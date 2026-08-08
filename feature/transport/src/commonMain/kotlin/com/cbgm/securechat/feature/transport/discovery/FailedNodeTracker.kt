@@ -15,10 +15,20 @@ class FailedNodeTracker(
     }
 
     fun available(endpoints: List<NodeEndpoint>): List<NodeEndpoint> {
+        removeExpiredFailures()
+        return endpoints.filterNot { endpoint -> endpoint.nodeId in failedAt }
+    }
+
+    fun unavailableNodeIds(endpoints: List<NodeEndpoint>): Set<String> {
+        removeExpiredFailures()
+        val endpointIds = endpoints.map(NodeEndpoint::nodeId).toSet()
+        return failedAt.keys.filterTo(mutableSetOf()) { nodeId -> nodeId in endpointIds }
+    }
+
+    private fun removeExpiredFailures() {
         val currentTime = now()
         failedAt.entries.removeAll { (_, failedAtEpochMilliseconds) ->
             currentTime - failedAtEpochMilliseconds >= cooldownMilliseconds
         }
-        return endpoints.filterNot { endpoint -> endpoint.nodeId in failedAt }
     }
 }

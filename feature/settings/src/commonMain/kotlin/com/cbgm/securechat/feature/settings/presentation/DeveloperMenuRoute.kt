@@ -17,8 +17,7 @@ fun DeveloperMenuRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     DeveloperMenuScreen(
-        buildInfo = uiState.buildInfo,
-        isClearingLocalData = uiState.isClearingLocalData,
+        uiState = uiState,
         onBack = onBack,
         onClearLocalData = viewModel::onClearLocalData,
         onDisableDeveloperMode = {

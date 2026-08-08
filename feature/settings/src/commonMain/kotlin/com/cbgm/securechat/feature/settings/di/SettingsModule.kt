@@ -109,7 +109,10 @@ val settingsModule =
         }
 
         viewModel {
-            DeveloperMenuViewModel(settingsRepository = get())
+            DeveloperMenuViewModel(
+                settingsRepository = get(),
+                transportDiagnosticsProvider = get()
+            )
         }
 
         viewModel {

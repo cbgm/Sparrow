@@ -14,11 +14,12 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import kotlinx.serialization.encodeToString
+import org.slf4j.LoggerFactory
 import java.util.UUID
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -28,6 +29,8 @@ class NodeRegistrationAgent(
     private val config: NodeRegistrationConfig,
     private val now: () -> Long = System::currentTimeMillis
 ) {
+    private val logger = LoggerFactory.getLogger(NodeRegistrationAgent::class.java)
+
     suspend fun run() {
         while (currentCoroutineContext().isActive) {
             try {
@@ -35,7 +38,12 @@ class NodeRegistrationAgent(
                 heartbeatUntilRefresh()
             } catch (cancellation: CancellationException) {
                 throw cancellation
-            } catch (_: Exception) {
+            } catch (error: Exception) {
+                logger.warn(
+                    "Node registration loop failed for {}: {}",
+                    identity.nodeId,
+                    error.message ?: error::class.simpleName
+                )
                 delay(config.retryDelayMilliseconds.milliseconds)
             }
         }
@@ -58,9 +66,14 @@ class NodeRegistrationAgent(
                 ),
                 identity
             )
-        httpClient.post("${config.registryUrl.trimEnd('/')}/v1/nodes") {
-            contentType(ContentType.Application.Json)
-            setBody(NodeRegistrationRequest(descriptor))
+        val response =
+            httpClient.post("${config.registryUrl.trimEnd('/')}/v1/nodes") {
+                contentType(ContentType.Application.Json)
+                setBody(NodeRegistrationRequest(descriptor))
+            }
+
+        check(response.status.isSuccess()) {
+            "Node registration failed with HTTP ${response.status.value}"
         }
     }
 
@@ -84,11 +97,16 @@ class NodeRegistrationAgent(
                             identity.privateKey
                         )
                 )
-            httpClient.post(
-                "${config.registryUrl.trimEnd('/')}/v1/nodes/${identity.nodeId}/heartbeat"
-            ) {
-                contentType(ContentType.Application.Json)
-                setBody(heartbeat)
+            val response =
+                httpClient.post(
+                    "${config.registryUrl.trimEnd('/')}/v1/nodes/${identity.nodeId}/heartbeat"
+                ) {
+                    contentType(ContentType.Application.Json)
+                    setBody(heartbeat)
+                }
+
+            check(response.status.isSuccess()) {
+                "Node heartbeat failed with HTTP ${response.status.value}"
             }
         }
     }
@@ -106,7 +124,7 @@ data class NodeRegistrationConfig(
 ) {
     private companion object {
         const val DEFAULT_DESCRIPTOR_LIFETIME_MILLISECONDS = 10L * 60L * 1_000L
-        const val DEFAULT_REGISTRATION_REFRESH_MILLISECONDS = 5L * 60L * 1_000L
+        const val DEFAULT_REGISTRATION_REFRESH_MILLISECONDS = 7L * 60L * 1_000L
         const val DEFAULT_HEARTBEAT_INTERVAL_MILLISECONDS = 30_000L
         const val DEFAULT_RETRY_DELAY_MILLISECONDS = 5_000L
     }

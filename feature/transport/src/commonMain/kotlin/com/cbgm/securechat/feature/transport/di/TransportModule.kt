@@ -5,6 +5,7 @@ import com.cbgm.securechat.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.securechat.core.protocol.identity.LocalSigningPublicKeyProvider
 import com.cbgm.securechat.core.protocol.phone.PhoneNumberNormalizer
 import com.cbgm.securechat.core.protocol.transport.OutgoingWireSender
+import com.cbgm.securechat.core.transport.TransportDiagnosticsProvider
 import com.cbgm.securechat.feature.transport.connection.DefaultRelayConnectionManager
 import com.cbgm.securechat.feature.transport.connection.RelayConnectionManager
 import com.cbgm.securechat.feature.transport.discovery.DefaultNodeEndpointResolver
@@ -95,13 +96,21 @@ val transportModule =
             )
         }
 
-        single<RelayConnectionManager> {
+        single {
             DefaultRelayConnectionManager(
                 webSocketTransportClient = get<WebSocketTransportClient>(),
                 localRelayIdProvider = get<LocalRelayIdProvider>(),
                 relayTransportConfig = get<RelayTransportConfig>(),
                 nodeEndpointResolver = get<NodeEndpointResolver>()
             )
+        }
+
+        single<RelayConnectionManager> {
+            get<DefaultRelayConnectionManager>()
+        }
+
+        single<TransportDiagnosticsProvider> {
+            get<DefaultRelayConnectionManager>()
         }
 
         single {
@@ -149,9 +158,9 @@ val transportModule =
             WebSocketOutgoingWireSender(
                 webSocketTransportClient = get<WebSocketTransportClient>(),
                 localRelayIdProvider = get<LocalRelayIdProvider>(),
+                localBootstrapRelayIdProvider = get<LocalBootstrapRelayIdProvider>(),
                 relayTransportConfig = get<RelayTransportConfig>(),
-                mailboxRouteRepository = get(),
-                localBootstrapRelayIdProvider = get<LocalBootstrapRelayIdProvider>()
+                mailboxRouteRepository = get()
             )
         }
     }

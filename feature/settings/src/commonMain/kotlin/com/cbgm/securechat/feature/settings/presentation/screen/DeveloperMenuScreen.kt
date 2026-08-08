@@ -30,11 +30,16 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.cbgm.securechat.core.transport.TransportDiagnosticConnectionState
+import com.cbgm.securechat.core.transport.TransportDiagnostics
+import com.cbgm.securechat.core.transport.TransportNodeDiagnostic
+import com.cbgm.securechat.core.transport.TransportNodeDiagnosticState
 import com.cbgm.securechat.core.ui.component.SecureChatCardNoAnimation
 import com.cbgm.securechat.core.ui.component.SecureChatScrollScaffold
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.core.ui.theme.spacing
 import com.cbgm.securechat.feature.settings.domain.model.BuildInfo
+import com.cbgm.securechat.feature.settings.presentation.model.DeveloperMenuUiState
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.base_build_type
 import com.cbgm.securechat.resources.base_clear_local_data
@@ -49,12 +54,9 @@ import com.cbgm.securechat.resources.feature_settings_developer_menu
 import com.cbgm.securechat.resources.feature_settings_disable_developer_mode
 import org.jetbrains.compose.resources.stringResource
 
-private val CardColor = Color(0xFF102A46)
-
 @Composable
 fun DeveloperMenuScreen(
-    buildInfo: BuildInfo,
-    isClearingLocalData: Boolean,
+    uiState: DeveloperMenuUiState,
     onBack: () -> Unit,
     onClearLocalData: () -> Unit,
     onDisableDeveloperMode: () -> Unit,
@@ -83,10 +85,12 @@ fun DeveloperMenuScreen(
                     ),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
         ) {
-            BuildInfoCard(buildInfo = buildInfo)
+            BuildInfoCard(buildInfo = uiState.buildInfo)
+
+            NetworkDiagnosticsCard(diagnostics = uiState.transportDiagnostics)
 
             DangerZoneCard(
-                isClearingLocalData = isClearingLocalData,
+                isClearingLocalData = uiState.isClearingLocalData,
                 onClearLocalData = onClearLocalData,
                 onDisableDeveloperMode = onDisableDeveloperMode
             )
@@ -134,7 +138,7 @@ private fun BuildInfoCard(buildInfo: BuildInfo) {
         ) {
             Text(
                 text = stringResource(Res.string.feature_settings_build_info),
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -176,7 +180,7 @@ private fun DangerZoneCard(
         ) {
             Text(
                 text = stringResource(Res.string.feature_settings_danger_zone),
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.error
             )
@@ -262,14 +266,37 @@ private fun BuildInfoRow(
 fun DeveloperScreenPreview() {
     SecureChatTheme {
         DeveloperMenuScreen(
-            buildInfo =
-                BuildInfo(
-                    versionName = "1.0.0",
-                    versionCode = 1,
-                    buildType = "debug",
-                    gitSha = null
+            uiState =
+                DeveloperMenuUiState(
+                    buildInfo =
+                        BuildInfo(
+                            versionName = "1.0.0",
+                            versionCode = 1,
+                            buildType = "debug",
+                            gitSha = null
+                        ),
+                    transportDiagnostics =
+                        TransportDiagnostics(
+                            connectionState = TransportDiagnosticConnectionState.CONNECTED,
+                            currentNodeId = "1dc6103605070c67",
+                            currentWebSocketUrl = "ws://192.168.178.60:8490/relay",
+                            registryUrl = "http://10.0.2.2:8390",
+                            registryAuthorityVerified = true,
+                            availableNodes =
+                                listOf(
+                                    TransportNodeDiagnostic(
+                                        nodeId = "1dc6103605070c67",
+                                        websocketUrl = "ws://192.168.178.60:8490/relay",
+                                        state = TransportNodeDiagnosticState.CURRENT
+                                    ),
+                                    TransportNodeDiagnostic(
+                                        nodeId = "901d125ea367d974",
+                                        websocketUrl = "ws://192.168.178.21:8490/relay",
+                                        state = TransportNodeDiagnosticState.AVAILABLE
+                                    )
+                                )
+                        )
                 ),
-            isClearingLocalData = false,
             onBack = {},
             onClearLocalData = {},
             onDisableDeveloperMode = {}

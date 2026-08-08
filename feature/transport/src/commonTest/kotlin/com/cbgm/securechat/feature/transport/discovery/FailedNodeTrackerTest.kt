@@ -14,10 +14,12 @@ class FailedNodeTrackerTest {
         tracker.recordFailure(nodeA.nodeId)
 
         assertEquals(listOf(nodeB), tracker.available(listOf(nodeA, nodeB)))
+        assertEquals(setOf(nodeA.nodeId), tracker.unavailableNodeIds(listOf(nodeA, nodeB)))
 
         now += 30_000L
 
         assertEquals(listOf(nodeA, nodeB), tracker.available(listOf(nodeA, nodeB)))
+        assertEquals(emptySet(), tracker.unavailableNodeIds(listOf(nodeA, nodeB)))
     }
 
     @Test
@@ -29,5 +31,6 @@ class FailedNodeTrackerTest {
         tracker.recordSuccess(node.nodeId)
 
         assertEquals(listOf(node), tracker.available(listOf(node)))
+        assertEquals(emptySet(), tracker.unavailableNodeIds(listOf(node)))
     }
 }
