@@ -15,9 +15,13 @@ class NodeDirectoryVerifier(
         trustedAuthorityNodeId: String,
         supportedProtocolVersion: Int,
         nowEpochMilliseconds: Long,
-        allowDirectoryExpiredUntilEpochMilliseconds: Long? = null
+        allowDirectoryExpiredUntilEpochMilliseconds: Long? = null,
+        descriptorExpiryGraceMilliseconds: Long = 0L
     ): Result<Unit> =
         runCatching {
+            require(descriptorExpiryGraceMilliseconds >= 0L) {
+                "Node descriptor expiry grace must not be negative"
+            }
             require(trustedAuthorityNodeId == signedDirectory.authorityNodeId) {
                 "Node directory was signed by an untrusted registry authority"
             }
@@ -58,7 +62,8 @@ class NodeDirectoryVerifier(
             signedDirectory.directory.nodes.forEach { descriptor ->
                 verifyDescriptor(
                     descriptor = descriptor,
-                    nowEpochMilliseconds = nowEpochMilliseconds
+                    nowEpochMilliseconds = nowEpochMilliseconds,
+                    expiryGraceMilliseconds = descriptorExpiryGraceMilliseconds
                 )
             }
 
@@ -83,12 +88,15 @@ class NodeDirectoryVerifier(
 
     private suspend fun verifyDescriptor(
         descriptor: SecureChatNodeDescriptor,
-        nowEpochMilliseconds: Long
+        nowEpochMilliseconds: Long,
+        expiryGraceMilliseconds: Long
     ) {
         require(nodeId(descriptor.identityPublicKey) == descriptor.nodeId) {
             "Node ID does not match its public key"
         }
-        require(nowEpochMilliseconds < descriptor.validUntilEpochMilliseconds) {
+        val acceptedDescriptorExpiry =
+            descriptor.validUntilEpochMilliseconds + expiryGraceMilliseconds
+        require(nowEpochMilliseconds < acceptedDescriptorExpiry) {
             "Node descriptor has expired"
         }
         require(

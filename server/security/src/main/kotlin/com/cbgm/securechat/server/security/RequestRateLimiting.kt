@@ -103,7 +103,30 @@ fun ApplicationCall.clientRateLimitKey(): String =
 suspend fun ApplicationCall.enforceRateLimit(
     limiter: BoundedRateLimiter
 ): Boolean =
-    when (val decision = limiter.acquire(clientRateLimitKey())) {
+    enforceRateLimit(
+        limiter = limiter,
+        key = clientRateLimitKey()
+    )
+
+suspend fun ApplicationCall.enforceRateLimit(
+    limiter: BoundedRateLimiter,
+    scope: String
+): Boolean {
+    require(scope.isNotBlank()) {
+        "Rate-limit scope must not be blank"
+    }
+
+    return enforceRateLimit(
+        limiter = limiter,
+        key = "${clientRateLimitKey()}:$scope"
+    )
+}
+
+private suspend fun ApplicationCall.enforceRateLimit(
+    limiter: BoundedRateLimiter,
+    key: String
+): Boolean =
+    when (val decision = limiter.acquire(key)) {
         RateLimitDecision.Allowed -> true
         is RateLimitDecision.Rejected -> {
             respondTooManyRequests(decision.retryAfterSeconds)

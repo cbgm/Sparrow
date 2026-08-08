@@ -60,6 +60,43 @@ class DefaultNodeEndpointResolverTest {
         }
 
     @Test
+    fun emptyRemoteDirectoryUsesRecentlyExpiredCachedDescriptors() =
+        runTest {
+            val cachedDirectory =
+                signedDirectory(
+                    directoryValidUntil = NOW + 1_000L,
+                    descriptorValidUntil = NOW + 1_000L
+                )
+            val emptyRemoteDirectory =
+                signedDirectory(
+                    directoryValidUntil = NOW + 60_000L,
+                    nodes = emptyList()
+                )
+            val cache =
+                RecordingNodeDirectoryCache(
+                    CachedNodeDirectory(
+                        encodedDirectory = json.encodeToString(cachedDirectory),
+                        trustedAuthorityNodeId = cachedDirectory.authorityNodeId
+                    )
+                )
+            val source =
+                RecordingNodeDirectorySource(
+                    Result.success(json.encodeToString(emptyRemoteDirectory))
+                )
+            val resolver =
+                resolver(
+                    source = source,
+                    cache = cache,
+                    now = { NOW + 2_000L }
+                )
+
+            val result = resolver.resolve("relay-a")
+
+            assertTrue(result.isSuccess)
+            assertEquals(2, result.getOrThrow().size)
+        }
+
+    @Test
     fun cacheBeyondItsGracePeriodIsRejected() =
         runTest {
             val directory = signedDirectory(directoryValidUntil = NOW + 1_000L)
@@ -111,7 +148,11 @@ class DefaultNodeEndpointResolverTest {
         )
     }
 
-    private fun signedDirectory(directoryValidUntil: Long = NOW + 60_000L): SignedNodeDirectory {
+    private fun signedDirectory(
+        directoryValidUntil: Long = NOW + 60_000L,
+        descriptorValidUntil: Long = NOW + 10L * 60L * 1_000L,
+        nodes: List<SecureChatNodeDescriptor>? = null
+    ): SignedNodeDirectory {
         val authorityKey = encodedPublicKey(seed = 1)
         return SignedNodeDirectory(
             directory =
@@ -119,10 +160,21 @@ class DefaultNodeEndpointResolverTest {
                     generatedAtEpochMilliseconds = NOW - 1_000L,
                     validUntilEpochMilliseconds = directoryValidUntil,
                     nodes =
-                        listOf(
-                            descriptor("node-a", "wss://a.example/relay", seed = 2),
-                            descriptor("node-b", "wss://b.example/relay", seed = 3)
-                        )
+                        nodes
+                            ?: listOf(
+                                descriptor(
+                                    "node-a",
+                                    "wss://a.example/relay",
+                                    seed = 2,
+                                    validUntil = descriptorValidUntil
+                                ),
+                                descriptor(
+                                    "node-b",
+                                    "wss://b.example/relay",
+                                    seed = 3,
+                                    validUntil = descriptorValidUntil
+                                )
+                            )
                 ),
             authorityNodeId = nodeId(authorityKey),
             authorityPublicKey = authorityKey,
@@ -133,7 +185,8 @@ class DefaultNodeEndpointResolverTest {
     private fun descriptor(
         name: String,
         endpoint: String,
-        seed: Int
+        seed: Int,
+        validUntil: Long = NOW + 10L * 60L * 1_000L
     ): SecureChatNodeDescriptor {
         val key = encodedPublicKey(seed)
         return SecureChatNodeDescriptor(
@@ -144,7 +197,7 @@ class DefaultNodeEndpointResolverTest {
             identityPublicKey = key,
             protocolVersions = setOf(1),
             capabilities = setOf(NodeCapability.GATEWAY),
-            validUntilEpochMilliseconds = NOW + 10L * 60L * 1_000L,
+            validUntilEpochMilliseconds = validUntil,
             signature = byteArrayOf(seed.toByte())
         )
     }

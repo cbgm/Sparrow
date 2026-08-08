@@ -152,7 +152,8 @@ class DefaultNodeEndpointResolver(
                 trustedAuthorityNodeId = fallbackAuthorityNodeId,
                 supportedProtocolVersion = config.supportedProtocolVersion,
                 nowEpochMilliseconds = currentTime,
-                allowDirectoryExpiredUntilEpochMilliseconds = cacheExpiry
+                allowDirectoryExpiredUntilEpochMilliseconds = cacheExpiry,
+                descriptorExpiryGraceMilliseconds = config.cachedDirectoryGraceMilliseconds
             ).getOrElse { throw remoteError }
 
         logger.warn {

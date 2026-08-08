@@ -10,6 +10,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -17,6 +22,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.securechat.core.time.SystemClock
 import com.cbgm.securechat.core.transport.TransportDiagnosticConnectionState
 import com.cbgm.securechat.core.transport.TransportDiagnostics
 import com.cbgm.securechat.core.transport.TransportNodeDiagnostic
@@ -36,6 +42,7 @@ import com.cbgm.securechat.resources.feature_settings_network_no_nodes
 import com.cbgm.securechat.resources.feature_settings_network_nodes
 import com.cbgm.securechat.resources.feature_settings_node_available
 import com.cbgm.securechat.resources.feature_settings_node_cooldown
+import com.cbgm.securechat.resources.feature_settings_node_cooldown_remaining
 import com.cbgm.securechat.resources.feature_settings_node_current
 import com.cbgm.securechat.resources.feature_settings_registry_authority
 import com.cbgm.securechat.resources.feature_settings_registry_not_configured
@@ -47,7 +54,9 @@ import com.cbgm.securechat.resources.feature_settings_status_connecting
 import com.cbgm.securechat.resources.feature_settings_status_disconnected
 import com.cbgm.securechat.resources.feature_settings_status_failed
 import com.cbgm.securechat.resources.feature_settings_websocket_endpoint
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
+import kotlin.time.Duration.Companion.seconds
 
 @Composable
 internal fun NetworkDiagnosticsCard(diagnostics: TransportDiagnostics) {
@@ -130,45 +139,96 @@ private fun NodeList(diagnostics: TransportDiagnostics) {
 
 @Composable
 private fun NodeDiagnosticRow(node: TransportNodeDiagnostic) {
+    val cooldown = rememberNodeCooldown(node)
+    val effectiveState =
+        if (node.state == TransportNodeDiagnosticState.COOLDOWN && cooldown.remainingSeconds == 0L) {
+            TransportNodeDiagnosticState.AVAILABLE
+        } else {
+            node.state
+        }
+
     Column(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .padding(vertical = MaterialTheme.spacing.base)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = node.nodeId,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-
-            Text(
-                text = node.state.displayText(),
-                modifier = Modifier.padding(start = MaterialTheme.spacing.small),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = node.state.displayColor()
-            )
-        }
+        NodeDiagnosticHeader(
+            nodeId = node.nodeId,
+            state = effectiveState,
+            cooldownRemainingSeconds = cooldown.remainingSeconds
+        )
 
         Text(
             text = node.websocketUrl,
             modifier = Modifier.padding(top = MaterialTheme.spacing.base / 2),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
         )
     }
 }
+
+@Composable
+private fun NodeDiagnosticHeader(
+    nodeId: String,
+    state: TransportNodeDiagnosticState,
+    cooldownRemainingSeconds: Long
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = nodeId,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.bodySmall,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        Text(
+            text = state.displayText(cooldownRemainingSeconds),
+            modifier = Modifier.padding(start = MaterialTheme.spacing.small),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = state.displayColor()
+        )
+    }
+}
+
+@Composable
+private fun rememberNodeCooldown(node: TransportNodeDiagnostic): NodeCooldown {
+    val cooldownUntil = node.cooldownUntilEpochMilliseconds
+    var nowEpochMilliseconds by remember(cooldownUntil) {
+        mutableLongStateOf(SystemClock.nowEpochMilliseconds())
+    }
+
+    LaunchedEffect(cooldownUntil) {
+        while (cooldownUntil != null && nowEpochMilliseconds < cooldownUntil) {
+            delay(1.seconds)
+            nowEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+        }
+    }
+
+    val remainingMilliseconds =
+        cooldownUntil
+            ?.minus(nowEpochMilliseconds)
+            ?.coerceAtLeast(0L)
+            ?: 0L
+
+    return NodeCooldown(
+        remainingSeconds = (remainingMilliseconds + 999L) / 1_000L
+    )
+}
+
+private data class NodeCooldown(
+    val remainingSeconds: Long
+)
 
 @Composable
 private fun DiagnosticRow(
@@ -224,11 +284,25 @@ private fun TransportDiagnostics.registryStatusText(): String =
     }
 
 @Composable
-private fun TransportNodeDiagnosticState.displayText(): String =
+private fun TransportNodeDiagnosticState.displayText(
+    cooldownRemainingSeconds: Long = 0L
+): String =
     when (this) {
-        TransportNodeDiagnosticState.CURRENT -> stringResource(Res.string.feature_settings_node_current)
-        TransportNodeDiagnosticState.AVAILABLE -> stringResource(Res.string.feature_settings_node_available)
-        TransportNodeDiagnosticState.COOLDOWN -> stringResource(Res.string.feature_settings_node_cooldown)
+        TransportNodeDiagnosticState.CURRENT ->
+            stringResource(Res.string.feature_settings_node_current)
+
+        TransportNodeDiagnosticState.AVAILABLE ->
+            stringResource(Res.string.feature_settings_node_available)
+
+        TransportNodeDiagnosticState.COOLDOWN ->
+            if (cooldownRemainingSeconds > 0L) {
+                stringResource(
+                    Res.string.feature_settings_node_cooldown_remaining,
+                    cooldownRemainingSeconds
+                )
+            } else {
+                stringResource(Res.string.feature_settings_node_cooldown)
+            }
     }
 
 @Composable
@@ -250,7 +324,25 @@ fun NetworkDiagnosticCardPreview() {
                     currentNodeId = "1dc6103605070c67",
                     currentWebSocketUrl = "ws://192.168.178.60:8490/relay",
                     registryUrl = "http://10.0.2.2:8390",
-                    registryAuthorityVerified = true
+                    registryAuthorityVerified = true,
+                    availableNodes =
+                        listOf(
+                            TransportNodeDiagnostic(
+                                nodeId = "1dc6103605070c67",
+                                websocketUrl = "ws://192.168.178.60:8490/relay",
+                                state = TransportNodeDiagnosticState.CURRENT
+                            ),
+                            TransportNodeDiagnostic(
+                                nodeId = "901d125ea367d974",
+                                websocketUrl = "ws://192.168.178.21:8490/relay",
+                                state = TransportNodeDiagnosticState.AVAILABLE
+                            ),
+                            TransportNodeDiagnostic(
+                                nodeId = "901d125ea367d974",
+                                websocketUrl = "ws://192.168.178.21:8490/relay",
+                                state = TransportNodeDiagnosticState.COOLDOWN
+                            )
+                        )
                 )
         )
     }

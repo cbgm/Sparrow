@@ -74,30 +74,43 @@ fun Application.nodeRegistryModule(
         }
 
         post("/v1/nodes") {
-            if (!call.enforceRateLimit(registrationRateLimiter)) {
+            val descriptor = call.receive<NodeRegistrationRequest>().descriptor
+            if (!call.enforceRateLimit(registrationRateLimiter, descriptor.nodeId)) {
                 return@post
             }
-            when (val result = store.register(call.receive<NodeRegistrationRequest>().descriptor)) {
+
+            when (val result = store.register(descriptor)) {
                 RegistrationResult.Accepted -> call.respond(HttpStatusCode.Created)
                 is RegistrationResult.Rejected ->
-                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(result.code, "Node registration rejected"))
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse(result.code, "Node registration rejected")
+                    )
             }
         }
 
         post("/v1/nodes/{nodeId}/heartbeat") {
-            if (!call.enforceRateLimit(heartbeatRateLimiter)) {
+            val nodeId = call.parameters["nodeId"].orEmpty()
+            if (!call.enforceRateLimit(heartbeatRateLimiter, nodeId)) {
                 return@post
             }
+
             val heartbeat = call.receive<NodeHeartbeatRequest>()
-            if (heartbeat.nodeId != call.parameters["nodeId"]) {
-                call.respond(HttpStatusCode.BadRequest, ErrorResponse("NODE_ID_MISMATCH", "Path and body differ"))
+            if (heartbeat.nodeId != nodeId) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse("NODE_ID_MISMATCH", "Path and body differ")
+                )
                 return@post
             }
 
             when (val result = store.heartbeat(heartbeat)) {
                 RegistrationResult.Accepted -> call.respond(HttpStatusCode.NoContent)
                 is RegistrationResult.Rejected ->
-                    call.respond(HttpStatusCode.Unauthorized, ErrorResponse(result.code, "Heartbeat rejected"))
+                    call.respond(
+                        HttpStatusCode.Unauthorized,
+                        ErrorResponse(result.code, "Heartbeat rejected")
+                    )
             }
         }
 

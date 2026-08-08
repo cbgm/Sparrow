@@ -24,6 +24,18 @@ class RequestRateLimitingTest {
     }
 
     @Test
+    fun independentNodeScopesDoNotShareTheSameBucket() {
+        val limiter =
+            BoundedRateLimiter(
+                policy = RateLimitPolicy(maximumRequests = 1, windowMilliseconds = 60_000L)
+            )
+
+        assertEquals(RateLimitDecision.Allowed, limiter.acquire("proxy:node-a"))
+        assertEquals(RateLimitDecision.Allowed, limiter.acquire("proxy:node-b"))
+        assertIs<RateLimitDecision.Rejected>(limiter.acquire("proxy:node-a"))
+    }
+
+    @Test
     fun trackedClientCardinalityIsBounded() {
         val limiter =
             BoundedRateLimiter(
