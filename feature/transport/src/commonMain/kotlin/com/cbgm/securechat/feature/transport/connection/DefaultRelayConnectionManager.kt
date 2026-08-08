@@ -68,7 +68,8 @@ class DefaultRelayConnectionManager(
         activeJob?.cancelAndJoin()
         webSocketTransportClient.disconnect()
         diagnosticsState.stopped(
-            unavailableNodeIds = failedNodeTracker.unavailableNodeIds(resolvedEndpoints)
+            cooldownUntilEpochMillisecondsByNodeId =
+                failedNodeTracker.cooldownUntilEpochMillisecondsByNodeId(resolvedEndpoints)
         )
     }
 
@@ -132,7 +133,8 @@ class DefaultRelayConnectionManager(
             diagnosticsState.failed(
                 endpoint = selectedEndpoint,
                 message = error.message ?: "Relay connection error",
-                unavailableNodeIds = failedNodeTracker.unavailableNodeIds(resolvedEndpoints)
+                cooldownUntilEpochMillisecondsByNodeId =
+                    failedNodeTracker.cooldownUntilEpochMillisecondsByNodeId(resolvedEndpoints)
             )
             false
         }
@@ -142,11 +144,12 @@ class DefaultRelayConnectionManager(
         val endpoints = nodeEndpointResolver.resolve(relayId).getOrThrow()
         resolvedEndpoints = endpoints
         val availableEndpoints = failedNodeTracker.available(endpoints)
-        val unavailableNodeIds = failedNodeTracker.unavailableNodeIds(endpoints)
+        val cooldowns =
+            failedNodeTracker.cooldownUntilEpochMillisecondsByNodeId(endpoints)
 
         diagnosticsState.resolved(
             endpoints = endpoints,
-            unavailableNodeIds = unavailableNodeIds,
+            cooldownUntilEpochMillisecondsByNodeId = cooldowns,
             registryAuthorityVerified = relayTransportConfig.nodeRegistryBaseUrl != null
         )
 
@@ -161,7 +164,8 @@ class DefaultRelayConnectionManager(
     ) {
         diagnosticsState.selected(
             endpoint = endpoint,
-            unavailableNodeIds = failedNodeTracker.unavailableNodeIds(resolvedEndpoints)
+            cooldownUntilEpochMillisecondsByNodeId =
+                failedNodeTracker.cooldownUntilEpochMillisecondsByNodeId(resolvedEndpoints)
         )
         logger.debug {
             "Connecting to node ${endpoint.nodeId} as $relayId"
@@ -189,7 +193,8 @@ class DefaultRelayConnectionManager(
         failedNodeTracker.recordSuccess(endpoint.nodeId)
         diagnosticsState.connected(
             endpoint = endpoint,
-            unavailableNodeIds = failedNodeTracker.unavailableNodeIds(resolvedEndpoints)
+            cooldownUntilEpochMillisecondsByNodeId =
+                failedNodeTracker.cooldownUntilEpochMillisecondsByNodeId(resolvedEndpoints)
         )
         logger.info {
             "Relay connected through node ${endpoint.nodeId} as $relayId"
@@ -204,7 +209,8 @@ class DefaultRelayConnectionManager(
         diagnosticsState.connectedNodeEnded(
             endpoint = endpoint,
             state = state,
-            unavailableNodeIds = failedNodeTracker.unavailableNodeIds(resolvedEndpoints)
+            cooldownUntilEpochMillisecondsByNodeId =
+                failedNodeTracker.cooldownUntilEpochMillisecondsByNodeId(resolvedEndpoints)
         )
     }
 
@@ -217,7 +223,8 @@ class DefaultRelayConnectionManager(
         diagnosticsState.failed(
             endpoint = endpoint,
             message = message,
-            unavailableNodeIds = failedNodeTracker.unavailableNodeIds(resolvedEndpoints)
+            cooldownUntilEpochMillisecondsByNodeId =
+                failedNodeTracker.cooldownUntilEpochMillisecondsByNodeId(resolvedEndpoints)
         )
     }
 
@@ -232,10 +239,10 @@ class DefaultRelayConnectionManager(
                                 resolvedEndpoints = endpoints
                                 diagnosticsState.resolved(
                                     endpoints = endpoints,
-                                    unavailableNodeIds =
-                                        failedNodeTracker.unavailableNodeIds(endpoints),
-                                    registryAuthorityVerified =
-                                        relayTransportConfig.nodeRegistryBaseUrl != null
+                                    cooldownUntilEpochMillisecondsByNodeId =
+                                        failedNodeTracker
+                                            .cooldownUntilEpochMillisecondsByNodeId(endpoints),
+                                    registryAuthorityVerified = relayTransportConfig.nodeRegistryBaseUrl != null
                                 )
                             },
                             onFailure = { error ->

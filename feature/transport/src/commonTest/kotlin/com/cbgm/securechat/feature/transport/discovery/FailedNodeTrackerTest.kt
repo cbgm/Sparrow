@@ -15,11 +15,19 @@ class FailedNodeTrackerTest {
 
         assertEquals(listOf(nodeB), tracker.available(listOf(nodeA, nodeB)))
         assertEquals(setOf(nodeA.nodeId), tracker.unavailableNodeIds(listOf(nodeA, nodeB)))
+        assertEquals(
+            mapOf(nodeA.nodeId to 31_000L),
+            tracker.cooldownUntilEpochMillisecondsByNodeId(listOf(nodeA, nodeB))
+        )
 
         now += 30_000L
 
         assertEquals(listOf(nodeA, nodeB), tracker.available(listOf(nodeA, nodeB)))
         assertEquals(emptySet(), tracker.unavailableNodeIds(listOf(nodeA, nodeB)))
+        assertEquals(
+            emptyMap(),
+            tracker.cooldownUntilEpochMillisecondsByNodeId(listOf(nodeA, nodeB))
+        )
     }
 
     @Test
@@ -32,5 +40,9 @@ class FailedNodeTrackerTest {
 
         assertEquals(listOf(node), tracker.available(listOf(node)))
         assertEquals(emptySet(), tracker.unavailableNodeIds(listOf(node)))
+        assertEquals(
+            emptyMap(),
+            tracker.cooldownUntilEpochMillisecondsByNodeId(listOf(node))
+        )
     }
 }

@@ -18,7 +18,8 @@ enum class TransportNodeDiagnosticState {
 data class TransportNodeDiagnostic(
     val nodeId: String,
     val websocketUrl: String,
-    val state: TransportNodeDiagnosticState
+    val state: TransportNodeDiagnosticState,
+    val cooldownUntilEpochMilliseconds: Long? = null
 )
 
 data class TransportDiagnostics(

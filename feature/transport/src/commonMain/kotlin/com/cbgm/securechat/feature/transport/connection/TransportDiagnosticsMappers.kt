@@ -6,11 +6,11 @@ import com.cbgm.securechat.feature.transport.discovery.NodeEndpoint
 
 internal fun NodeEndpoint.diagnosticState(
     currentNodeId: String?,
-    unavailableNodeIds: Set<String>
+    cooldownUntilEpochMillisecondsByNodeId: Map<String, Long>
 ): TransportNodeDiagnosticState =
     when {
         nodeId == currentNodeId -> TransportNodeDiagnosticState.CURRENT
-        nodeId in unavailableNodeIds -> TransportNodeDiagnosticState.COOLDOWN
+        nodeId in cooldownUntilEpochMillisecondsByNodeId -> TransportNodeDiagnosticState.COOLDOWN
         else -> TransportNodeDiagnosticState.AVAILABLE
     }
 

@@ -301,6 +301,7 @@
     <string name="feature_settings_node_current">AKTUELL</string>
     <string name="feature_settings_node_available">VERFÜGBAR</string>
     <string name="feature_settings_node_cooldown">COOLDOWN</string>
+    <string name="feature_settings_node_cooldown_remaining">COOLDOWN · %1$d s</string>
     <string name="feature_settings_status_connected">Verbunden</string>
     <string name="feature_settings_status_connecting">Verbindungsaufbau</string>
     <string name="feature_settings_status_disconnected">Getrennt</string>

@@ -34,13 +34,13 @@ internal class RelayTransportDiagnosticsState(
 
     fun resolved(
         endpoints: List<NodeEndpoint>,
-        unavailableNodeIds: Set<String>,
+        cooldownUntilEpochMillisecondsByNodeId: Map<String, Long>,
         registryAuthorityVerified: Boolean
     ) {
         resolvedEndpoints = endpoints
         updateNodes(
             currentNodeId = _diagnostics.value.currentNodeId,
-            unavailableNodeIds = unavailableNodeIds
+            cooldownUntilEpochMillisecondsByNodeId = cooldownUntilEpochMillisecondsByNodeId
         )
         _diagnostics.value =
             _diagnostics.value.copy(
@@ -50,7 +50,7 @@ internal class RelayTransportDiagnosticsState(
 
     fun selected(
         endpoint: NodeEndpoint,
-        unavailableNodeIds: Set<String>
+        cooldownUntilEpochMillisecondsByNodeId: Map<String, Long>
     ) {
         _diagnostics.value =
             _diagnostics.value.copy(
@@ -59,13 +59,13 @@ internal class RelayTransportDiagnosticsState(
             )
         updateNodes(
             currentNodeId = endpoint.nodeId,
-            unavailableNodeIds = unavailableNodeIds
+            cooldownUntilEpochMillisecondsByNodeId = cooldownUntilEpochMillisecondsByNodeId
         )
     }
 
     fun connected(
         endpoint: NodeEndpoint,
-        unavailableNodeIds: Set<String>
+        cooldownUntilEpochMillisecondsByNodeId: Map<String, Long>
     ) {
         val failoverOccurred =
             failedConnectedNodeId != null && failedConnectedNodeId != endpoint.nodeId
@@ -81,14 +81,14 @@ internal class RelayTransportDiagnosticsState(
             )
         updateNodes(
             currentNodeId = endpoint.nodeId,
-            unavailableNodeIds = unavailableNodeIds
+            cooldownUntilEpochMillisecondsByNodeId = cooldownUntilEpochMillisecondsByNodeId
         )
     }
 
     fun connectedNodeEnded(
         endpoint: NodeEndpoint,
         state: TransportConnectionState,
-        unavailableNodeIds: Set<String>
+        cooldownUntilEpochMillisecondsByNodeId: Map<String, Long>
     ) {
         failedConnectedNodeId = endpoint.nodeId
 
@@ -102,14 +102,14 @@ internal class RelayTransportDiagnosticsState(
             )
         updateNodes(
             currentNodeId = null,
-            unavailableNodeIds = unavailableNodeIds
+            cooldownUntilEpochMillisecondsByNodeId = cooldownUntilEpochMillisecondsByNodeId
         )
     }
 
     fun failed(
         endpoint: NodeEndpoint?,
         message: String,
-        unavailableNodeIds: Set<String>
+        cooldownUntilEpochMillisecondsByNodeId: Map<String, Long>
     ) {
         _diagnostics.value =
             _diagnostics.value.copy(
@@ -121,11 +121,11 @@ internal class RelayTransportDiagnosticsState(
             )
         updateNodes(
             currentNodeId = null,
-            unavailableNodeIds = unavailableNodeIds
+            cooldownUntilEpochMillisecondsByNodeId = cooldownUntilEpochMillisecondsByNodeId
         )
     }
 
-    fun stopped(unavailableNodeIds: Set<String>) {
+    fun stopped(cooldownUntilEpochMillisecondsByNodeId: Map<String, Long>) {
         _diagnostics.value =
             _diagnostics.value.copy(
                 connectionState = TransportDiagnosticConnectionState.DISCONNECTED,
@@ -135,26 +135,31 @@ internal class RelayTransportDiagnosticsState(
             )
         updateNodes(
             currentNodeId = null,
-            unavailableNodeIds = unavailableNodeIds
+            cooldownUntilEpochMillisecondsByNodeId = cooldownUntilEpochMillisecondsByNodeId
         )
     }
 
     private fun updateNodes(
         currentNodeId: String?,
-        unavailableNodeIds: Set<String>
+        cooldownUntilEpochMillisecondsByNodeId: Map<String, Long>
     ) {
         _diagnostics.value =
             _diagnostics.value.copy(
                 availableNodes =
                     resolvedEndpoints.map { endpoint ->
+                        val cooldownUntilEpochMilliseconds =
+                            cooldownUntilEpochMillisecondsByNodeId[endpoint.nodeId]
+
                         TransportNodeDiagnostic(
                             nodeId = endpoint.nodeId,
                             websocketUrl = endpoint.websocketUrl,
                             state =
                                 endpoint.diagnosticState(
                                     currentNodeId = currentNodeId,
-                                    unavailableNodeIds = unavailableNodeIds
-                                )
+                                    cooldownUntilEpochMillisecondsByNodeId =
+                                    cooldownUntilEpochMillisecondsByNodeId
+                                ),
+                            cooldownUntilEpochMilliseconds = cooldownUntilEpochMilliseconds
                         )
                     }
             )

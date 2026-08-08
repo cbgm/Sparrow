@@ -34,16 +34,6 @@ android {
 
         buildConfigField(
             type = "String",
-            name = "RELAY_WEBSOCKET_URL",
-            value =
-                localProperties.buildConfigString(
-                    key = "securechat.relay.websocketUrl",
-                    defaultValue = "ws://10.0.2.2:8080/relay"
-                )
-        )
-
-        buildConfigField(
-            type = "String",
             name = "RELAY_HTTP_BASE_URL",
             value =
                 localProperties.buildConfigString(

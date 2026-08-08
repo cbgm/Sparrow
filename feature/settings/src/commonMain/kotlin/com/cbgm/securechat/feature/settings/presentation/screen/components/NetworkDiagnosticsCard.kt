@@ -111,14 +111,14 @@ private fun NodeList(diagnostics: TransportDiagnostics) {
         text = stringResource(Res.string.feature_settings_network_nodes),
         style = MaterialTheme.typography.labelLarge,
         fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onBackground
+        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
     )
 
     if (diagnostics.availableNodes.isEmpty()) {
         Text(
             text = stringResource(Res.string.feature_settings_network_no_nodes),
             modifier = Modifier.padding(top = MaterialTheme.spacing.base),
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
         )
     } else {
@@ -146,7 +146,7 @@ private fun NodeDiagnosticRow(node: TransportNodeDiagnostic) {
                 modifier = Modifier.weight(1f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onBackground
             )
 
@@ -164,9 +164,8 @@ private fun NodeDiagnosticRow(node: TransportNodeDiagnostic) {
             modifier = Modifier.padding(top = MaterialTheme.spacing.base / 2),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
         )
     }
 }
@@ -193,8 +192,7 @@ private fun DiagnosticRow(
             modifier = Modifier.padding(top = MaterialTheme.spacing.base / 2),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onBackground
         )
     }
@@ -236,7 +234,7 @@ private fun TransportNodeDiagnosticState.displayText(): String =
 @Composable
 private fun TransportNodeDiagnosticState.displayColor(): Color =
     when (this) {
-        TransportNodeDiagnosticState.CURRENT -> MaterialTheme.colorScheme.primary
+        TransportNodeDiagnosticState.CURRENT -> MaterialTheme.colorScheme.secondary
         TransportNodeDiagnosticState.AVAILABLE -> MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
         TransportNodeDiagnosticState.COOLDOWN -> MaterialTheme.colorScheme.error
     }

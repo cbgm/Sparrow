@@ -217,8 +217,8 @@ docker compose `
 The app refreshes the directory every minute, rejects invalid authority or node signatures, rejects
 expired and incompatible descriptors, and keeps failed nodes out of selection for 30 seconds. If
 the registry is briefly unavailable, the last verified directory has a five-minute grace period.
-When `securechat.registry.baseUrl` is blank, the static `securechat.relay.websocketUrl` remains
-available for legacy single-relay development.
+Clients do not configure a static WebSocket URL. They bootstrap exclusively from the signed registry,
+which is the source of all compatible gateway endpoints and failover candidates.
 
 The trusted registry ID is deliberately retained across app restarts. If local testing deletes the
 `registry-identity` Docker volume, clear the app data once before trusting the newly generated local

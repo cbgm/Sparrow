@@ -1,9 +1,8 @@
 package com.cbgm.securechat.feature.transport.relay.config
 
 data class RelayTransportConfig(
-    val serverUrl: String,
     val httpBaseUrl: String,
-    val nodeRegistryBaseUrl: String? = null,
+    val nodeRegistryBaseUrl: String,
     val trustedRegistryAuthorityNodeId: String? = null,
     val supportedProtocolVersion: Int = 1,
     val directoryRefreshIntervalMilliseconds: Long = 60_000L,
@@ -15,21 +14,15 @@ data class RelayTransportConfig(
     val acknowledgementTimeoutMilliseconds: Long = 15_000L
 ) {
     init {
-        require(serverUrl.isNotBlank()) {
-            "Relay server URL must not be blank"
-        }
-
-        require(serverUrl.startsWith(prefix = "ws://") || serverUrl.startsWith(prefix = "wss://")) {
-            "Relay URL must use ws:// or wss://"
-        }
-
-        require(httpBaseUrl.startsWith(prefix = "http://") || httpBaseUrl.startsWith(prefix = "https://")) {
+        require(
+            httpBaseUrl.startsWith(prefix = "http://") ||
+                httpBaseUrl.startsWith(prefix = "https://")
+        ) {
             "Relay HTTP base URL must use http:// or https://"
         }
 
         require(
-            nodeRegistryBaseUrl == null ||
-                nodeRegistryBaseUrl.startsWith(prefix = "http://") ||
+            nodeRegistryBaseUrl.startsWith(prefix = "http://") ||
                 nodeRegistryBaseUrl.startsWith(prefix = "https://")
         ) {
             "Node registry base URL must use http:// or https://"

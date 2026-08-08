@@ -57,11 +57,14 @@ The interface filename is currently `WebsocketTransportClient.kt`; the declared 
 `DefaultRelayConnectionManager` implements `RelayConnectionManager`. It:
 
 1. gets the local relay ID from `LocalRelayIdProvider`;
-2. calls `WebSocketTransportClient.connect(serverUrl, localRelayId)`;
-3. waits up to 15 seconds for `Connected` or `Failed`;
-4. stays suspended while a connected session remains active;
-5. disconnects the old session after failure or closure;
-6. reconnects with exponential backoff from one to 30 seconds.
+2. resolves compatible gateway endpoints from the signed node registry;
+3. skips nodes that are currently in the failed-node cooldown;
+4. connects `WebSocketTransportClient` to the selected gateway;
+5. waits up to 15 seconds for `Connected` or `Failed`;
+6. reconnects through another discovered node after failure or closure.
+
+A static WebSocket endpoint is not part of client configuration. The signed registry is the only
+source of gateway WebSocket endpoints.
 
 The observable states are:
 

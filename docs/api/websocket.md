@@ -5,7 +5,8 @@ live under `:feature:transport`; matching server models live under `:relay`.
 
 ## Connection
 
-The URL comes from `RelayTransportConfig.serverUrl`. Immediately after the Ktor WebSocket opens,
+The WebSocket URL comes from the signed node directory returned by the configured registry.
+There is no statically configured client relay URL. Immediately after the Ktor WebSocket opens,
 the client sends `RelayClientMessage.Register`.
 
 ```json

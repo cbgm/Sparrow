@@ -83,33 +83,10 @@ class DefaultNodeEndpointResolverTest {
             assertTrue(resolver.resolve("relay-a").isFailure)
         }
 
-    @Test
-    fun staticRelayRemainsAvailableWhenDiscoveryIsDisabled() =
-        runTest {
-            val source =
-                RecordingNodeDirectorySource(
-                    Result.failure(IllegalStateException("must not be called"))
-                )
-            val resolver =
-                resolver(
-                    source = source,
-                    cache = RecordingNodeDirectoryCache(),
-                    now = { NOW },
-                    registryBaseUrl = null
-                )
-
-            assertEquals(
-                listOf(NodeEndpoint("static-configured-relay", "ws://localhost:8094/relay")),
-                resolver.resolve("relay-a").getOrThrow()
-            )
-            assertEquals(0, source.fetchCount)
-        }
-
     private fun resolver(
         source: NodeDirectorySource,
         cache: NodeDirectoryCache,
-        now: () -> Long,
-        registryBaseUrl: String? = "https://registry.example"
+        now: () -> Long
     ): DefaultNodeEndpointResolver {
         val trustedDirectory = signedDirectory()
         return DefaultNodeEndpointResolver(
@@ -124,9 +101,8 @@ class DefaultNodeEndpointResolverTest {
                 ),
             config =
                 RelayTransportConfig(
-                    serverUrl = "ws://localhost:8094/relay",
                     httpBaseUrl = "http://localhost:8095",
-                    nodeRegistryBaseUrl = registryBaseUrl,
+                    nodeRegistryBaseUrl = "https://registry.example",
                     trustedRegistryAuthorityNodeId = trustedDirectory.authorityNodeId,
                     directoryRefreshIntervalMilliseconds = 60_000L,
                     cachedDirectoryGraceMilliseconds = CACHE_GRACE_MILLISECONDS
@@ -173,7 +149,11 @@ class DefaultNodeEndpointResolverTest {
         )
     }
 
-    private fun encodedPublicKey(seed: Int): ByteArray = X509_ED25519_PREFIX + ByteArray(32) { index -> (index + seed).toByte() }
+    private fun encodedPublicKey(seed: Int): ByteArray =
+        X509_ED25519_PREFIX +
+            ByteArray(32) { index ->
+                (index + seed).toByte()
+            }
 
     private fun nodeId(publicKey: ByteArray): String =
         cryptoHash

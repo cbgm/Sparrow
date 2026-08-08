@@ -31,13 +31,9 @@ class DefaultNodeEndpointResolver(
         }
 
     private suspend fun resolveLocked(localRelayId: String): List<NodeEndpoint> =
-        config.nodeRegistryBaseUrl?.let { registryBaseUrl ->
-            resolveRegistry(registryBaseUrl, localRelayId)
-        } ?: listOf(
-            NodeEndpoint(
-                nodeId = STATIC_NODE_ID,
-                websocketUrl = config.serverUrl
-            )
+        resolveRegistry(
+            registryBaseUrl = config.nodeRegistryBaseUrl,
+            localRelayId = localRelayId
         )
 
     private suspend fun resolveRegistry(
@@ -170,7 +166,10 @@ class DefaultNodeEndpointResolver(
             json.decodeFromString<SignedNodeDirectory>(encodedDirectory)
         }
 
-    private fun CachedNodeDirectory.decode(): SignedNodeDirectory? = runCatching { json.decodeFromString<SignedNodeDirectory>(encodedDirectory) }.getOrNull()
+    private fun CachedNodeDirectory.decode(): SignedNodeDirectory? =
+        runCatching {
+            json.decodeFromString<SignedNodeDirectory>(encodedDirectory)
+        }.getOrNull()
 
     private fun SignedNodeDirectory.endpointsFor(localRelayId: String): List<NodeEndpoint> {
         val endpoints =
@@ -195,10 +194,6 @@ class DefaultNodeEndpointResolver(
 
         val startIndex = (localRelayId.hashCode() and Int.MAX_VALUE) % endpoints.size
         return endpoints.drop(startIndex) + endpoints.take(startIndex)
-    }
-
-    private companion object {
-        const val STATIC_NODE_ID = "static-configured-relay"
     }
 }
 

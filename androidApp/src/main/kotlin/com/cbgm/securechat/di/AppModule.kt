@@ -62,9 +62,8 @@ val appModule =
 
         single {
             RelayTransportConfig(
-                serverUrl = BuildConfig.RELAY_WEBSOCKET_URL,
                 httpBaseUrl = BuildConfig.RELAY_HTTP_BASE_URL,
-                nodeRegistryBaseUrl = BuildConfig.NODE_REGISTRY_BASE_URL.takeIf(String::isNotBlank),
+                nodeRegistryBaseUrl = BuildConfig.NODE_REGISTRY_BASE_URL,
                 trustedRegistryAuthorityNodeId =
                     BuildConfig.NODE_REGISTRY_AUTHORITY_NODE_ID.takeIf(String::isNotBlank)
             )
