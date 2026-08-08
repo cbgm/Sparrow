@@ -15,6 +15,7 @@ import com.cbgm.securechat.server.security.enforceRateLimit
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
+import io.ktor.server.request.httpMethod
 import io.ktor.server.request.receive
 import io.ktor.server.request.receiveText
 import io.ktor.server.response.respond
@@ -35,6 +36,7 @@ internal fun Application.installFederationRoutes(
         installHealthRoutes(runtime)
         installInternalRoutes(runtime.router, config)
         installIncomingFederationRoutes(runtime)
+        installRouteProbe(runtime)
     }
 }
 
@@ -145,6 +147,34 @@ private fun Routing.installIncomingFederationRoutes(runtime: FederationRuntime) 
     }
 }
 
+private fun Routing.installRouteProbe(runtime: FederationRuntime) {
+    get("/v1/federation/routes/{routingId}") {
+        if (!call.enforceRateLimit(runtime.incomingRateLimiter)) {
+            return@get
+        }
+
+        val routingId = call.parameters["routingId"]
+        if (routingId.isNullOrBlank()) {
+            call.respond(HttpStatusCode.BadRequest)
+            return@get
+        }
+
+        val path = "/v1/federation/routes/$routingId"
+        if (!call.hasValidNodeAuthentication(path, "", runtime)) {
+            call.respondInvalidNodeAuthentication()
+            return@get
+        }
+
+        val canonicalRoutingId =
+            (runtime.localGateway as? LocalRouteResolver)?.resolve(routingId)
+        if (canonicalRoutingId == null) {
+            call.respond(HttpStatusCode.NotFound)
+        } else {
+            call.respondText(canonicalRoutingId)
+        }
+    }
+}
+
 private suspend fun ApplicationCall.respondInvalidNodeAuthentication() {
     respond(
         HttpStatusCode.Unauthorized,
@@ -197,7 +227,7 @@ private suspend fun ApplicationCall.hasValidNodeAuthentication(
         descriptor != null &&
         runtime.verifier.verify(
             authentication = authentication,
-            method = "POST",
+            method = request.httpMethod.value,
             path = path,
             body = body,
             publicKey = Signatures.decodePublicKey(descriptor.identityPublicKey)

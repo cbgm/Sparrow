@@ -12,7 +12,8 @@ class GatewayWebSocketHandler(
     private val connections: ConnectionRegistry,
     private val federation: FederationClient,
     private val presence: PresenceClient,
-    private val legacyPush: LegacyPushClient
+    private val legacyPush: LegacyPushClient,
+    private val routeLifetimeMilliseconds: Long
 ) {
     suspend fun handle(session: DefaultWebSocketServerSession) {
         GatewaySessionHandler(
@@ -20,6 +21,7 @@ class GatewayWebSocketHandler(
             connections = connections,
             presence = presence,
             legacyPush = legacyPush,
+            routeValidator = GatewayRouteValidator(routeLifetimeMilliseconds),
             actions =
                 GatewayMessageActions(
                     sendEnvelope = { connection, message ->
@@ -203,21 +205,18 @@ class GatewayWebSocketHandler(
                 legacyPush.store(relayEnvelope)
             }.getOrDefault(false)
 
-        if (!stored) {
-            return false
-        }
-
-        recipients.forEach { recipient ->
-            runCatching {
-                recipient.send(
-                    GatewayServerMessage.IncomingEnvelope(
-                        envelope = relayEnvelope
+        val delivered =
+            recipients.any { recipient ->
+                runCatching {
+                    recipient.send(
+                        GatewayServerMessage.IncomingEnvelope(
+                            envelope = relayEnvelope
+                        )
                     )
-                )
+                }.isSuccess
             }
-        }
 
-        return true
+        return stored || delivered
     }
 }
 

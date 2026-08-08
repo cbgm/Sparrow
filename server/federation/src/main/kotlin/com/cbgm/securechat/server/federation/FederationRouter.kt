@@ -26,6 +26,18 @@ class FederationRouter(
     private val now: () -> Long = System::currentTimeMillis
 ) {
     private val deliveryMutex = Mutex()
+    private val localRouteResolver =
+        localGateway as? LocalRouteResolver ?: LocalRouteResolver { null }
+    private val peerRouter =
+        FederationPeerRouter(
+            localNodeId = localNodeId,
+            peerNodeDirectory =
+                nodeRegistry as? PeerNodeDirectory ?: PeerNodeDirectory { emptyList() },
+            remoteRouteResolver =
+                remoteFederation as? RemoteRouteResolver ?: RemoteRouteResolver { _, _ -> null },
+            remoteFederation = remoteFederation,
+            remoteTypingFederation = remoteTypingFederation
+        )
 
     init {
         require(retryBaseDelayMilliseconds > 0L)
@@ -73,16 +85,28 @@ class FederationRouter(
     }
 
     suspend fun routeTyping(event: FederatedTypingEvent): Boolean {
-        val routes = presenceDirectory.resolve(event.recipientRoutingId).routes
+        val localRoutingId =
+            runCatching {
+                localRouteResolver.resolve(event.recipientRoutingId)
+            }.getOrNull()
+        if (localRoutingId != null) {
+            return localTypingGateway.deliver(
+                event.copy(recipientRoutingId = localRoutingId)
+            )
+        }
+
+        if (peerRouter.routeTyping(event)) {
+            return true
+        }
+
+        val routes =
+            runCatching {
+                presenceDirectory.resolve(event.recipientRoutingId).routes
+            }.getOrDefault(emptyList())
         for (route in routes.sortedByDescending { it.generation }) {
             val delivered =
                 runCatching {
-                    val routedEvent =
-                        if (route.routingId == event.recipientRoutingId) {
-                            event
-                        } else {
-                            event.copy(recipientRoutingId = route.routingId)
-                        }
+                    val routedEvent = event.copy(recipientRoutingId = route.routingId)
                     if (route.nodeId == localNodeId) {
                         localTypingGateway.deliver(routedEvent)
                     } else {
@@ -99,13 +123,14 @@ class FederationRouter(
     }
 
     private suspend fun deliver(entry: OutboundEnvelopeEntry): FederationAcknowledgement {
-        val routableEntry = bindBootstrapRecipient(entry)
-        val nextAttemptAt = now() + retryDelay(routableEntry.attempts)
-        val attempted = queue.markAttempt(routableEntry.envelope.envelopeId, nextAttemptAt)
+        val nextAttemptAt = now() + retryDelay(entry.attempts)
+        val attempted = queue.markAttempt(entry.envelope.envelopeId, nextAttemptAt)
+        val onlineAcknowledgement = attempted?.let { routeOnline(it.envelope) }
         val acknowledgement =
-            attempted?.let { candidate ->
-                routeOnline(candidate.envelope) ?: storeInMailbox(candidate.envelope)
-            }
+            onlineAcknowledgement
+                ?: attempted
+                    ?.let { candidate -> bindBootstrapRecipient(candidate) }
+                    ?.let { candidate -> storeInMailbox(candidate.envelope) }
         val storedAcknowledgement =
             acknowledgement?.takeIf {
                 it.state == EnvelopeAcceptanceState.STORED_AT_DESTINATION
@@ -129,10 +154,12 @@ class FederationRouter(
         }
 
         val canonicalRoute =
-            presenceDirectory
-                .resolve(recipientRoutingId)
-                .routes
-                .maxByOrNull { route -> route.generation }
+            runCatching {
+                presenceDirectory
+                    .resolve(recipientRoutingId)
+                    .routes
+                    .maxByOrNull { route -> route.generation }
+            }.getOrNull()
                 ?: return entry
 
         if (canonicalRoute.routingId == recipientRoutingId) {
@@ -155,15 +182,43 @@ class FederationRouter(
     }
 
     private suspend fun routeOnline(envelope: FederatedEnvelope): FederationAcknowledgement? {
-        val routes = presenceDirectory.resolve(envelope.recipientDeviceRoutingId).routes
+        val localRoutingId =
+            runCatching {
+                localRouteResolver.resolve(envelope.recipientDeviceRoutingId)
+            }.getOrNull()
+        if (localRoutingId != null) {
+            val acknowledgement =
+                runCatching {
+                    localGateway.deliver(
+                        envelope.copy(recipientDeviceRoutingId = localRoutingId)
+                    )
+                }.getOrNull()
+            if (acknowledgement?.state == EnvelopeAcceptanceState.STORED_AT_DESTINATION) {
+                return acknowledgement
+            }
+        }
+
+        peerRouter.routeEnvelope(envelope)?.let { acknowledgement ->
+            return acknowledgement
+        }
+
+        val routes =
+            runCatching {
+                presenceDirectory.resolve(envelope.recipientDeviceRoutingId).routes
+            }.getOrDefault(emptyList())
         for (route in routes.sortedByDescending { it.generation }) {
             val acknowledgement =
                 runCatching {
                     if (route.nodeId == localNodeId) {
-                        localGateway.deliver(envelope)
+                        localGateway.deliver(
+                            envelope.copy(recipientDeviceRoutingId = route.routingId)
+                        )
                     } else {
                         val descriptor = nodeRegistry.find(route.nodeId) ?: return@runCatching null
-                        remoteFederation.deliver(descriptor, envelope)
+                        remoteFederation.deliver(
+                            descriptor,
+                            envelope.copy(recipientDeviceRoutingId = route.routingId)
+                        )
                     }
                 }.getOrNull()
 

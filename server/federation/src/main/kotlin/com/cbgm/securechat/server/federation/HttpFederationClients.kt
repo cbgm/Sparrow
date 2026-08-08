@@ -18,6 +18,7 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -32,22 +33,13 @@ class HttpPresenceDirectoryClient(
         httpClient.get("$baseUrl/v1/routes/$routingId").body()
 }
 
-class HttpNodeRegistryClient(
-    private val httpClient: HttpClient,
-    private val baseUrl: String
-) : NodeRegistryClient {
-    override suspend fun find(nodeId: String): SecureChatNodeDescriptor? {
-        val response = httpClient.get("$baseUrl/v1/nodes/$nodeId")
-        return if (response.status == HttpStatusCode.OK) response.body() else null
-    }
-}
-
 class HttpLocalGatewayClient(
     private val httpClient: HttpClient,
     private val baseUrl: String,
     private val internalToken: String?
 ) : LocalGatewayClient,
-    LocalTypingGatewayClient {
+    LocalTypingGatewayClient,
+    LocalRouteResolver {
     override suspend fun deliver(envelope: FederatedEnvelope): FederationAcknowledgement {
         val response =
             httpClient.post("$baseUrl/internal/v1/envelopes") {
@@ -73,13 +65,27 @@ class HttpLocalGatewayClient(
                 setBody(event)
             }.status
             .isSuccess()
+
+    override suspend fun resolve(routingId: String): String? {
+        val response =
+            httpClient.get("$baseUrl/internal/v1/routes/$routingId") {
+                internalToken?.let { header(InternalApiAuthentication.TOKEN_HEADER, it) }
+            }
+
+        return if (response.status == HttpStatusCode.OK) {
+            response.bodyAsText().takeIf(String::isNotBlank)
+        } else {
+            null
+        }
+    }
 }
 
 class HttpRemoteFederationClient(
     private val httpClient: HttpClient,
     private val signer: NodeRequestSigner
 ) : RemoteFederationClient,
-    RemoteTypingFederationClient {
+    RemoteTypingFederationClient,
+    RemoteRouteResolver {
     override suspend fun deliver(
         descriptor: SecureChatNodeDescriptor,
         envelope: FederatedEnvelope
@@ -123,6 +129,27 @@ class HttpRemoteFederationClient(
                 setBody(body)
             }.status
             .isSuccess()
+    }
+
+    override suspend fun resolve(
+        descriptor: SecureChatNodeDescriptor,
+        routingId: String
+    ): String? {
+        val path = "/v1/federation/routes/$routingId"
+        val authentication = signer.sign("GET", path, "")
+        val response =
+            httpClient.get(descriptor.federationEndpoint.trimEnd('/') + path) {
+                header(NodeRequestHeaders.NODE_ID, authentication.nodeId)
+                header(NodeRequestHeaders.TIMESTAMP, authentication.timestampEpochMilliseconds)
+                header(NodeRequestHeaders.NONCE, authentication.nonce)
+                header(NodeRequestHeaders.SIGNATURE, authentication.signature)
+            }
+
+        return if (response.status == HttpStatusCode.OK) {
+            response.bodyAsText().takeIf(String::isNotBlank)
+        } else {
+            null
+        }
     }
 }
 

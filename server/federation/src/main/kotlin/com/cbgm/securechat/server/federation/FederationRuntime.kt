@@ -40,7 +40,7 @@ internal fun createFederationRuntime(
     config: FederationConfig,
     httpClient: HttpClient
 ): FederationRuntime {
-    val registry = HttpNodeRegistryClient(httpClient, config.nodeRegistryUrl)
+    val registry = CachingNodeRegistryClient(httpClient, config.nodeRegistryUrl)
     val localGateway =
         HttpLocalGatewayClient(
             httpClient = httpClient,
@@ -91,6 +91,9 @@ internal fun Application.configureFederationLifecycle(
     config: FederationConfig,
     closeHttpClient: Boolean
 ) {
+    runtime.serviceScope.launch {
+        runtime.registry.runRefreshLoop()
+    }
     runtime.serviceScope.launch {
         OutboundEnvelopeRetryAgent(
             router = runtime.router,
@@ -146,7 +149,7 @@ internal data class ManagedHttpClient(
 internal data class FederationRuntime(
     val httpClient: HttpClient,
     val incomingRateLimiter: BoundedRateLimiter,
-    val registry: NodeRegistryClient,
+    val registry: CachingNodeRegistryClient,
     val localGateway: LocalGatewayClient,
     val outboundQueue: OutboundEnvelopeStorage,
     val router: FederationRouter,

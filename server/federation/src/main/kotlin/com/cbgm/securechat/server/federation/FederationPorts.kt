@@ -14,12 +14,20 @@ fun interface NodeRegistryClient {
     suspend fun find(nodeId: String): SecureChatNodeDescriptor?
 }
 
+fun interface PeerNodeDirectory {
+    suspend fun peers(): List<SecureChatNodeDescriptor>
+}
+
 fun interface LocalGatewayClient {
     suspend fun deliver(envelope: FederatedEnvelope): FederationAcknowledgement
 }
 
 fun interface LocalTypingGatewayClient {
     suspend fun deliver(event: FederatedTypingEvent): Boolean
+}
+
+fun interface LocalRouteResolver {
+    suspend fun resolve(routingId: String): String?
 }
 
 fun interface RemoteFederationClient {
@@ -34,6 +42,13 @@ fun interface RemoteTypingFederationClient {
         descriptor: SecureChatNodeDescriptor,
         event: FederatedTypingEvent
     ): Boolean
+}
+
+fun interface RemoteRouteResolver {
+    suspend fun resolve(
+        descriptor: SecureChatNodeDescriptor,
+        routingId: String
+    ): String?
 }
 
 fun interface MailboxClient {

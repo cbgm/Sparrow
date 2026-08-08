@@ -148,6 +148,91 @@ class FederationRouterTest {
             assertEquals(event, deliveredEvent)
         }
 
+    @Test
+    fun onlineEnvelopeUsesPeerRouteWhenControlPlaneIsUnavailable() =
+        kotlinx.coroutines.test.runTest {
+            var deliveredEnvelope: FederatedEnvelope? = null
+            val peer = testNodeDescriptor()
+            val peerClient =
+                TestPeerFederationClient(
+                    resolveRoute = { routingId ->
+                        if (routingId == "recipient-alias") "recipient" else null
+                    },
+                    deliverEnvelope = { envelope ->
+                        deliveredEnvelope = envelope
+                        FederationAcknowledgement(
+                            envelopeId = envelope.envelopeId,
+                            state = EnvelopeAcceptanceState.STORED_AT_DESTINATION
+                        )
+                    }
+                )
+            val router =
+                FederationRouter(
+                    localNodeId = "node-a",
+                    presenceDirectory = { error("Control plane unavailable") },
+                    nodeRegistry = TestPeerNodeRegistry(peer),
+                    localGateway = { error("Recipient is remote") },
+                    remoteFederation = peerClient,
+                    mailbox = { error("Mailbox must not be used") }
+                )
+
+            val acknowledgement =
+                router.route(
+                    testEnvelope().copy(
+                        recipientDeviceRoutingId = "recipient-alias",
+                        mailboxRoute = null
+                    )
+                )
+
+            assertEquals(
+                EnvelopeAcceptanceState.STORED_AT_DESTINATION,
+                acknowledgement.state
+            )
+            assertEquals(
+                "recipient",
+                requireNotNull(deliveredEnvelope).recipientDeviceRoutingId
+            )
+        }
+
+    @Test
+    fun typingUsesPeerRouteWhenControlPlaneIsUnavailable() =
+        kotlinx.coroutines.test.runTest {
+            var deliveredEvent: FederatedTypingEvent? = null
+            val peer = testNodeDescriptor()
+            val peerClient =
+                TestPeerFederationClient(
+                    resolveRoute = { routingId ->
+                        if (routingId == "recipient-alias") "recipient" else null
+                    },
+                    deliverTyping = { event ->
+                        deliveredEvent = event
+                        true
+                    }
+                )
+            val router =
+                FederationRouter(
+                    localNodeId = "node-a",
+                    presenceDirectory = { error("Control plane unavailable") },
+                    nodeRegistry = TestPeerNodeRegistry(peer),
+                    localGateway = { error("Envelope gateway must not be used") },
+                    remoteFederation = peerClient,
+                    mailbox = { error("Mailbox must not be used") },
+                    remoteTypingFederation = peerClient
+                )
+
+            val delivered =
+                router.routeTyping(
+                    FederatedTypingEvent(
+                        senderRoutingId = "sender",
+                        recipientRoutingId = "recipient-alias",
+                        isTyping = true
+                    )
+                )
+
+            assertTrue(delivered)
+            assertEquals("recipient", requireNotNull(deliveredEvent).recipientRoutingId)
+        }
+
     private fun testEnvelope(): FederatedEnvelope =
         FederatedEnvelope(
             envelopeId = "envelope-1",
@@ -187,4 +272,43 @@ class FederationRouterTest {
             nodeId = "mailbox-node",
             mailboxEndpoint = "http://mailbox"
         )
+
+    private class TestPeerNodeRegistry(
+        private val peer: SecureChatNodeDescriptor
+    ) : NodeRegistryClient,
+        PeerNodeDirectory {
+        override suspend fun find(nodeId: String): SecureChatNodeDescriptor? = null
+
+        override suspend fun peers(): List<SecureChatNodeDescriptor> = listOf(peer)
+    }
+
+    private class TestPeerFederationClient(
+        private val resolveRoute: suspend (String) -> String? = { null },
+        private val deliverEnvelope:
+            suspend (FederatedEnvelope) -> FederationAcknowledgement =
+            { envelope ->
+                FederationAcknowledgement(
+                    envelopeId = envelope.envelopeId,
+                    state = EnvelopeAcceptanceState.QUEUED_AT_GATEWAY
+                )
+            },
+        private val deliverTyping: suspend (FederatedTypingEvent) -> Boolean = { false }
+    ) : RemoteFederationClient,
+        RemoteTypingFederationClient,
+        RemoteRouteResolver {
+        override suspend fun deliver(
+            descriptor: SecureChatNodeDescriptor,
+            envelope: FederatedEnvelope
+        ): FederationAcknowledgement = deliverEnvelope(envelope)
+
+        override suspend fun deliver(
+            descriptor: SecureChatNodeDescriptor,
+            event: FederatedTypingEvent
+        ): Boolean = deliverTyping(event)
+
+        override suspend fun resolve(
+            descriptor: SecureChatNodeDescriptor,
+            routingId: String
+        ): String? = resolveRoute(routingId)
+    }
 }

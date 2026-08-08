@@ -16,6 +16,7 @@ internal class GatewaySessionHandler(
     private val connections: ConnectionRegistry,
     private val presence: PresenceClient,
     private val legacyPush: LegacyPushClient,
+    private val routeValidator: GatewayRouteValidator,
     private val actions: GatewayMessageActions
 ) {
     suspend fun handle(session: DefaultWebSocketServerSession) {
@@ -117,20 +118,27 @@ internal class GatewaySessionHandler(
         session: DefaultWebSocketServerSession,
         message: GatewayClientMessage.Register
     ): GatewayConnection? {
-        val connection =
-            GatewayConnection(
-                routingId = message.relayId,
-                connectionId = message.connectionId ?: UUID.randomUUID().toString(),
-                routingAliases =
-                    message.aliases
-                        ?.takeIf { message.generation != null }
-                        .orEmpty()
-                        .toSet(),
-                session = session
-            )
+        val connection = message.toConnection(session)
         val registration = message.toRouteRegistration(connection, nodeId)
-        val routeAccepted = registration?.let { presence.register(it) } ?: true
+        val routeIsValid =
+            registration?.let { currentRegistration ->
+                routeValidator.isValid(
+                    registration = currentRegistration,
+                    connectionRoutingId = connection.routingId,
+                    connectionId = connection.connectionId,
+                    expectedNodeId = nodeId
+                )
+            } ?: true
 
+        if (!routeIsValid) {
+            connection.sendError(
+                code = "INVALID_ROUTE",
+                message = "Signed route is invalid"
+            )
+            return null
+        }
+
+        val routeAccepted = registration?.let { synchronizePresence(it) } ?: true
         return if (routeAccepted) {
             activateConnection(connection)
             connection
@@ -165,23 +173,45 @@ internal class GatewaySessionHandler(
         connection: GatewayConnection?,
         registration: ClientRouteRegistration
     ) {
+        if (connection == null) {
+            return
+        }
+
+        val routeIsValid =
+            routeValidator.isValid(
+                registration = registration,
+                connectionRoutingId = connection.routingId,
+                connectionId = connection.connectionId,
+                expectedNodeId = nodeId
+            )
+
         when {
-            connection == null -> Unit
-            !registration.route.matches(connection, nodeId) ->
+            !routeIsValid ->
                 connection.sendError(
                     code = "INVALID_ROUTE_REFRESH",
-                    message = "Route does not match connection"
+                    message = "Signed route is invalid"
                 )
 
-            !presence.register(registration) ->
+            !synchronizePresence(registration) ->
                 connection.sendError(
                     code = "ROUTE_REJECTED",
                     message = "Presence route rejected"
                 )
 
-            else -> connection.updateRoutingAliases(registration.route.aliases.orEmpty())
+            else ->
+                connections.updateRoutingAliases(
+                    connection = connection,
+                    routingAliases = registration.route.aliases.orEmpty()
+                )
         }
     }
+
+    private suspend fun synchronizePresence(registration: ClientRouteRegistration): Boolean =
+        runCatching {
+            presence.register(registration)
+        }.getOrElse {
+            true
+        }
 
     private suspend fun cleanup(connection: GatewayConnection?) {
         connection?.let { current ->
@@ -207,13 +237,15 @@ private data class GatewaySessionState(
     var connection: GatewayConnection? = null
 )
 
-private fun ClientRoute.matches(
-    connection: GatewayConnection,
-    expectedNodeId: String
-): Boolean =
-    routingId == connection.routingId &&
-        connectionId == connection.connectionId &&
-        nodeId == expectedNodeId
+private fun GatewayClientMessage.Register.toConnection(
+    session: DefaultWebSocketServerSession
+): GatewayConnection =
+    GatewayConnection(
+        routingId = relayId,
+        connectionId = connectionId ?: UUID.randomUUID().toString(),
+        routingAliases = aliases?.takeIf { generation != null }.orEmpty().toSet(),
+        session = session
+    )
 
 private fun GatewayClientMessage.Register.toRouteRegistration(
     connection: GatewayConnection,

@@ -30,6 +30,7 @@ internal fun Application.installGatewayRoutes(
         installRelayRoute(runtime)
         installIncomingEnvelopeRoute(runtime, config)
         installIncomingTypingRoute(runtime, config)
+        installInternalRouteResolution(runtime, config)
     }
 }
 
@@ -94,6 +95,28 @@ private fun Route.installIncomingTypingRoute(
             )
         } else {
             call.respond(HttpStatusCode.Unauthorized)
+        }
+    }
+}
+
+private fun Route.installInternalRouteResolution(
+    runtime: GatewayRuntime,
+    config: GatewayConfig
+) {
+    get("/internal/v1/routes/{routingId}") {
+        if (!call.hasInternalAccess(config.gatewayInternalApiToken)) {
+            call.respond(HttpStatusCode.Unauthorized)
+            return@get
+        }
+
+        val routingId = call.parameters["routingId"]
+        val canonicalRoutingId =
+            routingId?.let(runtime.connections::resolveCanonicalRoutingId)
+
+        if (canonicalRoutingId == null) {
+            call.respond(HttpStatusCode.NotFound)
+        } else {
+            call.respondText(canonicalRoutingId)
         }
     }
 }

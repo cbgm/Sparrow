@@ -84,7 +84,8 @@ private fun createGatewayHandler(
                 baseUrl = config.presenceDirectoryUrl,
                 signer = signer
             ),
-        legacyPush = pushClient
+        legacyPush = pushClient,
+        routeLifetimeMilliseconds = config.routeLifetimeMilliseconds
     )
 }
 

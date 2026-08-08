@@ -21,6 +21,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 
@@ -64,13 +65,21 @@ class HttpPresenceClient(
         val path = "/v1/routes/${registration.route.routingId}"
         val body = serverJson.encodeToString(registration)
         val authentication = signer.sign("PUT", path, body)
-        return httpClient
-            .put(baseUrl.trimEnd('/') + path) {
-                nodeAuthentication(authentication)
-                contentType(ContentType.Application.Json)
-                setBody(body)
-            }.status
-            .isSuccess()
+        val status =
+            httpClient
+                .put(baseUrl.trimEnd('/') + path) {
+                    nodeAuthentication(authentication)
+                    contentType(ContentType.Application.Json)
+                    setBody(body)
+                }.status
+
+        check(
+            status.value < SERVER_ERROR_STATUS_CODE &&
+                status != HttpStatusCode.TooManyRequests
+        ) {
+            "Presence service unavailable: HTTP ${status.value}"
+        }
+        return status.isSuccess()
     }
 
     override suspend fun remove(
@@ -164,3 +173,5 @@ private fun HttpRequestBuilder.nodeAuthentication(authentication: NodeRequestAut
     header(NodeRequestHeaders.NONCE, authentication.nonce)
     header(NodeRequestHeaders.SIGNATURE, authentication.signature)
 }
+
+private const val SERVER_ERROR_STATUS_CODE = 500

@@ -6,7 +6,6 @@ import io.ktor.server.websocket.DefaultWebSocketServerSession
 import io.ktor.websocket.Frame
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.serialization.encodeToString
 import java.util.concurrent.ConcurrentHashMap
 
 class GatewayConnection(
@@ -23,6 +22,8 @@ class GatewayConnection(
     fun acceptsSenderRoutingId(senderRoutingId: String): Boolean =
         senderRoutingId == routingId || senderRoutingId in acceptedRoutingAliases
 
+    fun routingIds(): Set<String> = acceptedRoutingAliases + routingId
+
     fun updateRoutingAliases(routingAliases: Collection<String>) {
         acceptedRoutingAliases = routingAliases.toSet()
     }
@@ -35,23 +36,49 @@ class GatewayConnection(
 }
 
 class ConnectionRegistry {
-    private val connections = ConcurrentHashMap<String, ConcurrentHashMap<String, GatewayConnection>>()
+    private val connections =
+        ConcurrentHashMap<String, ConcurrentHashMap<String, GatewayConnection>>()
 
     fun register(connection: GatewayConnection) {
-        connections
-            .computeIfAbsent(connection.routingId) { ConcurrentHashMap() }[connection.connectionId] = connection
+        connection.routingIds().forEach { routingId ->
+            connections
+                .computeIfAbsent(routingId) { ConcurrentHashMap() }[connection.connectionId] =
+                connection
+        }
+    }
+
+    fun updateRoutingAliases(
+        connection: GatewayConnection,
+        routingAliases: Collection<String>
+    ) {
+        remove(connection)
+        connection.updateRoutingAliases(routingAliases)
+        register(connection)
     }
 
     fun remove(connection: GatewayConnection) {
-        connections[connection.routingId]?.let { routes ->
+        connections.entries.forEach { entry ->
+            val routes = entry.value
             routes.remove(connection.connectionId, connection)
             if (routes.isEmpty()) {
-                connections.remove(connection.routingId, routes)
+                connections.remove(entry.key, routes)
             }
         }
     }
 
-    fun find(routingId: String): List<GatewayConnection> = connections[routingId]?.values?.toList().orEmpty()
+    fun find(routingId: String): List<GatewayConnection> =
+        connections[routingId]
+            ?.values
+            ?.distinctBy(GatewayConnection::connectionId)
+            .orEmpty()
 
-    fun count(): Int = connections.values.sumOf { it.size }
+    fun resolveCanonicalRoutingId(routingId: String): String? =
+        find(routingId).firstOrNull()?.routingId
+
+    fun count(): Int =
+        connections
+            .values
+            .flatMap { routes -> routes.values }
+            .distinctBy(GatewayConnection::connectionId)
+            .size
 }
