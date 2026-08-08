@@ -103,7 +103,7 @@ fun ApplicationCall.clientRateLimitKey(): String =
 suspend fun ApplicationCall.enforceRateLimit(
     limiter: BoundedRateLimiter
 ): Boolean =
-    enforceRateLimit(
+    enforceRateLimitP(
         limiter = limiter,
         key = clientRateLimitKey()
     )
@@ -116,13 +116,13 @@ suspend fun ApplicationCall.enforceRateLimit(
         "Rate-limit scope must not be blank"
     }
 
-    return enforceRateLimit(
+    return enforceRateLimitP(
         limiter = limiter,
         key = "${clientRateLimitKey()}:$scope"
     )
 }
 
-private suspend fun ApplicationCall.enforceRateLimit(
+private suspend fun ApplicationCall.enforceRateLimitP(
     limiter: BoundedRateLimiter,
     key: String
 ): Boolean =
