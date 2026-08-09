@@ -8,15 +8,17 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 $deploymentDirectory = $PSScriptRoot
-$releaseEnvironmentPath = Join-Path $deploymentDirectory "release.env"
+$networkConfigPath = Join-Path $deploymentDirectory "securechat.conf"
 $runtimeEnvironmentPath = Join-Path $deploymentDirectory ".env.runtime"
 $secretsDirectory = Join-Path $deploymentDirectory "secrets"
 $composePath = Join-Path $deploymentDirectory "docker-compose.yml"
 $releaseComposePath = Join-Path $deploymentDirectory "docker-compose.release.yml"
+$productionComposePath = Join-Path $deploymentDirectory "docker-compose.production.yml"
 $logPath = Join-Path $deploymentDirectory "bootstrap-community-node.log"
 
 $publicPort = 8490
 $script:Docker = $null
+$script:ComposeFileArguments = @()
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "SecureChat Community Node"
@@ -244,21 +246,87 @@ function Test-ControlPlane {
     }
 }
 
-function Resolve-ControlPlaneUrls {
+function Get-NetworkMode {
+    param([Parameter(Mandatory = $true)][hashtable]$Config)
+
+    $mode = if ($Config.ContainsKey("MODE")) { $Config["MODE"].Trim().ToLowerInvariant() } else { "lan" }
+
+    if ($mode -notin @("lan", "public")) {
+        throw "securechat.conf MODE must be lan or public."
+    }
+
+    return $mode
+}
+
+function Get-PublicIpv4Address {
+    foreach ($url in @("https://api.ipify.org", "https://checkip.amazonaws.com")) {
+        try {
+            $value = (Invoke-RestMethod -Uri $url -Method Get -TimeoutSec 5).ToString().Trim()
+            $parsed = $null
+
+            if (
+                [System.Net.IPAddress]::TryParse($value, [ref]$parsed) -and
+                $parsed.AddressFamily -eq [System.Net.Sockets.AddressFamily]::InterNetwork
+            ) {
+                return $value
+            }
+        } catch {
+            Write-Log "Public IPv4 lookup failed at $url: $($_.Exception.Message)"
+        }
+    }
+
+    throw "Could not detect the public IPv4 address. Set PUBLIC_DOMAIN in securechat.conf."
+}
+
+function Resolve-PublicDomain {
+    param([Parameter(Mandatory = $true)][hashtable]$Config)
+
+    if ($Config.ContainsKey("PUBLIC_DOMAIN") -and -not [string]::IsNullOrWhiteSpace($Config["PUBLIC_DOMAIN"])) {
+        return $Config["PUBLIC_DOMAIN"].Trim().TrimEnd(".")
+    }
+
+    $publicAddress = Get-PublicIpv4Address
+    return "$($publicAddress.Replace('.', '-')).sslip.io"
+}
+
+function Normalize-ControlPlaneUrl {
+    param(
+        [Parameter(Mandatory = $true)][string]$Value,
+        [Parameter(Mandatory = $true)][string]$Mode
+    )
+
+    $candidate = $Value.Trim()
+
+    if ([string]::IsNullOrWhiteSpace($candidate)) {
+        return $null
+    }
+
+    if ($candidate -notmatch '^[A-Za-z][A-Za-z0-9+.-]*://') {
+        $scheme = if ($Mode -eq "public") { "https" } else { "http" }
+        $candidate = "${scheme}://$candidate"
+    }
+
+    $uri = $null
+    if (-not [Uri]::TryCreate($candidate, [UriKind]::Absolute, [ref]$uri)) {
+        throw "Invalid control-plane address in securechat.conf: $Value"
+    }
+
+    if ($uri.Scheme -notin @("http", "https")) {
+        throw "Control-plane addresses must use HTTP or HTTPS: $Value"
+    }
+
+    if ($Mode -eq "public" -and $uri.Scheme -ne "https") {
+        throw "Public mode requires HTTPS control-plane addresses: $Value"
+    }
+
+    return $candidate.TrimEnd("/")
+}
+
+function Resolve-ControlPlaneUrl {
     param([Parameter(Mandatory = $true)][string]$ConfiguredUrl)
 
     $uri = [Uri]$ConfiguredUrl
-
-    if (-not $uri.IsAbsoluteUri -or $uri.Scheme -notin @("http", "https")) {
-        throw "CONTROL_PLANE_URL must be an absolute HTTP or HTTPS URL."
-    }
-
-    $port =
-        if ($uri.IsDefaultPort) {
-            if ($uri.Scheme -eq "https") { 443 } else { 80 }
-        } else {
-            $uri.Port
-        }
+    $port = if ($uri.IsDefaultPort) { if ($uri.Scheme -eq "https") { 443 } else { 80 } } else { $uri.Port }
 
     if (Test-IsLocalHostAddress -HostName $uri.Host) {
         $hostProbeUrl = "$($uri.Scheme)://127.0.0.1`:$port"
@@ -267,16 +335,11 @@ function Resolve-ControlPlaneUrls {
             throw "The local SecureChat control plane is not reachable at $hostProbeUrl."
         }
 
-        $containerUrl =
-            if ($uri.Scheme -eq "http") {
-                "http://host.docker.internal`:$port"
-            } else {
-                $ConfiguredUrl.TrimEnd("/")
-            }
+        $containerUrl = if ($uri.Scheme -eq "http") { "http://host.docker.internal`:$port" } else { $ConfiguredUrl }
 
         return [PSCustomObject]@{
             HostProbeUrl = $hostProbeUrl
-            ContainerUrl = $containerUrl
+            ContainerUrl = $containerUrl.TrimEnd("/")
         }
     }
 
@@ -288,6 +351,43 @@ function Resolve-ControlPlaneUrls {
         HostProbeUrl = $ConfiguredUrl.TrimEnd("/")
         ContainerUrl = $ConfiguredUrl.TrimEnd("/")
     }
+}
+
+function Resolve-ControlPlaneCandidates {
+    param(
+        [Parameter(Mandatory = $true)][hashtable]$Config,
+        [Parameter(Mandatory = $true)][string]$Mode
+    )
+
+    if (
+        -not $Config.ContainsKey("CONTROL_PLANE_URLS") -or
+        [string]::IsNullOrWhiteSpace($Config["CONTROL_PLANE_URLS"])
+    ) {
+        throw "securechat.conf is missing CONTROL_PLANE_URLS."
+    }
+
+    $failures = @()
+
+    foreach ($rawCandidate in ($Config["CONTROL_PLANE_URLS"] -split '[,;]')) {
+        $candidate = Normalize-ControlPlaneUrl -Value $rawCandidate -Mode $Mode
+        if ([string]::IsNullOrWhiteSpace($candidate)) {
+            continue
+        }
+
+        try {
+            Set-Status "Checking control plane $candidate..."
+            return Resolve-ControlPlaneUrl -ConfiguredUrl $candidate
+        } catch {
+            $failures += "$candidate - $($_.Exception.Message)"
+            Write-Log "Control-plane candidate failed: $candidate"
+        }
+    }
+
+    if ($failures.Count -eq 0) {
+        throw "securechat.conf CONTROL_PLANE_URLS contains no usable addresses."
+    }
+
+    throw "No configured SecureChat control plane is reachable.`n$($failures -join "`n")"
 }
 
 function New-RandomSecret {
@@ -328,11 +428,11 @@ function Invoke-Compose {
     try {
         $ErrorActionPreference = "Continue"
 
+        $composeFileArguments = $script:ComposeFileArguments
         $output = @(
             & $script:Docker compose `
                 --env-file $runtimeEnvironmentPath `
-                -f $composePath `
-                -f $releaseComposePath `
+                @composeFileArguments `
                 @Arguments 2>&1
         )
 
@@ -370,11 +470,11 @@ function Wait-ForContainerRunning {
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
 
     while ([DateTime]::UtcNow -lt $deadline) {
+        $composeFileArguments = $script:ComposeFileArguments
         $containerId = (
             & $script:Docker compose `
                 --env-file $runtimeEnvironmentPath `
-                -f $composePath `
-                -f $releaseComposePath `
+                @composeFileArguments `
                 ps -q $Service 2>$null |
                 Select-Object -First 1
         )
@@ -418,10 +518,10 @@ function Synchronize-PostgresPassword {
     $escapedPassword = Escape-SqlLiteral -Value $Password
     $sql = "ALTER ROLE `"$DatabaseUser`" WITH PASSWORD '$escapedPassword';"
 
+    $composeFileArguments = $script:ComposeFileArguments
     $output = & $script:Docker compose `
         --env-file $runtimeEnvironmentPath `
-        -f $composePath `
-        -f $releaseComposePath `
+        @composeFileArguments `
         exec -T `
         $Service `
         psql `
@@ -493,10 +593,10 @@ function Wait-ForEndpoint {
 function Collect-Diagnostics {
     try {
         Write-Log "----- docker compose ps -----"
+        $composeFileArguments = $script:ComposeFileArguments
         (& $script:Docker compose `
             --env-file $runtimeEnvironmentPath `
-            -f $composePath `
-            -f $releaseComposePath `
+            @composeFileArguments `
             ps --all 2>&1) | ForEach-Object {
                 Write-Log $_.ToString()
             }
@@ -504,8 +604,7 @@ function Collect-Diagnostics {
         Write-Log "----- docker compose logs -----"
         (& $script:Docker compose `
             --env-file $runtimeEnvironmentPath `
-            -f $composePath `
-            -f $releaseComposePath `
+            @composeFileArguments `
             logs --tail 180 --no-color 2>&1) | ForEach-Object {
                 Write-Log $_.ToString()
             }
@@ -543,9 +642,10 @@ try {
     Set-Content -LiteralPath $logPath -Value "" -Encoding UTF8
 
     foreach ($requiredFile in @(
-        $releaseEnvironmentPath,
+        $networkConfigPath,
         $composePath,
-        $releaseComposePath
+        $releaseComposePath,
+        $productionComposePath
     )) {
         if (-not (Test-Path -LiteralPath $requiredFile -PathType Leaf)) {
             throw "The deployment bundle is incomplete: $([System.IO.Path]::GetFileName($requiredFile)) is missing."
@@ -556,26 +656,25 @@ try {
     Ensure-Docker
     Assert-ComposeVersion
 
-    Set-Status "Checking SecureChat control plane..."
-    $release = Read-EnvironmentFile -Path $releaseEnvironmentPath
+    $config = Read-EnvironmentFile -Path $networkConfigPath
 
-    foreach ($requiredValue in @(
-        "CONTROL_PLANE_URL",
-        "SECURECHAT_IMAGE_PREFIX",
-        "SECURECHAT_IMAGE_TAG"
-    )) {
-        if (
-            -not $release.ContainsKey($requiredValue) -or
-            [string]::IsNullOrWhiteSpace($release[$requiredValue])
-        ) {
-            throw "release.env is missing $requiredValue."
+    foreach ($requiredValue in @("SECURECHAT_IMAGE_PREFIX", "SECURECHAT_IMAGE_TAG")) {
+        if (-not $config.ContainsKey($requiredValue) -or [string]::IsNullOrWhiteSpace($config[$requiredValue])) {
+            throw "securechat.conf is missing $requiredValue."
         }
     }
 
-    $controlPlane = Resolve-ControlPlaneUrls `
-        -ConfiguredUrl $release["CONTROL_PLANE_URL"]
+    $mode = Get-NetworkMode -Config $config
+    $script:ComposeFileArguments = @("-f", $composePath, "-f", $releaseComposePath)
 
+    if ($mode -eq "public") {
+        $script:ComposeFileArguments += @("-f", $productionComposePath)
+    }
+
+    Set-Status "Checking SecureChat control plane..."
+    $controlPlane = Resolve-ControlPlaneCandidates -Config $config -Mode $mode
     $hostAddress = Get-PrimaryIpv4Address
+    $publicDomain = if ($mode -eq "public") { Resolve-PublicDomain -Config $config } else { $null }
 
     Set-Status "Preparing SecureChat node secrets..."
     New-Item -ItemType Directory -Path $secretsDirectory -Force | Out-Null
@@ -597,17 +696,22 @@ try {
     $mailboxPassword = (Get-Content -LiteralPath $mailboxPasswordPath -Raw).Trim()
     $federationPassword = (Get-Content -LiteralPath $federationPasswordPath -Raw).Trim()
 
+    $clientEndpoint = if ($mode -eq "public") { "wss://$publicDomain/relay" } else { "ws://$hostAddress`:$publicPort/relay" }
+    $httpEndpoint = if ($mode -eq "public") { "https://$publicDomain" } else { "http://$hostAddress`:$publicPort" }
+    $siteAddress = if ($mode -eq "public") { $publicDomain } else { ":80" }
+
     $runtimeEnvironment = @(
         "COMMUNITY_NODE_PROJECT_NAME=securechat-community-node",
         "COMMUNITY_NODE_BIND_ADDRESS=0.0.0.0",
         "COMMUNITY_NODE_HTTP_PORT=$publicPort",
-        "COMMUNITY_NODE_SITE_ADDRESS=:80",
+        "COMMUNITY_NODE_SITE_ADDRESS=$siteAddress",
+        "COMMUNITY_NODE_DOMAIN=$publicDomain",
         "CONTROL_PLANE_URL=$($controlPlane.ContainerUrl)",
-        "CLIENT_ENDPOINT=ws://$hostAddress`:$publicPort/relay",
-        "FEDERATION_ENDPOINT=http://$hostAddress`:$publicPort",
-        "MAILBOX_ENDPOINT=http://$hostAddress`:$publicPort",
-        "SECURECHAT_IMAGE_PREFIX=$($release['SECURECHAT_IMAGE_PREFIX'])",
-        "SECURECHAT_IMAGE_TAG=$($release['SECURECHAT_IMAGE_TAG'])",
+        "CLIENT_ENDPOINT=$clientEndpoint",
+        "FEDERATION_ENDPOINT=$httpEndpoint",
+        "MAILBOX_ENDPOINT=$httpEndpoint",
+        "SECURECHAT_IMAGE_PREFIX=$($config['SECURECHAT_IMAGE_PREFIX'])",
+        "SECURECHAT_IMAGE_TAG=$($config['SECURECHAT_IMAGE_TAG'])",
         "SECURECHAT_UPDATE_INTERVAL_SECONDS=300",
         "MAILBOX_DATABASE_PASSWORD_FILE=./secrets/mailbox-database-password.txt",
         "FEDERATION_DATABASE_PASSWORD_FILE=./secrets/federation-database-password.txt",
@@ -693,8 +797,9 @@ try {
     $progress.Style = [System.Windows.Forms.ProgressBarStyle]::Blocks
     $progress.Value = 100
     $title.Text = "SecureChat community node is running"
-    $status.Text = "http://$hostAddress`:$publicPort"
-    Write-Log "SUCCESS: http://$hostAddress`:$publicPort"
+    $displayUrl = if ($mode -eq "public") { "https://$publicDomain" } else { "http://$hostAddress`:$publicPort" }
+    $status.Text = $displayUrl
+    Write-Log "SUCCESS: $displayUrl"
 
     [System.Windows.Forms.Application]::DoEvents()
     Start-Sleep -Seconds 3

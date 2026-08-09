@@ -1,12 +1,3 @@
-x-hardened-service: &hardened-service
-  read_only: true
-  tmpfs:
-    - /tmp:size=64m,mode=1777
-  cap_drop:
-    - ALL
-  security_opt:
-    - no-new-privileges:true
-
 services:
   caddy:
     environment:
@@ -15,90 +6,10 @@ services:
       - "80:80"
       - "443:443"
       - "443:443/udp"
-    networks:
-      - edge
-
-  mailbox-database:
-    ports: !reset []
-    environment:
-      POSTGRES_PASSWORD: !reset null
-      POSTGRES_PASSWORD_FILE: /run/secrets/mailbox-database-password
-    secrets:
-      - mailbox-database-password
-    networks:
-      - backend
-
-  mailbox:
-    <<: *hardened-service
-    ports: !reset []
-    environment:
-      TRUST_PROXY_HEADERS: "true"
-      MAILBOX_DATABASE_PASSWORD: !reset null
-      MAILBOX_DATABASE_PASSWORD_FILE: /run/secrets/mailbox-database-password
-    secrets:
-      - mailbox-database-password
-    networks:
-      - edge
-      - backend
-
-  federation-database:
-    ports: !reset []
-    environment:
-      POSTGRES_PASSWORD: !reset null
-      POSTGRES_PASSWORD_FILE: /run/secrets/federation-database-password
-    secrets:
-      - federation-database-password
-    networks:
-      - backend
+      - "127.0.0.1:${COMMUNITY_NODE_HTTP_PORT:-8490}:8080"
 
   federation:
-    <<: *hardened-service
-    ports: !reset []
     environment:
-      TRUST_PROXY_HEADERS: "true"
       CLIENT_ENDPOINT: wss://${COMMUNITY_NODE_DOMAIN:?Set COMMUNITY_NODE_DOMAIN}/relay
       FEDERATION_ENDPOINT: https://${COMMUNITY_NODE_DOMAIN:?Set COMMUNITY_NODE_DOMAIN}
       MAILBOX_ENDPOINT: https://${COMMUNITY_NODE_DOMAIN:?Set COMMUNITY_NODE_DOMAIN}
-      FEDERATION_DATABASE_PASSWORD: !reset null
-      FEDERATION_DATABASE_PASSWORD_FILE: /run/secrets/federation-database-password
-      FEDERATION_INTERNAL_API_TOKEN: !reset null
-      FEDERATION_INTERNAL_API_TOKEN_FILE: /run/secrets/federation-internal-api-token
-      GATEWAY_INTERNAL_API_TOKEN: !reset null
-      GATEWAY_INTERNAL_API_TOKEN_FILE: /run/secrets/gateway-internal-api-token
-    secrets:
-      - federation-database-password
-      - federation-internal-api-token
-      - gateway-internal-api-token
-    networks:
-      - edge
-      - backend
-
-  gateway:
-    <<: *hardened-service
-    ports: !reset []
-    environment:
-      FEDERATION_INTERNAL_API_TOKEN: !reset null
-      FEDERATION_INTERNAL_API_TOKEN_FILE: /run/secrets/federation-internal-api-token
-      GATEWAY_INTERNAL_API_TOKEN: !reset null
-      GATEWAY_INTERNAL_API_TOKEN_FILE: /run/secrets/gateway-internal-api-token
-    secrets:
-      - federation-internal-api-token
-      - gateway-internal-api-token
-    networks:
-      - edge
-      - backend
-
-networks:
-  edge:
-  backend:
-    internal: true
-
-secrets:
-  mailbox-database-password:
-    file: ${MAILBOX_DATABASE_PASSWORD_FILE:?Set mailbox password file}
-  federation-database-password:
-    file: ${FEDERATION_DATABASE_PASSWORD_FILE:?Set federation password file}
-  federation-internal-api-token:
-    file: ${FEDERATION_INTERNAL_API_TOKEN_FILE:?Set federation token file}
-  gateway-internal-api-token:
-    file: ${GATEWAY_INTERNAL_API_TOKEN_FILE:?Set gateway token file}

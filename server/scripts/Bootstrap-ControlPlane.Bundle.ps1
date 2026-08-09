@@ -9,14 +9,16 @@ Add-Type -AssemblyName System.Drawing
 
 $deploymentDirectory = $PSScriptRoot
 $runtimeEnvironmentPath = Join-Path $deploymentDirectory ".env.runtime"
-$releaseEnvironmentPath = Join-Path $deploymentDirectory "release.env"
+$networkConfigPath = Join-Path $deploymentDirectory "securechat.conf"
 $secretsDirectory = Join-Path $deploymentDirectory "secrets"
 $composePath = Join-Path $deploymentDirectory "docker-compose.yml"
 $releaseComposePath = Join-Path $deploymentDirectory "docker-compose.release.yml"
+$productionComposePath = Join-Path $deploymentDirectory "docker-compose.production.yml"
 $logPath = Join-Path $deploymentDirectory "bootstrap-control-plane.log"
 $controlPlanePort = 8390
 
 $script:Docker = $null
+$script:ComposeFileArguments = @()
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "SecureChat Control Plane"
@@ -75,17 +77,16 @@ function Fail {
         Push-Location $deploymentDirectory
         try {
             Write-Log "----- docker compose ps -----"
+            $composeFileArguments = $script:ComposeFileArguments
             (& $script:Docker compose `
                 --env-file $runtimeEnvironmentPath `
-                -f $composePath `
-                -f $releaseComposePath `
+                @composeFileArguments `
                 ps --all 2>&1) | ForEach-Object { Write-Log $_.ToString() }
 
             Write-Log "----- docker compose logs -----"
             (& $script:Docker compose `
                 --env-file $runtimeEnvironmentPath `
-                -f $composePath `
-                -f $releaseComposePath `
+                @composeFileArguments `
                 logs --tail 150 --no-color 2>&1) | ForEach-Object { Write-Log $_.ToString() }
         } finally {
             Pop-Location
@@ -126,6 +127,49 @@ function Read-EnvironmentFile {
     }
 
     return $values
+}
+
+function Get-NetworkMode {
+    param([hashtable]$Config)
+
+    $mode = if ($Config.ContainsKey("MODE")) { $Config["MODE"].Trim().ToLowerInvariant() } else { "lan" }
+
+    if ($mode -notin @("lan", "public")) {
+        throw "securechat.conf MODE must be lan or public."
+    }
+
+    return $mode
+}
+
+function Get-PublicIpv4Address {
+    foreach ($url in @("https://api.ipify.org", "https://checkip.amazonaws.com")) {
+        try {
+            $value = (Invoke-RestMethod -Uri $url -Method Get -TimeoutSec 5).ToString().Trim()
+            $parsed = $null
+
+            if (
+                [System.Net.IPAddress]::TryParse($value, [ref]$parsed) -and
+                $parsed.AddressFamily -eq [System.Net.Sockets.AddressFamily]::InterNetwork
+            ) {
+                return $value
+            }
+        } catch {
+            Write-Log "Public IPv4 lookup failed at $url: $($_.Exception.Message)"
+        }
+    }
+
+    throw "Could not detect the public IPv4 address. Set PUBLIC_DOMAIN in securechat.conf."
+}
+
+function Resolve-PublicDomain {
+    param([hashtable]$Config)
+
+    if ($Config.ContainsKey("PUBLIC_DOMAIN") -and -not [string]::IsNullOrWhiteSpace($Config["PUBLIC_DOMAIN"])) {
+        return $Config["PUBLIC_DOMAIN"].Trim().TrimEnd(".")
+    }
+
+    $publicAddress = Get-PublicIpv4Address
+    return "$($publicAddress.Replace('.', '-')).sslip.io"
 }
 
 function New-Secret {
@@ -215,10 +259,10 @@ function Find-FirebaseCredentials {
 function Invoke-Compose {
     param([string[]]$Arguments)
 
+    $composeFileArguments = $script:ComposeFileArguments
     & $script:Docker compose `
         --env-file $runtimeEnvironmentPath `
-        -f $composePath `
-        -f $releaseComposePath `
+        @composeFileArguments `
         @Arguments
 
     if ($LASTEXITCODE -ne 0) {
@@ -235,11 +279,11 @@ function Wait-ForContainerRunning {
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
 
     while ([DateTime]::UtcNow -lt $deadline) {
+        $composeFileArguments = $script:ComposeFileArguments
         $containerId = (
             & $script:Docker compose `
                 --env-file $runtimeEnvironmentPath `
-                -f $composePath `
-                -f $releaseComposePath `
+                @composeFileArguments `
                 ps -q $Service 2>$null |
                 Select-Object -First 1
         )
@@ -283,10 +327,10 @@ function Synchronize-PostgresPassword {
     $escapedPassword = Escape-SqlLiteral -Value $Password
     $sql = "ALTER ROLE `"$DatabaseUser`" WITH PASSWORD '$escapedPassword';"
 
+    $composeFileArguments = $script:ComposeFileArguments
     $output = & $script:Docker compose `
         --env-file $runtimeEnvironmentPath `
-        -f $composePath `
-        -f $releaseComposePath `
+        @composeFileArguments `
         exec -T `
         $Service `
         psql `
@@ -358,6 +402,33 @@ function Wait-ForEndpoint {
 try {
     Set-Content -LiteralPath $logPath -Value "" -Encoding UTF8
 
+    foreach ($requiredFile in @(
+        $networkConfigPath,
+        $composePath,
+        $releaseComposePath,
+        $productionComposePath
+    )) {
+        if (-not (Test-Path -LiteralPath $requiredFile -PathType Leaf)) {
+            throw "The deployment bundle is incomplete: $([System.IO.Path]::GetFileName($requiredFile)) is missing."
+        }
+    }
+
+    $config = Read-EnvironmentFile -Path $networkConfigPath
+
+    foreach ($requiredValue in @("SECURECHAT_IMAGE_PREFIX", "SECURECHAT_IMAGE_TAG")) {
+        if (-not $config.ContainsKey($requiredValue) -or [string]::IsNullOrWhiteSpace($config[$requiredValue])) {
+            throw "securechat.conf is missing $requiredValue."
+        }
+    }
+
+    $mode = Get-NetworkMode -Config $config
+    $publicDomain = if ($mode -eq "public") { Resolve-PublicDomain -Config $config } else { $null }
+    $script:ComposeFileArguments = @("-f", $composePath, "-f", $releaseComposePath)
+
+    if ($mode -eq "public") {
+        $script:ComposeFileArguments += @("-f", $productionComposePath)
+    }
+
     Set-Status "Starting Docker Desktop..."
     $script:Docker = Ensure-Docker
 
@@ -381,31 +452,25 @@ try {
 
     $firebaseCredentials = Find-FirebaseCredentials
 
-    if (-not (Test-Path -LiteralPath $releaseEnvironmentPath -PathType Leaf)) {
-        throw "release.env is missing."
-    }
-
-    $release = Read-EnvironmentFile $releaseEnvironmentPath
-
-    if (
-        -not $release.ContainsKey("SECURECHAT_IMAGE_PREFIX") -or
-        -not $release.ContainsKey("SECURECHAT_IMAGE_TAG")
-    ) {
-        throw "release.env is incomplete."
-    }
+    $siteAddress = if ($mode -eq "public") { $publicDomain } else { ":80" }
 
     $runtime = @(
         "CONTROL_PLANE_PROJECT_NAME=securechat-control-plane",
         "CONTROL_PLANE_BIND_ADDRESS=0.0.0.0",
         "CONTROL_PLANE_HTTP_PORT=$controlPlanePort",
-        "CONTROL_PLANE_SITE_ADDRESS=:80",
+        "CONTROL_PLANE_SITE_ADDRESS=$siteAddress",
+        "CONTROL_PLANE_DOMAIN=$publicDomain",
         "FIREBASE_ADMIN_CREDENTIALS=$($firebaseCredentials.Replace('\','/'))",
         "NODE_REGISTRY_DATABASE_PASSWORD=$registryPassword",
         "PRESENCE_REDIS_PASSWORD=$presencePassword",
         "PUSH_DATABASE_PASSWORD=$pushPassword",
         "PUSH_INTERNAL_API_TOKEN=$pushToken",
-        "SECURECHAT_IMAGE_PREFIX=$($release['SECURECHAT_IMAGE_PREFIX'])",
-        "SECURECHAT_IMAGE_TAG=$($release['SECURECHAT_IMAGE_TAG'])"
+        "NODE_REGISTRY_DATABASE_PASSWORD_FILE=./secrets/node-registry-database-password.txt",
+        "PRESENCE_REDIS_PASSWORD_FILE=./secrets/presence-redis-password.txt",
+        "PUSH_DATABASE_PASSWORD_FILE=./secrets/push-database-password.txt",
+        "PUSH_INTERNAL_API_TOKEN_FILE=./secrets/push-internal-api-token.txt",
+        "SECURECHAT_IMAGE_PREFIX=$($config['SECURECHAT_IMAGE_PREFIX'])",
+        "SECURECHAT_IMAGE_TAG=$($config['SECURECHAT_IMAGE_TAG'])"
     )
 
     [System.IO.File]::WriteAllLines(
@@ -506,7 +571,7 @@ try {
         $address = "localhost"
     }
 
-    $url = "http://$address`:$controlPlanePort"
+    $url = if ($mode -eq "public") { "https://$publicDomain" } else { "http://$address`:$controlPlanePort" }
 
     $progress.Style = [System.Windows.Forms.ProgressBarStyle]::Blocks
     $progress.Value = 100

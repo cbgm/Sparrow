@@ -1,4 +1,4 @@
-{$COMMUNITY_NODE_SITE_ADDRESS} {
+(securechat_community_routes) {
     encode zstd gzip
 
     header {
@@ -49,4 +49,12 @@
     }
 
     respond 404
+}
+
+{$COMMUNITY_NODE_SITE_ADDRESS} {
+    import securechat_community_routes
+}
+
+:8080 {
+    import securechat_community_routes
 }

@@ -51,6 +51,81 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
 
+      - name: Validate deployment scripts
+        shell: pwsh
+        run: |
+          $files = @(
+              "server/community-node/Bootstrap-CommunityNode.ps1",
+              "server/scripts/Bootstrap-ControlPlane.Bundle.ps1",
+              "server/scripts/New-CommunityNodeBundle.ps1",
+              "server/scripts/New-ControlPlaneBundle.ps1"
+          )
+
+          foreach ($file in $files) {
+              $tokens = $null
+              $errors = $null
+              [System.Management.Automation.Language.Parser]::ParseFile(
+                  (Resolve-Path $file),
+                  [ref]$tokens,
+                  [ref]$errors
+              ) | Out-Null
+
+              if ($errors.Count -gt 0) {
+                  $details = ($errors | ForEach-Object { $_.Message }) -join "`n"
+                  throw "$file contains PowerShell syntax errors:`n$details"
+              }
+          }
+
+      - name: Validate Unix community-node launcher
+        shell: bash
+        run: bash -n server/community-node/bootstrap-community-node.sh
+
+      - name: Validate Compose production merges
+        shell: bash
+        run: |
+          set -euo pipefail
+          secret="${RUNNER_TEMP}/securechat-compose-validation-secret"
+          printf 'validation' > "${secret}"
+
+          cat > "${RUNNER_TEMP}/community.env" <<EOF_COMMUNITY
+          CONTROL_PLANE_URL=https://control.example.test
+          CLIENT_ENDPOINT=wss://node.example.test/relay
+          FEDERATION_ENDPOINT=https://node.example.test
+          MAILBOX_ENDPOINT=https://node.example.test
+          COMMUNITY_NODE_DOMAIN=node.example.test
+          SECURECHAT_IMAGE_PREFIX=ghcr.io/example/securechat
+          SECURECHAT_IMAGE_TAG=validation
+          MAILBOX_DATABASE_PASSWORD_FILE=${secret}
+          FEDERATION_DATABASE_PASSWORD_FILE=${secret}
+          FEDERATION_INTERNAL_API_TOKEN_FILE=${secret}
+          GATEWAY_INTERNAL_API_TOKEN_FILE=${secret}
+          EOF_COMMUNITY
+
+          docker compose \
+            --env-file "${RUNNER_TEMP}/community.env" \
+            -f server/community-node/docker-compose.yml \
+            -f server/community-node/docker-compose.release.yml \
+            -f server/community-node/docker-compose.production.yml \
+            config --quiet
+
+          cat > "${RUNNER_TEMP}/control.env" <<EOF_CONTROL
+          CONTROL_PLANE_DOMAIN=control.example.test
+          FIREBASE_ADMIN_CREDENTIALS=${secret}
+          SECURECHAT_IMAGE_PREFIX=ghcr.io/example/securechat
+          SECURECHAT_IMAGE_TAG=validation
+          NODE_REGISTRY_DATABASE_PASSWORD_FILE=${secret}
+          PRESENCE_REDIS_PASSWORD_FILE=${secret}
+          PUSH_DATABASE_PASSWORD_FILE=${secret}
+          PUSH_INTERNAL_API_TOKEN_FILE=${secret}
+          EOF_CONTROL
+
+          docker compose \
+            --env-file "${RUNNER_TEMP}/control.env" \
+            -f server/control-plane/docker-compose.yml \
+            -f server/control-plane/docker-compose.release.yml \
+            -f server/control-plane/docker-compose.production.yml \
+            config --quiet
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
@@ -212,6 +287,22 @@ jobs:
               -DestinationPath dist-control-plane/artifact `
               -Force
 
+          foreach ($required in @(
+              "Start-SecureChatControlPlane.cmd",
+              "Bootstrap-ControlPlane.ps1",
+              "securechat.conf",
+              "docker-compose.production.yml"
+          )) {
+              if (-not (Test-Path -LiteralPath "dist-control-plane/artifact/$required" -PathType Leaf)) {
+                  throw "Control-plane artifact is missing $required."
+              }
+          }
+
+          $controlConfig = Get-Content -LiteralPath dist-control-plane/artifact/securechat.conf -Raw
+          if ($controlConfig -match '(?m)^CONTROL_PLANE_URLS=') {
+              throw "Control-plane securechat.conf must not contain CONTROL_PLANE_URLS."
+          }
+
       - name: Upload control-plane bundle
         uses: actions/upload-artifact@v7
         with:
@@ -238,17 +329,11 @@ jobs:
       - name: Create community-node bundle
         shell: pwsh
         env:
-          CONFIGURED_CONTROL_PLANE_URL: ${{ vars.SECURECHAT_CONTROL_PLANE_URL }}
           SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           $owner = "${{ github.repository_owner }}".ToLowerInvariant()
           $imagePrefix = "ghcr.io/$owner/securechat"
-
-          $controlPlaneUrl = $env:CONFIGURED_CONTROL_PLANE_URL
-          if ([string]::IsNullOrWhiteSpace($controlPlaneUrl)) {
-              $controlPlaneUrl = "http://192.168.178.60:8390"
-          }
 
           if (-not [string]::IsNullOrWhiteSpace($env:PR_NUMBER)) {
               $imageTag = "pr-$($env:PR_NUMBER)"
@@ -258,7 +343,6 @@ jobs:
 
           ./server/scripts/New-CommunityNodeBundle.ps1 `
               -OutputDirectory dist-community `
-              -ControlPlaneUrl $controlPlaneUrl `
               -ImagePrefix $imagePrefix `
               -ImageTag $imageTag
 
@@ -270,6 +354,23 @@ jobs:
               -LiteralPath dist-community/securechat-community-node.zip `
               -DestinationPath dist-community/artifact `
               -Force
+
+
+          foreach ($required in @(
+              "Start-SecureChatNode.cmd",
+              "Bootstrap-CommunityNode.ps1",
+              "securechat.conf",
+              "docker-compose.production.yml"
+          )) {
+              if (-not (Test-Path -LiteralPath "dist-community/artifact/$required" -PathType Leaf)) {
+                  throw "Community-node artifact is missing $required."
+              }
+          }
+
+          $nodeConfig = Get-Content -LiteralPath dist-community/artifact/securechat.conf -Raw
+          if ($nodeConfig -notmatch '(?m)^CONTROL_PLANE_URLS=') {
+              throw "Community-node securechat.conf is missing CONTROL_PLANE_URLS."
+          }
 
       - name: Upload community-node bundle
         uses: actions/upload-artifact@v7

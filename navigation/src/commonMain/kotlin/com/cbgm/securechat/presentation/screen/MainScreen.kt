@@ -4,6 +4,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -64,7 +67,15 @@ fun MainScreen(
     val coroutineScope = rememberCoroutineScope()
     val getOrCreateDirectConversation = koinInject<GetOrCreateDirectConversation>()
 
-    var selectedTab by rememberSaveable { mutableStateOf(MainTab.Chats) }
+    val tabs = MainTab.entries
+
+    val pagerState =
+        rememberPagerState(
+            initialPage = tabs.indexOf(MainTab.Chats),
+            pageCount = { tabs.size }
+        )
+
+    val selectedTab = tabs[pagerState.currentPage]
     var showContactsOverlay by rememberSaveable {
         mutableStateOf(false)
     }
@@ -100,13 +111,17 @@ fun MainScreen(
                     selectedTab = selectedTab,
                     containerColor = containerColor,
                     onTabSelected = { tab ->
-                        selectedTab = tab
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(
+                                page = tabs.indexOf(tab)
+                            )
+                        }
                     }
                 )
             }
         ) { innerPadding, scrollStates ->
             MainContent(
-                selectedTab = selectedTab,
+                pagerState = pagerState,
                 innerPadding = innerPadding,
                 scrollStates = scrollStates,
                 onOpenChat = onOpenChat,
@@ -242,7 +257,7 @@ private fun MainBottomBar(
 
 @Composable
 private fun MainContent(
-    selectedTab: MainTab,
+    pagerState: PagerState,
     innerPadding: PaddingValues,
     scrollStates: SecureChatTabbedScrollStates<MainTab>,
     onOpenChat: (String, String, String, Boolean) -> Unit,
@@ -253,44 +268,49 @@ private fun MainContent(
     onNavigateToDeveloperMenu: () -> Unit,
     onNavigateToBlockedContacts: () -> Unit
 ) {
-    when (selectedTab) {
-        MainTab.Chats -> {
-            ChatsRoute(
-                onChatClick = onOpenChat,
-                listState =
-                    scrollStates.lazyListState(
-                        MainTab.Chats
-                    ),
-                innerPadding = innerPadding,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+    HorizontalPager(
+        state = pagerState,
+        modifier = Modifier.fillMaxSize()
+    ) { page ->
+        when (MainTab.entries[page]) {
+            MainTab.Chats -> {
+                ChatsRoute(
+                    onChatClick = onOpenChat,
+                    listState =
+                        scrollStates.lazyListState(
+                            MainTab.Chats
+                        ),
+                    innerPadding = innerPadding,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
-        MainTab.Me -> {
-            IdentityRoute(
-                onShareIdentity = onShareIdentity,
-                scrollState =
-                    scrollStates.scrollState(
-                        MainTab.Me
-                    ),
-                innerPadding = innerPadding,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+            MainTab.Me -> {
+                IdentityRoute(
+                    onShareIdentity = onShareIdentity,
+                    scrollState =
+                        scrollStates.scrollState(
+                            MainTab.Me
+                        ),
+                    innerPadding = innerPadding,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
-        MainTab.Settings -> {
-            SettingsRoute(
-                scrollState =
-                    scrollStates.scrollState(
-                        MainTab.Settings
-                    ),
-                innerPadding = innerPadding,
-                onNavigateToPrivacyPolicy = onNavigateToPrivacyPolicy,
-                onNavigateToDataDisclaimer = onNavigateToDataDisclaimer,
-                onNavigateToLicenses = onNavigateToLicenses,
-                onNavigateToDeveloperMenu = onNavigateToDeveloperMenu,
-                onNavigateToBlockedContacts = onNavigateToBlockedContacts
-            )
+            MainTab.Settings -> {
+                SettingsRoute(
+                    scrollState =
+                        scrollStates.scrollState(
+                            MainTab.Settings
+                        ),
+                    innerPadding = innerPadding,
+                    onNavigateToPrivacyPolicy = onNavigateToPrivacyPolicy,
+                    onNavigateToDataDisclaimer = onNavigateToDataDisclaimer,
+                    onNavigateToLicenses = onNavigateToLicenses,
+                    onNavigateToDeveloperMenu = onNavigateToDeveloperMenu,
+                    onNavigateToBlockedContacts = onNavigateToBlockedContacts
+                )
+            }
         }
     }
 }

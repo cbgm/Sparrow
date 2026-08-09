@@ -1,7 +1,6 @@
 [CmdletBinding()]
 param(
     [string]$OutputDirectory = "dist",
-    [string]$ControlPlaneUrl = "http://192.168.178.60:8390",
     [string]$ImagePrefix = "ghcr.io/cbgm/securechat",
     [string]$ImageTag = "latest"
 )
@@ -15,13 +14,6 @@ $stagingRoot = Join-Path ([System.IO.Path]::GetTempPath()) "securechat-community
 $bundleRoot = Join-Path $stagingRoot "securechat-community-node"
 $communityNodeRoot = Join-Path $repositoryRoot "server/community-node"
 
-$controlPlaneUri = $null
-if (-not [Uri]::TryCreate($ControlPlaneUrl, [UriKind]::Absolute, [ref]$controlPlaneUri)) {
-    throw "CONTROL_PLANE_URL must be an absolute URL."
-}
-if ($controlPlaneUri.Scheme -notin @("http", "https")) {
-    throw "CONTROL_PLANE_URL must use http or https."
-}
 if ($ImagePrefix -notmatch '^[a-z0-9.-]+(?:/[a-z0-9._-]+)+$') {
     throw "ImagePrefix is not a valid lowercase container-image prefix."
 }
@@ -32,6 +24,7 @@ if ($ImageTag -notmatch '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$') {
 $bundleFiles = @(
     "docker-compose.yml",
     "docker-compose.release.yml",
+    "docker-compose.production.yml",
     "Caddyfile",
     "Bootstrap-CommunityNode.ps1",
     "Start-SecureChatNode.cmd",
@@ -42,6 +35,7 @@ $bundleFiles = @(
 )
 
 Remove-Item -LiteralPath $stagingRoot -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $outputPath -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $bundleRoot -Force | Out-Null
 New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
 
@@ -54,18 +48,29 @@ foreach ($relativePath in $bundleFiles) {
     Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $bundleRoot $relativePath) -Force
 }
 
-$releaseEnvironment = @(
-    "CONTROL_PLANE_URL=$ControlPlaneUrl",
-    "SECURECHAT_IMAGE_PREFIX=$ImagePrefix",
-    "SECURECHAT_IMAGE_TAG=$ImageTag"
-)
 [System.IO.File]::WriteAllLines(
-    (Join-Path $bundleRoot "release.env"),
-    $releaseEnvironment,
+    (Join-Path $bundleRoot "securechat.conf"),
+    @(
+        "# SecureChat community-node configuration",
+        "# MODE: lan or public",
+        "# PUBLIC_DOMAIN: leave blank to derive <public-ip>.sslip.io in public mode",
+        "# CONTROL_PLANE_URLS: comma-separated priority list; first reachable control plane is used",
+        "MODE=lan",
+        "PUBLIC_DOMAIN=",
+        "CONTROL_PLANE_URLS=http://192.168.178.60:8390",
+        "SECURECHAT_IMAGE_PREFIX=$ImagePrefix",
+        "SECURECHAT_IMAGE_TAG=$ImageTag"
+    ),
     [System.Text.UTF8Encoding]::new($false)
 )
 
 New-Item -ItemType Directory -Path (Join-Path $bundleRoot "secrets") -Force | Out-Null
+
+foreach ($required in @("Start-SecureChatNode.cmd", "securechat.conf")) {
+    if (-not (Test-Path -LiteralPath (Join-Path $bundleRoot $required) -PathType Leaf)) {
+        throw "Community-node bundle is missing $required."
+    }
+}
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $archivePath = Join-Path $outputPath "securechat-community-node.zip"
@@ -74,25 +79,24 @@ Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue
     $bundleRoot,
     $archivePath,
     [System.IO.Compression.CompressionLevel]::Optimal,
-    $true
+    $false
 )
 
 $tarArchivePath = Join-Path $outputPath "securechat-community-node.tar.gz"
 Remove-Item -LiteralPath $tarArchivePath -Force -ErrorAction SilentlyContinue
-& tar -czf $tarArchivePath -C $stagingRoot "securechat-community-node"
+& tar -czf $tarArchivePath -C $bundleRoot .
 if ($LASTEXITCODE -ne 0) {
     throw "Could not create $tarArchivePath"
 }
 
 $zipChecksum = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
 $tarChecksum = (Get-FileHash -LiteralPath $tarArchivePath -Algorithm SHA256).Hash.ToLowerInvariant()
-$checksumLines = @(
-    "$zipChecksum  securechat-community-node.zip",
-    "$tarChecksum  securechat-community-node.tar.gz"
-)
 [System.IO.File]::WriteAllLines(
     (Join-Path $outputPath "SHA256SUMS.txt"),
-    $checksumLines,
+    @(
+        "$zipChecksum  securechat-community-node.zip",
+        "$tarChecksum  securechat-community-node.tar.gz"
+    ),
     [System.Text.UTF8Encoding]::new($false)
 )
 

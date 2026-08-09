@@ -1,4 +1,4 @@
-{$CONTROL_PLANE_SITE_ADDRESS} {
+(securechat_control_routes) {
     encode zstd gzip
 
     header {
@@ -47,4 +47,12 @@
     }
 
     respond 404
+}
+
+{$CONTROL_PLANE_SITE_ADDRESS} {
+    import securechat_control_routes
+}
+
+:8080 {
+    import securechat_control_routes
 }
