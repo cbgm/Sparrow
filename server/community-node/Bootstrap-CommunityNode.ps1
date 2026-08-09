@@ -271,7 +271,7 @@ function Get-PublicIpv4Address {
                 return $value
             }
         } catch {
-            Write-Log "Public IPv4 lookup failed at $url: $($_.Exception.Message)"
+            Write-Log "Public IPv4 lookup failed at ${url}: $($_.Exception.Message)"
         }
     }
 
