@@ -37,6 +37,7 @@ import com.cbgm.securechat.resources.feature_settings_current_node
 import com.cbgm.securechat.resources.feature_settings_failover_count
 import com.cbgm.securechat.resources.feature_settings_last_disconnect
 import com.cbgm.securechat.resources.feature_settings_last_failed_node
+import com.cbgm.securechat.resources.feature_settings_network_active_connections
 import com.cbgm.securechat.resources.feature_settings_network_diagnostics
 import com.cbgm.securechat.resources.feature_settings_network_no_nodes
 import com.cbgm.securechat.resources.feature_settings_network_nodes
@@ -188,7 +189,7 @@ private fun NodeDiagnosticHeader(
             modifier = Modifier.weight(1f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.displayMedium,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onBackground
         )
 
