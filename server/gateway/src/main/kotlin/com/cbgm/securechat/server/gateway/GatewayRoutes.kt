@@ -4,6 +4,7 @@ import com.cbgm.securechat.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.securechat.server.protocol.FederatedEnvelope
 import com.cbgm.securechat.server.protocol.FederatedTypingEvent
 import com.cbgm.securechat.server.protocol.FederationAcknowledgement
+import com.cbgm.securechat.server.protocol.GatewayLoad
 import com.cbgm.securechat.server.protocol.GatewayNodeInformation
 import com.cbgm.securechat.server.security.InternalApiAuthentication
 import com.cbgm.securechat.server.security.NodeIdentity
@@ -30,6 +31,7 @@ internal fun Application.installGatewayRoutes(
         installRelayRoute(runtime)
         installIncomingEnvelopeRoute(runtime, config)
         installIncomingTypingRoute(runtime, config)
+        installInternalLoadRoute(runtime, config)
         installInternalRouteResolution(runtime, config)
     }
 }
@@ -96,6 +98,24 @@ private fun Route.installIncomingTypingRoute(
         } else {
             call.respond(HttpStatusCode.Unauthorized)
         }
+    }
+}
+
+private fun Route.installInternalLoadRoute(
+    runtime: GatewayRuntime,
+    config: GatewayConfig
+) {
+    get("/internal/v1/load") {
+        if (!call.hasInternalAccess(config.gatewayInternalApiToken)) {
+            call.respond(HttpStatusCode.Unauthorized)
+            return@get
+        }
+
+        call.respond(
+            GatewayLoad(
+                activeConnections = runtime.connections.count()
+            )
+        )
     }
 }
 

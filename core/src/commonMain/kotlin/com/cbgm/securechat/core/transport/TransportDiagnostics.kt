@@ -19,6 +19,7 @@ data class TransportNodeDiagnostic(
     val nodeId: String,
     val websocketUrl: String,
     val state: TransportNodeDiagnosticState,
+    val activeConnections: Int = 0,
     val cooldownUntilEpochMilliseconds: Long? = null
 )
 

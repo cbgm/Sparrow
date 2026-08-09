@@ -35,6 +35,101 @@ class DefaultNodeEndpointResolverTest {
         }
 
     @Test
+    fun firstResolutionFetchesFreshLoadInsteadOfUsingProcessCache() =
+        runTest {
+            val cachedDirectory =
+                signedDirectory(
+                    nodes =
+                        listOf(
+                            descriptor(
+                                name = "node-a",
+                                endpoint = "wss://a.example/relay",
+                                seed = 2,
+                                activeConnections = 0
+                            ),
+                            descriptor(
+                                name = "node-b",
+                                endpoint = "wss://b.example/relay",
+                                seed = 3,
+                                activeConnections = 5
+                            )
+                        )
+                )
+            val remoteDirectory =
+                signedDirectory(
+                    nodes =
+                        listOf(
+                            descriptor(
+                                name = "node-a",
+                                endpoint = "wss://a.example/relay",
+                                seed = 2,
+                                activeConnections = 5
+                            ),
+                            descriptor(
+                                name = "node-b",
+                                endpoint = "wss://b.example/relay",
+                                seed = 3,
+                                activeConnections = 0
+                            )
+                        )
+                )
+            val source =
+                RecordingNodeDirectorySource(
+                    Result.success(json.encodeToString(remoteDirectory))
+                )
+            val cache =
+                RecordingNodeDirectoryCache(
+                    CachedNodeDirectory(
+                        encodedDirectory = json.encodeToString(cachedDirectory),
+                        trustedAuthorityNodeId = cachedDirectory.authorityNodeId
+                    )
+                )
+            val resolver = resolver(source = source, cache = cache, now = { NOW })
+
+            val endpoints = resolver.resolve("relay-a").getOrThrow()
+
+            assertEquals("wss://b.example/relay", endpoints.first().websocketUrl)
+            assertEquals(1, source.fetchCount)
+        }
+
+    @Test
+    fun leastLoadedNodeIsPreferred() =
+        runTest {
+            val directory =
+                signedDirectory(
+                    nodes =
+                        listOf(
+                            descriptor(
+                                name = "node-a",
+                                endpoint = "wss://a.example/relay",
+                                seed = 2,
+                                activeConnections = 4
+                            ),
+                            descriptor(
+                                name = "node-b",
+                                endpoint = "wss://b.example/relay",
+                                seed = 3,
+                                activeConnections = 1
+                            )
+                        )
+                )
+            val resolver =
+                resolver(
+                    source =
+                        RecordingNodeDirectorySource(
+                            Result.success(json.encodeToString(directory))
+                        ),
+                    cache = RecordingNodeDirectoryCache(),
+                    now = { NOW }
+                )
+
+            val endpoints = resolver.resolve("relay-a").getOrThrow()
+
+            assertEquals("wss://b.example/relay", endpoints.first().websocketUrl)
+            assertEquals(1, endpoints.first().activeConnections)
+        }
+
+    @Test
     fun registryFailureUsesRecentlyExpiredSignedCache() =
         runTest {
             var now = NOW
@@ -186,7 +281,8 @@ class DefaultNodeEndpointResolverTest {
         name: String,
         endpoint: String,
         seed: Int,
-        validUntil: Long = NOW + 10L * 60L * 1_000L
+        validUntil: Long = NOW + 10L * 60L * 1_000L,
+        activeConnections: Int = 0
     ): SecureChatNodeDescriptor {
         val key = encodedPublicKey(seed)
         return SecureChatNodeDescriptor(
@@ -198,6 +294,7 @@ class DefaultNodeEndpointResolverTest {
             protocolVersions = setOf(1),
             capabilities = setOf(NodeCapability.GATEWAY),
             validUntilEpochMilliseconds = validUntil,
+            activeConnections = activeConnections,
             signature = byteArrayOf(seed.toByte())
         )
     }

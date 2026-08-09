@@ -16,6 +16,15 @@ data class GatewayNodeInformation(
 }
 
 @Serializable
+data class GatewayLoad(
+    val activeConnections: Int
+) {
+    init {
+        require(activeConnections >= 0)
+    }
+}
+
+@Serializable
 data class ClientRoute(
     val routingId: String,
     val nodeId: String,

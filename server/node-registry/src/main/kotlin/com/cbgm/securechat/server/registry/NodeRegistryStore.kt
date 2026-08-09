@@ -29,7 +29,8 @@ class NodeRegistryStore(
 ) : NodeRegistryStorage {
     private data class RegisteredNode(
         val descriptor: SecureChatNodeDescriptor,
-        val lastHeartbeatAtEpochMilliseconds: Long
+        val lastHeartbeatAtEpochMilliseconds: Long,
+        val activeConnections: Int?
     )
 
     private val nodes = ConcurrentHashMap<String, RegisteredNode>()
@@ -51,7 +52,13 @@ class NodeRegistryStore(
             )
 
         return if (rejection == null) {
-            nodes[descriptor.nodeId] = RegisteredNode(descriptor, currentTime)
+            val previousLoad = nodes[descriptor.nodeId]?.activeConnections
+            nodes[descriptor.nodeId] =
+                RegisteredNode(
+                    descriptor = descriptor.copy(activeConnections = null),
+                    lastHeartbeatAtEpochMilliseconds = currentTime,
+                    activeConnections = previousLoad
+                )
             RegistrationResult.Accepted
         } else {
             rejection
@@ -77,7 +84,8 @@ class NodeRegistryStore(
             else -> {
                 nodes[heartbeat.nodeId] =
                     registered.copy(
-                        lastHeartbeatAtEpochMilliseconds = now()
+                        lastHeartbeatAtEpochMilliseconds = now(),
+                        activeConnections = heartbeat.activeConnections ?: registered.activeConnections
                     )
                 RegistrationResult.Accepted
             }
@@ -92,7 +100,11 @@ class NodeRegistryStore(
             .filter {
                 currentTime - it.lastHeartbeatAtEpochMilliseconds <=
                     heartbeatGraceMilliseconds
-            }.map(RegisteredNode::descriptor)
+            }.map { registered ->
+                registered.descriptor.copy(
+                    activeConnections = registered.activeConnections
+                )
+            }
             .sortedBy(SecureChatNodeDescriptor::nodeId)
             .toList()
     }

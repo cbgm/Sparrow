@@ -94,6 +94,9 @@ class NodeDirectoryVerifier(
         require(nodeId(descriptor.identityPublicKey) == descriptor.nodeId) {
             "Node ID does not match its public key"
         }
+        require(descriptor.activeConnections == null || descriptor.activeConnections >= 0) {
+            "Node connection load must not be negative"
+        }
         val acceptedDescriptorExpiry =
             descriptor.validUntilEpochMilliseconds + expiryGraceMilliseconds
         require(nowEpochMilliseconds < acceptedDescriptorExpiry) {

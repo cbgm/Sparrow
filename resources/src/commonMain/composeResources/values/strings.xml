@@ -297,6 +297,7 @@
     <string name="feature_settings_last_disconnect">Last disconnect</string>
     <string name="feature_settings_network_nodes">Discovered nodes</string>
     <string name="feature_settings_network_no_nodes">No nodes discovered yet</string>
+    <string name="feature_settings_network_active_connections">Connections: %1$d</string>
     <string name="feature_settings_node_current">CURRENT</string>
     <string name="feature_settings_node_available">AVAILABLE</string>
     <string name="feature_settings_node_cooldown">COOLDOWN</string>

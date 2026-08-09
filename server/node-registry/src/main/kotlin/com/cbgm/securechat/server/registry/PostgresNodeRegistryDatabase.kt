@@ -75,8 +75,13 @@ internal class PostgresNodeRegistryDatabase(
                     node_id TEXT PRIMARY KEY,
                     descriptor_json TEXT NOT NULL,
                     valid_until_epoch_milliseconds BIGINT NOT NULL,
-                    last_heartbeat_at_epoch_milliseconds BIGINT NOT NULL
+                    last_heartbeat_at_epoch_milliseconds BIGINT NOT NULL,
+                    active_connections INTEGER
                 )
+                """.trimIndent(),
+                """
+                ALTER TABLE registered_nodes
+                ADD COLUMN IF NOT EXISTS active_connections INTEGER
                 """.trimIndent(),
                 """
                 CREATE INDEX IF NOT EXISTS registered_nodes_health_idx

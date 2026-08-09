@@ -5,6 +5,7 @@ import com.cbgm.securechat.server.protocol.SecureChatNodeDescriptor
 import com.cbgm.securechat.server.protocol.serverJson
 import com.cbgm.securechat.server.security.ProtocolSignatures
 import java.sql.Connection
+import java.sql.Types
 
 internal class PostgresNodeRegistryStore(
     private val database: PostgresNodeRegistryDatabase,
@@ -36,7 +37,12 @@ internal class PostgresNodeRegistryStore(
                     """.trimIndent()
                 ).use { statement ->
                     statement.setString(1, descriptor.nodeId)
-                    statement.setString(2, serverJson.encodeToString(descriptor))
+                    statement.setString(
+                        2,
+                        serverJson.encodeToString(
+                            descriptor.copy(activeConnections = null)
+                        )
+                    )
                     statement.setLong(DESCRIPTOR_EXPIRATION_PARAMETER, descriptor.validUntilEpochMilliseconds)
                     statement.setLong(LAST_HEARTBEAT_PARAMETER, currentTime)
                     statement.executeUpdate()
@@ -67,12 +73,16 @@ internal class PostgresNodeRegistryStore(
                     .prepareStatement(
                         """
                         UPDATE registered_nodes
-                        SET last_heartbeat_at_epoch_milliseconds = ?
+                        SET last_heartbeat_at_epoch_milliseconds = ?,
+                            active_connections = COALESCE(?, active_connections)
                         WHERE node_id = ?
                         """.trimIndent()
                     ).use { statement ->
                         statement.setLong(1, currentTime)
-                        statement.setString(2, heartbeat.nodeId)
+                        heartbeat.activeConnections?.let { activeConnections ->
+                            statement.setInt(2, activeConnections)
+                        } ?: statement.setNull(2, Types.INTEGER)
+                        statement.setString(3, heartbeat.nodeId)
                         statement.executeUpdate()
                     }
                 RegistrationResult.Accepted
@@ -85,7 +95,7 @@ internal class PostgresNodeRegistryStore(
             connection
                 .prepareStatement(
                     """
-                    SELECT descriptor_json
+                    SELECT descriptor_json, active_connections
                     FROM registered_nodes
                     WHERE valid_until_epoch_milliseconds > ?
                       AND last_heartbeat_at_epoch_milliseconds >= ?
@@ -98,9 +108,12 @@ internal class PostgresNodeRegistryStore(
                         buildList {
                             while (results.next()) {
                                 add(
-                                    serverJson.decodeFromString<SecureChatNodeDescriptor>(
-                                        results.getString(1)
-                                    )
+                                    serverJson
+                                        .decodeFromString<SecureChatNodeDescriptor>(
+                                            results.getString(1)
+                                        ).copy(
+                                            activeConnections = results.connectionLoad(2)
+                                        )
                                 )
                             }
                         }
@@ -115,7 +128,7 @@ internal class PostgresNodeRegistryStore(
             connection
                 .prepareStatement(
                     """
-                    SELECT descriptor_json
+                    SELECT descriptor_json, active_connections
                     FROM registered_nodes
                     WHERE node_id = ?
                       AND valid_until_epoch_milliseconds > ?
@@ -127,7 +140,12 @@ internal class PostgresNodeRegistryStore(
                     statement.setLong(HEARTBEAT_CUTOFF_PARAMETER, currentTime - heartbeatGraceMilliseconds)
                     statement.executeQuery().use { results ->
                         if (results.next()) {
-                            serverJson.decodeFromString<SecureChatNodeDescriptor>(results.getString(1))
+                            serverJson
+                                .decodeFromString<SecureChatNodeDescriptor>(
+                                    results.getString(1)
+                                ).copy(
+                                    activeConnections = results.connectionLoad(2)
+                                )
                         } else {
                             null
                         }
@@ -195,6 +213,11 @@ internal class PostgresNodeRegistryStore(
                 )
                 statement.executeUpdate() == 1
             }
+
+    private fun java.sql.ResultSet.connectionLoad(columnIndex: Int): Int? =
+        getObject(columnIndex)?.let { value ->
+            (value as Number).toInt()
+        }
 
     private companion object {
         const val DESCRIPTOR_EXPIRATION_PARAMETER = 3

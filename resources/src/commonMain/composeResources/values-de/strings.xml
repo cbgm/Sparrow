@@ -298,6 +298,7 @@
     <string name="feature_settings_last_disconnect">Letzte Trennung</string>
     <string name="feature_settings_network_nodes">Gefundene Nodes</string>
     <string name="feature_settings_network_no_nodes">Noch keine Nodes gefunden</string>
+    <string name="feature_settings_network_active_connections">Verbindungen: %1$d</string>
     <string name="feature_settings_node_current">AKTUELL</string>
     <string name="feature_settings_node_available">VERFÜGBAR</string>
     <string name="feature_settings_node_cooldown">COOLDOWN</string>

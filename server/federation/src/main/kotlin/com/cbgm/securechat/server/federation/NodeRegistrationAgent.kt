@@ -1,15 +1,20 @@
 package com.cbgm.securechat.server.federation
 
+import com.cbgm.securechat.server.protocol.GatewayLoad
 import com.cbgm.securechat.server.protocol.NodeCapability
 import com.cbgm.securechat.server.protocol.NodeHeartbeatRequest
 import com.cbgm.securechat.server.protocol.NodeRegistrationRequest
 import com.cbgm.securechat.server.protocol.SecureChatNodeDescriptor
 import com.cbgm.securechat.server.protocol.serverJson
 import com.cbgm.securechat.server.protocol.unsigned
+import com.cbgm.securechat.server.security.InternalApiAuthentication
 import com.cbgm.securechat.server.security.NodeIdentity
 import com.cbgm.securechat.server.security.ProtocolSignatures
 import com.cbgm.securechat.server.security.Signatures
 import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
@@ -30,6 +35,7 @@ class NodeRegistrationAgent(
     private val httpClient: HttpClient,
     private val identity: NodeIdentity,
     private val config: NodeRegistrationConfig,
+    private val loadProvider: GatewayLoadProvider = GatewayLoadProvider { 0 },
     private val now: () -> Long = System::currentTimeMillis
 ) {
     suspend fun run() {
@@ -143,11 +149,24 @@ class NodeRegistrationAgent(
 
     private suspend fun heartbeat() {
         val timestamp = now()
+        val activeConnections =
+            runCatching {
+                loadProvider.activeConnections()
+            }.getOrElse { error ->
+                logger.warn(
+                    "Gateway load lookup failed for {}: {}",
+                    identity.nodeId,
+                    error.message ?: error::class.simpleName
+                )
+                0
+            }
+
         val unsigned =
             NodeHeartbeatRequest(
                 nodeId = identity.nodeId,
                 timestampEpochMilliseconds = timestamp,
                 nonce = UUID.randomUUID().toString(),
+                activeConnections = activeConnections.coerceAtLeast(0),
                 signature = byteArrayOf()
             )
         val heartbeat =
@@ -182,6 +201,25 @@ class NodeRegistrationAgent(
     }
 }
 
+fun interface GatewayLoadProvider {
+    suspend fun activeConnections(): Int
+}
+
+internal class HttpGatewayLoadProvider(
+    private val httpClient: HttpClient,
+    private val baseUrl: String,
+    private val internalToken: String?
+) : GatewayLoadProvider {
+    override suspend fun activeConnections(): Int =
+        httpClient
+            .get("${baseUrl.trimEnd('/')}/internal/v1/load") {
+                internalToken?.let { token ->
+                    header(InternalApiAuthentication.TOKEN_HEADER, token)
+                }
+            }.body<GatewayLoad>()
+            .activeConnections
+}
+
 data class NodeRegistrationConfig(
     val registryUrl: String,
     val clientEndpoint: String,
@@ -210,7 +248,7 @@ data class NodeRegistrationConfig(
     private companion object {
         const val DEFAULT_DESCRIPTOR_LIFETIME_MILLISECONDS = 60L * 60L * 1_000L
         const val DEFAULT_REGISTRATION_REFRESH_MILLISECONDS = 10L * 60L * 1_000L
-        const val DEFAULT_HEARTBEAT_INTERVAL_MILLISECONDS = 30_000L
+        const val DEFAULT_HEARTBEAT_INTERVAL_MILLISECONDS = 10_000L
         const val DEFAULT_RETRY_DELAY_MILLISECONDS = 5_000L
     }
 }

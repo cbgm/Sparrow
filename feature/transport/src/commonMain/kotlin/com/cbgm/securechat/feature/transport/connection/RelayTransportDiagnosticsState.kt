@@ -159,6 +159,7 @@ internal class RelayTransportDiagnosticsState(
                                     cooldownUntilEpochMillisecondsByNodeId =
                                     cooldownUntilEpochMillisecondsByNodeId
                                 ),
+                            activeConnections = endpoint.activeConnections,
                             cooldownUntilEpochMilliseconds = cooldownUntilEpochMilliseconds
                         )
                     }

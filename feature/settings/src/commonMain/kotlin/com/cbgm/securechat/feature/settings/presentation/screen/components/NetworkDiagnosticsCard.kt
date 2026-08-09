@@ -156,6 +156,7 @@ private fun NodeDiagnosticRow(node: TransportNodeDiagnostic) {
         NodeDiagnosticHeader(
             nodeId = node.nodeId,
             state = effectiveState,
+            activeConnections = node.activeConnections,
             cooldownRemainingSeconds = cooldown.remainingSeconds
         )
 
@@ -174,6 +175,7 @@ private fun NodeDiagnosticRow(node: TransportNodeDiagnostic) {
 private fun NodeDiagnosticHeader(
     nodeId: String,
     state: TransportNodeDiagnosticState,
+    activeConnections: Int,
     cooldownRemainingSeconds: Long
 ) {
     Row(
@@ -186,18 +188,30 @@ private fun NodeDiagnosticHeader(
             modifier = Modifier.weight(1f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace,
+            style = MaterialTheme.typography.displayMedium,
             color = MaterialTheme.colorScheme.onBackground
         )
 
-        Text(
-            text = state.displayText(cooldownRemainingSeconds),
+        Column(
             modifier = Modifier.padding(start = MaterialTheme.spacing.small),
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = state.displayColor()
-        )
+            horizontalAlignment = Alignment.End
+        ) {
+            Text(
+                text = state.displayText(cooldownRemainingSeconds),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = state.displayColor()
+            )
+            Text(
+                text =
+                    stringResource(
+                        Res.string.feature_settings_network_active_connections,
+                        activeConnections
+                    ),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            )
+        }
     }
 }
 

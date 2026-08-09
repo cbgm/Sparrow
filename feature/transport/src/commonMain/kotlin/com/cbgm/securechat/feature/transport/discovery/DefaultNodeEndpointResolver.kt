@@ -18,6 +18,7 @@ class DefaultNodeEndpointResolver(
 ) : NodeEndpointResolver {
     private val logger = SecureChatLog.withTag("DefaultNodeEndpointResolver")
     private val resolutionMutex = Mutex()
+    private var fetchedRemoteDirectory = false
 
     override suspend fun resolve(localRelayId: String): Result<List<NodeEndpoint>> =
         runCatching {
@@ -46,7 +47,10 @@ class DefaultNodeEndpointResolver(
         val trustedAuthorityNodeId =
             config.trustedRegistryAuthorityNodeId ?: cached?.trustedAuthorityNodeId
 
-        if (isReusable(cachedDirectory, trustedAuthorityNodeId, currentTime)) {
+        if (
+            fetchedRemoteDirectory &&
+            isReusable(cachedDirectory, trustedAuthorityNodeId, currentTime)
+        ) {
             return checkNotNull(cachedDirectory).endpointsFor(localRelayId)
         }
 
@@ -100,6 +104,7 @@ class DefaultNodeEndpointResolver(
                     nowEpochMilliseconds = currentTime
                 ).getOrThrow()
             cacheVerifiedDirectory(remoteDirectory, authorityNodeId)
+            fetchedRemoteDirectory = true
             remoteDirectory
         }
 
@@ -172,6 +177,18 @@ class DefaultNodeEndpointResolver(
             json.decodeFromString<SignedNodeDirectory>(encodedDirectory)
         }.getOrNull()
 
+    private fun stableSelectionScore(
+        localRelayId: String,
+        nodeId: String
+    ): ULong {
+        var hash = FNV_OFFSET_BASIS
+        "$localRelayId:$nodeId".forEach { character ->
+            hash = hash xor character.code.toULong()
+            hash *= FNV_PRIME
+        }
+        return hash
+    }
+
     private fun SignedNodeDirectory.endpointsFor(localRelayId: String): List<NodeEndpoint> {
         val endpoints =
             directory.nodes
@@ -184,17 +201,30 @@ class DefaultNodeEndpointResolver(
                         websocketUrl = descriptor.clientEndpoint,
                         mailboxRouteEndpoint = descriptor.mailboxEndpoint,
                         mailboxAccessEndpoint =
-                            descriptor.mailboxEndpoint.clientAccessibleFrom(descriptor.clientEndpoint)
+                            descriptor.mailboxEndpoint.clientAccessibleFrom(descriptor.clientEndpoint),
+                        activeConnections = descriptor.activeConnections ?: 0
                     )
                 }.distinctBy(NodeEndpoint::nodeId)
-                .sortedBy(NodeEndpoint::nodeId)
+                .sortedWith(
+                    compareBy<NodeEndpoint>(NodeEndpoint::activeConnections)
+                        .thenByDescending { endpoint ->
+                            stableSelectionScore(
+                                localRelayId = localRelayId,
+                                nodeId = endpoint.nodeId
+                            )
+                        }
+                )
 
         check(endpoints.isNotEmpty()) {
             "Node directory does not contain a compatible gateway"
         }
 
-        val startIndex = (localRelayId.hashCode() and Int.MAX_VALUE) % endpoints.size
-        return endpoints.drop(startIndex) + endpoints.take(startIndex)
+        return endpoints
+    }
+
+    private companion object {
+        const val FNV_OFFSET_BASIS: ULong = 14_695_981_039_346_656_037uL
+        const val FNV_PRIME: ULong = 1_099_511_628_211uL
     }
 }
 

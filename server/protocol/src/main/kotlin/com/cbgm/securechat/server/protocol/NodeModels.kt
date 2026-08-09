@@ -19,6 +19,7 @@ data class SecureChatNodeDescriptor(
     val protocolVersions: Set<Int>,
     val capabilities: Set<NodeCapability>,
     val validUntilEpochMilliseconds: Long,
+    val activeConnections: Int? = null,
     val signature: ByteArray
 ) {
     init {
@@ -29,6 +30,7 @@ data class SecureChatNodeDescriptor(
         require(identityPublicKey.isNotEmpty())
         require(protocolVersions.isNotEmpty() && protocolVersions.all { it > 0 })
         require(validUntilEpochMilliseconds > 0L)
+        require(activeConnections == null || activeConnections >= 0)
     }
 }
 
@@ -66,21 +68,28 @@ data class NodeHeartbeatRequest(
     val nodeId: String,
     val timestampEpochMilliseconds: Long,
     val nonce: String,
+    val activeConnections: Int? = null,
     val signature: ByteArray
-)
+) {
+    init {
+        require(activeConnections == null || activeConnections >= 0)
+    }
+}
 
 @Serializable
 data class UnsignedNodeHeartbeat(
     val nodeId: String,
     val timestampEpochMilliseconds: Long,
-    val nonce: String
+    val nonce: String,
+    val activeConnections: Int?
 )
 
 fun NodeHeartbeatRequest.unsigned(): UnsignedNodeHeartbeat =
     UnsignedNodeHeartbeat(
         nodeId = nodeId,
         timestampEpochMilliseconds = timestampEpochMilliseconds,
-        nonce = nonce
+        nonce = nonce,
+        activeConnections = activeConnections
     )
 
 @Serializable

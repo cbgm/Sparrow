@@ -19,6 +19,7 @@ data class SecureChatNodeDescriptor(
     val protocolVersions: Set<Int>,
     val capabilities: Set<NodeCapability>,
     val validUntilEpochMilliseconds: Long,
+    val activeConnections: Int? = null,
     val signature: ByteArray
 )
 
@@ -65,5 +66,6 @@ data class NodeEndpoint(
     val nodeId: String,
     val websocketUrl: String,
     val mailboxRouteEndpoint: String? = null,
-    val mailboxAccessEndpoint: String? = null
+    val mailboxAccessEndpoint: String? = null,
+    val activeConnections: Int = 0
 )

@@ -106,7 +106,13 @@ internal fun Application.configureFederationLifecycle(
             NodeRegistrationAgent(
                 httpClient = runtime.httpClient,
                 identity = identity,
-                config = config.toNodeRegistrationConfig()
+                config = config.toNodeRegistrationConfig(),
+                loadProvider =
+                    HttpGatewayLoadProvider(
+                        httpClient = runtime.httpClient,
+                        baseUrl = config.gatewayInternalUrl,
+                        internalToken = config.gatewayInternalApiToken
+                    )
             ).run()
         }
     }
