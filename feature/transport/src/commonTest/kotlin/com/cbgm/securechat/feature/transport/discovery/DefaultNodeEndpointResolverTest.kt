@@ -93,6 +93,58 @@ class DefaultNodeEndpointResolverTest {
         }
 
     @Test
+    fun forcedRefreshBypassesReusableDirectoryCache() =
+        runTest {
+            val initialDirectory =
+                signedDirectory(
+                    nodes =
+                        listOf(
+                            descriptor(
+                                name = "node-a",
+                                endpoint = "wss://a.example/relay",
+                                seed = 2,
+                                activeConnections = 1
+                            )
+                        )
+                )
+            val refreshedDirectory =
+                signedDirectory(
+                    nodes =
+                        listOf(
+                            descriptor(
+                                name = "node-a",
+                                endpoint = "wss://a.example/relay",
+                                seed = 2,
+                                activeConnections = 2
+                            )
+                        )
+                )
+            val source =
+                RecordingNodeDirectorySource(
+                    Result.success(json.encodeToString(initialDirectory))
+                )
+            val resolver =
+                resolver(
+                    source = source,
+                    cache = RecordingNodeDirectoryCache(),
+                    now = { NOW }
+                )
+
+            val initial = resolver.resolve("relay-a").getOrThrow()
+            source.result = Result.success(json.encodeToString(refreshedDirectory))
+            val refreshed =
+                resolver
+                    .resolve(
+                        localRelayId = "relay-a",
+                        forceRefresh = true
+                    ).getOrThrow()
+
+            assertEquals(1, initial.single().activeConnections)
+            assertEquals(2, refreshed.single().activeConnections)
+            assertEquals(2, source.fetchCount)
+        }
+
+    @Test
     fun leastLoadedNodeIsPreferred() =
         runTest {
             val directory =
@@ -313,7 +365,7 @@ class DefaultNodeEndpointResolverTest {
             }
 
     private class RecordingNodeDirectorySource(
-        private val result: Result<String>
+        var result: Result<String>
     ) : NodeDirectorySource {
         var fetchCount: Int = 0
 

@@ -37,4 +37,5 @@ data class TransportDiagnostics(
 
 interface TransportDiagnosticsProvider {
     val diagnostics: StateFlow<TransportDiagnostics>
+    val refreshDiagnostics: suspend () -> Unit
 }

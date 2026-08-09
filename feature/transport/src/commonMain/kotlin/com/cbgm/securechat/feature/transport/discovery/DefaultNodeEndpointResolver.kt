@@ -20,26 +20,37 @@ class DefaultNodeEndpointResolver(
     private val resolutionMutex = Mutex()
     private var fetchedRemoteDirectory = false
 
-    override suspend fun resolve(localRelayId: String): Result<List<NodeEndpoint>> =
+    override suspend fun resolve(
+        localRelayId: String,
+        forceRefresh: Boolean
+    ): Result<List<NodeEndpoint>> =
         runCatching {
             require(localRelayId.isNotBlank()) {
                 "Local relay ID must not be blank"
             }
 
             resolutionMutex.withLock {
-                resolveLocked(localRelayId)
+                resolveLocked(
+                    localRelayId = localRelayId,
+                    forceRefresh = forceRefresh
+                )
             }
         }
 
-    private suspend fun resolveLocked(localRelayId: String): List<NodeEndpoint> =
+    private suspend fun resolveLocked(
+        localRelayId: String,
+        forceRefresh: Boolean
+    ): List<NodeEndpoint> =
         resolveRegistry(
             registryBaseUrl = config.nodeRegistryBaseUrl,
-            localRelayId = localRelayId
+            localRelayId = localRelayId,
+            forceRefresh = forceRefresh
         )
 
     private suspend fun resolveRegistry(
         registryBaseUrl: String,
-        localRelayId: String
+        localRelayId: String,
+        forceRefresh: Boolean
     ): List<NodeEndpoint> {
         val cached = cache.read()
         val cachedDirectory = cached?.decode()
@@ -48,6 +59,7 @@ class DefaultNodeEndpointResolver(
             config.trustedRegistryAuthorityNodeId ?: cached?.trustedAuthorityNodeId
 
         if (
+            !forceRefresh &&
             fetchedRemoteDirectory &&
             isReusable(cachedDirectory, trustedAuthorityNodeId, currentTime)
         ) {

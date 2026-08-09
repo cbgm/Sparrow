@@ -5,16 +5,18 @@ import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.transport.TransportDiagnosticsProvider
 import com.cbgm.securechat.feature.settings.domain.repository.SettingsRepository
 import com.cbgm.securechat.feature.settings.presentation.model.DeveloperMenuUiState
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class DeveloperMenuViewModel(
     private val settingsRepository: SettingsRepository,
-    transportDiagnosticsProvider: TransportDiagnosticsProvider
+    private val transportDiagnosticsProvider: TransportDiagnosticsProvider
 ) : ViewModel() {
     private val _uiState =
         MutableStateFlow(
@@ -33,6 +35,12 @@ class DeveloperMenuViewModel(
                 }
             }
         }
+        viewModelScope.launch {
+            while (isActive) {
+                transportDiagnosticsProvider.refreshDiagnostics()
+                delay(DIAGNOSTICS_REFRESH_INTERVAL_MILLISECONDS)
+            }
+        }
     }
 
     fun onClearLocalData() {
@@ -47,5 +55,9 @@ class DeveloperMenuViewModel(
         viewModelScope.launch {
             settingsRepository.setDeveloperModeEnabled(false)
         }
+    }
+
+    private companion object {
+        const val DIAGNOSTICS_REFRESH_INTERVAL_MILLISECONDS = 1_000L
     }
 }

@@ -50,6 +50,32 @@ class DefaultRelayConnectionManager(
 
     override val diagnostics: StateFlow<TransportDiagnostics> = diagnosticsState.diagnostics
 
+    override val refreshDiagnostics: suspend () -> Unit = {
+        localRelayIdProvider.getLocalRelayId().getOrNull()?.let { relayId ->
+            nodeEndpointResolver
+                .resolve(
+                    localRelayId = relayId,
+                    forceRefresh = true
+                ).fold(
+                    onSuccess = { endpoints ->
+                        resolvedEndpoints = endpoints
+                        diagnosticsState.resolved(
+                            endpoints = endpoints,
+                            cooldownUntilEpochMillisecondsByNodeId =
+                                failedNodeTracker.cooldownUntilEpochMillisecondsByNodeId(endpoints),
+                            registryAuthorityVerified = true
+                        )
+                    },
+                    onFailure = { error ->
+                        logger.warn {
+                            "Live transport diagnostics refresh failed: " +
+                                (error.message ?: "unknown error")
+                        }
+                    }
+                )
+        }
+    }
+
     override val connectionState: StateFlow<TransportConnectionState> =
         webSocketTransportClient.connectionState
 

@@ -259,7 +259,7 @@ data class NodeRegistrationConfig(
     private companion object {
         const val DEFAULT_DESCRIPTOR_LIFETIME_MILLISECONDS = 60L * 60L * 1_000L
         const val DEFAULT_REGISTRATION_REFRESH_MILLISECONDS = 10L * 60L * 1_000L
-        const val DEFAULT_HEARTBEAT_INTERVAL_MILLISECONDS = 5_000L
+        const val DEFAULT_HEARTBEAT_INTERVAL_MILLISECONDS = 2_000L
         const val DEFAULT_RETRY_DELAY_MILLISECONDS = 5_000L
     }
 }
