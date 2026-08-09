@@ -1,6 +1,7 @@
 package com.cbgm.securechat.server.federation
 
 import com.cbgm.securechat.server.persistence.ServiceEnvironment
+import com.cbgm.securechat.server.persistence.controlPlaneUrlsFromEnvironment
 import com.cbgm.securechat.server.security.NodeIdentity
 import com.cbgm.securechat.server.security.NodeIdentityStore
 import com.cbgm.securechat.server.security.RateLimitPolicy
@@ -44,6 +45,7 @@ data class FederationConfig(
     val databaseUser: String,
     val databasePassword: String,
     val databaseMaximumPoolSize: Int,
+    val controlPlaneUrls: List<String>,
     val nodeRegistryUrl: String,
     val presenceDirectoryUrl: String,
     val gatewayInternalUrl: String,
@@ -85,6 +87,16 @@ data class FederationConfig(
                         "FEDERATION_DATABASE_MAXIMUM_POOL_SIZE",
                         DEFAULT_DATABASE_MAXIMUM_POOL_SIZE
                     ),
+                controlPlaneUrls =
+                    System.getenv("CONTROL_PLANE_URLS")
+                        ?.takeIf(String::isNotBlank)
+                        ?.let { value ->
+                            controlPlaneUrlsFromEnvironment(
+                                legacyEnvironmentNames = emptyList(),
+                                defaultUrl = value
+                            )
+                        }
+                        ?: emptyList(),
                 nodeRegistryUrl =
                     ServiceEnvironment.string("NODE_REGISTRY_URL", "http://localhost:8090"),
                 presenceDirectoryUrl =

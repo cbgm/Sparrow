@@ -2,6 +2,7 @@ package com.cbgm.securechat.server.federation
 
 import com.cbgm.securechat.server.observability.installServerObservability
 import com.cbgm.securechat.server.persistence.BoundedIdempotencyStore
+import com.cbgm.securechat.server.persistence.ControlPlaneEndpointPool
 import com.cbgm.securechat.server.protocol.serverJson
 import com.cbgm.securechat.server.security.BoundedRateLimiter
 import com.cbgm.securechat.server.security.NodeIdentity
@@ -40,7 +41,15 @@ internal fun createFederationRuntime(
     config: FederationConfig,
     httpClient: HttpClient
 ): FederationRuntime {
-    val registry = CachingNodeRegistryClient(httpClient, config.nodeRegistryUrl)
+    val registryEndpointPool =
+        ControlPlaneEndpointPool(
+            config.controlPlaneUrls.ifEmpty { listOf(config.nodeRegistryUrl) }
+        )
+    val presenceEndpointPool =
+        ControlPlaneEndpointPool(
+            config.controlPlaneUrls.ifEmpty { listOf(config.presenceDirectoryUrl) }
+        )
+    val registry = CachingNodeRegistryClient(httpClient, registryEndpointPool)
     val localGateway =
         HttpLocalGatewayClient(
             httpClient = httpClient,
@@ -57,7 +66,7 @@ internal fun createFederationRuntime(
         FederationRouter(
             localNodeId = identity.nodeId,
             presenceDirectory =
-                HttpPresenceDirectoryClient(httpClient, config.presenceDirectoryUrl),
+                HttpPresenceDirectoryClient(httpClient, presenceEndpointPool),
             nodeRegistry = registry,
             localGateway = localGateway,
             remoteFederation = remoteFederation,
@@ -81,7 +90,8 @@ internal fun createFederationRuntime(
             BoundedIdempotencyStore(
                 maximumEntries = config.maximumDeduplicationEntries
             ),
-        serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+        registryEndpointPool = registryEndpointPool
     )
 }
 
@@ -107,6 +117,7 @@ internal fun Application.configureFederationLifecycle(
                 httpClient = runtime.httpClient,
                 identity = identity,
                 config = config.toNodeRegistrationConfig(),
+                endpointPool = runtime.registryEndpointPool,
                 loadProvider =
                     HttpGatewayLoadProvider(
                         httpClient = runtime.httpClient,
@@ -127,7 +138,6 @@ internal fun Application.configureFederationLifecycle(
 
 private fun FederationConfig.toNodeRegistrationConfig(): NodeRegistrationConfig =
     NodeRegistrationConfig(
-        registryUrl = nodeRegistryUrl,
         clientEndpoint = clientEndpoint,
         federationEndpoint = federationEndpoint,
         mailboxEndpoint = mailboxEndpoint
@@ -161,5 +171,6 @@ internal data class FederationRuntime(
     val router: FederationRouter,
     val verifier: NodeRequestVerifier,
     val incomingIds: BoundedIdempotencyStore,
-    val serviceScope: CoroutineScope
+    val serviceScope: CoroutineScope,
+    val registryEndpointPool: ControlPlaneEndpointPool
 )

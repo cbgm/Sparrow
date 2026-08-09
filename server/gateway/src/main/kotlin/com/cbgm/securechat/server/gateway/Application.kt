@@ -1,6 +1,7 @@
 package com.cbgm.securechat.server.gateway
 
 import com.cbgm.securechat.server.persistence.ServiceEnvironment
+import com.cbgm.securechat.server.persistence.controlPlaneUrlsFromEnvironment
 import com.cbgm.securechat.server.security.NodeIdentity
 import com.cbgm.securechat.server.security.NodeIdentityStore
 import io.ktor.client.HttpClient
@@ -40,6 +41,7 @@ data class GatewayConfig(
     val nodeIdentityPath: String,
     val federationInternalUrl: String,
     val pushInternalUrl: String,
+    val controlPlaneUrls: List<String>,
     val pushNodeApiUrl: String?,
     val presenceDirectoryUrl: String,
     val federationInternalApiToken: String?,
@@ -78,6 +80,16 @@ data class GatewayConfig(
                         "PUSH_INTERNAL_URL",
                         "http://localhost:8095"
                     ),
+                controlPlaneUrls =
+                    System.getenv("CONTROL_PLANE_URLS")
+                        ?.takeIf(String::isNotBlank)
+                        ?.let { value ->
+                            controlPlaneUrlsFromEnvironment(
+                                legacyEnvironmentNames = emptyList(),
+                                defaultUrl = value
+                            )
+                        }
+                        ?: emptyList(),
                 pushNodeApiUrl =
                     System.getenv("PUSH_NODE_API_URL")?.takeIf(String::isNotBlank),
                 presenceDirectoryUrl =

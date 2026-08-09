@@ -1,5 +1,6 @@
 package com.cbgm.securechat.server.federation
 
+import com.cbgm.securechat.server.persistence.ControlPlaneEndpointPool
 import com.cbgm.securechat.server.protocol.GatewayLoad
 import com.cbgm.securechat.server.protocol.NodeCapability
 import com.cbgm.securechat.server.protocol.NodeHeartbeatRequest
@@ -17,7 +18,6 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
-import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
@@ -26,6 +26,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.serialization.encodeToString
 import org.slf4j.LoggerFactory
 import java.util.UUID
 import kotlin.time.Duration.Companion.milliseconds
@@ -34,180 +35,150 @@ class NodeRegistrationAgent(
     private val httpClient: HttpClient,
     private val identity: NodeIdentity,
     private val config: NodeRegistrationConfig,
+    private val endpointPool: ControlPlaneEndpointPool,
     private val loadProvider: GatewayLoadProvider = GatewayLoadProvider { 0 },
     private val now: () -> Long = System::currentTimeMillis
 ) {
     suspend fun run() {
-        while (currentCoroutineContext().isActive) {
-            try {
-                val refreshAt = establishRegistration()
-                maintainRegistration(initialRefreshAt = refreshAt)
-            } catch (cancellation: CancellationException) {
-                throw cancellation
-            } catch (error: Exception) {
-                logger.warn(
-                    "Node registration loop failed for {}: {}",
-                    identity.nodeId,
-                    error.message ?: error::class.simpleName
-                )
-                delay(retryDelay(error).milliseconds)
-            }
-        }
-    }
-
-    private suspend fun establishRegistration(): Long =
-        try {
-            register()
-            try {
-                heartbeat()
-            } catch (cancellation: CancellationException) {
-                throw cancellation
-            } catch (error: Exception) {
-                logger.warn(
-                    "Initial node load heartbeat failed for {}: {}",
-                    identity.nodeId,
-                    error.message ?: error::class.simpleName
-                )
-            }
-            now() + config.registrationRefreshMilliseconds
-        } catch (error: NodeRegistrationHttpException) {
-            if (error.statusCode != HttpStatusCode.TooManyRequests.value) {
-                throw error
-            }
-
-            val heartbeatSucceeded =
-                try {
-                    heartbeat()
-                    true
-                } catch (cancellation: CancellationException) {
-                    throw cancellation
-                } catch (error: Exception) {
-                    logger.warn(
-                        "Existing node registration heartbeat failed for {}: {}",
-                        identity.nodeId,
-                        error.message ?: error::class.simpleName
-                    )
-                    false
-                }
-
-            if (!heartbeatSucceeded) {
-                throw error
-            }
-
-            logger.warn(
-                "Node registration for {} is rate-limited; " +
-                    "continuing with the existing healthy registration",
-                identity.nodeId
+        val registrationClient =
+            NodeRegistrationClient(
+                httpClient = httpClient,
+                identity = identity,
+                config = config,
+                endpointPool = endpointPool,
+                now = now
             )
-            now() + retryDelay(error)
-        }
-
-    private suspend fun maintainRegistration(initialRefreshAt: Long) {
-        var refreshAt = initialRefreshAt
-
         while (currentCoroutineContext().isActive) {
+            registrationClient.synchronize(resolveLoad())
             delay(config.heartbeatIntervalMilliseconds.milliseconds)
-            heartbeat()
-
-            if (now() >= refreshAt) {
-                refreshAt = refreshDescriptor()
-            }
         }
     }
 
-    private suspend fun refreshDescriptor(): Long =
+    private suspend fun resolveLoad(): Int? =
         try {
-            register()
-            now() + config.registrationRefreshMilliseconds
+            loadProvider.activeConnections().coerceAtLeast(0)
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (error: Exception) {
             logger.warn(
-                "Node descriptor refresh failed for {}: {}; heartbeats will continue",
+                "Gateway load lookup failed for {}: {}; preserving the last reported load",
                 identity.nodeId,
                 error.message ?: error::class.simpleName
             )
-            now() + retryDelay(error)
+            null
         }
 
-    private suspend fun register() {
-        val descriptor =
-            ProtocolSignatures.signDescriptor(
-                SecureChatNodeDescriptor(
-                    nodeId = identity.nodeId,
-                    clientEndpoint = config.clientEndpoint,
-                    federationEndpoint = config.federationEndpoint,
-                    mailboxEndpoint = config.mailboxEndpoint,
-                    identityPublicKey = identity.encodedPublicKey,
-                    protocolVersions = setOf(SUPPORTED_PROTOCOL_VERSION),
-                    capabilities = NodeCapability.entries.toSet(),
-                    validUntilEpochMilliseconds =
-                        now() + config.descriptorLifetimeMilliseconds,
-                    signature = byteArrayOf()
-                ),
-                identity
-            )
+    private companion object {
+        val logger = LoggerFactory.getLogger(NodeRegistrationAgent::class.java)
+    }
+}
 
-        val response =
-            httpClient.post("${config.registryUrl.trimEnd('/')}/v1/nodes") {
-                contentType(ContentType.Application.Json)
-                setBody(NodeRegistrationRequest(descriptor))
-            }
+private class NodeRegistrationClient(
+    private val httpClient: HttpClient,
+    private val identity: NodeIdentity,
+    private val config: NodeRegistrationConfig,
+    private val endpointPool: ControlPlaneEndpointPool,
+    private val now: () -> Long
+) {
+    private val nextRegistrationAt = mutableMapOf<String, Long>()
 
-        response.requireSuccessful("Node registration")
+    suspend fun synchronize(activeConnections: Int?) {
+        endpointPool.all().forEach { baseUrl ->
+            synchronizeEndpoint(baseUrl, activeConnections)
+        }
     }
 
-    private suspend fun heartbeat() {
-        val timestamp = now()
-        val activeConnections =
-            runCatching {
-                loadProvider.activeConnections().coerceAtLeast(0)
-            }.getOrElse { error ->
-                logger.warn(
-                    "Gateway load lookup failed for {}: {}; preserving the last reported load",
-                    identity.nodeId,
-                    error.message ?: error::class.simpleName
-                )
-                null
+    private suspend fun synchronizeEndpoint(
+        baseUrl: String,
+        activeConnections: Int?
+    ) {
+        try {
+            if (now() >= (nextRegistrationAt[baseUrl] ?: Long.MIN_VALUE)) {
+                register(baseUrl)
             }
+            heartbeat(baseUrl, activeConnections)
+            endpointPool.markReachable(baseUrl)
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            endpointPool.markUnavailable(baseUrl)
+            nextRegistrationAt[baseUrl] = now() + config.retryDelayMilliseconds
+            logger.warn(
+                "Control-plane synchronization failed for node {} at {}: {}",
+                identity.nodeId,
+                baseUrl,
+                error.message ?: error::class.simpleName
+            )
+        }
+    }
 
+    private suspend fun register(baseUrl: String) {
+        val response =
+            httpClient.post("${baseUrl.trimEnd('/')}/v1/nodes") {
+                contentType(ContentType.Application.Json)
+                setBody(NodeRegistrationRequest(createDescriptor()))
+            }
+        if (response.status == HttpStatusCode.TooManyRequests) {
+            nextRegistrationAt[baseUrl] = now() + config.retryDelayMilliseconds
+            return
+        }
+        check(response.status.isSuccess()) {
+            "Node registration failed with HTTP ${response.status.value}"
+        }
+        nextRegistrationAt[baseUrl] = now() + config.registrationRefreshMilliseconds
+    }
+
+    private suspend fun heartbeat(
+        baseUrl: String,
+        activeConnections: Int?
+    ) {
+        val response =
+            httpClient.post("${baseUrl.trimEnd('/')}/v1/nodes/${identity.nodeId}/heartbeat") {
+                contentType(ContentType.Application.Json)
+                setBody(createHeartbeat(activeConnections))
+            }
+        check(response.status.isSuccess()) {
+            "Node heartbeat failed with HTTP ${response.status.value}"
+        }
+    }
+
+    private fun createDescriptor(): SecureChatNodeDescriptor =
+        ProtocolSignatures.signDescriptor(
+            SecureChatNodeDescriptor(
+                nodeId = identity.nodeId,
+                clientEndpoint = config.clientEndpoint,
+                federationEndpoint = config.federationEndpoint,
+                mailboxEndpoint = config.mailboxEndpoint,
+                identityPublicKey = identity.encodedPublicKey,
+                protocolVersions = setOf(SUPPORTED_PROTOCOL_VERSION),
+                capabilities = NodeCapability.entries.toSet(),
+                validUntilEpochMilliseconds = now() + config.descriptorLifetimeMilliseconds,
+                signature = byteArrayOf()
+            ),
+            identity
+        )
+
+    private fun createHeartbeat(activeConnections: Int?): NodeHeartbeatRequest {
         val unsigned =
             NodeHeartbeatRequest(
                 nodeId = identity.nodeId,
-                timestampEpochMilliseconds = timestamp,
+                timestampEpochMilliseconds = now(),
                 nonce = UUID.randomUUID().toString(),
                 activeConnections = activeConnections,
                 signature = byteArrayOf()
             )
-        val heartbeat =
-            unsigned.copy(
-                signature =
-                    Signatures.sign(
-                        serverJson.encodeToString(unsigned.unsigned()).encodeToByteArray(),
-                        identity.privateKey
-                    )
-            )
-        val response =
-            httpClient.post(
-                "${config.registryUrl.trimEnd('/')}/v1/nodes/${identity.nodeId}/heartbeat"
-            ) {
-                contentType(ContentType.Application.Json)
-                setBody(heartbeat)
-            }
-
-        response.requireSuccessful("Node heartbeat")
+        return unsigned.copy(
+            signature =
+                Signatures.sign(
+                    serverJson.encodeToString(unsigned.unsigned()).encodeToByteArray(),
+                    identity.privateKey
+                )
+        )
     }
-
-    private fun retryDelay(error: Exception): Long =
-        (error as? NodeRegistrationHttpException)
-            ?.retryAfterMilliseconds
-            ?.coerceAtLeast(config.retryDelayMilliseconds)
-            ?: config.retryDelayMilliseconds
 
     private companion object {
         const val SUPPORTED_PROTOCOL_VERSION = 1
-
-        val logger = LoggerFactory.getLogger(NodeRegistrationAgent::class.java)
+        val logger = LoggerFactory.getLogger(NodeRegistrationClient::class.java)
     }
 }
 
@@ -231,7 +202,6 @@ internal class HttpGatewayLoadProvider(
 }
 
 data class NodeRegistrationConfig(
-    val registryUrl: String,
     val clientEndpoint: String,
     val federationEndpoint: String,
     val mailboxEndpoint: String,
@@ -241,18 +211,10 @@ data class NodeRegistrationConfig(
     val retryDelayMilliseconds: Long = DEFAULT_RETRY_DELAY_MILLISECONDS
 ) {
     init {
-        require(descriptorLifetimeMilliseconds > registrationRefreshMilliseconds) {
-            "Node descriptor lifetime must exceed its registration refresh interval"
-        }
-        require(registrationRefreshMilliseconds > heartbeatIntervalMilliseconds) {
-            "Node registration refresh interval must exceed its heartbeat interval"
-        }
-        require(heartbeatIntervalMilliseconds > 0L) {
-            "Node heartbeat interval must be positive"
-        }
-        require(retryDelayMilliseconds > 0L) {
-            "Node registration retry delay must be positive"
-        }
+        require(descriptorLifetimeMilliseconds > registrationRefreshMilliseconds)
+        require(registrationRefreshMilliseconds > heartbeatIntervalMilliseconds)
+        require(heartbeatIntervalMilliseconds > 0L)
+        require(retryDelayMilliseconds > 0L)
     }
 
     private companion object {
@@ -262,29 +224,3 @@ data class NodeRegistrationConfig(
         const val DEFAULT_RETRY_DELAY_MILLISECONDS = 5_000L
     }
 }
-
-private fun HttpResponse.requireSuccessful(operation: String) {
-    if (status.isSuccess()) {
-        return
-    }
-
-    val retryAfterMilliseconds =
-        headers[RETRY_AFTER_HEADER]
-            ?.toLongOrNull()
-            ?.times(MILLISECONDS_PER_SECOND)
-
-    throw NodeRegistrationHttpException(
-        message = "$operation failed with HTTP ${status.value}",
-        statusCode = status.value,
-        retryAfterMilliseconds = retryAfterMilliseconds
-    )
-}
-
-private class NodeRegistrationHttpException(
-    message: String,
-    val statusCode: Int,
-    val retryAfterMilliseconds: Long?
-) : IllegalStateException(message)
-
-private const val RETRY_AFTER_HEADER = "Retry-After"
-private const val MILLISECONDS_PER_SECOND = 1_000L

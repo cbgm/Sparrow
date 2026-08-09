@@ -59,6 +59,7 @@ class PostgresOutboundEnvelopeStorageIntegrationTest {
             databasePassword =
                 System.getenv("FEDERATION_TEST_DATABASE_PASSWORD") ?: "local-development-password",
             databaseMaximumPoolSize = 2,
+            controlPlaneUrls = emptyList(),
             nodeRegistryUrl = "http://localhost:8090",
             presenceDirectoryUrl = "http://localhost:8091",
             gatewayInternalUrl = "http://localhost:8094",

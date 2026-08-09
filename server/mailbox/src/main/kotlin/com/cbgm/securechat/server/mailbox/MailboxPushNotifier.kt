@@ -1,6 +1,8 @@
 package com.cbgm.securechat.server.mailbox
 
+import com.cbgm.securechat.server.persistence.ControlPlaneEndpointPool
 import com.cbgm.securechat.server.persistence.ServiceEnvironment
+import com.cbgm.securechat.server.persistence.controlPlaneUrlsFromEnvironment
 import com.cbgm.securechat.server.security.InternalApiAuthentication
 import com.cbgm.securechat.server.security.NodeIdentityStore
 import com.cbgm.securechat.server.security.NodeRequestAuthentication
@@ -12,36 +14,52 @@ import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.http.isSuccess
+import kotlinx.coroutines.CancellationException
 import java.nio.file.Path
 
 class MailboxPushNotifier private constructor(
     private val httpClient: HttpClient?,
-    private val baseUrl: String?,
+    private val endpointPool: ControlPlaneEndpointPool?,
+    private val internalBaseUrl: String?,
     private val internalToken: String?,
     private val nodeSigner: NodeRequestSigner?
 ) : AutoCloseable {
     suspend fun notify(recipientId: String): Boolean {
-        val client = httpClient
-        val pushBaseUrl = baseUrl
+        val client = httpClient ?: return false
         return when {
-            client == null || pushBaseUrl == null -> false
-            nodeSigner != null -> notifyUsingNodeIdentity(client, pushBaseUrl, recipientId)
-            else -> notifyUsingInternalToken(client, pushBaseUrl, recipientId)
+            nodeSigner != null && endpointPool != null ->
+                notifyUsingNodeIdentity(client, endpointPool, recipientId)
+            internalBaseUrl != null ->
+                notifyUsingInternalToken(client, internalBaseUrl, recipientId)
+            else -> false
         }
     }
 
     private suspend fun notifyUsingNodeIdentity(
         client: HttpClient,
-        pushBaseUrl: String,
+        pool: ControlPlaneEndpointPool,
         recipientId: String
     ): Boolean {
         val path = "/v1/node-push/wake-ups/$recipientId"
-        val authentication = requireNotNull(nodeSigner).sign("POST", path, "")
-        return client
-            .post(pushBaseUrl.trimEnd('/') + path) {
-                nodeAuthentication(authentication)
-            }.status
-            .isSuccess()
+        for (baseUrl in pool.ordered()) {
+            try {
+                val authentication = requireNotNull(nodeSigner).sign("POST", path, "")
+                val response =
+                    client.post(baseUrl.trimEnd('/') + path) {
+                        nodeAuthentication(authentication)
+                    }
+                if (response.status.isSuccess()) {
+                    pool.markAvailable(baseUrl)
+                    return true
+                }
+                pool.markUnavailable(baseUrl)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: Exception) {
+                pool.markUnavailable(baseUrl)
+            }
+        }
+        return false
     }
 
     private suspend fun notifyUsingInternalToken(
@@ -63,19 +81,27 @@ class MailboxPushNotifier private constructor(
         fun fromEnvironment(): MailboxPushNotifier {
             val nodeApiUrl = System.getenv("PUSH_NODE_API_URL")?.takeIf(String::isNotBlank)
             val internalUrl = System.getenv("PUSH_INTERNAL_URL")?.takeIf(String::isNotBlank)
-            val baseUrl = nodeApiUrl ?: internalUrl
-            val signer = nodeApiUrl?.let { createNodeSigner() }
+            val endpointPool =
+                nodeApiUrl?.let {
+                    ControlPlaneEndpointPool(
+                        controlPlaneUrlsFromEnvironment(
+                            legacyEnvironmentNames = listOf("PUSH_NODE_API_URL"),
+                            defaultUrl = it
+                        )
+                    )
+                }
             return MailboxPushNotifier(
-                httpClient = baseUrl?.let { HttpClient(CIO) },
-                baseUrl = baseUrl,
+                httpClient = if (endpointPool != null || internalUrl != null) HttpClient(CIO) else null,
+                endpointPool = endpointPool,
+                internalBaseUrl = internalUrl,
                 internalToken =
                     ServiceEnvironment.secret("PUSH_INTERNAL_API_TOKEN")
                         ?: ServiceEnvironment.secret("INTERNAL_API_TOKEN"),
-                nodeSigner = signer
+                nodeSigner = endpointPool?.let { createNodeSigner() }
             )
         }
 
-        fun disabled() = MailboxPushNotifier(null, null, null, null)
+        fun disabled() = MailboxPushNotifier(null, null, null, null, null)
 
         private fun createNodeSigner(): NodeRequestSigner {
             val identityPath =

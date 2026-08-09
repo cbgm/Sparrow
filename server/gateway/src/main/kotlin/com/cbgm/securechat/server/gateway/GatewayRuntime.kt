@@ -1,6 +1,7 @@
 package com.cbgm.securechat.server.gateway
 
 import com.cbgm.securechat.server.observability.installServerObservability
+import com.cbgm.securechat.server.persistence.ControlPlaneEndpointPool
 import com.cbgm.securechat.server.protocol.serverJson
 import com.cbgm.securechat.server.security.NodeIdentity
 import com.cbgm.securechat.server.security.NodeRequestSigner
@@ -56,11 +57,18 @@ private fun createGatewayHandler(
     connections: ConnectionRegistry
 ): GatewayWebSocketHandler {
     val signer = NodeRequestSigner(identity)
+    val presenceEndpointPool =
+        ControlPlaneEndpointPool(
+            config.controlPlaneUrls.ifEmpty { listOf(config.presenceDirectoryUrl) }
+        )
     val pushClient =
         config.pushNodeApiUrl?.let { nodeApiUrl ->
             HttpNodePushClient(
                 httpClient = httpClient,
-                baseUrl = nodeApiUrl,
+                endpointPool =
+                    ControlPlaneEndpointPool(
+                        config.controlPlaneUrls.ifEmpty { listOf(nodeApiUrl) }
+                    ),
                 signer = signer
             )
         } ?: HttpLegacyPushClient(
@@ -81,7 +89,7 @@ private fun createGatewayHandler(
         presence =
             HttpPresenceClient(
                 httpClient = httpClient,
-                baseUrl = config.presenceDirectoryUrl,
+                endpointPool = presenceEndpointPool,
                 signer = signer
             ),
         legacyPush = pushClient,

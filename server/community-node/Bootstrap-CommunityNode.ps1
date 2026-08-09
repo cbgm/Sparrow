@@ -400,6 +400,19 @@ function Resolve-ControlPlaneUrl {
     }
 }
 
+function Convert-ControlPlaneUrlForContainer {
+    param([Parameter(Mandatory = $true)][string]$ConfiguredUrl)
+
+    $uri = [Uri]$ConfiguredUrl
+    $port = if ($uri.IsDefaultPort) { if ($uri.Scheme -eq "https") { 443 } else { 80 } } else { $uri.Port }
+
+    if ((Test-IsLocalHostAddress -HostName $uri.Host) -and $uri.Scheme -eq "http") {
+        return "http://host.docker.internal`:$port"
+    }
+
+    return $ConfiguredUrl.TrimEnd("/")
+}
+
 function Resolve-ControlPlaneCandidates {
     param(
         [Parameter(Mandatory = $true)][hashtable]$Config,
@@ -414,6 +427,8 @@ function Resolve-ControlPlaneCandidates {
     }
 
     $failures = @()
+    $containerUrls = [System.Collections.Generic.List[string]]::new()
+    $selected = $null
 
     foreach ($rawCandidate in ($Config["CONTROL_PLANE_URLS"] -split '[,;]')) {
         $candidate = Normalize-ControlPlaneUrl -Value $rawCandidate -Mode $Mode
@@ -421,20 +436,37 @@ function Resolve-ControlPlaneCandidates {
             continue
         }
 
+        $containerUrl = Convert-ControlPlaneUrlForContainer -ConfiguredUrl $candidate
+        if (-not $containerUrls.Contains($containerUrl)) {
+            $containerUrls.Add($containerUrl)
+        }
+
+        if ($null -ne $selected) {
+            continue
+        }
+
         try {
             Set-Status "Checking control plane $candidate..."
-            return Resolve-ControlPlaneUrl -ConfiguredUrl $candidate
+            $selected = Resolve-ControlPlaneUrl -ConfiguredUrl $candidate
         } catch {
             $failures += "$candidate - $($_.Exception.Message)"
             Write-Log "Control-plane candidate failed: $candidate"
         }
     }
 
-    if ($failures.Count -eq 0) {
+    if ($containerUrls.Count -eq 0) {
         throw "securechat.conf CONTROL_PLANE_URLS contains no usable addresses."
     }
 
-    throw "No configured SecureChat control plane is reachable.`n$($failures -join "`n")"
+    if ($null -eq $selected) {
+        throw "No configured SecureChat control plane is reachable.`n$($failures -join "`n")"
+    }
+
+    return [PSCustomObject]@{
+        HostProbeUrl = $selected.HostProbeUrl
+        ContainerUrl = $selected.ContainerUrl
+        ContainerUrls = @($containerUrls)
+    }
 }
 
 function New-RandomSecret {
@@ -911,6 +943,7 @@ try {
         "COMMUNITY_NODE_SITE_ADDRESS=$siteAddress",
         "COMMUNITY_NODE_DOMAIN=$publicDomain",
         "CONTROL_PLANE_URL=$($controlPlane.ContainerUrl)",
+        "CONTROL_PLANE_URLS=$($controlPlane.ContainerUrls -join ',')",
         "CLIENT_ENDPOINT=$clientEndpoint",
         "FEDERATION_ENDPOINT=$httpEndpoint",
         "MAILBOX_ENDPOINT=$httpEndpoint",

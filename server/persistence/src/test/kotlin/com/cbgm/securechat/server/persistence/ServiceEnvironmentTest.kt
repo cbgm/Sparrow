@@ -46,3 +46,45 @@ class ServiceEnvironmentTest {
         }
     }
 }
+
+class ControlPlaneEndpointPoolTest {
+    @Test
+    fun failedEndpointIsDeprioritizedUntilCooldownExpires() {
+        var now = 1_000L
+        val pool =
+            ControlPlaneEndpointPool(
+                baseUrls = listOf("https://cp-a.example", "https://cp-b.example"),
+                failureCooldownMilliseconds = 5_000L,
+                now = { now }
+            )
+
+        pool.markUnavailable("https://cp-a.example")
+
+        assertEquals(
+            listOf("https://cp-b.example", "https://cp-a.example"),
+            pool.ordered()
+        )
+
+        now += 5_001L
+
+        assertEquals(
+            listOf("https://cp-a.example", "https://cp-b.example"),
+            pool.ordered()
+        )
+    }
+
+    @Test
+    fun successfulEndpointBecomesPreferred() {
+        val pool =
+            ControlPlaneEndpointPool(
+                baseUrls = listOf("https://cp-a.example", "https://cp-b.example")
+            )
+
+        pool.markAvailable("https://cp-b.example")
+
+        assertEquals(
+            listOf("https://cp-b.example", "https://cp-a.example"),
+            pool.ordered()
+        )
+    }
+}

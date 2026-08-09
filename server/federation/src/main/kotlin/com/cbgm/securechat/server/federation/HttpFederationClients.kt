@@ -1,5 +1,6 @@
 package com.cbgm.securechat.server.federation
 
+import com.cbgm.securechat.server.persistence.ControlPlaneEndpointPool
 import com.cbgm.securechat.server.protocol.ClientRoutingResult
 import com.cbgm.securechat.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.securechat.server.protocol.FederatedEnvelope
@@ -24,13 +25,37 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import kotlinx.coroutines.CancellationException
 
 class HttpPresenceDirectoryClient(
     private val httpClient: HttpClient,
-    private val baseUrl: String
+    private val endpointPool: ControlPlaneEndpointPool
 ) : PresenceDirectoryClient {
-    override suspend fun resolve(routingId: String): ClientRoutingResult =
-        httpClient.get("$baseUrl/v1/routes/$routingId").body()
+    override suspend fun resolve(routingId: String): ClientRoutingResult {
+        var emptyResult: ClientRoutingResult? = null
+        for (baseUrl in endpointPool.ordered()) {
+            try {
+                val response = httpClient.get("${baseUrl.trimEnd('/')}/v1/routes/$routingId")
+                if (!response.status.isSuccess()) {
+                    if (response.status.value >= SERVER_ERROR_STATUS_CODE) {
+                        endpointPool.markUnavailable(baseUrl)
+                    }
+                    continue
+                }
+                val result = response.body<ClientRoutingResult>()
+                endpointPool.markAvailable(baseUrl)
+                if (result.routes.isNotEmpty()) {
+                    return result
+                }
+                emptyResult = result
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: Exception) {
+                endpointPool.markUnavailable(baseUrl)
+            }
+        }
+        return emptyResult ?: ClientRoutingResult(routingId = routingId, routes = emptyList())
+    }
 }
 
 class HttpLocalGatewayClient(
@@ -168,3 +193,5 @@ class HttpMailboxClient(
             }.body()
     }
 }
+
+private const val SERVER_ERROR_STATUS_CODE = 500

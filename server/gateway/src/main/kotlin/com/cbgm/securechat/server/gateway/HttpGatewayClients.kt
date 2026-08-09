@@ -1,5 +1,6 @@
 package com.cbgm.securechat.server.gateway
 
+import com.cbgm.securechat.server.persistence.ControlPlaneEndpointPool
 import com.cbgm.securechat.server.protocol.ClientRouteRegistration
 import com.cbgm.securechat.server.protocol.FederatedEnvelope
 import com.cbgm.securechat.server.protocol.FederatedTypingEvent
@@ -24,6 +25,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import kotlinx.coroutines.CancellationException
 
 class HttpFederationClient(
     private val httpClient: HttpClient,
@@ -58,39 +60,78 @@ class HttpFederationClient(
 
 class HttpPresenceClient(
     private val httpClient: HttpClient,
-    private val baseUrl: String,
+    private val endpointPool: ControlPlaneEndpointPool,
     private val signer: NodeRequestSigner
 ) : PresenceClient {
     override suspend fun register(registration: ClientRouteRegistration): Boolean {
-        val path = "/v1/routes/${registration.route.routingId}"
-        val body = serverJson.encodeToString(registration)
-        val authentication = signer.sign("PUT", path, body)
-        val status =
-            httpClient
-                .put(baseUrl.trimEnd('/') + path) {
-                    nodeAuthentication(authentication)
-                    contentType(ContentType.Application.Json)
-                    setBody(body)
-                }.status
-
-        check(
-            status.value < SERVER_ERROR_STATUS_CODE &&
-                status != HttpStatusCode.TooManyRequests
-        ) {
-            "Presence service unavailable: HTTP ${status.value}"
+        var accepted = false
+        endpointPool.all().forEach { baseUrl ->
+            accepted = registerAt(baseUrl, registration) || accepted
         }
-        return status.isSuccess()
+        return accepted
     }
 
     override suspend fun remove(
         routingId: String,
         connectionId: String
     ) {
+        endpointPool.all().forEach { baseUrl ->
+            try {
+                removeAt(baseUrl, routingId, connectionId)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: Exception) {
+                endpointPool.markUnavailable(baseUrl)
+            }
+        }
+    }
+
+    private suspend fun registerAt(
+        baseUrl: String,
+        registration: ClientRouteRegistration
+    ): Boolean =
+        try {
+            val path = "/v1/routes/${registration.route.routingId}"
+            val body = serverJson.encodeToString(registration)
+            val authentication = signer.sign("PUT", path, body)
+            val status =
+                httpClient
+                    .put(baseUrl.trimEnd('/') + path) {
+                        nodeAuthentication(authentication)
+                        contentType(ContentType.Application.Json)
+                        setBody(body)
+                    }.status
+            if (status.isSuccess()) {
+                endpointPool.markReachable(baseUrl)
+                true
+            } else {
+                if (status.value >= SERVER_ERROR_STATUS_CODE || status == HttpStatusCode.TooManyRequests) {
+                    endpointPool.markUnavailable(baseUrl)
+                }
+                false
+            }
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            endpointPool.markUnavailable(baseUrl)
+            false
+        }
+
+    private suspend fun removeAt(
+        baseUrl: String,
+        routingId: String,
+        connectionId: String
+    ) {
         val path = "/v1/routes/$routingId/$connectionId"
         val authentication = signer.sign("DELETE", path, "")
-        httpClient.delete(baseUrl.trimEnd('/') + path) {
-            nodeAuthentication(authentication)
+        val response =
+            httpClient.delete(baseUrl.trimEnd('/') + path) {
+                nodeAuthentication(authentication)
+            }
+        if (response.status.value >= SERVER_ERROR_STATUS_CODE) {
+            error("Presence removal failed with HTTP ${response.status.value}")
         }
+        endpointPool.markReachable(baseUrl)
     }
 }
 
@@ -129,30 +170,66 @@ class HttpLegacyPushClient(
 
 class HttpNodePushClient(
     private val httpClient: HttpClient,
-    private val baseUrl: String,
+    private val endpointPool: ControlPlaneEndpointPool,
     private val signer: NodeRequestSigner
 ) : LegacyPushClient {
     override suspend fun store(envelope: RelayEnvelope): Boolean {
         val path = "/v1/node-push/envelopes"
         val body = serverJson.encodeToString(envelope)
-        val authentication = signer.sign("POST", path, body)
-        return httpClient
-            .post(baseUrl.trimEnd('/') + path) {
-                nodeAuthentication(authentication)
-                contentType(ContentType.Application.Json)
-                setBody(body)
-            }.status
-            .isSuccess()
+        for (baseUrl in endpointPool.ordered()) {
+            try {
+                val authentication = signer.sign("POST", path, body)
+                val response =
+                    httpClient.post(baseUrl.trimEnd('/') + path) {
+                        nodeAuthentication(authentication)
+                        contentType(ContentType.Application.Json)
+                        setBody(body)
+                    }
+                if (response.status.isSuccess()) {
+                    endpointPool.markAvailable(baseUrl)
+                    return true
+                }
+                if (response.status.value >= SERVER_ERROR_STATUS_CODE) {
+                    endpointPool.markUnavailable(baseUrl)
+                }
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: Exception) {
+                endpointPool.markUnavailable(baseUrl)
+            }
+        }
+        return false
     }
 
     override suspend fun pending(recipientId: String): List<RelayEnvelope> {
         val path = "/v1/node-push/recipients/$recipientId/envelopes"
-        val authentication = signer.sign("GET", path, "")
-        return httpClient
-            .get(baseUrl.trimEnd('/') + path) {
-                nodeAuthentication(authentication)
-            }.body<PendingRelayEnvelopesResponse>()
-            .envelopes
+        var lastError: Throwable? = null
+        for (baseUrl in endpointPool.ordered()) {
+            try {
+                val authentication = signer.sign("GET", path, "")
+                val response =
+                    httpClient.get(baseUrl.trimEnd('/') + path) {
+                        nodeAuthentication(authentication)
+                    }
+                if (response.status.isSuccess()) {
+                    endpointPool.markAvailable(baseUrl)
+                    return response.body<PendingRelayEnvelopesResponse>().envelopes
+                }
+                if (response.status.value >= SERVER_ERROR_STATUS_CODE) {
+                    endpointPool.markUnavailable(baseUrl)
+                }
+                lastError =
+                    IllegalStateException(
+                        "Push pending failed with HTTP ${response.status.value}"
+                    )
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: Exception) {
+                endpointPool.markUnavailable(baseUrl)
+                lastError = error
+            }
+        }
+        throw lastError ?: IllegalStateException("No control-plane push service is available")
     }
 
     override suspend fun acknowledge(
@@ -160,9 +237,25 @@ class HttpNodePushClient(
         envelopeId: String
     ) {
         val path = "/v1/node-push/recipients/$recipientId/envelopes/$envelopeId/ack"
-        val authentication = signer.sign("POST", path, "")
-        httpClient.post(baseUrl.trimEnd('/') + path) {
-            nodeAuthentication(authentication)
+        for (baseUrl in endpointPool.ordered()) {
+            try {
+                val authentication = signer.sign("POST", path, "")
+                val response =
+                    httpClient.post(baseUrl.trimEnd('/') + path) {
+                        nodeAuthentication(authentication)
+                    }
+                if (response.status.isSuccess()) {
+                    endpointPool.markAvailable(baseUrl)
+                    return
+                }
+                if (response.status.value >= SERVER_ERROR_STATUS_CODE) {
+                    endpointPool.markUnavailable(baseUrl)
+                }
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: Exception) {
+                endpointPool.markUnavailable(baseUrl)
+            }
         }
     }
 }

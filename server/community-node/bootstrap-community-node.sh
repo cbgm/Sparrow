@@ -94,15 +94,21 @@ normalize_control_plane_url() {
 }
 
 CONTROL_PLANE_URL=""
+NORMALIZED_CONTROL_PLANE_URLS=()
 IFS=',;' read -r -a CONTROL_PLANE_CANDIDATES <<< "$CONTROL_PLANE_URLS"
 for raw_candidate in "${CONTROL_PLANE_CANDIDATES[@]}"; do
   candidate="$(normalize_control_plane_url "$raw_candidate" || true)"
   [[ -n "$candidate" ]] || continue
-  if http_ready "$candidate/v1/nodes"; then
+  NORMALIZED_CONTROL_PLANE_URLS+=("$candidate")
+  if [[ -z "$CONTROL_PLANE_URL" ]] && http_ready "$candidate/v1/nodes"; then
     CONTROL_PLANE_URL="$candidate"
-    break
   fi
 done
+
+if [[ ${#NORMALIZED_CONTROL_PLANE_URLS[@]} -eq 0 ]]; then
+  echo "securechat.conf CONTROL_PLANE_URLS contains no usable addresses." >&2
+  exit 1
+fi
 
 if [[ -z "$CONTROL_PLANE_URL" ]]; then
   echo "None of the control planes configured in securechat.conf are reachable." >&2
@@ -114,13 +120,25 @@ control_plane_host() {
 }
 
 container_control_plane_url() {
+  local value="$1"
   local host
-  host="$(control_plane_host)"
+  host="$(printf '%s' "$value" | sed -E 's#^[a-zA-Z]+://([^/:]+).*#\1#')"
   if [[ "$host" == "localhost" || "$host" == "127.0.0.1" ]]; then
-    printf '%s' "$CONTROL_PLANE_URL" | sed -E 's#(https?://)(localhost|127\.0\.0\.1)#\1host.docker.internal#'
+    printf '%s' "$value" | sed -E 's#(https?://)(localhost|127\.0\.0\.1)#\1host.docker.internal#'
     return
   fi
-  printf '%s' "$CONTROL_PLANE_URL"
+  printf '%s' "$value"
+}
+
+container_control_plane_urls() {
+  local converted=()
+  local candidate
+  for candidate in "${NORMALIZED_CONTROL_PLANE_URLS[@]}"; do
+    converted+=("$(container_control_plane_url "$candidate")")
+  done
+  local joined
+  joined="$(IFS=,; printf '%s' "${converted[*]}")"
+  printf '%s' "$joined"
 }
 
 primary_ipv4() {
@@ -213,7 +231,8 @@ COMMUNITY_NODE_BIND_ADDRESS=0.0.0.0
 COMMUNITY_NODE_HTTP_PORT=8490
 COMMUNITY_NODE_SITE_ADDRESS=$SITE_ADDRESS
 COMMUNITY_NODE_DOMAIN=$PUBLIC_DOMAIN
-CONTROL_PLANE_URL=$(container_control_plane_url)
+CONTROL_PLANE_URL=$(container_control_plane_url "$CONTROL_PLANE_URL")
+CONTROL_PLANE_URLS=$(container_control_plane_urls)
 CLIENT_ENDPOINT=$CLIENT_ENDPOINT
 FEDERATION_ENDPOINT=$HTTP_ENDPOINT
 MAILBOX_ENDPOINT=$HTTP_ENDPOINT

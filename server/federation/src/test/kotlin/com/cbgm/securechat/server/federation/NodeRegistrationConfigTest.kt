@@ -9,7 +9,6 @@ class NodeRegistrationConfigTest {
     fun defaultsKeepLargeDescriptorSafetyWindow() {
         val config =
             NodeRegistrationConfig(
-                registryUrl = "https://registry.example",
                 clientEndpoint = "wss://node.example/relay",
                 federationEndpoint = "https://node.example/federation",
                 mailboxEndpoint = "https://node.example/mailbox"
