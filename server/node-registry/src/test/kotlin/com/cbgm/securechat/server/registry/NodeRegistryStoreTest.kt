@@ -62,6 +62,34 @@ class NodeRegistryStoreTest {
             assertEquals(3, store.healthyNodes().single().activeConnections)
         }
 
+    @Test
+    fun heartbeatWithoutLoadPreservesLastReportedConnectionLoad() =
+        runTest {
+            val now = 1_000L
+            val identity = NodeIdentity.generate()
+            val store = NodeRegistryStore(now = { now })
+
+            store.register(descriptor(identity))
+            store.heartbeat(
+                signedHeartbeat(
+                    identity = identity,
+                    activeConnections = 3,
+                    now = now,
+                    nonce = "load-3"
+                )
+            )
+            store.heartbeat(
+                signedHeartbeat(
+                    identity = identity,
+                    activeConnections = null,
+                    now = now,
+                    nonce = "load-unavailable"
+                )
+            )
+
+            assertEquals(3, store.healthyNodes().single().activeConnections)
+        }
+
     private fun descriptor(identity: NodeIdentity): SecureChatNodeDescriptor =
         ProtocolSignatures.signDescriptor(
             SecureChatNodeDescriptor(
@@ -80,14 +108,15 @@ class NodeRegistryStoreTest {
 
     private fun signedHeartbeat(
         identity: NodeIdentity,
-        activeConnections: Int,
-        now: Long
+        activeConnections: Int?,
+        now: Long,
+        nonce: String = "nonce-$activeConnections"
     ): NodeHeartbeatRequest {
         val unsigned =
             NodeHeartbeatRequest(
                 nodeId = identity.nodeId,
                 timestampEpochMilliseconds = now,
-                nonce = "nonce-$activeConnections",
+                nonce = nonce,
                 activeConnections = activeConnections,
                 signature = byteArrayOf()
             )

@@ -59,6 +59,17 @@ class NodeRegistrationAgent(
     private suspend fun establishRegistration(): Long =
         try {
             register()
+            try {
+                heartbeat()
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: Exception) {
+                logger.warn(
+                    "Initial node load heartbeat failed for {}: {}",
+                    identity.nodeId,
+                    error.message ?: error::class.simpleName
+                )
+            }
             now() + config.registrationRefreshMilliseconds
         } catch (error: NodeRegistrationHttpException) {
             if (error.statusCode != HttpStatusCode.TooManyRequests.value) {
@@ -151,14 +162,14 @@ class NodeRegistrationAgent(
         val timestamp = now()
         val activeConnections =
             runCatching {
-                loadProvider.activeConnections()
+                loadProvider.activeConnections().coerceAtLeast(0)
             }.getOrElse { error ->
                 logger.warn(
-                    "Gateway load lookup failed for {}: {}",
+                    "Gateway load lookup failed for {}: {}; preserving the last reported load",
                     identity.nodeId,
                     error.message ?: error::class.simpleName
                 )
-                0
+                null
             }
 
         val unsigned =
@@ -166,7 +177,7 @@ class NodeRegistrationAgent(
                 nodeId = identity.nodeId,
                 timestampEpochMilliseconds = timestamp,
                 nonce = UUID.randomUUID().toString(),
-                activeConnections = activeConnections.coerceAtLeast(0),
+                activeConnections = activeConnections,
                 signature = byteArrayOf()
             )
         val heartbeat =
@@ -248,7 +259,7 @@ data class NodeRegistrationConfig(
     private companion object {
         const val DEFAULT_DESCRIPTOR_LIFETIME_MILLISECONDS = 60L * 60L * 1_000L
         const val DEFAULT_REGISTRATION_REFRESH_MILLISECONDS = 10L * 60L * 1_000L
-        const val DEFAULT_HEARTBEAT_INTERVAL_MILLISECONDS = 10_000L
+        const val DEFAULT_HEARTBEAT_INTERVAL_MILLISECONDS = 5_000L
         const val DEFAULT_RETRY_DELAY_MILLISECONDS = 5_000L
     }
 }

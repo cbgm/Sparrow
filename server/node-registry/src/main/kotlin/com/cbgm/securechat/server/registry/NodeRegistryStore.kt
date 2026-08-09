@@ -6,7 +6,7 @@ import com.cbgm.securechat.server.security.ProtocolSignatures
 import com.cbgm.securechat.server.security.ReplayProtection
 import java.util.concurrent.ConcurrentHashMap
 
-private const val DEFAULT_HEARTBEAT_GRACE_MILLISECONDS = 90_000L
+private const val DEFAULT_HEARTBEAT_GRACE_MILLISECONDS = 30_000L
 private const val DEFAULT_REPLAY_RETENTION_MILLISECONDS = 5L * 60L * 1_000L
 
 interface NodeRegistryStorage : AutoCloseable {

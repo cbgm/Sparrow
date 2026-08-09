@@ -15,6 +15,8 @@ class RelayTransportConfigTest {
             )
 
         assertEquals("https://registry.example", config.nodeRegistryBaseUrl)
+        assertEquals(10_000L, config.directoryRefreshIntervalMilliseconds)
+        assertEquals(60_000L, config.failedNodeCooldownMilliseconds)
     }
 
     @Test

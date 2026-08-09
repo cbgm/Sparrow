@@ -5,9 +5,9 @@ data class RelayTransportConfig(
     val nodeRegistryBaseUrl: String,
     val trustedRegistryAuthorityNodeId: String? = null,
     val supportedProtocolVersion: Int = 1,
-    val directoryRefreshIntervalMilliseconds: Long = 60_000L,
+    val directoryRefreshIntervalMilliseconds: Long = 10_000L,
     val cachedDirectoryGraceMilliseconds: Long = 5L * 60L * 1_000L,
-    val failedNodeCooldownMilliseconds: Long = 30_000L,
+    val failedNodeCooldownMilliseconds: Long = 60_000L,
     /**
      * Maximum wait for the relay to accept an envelope.
      */

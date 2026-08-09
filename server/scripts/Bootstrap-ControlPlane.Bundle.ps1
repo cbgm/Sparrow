@@ -485,17 +485,25 @@ try {
         Set-Status "Pulling SecureChat images..."
         Invoke-Compose -Arguments @("pull")
 
-        # Start stateful dependencies first. If their named volumes already
-        # exist, PostgreSQL keeps the original password and ignores a newly
-        # supplied POSTGRES_PASSWORD. We therefore synchronize the role
-        # passwords inside the existing databases before starting apps.
+        # Start stateful dependencies first. PostgreSQL keeps its original
+        # role passwords in existing volumes, so those roles are synchronized
+        # below. Redis reads requirepass only when the Redis process starts,
+        # therefore recreate only that container so it always consumes the
+        # current presence-redis-password secret while preserving its volume.
         Set-Status "Starting SecureChat databases..."
         Invoke-Compose -Arguments @(
             "up",
             "-d",
             "node-registry-database",
-            "presence-redis",
             "push-database"
+        )
+
+        Set-Status "Synchronizing presence Redis credentials..."
+        Invoke-Compose -Arguments @(
+            "up",
+            "-d",
+            "--force-recreate",
+            "presence-redis"
         )
 
         Wait-ForContainerRunning -Service "node-registry-database"

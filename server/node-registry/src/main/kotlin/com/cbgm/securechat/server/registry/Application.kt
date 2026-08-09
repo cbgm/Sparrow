@@ -231,7 +231,7 @@ data class NodeRegistryConfig(
             )
 
         private const val DEFAULT_DATABASE_MAXIMUM_POOL_SIZE = 10
-        private const val DEFAULT_HEARTBEAT_GRACE_MILLISECONDS = 90_000L
+        private const val DEFAULT_HEARTBEAT_GRACE_MILLISECONDS = 30_000L
         private const val DEFAULT_REPLAY_RETENTION_MILLISECONDS = 5L * 60L * 1_000L
         private const val DEFAULT_REGISTRATION_RATE_LIMIT_REQUESTS = 30
         private const val DEFAULT_REGISTRATION_RATE_LIMIT_WINDOW_MILLISECONDS = 60L * 60L * 1_000L
