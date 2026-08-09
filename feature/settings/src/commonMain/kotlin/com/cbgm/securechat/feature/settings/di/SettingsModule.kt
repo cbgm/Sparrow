@@ -21,9 +21,9 @@ import com.cbgm.securechat.feature.settings.domain.usecase.SetBlockUnknownContac
 import com.cbgm.securechat.feature.settings.domain.usecase.SetDeveloperEnabledUseCase
 import com.cbgm.securechat.feature.settings.domain.usecase.SetDirectIdentitySetupMode
 import com.cbgm.securechat.feature.settings.presentation.screen.ControlPlaneSettingsViewModel
-import com.cbgm.securechat.feature.settings.presentation.screen.DeveloperMenuViewModel
-import com.cbgm.securechat.feature.settings.presentation.screen.LicensesViewModel
 import com.cbgm.securechat.feature.settings.presentation.screen.SettingsViewModel
+import com.cbgm.securechat.feature.settings.presentation.screen.developer.DeveloperMenuViewModel
+import com.cbgm.securechat.feature.settings.presentation.screen.licenses.LicensesViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
