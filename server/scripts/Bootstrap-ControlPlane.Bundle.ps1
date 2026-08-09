@@ -535,18 +535,6 @@ try {
     }
 
     Wait-ForEndpoint `
-        -Name "node registry" `
-        -Url "http://127.0.0.1:8391/health/ready"
-
-    Wait-ForEndpoint `
-        -Name "presence directory" `
-        -Url "http://127.0.0.1:8392/health/ready"
-
-    Wait-ForEndpoint `
-        -Name "push service" `
-        -Url "http://127.0.0.1:8395/health/ready"
-
-    Wait-ForEndpoint `
         -Name "control-plane registry route" `
         -Url "http://127.0.0.1:8390/health/registry"
 
