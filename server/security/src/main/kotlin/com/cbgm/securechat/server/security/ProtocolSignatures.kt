@@ -127,28 +127,36 @@ object ProtocolSignatures {
         )
 
     fun verifyDirectory(directory: SignedNodeDirectory): Boolean {
-        if (NodeIds.fromPublicKey(directory.authorityPublicKey) != directory.authorityNodeId) {
-            return false
-        }
+        val expectedNodeId = NodeIds.fromPublicKey(directory.authorityPublicKey)
+        if (expectedNodeId != directory.authorityNodeId) return false
+
         val certificate = directory.authorityCertificate
-        if (
-            certificate != null &&
-            (
-                !verifyAuthorityCertificate(certificate) ||
-                    certificate.authorityNodeId != directory.authorityNodeId ||
-                    !certificate.authorityPublicKey.contentEquals(directory.authorityPublicKey)
-            )
-        ) {
+        if (certificate != null && !isCertificateValid(certificate, directory)) {
             return false
         }
-        return runCatching {
+
+        return verifyDirectorySignature(directory)
+    }
+
+    private fun isCertificateValid(certificate: RegistryAuthorityCertificate, directory: SignedNodeDirectory): Boolean {
+        val isStructureValid = verifyAuthorityCertificate(certificate)
+        val isNodeIdMatching = certificate.authorityNodeId == directory.authorityNodeId
+        val isKeyMatching = certificate.authorityPublicKey.contentEquals(directory.authorityPublicKey)
+
+        return isStructureValid && isNodeIdMatching && isKeyMatching
+    }
+
+    private fun verifyDirectorySignature(directory: SignedNodeDirectory): Boolean =
+        runCatching {
+            val encodedContent = serverJson.encodeToString(directory.directory).encodeToByteArray()
+            val decodedKey = Signatures.decodePublicKey(directory.authorityPublicKey)
+
             Signatures.verify(
-                content = serverJson.encodeToString(directory.directory).encodeToByteArray(),
+                content = encodedContent,
                 signature = directory.signature,
-                publicKey = Signatures.decodePublicKey(directory.authorityPublicKey)
+                publicKey = decodedKey
             )
         }.getOrDefault(false)
-    }
 
     private fun descriptorContent(descriptor: SecureChatNodeDescriptor): ByteArray =
         serverJson.encodeToString(descriptor.unsigned()).encodeToByteArray()
