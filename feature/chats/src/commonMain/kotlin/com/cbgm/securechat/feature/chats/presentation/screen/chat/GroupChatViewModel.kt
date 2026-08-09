@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 import kotlin.time.Duration.Companion.milliseconds
 
 class GroupChatViewModel(
@@ -311,11 +312,17 @@ class GroupChatViewModel(
     }
 
     private suspend fun sendTypingStateNow(isTyping: Boolean) {
-        participantContactIds.value.forEach { contactId ->
-            setTypingIndicator(contactId, isTyping)
-                .onFailure { error ->
-                    logger.warn(error) { "Could not send group typing state for $contactId" }
+        supervisorScope {
+            participantContactIds.value.forEach { contactId ->
+                launch {
+                    setTypingIndicator(contactId, isTyping)
+                        .onFailure { error ->
+                            logger.warn(error) {
+                                "Could not send group typing state for $contactId"
+                            }
+                        }
                 }
+            }
         }
     }
 

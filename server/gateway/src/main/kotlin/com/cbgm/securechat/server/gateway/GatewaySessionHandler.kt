@@ -21,11 +21,18 @@ internal class GatewaySessionHandler(
 ) {
     suspend fun handle(session: DefaultWebSocketServerSession) {
         val state = GatewaySessionState()
+        val workDispatcher = GatewaySessionWorkDispatcher()
         try {
             session.incoming.consumeEach { frame ->
-                handleFrame(session, state, frame)
+                handleFrame(
+                    session = session,
+                    state = state,
+                    frame = frame,
+                    workDispatcher = workDispatcher
+                )
             }
         } finally {
+            workDispatcher.close()
             cleanup(state.connection)
         }
     }
@@ -33,11 +40,17 @@ internal class GatewaySessionHandler(
     private suspend fun handleFrame(
         session: DefaultWebSocketServerSession,
         state: GatewaySessionState,
-        frame: Frame
+        frame: Frame,
+        workDispatcher: GatewaySessionWorkDispatcher
     ) {
         if (frame is Frame.Text) {
             decodeMessage(session, frame)?.let { message ->
-                handleMessage(session, state, message)
+                handleMessage(
+                    session = session,
+                    state = state,
+                    message = message,
+                    workDispatcher = workDispatcher
+                )
             }
         } else {
             state.connection?.sendError(
@@ -64,23 +77,36 @@ internal class GatewaySessionHandler(
     private suspend fun handleMessage(
         session: DefaultWebSocketServerSession,
         state: GatewaySessionState,
-        message: GatewayClientMessage
+        message: GatewayClientMessage,
+        workDispatcher: GatewaySessionWorkDispatcher
     ) {
         when (message) {
             is GatewayClientMessage.Register -> handleRegistration(session, state, message)
             is GatewayClientMessage.SendEnvelope ->
                 state.connection?.let { connection ->
-                    actions.sendEnvelope(connection, message)
+                    workDispatcher.dispatch(
+                        key = "envelope:${message.envelope.recipientId}"
+                    ) {
+                        actions.sendEnvelope(connection, message)
+                    }
                 } ?: session.sendNotRegistered()
 
             is GatewayClientMessage.SendFederatedEnvelope ->
                 state.connection?.let { connection ->
-                    actions.sendFederatedEnvelope(connection, message)
+                    workDispatcher.dispatch(
+                        key = "envelope:${message.envelope.recipientDeviceRoutingId}"
+                    ) {
+                        actions.sendFederatedEnvelope(connection, message)
+                    }
                 } ?: session.sendNotRegistered()
 
             is GatewayClientMessage.TypingState ->
                 state.connection?.let { connection ->
-                    actions.deliverTyping(connection, message)
+                    workDispatcher.dispatch(
+                        key = "typing:${message.recipientId}"
+                    ) {
+                        actions.deliverTyping(connection, message)
+                    }
                 }
 
             is GatewayClientMessage.AcknowledgeEnvelope ->

@@ -72,7 +72,7 @@ class RelayTypingIndicatorGatewayTest {
         }
 
     @Test
-    fun observationFiltersBySenderAndSuppressesDuplicateStates() =
+    fun observationForwardsRepeatedTypingStatesForTimeoutRecovery() =
         runTest {
             val client = FakeWebSocketTransportClient()
             val gateway =
@@ -84,7 +84,7 @@ class RelayTypingIndicatorGatewayTest {
                 async(start = CoroutineStart.UNDISPATCHED) {
                     gateway
                         .observeTyping(contactId = "contact-1")
-                        .take(2)
+                        .take(3)
                         .toList()
                 }
 
@@ -115,7 +115,7 @@ class RelayTypingIndicatorGatewayTest {
             )
 
             assertEquals(
-                expected = listOf(true, false),
+                expected = listOf(true, true, false),
                 actual =
                     withTimeout(TEST_TIMEOUT_MILLISECONDS) {
                         observedValues.await()

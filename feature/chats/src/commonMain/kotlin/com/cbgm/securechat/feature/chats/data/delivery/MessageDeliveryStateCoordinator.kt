@@ -7,11 +7,15 @@ import com.cbgm.securechat.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.securechat.feature.chats.domain.model.MessageDeliveryEvent
 import com.cbgm.securechat.feature.chats.domain.model.MessageDeliveryStateMachine
 import com.cbgm.securechat.feature.chats.domain.model.MessageDeliveryStatus
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class MessageDeliveryStateCoordinator(
     private val messageDeliveryStatusDao: MessageDeliveryStatusDao,
     private val messageRecipientStateDao: MessageRecipientStateDao
 ) {
+    private val recipientStateMutex = Mutex()
+
     suspend fun storePreparedTransport(
         packetId: String,
         encodedTransportPayload: String,
@@ -38,8 +42,14 @@ class MessageDeliveryStateCoordinator(
         val recipientState = messageRecipientStateDao.findByPacketId(packetId)
 
         if (recipientState != null) {
-            updateRecipientState(recipientState, event, errorMessage)
-            updateAggregatedStatus(recipientState.messageId)
+            recipientStateMutex.withLock {
+                val currentRecipientState =
+                    messageRecipientStateDao.findByPacketId(packetId)
+                        ?: return@withLock
+
+                updateRecipientState(currentRecipientState, event, errorMessage)
+                updateAggregatedStatus(currentRecipientState.messageId)
+            }
             return
         }
 
@@ -75,8 +85,16 @@ class MessageDeliveryStateCoordinator(
                 .firstOrNull { it.contactId == contactId }
 
         if (recipientState != null) {
-            updateRecipientState(recipientState, event)
-            updateAggregatedStatus(messageId)
+            recipientStateMutex.withLock {
+                val currentRecipientState =
+                    messageRecipientStateDao
+                        .findByMessageId(messageId)
+                        .firstOrNull { state -> state.contactId == contactId }
+                        ?: return@withLock
+
+                updateRecipientState(currentRecipientState, event)
+                updateAggregatedStatus(messageId)
+            }
             return
         }
 
@@ -101,17 +119,28 @@ class MessageDeliveryStateCoordinator(
         require(messageId.isNotBlank()) { "Message ID must not be blank" }
 
         if (contactId != null) {
-            val recipientState =
+            val recipientExists =
                 messageRecipientStateDao
                     .findByMessageId(messageId)
-                    .firstOrNull { it.contactId == contactId }
-                    ?: return
+                    .any { state -> state.contactId == contactId }
 
-            updateRecipientState(
-                recipientState = recipientState,
-                event = MessageDeliveryEvent.RETRY_REQUESTED
-            )
-            updateAggregatedStatus(messageId)
+            if (!recipientExists) {
+                return
+            }
+
+            recipientStateMutex.withLock {
+                val currentRecipientState =
+                    messageRecipientStateDao
+                        .findByMessageId(messageId)
+                        .firstOrNull { state -> state.contactId == contactId }
+                        ?: return@withLock
+
+                updateRecipientState(
+                    recipientState = currentRecipientState,
+                    event = MessageDeliveryEvent.RETRY_REQUESTED
+                )
+                updateAggregatedStatus(messageId)
+            }
             return
         }
 

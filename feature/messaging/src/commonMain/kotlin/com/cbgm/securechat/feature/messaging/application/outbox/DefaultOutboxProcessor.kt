@@ -10,6 +10,11 @@ import com.cbgm.securechat.core.protocol.outbox.ProtocolOutboxItem
 import com.cbgm.securechat.core.protocol.transport.OutgoingWireSender
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
 import com.cbgm.securechat.feature.messaging.domain.relay.ContactRelayIdResolver
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 class DefaultOutboxProcessor(
     private val protocolOutbox: ProtocolOutbox,
@@ -28,25 +33,34 @@ class DefaultOutboxProcessor(
             }
 
             val pendingItems = protocolOutbox.getPending(limit = limit).getOrThrow()
-
-            var sentCount = 0
-            var failedCount = 0
-
-            pendingItems.forEach { item ->
-                val result = processItem(item = item)
-
-                if (result.isSuccess) {
-                    sentCount += 1
-                } else {
-                    failedCount += 1
-                }
-            }
+            val results = processByRecipient(pendingItems)
 
             OutboxProcessingResult(
-                processedCount = pendingItems.size,
-                sentCount = sentCount,
-                failedCount = failedCount
+                processedCount = results.size,
+                sentCount = results.count { result -> result.isSuccess },
+                failedCount = results.count { result -> result.isFailure }
             )
+        }
+
+    private suspend fun processByRecipient(
+        pendingItems: List<ProtocolOutboxItem>
+    ): List<Result<Unit>> =
+        coroutineScope {
+            val slots = Semaphore(MAX_CONCURRENT_RECIPIENTS)
+
+            pendingItems
+                .groupBy(ProtocolOutboxItem::contactId)
+                .values
+                .map { recipientItems ->
+                    async {
+                        slots.withPermit {
+                            recipientItems.map { item ->
+                                processItem(item = item)
+                            }
+                        }
+                    }
+                }.awaitAll()
+                .flatten()
         }
 
     private suspend fun processItem(item: ProtocolOutboxItem): Result<Unit> {
@@ -97,12 +111,6 @@ class DefaultOutboxProcessor(
         return Result.failure(error ?: IllegalStateException(errorMessage))
     }
 
-    /*
-     * Preparing and sending are kept together because any failure before
-     * markSent leaves the item in PROCESSING and can safely transition it
-     * to FAILED. Delivery-state persistence after markSent is separate so
-     * it cannot incorrectly move an already sent outbox item backwards.
-     */
     private suspend fun prepareAndSend(item: ProtocolOutboxItem) {
         val contact =
             getContact(contactId = item.contactId).getOrThrow()
@@ -138,5 +146,9 @@ class DefaultOutboxProcessor(
             ).getOrThrow()
 
         protocolOutbox.markSent(itemId = item.id).getOrThrow()
+    }
+
+    private companion object {
+        const val MAX_CONCURRENT_RECIPIENTS = 8
     }
 }

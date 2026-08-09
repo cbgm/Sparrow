@@ -4,7 +4,6 @@ import com.cbgm.securechat.feature.chats.domain.repository.TypingIndicatorGatewa
 import com.cbgm.securechat.feature.messaging.domain.relay.ContactRelayIdResolver
 import com.cbgm.securechat.feature.transport.websocket.WebSocketTransportClient
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.transform
 
 class RelayTypingIndicatorGateway(
@@ -23,7 +22,7 @@ class RelayTypingIndicatorGateway(
                 if (event.senderId == contactRelayId) {
                     emit(event.isTyping)
                 }
-            }.distinctUntilChanged()
+            }
 
     override suspend fun sendTypingState(
         contactId: String,
