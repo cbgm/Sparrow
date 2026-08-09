@@ -28,19 +28,8 @@ class DeveloperMenuViewModel(
     val uiState: StateFlow<DeveloperMenuUiState> = _uiState.asStateFlow()
 
     init {
-        viewModelScope.launch {
-            transportDiagnosticsProvider.diagnostics.collectLatest { diagnostics ->
-                _uiState.update { current ->
-                    current.copy(transportDiagnostics = diagnostics)
-                }
-            }
-        }
-        viewModelScope.launch {
-            while (isActive) {
-                transportDiagnosticsProvider.refreshDiagnostics()
-                delay(DIAGNOSTICS_REFRESH_INTERVAL_MILLISECONDS)
-            }
-        }
+        observeTransportDiagnostics()
+        refreshTransportDiagnostics()
     }
 
     fun onClearLocalData() {
@@ -54,6 +43,25 @@ class DeveloperMenuViewModel(
     fun onDisableDeveloperMode() {
         viewModelScope.launch {
             settingsRepository.setDeveloperModeEnabled(false)
+        }
+    }
+
+    private fun observeTransportDiagnostics() {
+        viewModelScope.launch {
+            transportDiagnosticsProvider.diagnostics.collectLatest { diagnostics ->
+                _uiState.update { current ->
+                    current.copy(transportDiagnostics = diagnostics)
+                }
+            }
+        }
+    }
+
+    private fun refreshTransportDiagnostics() {
+        viewModelScope.launch {
+            while (isActive) {
+                transportDiagnosticsProvider.refreshDiagnostics()
+                delay(DIAGNOSTICS_REFRESH_INTERVAL_MILLISECONDS)
+            }
         }
     }
 

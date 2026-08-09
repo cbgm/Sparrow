@@ -3,11 +3,11 @@ package com.cbgm.securechat.server.security
 import com.cbgm.securechat.server.protocol.ClientRoute
 import com.cbgm.securechat.server.protocol.NodeDirectory
 import com.cbgm.securechat.server.protocol.NodeHeartbeatRequest
+import com.cbgm.securechat.server.protocol.RegistryAuthorityCertificate
 import com.cbgm.securechat.server.protocol.SecureChatNodeDescriptor
 import com.cbgm.securechat.server.protocol.SignedNodeDirectory
 import com.cbgm.securechat.server.protocol.serverJson
 import com.cbgm.securechat.server.protocol.unsigned
-import kotlinx.serialization.encodeToString
 
 object ProtocolSignatures {
     fun signDescriptor(
@@ -66,14 +66,59 @@ object ProtocolSignatures {
             )
         }.getOrDefault(false)
 
+    fun signAuthorityCertificate(
+        rootIdentity: NodeIdentity,
+        authorityIdentity: NodeIdentity,
+        keyVersion: Long,
+        validFromEpochMilliseconds: Long,
+        validUntilEpochMilliseconds: Long
+    ): RegistryAuthorityCertificate {
+        val unsigned =
+            RegistryAuthorityCertificate(
+                rootNodeId = rootIdentity.nodeId,
+                rootPublicKey = rootIdentity.encodedPublicKey,
+                authorityNodeId = authorityIdentity.nodeId,
+                authorityPublicKey = authorityIdentity.encodedPublicKey,
+                keyVersion = keyVersion,
+                validFromEpochMilliseconds = validFromEpochMilliseconds,
+                validUntilEpochMilliseconds = validUntilEpochMilliseconds,
+                signature = byteArrayOf()
+            )
+        return unsigned.copy(
+            signature =
+                Signatures.sign(
+                    serverJson.encodeToString(unsigned.unsigned()).encodeToByteArray(),
+                    rootIdentity.privateKey
+                )
+        )
+    }
+
+    fun verifyAuthorityCertificate(certificate: RegistryAuthorityCertificate): Boolean {
+        if (NodeIds.fromPublicKey(certificate.rootPublicKey) != certificate.rootNodeId) {
+            return false
+        }
+        if (NodeIds.fromPublicKey(certificate.authorityPublicKey) != certificate.authorityNodeId) {
+            return false
+        }
+        return runCatching {
+            Signatures.verify(
+                content = serverJson.encodeToString(certificate.unsigned()).encodeToByteArray(),
+                signature = certificate.signature,
+                publicKey = Signatures.decodePublicKey(certificate.rootPublicKey)
+            )
+        }.getOrDefault(false)
+    }
+
     fun signDirectory(
         directory: NodeDirectory,
-        identity: NodeIdentity
+        identity: NodeIdentity,
+        certificate: RegistryAuthorityCertificate? = null
     ): SignedNodeDirectory =
         SignedNodeDirectory(
             directory = directory,
             authorityNodeId = identity.nodeId,
             authorityPublicKey = identity.encodedPublicKey,
+            authorityCertificate = certificate,
             signature =
                 Signatures.sign(
                     serverJson.encodeToString(directory).encodeToByteArray(),
@@ -83,6 +128,17 @@ object ProtocolSignatures {
 
     fun verifyDirectory(directory: SignedNodeDirectory): Boolean {
         if (NodeIds.fromPublicKey(directory.authorityPublicKey) != directory.authorityNodeId) {
+            return false
+        }
+        val certificate = directory.authorityCertificate
+        if (
+            certificate != null &&
+            (
+                !verifyAuthorityCertificate(certificate) ||
+                    certificate.authorityNodeId != directory.authorityNodeId ||
+                    !certificate.authorityPublicKey.contentEquals(directory.authorityPublicKey)
+            )
+        ) {
             return false
         }
         return runCatching {

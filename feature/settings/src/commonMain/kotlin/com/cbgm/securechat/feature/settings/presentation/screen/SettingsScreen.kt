@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Language
@@ -58,12 +59,15 @@ import com.cbgm.securechat.resources.feature_settings_block_unknown_invites
 import com.cbgm.securechat.resources.feature_settings_block_unknown_invites_subtitle
 import com.cbgm.securechat.resources.feature_settings_blocked_contacts
 import com.cbgm.securechat.resources.feature_settings_blocked_contacts_count
+import com.cbgm.securechat.resources.feature_settings_control_planes
+import com.cbgm.securechat.resources.feature_settings_control_planes_settings_subtitle
 import com.cbgm.securechat.resources.feature_settings_data_disclaimer
 import com.cbgm.securechat.resources.feature_settings_data_disclaimer_subtitle
 import com.cbgm.securechat.resources.feature_settings_developer_menu
 import com.cbgm.securechat.resources.feature_settings_developer_menu_subtitle
 import com.cbgm.securechat.resources.feature_settings_general
 import com.cbgm.securechat.resources.feature_settings_licenses_subtitle
+import com.cbgm.securechat.resources.feature_settings_network
 import com.cbgm.securechat.resources.feature_settings_open_source_licenses
 import com.cbgm.securechat.resources.feature_settings_privacy_and_data
 import com.cbgm.securechat.resources.feature_settings_privacy_policy
@@ -82,6 +86,7 @@ fun SettingsScreen(
     onOpenLicenses: () -> Unit,
     onOpenDeveloperMenu: () -> Unit,
     onOpenBlockedContacts: () -> Unit,
+    onOpenControlPlanes: () -> Unit,
     onOpenLanguagePicker: () -> Unit,
     onDismissLanguagePicker: () -> Unit,
     onLanguageSelected: (AppLanguage) -> Unit,
@@ -112,6 +117,15 @@ fun SettingsScreen(
                 subtitle = uiState.currentLanguage.nativeName,
                 onClick = onOpenLanguagePicker,
                 showChevron = false
+            )
+        }
+
+        SettingsSection(title = stringResource(Res.string.feature_settings_network)) {
+            SettingsRow(
+                icon = Icons.Default.Cloud,
+                title = stringResource(Res.string.feature_settings_control_planes),
+                subtitle = stringResource(Res.string.feature_settings_control_planes_settings_subtitle),
+                onClick = onOpenControlPlanes
             )
         }
 
@@ -386,6 +400,7 @@ fun SettingsScreenPreview() {
             onOpenLicenses = {},
             onOpenDeveloperMenu = {},
             onOpenBlockedContacts = {},
+            onOpenControlPlanes = {},
             onOpenLanguagePicker = {},
             onDismissLanguagePicker = {},
             onLanguageSelected = {},

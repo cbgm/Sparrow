@@ -2,6 +2,7 @@ package com.cbgm.securechat.feature.transport.connection
 
 import com.cbgm.securechat.core.logging.SecureChatLog
 import com.cbgm.securechat.core.time.SystemClock
+import com.cbgm.securechat.core.transport.ControlPlaneConfiguration
 import com.cbgm.securechat.core.transport.TransportDiagnostics
 import com.cbgm.securechat.core.transport.TransportDiagnosticsProvider
 import com.cbgm.securechat.feature.transport.discovery.FailedNodeTracker
@@ -29,7 +30,8 @@ class DefaultRelayConnectionManager(
     private val webSocketTransportClient: WebSocketTransportClient,
     private val localRelayIdProvider: LocalRelayIdProvider,
     private val relayTransportConfig: RelayTransportConfig,
-    private val nodeEndpointResolver: NodeEndpointResolver
+    private val nodeEndpointResolver: NodeEndpointResolver,
+    private val controlPlaneConfiguration: ControlPlaneConfiguration
 ) : RelayConnectionManager,
     TransportDiagnosticsProvider {
     private val logger = SecureChatLog.withTag("DefaultRelayConnectionManager")
@@ -45,7 +47,7 @@ class DefaultRelayConnectionManager(
 
     private val diagnosticsState =
         RelayTransportDiagnosticsState(
-            registryUrl = relayTransportConfig.nodeRegistryBaseUrl
+            registryUrl = controlPlaneConfiguration.activeEndpoint.value?.baseUrl
         )
 
     override val diagnostics: StateFlow<TransportDiagnostics> = diagnosticsState.diagnostics
@@ -63,7 +65,8 @@ class DefaultRelayConnectionManager(
                             endpoints = endpoints,
                             cooldownUntilEpochMillisecondsByNodeId =
                                 failedNodeTracker.cooldownUntilEpochMillisecondsByNodeId(endpoints),
-                            registryAuthorityVerified = true
+                            registryAuthorityVerified = true,
+                            registryUrl = controlPlaneConfiguration.activeEndpoint.value?.baseUrl
                         )
                     },
                     onFailure = { error ->
@@ -176,7 +179,8 @@ class DefaultRelayConnectionManager(
         diagnosticsState.resolved(
             endpoints = endpoints,
             cooldownUntilEpochMillisecondsByNodeId = cooldowns,
-            registryAuthorityVerified = relayTransportConfig.nodeRegistryBaseUrl != null
+            registryAuthorityVerified = true,
+            registryUrl = controlPlaneConfiguration.activeEndpoint.value?.baseUrl
         )
 
         return checkNotNull(availableEndpoints.firstOrNull()) {
@@ -268,7 +272,8 @@ class DefaultRelayConnectionManager(
                                     cooldownUntilEpochMillisecondsByNodeId =
                                         failedNodeTracker
                                             .cooldownUntilEpochMillisecondsByNodeId(endpoints),
-                                    registryAuthorityVerified = relayTransportConfig.nodeRegistryBaseUrl != null
+                                    registryAuthorityVerified = true,
+                                    registryUrl = controlPlaneConfiguration.activeEndpoint.value?.baseUrl
                                 )
                             },
                             onFailure = { error ->

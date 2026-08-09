@@ -1,7 +1,6 @@
 package com.cbgm.securechat.feature.transport.relay.model
 
 import com.cbgm.securechat.feature.transport.relay.codec.createRelayJson
-import kotlinx.serialization.encodeToString
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

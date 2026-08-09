@@ -20,6 +20,7 @@ import com.cbgm.securechat.feature.settings.domain.usecase.SetAppLanguageUseCase
 import com.cbgm.securechat.feature.settings.domain.usecase.SetBlockUnknownContactInvites
 import com.cbgm.securechat.feature.settings.domain.usecase.SetDeveloperEnabledUseCase
 import com.cbgm.securechat.feature.settings.domain.usecase.SetDirectIdentitySetupMode
+import com.cbgm.securechat.feature.settings.presentation.screen.ControlPlaneSettingsViewModel
 import com.cbgm.securechat.feature.settings.presentation.screen.DeveloperMenuViewModel
 import com.cbgm.securechat.feature.settings.presentation.screen.LicensesViewModel
 import com.cbgm.securechat.feature.settings.presentation.screen.SettingsViewModel
@@ -105,6 +106,15 @@ val settingsModule =
                 observeBlockUnknownContactInvites = get(),
                 setBlockUnknownContactInvites = get(),
                 observeBlockedContactIds = get()
+            )
+        }
+
+        viewModel {
+            ControlPlaneSettingsViewModel(
+                configuration = get(),
+                statusStore = get(),
+                healthMonitor = get(),
+                directorySynchronizer = get()
             )
         }
 

@@ -1,7 +1,7 @@
 package com.cbgm.securechat.feature.transport.relay.inbox
 
+import com.cbgm.securechat.feature.transport.controlplane.ControlPlaneRequestRouter
 import com.cbgm.securechat.feature.transport.relay.api.PendingRelayEnvelopesResponse
-import com.cbgm.securechat.feature.transport.relay.config.RelayTransportConfig
 import com.cbgm.securechat.feature.transport.relay.model.RelayEnvelope
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -11,7 +11,7 @@ import io.ktor.http.HttpStatusCode
 
 class HttpPendingRelayEnvelopeGateway(
     private val httpClient: HttpClient,
-    private val relayTransportConfig: RelayTransportConfig
+    private val controlPlaneRequestRouter: ControlPlaneRequestRouter
 ) : PendingRelayEnvelopeGateway {
     override suspend fun getPendingEnvelopes(wakeUpId: String): Result<List<RelayEnvelope>> =
         runCatching {
@@ -19,12 +19,14 @@ class HttpPendingRelayEnvelopeGateway(
                 "Wake-up ID must not be blank"
             }
 
-            httpClient
-                .get(
-                    urlString =
-                        "${relayTransportConfig.httpBaseUrl}/push/wake/$wakeUpId/inbox"
-                ).body<PendingRelayEnvelopesResponse>()
-                .envelopes
+            controlPlaneRequestRouter
+                .execute { endpoint ->
+                    httpClient
+                        .get(
+                            urlString = "${endpoint.baseUrl}/push/wake/$wakeUpId/inbox"
+                        ).body<PendingRelayEnvelopesResponse>()
+                        .envelopes
+                }.getOrThrow()
         }
 
     override suspend fun acknowledge(
@@ -40,15 +42,18 @@ class HttpPendingRelayEnvelopeGateway(
                 "Envelope ID must not be blank"
             }
 
-            val response =
-                httpClient.post(
-                    urlString =
-                        "${relayTransportConfig.httpBaseUrl}/push/wake/$wakeUpId/inbox/" +
-                            "$envelopeId/ack"
-                )
+            controlPlaneRequestRouter
+                .execute { endpoint ->
+                    val response =
+                        httpClient.post(
+                            urlString =
+                                "${endpoint.baseUrl}/push/wake/$wakeUpId/inbox/" +
+                                    "$envelopeId/ack"
+                        )
 
-            check(response.status == HttpStatusCode.NoContent) {
-                "Relay acknowledgement failed with ${response.status}"
-            }
+                    check(response.status == HttpStatusCode.NoContent) {
+                        "Relay acknowledgement failed with ${response.status}"
+                    }
+                }.getOrThrow()
         }
 }

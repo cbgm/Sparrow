@@ -8,6 +8,9 @@ import com.cbgm.securechat.core.crypto.SodiumRuntime
 import com.cbgm.securechat.core.crypto.di.cryptoModule
 import com.cbgm.securechat.core.logging.SecureChatLog
 import com.cbgm.securechat.core.protocol.di.protocolModule
+import com.cbgm.securechat.core.transport.ControlPlaneConfiguration
+import com.cbgm.securechat.core.transport.ControlPlaneDirectorySynchronizer
+import com.cbgm.securechat.core.transport.ControlPlaneHealthMonitor
 import com.cbgm.securechat.data.database.di.androidDatabaseModule
 import com.cbgm.securechat.di.appModule
 import com.cbgm.securechat.di.sharedModule
@@ -34,8 +37,12 @@ import com.cbgm.securechat.startup.di.startupModule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.koin.android.ext.koin.androidContext
@@ -97,6 +104,42 @@ class SecureChatApplication : Application() {
         koin.get<ConversationNotificationCoordinator>().start()
 
         koin.get<ForegroundRuntimeController>().start()
+
+        observeActiveControlPlane(koin)
+        startControlPlaneDirectorySync(koin)
+        startControlPlaneHealthMonitoring(koin)
+    }
+
+    private fun observeActiveControlPlane(koin: Koin) {
+        applicationScope.launch {
+            waitUntilLocalIdentityIsReady(koin)
+
+            koin
+                .get<ControlPlaneConfiguration>()
+                .activeEndpoint
+                .drop(1)
+                .collectLatest {
+                    koin.get<PushTokenRegistrationScheduler>().enqueueCurrentToken()
+                }
+        }
+    }
+
+    private fun startControlPlaneDirectorySync(koin: Koin) {
+        applicationScope.launch {
+            while (isActive) {
+                koin.get<ControlPlaneDirectorySynchronizer>().refresh()
+                delay(CONTROL_PLANE_DIRECTORY_REFRESH_MILLISECONDS)
+            }
+        }
+    }
+
+    private fun startControlPlaneHealthMonitoring(koin: Koin) {
+        applicationScope.launch {
+            while (isActive) {
+                koin.get<ControlPlaneHealthMonitor>().refresh()
+                delay(CONTROL_PLANE_HEALTH_REFRESH_MILLISECONDS)
+            }
+        }
     }
 
     private fun launchStartupTasks(koin: Koin) {
@@ -165,5 +208,10 @@ class SecureChatApplication : Application() {
                     )
                 }
         }
+    }
+
+    private companion object {
+        const val CONTROL_PLANE_DIRECTORY_REFRESH_MILLISECONDS = 300_000L
+        const val CONTROL_PLANE_HEALTH_REFRESH_MILLISECONDS = 60_000L
     }
 }

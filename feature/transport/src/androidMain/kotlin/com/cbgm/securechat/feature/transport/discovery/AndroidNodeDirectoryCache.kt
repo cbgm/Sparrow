@@ -1,7 +1,6 @@
 package com.cbgm.securechat.feature.transport.discovery
 
 import android.content.Context
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 internal class AndroidNodeDirectoryCache(

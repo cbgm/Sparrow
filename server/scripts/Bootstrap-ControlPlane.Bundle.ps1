@@ -653,7 +653,6 @@ try {
     $firebaseCredentials = Find-FirebaseCredentials
 
     $siteAddress = if ($mode -eq "public") { $publicDomain } else { ":80" }
-
     $runtime = @(
         "CONTROL_PLANE_PROJECT_NAME=securechat-control-plane",
         "CONTROL_PLANE_BIND_ADDRESS=0.0.0.0",

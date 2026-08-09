@@ -6,25 +6,21 @@ import kotlin.test.assertFailsWith
 
 class RelayTransportConfigTest {
     @Test
-    fun registryConfigurationDoesNotRequireRelayWebSocketUrl() {
+    fun defaultTransportTimingIsValid() {
         val config =
             RelayTransportConfig(
-                httpBaseUrl = "https://push.example",
-                nodeRegistryBaseUrl = "https://registry.example",
-                trustedRegistryAuthorityNodeId = "authority"
+                trustedRegistryRootNodeId = "authority"
             )
 
-        assertEquals("https://registry.example", config.nodeRegistryBaseUrl)
         assertEquals(10_000L, config.directoryRefreshIntervalMilliseconds)
         assertEquals(60_000L, config.failedNodeCooldownMilliseconds)
     }
 
     @Test
-    fun invalidRegistryUrlIsRejected() {
+    fun blankAuthorityNodeIdIsRejected() {
         assertFailsWith<IllegalArgumentException> {
             RelayTransportConfig(
-                httpBaseUrl = "https://push.example",
-                nodeRegistryBaseUrl = "ws://registry.example"
+                trustedRegistryRootNodeId = ""
             )
         }
     }

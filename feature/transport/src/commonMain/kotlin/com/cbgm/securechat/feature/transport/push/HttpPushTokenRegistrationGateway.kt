@@ -1,7 +1,7 @@
 package com.cbgm.securechat.feature.transport.push
 
+import com.cbgm.securechat.feature.transport.controlplane.ControlPlaneRequestRouter
 import com.cbgm.securechat.feature.transport.relay.api.PushDeviceRegistrationRequest
-import com.cbgm.securechat.feature.transport.relay.config.RelayTransportConfig
 import com.cbgm.securechat.feature.transport.relay.identity.LocalRelayIdProvider
 import io.ktor.client.HttpClient
 import io.ktor.client.request.post
@@ -13,7 +13,7 @@ import io.ktor.http.contentType
 class HttpPushTokenRegistrationGateway(
     private val httpClient: HttpClient,
     private val localRelayIdProvider: LocalRelayIdProvider,
-    private val relayTransportConfig: RelayTransportConfig
+    private val controlPlaneRequestRouter: ControlPlaneRequestRouter
 ) : PushTokenRegistrationGateway {
     override suspend fun register(
         token: String,
@@ -29,22 +29,25 @@ class HttpPushTokenRegistrationGateway(
                     .getLocalRelayId()
                     .getOrThrow()
 
-            val response =
-                httpClient.post(
-                    urlString = "${relayTransportConfig.httpBaseUrl}/push/devices"
-                ) {
-                    contentType(ContentType.Application.Json)
-                    setBody(
-                        PushDeviceRegistrationRequest(
-                            relayId = relayId,
-                            token = token,
-                            platform = platform.name
-                        )
-                    )
-                }
+            controlPlaneRequestRouter
+                .execute { endpoint ->
+                    val response =
+                        httpClient.post(
+                            urlString = "${endpoint.baseUrl}/push/devices"
+                        ) {
+                            contentType(ContentType.Application.Json)
+                            setBody(
+                                PushDeviceRegistrationRequest(
+                                    relayId = relayId,
+                                    token = token,
+                                    platform = platform.name
+                                )
+                            )
+                        }
 
-            check(response.status == HttpStatusCode.NoContent) {
-                "Push-token registration failed with ${response.status}"
-            }
+                    check(response.status == HttpStatusCode.NoContent) {
+                        "Push-token registration failed with ${response.status}"
+                    }
+                }.getOrThrow()
         }
 }

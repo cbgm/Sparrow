@@ -1,5 +1,6 @@
 package com.cbgm.securechat.feature.transport.discovery
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 interface NodeDirectoryCache {
@@ -11,5 +12,6 @@ interface NodeDirectoryCache {
 @Serializable
 data class CachedNodeDirectory(
     val encodedDirectory: String,
-    val trustedAuthorityNodeId: String
+    @SerialName("trustedAuthorityNodeId")
+    val trustedRootNodeId: String
 )

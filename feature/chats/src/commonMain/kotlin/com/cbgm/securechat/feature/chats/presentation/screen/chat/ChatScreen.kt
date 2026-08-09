@@ -116,11 +116,7 @@ import com.cbgm.securechat.resources.feature_chats_direct_chat_reinvite_required
 import com.cbgm.securechat.resources.feature_chats_direct_chat_reinvite_required_title
 import com.cbgm.securechat.resources.feature_chats_encrypted
 import com.cbgm.securechat.resources.feature_chats_failed
-import com.cbgm.securechat.resources.feature_chats_group_accept
-import com.cbgm.securechat.resources.feature_chats_group_decline
 import com.cbgm.securechat.resources.feature_chats_group_deleted_status
-import com.cbgm.securechat.resources.feature_chats_group_invitation_description
-import com.cbgm.securechat.resources.feature_chats_group_invitation_title
 import com.cbgm.securechat.resources.feature_chats_group_member_accepted
 import com.cbgm.securechat.resources.feature_chats_group_member_active
 import com.cbgm.securechat.resources.feature_chats_group_member_count

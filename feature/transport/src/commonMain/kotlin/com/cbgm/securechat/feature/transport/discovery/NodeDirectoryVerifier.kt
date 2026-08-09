@@ -2,7 +2,6 @@ package com.cbgm.securechat.feature.transport.discovery
 
 import com.cbgm.securechat.core.crypto.hash.CryptoHash
 import com.cbgm.securechat.core.crypto.signature.DetachedSignatureCrypto
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 class NodeDirectoryVerifier(
@@ -12,7 +11,7 @@ class NodeDirectoryVerifier(
 ) {
     suspend fun verify(
         signedDirectory: SignedNodeDirectory,
-        trustedAuthorityNodeId: String,
+        trustedRootNodeId: String,
         supportedProtocolVersion: Int,
         nowEpochMilliseconds: Long,
         allowDirectoryExpiredUntilEpochMilliseconds: Long? = null,
@@ -22,12 +21,11 @@ class NodeDirectoryVerifier(
             require(descriptorExpiryGraceMilliseconds >= 0L) {
                 "Node descriptor expiry grace must not be negative"
             }
-            require(trustedAuthorityNodeId == signedDirectory.authorityNodeId) {
-                "Node directory was signed by an untrusted registry authority"
-            }
-            require(nodeId(signedDirectory.authorityPublicKey) == signedDirectory.authorityNodeId) {
-                "Registry authority ID does not match its public key"
-            }
+            verifyAuthority(
+                signedDirectory = signedDirectory,
+                trustedRootNodeId = trustedRootNodeId,
+                nowEpochMilliseconds = nowEpochMilliseconds
+            )
             require(
                 signedDirectory.directory.generatedAtEpochMilliseconds <=
                     nowEpochMilliseconds + MAX_CLOCK_SKEW_MILLISECONDS
@@ -77,14 +75,71 @@ class NodeDirectoryVerifier(
             }
         }
 
-    fun authorityNodeId(signedDirectory: SignedNodeDirectory): Result<String> =
+    fun rootNodeId(signedDirectory: SignedNodeDirectory): Result<String> =
         runCatching {
-            val derivedNodeId = nodeId(signedDirectory.authorityPublicKey)
-            require(derivedNodeId == signedDirectory.authorityNodeId) {
-                "Registry authority ID does not match its public key"
+            val certificate = signedDirectory.authorityCertificate
+            if (certificate == null) {
+                val derivedNodeId = nodeId(signedDirectory.authorityPublicKey)
+                require(derivedNodeId == signedDirectory.authorityNodeId) {
+                    "Registry authority ID does not match its public key"
+                }
+                derivedNodeId
+            } else {
+                require(nodeId(certificate.rootPublicKey) == certificate.rootNodeId) {
+                    "Registry root ID does not match its public key"
+                }
+                certificate.rootNodeId
             }
-            derivedNodeId
         }
+
+    private suspend fun verifyAuthority(
+        signedDirectory: SignedNodeDirectory,
+        trustedRootNodeId: String,
+        nowEpochMilliseconds: Long
+    ) {
+        val certificate = signedDirectory.authorityCertificate
+        if (certificate == null) {
+            require(trustedRootNodeId == signedDirectory.authorityNodeId) {
+                "Node directory was signed by an untrusted registry root"
+            }
+            require(nodeId(signedDirectory.authorityPublicKey) == signedDirectory.authorityNodeId) {
+                "Registry root ID does not match its public key"
+            }
+            return
+        }
+
+        require(certificate.rootNodeId == trustedRootNodeId) {
+            "Registry authority certificate was signed by an untrusted root"
+        }
+        require(nodeId(certificate.rootPublicKey) == certificate.rootNodeId) {
+            "Registry root ID does not match its public key"
+        }
+        require(nodeId(certificate.authorityPublicKey) == certificate.authorityNodeId) {
+            "Registry authority ID does not match its public key"
+        }
+        require(certificate.authorityNodeId == signedDirectory.authorityNodeId) {
+            "Directory signer does not match its registry authority certificate"
+        }
+        require(certificate.authorityPublicKey.contentEquals(signedDirectory.authorityPublicKey)) {
+            "Directory signer key does not match its registry authority certificate"
+        }
+        require(
+            certificate.validFromEpochMilliseconds <=
+                nowEpochMilliseconds + MAX_CLOCK_SKEW_MILLISECONDS
+        ) {
+            "Registry authority certificate is not valid yet"
+        }
+        require(nowEpochMilliseconds < certificate.validUntilEpochMilliseconds) {
+            "Registry authority certificate has expired"
+        }
+
+        signatureCrypto
+            .verify(
+                payload = json.encodeToString(certificate.unsigned()).encodeToByteArray(),
+                signingPublicKey = rawEd25519PublicKey(certificate.rootPublicKey),
+                signature = certificate.signature
+            ).getOrThrow()
+    }
 
     private suspend fun verifyDescriptor(
         descriptor: SecureChatNodeDescriptor,

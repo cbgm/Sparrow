@@ -25,6 +25,7 @@ fun SettingsRoute(
     onNavigateToLicenses: () -> Unit,
     onNavigateToDeveloperMenu: () -> Unit,
     onNavigateToBlockedContacts: () -> Unit,
+    onNavigateToControlPlanes: () -> Unit,
     viewModel: SettingsViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -46,6 +47,7 @@ fun SettingsRoute(
         onOpenLicenses = onNavigateToLicenses,
         onOpenDeveloperMenu = onNavigateToDeveloperMenu,
         onOpenBlockedContacts = onNavigateToBlockedContacts,
+        onOpenControlPlanes = onNavigateToControlPlanes,
         onOpenLanguagePicker = { viewModel.onEvent(SettingsEvent.LanguagePickerOpened) },
         onDismissLanguagePicker = { viewModel.onEvent(SettingsEvent.LanguagePickerDismissed) },
         onLanguageSelected = { viewModel.onEvent(SettingsEvent.LanguageSelected(it)) },

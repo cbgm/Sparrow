@@ -9,7 +9,6 @@ import com.cbgm.securechat.server.security.NodeIdentity
 import com.cbgm.securechat.server.security.ProtocolSignatures
 import com.cbgm.securechat.server.security.Signatures
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.encodeToString
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals

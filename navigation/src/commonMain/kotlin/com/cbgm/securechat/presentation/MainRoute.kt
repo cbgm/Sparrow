@@ -11,6 +11,7 @@ fun MainRoute(
     onNavigateToLicenses: () -> Unit,
     onNavigateToDeveloperMenu: () -> Unit,
     onNavigateToBlockedContacts: () -> Unit,
+    onNavigateToControlPlanes: () -> Unit,
     onOpenChat: (String, String, String, Boolean) -> Unit,
     onShareIdentity: () -> Unit
 ) {
@@ -21,6 +22,7 @@ fun MainRoute(
         onNavigateToLicenses = onNavigateToLicenses,
         onNavigateToDeveloperMenu = onNavigateToDeveloperMenu,
         onNavigateToBlockedContacts = onNavigateToBlockedContacts,
+        onNavigateToControlPlanes = onNavigateToControlPlanes,
         onOpenChat = onOpenChat,
         onShareIdentity = onShareIdentity
     )

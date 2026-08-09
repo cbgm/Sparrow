@@ -2,10 +2,16 @@ package com.cbgm.securechat.feature.transport.discovery
 
 import com.cbgm.securechat.core.crypto.hash.DefaultCryptoHash
 import com.cbgm.securechat.core.crypto.signature.DetachedSignatureCrypto
+import com.cbgm.securechat.core.transport.ControlPlaneConfiguration
+import com.cbgm.securechat.core.transport.ControlPlaneEndpoint
+import com.cbgm.securechat.core.transport.ControlPlaneEndpointStatus
+import com.cbgm.securechat.core.transport.ControlPlaneReachability
+import com.cbgm.securechat.core.transport.ControlPlaneStatusStore
 import com.cbgm.securechat.feature.transport.relay.codec.createRelayJson
 import com.cbgm.securechat.feature.transport.relay.config.RelayTransportConfig
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.encodeToString
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -31,7 +37,7 @@ class DefaultNodeEndpointResolverTest {
             )
             assertEquals(first, second)
             assertEquals(1, source.fetchCount)
-            assertEquals(directory.authorityNodeId, cache.value?.trustedAuthorityNodeId)
+            assertEquals(directory.authorityNodeId, cache.value?.trustedRootNodeId)
         }
 
     @Test
@@ -81,7 +87,7 @@ class DefaultNodeEndpointResolverTest {
                 RecordingNodeDirectoryCache(
                     CachedNodeDirectory(
                         encodedDirectory = json.encodeToString(cachedDirectory),
-                        trustedAuthorityNodeId = cachedDirectory.authorityNodeId
+                        trustedRootNodeId = cachedDirectory.authorityNodeId
                     )
                 )
             val resolver = resolver(source = source, cache = cache, now = { NOW })
@@ -190,7 +196,7 @@ class DefaultNodeEndpointResolverTest {
                 RecordingNodeDirectoryCache(
                     CachedNodeDirectory(
                         encodedDirectory = json.encodeToString(directory),
-                        trustedAuthorityNodeId = directory.authorityNodeId
+                        trustedRootNodeId = directory.authorityNodeId
                     )
                 )
             val source =
@@ -223,7 +229,7 @@ class DefaultNodeEndpointResolverTest {
                 RecordingNodeDirectoryCache(
                     CachedNodeDirectory(
                         encodedDirectory = json.encodeToString(cachedDirectory),
-                        trustedAuthorityNodeId = cachedDirectory.authorityNodeId
+                        trustedRootNodeId = cachedDirectory.authorityNodeId
                     )
                 )
             val source =
@@ -251,7 +257,7 @@ class DefaultNodeEndpointResolverTest {
                 RecordingNodeDirectoryCache(
                     CachedNodeDirectory(
                         encodedDirectory = json.encodeToString(directory),
-                        trustedAuthorityNodeId = directory.authorityNodeId
+                        trustedRootNodeId = directory.authorityNodeId
                     )
                 )
             val resolver =
@@ -267,12 +273,57 @@ class DefaultNodeEndpointResolverTest {
             assertTrue(resolver.resolve("relay-a").isFailure)
         }
 
+    @Test
+    fun unavailablePreferredControlPlaneFallsBackToNext() =
+        runTest {
+            val directory = signedDirectory()
+            val source =
+                RecordingNodeDirectorySource(
+                    result = Result.success(json.encodeToString(directory)),
+                    failuresByBaseUrl = setOf("https://cp-a.example")
+                )
+            val configuration =
+                FakeControlPlaneConfiguration(
+                    listOf(
+                        "https://cp-a.example",
+                        "https://cp-b.example"
+                    )
+                )
+            val trustedDirectory = signedDirectory()
+            val resolver =
+                DefaultNodeEndpointResolver(
+                    source = source,
+                    json = json,
+                    cache = RecordingNodeDirectoryCache(),
+                    verifier =
+                        NodeDirectoryVerifier(
+                            signatureCrypto = AcceptingSignatureCrypto,
+                            cryptoHash = cryptoHash,
+                            json = json
+                        ),
+                    config =
+                        RelayTransportConfig(
+                            trustedRegistryRootNodeId = trustedDirectory.authorityNodeId
+                        ),
+                    controlPlaneConfiguration = configuration,
+                    controlPlaneStatusStore = configuration,
+                    now = { NOW }
+                )
+
+            val result = resolver.resolve("relay-a")
+
+            assertTrue(result.isSuccess)
+            assertEquals("https://cp-b.example", configuration.activeEndpoint.value?.baseUrl)
+            assertEquals(2, source.fetchCount)
+        }
+
     private fun resolver(
         source: NodeDirectorySource,
         cache: NodeDirectoryCache,
         now: () -> Long
     ): DefaultNodeEndpointResolver {
         val trustedDirectory = signedDirectory()
+        val controlPlanes = FakeControlPlaneConfiguration()
         return DefaultNodeEndpointResolver(
             source = source,
             json = json,
@@ -285,12 +336,12 @@ class DefaultNodeEndpointResolverTest {
                 ),
             config =
                 RelayTransportConfig(
-                    httpBaseUrl = "http://localhost:8095",
-                    nodeRegistryBaseUrl = "https://registry.example",
-                    trustedRegistryAuthorityNodeId = trustedDirectory.authorityNodeId,
+                    trustedRegistryRootNodeId = trustedDirectory.authorityNodeId,
                     directoryRefreshIntervalMilliseconds = 60_000L,
                     cachedDirectoryGraceMilliseconds = CACHE_GRACE_MILLISECONDS
                 ),
+            controlPlaneConfiguration = controlPlanes,
+            controlPlaneStatusStore = controlPlanes,
             now = now
         )
     }
@@ -365,13 +416,93 @@ class DefaultNodeEndpointResolverTest {
             }
 
     private class RecordingNodeDirectorySource(
-        var result: Result<String>
+        var result: Result<String>,
+        private val failuresByBaseUrl: Set<String> = emptySet()
     ) : NodeDirectorySource {
         var fetchCount: Int = 0
 
         override suspend fun fetch(registryBaseUrl: String): Result<String> {
             fetchCount += 1
+            if (registryBaseUrl in failuresByBaseUrl) {
+                return Result.failure(IllegalStateException("registry unavailable"))
+            }
             return result
+        }
+    }
+
+    private class FakeControlPlaneConfiguration(
+        baseUrls: List<String> = listOf("https://registry.example")
+    ) : ControlPlaneConfiguration,
+        ControlPlaneStatusStore {
+        private val configured = baseUrls.map(::ControlPlaneEndpoint)
+        private val _endpoints = MutableStateFlow(configured)
+        private val _activeEndpoint = MutableStateFlow(configured.firstOrNull())
+        private val _statuses =
+            MutableStateFlow(
+                configured.map { endpoint ->
+                    ControlPlaneEndpointStatus(
+                        endpoint = endpoint,
+                        isActive = endpoint == _activeEndpoint.value
+                    )
+                }
+            )
+
+        override val endpoints: StateFlow<List<ControlPlaneEndpoint>> = _endpoints
+        override val activeEndpoint: StateFlow<ControlPlaneEndpoint?> = _activeEndpoint
+        override val manualBaseUrls = MutableStateFlow(baseUrls.toSet())
+        override val directoryBaseUrls = MutableStateFlow(emptySet<String>())
+        override val directoryUrl = MutableStateFlow<String?>(null)
+        override val statuses: StateFlow<List<ControlPlaneEndpointStatus>> = _statuses
+
+        override fun orderedEndpoints(): List<ControlPlaneEndpoint> {
+            val active = _activeEndpoint.value ?: return _endpoints.value
+            return listOf(active) + _endpoints.value.filterNot { it == active }
+        }
+
+        override fun markActive(endpoint: ControlPlaneEndpoint) {
+            _activeEndpoint.value = endpoint
+            _statuses.value = _statuses.value.map { it.copy(isActive = it.endpoint == endpoint) }
+        }
+
+        override fun markAvailable(endpoint: ControlPlaneEndpoint) {
+            updateStatus(endpoint, ControlPlaneReachability.AVAILABLE)
+        }
+
+        override fun markUnreachable(endpoint: ControlPlaneEndpoint) {
+            updateStatus(endpoint, ControlPlaneReachability.UNREACHABLE)
+        }
+
+        override suspend fun replace(baseUrls: List<String>): Result<Unit> =
+            runCatching {
+                val updated = baseUrls.map(::ControlPlaneEndpoint)
+                require(updated.isNotEmpty())
+                _endpoints.value = updated
+                _activeEndpoint.value = updated.first()
+                _statuses.value =
+                    updated.map { endpoint ->
+                        ControlPlaneEndpointStatus(
+                            endpoint = endpoint,
+                            isActive = endpoint == updated.first()
+                        )
+                    }
+            }
+
+        override suspend fun addManual(baseUrl: String): Result<Unit> = Result.success(Unit)
+
+        override suspend fun removeManual(baseUrl: String): Result<Unit> = Result.success(Unit)
+
+        override suspend fun setDirectoryUrl(url: String?): Result<Unit> = Result.success(Unit)
+
+        override suspend fun replaceDirectory(baseUrls: List<String>): Result<Unit> = Result.success(Unit)
+
+        private fun updateStatus(
+            endpoint: ControlPlaneEndpoint,
+            reachability: ControlPlaneReachability
+        ) {
+            _statuses.value =
+                _statuses.value.map { status ->
+                    if (status.endpoint == endpoint) status.copy(reachability = reachability) else status
+                }
         }
     }
 

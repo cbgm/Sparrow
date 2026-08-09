@@ -7,7 +7,6 @@ import io.ktor.server.plugins.origin
 import io.ktor.server.response.respond
 import java.security.MessageDigest
 import java.util.Base64
-import java.util.LinkedHashMap
 
 data class RateLimitPolicy(
     val maximumRequests: Int,

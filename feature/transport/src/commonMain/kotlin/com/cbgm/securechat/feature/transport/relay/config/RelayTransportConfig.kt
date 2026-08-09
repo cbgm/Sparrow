@@ -1,9 +1,7 @@
 package com.cbgm.securechat.feature.transport.relay.config
 
 data class RelayTransportConfig(
-    val httpBaseUrl: String,
-    val nodeRegistryBaseUrl: String,
-    val trustedRegistryAuthorityNodeId: String? = null,
+    val trustedRegistryRootNodeId: String? = null,
     val supportedProtocolVersion: Int = 1,
     val directoryRefreshIntervalMilliseconds: Long = 10_000L,
     val cachedDirectoryGraceMilliseconds: Long = 5L * 60L * 1_000L,
@@ -14,22 +12,8 @@ data class RelayTransportConfig(
     val acknowledgementTimeoutMilliseconds: Long = 15_000L
 ) {
     init {
-        require(
-            httpBaseUrl.startsWith(prefix = "http://") ||
-                httpBaseUrl.startsWith(prefix = "https://")
-        ) {
-            "Relay HTTP base URL must use http:// or https://"
-        }
-
-        require(
-            nodeRegistryBaseUrl.startsWith(prefix = "http://") ||
-                nodeRegistryBaseUrl.startsWith(prefix = "https://")
-        ) {
-            "Node registry base URL must use http:// or https://"
-        }
-
-        require(trustedRegistryAuthorityNodeId == null || trustedRegistryAuthorityNodeId.isNotBlank()) {
-            "Trusted registry authority node ID must not be blank"
+        require(trustedRegistryRootNodeId == null || trustedRegistryRootNodeId.isNotBlank()) {
+            "Trusted registry root node ID must not be blank"
         }
 
         require(supportedProtocolVersion > 0) {

@@ -1,6 +1,5 @@
 package com.cbgm.securechat.server.protocol
 
-import kotlinx.serialization.encodeToString
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

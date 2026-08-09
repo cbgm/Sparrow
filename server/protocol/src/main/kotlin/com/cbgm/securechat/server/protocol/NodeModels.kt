@@ -93,6 +93,49 @@ fun NodeHeartbeatRequest.unsigned(): UnsignedNodeHeartbeat =
     )
 
 @Serializable
+data class RegistryAuthorityCertificate(
+    val rootNodeId: String,
+    val rootPublicKey: ByteArray,
+    val authorityNodeId: String,
+    val authorityPublicKey: ByteArray,
+    val keyVersion: Long,
+    val validFromEpochMilliseconds: Long,
+    val validUntilEpochMilliseconds: Long,
+    val signature: ByteArray
+) {
+    init {
+        require(rootNodeId.isNotBlank())
+        require(rootPublicKey.isNotEmpty())
+        require(authorityNodeId.isNotBlank())
+        require(authorityPublicKey.isNotEmpty())
+        require(keyVersion >= 0L)
+        require(validFromEpochMilliseconds < validUntilEpochMilliseconds)
+    }
+}
+
+@Serializable
+data class UnsignedRegistryAuthorityCertificate(
+    val rootNodeId: String,
+    val rootPublicKey: ByteArray,
+    val authorityNodeId: String,
+    val authorityPublicKey: ByteArray,
+    val keyVersion: Long,
+    val validFromEpochMilliseconds: Long,
+    val validUntilEpochMilliseconds: Long
+)
+
+fun RegistryAuthorityCertificate.unsigned(): UnsignedRegistryAuthorityCertificate =
+    UnsignedRegistryAuthorityCertificate(
+        rootNodeId = rootNodeId,
+        rootPublicKey = rootPublicKey,
+        authorityNodeId = authorityNodeId,
+        authorityPublicKey = authorityPublicKey,
+        keyVersion = keyVersion,
+        validFromEpochMilliseconds = validFromEpochMilliseconds,
+        validUntilEpochMilliseconds = validUntilEpochMilliseconds
+    )
+
+@Serializable
 data class NodeDirectory(
     val generatedAtEpochMilliseconds: Long,
     val validUntilEpochMilliseconds: Long,
@@ -104,5 +147,6 @@ data class SignedNodeDirectory(
     val directory: NodeDirectory,
     val authorityNodeId: String,
     val authorityPublicKey: ByteArray,
+    val authorityCertificate: RegistryAuthorityCertificate? = null,
     val signature: ByteArray
 )

@@ -17,14 +17,14 @@ class NodeDirectoryVerifierTest {
         )
 
     @Test
-    fun validSignedDirectoryIsAccepted() =
+    fun rootCertifiedRegistryAuthorityIsAccepted() =
         runTest {
             val directory = signedDirectory()
 
             val result =
                 verifier.verify(
                     signedDirectory = directory,
-                    trustedAuthorityNodeId = directory.authorityNodeId,
+                    trustedRootNodeId = checkNotNull(directory.authorityCertificate).rootNodeId,
                     supportedProtocolVersion = 1,
                     nowEpochMilliseconds = NOW
                 )
@@ -33,12 +33,38 @@ class NodeDirectoryVerifierTest {
         }
 
     @Test
-    fun untrustedRegistryAuthorityIsRejected() =
+    fun changedRegistrySigningKeyIsAcceptedWhenRootCertified() =
+        runTest {
+            val first = signedDirectory(authoritySeed = 2, keyVersion = 1L)
+            val rotated = signedDirectory(authoritySeed = 8, keyVersion = 2L)
+            val trustedRoot = checkNotNull(first.authorityCertificate).rootNodeId
+
+            val firstResult =
+                verifier.verify(
+                    signedDirectory = first,
+                    trustedRootNodeId = trustedRoot,
+                    supportedProtocolVersion = 1,
+                    nowEpochMilliseconds = NOW
+                )
+            val rotatedResult =
+                verifier.verify(
+                    signedDirectory = rotated,
+                    trustedRootNodeId = trustedRoot,
+                    supportedProtocolVersion = 1,
+                    nowEpochMilliseconds = NOW
+                )
+
+            assertTrue(firstResult.isSuccess)
+            assertTrue(rotatedResult.isSuccess)
+        }
+
+    @Test
+    fun untrustedRegistryRootIsRejected() =
         runTest {
             val result =
                 verifier.verify(
                     signedDirectory = signedDirectory(),
-                    trustedAuthorityNodeId = "different-authority",
+                    trustedRootNodeId = "different-root",
                     supportedProtocolVersion = 1,
                     nowEpochMilliseconds = NOW
                 )
@@ -47,7 +73,61 @@ class NodeDirectoryVerifierTest {
         }
 
     @Test
-    fun invalidDirectorySignatureIsRejected() =
+    fun directorySignerMustMatchRootCertificate() =
+        runTest {
+            val directory = signedDirectory()
+            val differentAuthorityKey = encodedPublicKey(seed = 9)
+            val tampered =
+                directory.copy(
+                    authorityNodeId = nodeId(differentAuthorityKey),
+                    authorityPublicKey = differentAuthorityKey
+                )
+
+            val result =
+                verifier.verify(
+                    signedDirectory = tampered,
+                    trustedRootNodeId = checkNotNull(directory.authorityCertificate).rootNodeId,
+                    supportedProtocolVersion = 1,
+                    nowEpochMilliseconds = NOW
+                )
+
+            assertTrue(result.isFailure)
+        }
+
+    @Test
+    fun expiredRegistryAuthorityCertificateIsRejected() =
+        runTest {
+            val directory = signedDirectory(certificateValidUntil = NOW)
+
+            val result =
+                verifier.verify(
+                    signedDirectory = directory,
+                    trustedRootNodeId = checkNotNull(directory.authorityCertificate).rootNodeId,
+                    supportedProtocolVersion = 1,
+                    nowEpochMilliseconds = NOW
+                )
+
+            assertTrue(result.isFailure)
+        }
+
+    @Test
+    fun legacyDirectorySignedDirectlyByTrustedRootIsAccepted() =
+        runTest {
+            val directory = signedDirectory(legacyRootSigning = true)
+
+            val result =
+                verifier.verify(
+                    signedDirectory = directory,
+                    trustedRootNodeId = directory.authorityNodeId,
+                    supportedProtocolVersion = 1,
+                    nowEpochMilliseconds = NOW
+                )
+
+            assertTrue(result.isSuccess)
+        }
+
+    @Test
+    fun invalidSignatureIsRejected() =
         runTest {
             val directory = signedDirectory()
             val rejectingVerifier =
@@ -60,7 +140,7 @@ class NodeDirectoryVerifierTest {
             val result =
                 rejectingVerifier.verify(
                     signedDirectory = directory,
-                    trustedAuthorityNodeId = directory.authorityNodeId,
+                    trustedRootNodeId = checkNotNull(directory.authorityCertificate).rootNodeId,
                     supportedProtocolVersion = 1,
                     nowEpochMilliseconds = NOW
                 )
@@ -72,18 +152,19 @@ class NodeDirectoryVerifierTest {
     fun expiredDirectoryRequiresAnExplicitCacheGracePeriod() =
         runTest {
             val directory = signedDirectory(directoryValidUntil = NOW - 1L)
+            val rootNodeId = checkNotNull(directory.authorityCertificate).rootNodeId
 
             val expiredResult =
                 verifier.verify(
                     signedDirectory = directory,
-                    trustedAuthorityNodeId = directory.authorityNodeId,
+                    trustedRootNodeId = rootNodeId,
                     supportedProtocolVersion = 1,
                     nowEpochMilliseconds = NOW
                 )
             val cachedResult =
                 verifier.verify(
                     signedDirectory = directory,
-                    trustedAuthorityNodeId = directory.authorityNodeId,
+                    trustedRootNodeId = rootNodeId,
                     supportedProtocolVersion = 1,
                     nowEpochMilliseconds = NOW,
                     allowDirectoryExpiredUntilEpochMilliseconds = NOW + 1_000L
@@ -105,7 +186,7 @@ class NodeDirectoryVerifierTest {
             val result =
                 verifier.verify(
                     signedDirectory = directory,
-                    trustedAuthorityNodeId = directory.authorityNodeId,
+                    trustedRootNodeId = checkNotNull(directory.authorityCertificate).rootNodeId,
                     supportedProtocolVersion = 1,
                     nowEpochMilliseconds = NOW
                 )
@@ -116,10 +197,30 @@ class NodeDirectoryVerifierTest {
     private fun signedDirectory(
         directoryValidUntil: Long = NOW + 60_000L,
         protocolVersions: Set<Int> = setOf(1),
-        capabilities: Set<NodeCapability> = setOf(NodeCapability.GATEWAY)
+        capabilities: Set<NodeCapability> = setOf(NodeCapability.GATEWAY),
+        authoritySeed: Int = 2,
+        keyVersion: Long = 1L,
+        certificateValidUntil: Long = NOW + 120_000L,
+        legacyRootSigning: Boolean = false
     ): SignedNodeDirectory {
-        val authorityKey = encodedPublicKey(seed = 1)
-        val nodeKey = encodedPublicKey(seed = 2)
+        val rootKey = encodedPublicKey(seed = 1)
+        val authorityKey = if (legacyRootSigning) rootKey else encodedPublicKey(seed = authoritySeed)
+        val nodeKey = encodedPublicKey(seed = 3)
+        val certificate =
+            if (legacyRootSigning) {
+                null
+            } else {
+                RegistryAuthorityCertificate(
+                    rootNodeId = nodeId(rootKey),
+                    rootPublicKey = rootKey,
+                    authorityNodeId = nodeId(authorityKey),
+                    authorityPublicKey = authorityKey,
+                    keyVersion = keyVersion,
+                    validFromEpochMilliseconds = NOW - 60_000L,
+                    validUntilEpochMilliseconds = certificateValidUntil,
+                    signature = byteArrayOf(9)
+                )
+            }
         val node =
             SecureChatNodeDescriptor(
                 nodeId = nodeId(nodeKey),
@@ -141,11 +242,13 @@ class NodeDirectoryVerifierTest {
                 ),
             authorityNodeId = nodeId(authorityKey),
             authorityPublicKey = authorityKey,
+            authorityCertificate = certificate,
             signature = byteArrayOf(1)
         )
     }
 
-    private fun encodedPublicKey(seed: Int): ByteArray = X509_ED25519_PREFIX + ByteArray(32) { index -> (index + seed).toByte() }
+    private fun encodedPublicKey(seed: Int): ByteArray =
+        X509_ED25519_PREFIX + ByteArray(32) { index -> (index + seed).toByte() }
 
     private fun nodeId(publicKey: ByteArray): String =
         cryptoHash

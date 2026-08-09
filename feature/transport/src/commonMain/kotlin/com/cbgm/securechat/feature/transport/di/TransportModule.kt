@@ -5,9 +5,16 @@ import com.cbgm.securechat.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.securechat.core.protocol.identity.LocalSigningPublicKeyProvider
 import com.cbgm.securechat.core.protocol.phone.PhoneNumberNormalizer
 import com.cbgm.securechat.core.protocol.transport.OutgoingWireSender
+import com.cbgm.securechat.core.transport.ControlPlaneConfiguration
+import com.cbgm.securechat.core.transport.ControlPlaneDirectorySynchronizer
+import com.cbgm.securechat.core.transport.ControlPlaneHealthMonitor
+import com.cbgm.securechat.core.transport.ControlPlaneStatusStore
 import com.cbgm.securechat.core.transport.TransportDiagnosticsProvider
 import com.cbgm.securechat.feature.transport.connection.DefaultRelayConnectionManager
 import com.cbgm.securechat.feature.transport.connection.RelayConnectionManager
+import com.cbgm.securechat.feature.transport.controlplane.ControlPlaneRequestRouter
+import com.cbgm.securechat.feature.transport.controlplane.HttpControlPlaneDirectorySynchronizer
+import com.cbgm.securechat.feature.transport.controlplane.HttpControlPlaneHealthMonitor
 import com.cbgm.securechat.feature.transport.discovery.DefaultNodeEndpointResolver
 import com.cbgm.securechat.feature.transport.discovery.HttpNodeDirectorySource
 import com.cbgm.securechat.feature.transport.discovery.NodeDirectorySource
@@ -101,7 +108,8 @@ val transportModule =
                 webSocketTransportClient = get<WebSocketTransportClient>(),
                 localRelayIdProvider = get<LocalRelayIdProvider>(),
                 relayTransportConfig = get<RelayTransportConfig>(),
-                nodeEndpointResolver = get<NodeEndpointResolver>()
+                nodeEndpointResolver = get<NodeEndpointResolver>(),
+                controlPlaneConfiguration = get<ControlPlaneConfiguration>()
             )
         }
 
@@ -127,7 +135,9 @@ val transportModule =
                 json = get(qualifier = named(RELAY_JSON_QUALIFIER)),
                 cache = get(),
                 verifier = get(),
-                config = get<RelayTransportConfig>()
+                config = get<RelayTransportConfig>(),
+                controlPlaneConfiguration = get<ControlPlaneConfiguration>(),
+                controlPlaneStatusStore = get<ControlPlaneStatusStore>()
             )
         }
 
@@ -135,10 +145,32 @@ val transportModule =
             HttpNodeDirectorySource(httpClient = get<HttpClient>())
         }
 
+        single {
+            ControlPlaneRequestRouter(
+                configuration = get<ControlPlaneConfiguration>(),
+                statusStore = get<ControlPlaneStatusStore>()
+            )
+        }
+
+        single<ControlPlaneHealthMonitor> {
+            HttpControlPlaneHealthMonitor(
+                httpClient = get<HttpClient>(),
+                configuration = get<ControlPlaneConfiguration>(),
+                statusStore = get<ControlPlaneStatusStore>()
+            )
+        }
+
+        single<ControlPlaneDirectorySynchronizer> {
+            HttpControlPlaneDirectorySynchronizer(
+                httpClient = get<HttpClient>(),
+                configuration = get<ControlPlaneConfiguration>()
+            )
+        }
+
         single<PendingRelayEnvelopeGateway> {
             HttpPendingRelayEnvelopeGateway(
                 httpClient = get<HttpClient>(),
-                relayTransportConfig = get<RelayTransportConfig>()
+                controlPlaneRequestRouter = get<ControlPlaneRequestRouter>()
             )
         }
 
@@ -150,7 +182,7 @@ val transportModule =
             HttpPushTokenRegistrationGateway(
                 httpClient = get<HttpClient>(),
                 localRelayIdProvider = get<LocalRelayIdProvider>(),
-                relayTransportConfig = get<RelayTransportConfig>()
+                controlPlaneRequestRouter = get<ControlPlaneRequestRouter>()
             )
         }
 

@@ -48,6 +48,40 @@ internal fun SecureChatNodeDescriptor.unsigned(): UnsignedNodeDescriptor =
     )
 
 @Serializable
+data class RegistryAuthorityCertificate(
+    val rootNodeId: String,
+    val rootPublicKey: ByteArray,
+    val authorityNodeId: String,
+    val authorityPublicKey: ByteArray,
+    val keyVersion: Long,
+    val validFromEpochMilliseconds: Long,
+    val validUntilEpochMilliseconds: Long,
+    val signature: ByteArray
+)
+
+@Serializable
+internal data class UnsignedRegistryAuthorityCertificate(
+    val rootNodeId: String,
+    val rootPublicKey: ByteArray,
+    val authorityNodeId: String,
+    val authorityPublicKey: ByteArray,
+    val keyVersion: Long,
+    val validFromEpochMilliseconds: Long,
+    val validUntilEpochMilliseconds: Long
+)
+
+internal fun RegistryAuthorityCertificate.unsigned(): UnsignedRegistryAuthorityCertificate =
+    UnsignedRegistryAuthorityCertificate(
+        rootNodeId = rootNodeId,
+        rootPublicKey = rootPublicKey,
+        authorityNodeId = authorityNodeId,
+        authorityPublicKey = authorityPublicKey,
+        keyVersion = keyVersion,
+        validFromEpochMilliseconds = validFromEpochMilliseconds,
+        validUntilEpochMilliseconds = validUntilEpochMilliseconds
+    )
+
+@Serializable
 data class NodeDirectory(
     val generatedAtEpochMilliseconds: Long,
     val validUntilEpochMilliseconds: Long,
@@ -59,6 +93,7 @@ data class SignedNodeDirectory(
     val directory: NodeDirectory,
     val authorityNodeId: String,
     val authorityPublicKey: ByteArray,
+    val authorityCertificate: RegistryAuthorityCertificate? = null,
     val signature: ByteArray
 )
 

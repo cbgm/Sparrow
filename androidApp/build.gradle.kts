@@ -5,7 +5,6 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.securechat.lint)
-    alias(libs.plugins.securechat.properties)
 }
 
 if (file("google-services.json").exists()) {
@@ -31,36 +30,6 @@ android {
                 .toInt()
         versionCode = 1
         versionName = "1.0"
-
-        buildConfigField(
-            type = "String",
-            name = "RELAY_HTTP_BASE_URL",
-            value =
-                localProperties.buildConfigString(
-                    key = "securechat.relay.httpBaseUrl",
-                    defaultValue = "http://10.0.2.2:8095"
-                )
-        )
-
-        buildConfigField(
-            type = "String",
-            name = "NODE_REGISTRY_BASE_URL",
-            value =
-                localProperties.buildConfigString(
-                    key = "securechat.registry.baseUrl",
-                    defaultValue = "http://10.0.2.2:8090"
-                )
-        )
-
-        buildConfigField(
-            type = "String",
-            name = "NODE_REGISTRY_AUTHORITY_NODE_ID",
-            value =
-                localProperties.buildConfigString(
-                    key = "securechat.registry.authorityNodeId",
-                    defaultValue = ""
-                )
-        )
     }
 
     compileOptions {

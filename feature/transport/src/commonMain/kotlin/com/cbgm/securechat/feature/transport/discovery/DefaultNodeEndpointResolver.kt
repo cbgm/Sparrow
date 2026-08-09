@@ -2,10 +2,12 @@ package com.cbgm.securechat.feature.transport.discovery
 
 import com.cbgm.securechat.core.logging.SecureChatLog
 import com.cbgm.securechat.core.time.SystemClock
+import com.cbgm.securechat.core.transport.ControlPlaneConfiguration
+import com.cbgm.securechat.core.transport.ControlPlaneEndpoint
+import com.cbgm.securechat.core.transport.ControlPlaneStatusStore
 import com.cbgm.securechat.feature.transport.relay.config.RelayTransportConfig
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 class DefaultNodeEndpointResolver(
@@ -14,6 +16,8 @@ class DefaultNodeEndpointResolver(
     private val cache: NodeDirectoryCache,
     private val verifier: NodeDirectoryVerifier,
     private val config: RelayTransportConfig,
+    private val controlPlaneConfiguration: ControlPlaneConfiguration,
+    private val controlPlaneStatusStore: ControlPlaneStatusStore,
     private val now: () -> Long = SystemClock::nowEpochMilliseconds
 ) : NodeEndpointResolver {
     private val logger = SecureChatLog.withTag("DefaultNodeEndpointResolver")
@@ -30,51 +34,39 @@ class DefaultNodeEndpointResolver(
             }
 
             resolutionMutex.withLock {
-                resolveLocked(
+                resolveRegistry(
                     localRelayId = localRelayId,
                     forceRefresh = forceRefresh
                 )
             }
         }
 
-    private suspend fun resolveLocked(
-        localRelayId: String,
-        forceRefresh: Boolean
-    ): List<NodeEndpoint> =
-        resolveRegistry(
-            registryBaseUrl = config.nodeRegistryBaseUrl,
-            localRelayId = localRelayId,
-            forceRefresh = forceRefresh
-        )
-
     private suspend fun resolveRegistry(
-        registryBaseUrl: String,
         localRelayId: String,
         forceRefresh: Boolean
     ): List<NodeEndpoint> {
         val cached = cache.read()
         val cachedDirectory = cached?.decode()
         val currentTime = now()
-        val trustedAuthorityNodeId =
-            config.trustedRegistryAuthorityNodeId ?: cached?.trustedAuthorityNodeId
+        val trustedRootNodeId =
+            config.trustedRegistryRootNodeId ?: cached?.trustedRootNodeId
 
         if (
             !forceRefresh &&
             fetchedRemoteDirectory &&
-            isReusable(cachedDirectory, trustedAuthorityNodeId, currentTime)
+            isReusable(cachedDirectory, trustedRootNodeId, currentTime)
         ) {
             return checkNotNull(cachedDirectory).endpointsFor(localRelayId)
         }
 
         val selectedDirectory =
-            fetchAndCache(
-                registryBaseUrl = registryBaseUrl,
+            fetchConfiguredDirectory(
                 cached = cached,
                 currentTime = currentTime
             ).getOrElse { remoteError ->
                 cachedFallback(
                     cachedDirectory = cachedDirectory,
-                    trustedAuthorityNodeId = trustedAuthorityNodeId,
+                    trustedRootNodeId = trustedRootNodeId,
                     currentTime = currentTime,
                     remoteError = remoteError
                 )
@@ -82,12 +74,38 @@ class DefaultNodeEndpointResolver(
         return selectedDirectory.endpointsFor(localRelayId)
     }
 
+    private suspend fun fetchConfiguredDirectory(
+        cached: CachedNodeDirectory?,
+        currentTime: Long
+    ): Result<SignedNodeDirectory> {
+        var lastError: Throwable? = null
+
+        controlPlaneConfiguration.orderedEndpoints().forEach { endpoint ->
+            fetchAndCache(
+                endpoint = endpoint,
+                cached = cached,
+                currentTime = currentTime
+            ).onSuccess { directory ->
+                controlPlaneStatusStore.markAvailable(endpoint)
+                controlPlaneConfiguration.markActive(endpoint)
+                return Result.success(directory)
+            }.onFailure { error ->
+                controlPlaneStatusStore.markUnreachable(endpoint)
+                lastError = error
+            }
+        }
+
+        return Result.failure(
+            lastError ?: IllegalStateException("No control plane is configured")
+        )
+    }
+
     private suspend fun isReusable(
         cachedDirectory: SignedNodeDirectory?,
-        trustedAuthorityNodeId: String?,
+        trustedRootNodeId: String?,
         currentTime: Long
     ): Boolean {
-        if (cachedDirectory == null || trustedAuthorityNodeId == null) {
+        if (cachedDirectory == null || trustedRootNodeId == null) {
             return false
         }
         val cacheAge = currentTime - cachedDirectory.directory.generatedAtEpochMilliseconds
@@ -95,53 +113,54 @@ class DefaultNodeEndpointResolver(
             verifier
                 .verify(
                     signedDirectory = cachedDirectory,
-                    trustedAuthorityNodeId = trustedAuthorityNodeId,
+                    trustedRootNodeId = trustedRootNodeId,
                     supportedProtocolVersion = config.supportedProtocolVersion,
                     nowEpochMilliseconds = currentTime
                 ).isSuccess
     }
 
     private suspend fun fetchAndCache(
-        registryBaseUrl: String,
+        endpoint: ControlPlaneEndpoint,
         cached: CachedNodeDirectory?,
         currentTime: Long
     ): Result<SignedNodeDirectory> =
-        fetchDirectory(registryBaseUrl).mapCatching { remoteDirectory ->
-            val authorityNodeId = trustedAuthority(remoteDirectory, cached)
+        source.fetch(endpoint.baseUrl).mapCatching { encodedDirectory ->
+            val remoteDirectory = json.decodeFromString<SignedNodeDirectory>(encodedDirectory)
+            val rootNodeId = trustedRoot(remoteDirectory, cached)
             verifier
                 .verify(
                     signedDirectory = remoteDirectory,
-                    trustedAuthorityNodeId = authorityNodeId,
+                    trustedRootNodeId = rootNodeId,
                     supportedProtocolVersion = config.supportedProtocolVersion,
                     nowEpochMilliseconds = currentTime
                 ).getOrThrow()
-            cacheVerifiedDirectory(remoteDirectory, authorityNodeId)
+            cacheVerifiedDirectory(remoteDirectory, rootNodeId)
             fetchedRemoteDirectory = true
             remoteDirectory
         }
 
-    private fun trustedAuthority(
+    private fun trustedRoot(
         remoteDirectory: SignedNodeDirectory,
         cached: CachedNodeDirectory?
     ): String =
-        config.trustedRegistryAuthorityNodeId
-            ?: cached?.trustedAuthorityNodeId
-            ?: verifier.authorityNodeId(remoteDirectory).getOrThrow().also { authorityNodeId ->
+        config.trustedRegistryRootNodeId
+            ?: cached?.trustedRootNodeId
+            ?: verifier.rootNodeId(remoteDirectory).getOrThrow().also { rootNodeId ->
                 logger.warn {
-                    "Trusting registry authority $authorityNodeId on first use; " +
-                        "configure its node ID for production"
+                    "Trusting registry root $rootNodeId on first use; " +
+                        "configure its root node ID for production"
                 }
             }
 
     private suspend fun cacheVerifiedDirectory(
         remoteDirectory: SignedNodeDirectory,
-        authorityNodeId: String
+        rootNodeId: String
     ) {
         runCatching {
             cache.write(
                 CachedNodeDirectory(
                     encodedDirectory = json.encodeToString(remoteDirectory),
-                    trustedAuthorityNodeId = authorityNodeId
+                    trustedRootNodeId = rootNodeId
                 )
             )
         }.onFailure { error ->
@@ -153,12 +172,12 @@ class DefaultNodeEndpointResolver(
 
     private suspend fun cachedFallback(
         cachedDirectory: SignedNodeDirectory?,
-        trustedAuthorityNodeId: String?,
+        trustedRootNodeId: String?,
         currentTime: Long,
         remoteError: Throwable
     ): SignedNodeDirectory {
         val fallbackDirectory = cachedDirectory ?: throw remoteError
-        val fallbackAuthorityNodeId = trustedAuthorityNodeId ?: throw remoteError
+        val fallbackRootNodeId = trustedRootNodeId ?: throw remoteError
         val cacheExpiry =
             fallbackDirectory.directory.validUntilEpochMilliseconds +
                 config.cachedDirectoryGraceMilliseconds
@@ -166,7 +185,7 @@ class DefaultNodeEndpointResolver(
         verifier
             .verify(
                 signedDirectory = fallbackDirectory,
-                trustedAuthorityNodeId = fallbackAuthorityNodeId,
+                trustedRootNodeId = fallbackRootNodeId,
                 supportedProtocolVersion = config.supportedProtocolVersion,
                 nowEpochMilliseconds = currentTime,
                 allowDirectoryExpiredUntilEpochMilliseconds = cacheExpiry,
@@ -174,15 +193,10 @@ class DefaultNodeEndpointResolver(
             ).getOrElse { throw remoteError }
 
         logger.warn {
-            "Registry unavailable; reconnecting with the last valid signed directory"
+            "All configured control planes are unavailable; using the last valid signed directory"
         }
         return fallbackDirectory
     }
-
-    private suspend fun fetchDirectory(registryBaseUrl: String): Result<SignedNodeDirectory> =
-        source.fetch(registryBaseUrl).mapCatching { encodedDirectory ->
-            json.decodeFromString<SignedNodeDirectory>(encodedDirectory)
-        }
 
     private fun CachedNodeDirectory.decode(): SignedNodeDirectory? =
         runCatching {

@@ -55,6 +55,7 @@ fun MainScreen(
     onNavigateToLicenses: () -> Unit,
     onNavigateToDeveloperMenu: () -> Unit,
     onNavigateToBlockedContacts: () -> Unit,
+    onNavigateToControlPlanes: () -> Unit,
     onOpenChat: (
         conversationId: String,
         contactId: String,
@@ -130,7 +131,8 @@ fun MainScreen(
                 onNavigateToDataDisclaimer = onNavigateToDataDisclaimer,
                 onNavigateToLicenses = onNavigateToLicenses,
                 onNavigateToDeveloperMenu = onNavigateToDeveloperMenu,
-                onNavigateToBlockedContacts = onNavigateToBlockedContacts
+                onNavigateToBlockedContacts = onNavigateToBlockedContacts,
+                onNavigateToControlPlanes = onNavigateToControlPlanes
             )
         }
 
@@ -266,7 +268,8 @@ private fun MainContent(
     onNavigateToDataDisclaimer: () -> Unit,
     onNavigateToLicenses: () -> Unit,
     onNavigateToDeveloperMenu: () -> Unit,
-    onNavigateToBlockedContacts: () -> Unit
+    onNavigateToBlockedContacts: () -> Unit,
+    onNavigateToControlPlanes: () -> Unit
 ) {
     HorizontalPager(
         state = pagerState,
@@ -308,7 +311,8 @@ private fun MainContent(
                     onNavigateToDataDisclaimer = onNavigateToDataDisclaimer,
                     onNavigateToLicenses = onNavigateToLicenses,
                     onNavigateToDeveloperMenu = onNavigateToDeveloperMenu,
-                    onNavigateToBlockedContacts = onNavigateToBlockedContacts
+                    onNavigateToBlockedContacts = onNavigateToBlockedContacts,
+                    onNavigateToControlPlanes = onNavigateToControlPlanes
                 )
             }
         }
@@ -328,6 +332,7 @@ private fun MainScreenPreview() {
             onNavigateToLicenses = {},
             onNavigateToDeveloperMenu = {},
             onNavigateToBlockedContacts = {},
+            onNavigateToControlPlanes = {},
             modifier = Modifier.fillMaxSize()
         )
     }

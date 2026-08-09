@@ -3,8 +3,6 @@ package com.cbgm.securechat.server.federation
 import com.cbgm.securechat.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.securechat.server.protocol.FederatedEnvelope
 import com.cbgm.securechat.server.protocol.serverJson
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
 import java.sql.Connection
 import java.sql.ResultSet
 

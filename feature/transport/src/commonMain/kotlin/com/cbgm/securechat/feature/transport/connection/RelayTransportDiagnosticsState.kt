@@ -35,7 +35,8 @@ internal class RelayTransportDiagnosticsState(
     fun resolved(
         endpoints: List<NodeEndpoint>,
         cooldownUntilEpochMillisecondsByNodeId: Map<String, Long>,
-        registryAuthorityVerified: Boolean
+        registryAuthorityVerified: Boolean,
+        registryUrl: String?
     ) {
         resolvedEndpoints = endpoints
         updateNodes(
@@ -44,6 +45,7 @@ internal class RelayTransportDiagnosticsState(
         )
         _diagnostics.value =
             _diagnostics.value.copy(
+                registryUrl = registryUrl,
                 registryAuthorityVerified = registryAuthorityVerified
             )
     }

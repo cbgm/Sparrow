@@ -10,7 +10,6 @@ import com.cbgm.securechat.server.protocol.serverJson
 import com.cbgm.securechat.server.security.BoundedRateLimiter
 import com.cbgm.securechat.server.security.NodeIdentity
 import com.cbgm.securechat.server.security.NodeIdentityStore
-import com.cbgm.securechat.server.security.ProtocolSignatures
 import com.cbgm.securechat.server.security.RateLimitPolicy
 import com.cbgm.securechat.server.security.enforceRateLimit
 import io.ktor.http.HttpStatusCode
@@ -33,23 +32,39 @@ import java.nio.file.Path
 private const val DEFAULT_NODE_REGISTRY_PORT = 8090
 
 fun main() {
-    val identity =
-        NodeIdentityStore(
-            Path.of(ServiceEnvironment.string("REGISTRY_IDENTITY_PATH", ".securechat-server/registry.identity"))
-        ).loadOrCreate()
+    val rootIdentityPath =
+        Path.of(
+            ServiceEnvironment.string(
+                "REGISTRY_IDENTITY_PATH",
+                ".securechat-server/registry.identity"
+            )
+        )
+    val rootIdentity = NodeIdentityStore(rootIdentityPath).loadOrCreate()
+    val directorySigner =
+        RotatingRegistryDirectorySigner(
+            rootIdentity = rootIdentity,
+            identityDirectory = rootIdentityPath.parent ?: Path.of("."),
+            config = RegistrySigningConfig()
+        )
 
     embeddedServer(
         factory = Netty,
         host = "0.0.0.0",
         port = ServiceEnvironment.int("PORT", DEFAULT_NODE_REGISTRY_PORT),
-        module = { nodeRegistryModule(identity) }
+        module = {
+            nodeRegistryModule(
+                identity = rootIdentity,
+                directorySigner = directorySigner
+            )
+        }
     ).start(wait = true)
 }
 
 fun Application.nodeRegistryModule(
     identity: NodeIdentity,
     config: NodeRegistryConfig = NodeRegistryConfig.fromEnvironment(),
-    store: NodeRegistryStorage = createNodeRegistryStorage(config)
+    store: NodeRegistryStorage = createNodeRegistryStorage(config),
+    directorySigner: RegistryDirectorySigner = DirectRegistryDirectorySigner(identity)
 ) {
     val registrationRateLimiter = BoundedRateLimiter(config.registrationRateLimit)
     val heartbeatRateLimiter = BoundedRateLimiter(config.heartbeatRateLimit)
@@ -122,7 +137,7 @@ fun Application.nodeRegistryModule(
                     validUntilEpochMilliseconds = generatedAt + 60_000L,
                     nodes = store.healthyNodes()
                 )
-            call.respond(ProtocolSignatures.signDirectory(directory, identity))
+            call.respond(directorySigner.sign(directory))
         }
 
         get("/v1/nodes/{nodeId}") {

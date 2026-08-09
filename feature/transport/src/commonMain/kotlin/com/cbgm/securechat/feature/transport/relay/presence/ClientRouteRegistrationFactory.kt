@@ -5,7 +5,6 @@ import com.cbgm.securechat.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.securechat.feature.transport.relay.model.ClientRoute
 import com.cbgm.securechat.feature.transport.relay.model.ClientRouteRegistration
 import com.cbgm.securechat.feature.transport.relay.model.UnsignedClientRoute
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 class ClientRouteRegistrationFactory(
