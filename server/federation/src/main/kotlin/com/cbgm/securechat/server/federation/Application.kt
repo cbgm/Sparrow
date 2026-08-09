@@ -16,7 +16,12 @@ private const val DEFAULT_FEDERATION_PORT = 8093
 fun main() {
     val identity =
         NodeIdentityStore(
-            Path.of(ServiceEnvironment.string("NODE_IDENTITY_PATH", ".securechat-server/node.identity"))
+            Path.of(
+                ServiceEnvironment.string(
+                    "NODE_IDENTITY_PATH",
+                    ".securechat-server/node.identity"
+                )
+            )
         ).loadOrCreate()
 
     embeddedServer(
@@ -77,94 +82,79 @@ data class FederationConfig(
 
     companion object {
         fun fromEnvironment(): FederationConfig =
-            FederationConfig(
-                databaseUrl = System.getenv("FEDERATION_DATABASE_URL")?.takeIf(String::isNotBlank),
-                databaseUser = System.getenv("FEDERATION_DATABASE_USER").orEmpty(),
-                databasePassword =
-                    ServiceEnvironment.secret("FEDERATION_DATABASE_PASSWORD").orEmpty(),
-                databaseMaximumPoolSize =
-                    ServiceEnvironment.int(
-                        "FEDERATION_DATABASE_MAXIMUM_POOL_SIZE",
-                        DEFAULT_DATABASE_MAXIMUM_POOL_SIZE
-                    ),
-                controlPlaneUrls =
-                    System.getenv("CONTROL_PLANE_URLS")
-                        ?.takeIf(String::isNotBlank)
-                        ?.let { value ->
-                            controlPlaneUrlsFromEnvironment(
-                                legacyEnvironmentNames = emptyList(),
-                                defaultUrl = value
-                            )
-                        }
-                        ?: emptyList(),
-                nodeRegistryUrl =
-                    ServiceEnvironment.string("NODE_REGISTRY_URL", "http://localhost:8090"),
-                presenceDirectoryUrl =
-                    ServiceEnvironment.string(
-                        "PRESENCE_DIRECTORY_URL",
-                        "http://localhost:8091"
-                    ),
-                gatewayInternalUrl =
-                    ServiceEnvironment.string("GATEWAY_INTERNAL_URL", "http://localhost:8094"),
-                federationInternalApiToken =
-                    ServiceEnvironment.secret("FEDERATION_INTERNAL_API_TOKEN")
-                        ?: ServiceEnvironment.secret("INTERNAL_API_TOKEN"),
-                gatewayInternalApiToken =
-                    ServiceEnvironment.secret("GATEWAY_INTERNAL_API_TOKEN")
-                        ?: ServiceEnvironment.secret("INTERNAL_API_TOKEN"),
-                maximumDeduplicationEntries =
-                    ServiceEnvironment.int(
-                        "MAX_DEDUPLICATION_ENTRIES",
-                        DEFAULT_MAXIMUM_DEDUPLICATION_ENTRIES
-                    ),
-                registerNode = ServiceEnvironment.string("REGISTER_NODE", "true").toBoolean(),
-                clientEndpoint =
-                    ServiceEnvironment.string("CLIENT_ENDPOINT", "ws://localhost:8094/relay"),
-                federationEndpoint =
-                    ServiceEnvironment.string("FEDERATION_ENDPOINT", "http://localhost:8093"),
-                mailboxEndpoint =
-                    ServiceEnvironment.string("MAILBOX_ENDPOINT", "http://localhost:8092"),
-                outboundRetryPollIntervalMilliseconds =
-                    ServiceEnvironment.long(
-                        "FEDERATION_RETRY_POLL_INTERVAL_MILLISECONDS",
-                        DEFAULT_RETRY_POLL_INTERVAL_MILLISECONDS
-                    ),
-                outboundRetryBaseDelayMilliseconds =
-                    ServiceEnvironment.long(
-                        "FEDERATION_RETRY_BASE_DELAY_MILLISECONDS",
-                        DEFAULT_RETRY_BASE_DELAY_MILLISECONDS
-                    ),
-                outboundRetryMaximumDelayMilliseconds =
-                    ServiceEnvironment.long(
-                        "FEDERATION_RETRY_MAXIMUM_DELAY_MILLISECONDS",
-                        DEFAULT_RETRY_MAXIMUM_DELAY_MILLISECONDS
-                    ),
-                outboundRetryBatchSize =
-                    ServiceEnvironment.int(
-                        "FEDERATION_RETRY_BATCH_SIZE",
-                        DEFAULT_RETRY_BATCH_SIZE
-                    ),
-                incomingRateLimit =
-                    RateLimitPolicy(
-                        maximumRequests =
-                            ServiceEnvironment.int(
-                                "FEDERATION_INCOMING_RATE_LIMIT_REQUESTS",
-                                DEFAULT_INCOMING_RATE_LIMIT_REQUESTS
-                            ),
-                        windowMilliseconds =
-                            ServiceEnvironment.long(
-                                "FEDERATION_INCOMING_RATE_LIMIT_WINDOW_MILLISECONDS",
-                                DEFAULT_INCOMING_RATE_LIMIT_WINDOW_MILLISECONDS
-                            ),
-                        maximumTrackedClients =
-                            ServiceEnvironment.int(
-                                "FEDERATION_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS",
-                                DEFAULT_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS
-                            )
-                    ),
-                trustProxyHeaders =
-                    ServiceEnvironment.string("TRUST_PROXY_HEADERS", "false").toBoolean()
-            )
+            with(ServiceEnvironment) {
+                FederationConfig(
+                    databaseUrl = optionalEnv("FEDERATION_DATABASE_URL"),
+                    databaseUser = System.getenv("FEDERATION_DATABASE_USER").orEmpty(),
+                    databasePassword = secret("FEDERATION_DATABASE_PASSWORD").orEmpty(),
+                    databaseMaximumPoolSize =
+                        int(
+                            "FEDERATION_DATABASE_MAXIMUM_POOL_SIZE",
+                            DEFAULT_DATABASE_MAXIMUM_POOL_SIZE
+                        ),
+                    controlPlaneUrls =
+                        optionalEnv("CONTROL_PLANE_URLS")
+                            ?.let { controlPlaneUrlsFromEnvironment(emptyList(), it) }
+                            ?: emptyList(),
+                    nodeRegistryUrl = string("NODE_REGISTRY_URL", "http://localhost:8090"),
+                    presenceDirectoryUrl = string("PRESENCE_DIRECTORY_URL", "http://localhost:8091"),
+                    gatewayInternalUrl = string("GATEWAY_INTERNAL_URL", "http://localhost:8094"),
+                    federationInternalApiToken =
+                        secret("FEDERATION_INTERNAL_API_TOKEN")
+                            ?: secret("INTERNAL_API_TOKEN"),
+                    gatewayInternalApiToken =
+                        secret("GATEWAY_INTERNAL_API_TOKEN")
+                            ?: secret("INTERNAL_API_TOKEN"),
+                    maximumDeduplicationEntries =
+                        int(
+                            "MAX_DEDUPLICATION_ENTRIES",
+                            DEFAULT_MAXIMUM_DEDUPLICATION_ENTRIES
+                        ),
+                    registerNode = boolean("REGISTER_NODE", true),
+                    clientEndpoint = string("CLIENT_ENDPOINT", "ws://localhost:8094/relay"),
+                    federationEndpoint = string("FEDERATION_ENDPOINT", "http://localhost:8093"),
+                    mailboxEndpoint = string("MAILBOX_ENDPOINT", "http://localhost:8092"),
+                    outboundRetryPollIntervalMilliseconds =
+                        long(
+                            "FEDERATION_RETRY_POLL_INTERVAL_MILLISECONDS",
+                            DEFAULT_RETRY_POLL_INTERVAL_MILLISECONDS
+                        ),
+                    outboundRetryBaseDelayMilliseconds =
+                        long(
+                            "FEDERATION_RETRY_BASE_DELAY_MILLISECONDS",
+                            DEFAULT_RETRY_BASE_DELAY_MILLISECONDS
+                        ),
+                    outboundRetryMaximumDelayMilliseconds =
+                        long(
+                            "FEDERATION_RETRY_MAXIMUM_DELAY_MILLISECONDS",
+                            DEFAULT_RETRY_MAXIMUM_DELAY_MILLISECONDS
+                        ),
+                    outboundRetryBatchSize =
+                        int(
+                            "FEDERATION_RETRY_BATCH_SIZE",
+                            DEFAULT_RETRY_BATCH_SIZE
+                        ),
+                    incomingRateLimit =
+                        RateLimitPolicy(
+                            maximumRequests =
+                                int(
+                                    "FEDERATION_INCOMING_RATE_LIMIT_REQUESTS",
+                                    DEFAULT_INCOMING_RATE_LIMIT_REQUESTS
+                                ),
+                            windowMilliseconds =
+                                long(
+                                    "FEDERATION_INCOMING_RATE_LIMIT_WINDOW_MILLISECONDS",
+                                    DEFAULT_INCOMING_RATE_LIMIT_WINDOW_MILLISECONDS
+                                ),
+                            maximumTrackedClients =
+                                int(
+                                    "FEDERATION_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS",
+                                    DEFAULT_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS
+                                )
+                        ),
+                    trustProxyHeaders = boolean("TRUST_PROXY_HEADERS", false)
+                )
+            }
 
         private const val DEFAULT_DATABASE_MAXIMUM_POOL_SIZE = 10
         private const val DEFAULT_MAXIMUM_DEDUPLICATION_ENTRIES = 100_000
@@ -191,3 +181,9 @@ internal fun createOutboundEnvelopeStorage(config: FederationConfig): OutboundEn
         )
     return PostgresOutboundEnvelopeStorage(database)
 }
+
+internal fun ServiceEnvironment.boolean(key: String, default: Boolean): Boolean =
+    string(key, default.toString()).toBoolean()
+
+internal fun ServiceEnvironment.optionalEnv(key: String): String? =
+    System.getenv(key)?.takeIf(String::isNotBlank)
