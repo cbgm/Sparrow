@@ -280,15 +280,25 @@ function Test-IsLocalHostAddress {
 function Test-ControlPlane {
     param([Parameter(Mandatory = $true)][string]$Url)
 
-    try {
-        $base = $Url.TrimEnd("/")
-        $response = Invoke-RestMethod `
-            -Uri "$base/v1/nodes" `
-            -Method Get `
-            -TimeoutSec 3
+    $base = $Url.TrimEnd("/")
+    $healthUrl = "$base/health/registry"
 
-        return $null -ne $response
+    try {
+        $request = [System.Net.HttpWebRequest]::Create($healthUrl)
+        $request.Method = "GET"
+        $request.Timeout = 3000
+        $request.ReadWriteTimeout = 3000
+        $request.AllowAutoRedirect = $true
+
+        $response = $request.GetResponse()
+        try {
+            $statusCode = [int]$response.StatusCode
+            return $statusCode -ge 200 -and $statusCode -lt 300
+        } finally {
+            $response.Close()
+        }
     } catch {
+        Write-Log "Control-plane health probe failed at ${healthUrl}: $($_.Exception.Message)"
         return $false
     }
 }
@@ -376,7 +386,7 @@ function Resolve-ControlPlaneUrl {
     $port = if ($uri.IsDefaultPort) { if ($uri.Scheme -eq "https") { 443 } else { 80 } } else { $uri.Port }
 
     if (Test-IsLocalHostAddress -HostName $uri.Host) {
-        $hostProbeUrl = "$($uri.Scheme)://127.0.0.1`:$port"
+        $hostProbeUrl = $ConfiguredUrl.TrimEnd("/")
 
         if (-not (Test-ControlPlane -Url $hostProbeUrl)) {
             throw "The local SecureChat control plane is not reachable at $hostProbeUrl."
@@ -428,6 +438,7 @@ function Resolve-ControlPlaneCandidates {
 
     $failures = @()
     $containerUrls = [System.Collections.Generic.List[string]]::new()
+    $advertisedUrls = [System.Collections.Generic.List[string]]::new()
     $selected = $null
 
     foreach ($rawCandidate in ($Config["CONTROL_PLANE_URLS"] -split '[,;]')) {
@@ -439,6 +450,9 @@ function Resolve-ControlPlaneCandidates {
         $containerUrl = Convert-ControlPlaneUrlForContainer -ConfiguredUrl $candidate
         if (-not $containerUrls.Contains($containerUrl)) {
             $containerUrls.Add($containerUrl)
+        }
+        if (-not $advertisedUrls.Contains($candidate)) {
+            $advertisedUrls.Add($candidate)
         }
 
         if ($null -ne $selected) {
@@ -466,6 +480,7 @@ function Resolve-ControlPlaneCandidates {
         HostProbeUrl = $selected.HostProbeUrl
         ContainerUrl = $selected.ContainerUrl
         ContainerUrls = @($containerUrls)
+        AdvertisedUrls = @($advertisedUrls)
     }
 }
 
@@ -813,6 +828,11 @@ function Wait-ForEndpoint {
 }
 
 function Collect-Diagnostics {
+    if (-not (Test-Path -LiteralPath $runtimeEnvironmentPath -PathType Leaf)) {
+        Write-Log "Skipping Docker diagnostics because .env.runtime has not been generated yet."
+        return
+    }
+
     try {
         Write-Log "----- docker compose ps -----"
         $composeFileArguments = $script:ComposeFileArguments
@@ -944,6 +964,7 @@ try {
         "COMMUNITY_NODE_DOMAIN=$publicDomain",
         "CONTROL_PLANE_URL=$($controlPlane.ContainerUrl)",
         "CONTROL_PLANE_URLS=$($controlPlane.ContainerUrls -join ',')",
+        "ADVERTISED_CONTROL_PLANE_URLS=$($controlPlane.AdvertisedUrls -join ',')",
         "CLIENT_ENDPOINT=$clientEndpoint",
         "FEDERATION_ENDPOINT=$httpEndpoint",
         "MAILBOX_ENDPOINT=$httpEndpoint",

@@ -45,6 +45,10 @@ The node keeps all configured control planes in priority order, tracks reachabil
 and automatically switches to another reachable control plane without a node restart. Registration,
 heartbeats, and presence publication are synchronized across the configured control planes.
 
+The node also publishes the original external addresses at `GET /v1/control-planes`. Container-only
+rewrites such as `host.docker.internal` are not advertised. SecureChat clients verify every advertised
+candidate against the pinned registry root before persisting it or registering an FCM token there.
+
 ## LAN mode
 
 ```properties

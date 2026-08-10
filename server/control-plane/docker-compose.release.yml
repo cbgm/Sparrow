@@ -1,4 +1,16 @@
 services:
+  registry-signing-init:
+    profiles: ["init"]
+    image: alpine:3.21
+    restart: "no"
+    user: "0:0"
+    command:
+      - sh
+      - -c
+      - chown -R 65532:65532 /data/signing && chmod 700 /data/signing
+    volumes:
+      - registry-signing:/data/signing
+
   caddy:
     depends_on:
       node-registry:

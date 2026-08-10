@@ -103,11 +103,13 @@ are preferred when the offline root is available; both forms validate to the sam
 ## Multiple control planes
 
 Control planes remain independent and do not connect to one another. Replication is driven by the
-nodes and clients that already know the configured control-plane addresses:
+community nodes and clients:
 
 - community nodes register and heartbeat against every configured control plane;
 - community nodes publish presence to every configured control plane;
-- Android registers its FCM token with every reachable configured control plane;
+- a connected client reads the node's advertised control-plane addresses, verifies each candidate by
+  validating its signed node directory against the pinned registry root, and persists trusted addresses;
+- Android registers its FCM token with every reachable trusted control plane;
 - gateway nodes store an offline envelope on one notification-primary control plane and replicate the
   opaque envelope to the other reachable control planes without sending duplicate FCM notifications;
 - pending-envelope reads merge and deduplicate replicas, repair missing replicas on reachable control

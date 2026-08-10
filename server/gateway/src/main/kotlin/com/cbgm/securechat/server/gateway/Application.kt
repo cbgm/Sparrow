@@ -42,6 +42,7 @@ data class GatewayConfig(
     val federationInternalUrl: String,
     val pushInternalUrl: String,
     val controlPlaneUrls: List<String>,
+    val advertisedControlPlaneUrls: List<String>,
     val pushNodeApiUrl: String?,
     val presenceDirectoryUrl: String,
     val federationInternalApiToken: String?,
@@ -63,6 +64,7 @@ data class GatewayConfig(
     companion object {
         fun fromEnvironment(): GatewayConfig {
             val legacyToken = ServiceEnvironment.secret("INTERNAL_API_TOKEN")
+            val controlPlaneUrls = configuredControlPlaneUrls()
             return GatewayConfig(
                 port = ServiceEnvironment.int("PORT", DEFAULT_GATEWAY_PORT),
                 nodeIdentityPath =
@@ -80,16 +82,9 @@ data class GatewayConfig(
                         "PUSH_INTERNAL_URL",
                         "http://localhost:8095"
                     ),
-                controlPlaneUrls =
-                    System.getenv("CONTROL_PLANE_URLS")
-                        ?.takeIf(String::isNotBlank)
-                        ?.let { value ->
-                            controlPlaneUrlsFromEnvironment(
-                                legacyEnvironmentNames = emptyList(),
-                                defaultUrl = value
-                            )
-                        }
-                        ?: emptyList(),
+                controlPlaneUrls = controlPlaneUrls,
+                advertisedControlPlaneUrls =
+                    advertisedControlPlaneUrls(fallback = controlPlaneUrls),
                 pushNodeApiUrl =
                     System.getenv("PUSH_NODE_API_URL")?.takeIf(String::isNotBlank),
                 presenceDirectoryUrl =
@@ -116,6 +111,30 @@ data class GatewayConfig(
                         DEFAULT_ROUTE_REFRESH_INTERVAL_MILLISECONDS
                     )
             )
+        }
+
+        private fun configuredControlPlaneUrls(): List<String> =
+            System.getenv("CONTROL_PLANE_URLS")
+                ?.takeIf(String::isNotBlank)
+                ?.let { value ->
+                    controlPlaneUrlsFromEnvironment(
+                        legacyEnvironmentNames = emptyList(),
+                        defaultUrl = value
+                    )
+                }
+                ?: emptyList()
+
+        private fun advertisedControlPlaneUrls(fallback: List<String>): List<String> {
+            val configured =
+                System.getenv("ADVERTISED_CONTROL_PLANE_URLS")
+                    ?.takeIf(String::isNotBlank)
+                    ?: return fallback
+            return configured
+                .split(',', ';')
+                .map(String::trim)
+                .filter(String::isNotBlank)
+                .map { value -> value.trimEnd('/') }
+                .distinct()
         }
 
         private const val DEFAULT_MAXIMUM_FRAME_BYTES = 1_048_576L

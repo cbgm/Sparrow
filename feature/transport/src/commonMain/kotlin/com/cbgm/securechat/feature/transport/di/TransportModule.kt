@@ -12,9 +12,14 @@ import com.cbgm.securechat.core.transport.ControlPlaneStatusStore
 import com.cbgm.securechat.core.transport.TransportDiagnosticsProvider
 import com.cbgm.securechat.feature.transport.connection.DefaultRelayConnectionManager
 import com.cbgm.securechat.feature.transport.connection.RelayConnectionManager
+import com.cbgm.securechat.feature.transport.controlplane.ControlPlaneCandidateVerifier
 import com.cbgm.securechat.feature.transport.controlplane.ControlPlaneRequestRouter
 import com.cbgm.securechat.feature.transport.controlplane.HttpControlPlaneDirectorySynchronizer
 import com.cbgm.securechat.feature.transport.controlplane.HttpControlPlaneHealthMonitor
+import com.cbgm.securechat.feature.transport.controlplane.HttpNodeControlPlaneDirectorySource
+import com.cbgm.securechat.feature.transport.controlplane.NodeControlPlaneDirectorySource
+import com.cbgm.securechat.feature.transport.controlplane.NodeControlPlaneDiscoverySynchronizer
+import com.cbgm.securechat.feature.transport.controlplane.SignedDirectoryControlPlaneCandidateVerifier
 import com.cbgm.securechat.feature.transport.discovery.DefaultNodeEndpointResolver
 import com.cbgm.securechat.feature.transport.discovery.HttpNodeDirectorySource
 import com.cbgm.securechat.feature.transport.discovery.NodeDirectorySource
@@ -109,7 +114,8 @@ val transportModule =
                 localRelayIdProvider = get<LocalRelayIdProvider>(),
                 relayTransportConfig = get<RelayTransportConfig>(),
                 nodeEndpointResolver = get<NodeEndpointResolver>(),
-                controlPlaneConfiguration = get<ControlPlaneConfiguration>()
+                controlPlaneConfiguration = get<ControlPlaneConfiguration>(),
+                controlPlaneDiscoverySynchronizer = get<NodeControlPlaneDiscoverySynchronizer>()
             )
         }
 
@@ -163,6 +169,29 @@ val transportModule =
         single<ControlPlaneDirectorySynchronizer> {
             HttpControlPlaneDirectorySynchronizer(
                 httpClient = get<HttpClient>(),
+                configuration = get<ControlPlaneConfiguration>()
+            )
+        }
+
+        single<NodeControlPlaneDirectorySource> {
+            HttpNodeControlPlaneDirectorySource(
+                httpClient = get<HttpClient>()
+            )
+        }
+
+        single<ControlPlaneCandidateVerifier> {
+            SignedDirectoryControlPlaneCandidateVerifier(
+                nodeDirectorySource = get<NodeDirectorySource>(),
+                json = get(qualifier = named(RELAY_JSON_QUALIFIER)),
+                verifier = get<NodeDirectoryVerifier>(),
+                relayTransportConfig = get<RelayTransportConfig>()
+            )
+        }
+
+        single {
+            NodeControlPlaneDiscoverySynchronizer(
+                source = get<NodeControlPlaneDirectorySource>(),
+                candidateVerifier = get<ControlPlaneCandidateVerifier>(),
                 configuration = get<ControlPlaneConfiguration>()
             )
         }

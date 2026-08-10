@@ -19,6 +19,7 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import io.ktor.server.websocket.webSocket
+import kotlinx.serialization.Serializable
 
 internal fun Application.installGatewayRoutes(
     runtime: GatewayRuntime,
@@ -28,6 +29,7 @@ internal fun Application.installGatewayRoutes(
     routing {
         installHealthRoute(runtime)
         installInformationRoute(identity, config)
+        installControlPlaneDiscoveryRoute(config)
         installRelayRoute(runtime)
         installIncomingEnvelopeRoute(runtime, config)
         installIncomingTypingRoute(runtime, config)
@@ -52,6 +54,16 @@ private fun Route.installInformationRoute(
                 nodeId = identity.nodeId,
                 routeLifetimeMilliseconds = config.routeLifetimeMilliseconds,
                 routeRefreshIntervalMilliseconds = config.routeRefreshIntervalMilliseconds
+            )
+        )
+    }
+}
+
+private fun Route.installControlPlaneDiscoveryRoute(config: GatewayConfig) {
+    get("/v1/control-planes") {
+        call.respond(
+            GatewayControlPlaneDirectory(
+                controlPlanes = config.advertisedControlPlaneUrls
             )
         )
     }
@@ -164,3 +176,8 @@ private fun ApplicationCall.hasInternalAccess(expectedToken: String?): Boolean =
         expectedToken,
         request.headers[InternalApiAuthentication.TOKEN_HEADER]
     )
+
+@Serializable
+private data class GatewayControlPlaneDirectory(
+    val controlPlanes: List<String>
+)

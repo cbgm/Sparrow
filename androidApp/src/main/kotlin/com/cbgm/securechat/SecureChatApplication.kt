@@ -44,7 +44,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -136,7 +135,6 @@ class SecureChatApplication : Application() {
                     }.map { endpoint -> endpoint.baseUrl }
                     .toSet()
             }.distinctUntilChanged()
-                .drop(1)
                 .collectLatest {
                     koin.get<PushTokenRegistrationScheduler>().enqueueCurrentToken()
                 }
@@ -164,8 +162,6 @@ class SecureChatApplication : Application() {
     private fun launchStartupTasks(koin: Koin) {
         applicationScope.launch {
             waitUntilLocalIdentityIsReady(koin)
-
-            koin.get<PushTokenRegistrationScheduler>().enqueueCurrentToken()
 
             syncDeviceContactsIfPermitted(koin)
         }

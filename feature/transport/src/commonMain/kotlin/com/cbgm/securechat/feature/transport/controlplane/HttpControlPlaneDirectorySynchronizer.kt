@@ -21,7 +21,7 @@ class HttpControlPlaneDirectorySynchronizer(
             }
             val document = response.body<ControlPlaneDirectoryDocument>()
             configuration
-                .replaceDirectory(document.controlPlanes)
+                .mergeDirectory(document.controlPlanes)
                 .getOrThrow()
             document.controlPlanes.distinct().size
         }

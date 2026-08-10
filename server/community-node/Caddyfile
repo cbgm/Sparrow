@@ -15,7 +15,7 @@
         }
     }
 
-    @gateway_info path /v1/gateway
+    @gateway_info path /v1/gateway /v1/control-planes
     handle @gateway_info {
         reverse_proxy gateway:8094
     }

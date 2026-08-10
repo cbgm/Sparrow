@@ -47,6 +47,9 @@ interface ControlPlaneConfiguration {
     suspend fun setDirectoryUrl(url: String?): Result<Unit>
 
     suspend fun replaceDirectory(baseUrls: List<String>): Result<Unit>
+
+    suspend fun mergeDirectory(baseUrls: List<String>): Result<Unit> =
+        replaceDirectory((directoryBaseUrls.value + baseUrls).toList())
 }
 
 interface ControlPlaneStatusStore {

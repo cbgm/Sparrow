@@ -5,6 +5,7 @@ import com.cbgm.securechat.core.time.SystemClock
 import com.cbgm.securechat.core.transport.ControlPlaneConfiguration
 import com.cbgm.securechat.core.transport.TransportDiagnostics
 import com.cbgm.securechat.core.transport.TransportDiagnosticsProvider
+import com.cbgm.securechat.feature.transport.controlplane.NodeControlPlaneDiscoverySynchronizer
 import com.cbgm.securechat.feature.transport.discovery.FailedNodeTracker
 import com.cbgm.securechat.feature.transport.discovery.NodeEndpoint
 import com.cbgm.securechat.feature.transport.discovery.NodeEndpointResolver
@@ -31,7 +32,8 @@ class DefaultRelayConnectionManager(
     private val localRelayIdProvider: LocalRelayIdProvider,
     private val relayTransportConfig: RelayTransportConfig,
     private val nodeEndpointResolver: NodeEndpointResolver,
-    private val controlPlaneConfiguration: ControlPlaneConfiguration
+    private val controlPlaneConfiguration: ControlPlaneConfiguration,
+    private val controlPlaneDiscoverySynchronizer: NodeControlPlaneDiscoverySynchronizer
 ) : RelayConnectionManager,
     TransportDiagnosticsProvider {
     private val logger = SecureChatLog.withTag("DefaultRelayConnectionManager")
@@ -140,7 +142,7 @@ class DefaultRelayConnectionManager(
             when (val connectionResult = awaitConnectionResult()) {
                 is TransportConnectionState.Connected -> {
                     onConnected(endpoint = endpoint, relayId = connectionResult.relayId)
-                    val endState = waitForConnectionEnd(relayId)
+                    val endState = waitForConnectionEnd(relayId, endpoint)
                     onConnectedNodeEnded(endpoint = endpoint, state = endState)
                     true
                 }
@@ -216,7 +218,7 @@ class DefaultRelayConnectionManager(
                 }
         }
 
-    private fun onConnected(
+    private suspend fun onConnected(
         endpoint: NodeEndpoint,
         relayId: String
     ) {
@@ -229,6 +231,15 @@ class DefaultRelayConnectionManager(
         logger.info {
             "Relay connected through node ${endpoint.nodeId} as $relayId"
         }
+        controlPlaneDiscoverySynchronizer
+            .refreshFromNode(endpoint.websocketUrl)
+            .onSuccess { count ->
+                logger.info { "Control-plane discovery synchronized $count trusted addresses" }
+            }.onFailure { error ->
+                logger.warn {
+                    "Control-plane discovery failed: ${error.message ?: "unknown error"}"
+                }
+            }
     }
 
     private fun onConnectedNodeEnded(
@@ -258,7 +269,10 @@ class DefaultRelayConnectionManager(
         )
     }
 
-    private suspend fun waitForConnectionEnd(relayId: String): TransportConnectionState =
+    private suspend fun waitForConnectionEnd(
+        relayId: String,
+        endpoint: NodeEndpoint
+    ): TransportConnectionState =
         coroutineScope {
             val refreshJob =
                 launch {
@@ -285,6 +299,20 @@ class DefaultRelayConnectionManager(
                         )
                     }
                 }
+            val controlPlaneDiscoveryJob =
+                launch {
+                    while (isActive) {
+                        delay(CONTROL_PLANE_DISCOVERY_REFRESH_MILLISECONDS.milliseconds)
+                        controlPlaneDiscoverySynchronizer
+                            .refreshFromNode(endpoint.websocketUrl)
+                            .onFailure { error ->
+                                logger.warn {
+                                    "Control-plane discovery refresh failed: " +
+                                        (error.message ?: "unknown error")
+                                }
+                            }
+                    }
+                }
 
             try {
                 webSocketTransportClient.connectionState.first { state ->
@@ -293,6 +321,7 @@ class DefaultRelayConnectionManager(
                 }
             } finally {
                 refreshJob.cancelAndJoin()
+                controlPlaneDiscoveryJob.cancelAndJoin()
             }
         }
 
@@ -300,5 +329,6 @@ class DefaultRelayConnectionManager(
         const val CONNECTION_TIMEOUT_MILLISECONDS = 15_000L
         const val INITIAL_RECONNECT_DELAY_MILLISECONDS = 1_000L
         const val MAX_RECONNECT_DELAY_MILLISECONDS = 30_000L
+        const val CONTROL_PLANE_DISCOVERY_REFRESH_MILLISECONDS = 300_000L
     }
 }

@@ -459,6 +459,8 @@ Write-Utf8File -Path $nodeAEnvironment -Lines @(
     "COMMUNITY_NODE_HTTP_PORT=8490",
     "COMMUNITY_NODE_SITE_ADDRESS=:80",
     "CONTROL_PLANE_URL=http://host.docker.internal:8390",
+    "CONTROL_PLANE_URLS=http://host.docker.internal:8390",
+    "ADVERTISED_CONTROL_PLANE_URLS=http://localhost:8390",
     "CLIENT_ENDPOINT=ws://host.docker.internal:8490/relay",
     "FEDERATION_ENDPOINT=http://host.docker.internal:8490",
     "MAILBOX_ENDPOINT=http://host.docker.internal:8490",
@@ -479,6 +481,8 @@ Write-Utf8File -Path $nodeBEnvironment -Lines @(
     "COMMUNITY_NODE_HTTP_PORT=8590",
     "COMMUNITY_NODE_SITE_ADDRESS=:80",
     "CONTROL_PLANE_URL=http://host.docker.internal:8390",
+    "CONTROL_PLANE_URLS=http://host.docker.internal:8390",
+    "ADVERTISED_CONTROL_PLANE_URLS=http://localhost:8390",
     "CLIENT_ENDPOINT=ws://host.docker.internal:8590/relay",
     "FEDERATION_ENDPOINT=http://host.docker.internal:8590",
     "MAILBOX_ENDPOINT=http://host.docker.internal:8590",
@@ -545,6 +549,17 @@ try {
         -Name "node B gateway" `
         -Url "http://localhost:8594/health" `
         -Pattern '^ok connections=\d+$'
+
+    $advertisedControlPlanes =
+        Invoke-RestMethod `
+            -Uri "http://localhost:8490/v1/control-planes" `
+            -Method Get `
+            -TimeoutSec 10
+    if ($advertisedControlPlanes.controlPlanes -notcontains "http://localhost:8390") {
+        throw "Community node did not advertise its external control-plane address."
+    }
+    Write-Host "PASS node A advertises client-usable control-plane addresses."
+
     Wait-ForRegistryNodes -Expected 2
 
     $nodeAId =

@@ -852,6 +852,15 @@ try {
             -DatabaseName "securechat_push" `
             -Password $pushPassword
 
+        Set-ProgressValue -Value 80
+        Set-Status "Preparing registry signing storage..."
+        Invoke-Compose -Arguments @(
+            "run",
+            "--rm",
+            "--no-deps",
+            "registry-signing-init"
+        )
+
         Set-ProgressValue -Value 84
         Set-Status "Starting SecureChat services..."
         Invoke-Compose -Arguments @(
