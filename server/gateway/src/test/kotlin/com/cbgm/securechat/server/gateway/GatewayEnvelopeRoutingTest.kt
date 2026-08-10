@@ -15,7 +15,7 @@ class GatewayEnvelopeRoutingTest {
     fun locallyConnectedRecipientSkipsFederation() =
         runTest {
             var federationCalls = 0
-            val accepted =
+            val state =
                 routeFederatedEnvelope(
                     envelope = testEnvelope(),
                     localDelivery = { true },
@@ -29,7 +29,7 @@ class GatewayEnvelopeRoutingTest {
                         }
                 )
 
-            assertTrue(accepted)
+            assertEquals(EnvelopeAcceptanceState.STORED_AT_DESTINATION, state)
             assertEquals(0, federationCalls)
         }
 
@@ -38,7 +38,7 @@ class GatewayEnvelopeRoutingTest {
         runTest {
             var routedEnvelope: FederatedEnvelope? = null
             val envelope = testEnvelope()
-            val accepted =
+            val state =
                 routeFederatedEnvelope(
                     envelope = envelope,
                     localDelivery = { false },
@@ -52,12 +52,12 @@ class GatewayEnvelopeRoutingTest {
                         }
                 )
 
-            assertTrue(accepted)
+            assertEquals(EnvelopeAcceptanceState.STORED_AT_DESTINATION, state)
             assertEquals(envelope, routedEnvelope)
         }
 
     @Test
-    fun legacyEnvelopeIsStoredForPushAndStillRoutedOnline() =
+    fun onlineLegacyEnvelopeSkipsPushStorage() =
         runTest {
             var pushCalls = 0
             var networkCalls = 0
@@ -71,7 +71,7 @@ class GatewayEnvelopeRoutingTest {
                     },
                     networkDelivery = {
                         networkCalls += 1
-                        true
+                        EnvelopeAcceptanceState.STORED_AT_DESTINATION
                     },
                     markFederationStored = {
                         markedStoredEnvelopeId = it
@@ -79,13 +79,13 @@ class GatewayEnvelopeRoutingTest {
                 )
 
             assertTrue(accepted)
-            assertEquals(1, pushCalls)
+            assertEquals(0, pushCalls)
             assertEquals(1, networkCalls)
-            assertEquals("envelope-1", markedStoredEnvelopeId)
+            assertEquals(null, markedStoredEnvelopeId)
         }
 
     @Test
-    fun federatedEnvelopeIsStoredForPushAndStillUsesMailboxRoute() =
+    fun onlineFederatedEnvelopeSkipsPushStorage() =
         runTest {
             var pushedEnvelope: RelayEnvelope? = null
             var routedEnvelope: FederatedEnvelope? = null
@@ -101,7 +101,7 @@ class GatewayEnvelopeRoutingTest {
                     },
                     networkDelivery = { candidate ->
                         routedEnvelope = candidate
-                        true
+                        EnvelopeAcceptanceState.STORED_AT_DESTINATION
                     },
                     markFederationStored = { envelopeId ->
                         markedStoredEnvelopeId = envelopeId
@@ -109,18 +109,9 @@ class GatewayEnvelopeRoutingTest {
                 )
 
             assertTrue(accepted)
-            assertEquals(
-                RelayEnvelope(
-                    envelopeId = envelope.envelopeId,
-                    senderId = envelope.senderRoutingId,
-                    recipientId = envelope.recipientDeviceRoutingId,
-                    payload = envelope.encryptedPayload,
-                    createdAtEpochMilliseconds = envelope.createdAtEpochMilliseconds
-                ),
-                pushedEnvelope
-            )
+            assertEquals(null, pushedEnvelope)
             assertEquals(envelope, routedEnvelope)
-            assertEquals(envelope.envelopeId, markedStoredEnvelopeId)
+            assertEquals(null, markedStoredEnvelopeId)
         }
 
     @Test
@@ -131,7 +122,7 @@ class GatewayEnvelopeRoutingTest {
                 storeAndRouteFederatedEnvelope(
                     envelope = testEnvelope(),
                     pushStorage = { true },
-                    networkDelivery = { false },
+                    networkDelivery = { null },
                     markFederationStored = { envelopeId ->
                         markedStoredEnvelopeId = envelopeId
                     }
@@ -149,7 +140,7 @@ class GatewayEnvelopeRoutingTest {
                 storeAndRouteLegacyEnvelope(
                     envelope = testRelayEnvelope(),
                     pushStorage = { true },
-                    networkDelivery = { false },
+                    networkDelivery = { null },
                     markFederationStored = {
                         markedStoredEnvelopeId = it
                     }
@@ -157,6 +148,20 @@ class GatewayEnvelopeRoutingTest {
 
             assertTrue(accepted)
             assertEquals("envelope-1", markedStoredEnvelopeId)
+        }
+
+    @Test
+    fun queuedEnvelopeIsAcceptedWhenPushIsUnavailable() =
+        runTest {
+            val accepted =
+                storeAndRouteFederatedEnvelope(
+                    envelope = testEnvelope(),
+                    pushStorage = { false },
+                    networkDelivery = { EnvelopeAcceptanceState.QUEUED_AT_GATEWAY },
+                    markFederationStored = { error("Queued envelope must stay in federation") }
+                )
+
+            assertTrue(accepted)
         }
 
     @Test

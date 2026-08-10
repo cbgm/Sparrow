@@ -187,7 +187,9 @@ class GatewayWebSocketHandler(
         )
     }
 
-    private suspend fun routeEnvelope(envelope: FederatedEnvelope): Boolean =
+    private suspend fun routeEnvelope(
+        envelope: FederatedEnvelope
+    ): EnvelopeAcceptanceState? =
         routeFederatedEnvelope(
             envelope = envelope,
             localDelivery = ::acceptLocallyIfConnected,
@@ -199,12 +201,6 @@ class GatewayWebSocketHandler(
         recipients: List<GatewayConnection>
     ): Boolean {
         val relayEnvelope = envelope.toRelayEnvelope()
-
-        val stored =
-            runCatching {
-                legacyPush.store(relayEnvelope)
-            }.getOrDefault(false)
-
         val delivered =
             recipients.any { recipient ->
                 runCatching {
@@ -216,7 +212,13 @@ class GatewayWebSocketHandler(
                 }.isSuccess
             }
 
-        return stored || delivered
+        if (delivered) {
+            return true
+        }
+
+        return runCatching {
+            legacyPush.store(relayEnvelope)
+        }.getOrDefault(false)
     }
 }
 
@@ -224,22 +226,18 @@ internal suspend fun routeFederatedEnvelope(
     envelope: FederatedEnvelope,
     localDelivery: suspend (FederatedEnvelope) -> Boolean,
     federation: FederationClient
-): Boolean {
+): EnvelopeAcceptanceState? {
     if (localDelivery(envelope)) {
-        return true
+        return EnvelopeAcceptanceState.STORED_AT_DESTINATION
     }
 
-    return federation.route(envelope).state in
-        setOf(
-            EnvelopeAcceptanceState.QUEUED_AT_GATEWAY,
-            EnvelopeAcceptanceState.STORED_AT_DESTINATION
-        )
+    return runCatching { federation.route(envelope).state }.getOrNull()
 }
 
 internal suspend fun storeAndRouteLegacyEnvelope(
     envelope: RelayEnvelope,
     pushStorage: suspend (RelayEnvelope) -> Boolean,
-    networkDelivery: suspend (FederatedEnvelope) -> Boolean,
+    networkDelivery: suspend (FederatedEnvelope) -> EnvelopeAcceptanceState?,
     markFederationStored: suspend (String) -> Unit
 ): Boolean =
     storeAndRouteEnvelope(
@@ -253,7 +251,7 @@ internal suspend fun storeAndRouteLegacyEnvelope(
 internal suspend fun storeAndRouteFederatedEnvelope(
     envelope: FederatedEnvelope,
     pushStorage: suspend (RelayEnvelope) -> Boolean,
-    networkDelivery: suspend (FederatedEnvelope) -> Boolean,
+    networkDelivery: suspend (FederatedEnvelope) -> EnvelopeAcceptanceState?,
     markFederationStored: suspend (String) -> Unit
 ): Boolean =
     storeAndRouteEnvelope(
@@ -268,17 +266,21 @@ private suspend fun storeAndRouteEnvelope(
     pushEnvelope: RelayEnvelope,
     networkEnvelope: FederatedEnvelope,
     pushStorage: suspend (RelayEnvelope) -> Boolean,
-    networkDelivery: suspend (FederatedEnvelope) -> Boolean,
+    networkDelivery: suspend (FederatedEnvelope) -> EnvelopeAcceptanceState?,
     markFederationStored: suspend (String) -> Unit
 ): Boolean {
+    val routingState =
+        runCatching {
+            networkDelivery(networkEnvelope)
+        }.getOrNull()
+
+    if (routingState == EnvelopeAcceptanceState.STORED_AT_DESTINATION) {
+        return true
+    }
+
     val storedForPush =
         runCatching {
             pushStorage(pushEnvelope)
-        }.getOrDefault(false)
-
-    val routedOnline =
-        runCatching {
-            networkDelivery(networkEnvelope)
         }.getOrDefault(false)
 
     if (storedForPush) {
@@ -287,7 +289,7 @@ private suspend fun storeAndRouteEnvelope(
         }
     }
 
-    return storedForPush || routedOnline
+    return storedForPush || routingState == EnvelopeAcceptanceState.QUEUED_AT_GATEWAY
 }
 
 internal suspend fun routeFederatedTypingEvent(
