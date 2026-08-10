@@ -223,15 +223,9 @@ private fun NoIdentityContent(
                             focusedContainerColor = Field,
                             unfocusedContainerColor = Field,
                             focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                            unfocusedBorderColor =
-                                MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                    alpha = 0.18f
-                                ),
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.18f),
                             focusedLabelColor = MaterialTheme.colorScheme.secondary,
-                            unfocusedLabelColor =
-                                MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                    alpha = 0.72f
-                                ),
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
                             cursorColor = MaterialTheme.colorScheme.secondary,
                             errorBorderColor = MaterialTheme.colorScheme.error,
                             errorLabelColor = MaterialTheme.colorScheme.error,
@@ -366,10 +360,7 @@ private fun IncompleteIdentityContent(onRetry: () -> Unit) {
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
-        SecureChatApprovalButton(
-            onClick = onRetry,
-            text = stringResource(Res.string.feature_identity_check_again)
-        )
+        SecureChatApprovalButton(onClick = onRetry, text = stringResource(Res.string.feature_identity_check_again))
     }
 }
 

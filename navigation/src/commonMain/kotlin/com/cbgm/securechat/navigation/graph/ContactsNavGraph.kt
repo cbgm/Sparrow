@@ -1,10 +1,5 @@
 package com.cbgm.securechat.navigation.graph
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
@@ -24,28 +19,14 @@ fun NavGraphBuilder.contactsNavGraph() {
     }
 
     composable<AppRoute.ImportContact> { backStackEntry ->
-        val destination = backStackEntry.toRoute<AppRoute.ImportContact>()
-        val scannedIdentityFromScanner by
-            backStackEntry.savedStateHandle
-                .getStateFlow<String?>(SCANNED_IDENTITY_KEY, null)
-                .collectAsStateWithLifecycle()
-        var destinationScannedIdentity by remember(destination.scannedIdentity) {
-            mutableStateOf(destination.scannedIdentity)
-        }
-
         ImportIdentityRoute(
-            contactId = destination.contactId,
-            scannedIdentity = scannedIdentityFromScanner ?: destinationScannedIdentity,
-            onScannedIdentityConsumed = {
-                backStackEntry.savedStateHandle.remove<String>(SCANNED_IDENTITY_KEY)
-                destinationScannedIdentity = null
-            }
+            route = backStackEntry.toRoute<AppRoute.ImportContact>()
         )
     }
 
-    composable<AppRoute.ScanIdentity> {
-        ScanIdentityNavigationRoute()
+    composable<AppRoute.ScanIdentity> { backStackEntry ->
+        ScanIdentityNavigationRoute(
+            route = backStackEntry.toRoute<AppRoute.ScanIdentity>()
+        )
     }
 }
-
-private const val SCANNED_IDENTITY_KEY = "scannedIdentity"

@@ -5,8 +5,6 @@ sealed interface ContactDetailsUiEvent {
 
     data object RetryClicked : ContactDetailsUiEvent
 
-    data object RefreshRequested : ContactDetailsUiEvent
-
     data object ShareContactClicked : ContactDetailsUiEvent
 
     data object VerifyIdentityClicked : ContactDetailsUiEvent

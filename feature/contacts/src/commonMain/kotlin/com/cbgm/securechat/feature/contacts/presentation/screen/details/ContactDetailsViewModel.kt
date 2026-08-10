@@ -6,17 +6,20 @@ import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactSafetyNumber
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContact
 import com.cbgm.securechat.feature.contacts.domain.usecase.VerifyContact
 import com.cbgm.securechat.feature.contacts.presentation.model.ContactDetailsUiEvent
 import com.cbgm.securechat.feature.contacts.presentation.model.ContactDetailsUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 class ContactDetailsViewModel(
     private val contactId: String,
     private val getContact: GetContact,
+    private val observeContact: ObserveContact,
     private val getContactSafetyNumber: GetContactSafetyNumber,
     private val verifyContact: VerifyContact
 ) : BaseViewModel() {
@@ -26,18 +29,26 @@ class ContactDetailsViewModel(
 
     init {
         loadContact()
+        observeContactChanges()
     }
 
     fun onUiEvent(event: ContactDetailsUiEvent) {
         when (event) {
             ContactDetailsUiEvent.BackClicked -> navigator.popBackStack()
-            ContactDetailsUiEvent.RetryClicked,
-            ContactDetailsUiEvent.RefreshRequested -> loadContact()
+            ContactDetailsUiEvent.RetryClicked -> loadContact()
             ContactDetailsUiEvent.ConfirmVerificationClicked -> confirmVerification()
             ContactDetailsUiEvent.ScanQrCodeClicked -> scanQrCode()
             ContactDetailsUiEvent.ShareContactClicked,
             ContactDetailsUiEvent.VerifyIdentityClicked,
             ContactDetailsUiEvent.VerificationBackClicked -> Unit
+        }
+    }
+
+    private fun observeContactChanges() {
+        viewModelScope.launch {
+            observeContact(contactId)
+                .drop(1)
+                .collect { loadContact() }
         }
     }
 

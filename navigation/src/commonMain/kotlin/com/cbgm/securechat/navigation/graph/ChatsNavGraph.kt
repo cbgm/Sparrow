@@ -1,7 +1,5 @@
 package com.cbgm.securechat.navigation.graph
 
-import androidx.compose.runtime.getValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
@@ -45,15 +43,10 @@ fun NavGraphBuilder.chatsNavGraph() {
         popExitTransition = { slideOutToRight() }
     ) { backStackEntry ->
         val destination = backStackEntry.toRoute<AppRoute.ContactDetails>()
-        val verificationRevision by
-            backStackEntry.savedStateHandle
-                .getStateFlow(VERIFICATION_REVISION_KEY, 0)
-                .collectAsStateWithLifecycle()
 
         DetailsRoute(
             target = DetailsTarget.Contact(contactId = destination.contactId),
-            openVerification = destination.openVerification,
-            verificationRevision = verificationRevision
+            openVerification = destination.openVerification
         )
     }
 
@@ -67,8 +60,7 @@ fun NavGraphBuilder.chatsNavGraph() {
 
         DetailsRoute(
             target = DetailsTarget.Group(conversationId = destination.conversationId),
-            openVerification = false,
-            verificationRevision = 0
+            openVerification = false
         )
     }
 
@@ -80,5 +72,3 @@ fun NavGraphBuilder.chatsNavGraph() {
         )
     }
 }
-
-private const val VERIFICATION_REVISION_KEY = "verificationRevision"

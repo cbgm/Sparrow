@@ -11,7 +11,6 @@ import com.cbgm.securechat.startup.presentation.screen.StartupScreen
 import com.cbgm.securechat.startup.presentation.screen.StartupViewModel
 import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
-import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun StartupRoute(
@@ -22,7 +21,7 @@ fun StartupRoute(
 
     LaunchedEffect(startupUiState) {
         if (startupUiState == StartupUiState.Ready) {
-            delay(1000.milliseconds)
+            delay(1000)
             startupViewModel.completeStartup()
             onStartupReady()
         }

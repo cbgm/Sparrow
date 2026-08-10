@@ -12,20 +12,28 @@ import com.cbgm.securechat.core.ui.navigation.AppNavigator
 @Composable
 fun NavHostController.bind(navigator: AppNavigator) {
     val lifecycleOwner = LocalLifecycleOwner.current
+
     LaunchedEffect(navigator.navigationEvents, lifecycleOwner) {
-        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             navigator.navigationEvents.collect { event ->
                 when (event) {
                     is AppNavigationEvent.NavigateTo -> {
-                        this@bind.navigate(event.route) {
+                        navigate(event.route) {
                             launchSingleTop = true
+                            event.popUpTo?.let { route ->
+                                popUpTo(route) {
+                                    inclusive = event.inclusive
+                                }
+                            }
                         }
                     }
-                    is AppNavigationEvent.PopBackStack -> {
-                        this@bind.popBackStack()
+
+                    AppNavigationEvent.PopBackStack -> {
+                        popBackStack()
                     }
+
                     is AppNavigationEvent.PopBackStackTo -> {
-                        this@bind.popBackStack(event.route, event.inclusive)
+                        popBackStack(event.route, event.inclusive)
                     }
                 }
             }

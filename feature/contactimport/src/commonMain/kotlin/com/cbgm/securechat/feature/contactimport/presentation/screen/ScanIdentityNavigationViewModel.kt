@@ -1,32 +1,32 @@
 package com.cbgm.securechat.feature.contactimport.presentation.screen
 
-import com.cbgm.securechat.core.ui.navigation.AppNavigationResult
+import com.cbgm.securechat.core.ui.navigation.AppRoute
 import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.contactimport.presentation.model.ScanIdentityUiEvent
 
-class ScanIdentityNavigationViewModel : BaseViewModel() {
+class ScanIdentityNavigationViewModel(
+    private val route: AppRoute.ScanIdentity
+) : BaseViewModel() {
     fun onUiEvent(event: ScanIdentityUiEvent) {
         when (event) {
             is ScanIdentityUiEvent.QrCodeScanned -> onQrCodeScanned(event.encodedIdentity)
-            ScanIdentityUiEvent.BackClicked -> navigateBack()
+            ScanIdentityUiEvent.BackClicked -> navigator.popBackStack()
         }
     }
 
     private fun onQrCodeScanned(encodedIdentity: String) {
-        navigator.popBackStack(
-            result =
-                AppNavigationResult.StringValue(
-                    key = SCANNED_IDENTITY_KEY,
-                    value = encodedIdentity
-                )
+        navigator.navigateTo(
+            route =
+                AppRoute.ImportContact(
+                    scannedIdentity = encodedIdentity,
+                    contactId = route.contactId
+                ),
+            popUpTo =
+                AppRoute.ImportContact(
+                    scannedIdentity = route.previousScannedIdentity,
+                    contactId = route.contactId
+                ),
+            inclusive = true
         )
-    }
-
-    private fun navigateBack() {
-        navigator.popBackStack()
-    }
-
-    private companion object {
-        const val SCANNED_IDENTITY_KEY = "scannedIdentity"
     }
 }

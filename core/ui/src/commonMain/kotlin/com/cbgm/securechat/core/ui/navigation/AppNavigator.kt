@@ -3,9 +3,6 @@ package com.cbgm.securechat.core.ui.navigation
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.TimeMark
-import kotlin.time.TimeSource
 
 class AppNavigator {
     private val _navigationEvents =
@@ -13,6 +10,7 @@ class AppNavigator {
             replay = 0,
             extraBufferCapacity = 1
         )
+
     val navigationEvents: SharedFlow<AppNavigationEvent> = _navigationEvents.asSharedFlow()
 
     fun navigateTo(route: AppRoute) {
@@ -24,7 +22,13 @@ class AppNavigator {
         popUpTo: AppRoute? = null,
         inclusive: Boolean = false
     ) {
-        _navigationEvents.tryEmit(AppNavigationEvent.NavigateTo(route, popUpTo, inclusive))
+        _navigationEvents.tryEmit(
+            AppNavigationEvent.NavigateTo(
+                route = route,
+                popUpTo = popUpTo,
+                inclusive = inclusive
+            )
+        )
     }
 
     fun popBackStack() {

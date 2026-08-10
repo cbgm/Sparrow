@@ -1,7 +1,6 @@
 package com.cbgm.securechat.feature.contactimport.presentation.screen
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.securechat.core.ui.navigation.AppNavigationResult
 import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.contactimport.domain.usecase.VerifyContactByQr
 import com.cbgm.securechat.feature.contactimport.presentation.model.VerifyContactQrUiEvent
@@ -51,9 +50,7 @@ class VerifyContactQrViewModel(
                         errorMessage = null
                     )
                 }
-                navigator.popBackStack(
-                    AppNavigationResult.IncrementInt(key = "verificationRevision")
-                )
+                navigator.popBackStack()
             }.onFailure { error ->
                 _uiState.update {
                     it.copy(

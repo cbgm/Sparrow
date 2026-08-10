@@ -26,13 +26,18 @@ val contactImportModule =
             )
         }
 
-        viewModel {
+        viewModel { parameters ->
             ImportIdentityViewModel(
+                route = parameters.get(),
                 importSharedIdentity = get()
             )
         }
 
-        viewModel { ScanIdentityNavigationViewModel() }
+        viewModel { parameters ->
+            ScanIdentityNavigationViewModel(
+                route = parameters.get()
+            )
+        }
 
         viewModel { parameters ->
             VerifyContactQrViewModel(

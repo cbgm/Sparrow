@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.securechat.kmp.compose)
     alias(libs.plugins.securechat.kmp.serialization)
+    alias(libs.plugins.securechat.kmp.testing)
 }
 
 kotlin {
@@ -25,8 +26,8 @@ kotlin {
         }
 
         androidMain.dependencies {
-            implementation(libs.androidx.activity.compose)
-            implementation(libs.androidx.core.ktx)
+            implementation(libs.bundles.android.device.testing)
+            implementation(libs.bundles.coroutines.test)
         }
     }
 }

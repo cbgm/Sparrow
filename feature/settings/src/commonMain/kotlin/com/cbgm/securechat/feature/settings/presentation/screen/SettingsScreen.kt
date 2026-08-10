@@ -76,8 +76,6 @@ import com.cbgm.securechat.resources.feature_settings_privacy_policy_subtitle
 import com.cbgm.securechat.resources.feature_settings_security
 import org.jetbrains.compose.resources.stringResource
 
-private val CardColor = Color(0xFF102A46)
-
 @Composable
 fun SettingsScreen(
     uiState: SettingsUiState,

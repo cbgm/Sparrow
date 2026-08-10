@@ -35,7 +35,6 @@ private enum class ContactDetailsContent {
 fun ContactDetailsFlow(
     contactId: String,
     openVerification: Boolean,
-    verificationRevision: Int,
     onShareContact: (Contact) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ContactDetailsViewModel =
@@ -76,12 +75,6 @@ fun ContactDetailsFlow(
     LaunchedEffect(isAlreadyVerified) {
         if (isAlreadyVerified) {
             content = ContactDetailsContent.Overview
-        }
-    }
-
-    LaunchedEffect(verificationRevision) {
-        if (verificationRevision > 0) {
-            viewModel.onUiEvent(ContactDetailsUiEvent.RefreshRequested)
         }
     }
 

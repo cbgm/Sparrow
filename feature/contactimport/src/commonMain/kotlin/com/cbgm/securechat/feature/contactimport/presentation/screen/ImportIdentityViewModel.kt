@@ -14,26 +14,28 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class ImportIdentityViewModel(
+    private val route: AppRoute.ImportContact,
     private val importSharedIdentity: ImportSharedIdentity
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow(ImportIdentityUiState())
     val uiState: StateFlow<ImportIdentityUiState> = _uiState.asStateFlow()
 
-    private fun scanQrCode() {
-        navigator.navigateTo(AppRoute.ScanIdentity)
-    }
-
-    private fun navigateBack() {
-        navigator.popBackStack()
-    }
-
     fun onUiEvent(event: ImportIdentityUiEvent) {
         when (event) {
             is ImportIdentityUiEvent.EncodedIdentityChanged -> updateEncodedIdentity(event.value)
             is ImportIdentityUiEvent.ImportClicked -> importIdentity(event.contactId, event.identityImportTrust)
-            ImportIdentityUiEvent.BackClicked -> navigateBack()
+            ImportIdentityUiEvent.BackClicked -> navigator.popBackStack()
             ImportIdentityUiEvent.ScanQrCodeClicked -> scanQrCode()
         }
+    }
+
+    private fun scanQrCode() {
+        navigator.navigateTo(
+            AppRoute.ScanIdentity(
+                contactId = route.contactId,
+                previousScannedIdentity = route.scannedIdentity
+            )
+        )
     }
 
     private fun updateEncodedIdentity(value: String) {

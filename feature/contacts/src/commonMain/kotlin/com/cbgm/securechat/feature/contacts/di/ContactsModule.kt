@@ -265,6 +265,7 @@ val contactsModule =
             ContactDetailsViewModel(
                 contactId = parameters.get(),
                 getContact = get(),
+                observeContact = get(),
                 getContactSafetyNumber = get(),
                 verifyContact = get()
             )

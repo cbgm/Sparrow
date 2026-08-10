@@ -31,8 +31,7 @@ sealed interface DetailsTarget {
 @Composable
 fun DetailsRoute(
     target: DetailsTarget,
-    openVerification: Boolean,
-    verificationRevision: Int
+    openVerification: Boolean
 ) {
     val identityShareCodec = koinInject<IdentityShareCodec>()
     var encodedContactToShare by remember { mutableStateOf("") }
@@ -55,7 +54,6 @@ fun DetailsRoute(
             ContactDetailsFlow(
                 contactId = target.contactId,
                 openVerification = openVerification,
-                verificationRevision = verificationRevision,
                 onShareContact = { contact ->
                     encodeContactForSharing(
                         contact = contact,

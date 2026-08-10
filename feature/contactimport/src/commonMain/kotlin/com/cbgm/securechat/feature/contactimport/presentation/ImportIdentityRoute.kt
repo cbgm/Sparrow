@@ -8,6 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.securechat.core.extensions.toFingerprint
+import com.cbgm.securechat.core.ui.navigation.AppRoute
 import com.cbgm.securechat.feature.contactimport.presentation.model.ImportIdentityUiEvent
 import com.cbgm.securechat.feature.contactimport.presentation.model.ScannedIdentityPreview
 import com.cbgm.securechat.feature.contactimport.presentation.screen.ImportIdentityScreen
@@ -20,22 +21,28 @@ import com.cbgm.securechat.resources.feature_contactimport_trust_and_import
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @Composable
 fun ImportIdentityRoute(
-    contactId: String?,
-    scannedIdentity: String?,
-    onScannedIdentityConsumed: () -> Unit,
-    viewModel: ImportIdentityViewModel = koinViewModel(),
+    route: AppRoute.ImportContact,
+    viewModel: ImportIdentityViewModel =
+        koinViewModel(
+            parameters = {
+                parametersOf(route)
+            }
+        ),
     identityShareCodec: IdentityShareCodec = koinInject()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
+    var pendingScannedIdentity by remember(route.scannedIdentity) {
+        mutableStateOf(route.scannedIdentity)
+    }
     var scannedIdentityPreview by remember { mutableStateOf<ScannedIdentityPreview?>(null) }
 
-    LaunchedEffect(scannedIdentity) {
+    LaunchedEffect(pendingScannedIdentity) {
         val encodedIdentity =
-            scannedIdentity
+            pendingScannedIdentity
                 ?.trim()
                 ?.takeIf { it.isNotEmpty() }
                 ?: return@LaunchedEffect
@@ -52,21 +59,18 @@ fun ImportIdentityRoute(
                         encryptionKeyFingerprint = payload.encryptionPublicKey.toFingerprint()
                     )
             }.onFailure {
-                /*
-                 * Put the scanned value into the existing input so
-                 * the current screen can show its normal validation
-                 * error when the user presses Import.
-                 */
-                viewModel.onUiEvent(ImportIdentityUiEvent.EncodedIdentityChanged(encodedIdentity))
+                viewModel.onUiEvent(
+                    ImportIdentityUiEvent.EncodedIdentityChanged(encodedIdentity)
+                )
             }
 
-        onScannedIdentityConsumed()
+        pendingScannedIdentity = null
     }
 
     ImportIdentityScreen(
         uiState = uiState,
         onUiEvent = viewModel::onUiEvent,
-        importContactId = contactId
+        importContactId = route.contactId
     )
 
     scannedIdentityPreview?.let { preview ->
@@ -75,12 +79,12 @@ fun ImportIdentityRoute(
             confirmButtonText = stringResource(Res.string.feature_contactimport_trust_and_import),
             onConfirm = {
                 scannedIdentityPreview = null
-
-                viewModel.onUiEvent(ImportIdentityUiEvent.EncodedIdentityChanged(preview.encodedIdentity))
-
+                viewModel.onUiEvent(
+                    ImportIdentityUiEvent.EncodedIdentityChanged(preview.encodedIdentity)
+                )
                 viewModel.onUiEvent(
                     ImportIdentityUiEvent.ImportClicked(
-                        contactId = contactId,
+                        contactId = route.contactId,
                         identityImportTrust = IdentityImportTrust.VERIFIED_IN_PERSON
                     )
                 )

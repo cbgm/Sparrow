@@ -49,7 +49,10 @@ sealed interface AppRoute {
     ) : AppRoute
 
     @Serializable
-    data object ScanIdentity : AppRoute
+    data class ScanIdentity(
+        val contactId: String? = null,
+        val previousScannedIdentity: String? = null
+    ) : AppRoute
 
     @Serializable
     data object PrivacyPolicy : AppRoute
