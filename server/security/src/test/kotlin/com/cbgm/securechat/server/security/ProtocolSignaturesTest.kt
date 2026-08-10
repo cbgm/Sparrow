@@ -33,26 +33,35 @@ class ProtocolSignaturesTest {
     @Test
     fun registryAuthorityCertificateAllowsDirectorySigningKeyRotation() {
         val rootIdentity = NodeIdentity.generate()
-        val firstAuthority = NodeIdentity.generate()
-        val secondAuthority = NodeIdentity.generate()
+        val authorityIdentity = NodeIdentity.generate()
+        val firstSigner = NodeIdentity.generate()
+        val secondSigner = NodeIdentity.generate()
         val directory =
             NodeDirectory(
                 generatedAtEpochMilliseconds = 1_000L,
                 validUntilEpochMilliseconds = 2_000L,
                 nodes = emptyList()
             )
-        val firstCertificate =
-            ProtocolSignatures.signAuthorityCertificate(
+        val authorityCertificate =
+            RegistryCertificateSignatures.signAuthorityCertificate(
                 rootIdentity = rootIdentity,
-                authorityIdentity = firstAuthority,
+                authorityIdentity = authorityIdentity,
+                keyVersion = 1L,
+                validFromEpochMilliseconds = 500L,
+                validUntilEpochMilliseconds = 10_000L
+            )
+        val firstSigningCertificate =
+            RegistryCertificateSignatures.signSigningCertificate(
+                authorityIdentity = authorityIdentity,
+                signingIdentity = firstSigner,
                 keyVersion = 1L,
                 validFromEpochMilliseconds = 500L,
                 validUntilEpochMilliseconds = 5_000L
             )
-        val secondCertificate =
-            ProtocolSignatures.signAuthorityCertificate(
-                rootIdentity = rootIdentity,
-                authorityIdentity = secondAuthority,
+        val secondSigningCertificate =
+            RegistryCertificateSignatures.signSigningCertificate(
+                authorityIdentity = authorityIdentity,
+                signingIdentity = secondSigner,
                 keyVersion = 2L,
                 validFromEpochMilliseconds = 500L,
                 validUntilEpochMilliseconds = 5_000L
@@ -60,22 +69,26 @@ class ProtocolSignaturesTest {
         val firstDirectory =
             ProtocolSignatures.signDirectory(
                 directory = directory,
-                identity = firstAuthority,
-                certificate = firstCertificate
+                identity = firstSigner,
+                certificate = authorityCertificate,
+                signingCertificate = firstSigningCertificate
             )
         val secondDirectory =
             ProtocolSignatures.signDirectory(
                 directory = directory,
-                identity = secondAuthority,
-                certificate = secondCertificate
+                identity = secondSigner,
+                certificate = authorityCertificate,
+                signingCertificate = secondSigningCertificate
             )
 
-        assertTrue(ProtocolSignatures.verifyAuthorityCertificate(firstCertificate))
-        assertTrue(ProtocolSignatures.verifyAuthorityCertificate(secondCertificate))
+        assertTrue(RegistryCertificateSignatures.verifyAuthorityCertificate(authorityCertificate))
+        assertTrue(RegistryCertificateSignatures.verifySigningCertificate(firstSigningCertificate))
+        assertTrue(RegistryCertificateSignatures.verifySigningCertificate(secondSigningCertificate))
         assertTrue(ProtocolSignatures.verifyDirectory(firstDirectory))
         assertTrue(ProtocolSignatures.verifyDirectory(secondDirectory))
-        assertEquals(rootIdentity.nodeId, firstCertificate.rootNodeId)
-        assertEquals(rootIdentity.nodeId, secondCertificate.rootNodeId)
+        assertEquals(rootIdentity.nodeId, authorityCertificate.rootNodeId)
+        assertEquals(authorityIdentity.nodeId, firstSigningCertificate.authorityNodeId)
+        assertEquals(authorityIdentity.nodeId, secondSigningCertificate.authorityNodeId)
         assertFalse(firstDirectory.authorityNodeId == secondDirectory.authorityNodeId)
     }
 

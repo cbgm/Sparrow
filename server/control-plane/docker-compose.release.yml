@@ -13,6 +13,18 @@ services:
     build: !reset null
     pull_policy: always
     healthcheck: !reset null
+    environment:
+      REGISTRY_IDENTITY_PATH: !reset null
+      REGISTRY_AUTHORITY_IDENTITY_PATH: /run/secrets/registry-authority.identity
+      REGISTRY_AUTHORITY_CERTIFICATE_PATH: /run/secrets/registry-authority-certificate.json
+      REGISTRY_SIGNING_IDENTITY_DIRECTORY: /data/signing
+    secrets:
+      - source: registry-authority-identity
+        target: registry-authority.identity
+      - source: registry-authority-certificate
+        target: registry-authority-certificate.json
+    volumes: !override
+      - registry-signing:/data/signing
 
   presence-directory:
     image: ${SECURECHAT_IMAGE_PREFIX:?Missing SECURECHAT_IMAGE_PREFIX}-presence-directory:${SECURECHAT_IMAGE_TAG:?Missing SECURECHAT_IMAGE_TAG}
@@ -35,3 +47,12 @@ services:
         condition: service_started
       push-database:
         condition: service_healthy
+
+volumes:
+  registry-signing:
+
+secrets:
+  registry-authority-identity:
+    file: ${REGISTRY_AUTHORITY_IDENTITY_FILE:-./secrets/registry-authority.identity}
+  registry-authority-certificate:
+    file: ${REGISTRY_AUTHORITY_CERTIFICATE_FILE:-./secrets/registry-authority-certificate.json}

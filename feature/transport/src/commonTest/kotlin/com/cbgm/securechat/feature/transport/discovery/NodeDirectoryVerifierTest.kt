@@ -59,6 +59,48 @@ class NodeDirectoryVerifierTest {
         }
 
     @Test
+    fun rotatingSignerCertifiedByRegistryAuthorityIsAccepted() =
+        runTest {
+            val directory = signedDirectory(signingSeed = 10)
+
+            val result =
+                verifier.verify(
+                    signedDirectory = directory,
+                    trustedRootNodeId = checkNotNull(directory.authorityCertificate).rootNodeId,
+                    supportedProtocolVersion = 1,
+                    nowEpochMilliseconds = NOW
+                )
+
+            assertTrue(result.isSuccess)
+        }
+
+    @Test
+    fun differentControlPlaneAuthoritiesAreAcceptedUnderTheSameRoot() =
+        runTest {
+            val first = signedDirectory(authoritySeed = 2, signingSeed = 10)
+            val second = signedDirectory(authoritySeed = 8, signingSeed = 11)
+            val trustedRoot = checkNotNull(first.authorityCertificate).rootNodeId
+
+            val firstResult =
+                verifier.verify(
+                    signedDirectory = first,
+                    trustedRootNodeId = trustedRoot,
+                    supportedProtocolVersion = 1,
+                    nowEpochMilliseconds = NOW
+                )
+            val secondResult =
+                verifier.verify(
+                    signedDirectory = second,
+                    trustedRootNodeId = trustedRoot,
+                    supportedProtocolVersion = 1,
+                    nowEpochMilliseconds = NOW
+                )
+
+            assertTrue(firstResult.isSuccess)
+            assertTrue(secondResult.isSuccess)
+        }
+
+    @Test
     fun untrustedRegistryRootIsRejected() =
         runTest {
             val result =
@@ -201,10 +243,14 @@ class NodeDirectoryVerifierTest {
         authoritySeed: Int = 2,
         keyVersion: Long = 1L,
         certificateValidUntil: Long = NOW + 120_000L,
-        legacyRootSigning: Boolean = false
+        legacyRootSigning: Boolean = false,
+        signingSeed: Int? = null
     ): SignedNodeDirectory {
         val rootKey = encodedPublicKey(seed = 1)
-        val authorityKey = if (legacyRootSigning) rootKey else encodedPublicKey(seed = authoritySeed)
+        val certifiedAuthorityKey =
+            if (legacyRootSigning) rootKey else encodedPublicKey(seed = authoritySeed)
+        val directorySigningKey =
+            signingSeed?.let(::encodedPublicKey) ?: certifiedAuthorityKey
         val nodeKey = encodedPublicKey(seed = 3)
         val certificate =
             if (legacyRootSigning) {
@@ -213,12 +259,25 @@ class NodeDirectoryVerifierTest {
                 RegistryAuthorityCertificate(
                     rootNodeId = nodeId(rootKey),
                     rootPublicKey = rootKey,
-                    authorityNodeId = nodeId(authorityKey),
-                    authorityPublicKey = authorityKey,
+                    authorityNodeId = nodeId(certifiedAuthorityKey),
+                    authorityPublicKey = certifiedAuthorityKey,
                     keyVersion = keyVersion,
                     validFromEpochMilliseconds = NOW - 60_000L,
                     validUntilEpochMilliseconds = certificateValidUntil,
                     signature = byteArrayOf(9)
+                )
+            }
+        val signingCertificate =
+            signingSeed?.let {
+                RegistrySigningCertificate(
+                    authorityNodeId = nodeId(certifiedAuthorityKey),
+                    authorityPublicKey = certifiedAuthorityKey,
+                    signingNodeId = nodeId(directorySigningKey),
+                    signingPublicKey = directorySigningKey,
+                    keyVersion = keyVersion,
+                    validFromEpochMilliseconds = NOW - 60_000L,
+                    validUntilEpochMilliseconds = certificateValidUntil,
+                    signature = byteArrayOf(8)
                 )
             }
         val node =
@@ -240,9 +299,10 @@ class NodeDirectoryVerifierTest {
                     validUntilEpochMilliseconds = directoryValidUntil,
                     nodes = listOf(node)
                 ),
-            authorityNodeId = nodeId(authorityKey),
-            authorityPublicKey = authorityKey,
+            authorityNodeId = nodeId(directorySigningKey),
+            authorityPublicKey = directorySigningKey,
             authorityCertificate = certificate,
+            signingCertificate = signingCertificate,
             signature = byteArrayOf(1)
         )
     }

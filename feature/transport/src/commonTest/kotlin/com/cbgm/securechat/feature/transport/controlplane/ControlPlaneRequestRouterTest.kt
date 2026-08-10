@@ -39,6 +39,54 @@ class ControlPlaneRequestRouterTest {
             assertTrue(configuration.statusFor("https://secondary").isActive)
         }
 
+    @Test
+    fun executeAllVisitsEveryEndpointAndFailsWhenOneIsUnavailable() =
+        runTest {
+            val configuration = FakeControlPlaneConfiguration()
+            val router = ControlPlaneRequestRouter(configuration, configuration)
+            val visited = mutableListOf<String>()
+
+            val result =
+                router.executeAll { endpoint ->
+                    visited += endpoint.baseUrl
+                    if (endpoint.baseUrl.endsWith("primary")) {
+                        error("offline")
+                    }
+                }
+
+            assertTrue(result.isFailure)
+            assertEquals(
+                listOf("https://primary", "https://secondary"),
+                visited
+            )
+            assertEquals(
+                ControlPlaneReachability.UNREACHABLE,
+                configuration.statusFor("https://primary").reachability
+            )
+            assertEquals(
+                ControlPlaneReachability.AVAILABLE,
+                configuration.statusFor("https://secondary").reachability
+            )
+            assertEquals("https://primary", configuration.activeEndpoint.value?.baseUrl)
+        }
+
+    @Test
+    fun executeAllSkipsEndpointsAlreadyMarkedUnreachable() =
+        runTest {
+            val configuration = FakeControlPlaneConfiguration()
+            configuration.markUnreachable(ControlPlaneEndpoint("https://primary"))
+            val router = ControlPlaneRequestRouter(configuration, configuration)
+            val visited = mutableListOf<String>()
+
+            val result =
+                router.executeAll { endpoint ->
+                    visited += endpoint.baseUrl
+                }
+
+            assertTrue(result.isSuccess)
+            assertEquals(listOf("https://secondary"), visited)
+        }
+
     private class FakeControlPlaneConfiguration :
         ControlPlaneConfiguration,
         ControlPlaneStatusStore {

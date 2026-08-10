@@ -3,6 +3,7 @@ package com.cbgm.securechat.server.registry
 import com.cbgm.securechat.server.protocol.NodeDirectory
 import com.cbgm.securechat.server.security.NodeIdentity
 import com.cbgm.securechat.server.security.ProtocolSignatures
+import com.cbgm.securechat.server.security.RegistryCertificateSignatures
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -13,16 +14,26 @@ class RegistryDirectorySignerTest {
     @Test
     fun automaticRotationChangesSignerAtBoundaryWithoutChangingTrustRoot() {
         val rootIdentity = NodeIdentity.generate()
+        val authorityIdentity = NodeIdentity.generate()
         val identityDirectory = Files.createTempDirectory("securechat-registry-signer-test")
         val config =
             RegistrySigningConfig(
                 rotationIntervalMilliseconds = ROTATION_INTERVAL_MILLISECONDS,
                 certificateOverlapMilliseconds = CERTIFICATE_OVERLAP_MILLISECONDS
             )
+        val authorityCertificate =
+            RegistryCertificateSignatures.signAuthorityCertificate(
+                rootIdentity = rootIdentity,
+                authorityIdentity = authorityIdentity,
+                keyVersion = 1L,
+                validFromEpochMilliseconds = 0L,
+                validUntilEpochMilliseconds = 10L * ROTATION_INTERVAL_MILLISECONDS
+            )
         var currentTime = ROTATION_INTERVAL_MILLISECONDS - 1L
         val signer =
             RotatingRegistryDirectorySigner(
-                rootIdentity = rootIdentity,
+                authorityIdentity = authorityIdentity,
+                authorityCertificate = authorityCertificate,
                 identityDirectory = identityDirectory,
                 config = config,
                 now = { currentTime }
@@ -32,16 +43,28 @@ class RegistryDirectorySignerTest {
         currentTime = ROTATION_INTERVAL_MILLISECONDS
         val second = signer.sign(directory(currentTime))
 
-        val firstCertificate = checkNotNull(first.authorityCertificate)
-        val secondCertificate = checkNotNull(second.authorityCertificate)
+        val firstAuthorityCertificate = checkNotNull(first.authorityCertificate)
+        val secondAuthorityCertificate = checkNotNull(second.authorityCertificate)
+        val firstSigningCertificate = checkNotNull(first.signingCertificate)
+        val secondSigningCertificate = checkNotNull(second.signingCertificate)
 
-        assertEquals(rootIdentity.nodeId, firstCertificate.rootNodeId)
-        assertEquals(rootIdentity.nodeId, secondCertificate.rootNodeId)
+        assertEquals(rootIdentity.nodeId, firstAuthorityCertificate.rootNodeId)
+        assertEquals(rootIdentity.nodeId, secondAuthorityCertificate.rootNodeId)
+        assertEquals(authorityIdentity.nodeId, firstSigningCertificate.authorityNodeId)
+        assertEquals(authorityIdentity.nodeId, secondSigningCertificate.authorityNodeId)
         assertNotEquals(first.authorityNodeId, second.authorityNodeId)
-        assertEquals(0L, firstCertificate.keyVersion)
-        assertEquals(1L, secondCertificate.keyVersion)
-        assertTrue(ProtocolSignatures.verifyAuthorityCertificate(firstCertificate))
-        assertTrue(ProtocolSignatures.verifyAuthorityCertificate(secondCertificate))
+        assertEquals(0L, firstSigningCertificate.keyVersion)
+        assertEquals(1L, secondSigningCertificate.keyVersion)
+        assertEquals(
+            ROTATION_INTERVAL_MILLISECONDS + CERTIFICATE_OVERLAP_MILLISECONDS,
+            firstSigningCertificate.validUntilEpochMilliseconds
+        )
+        assertEquals(
+            2L * ROTATION_INTERVAL_MILLISECONDS + CERTIFICATE_OVERLAP_MILLISECONDS,
+            secondSigningCertificate.validUntilEpochMilliseconds
+        )
+        assertTrue(ProtocolSignatures.verifyDirectory(first))
+        assertTrue(ProtocolSignatures.verifyDirectory(second))
     }
 
     @Test

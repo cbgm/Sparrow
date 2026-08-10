@@ -9,7 +9,6 @@ import com.cbgm.securechat.server.protocol.NodeRegistrationRequest
 import com.cbgm.securechat.server.protocol.serverJson
 import com.cbgm.securechat.server.security.BoundedRateLimiter
 import com.cbgm.securechat.server.security.NodeIdentity
-import com.cbgm.securechat.server.security.NodeIdentityStore
 import com.cbgm.securechat.server.security.RateLimitPolicy
 import com.cbgm.securechat.server.security.enforceRateLimit
 import io.ktor.http.HttpStatusCode
@@ -27,25 +26,11 @@ import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
-import java.nio.file.Path
 
 private const val DEFAULT_NODE_REGISTRY_PORT = 8090
 
 fun main() {
-    val rootIdentityPath =
-        Path.of(
-            ServiceEnvironment.string(
-                "REGISTRY_IDENTITY_PATH",
-                ".securechat-server/registry.identity"
-            )
-        )
-    val rootIdentity = NodeIdentityStore(rootIdentityPath).loadOrCreate()
-    val directorySigner =
-        RotatingRegistryDirectorySigner(
-            rootIdentity = rootIdentity,
-            identityDirectory = rootIdentityPath.parent ?: Path.of("."),
-            config = RegistrySigningConfig()
-        )
+    val signingRuntime = createRegistrySigningRuntime()
 
     embeddedServer(
         factory = Netty,
@@ -53,8 +38,8 @@ fun main() {
         port = ServiceEnvironment.int("PORT", DEFAULT_NODE_REGISTRY_PORT),
         module = {
             nodeRegistryModule(
-                identity = rootIdentity,
-                directorySigner = directorySigner
+                identity = signingRuntime.identity,
+                directorySigner = signingRuntime.directorySigner
             )
         }
     ).start(wait = true)

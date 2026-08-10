@@ -174,54 +174,37 @@ class HttpNodePushClient(
     private val signer: NodeRequestSigner
 ) : LegacyPushClient {
     override suspend fun store(envelope: RelayEnvelope): Boolean {
-        val path = "/v1/node-push/envelopes"
         val body = serverJson.encodeToString(envelope)
-        for (baseUrl in endpointPool.ordered()) {
-            try {
-                val authentication = signer.sign("POST", path, body)
-                val response =
-                    httpClient.post(baseUrl.trimEnd('/') + path) {
-                        nodeAuthentication(authentication)
-                        contentType(ContentType.Application.Json)
-                        setBody(body)
-                    }
-                if (response.status.isSuccess()) {
-                    endpointPool.markAvailable(baseUrl)
-                    return true
-                }
-                if (response.status.value >= SERVER_ERROR_STATUS_CODE) {
-                    endpointPool.markUnavailable(baseUrl)
-                }
-            } catch (cancellation: CancellationException) {
-                throw cancellation
-            } catch (error: Exception) {
-                endpointPool.markUnavailable(baseUrl)
-            }
-        }
-        return false
+        val primary = storePrimary(body) ?: return false
+        replicateToAvailableControlPlanes(
+            body = body,
+            primary = primary
+        )
+        return true
     }
 
     override suspend fun pending(recipientId: String): List<RelayEnvelope> {
         val path = "/v1/node-push/recipients/$recipientId/envelopes"
+        val snapshots = mutableMapOf<String, List<RelayEnvelope>>()
         var lastError: Throwable? = null
-        for (baseUrl in endpointPool.ordered()) {
+
+        val candidates = endpointPool.availableEndpoints().ifEmpty { endpointPool.ordered() }
+        candidates.forEach { baseUrl ->
             try {
-                val authentication = signer.sign("GET", path, "")
                 val response =
                     httpClient.get(baseUrl.trimEnd('/') + path) {
-                        nodeAuthentication(authentication)
+                        nodeAuthentication(signer.sign("GET", path, ""))
                     }
                 if (response.status.isSuccess()) {
-                    endpointPool.markAvailable(baseUrl)
-                    return response.body<PendingRelayEnvelopesResponse>().envelopes
+                    endpointPool.markReachable(baseUrl)
+                    snapshots[baseUrl] = response.body<PendingRelayEnvelopesResponse>().envelopes
+                } else {
+                    handlePushFailure(baseUrl, response.status.value)
+                    lastError =
+                        IllegalStateException(
+                            "Push pending failed with HTTP ${response.status.value}"
+                        )
                 }
-                if (response.status.value >= SERVER_ERROR_STATUS_CODE) {
-                    endpointPool.markUnavailable(baseUrl)
-                }
-                lastError =
-                    IllegalStateException(
-                        "Push pending failed with HTTP ${response.status.value}"
-                    )
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (error: Exception) {
@@ -229,7 +212,14 @@ class HttpNodePushClient(
                 lastError = error
             }
         }
-        throw lastError ?: IllegalStateException("No control-plane push service is available")
+
+        if (snapshots.isEmpty()) {
+            throw lastError ?: IllegalStateException("No control-plane push service is available")
+        }
+
+        val merged = mergePendingEnvelopes(snapshots.values.flatten())
+        healPendingReplicas(merged, snapshots)
+        return merged
     }
 
     override suspend fun acknowledge(
@@ -237,19 +227,17 @@ class HttpNodePushClient(
         envelopeId: String
     ) {
         val path = "/v1/node-push/recipients/$recipientId/envelopes/$envelopeId/ack"
-        for (baseUrl in endpointPool.ordered()) {
+        val candidates = endpointPool.availableEndpoints().ifEmpty { endpointPool.ordered() }
+        candidates.forEach { baseUrl ->
             try {
-                val authentication = signer.sign("POST", path, "")
                 val response =
                     httpClient.post(baseUrl.trimEnd('/') + path) {
-                        nodeAuthentication(authentication)
+                        nodeAuthentication(signer.sign("POST", path, ""))
                     }
                 if (response.status.isSuccess()) {
-                    endpointPool.markAvailable(baseUrl)
-                    return
-                }
-                if (response.status.value >= SERVER_ERROR_STATUS_CODE) {
-                    endpointPool.markUnavailable(baseUrl)
+                    endpointPool.markReachable(baseUrl)
+                } else {
+                    handlePushFailure(baseUrl, response.status.value)
                 }
             } catch (cancellation: CancellationException) {
                 throw cancellation
@@ -257,6 +245,102 @@ class HttpNodePushClient(
                 endpointPool.markUnavailable(baseUrl)
             }
         }
+    }
+
+    private suspend fun storePrimary(body: String): String? {
+        for (baseUrl in endpointPool.ordered()) {
+            try {
+                val response = postEnvelope(baseUrl, NODE_ENVELOPE_PATH, body)
+                if (response.status.isSuccess()) {
+                    endpointPool.markAvailable(baseUrl)
+                    return baseUrl
+                }
+                handlePushFailure(baseUrl, response.status.value)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: Exception) {
+                endpointPool.markUnavailable(baseUrl)
+            }
+        }
+        return null
+    }
+
+    private suspend fun replicateToAvailableControlPlanes(
+        body: String,
+        primary: String
+    ) {
+        endpointPool
+            .availableEndpoints()
+            .filterNot { baseUrl -> baseUrl == primary }
+            .forEach { baseUrl ->
+                replicateEnvelope(baseUrl, body)
+            }
+    }
+
+    private suspend fun healPendingReplicas(
+        merged: List<RelayEnvelope>,
+        snapshots: Map<String, List<RelayEnvelope>>
+    ) {
+        snapshots.forEach { (baseUrl, localEnvelopes) ->
+            val localIds = localEnvelopes.mapTo(mutableSetOf(), RelayEnvelope::envelopeId)
+            merged
+                .filterNot { envelope -> envelope.envelopeId in localIds }
+                .forEach { envelope ->
+                    replicateEnvelope(baseUrl, serverJson.encodeToString(envelope))
+                }
+        }
+    }
+
+    private suspend fun replicateEnvelope(
+        baseUrl: String,
+        body: String
+    ) {
+        try {
+            val response = postEnvelope(baseUrl, NODE_ENVELOPE_REPLICA_PATH, body)
+            if (response.status.isSuccess()) {
+                endpointPool.markReachable(baseUrl)
+            } else {
+                handlePushFailure(baseUrl, response.status.value)
+            }
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            endpointPool.markUnavailable(baseUrl)
+        }
+    }
+
+    private suspend fun postEnvelope(
+        baseUrl: String,
+        path: String,
+        body: String
+    ) =
+        httpClient.post(baseUrl.trimEnd('/') + path) {
+            nodeAuthentication(signer.sign("POST", path, body))
+            contentType(ContentType.Application.Json)
+            setBody(body)
+        }
+
+    private fun handlePushFailure(
+        baseUrl: String,
+        statusCode: Int
+    ) {
+        if (statusCode >= SERVER_ERROR_STATUS_CODE) {
+            endpointPool.markUnavailable(baseUrl)
+        }
+    }
+
+    private fun mergePendingEnvelopes(envelopes: List<RelayEnvelope>): List<RelayEnvelope> =
+        envelopes
+            .associateBy(RelayEnvelope::envelopeId)
+            .values
+            .sortedWith(
+                compareBy(RelayEnvelope::createdAtEpochMilliseconds)
+                    .thenBy(RelayEnvelope::envelopeId)
+            )
+
+    private companion object {
+        const val NODE_ENVELOPE_PATH = "/v1/node-push/envelopes"
+        const val NODE_ENVELOPE_REPLICA_PATH = "/v1/node-push/replicas/envelopes"
     }
 }
 

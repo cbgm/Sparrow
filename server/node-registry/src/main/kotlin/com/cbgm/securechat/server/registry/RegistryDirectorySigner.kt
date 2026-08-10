@@ -2,10 +2,12 @@ package com.cbgm.securechat.server.registry
 
 import com.cbgm.securechat.server.protocol.NodeDirectory
 import com.cbgm.securechat.server.protocol.RegistryAuthorityCertificate
+import com.cbgm.securechat.server.protocol.RegistrySigningCertificate
 import com.cbgm.securechat.server.protocol.SignedNodeDirectory
 import com.cbgm.securechat.server.security.NodeIdentity
 import com.cbgm.securechat.server.security.NodeIdentityStore
 import com.cbgm.securechat.server.security.ProtocolSignatures
+import com.cbgm.securechat.server.security.RegistryCertificateSignatures
 import java.nio.file.Path
 
 interface RegistryDirectorySigner {
@@ -23,30 +25,51 @@ class DirectRegistryDirectorySigner(
 }
 
 class RotatingRegistryDirectorySigner(
-    private val rootIdentity: NodeIdentity,
+    private val authorityIdentity: NodeIdentity,
+    private val authorityCertificate: RegistryAuthorityCertificate,
     private val identityDirectory: Path,
     private val config: RegistrySigningConfig,
     private val now: () -> Long = System::currentTimeMillis
 ) : RegistryDirectorySigner {
     private var cachedVersion: Long? = null
-    private var cachedAuthority: CertifiedRegistryAuthority? = null
+    private var cachedSigner: CertifiedRegistrySigner? = null
+
+    init {
+        require(RegistryCertificateSignatures.verifyAuthorityCertificate(authorityCertificate)) {
+            "Registry authority certificate signature is invalid"
+        }
+        require(authorityCertificate.authorityNodeId == authorityIdentity.nodeId) {
+            "Registry authority identity does not match its certificate"
+        }
+        require(
+            authorityCertificate.authorityPublicKey.contentEquals(
+                authorityIdentity.encodedPublicKey
+            )
+        ) {
+            "Registry authority public key does not match its certificate"
+        }
+    }
 
     override fun sign(directory: NodeDirectory): SignedNodeDirectory {
         val currentTime = now()
+        require(currentTime < authorityCertificate.validUntilEpochMilliseconds) {
+            "Registry authority certificate has expired"
+        }
         val version = config.keyVersion(currentTime)
-        val authority = currentAuthority(version, currentTime)
+        val signer = currentSigner(version, currentTime)
         return ProtocolSignatures.signDirectory(
             directory = directory,
-            identity = authority.identity,
-            certificate = authority.certificate
+            identity = signer.identity,
+            certificate = authorityCertificate,
+            signingCertificate = signer.certificate
         )
     }
 
-    private fun currentAuthority(
+    private fun currentSigner(
         version: Long,
         currentTime: Long
-    ): CertifiedRegistryAuthority {
-        val existing = cachedAuthority
+    ): CertifiedRegistrySigner {
+        val existing = cachedSigner
         if (version == cachedVersion && existing != null) {
             return existing
         }
@@ -55,23 +78,33 @@ class RotatingRegistryDirectorySigner(
             NodeIdentityStore(
                 identityDirectory.resolve("registry-signing-v$version.identity")
             ).loadOrCreate()
-        val certificate =
-            ProtocolSignatures.signAuthorityCertificate(
-                rootIdentity = rootIdentity,
-                authorityIdentity = identity,
-                keyVersion = version,
-                validFromEpochMilliseconds = currentTime - CERTIFICATE_CLOCK_SKEW_MILLISECONDS,
-                validUntilEpochMilliseconds =
-                    currentTime +
-                        config.rotationIntervalMilliseconds +
-                        config.certificateOverlapMilliseconds
+        val validFrom =
+            maxOf(
+                config.versionStart(version) - CERTIFICATE_CLOCK_SKEW_MILLISECONDS,
+                authorityCertificate.validFromEpochMilliseconds
             )
-        return CertifiedRegistryAuthority(
+        val validUntil =
+            minOf(
+                config.versionEnd(version) + config.certificateOverlapMilliseconds,
+                authorityCertificate.validUntilEpochMilliseconds
+            )
+        require(validUntil > currentTime) {
+            "Registry authority certificate expires before a signing certificate can be issued"
+        }
+        val certificate =
+            RegistryCertificateSignatures.signSigningCertificate(
+                authorityIdentity = authorityIdentity,
+                signingIdentity = identity,
+                keyVersion = version,
+                validFromEpochMilliseconds = validFrom,
+                validUntilEpochMilliseconds = validUntil
+            )
+        return CertifiedRegistrySigner(
             identity = identity,
             certificate = certificate
-        ).also { authority ->
+        ).also { signer ->
             cachedVersion = version
-            cachedAuthority = authority
+            cachedSigner = signer
         }
     }
 
@@ -92,6 +125,10 @@ data class RegistrySigningConfig(
     fun keyVersion(nowEpochMilliseconds: Long): Long =
         nowEpochMilliseconds / rotationIntervalMilliseconds
 
+    fun versionStart(version: Long): Long = version * rotationIntervalMilliseconds
+
+    fun versionEnd(version: Long): Long = (version + 1L) * rotationIntervalMilliseconds
+
     companion object {
         private const val DEFAULT_ROTATION_INTERVAL_MILLISECONDS =
             30L * 24L * 60L * 60L * 1_000L
@@ -100,7 +137,7 @@ data class RegistrySigningConfig(
     }
 }
 
-private data class CertifiedRegistryAuthority(
+private data class CertifiedRegistrySigner(
     val identity: NodeIdentity,
-    val certificate: RegistryAuthorityCertificate
+    val certificate: RegistrySigningCertificate
 )

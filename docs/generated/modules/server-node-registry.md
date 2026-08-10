@@ -10,8 +10,8 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `server` |
 | Directory | `server/node-registry` |
 | Build file | `server/node-registry/build.gradle.kts` |
-| Kotlin files | 9 |
-| Production Kotlin files | 5 |
+| Kotlin files | 12 |
+| Production Kotlin files | 8 |
 | Test Kotlin files | 4 |
 | Resource files | 0 |
 | Direct dependencies | 4 |

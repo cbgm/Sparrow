@@ -35,4 +35,33 @@ class PushCoordinatorTest {
             assertTrue(coordinator.accept(envelope))
             assertEquals(1, pendingEnvelopes.count())
         }
+
+    @Test
+    fun replicatedEnvelopeIsDurableWithoutChangingDuplicateSemantics() =
+        runTest {
+            val pendingEnvelopes = InMemoryPendingEnvelopeStore()
+            val coordinator =
+                PushCoordinator(
+                    pendingEnvelopes = pendingEnvelopes,
+                    sender =
+                        FirebasePushSender(
+                            messaging = null,
+                            devices = InMemoryPushDeviceStore(),
+                            wakeUps = InMemoryWakeUpStore()
+                        ),
+                    scope = this
+                )
+            val envelope =
+                RelayEnvelope(
+                    envelopeId = "envelope-replica",
+                    senderId = "sender",
+                    recipientId = "recipient",
+                    payload = "ciphertext",
+                    createdAtEpochMilliseconds = 1L
+                )
+
+            assertTrue(coordinator.replicate(envelope))
+            assertTrue(coordinator.replicate(envelope))
+            assertEquals(1, pendingEnvelopes.count())
+        }
 }

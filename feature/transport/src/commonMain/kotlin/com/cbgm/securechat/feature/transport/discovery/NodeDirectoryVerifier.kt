@@ -97,17 +97,52 @@ class NodeDirectoryVerifier(
         trustedRootNodeId: String,
         nowEpochMilliseconds: Long
     ) {
-        val certificate = signedDirectory.authorityCertificate
-        if (certificate == null) {
-            require(trustedRootNodeId == signedDirectory.authorityNodeId) {
-                "Node directory was signed by an untrusted registry root"
-            }
-            require(nodeId(signedDirectory.authorityPublicKey) == signedDirectory.authorityNodeId) {
-                "Registry root ID does not match its public key"
-            }
+        val authorityCertificate = signedDirectory.authorityCertificate
+        if (authorityCertificate == null) {
+            verifyDirectRoot(signedDirectory, trustedRootNodeId)
             return
         }
 
+        verifyAuthorityCertificate(
+            certificate = authorityCertificate,
+            trustedRootNodeId = trustedRootNodeId,
+            nowEpochMilliseconds = nowEpochMilliseconds
+        )
+
+        val signingCertificate = signedDirectory.signingCertificate
+        if (signingCertificate == null) {
+            verifyDirectorySignerMatchesAuthority(signedDirectory, authorityCertificate)
+            return
+        }
+
+        verifySigningCertificate(
+            signedDirectory = signedDirectory,
+            authorityCertificate = authorityCertificate,
+            signingCertificate = signingCertificate,
+            nowEpochMilliseconds = nowEpochMilliseconds
+        )
+    }
+
+    private fun verifyDirectRoot(
+        signedDirectory: SignedNodeDirectory,
+        trustedRootNodeId: String
+    ) {
+        require(signedDirectory.signingCertificate == null) {
+            "Registry signing certificate requires an authority certificate"
+        }
+        require(trustedRootNodeId == signedDirectory.authorityNodeId) {
+            "Node directory was signed by an untrusted registry root"
+        }
+        require(nodeId(signedDirectory.authorityPublicKey) == signedDirectory.authorityNodeId) {
+            "Registry root ID does not match its public key"
+        }
+    }
+
+    private suspend fun verifyAuthorityCertificate(
+        certificate: RegistryAuthorityCertificate,
+        trustedRootNodeId: String,
+        nowEpochMilliseconds: Long
+    ) {
         require(certificate.rootNodeId == trustedRootNodeId) {
             "Registry authority certificate was signed by an untrusted root"
         }
@@ -117,28 +152,95 @@ class NodeDirectoryVerifier(
         require(nodeId(certificate.authorityPublicKey) == certificate.authorityNodeId) {
             "Registry authority ID does not match its public key"
         }
-        require(certificate.authorityNodeId == signedDirectory.authorityNodeId) {
-            "Directory signer does not match its registry authority certificate"
-        }
-        require(certificate.authorityPublicKey.contentEquals(signedDirectory.authorityPublicKey)) {
-            "Directory signer key does not match its registry authority certificate"
-        }
-        require(
-            certificate.validFromEpochMilliseconds <=
-                nowEpochMilliseconds + MAX_CLOCK_SKEW_MILLISECONDS
-        ) {
-            "Registry authority certificate is not valid yet"
-        }
-        require(nowEpochMilliseconds < certificate.validUntilEpochMilliseconds) {
-            "Registry authority certificate has expired"
-        }
-
+        requireCertificateTimeIsValid(
+            validFromEpochMilliseconds = certificate.validFromEpochMilliseconds,
+            validUntilEpochMilliseconds = certificate.validUntilEpochMilliseconds,
+            nowEpochMilliseconds = nowEpochMilliseconds,
+            label = "Registry authority certificate"
+        )
         signatureCrypto
             .verify(
                 payload = json.encodeToString(certificate.unsigned()).encodeToByteArray(),
                 signingPublicKey = rawEd25519PublicKey(certificate.rootPublicKey),
                 signature = certificate.signature
             ).getOrThrow()
+    }
+
+    private fun verifyDirectorySignerMatchesAuthority(
+        signedDirectory: SignedNodeDirectory,
+        certificate: RegistryAuthorityCertificate
+    ) {
+        require(certificate.authorityNodeId == signedDirectory.authorityNodeId) {
+            "Directory signer does not match its registry authority certificate"
+        }
+        require(certificate.authorityPublicKey.contentEquals(signedDirectory.authorityPublicKey)) {
+            "Directory signer key does not match its registry authority certificate"
+        }
+    }
+
+    private suspend fun verifySigningCertificate(
+        signedDirectory: SignedNodeDirectory,
+        authorityCertificate: RegistryAuthorityCertificate,
+        signingCertificate: RegistrySigningCertificate,
+        nowEpochMilliseconds: Long
+    ) {
+        require(signingCertificate.authorityNodeId == authorityCertificate.authorityNodeId) {
+            "Registry signing certificate was issued by a different authority"
+        }
+        require(
+            signingCertificate.authorityPublicKey.contentEquals(
+                authorityCertificate.authorityPublicKey
+            )
+        ) {
+            "Registry signing certificate authority key does not match"
+        }
+        require(nodeId(signingCertificate.signingPublicKey) == signingCertificate.signingNodeId) {
+            "Registry signing ID does not match its public key"
+        }
+        require(signingCertificate.signingNodeId == signedDirectory.authorityNodeId) {
+            "Directory signer does not match its signing certificate"
+        }
+        require(signingCertificate.signingPublicKey.contentEquals(signedDirectory.authorityPublicKey)) {
+            "Directory signer key does not match its signing certificate"
+        }
+        require(
+            signingCertificate.validFromEpochMilliseconds >=
+                authorityCertificate.validFromEpochMilliseconds
+        ) {
+            "Registry signing certificate begins before authority validity"
+        }
+        require(
+            signingCertificate.validUntilEpochMilliseconds <=
+                authorityCertificate.validUntilEpochMilliseconds
+        ) {
+            "Registry signing certificate exceeds authority validity"
+        }
+        requireCertificateTimeIsValid(
+            validFromEpochMilliseconds = signingCertificate.validFromEpochMilliseconds,
+            validUntilEpochMilliseconds = signingCertificate.validUntilEpochMilliseconds,
+            nowEpochMilliseconds = nowEpochMilliseconds,
+            label = "Registry signing certificate"
+        )
+        signatureCrypto
+            .verify(
+                payload = json.encodeToString(signingCertificate.unsigned()).encodeToByteArray(),
+                signingPublicKey = rawEd25519PublicKey(signingCertificate.authorityPublicKey),
+                signature = signingCertificate.signature
+            ).getOrThrow()
+    }
+
+    private fun requireCertificateTimeIsValid(
+        validFromEpochMilliseconds: Long,
+        validUntilEpochMilliseconds: Long,
+        nowEpochMilliseconds: Long,
+        label: String
+    ) {
+        require(validFromEpochMilliseconds <= nowEpochMilliseconds + MAX_CLOCK_SKEW_MILLISECONDS) {
+            "$label is not valid yet"
+        }
+        require(nowEpochMilliseconds < validUntilEpochMilliseconds) {
+            "$label has expired"
+        }
     }
 
     private suspend fun verifyDescriptor(

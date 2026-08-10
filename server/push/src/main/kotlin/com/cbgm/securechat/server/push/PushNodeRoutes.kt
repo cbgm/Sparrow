@@ -16,6 +16,7 @@ import io.ktor.server.routing.post
 
 internal fun Route.installNodePushRoutes(runtime: PushRuntime) {
     installNodeEnvelopeRoute(runtime)
+    installNodeEnvelopeReplicaRoute(runtime)
     installNodeWakeUpRoute(runtime)
     installNodePendingRoute(runtime)
     installNodeAcknowledgementRoute(runtime)
@@ -34,12 +35,43 @@ private fun Route.installNodeEnvelopeRoute(runtime: PushRuntime) {
                 method = "POST",
                 path = NODE_ENVELOPE_PATH,
                 body = body,
-                routingId = envelope.senderId
+                routingIds = setOf(envelope.senderId, envelope.recipientId)
             ) ->
                 call.respond(HttpStatusCode.Unauthorized)
 
             else -> {
                 val accepted = runtime.coordinator.accept(envelope)
+                call.respond(
+                    if (accepted) {
+                        HttpStatusCode.Accepted
+                    } else {
+                        HttpStatusCode.InsufficientStorage
+                    }
+                )
+            }
+        }
+    }
+}
+
+private fun Route.installNodeEnvelopeReplicaRoute(runtime: PushRuntime) {
+    post(NODE_ENVELOPE_REPLICA_PATH) {
+        val body = call.receiveText()
+        val envelope = runCatching { serverJson.decodeFromString<RelayEnvelope>(body) }.getOrNull()
+        when {
+            envelope == null ->
+                call.respond(HttpStatusCode.BadRequest)
+
+            !call.hasNodeRouteAccess(
+                runtime = runtime,
+                method = "POST",
+                path = NODE_ENVELOPE_REPLICA_PATH,
+                body = body,
+                routingIds = setOf(envelope.senderId, envelope.recipientId)
+            ) ->
+                call.respond(HttpStatusCode.Unauthorized)
+
+            else -> {
+                val accepted = runtime.coordinator.replicate(envelope)
                 call.respond(
                     if (accepted) {
                         HttpStatusCode.Accepted
@@ -132,6 +164,21 @@ private suspend fun ApplicationCall.hasNodeRouteAccess(
     path: String,
     routingId: String,
     body: String = ""
+): Boolean =
+    hasNodeRouteAccess(
+        runtime = runtime,
+        method = method,
+        path = path,
+        routingIds = setOf(routingId),
+        body = body
+    )
+
+private suspend fun ApplicationCall.hasNodeRouteAccess(
+    runtime: PushRuntime,
+    method: String,
+    path: String,
+    routingIds: Set<String>,
+    body: String = ""
 ): Boolean {
     val authentication = nodeRequestAuthentication()
     val nodeAuthorized =
@@ -147,9 +194,11 @@ private suspend fun ApplicationCall.hasNodeRouteAccess(
         ) ?: false
     val ownsRoute =
         authentication?.nodeId?.let { nodeId ->
-            runCatching {
-                runtime.nodeRouteOwnershipResolver?.isOwnedBy(routingId, nodeId) == true
-            }.getOrDefault(false)
+            routingIds.any { routingId ->
+                runCatching {
+                    runtime.nodeRouteOwnershipResolver?.isOwnedBy(routingId, nodeId) == true
+                }.getOrDefault(false)
+            }
         } ?: false
     return nodeAuthorized && ownsRoute
 }
@@ -173,3 +222,4 @@ private suspend fun ApplicationCall.hasNodeAccess(
     ) ?: false
 
 private const val NODE_ENVELOPE_PATH = "/v1/node-push/envelopes"
+private const val NODE_ENVELOPE_REPLICA_PATH = "/v1/node-push/replicas/envelopes"

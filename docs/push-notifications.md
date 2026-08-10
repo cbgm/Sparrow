@@ -126,6 +126,13 @@ The federated `:server:push` service stores pending encrypted envelopes, wake-up
 device tokens in its private PostgreSQL database. Docker Compose retains this database in the
 `push-database-data` volume, so normal service and Compose restarts preserve offline delivery.
 
+With multiple control planes configured, Android registers the same FCM token with every reachable
+control plane. Gateway nodes keep one control plane as the notification primary for a new offline
+envelope and replicate the opaque envelope to the remaining reachable control planes through the
+replica endpoint, which deliberately does not send another FCM notification. Pending reads merge and
+deduplicate replicas and acknowledgements are fanned out, so a control-plane failover does not lose
+the offline queue or require the closed app to re-register first.
+
 The migration-only `:relay` service still uses in-memory stores. Its messages survive client
 disconnects but not a relay-process restart. Use the federated server topology for restart-durable
 push delivery.

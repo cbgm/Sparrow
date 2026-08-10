@@ -12,7 +12,7 @@ class NodeIdentityStore(
 ) {
     fun loadOrCreate(): NodeIdentity {
         if (Files.exists(path)) {
-            return load()
+            return loadExisting()
         }
 
         val identity = NodeIdentity.generate()
@@ -20,11 +20,11 @@ class NodeIdentityStore(
             save(identity)
             identity
         }.getOrElse {
-            if (Files.exists(path)) load() else throw it
+            if (Files.exists(path)) loadExisting() else throw it
         }
     }
 
-    private fun load(): NodeIdentity {
+    fun loadExisting(): NodeIdentity {
         val properties = Properties()
         Files.newInputStream(path).use(properties::load)
 

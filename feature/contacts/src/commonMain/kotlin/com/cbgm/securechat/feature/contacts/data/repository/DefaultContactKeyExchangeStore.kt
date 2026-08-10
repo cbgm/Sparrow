@@ -60,7 +60,9 @@ class DefaultContactKeyExchangeStore(
             }
 
             val nextLocallyImported =
-                sameIdentity && existing.locallyImported || origin == RemoteIdentityOrigin.LOCAL_IMPORT || origin == RemoteIdentityOrigin.TRUSTED_QR_IMPORT
+                sameIdentity && existing?.locallyImported == true ||
+                    origin == RemoteIdentityOrigin.LOCAL_IMPORT ||
+                    origin == RemoteIdentityOrigin.TRUSTED_QR_IMPORT
 
             val nextRemoteIdentityPacketReceived =
                 sameIdentity && existing.remoteIdentityPacketReceived || origin == RemoteIdentityOrigin.REMOTE_PACKET || origin == RemoteIdentityOrigin.CONTACT_INVITATION
@@ -91,7 +93,7 @@ class DefaultContactKeyExchangeStore(
                     }
 
                     sameIdentity &&
-                        existing.verificationStatus == ContactVerificationStatus.VERIFIED.name -> {
+                        existing?.verificationStatus == ContactVerificationStatus.VERIFIED.name -> {
                         ContactVerificationStatus.VERIFIED
                     }
 
@@ -107,7 +109,7 @@ class DefaultContactKeyExchangeStore(
                         encryptionPublicKey = encryptionPublicKey.copyOf(),
                         signingPublicKey = signingPublicKey.copyOf(),
                         verificationStatus = nextVerificationStatus.name,
-                        verifiedByContact = sameIdentity && existing.verifiedByContact,
+                        verifiedByContact = sameIdentity && existing?.verifiedByContact == true,
                         keyExchangeStatus = nextKeyExchangeStatus.name,
                         locallyImported = nextLocallyImported,
                         remoteIdentityPacketReceived = nextRemoteIdentityPacketReceived,

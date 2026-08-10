@@ -216,9 +216,11 @@ docker compose `
 
 The app refreshes the directory every minute, rejects invalid authority or node signatures, rejects
 expired and incompatible descriptors, and keeps failed nodes out of selection for 30 seconds. If
-the registry is briefly unavailable, the last verified directory has a five-minute grace period.
-Clients do not configure a static WebSocket URL. They bootstrap exclusively from the signed registry,
-which is the source of all compatible gateway endpoints and failover candidates.
+a registry is briefly unavailable, the last verified directory has a five-minute grace period.
+Clients do not configure a static WebSocket URL. They bootstrap from the signed registries exposed by
+the configured control planes, which are the source of compatible gateway endpoints and failover
+candidates. Release registries use an offline-root -> registry-authority -> rotating-directory-signer
+certificate chain, so the pinned root stays stable while online signing keys rotate automatically.
 
 The trusted registry ID is deliberately retained across app restarts. If local testing deletes the
 `registry-identity` Docker volume, clear the app data once before trusting the newly generated local
@@ -751,8 +753,11 @@ Docker Compose provides `node-registry-database` and retains its data in the
 heartbeat nonces survive registry-container and complete Compose restarts. Persisting nonces keeps
 replay protection effective across restarts.
 
-The registry signing identity remains in the separate `registry-identity` volume. The health
-endpoint reports the active adapter and currently healthy node count:
+For the local development Compose stack, registry trust material remains in the separate
+`registry-identity` volume. Release control planes instead mount only the root-certified authority
+secret and persist rotating directory signers in the dedicated `registry-signing` volume; the offline
+root is never mounted into the running release registry. The health endpoint reports the active adapter
+and currently healthy node count:
 
 ```powershell
 curl.exe http://localhost:8090/health

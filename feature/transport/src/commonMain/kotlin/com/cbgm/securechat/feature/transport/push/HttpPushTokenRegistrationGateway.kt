@@ -30,7 +30,7 @@ class HttpPushTokenRegistrationGateway(
                     .getOrThrow()
 
             controlPlaneRequestRouter
-                .execute { endpoint ->
+                .executeAll { endpoint ->
                     val response =
                         httpClient.post(
                             urlString = "${endpoint.baseUrl}/push/devices"

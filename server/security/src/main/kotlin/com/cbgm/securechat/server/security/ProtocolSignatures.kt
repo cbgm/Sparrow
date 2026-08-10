@@ -4,6 +4,7 @@ import com.cbgm.securechat.server.protocol.ClientRoute
 import com.cbgm.securechat.server.protocol.NodeDirectory
 import com.cbgm.securechat.server.protocol.NodeHeartbeatRequest
 import com.cbgm.securechat.server.protocol.RegistryAuthorityCertificate
+import com.cbgm.securechat.server.protocol.RegistrySigningCertificate
 import com.cbgm.securechat.server.protocol.SecureChatNodeDescriptor
 import com.cbgm.securechat.server.protocol.SignedNodeDirectory
 import com.cbgm.securechat.server.protocol.serverJson
@@ -66,59 +67,18 @@ object ProtocolSignatures {
             )
         }.getOrDefault(false)
 
-    fun signAuthorityCertificate(
-        rootIdentity: NodeIdentity,
-        authorityIdentity: NodeIdentity,
-        keyVersion: Long,
-        validFromEpochMilliseconds: Long,
-        validUntilEpochMilliseconds: Long
-    ): RegistryAuthorityCertificate {
-        val unsigned =
-            RegistryAuthorityCertificate(
-                rootNodeId = rootIdentity.nodeId,
-                rootPublicKey = rootIdentity.encodedPublicKey,
-                authorityNodeId = authorityIdentity.nodeId,
-                authorityPublicKey = authorityIdentity.encodedPublicKey,
-                keyVersion = keyVersion,
-                validFromEpochMilliseconds = validFromEpochMilliseconds,
-                validUntilEpochMilliseconds = validUntilEpochMilliseconds,
-                signature = byteArrayOf()
-            )
-        return unsigned.copy(
-            signature =
-                Signatures.sign(
-                    serverJson.encodeToString(unsigned.unsigned()).encodeToByteArray(),
-                    rootIdentity.privateKey
-                )
-        )
-    }
-
-    fun verifyAuthorityCertificate(certificate: RegistryAuthorityCertificate): Boolean {
-        if (NodeIds.fromPublicKey(certificate.rootPublicKey) != certificate.rootNodeId) {
-            return false
-        }
-        if (NodeIds.fromPublicKey(certificate.authorityPublicKey) != certificate.authorityNodeId) {
-            return false
-        }
-        return runCatching {
-            Signatures.verify(
-                content = serverJson.encodeToString(certificate.unsigned()).encodeToByteArray(),
-                signature = certificate.signature,
-                publicKey = Signatures.decodePublicKey(certificate.rootPublicKey)
-            )
-        }.getOrDefault(false)
-    }
-
     fun signDirectory(
         directory: NodeDirectory,
         identity: NodeIdentity,
-        certificate: RegistryAuthorityCertificate? = null
+        certificate: RegistryAuthorityCertificate? = null,
+        signingCertificate: RegistrySigningCertificate? = null
     ): SignedNodeDirectory =
         SignedNodeDirectory(
             directory = directory,
             authorityNodeId = identity.nodeId,
             authorityPublicKey = identity.encodedPublicKey,
             authorityCertificate = certificate,
+            signingCertificate = signingCertificate,
             signature =
                 Signatures.sign(
                     serverJson.encodeToString(directory).encodeToByteArray(),
@@ -130,20 +90,33 @@ object ProtocolSignatures {
         val expectedNodeId = NodeIds.fromPublicKey(directory.authorityPublicKey)
         if (expectedNodeId != directory.authorityNodeId) return false
 
-        val certificate = directory.authorityCertificate
-        if (certificate != null && !isCertificateValid(certificate, directory)) {
+        if (!isCertificateChainValid(directory)) {
             return false
         }
 
         return verifyDirectorySignature(directory)
     }
 
-    private fun isCertificateValid(certificate: RegistryAuthorityCertificate, directory: SignedNodeDirectory): Boolean {
-        val isStructureValid = verifyAuthorityCertificate(certificate)
-        val isNodeIdMatching = certificate.authorityNodeId == directory.authorityNodeId
-        val isKeyMatching = certificate.authorityPublicKey.contentEquals(directory.authorityPublicKey)
+    private fun isCertificateChainValid(directory: SignedNodeDirectory): Boolean {
+        val authorityCertificate = directory.authorityCertificate ?: return directory.signingCertificate == null
+        if (!RegistryCertificateSignatures.verifyAuthorityCertificate(authorityCertificate)) {
+            return false
+        }
 
-        return isStructureValid && isNodeIdMatching && isKeyMatching
+        val signingCertificate =
+            directory.signingCertificate
+                ?: return authorityCertificate.authorityNodeId == directory.authorityNodeId &&
+                    authorityCertificate.authorityPublicKey.contentEquals(directory.authorityPublicKey)
+
+        return RegistryCertificateSignatures.verifySigningCertificate(signingCertificate) &&
+            signingCertificate.authorityNodeId == authorityCertificate.authorityNodeId &&
+            signingCertificate.authorityPublicKey.contentEquals(authorityCertificate.authorityPublicKey) &&
+            signingCertificate.validFromEpochMilliseconds >=
+            authorityCertificate.validFromEpochMilliseconds &&
+            signingCertificate.validUntilEpochMilliseconds <=
+            authorityCertificate.validUntilEpochMilliseconds &&
+            signingCertificate.signingNodeId == directory.authorityNodeId &&
+            signingCertificate.signingPublicKey.contentEquals(directory.authorityPublicKey)
     }
 
     private fun verifyDirectorySignature(directory: SignedNodeDirectory): Boolean =

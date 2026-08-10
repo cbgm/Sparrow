@@ -87,4 +87,29 @@ class ControlPlaneEndpointPoolTest {
             pool.ordered()
         )
     }
+
+    @Test
+    fun unavailableEndpointsAreExcludedFromReplicationUntilCooldownExpires() {
+        var now = 1_000L
+        val pool =
+            ControlPlaneEndpointPool(
+                baseUrls = listOf("https://cp-a.example", "https://cp-b.example"),
+                failureCooldownMilliseconds = 5_000L,
+                now = { now }
+            )
+
+        pool.markUnavailable("https://cp-a.example")
+
+        assertEquals(
+            listOf("https://cp-b.example"),
+            pool.availableEndpoints()
+        )
+
+        now += 5_001L
+
+        assertEquals(
+            listOf("https://cp-a.example", "https://cp-b.example"),
+            pool.availableEndpoints()
+        )
+    }
 }

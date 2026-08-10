@@ -40,6 +40,11 @@ class PushCoordinator(
         return true
     }
 
+    suspend fun replicate(envelope: RelayEnvelope): Boolean {
+        val accepted = pendingEnvelopes.enqueue(envelope)
+        return accepted || pendingEnvelopes.contains(envelope.envelopeId)
+    }
+
     suspend fun notifyRecipient(recipientId: String) {
         sender.notifyMessagesAvailable(recipientId)
     }

@@ -10,8 +10,8 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `server` |
 | Directory | `server/security` |
 | Build file | `server/security/build.gradle.kts` |
-| Kotlin files | 18 |
-| Production Kotlin files | 14 |
+| Kotlin files | 19 |
+| Production Kotlin files | 15 |
 | Test Kotlin files | 4 |
 | Resource files | 0 |
 | Direct dependencies | 1 |

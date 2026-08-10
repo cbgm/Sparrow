@@ -82,6 +82,49 @@ internal fun RegistryAuthorityCertificate.unsigned(): UnsignedRegistryAuthorityC
     )
 
 @Serializable
+data class RegistrySigningCertificate(
+    val authorityNodeId: String,
+    val authorityPublicKey: ByteArray,
+    val signingNodeId: String,
+    val signingPublicKey: ByteArray,
+    val keyVersion: Long,
+    val validFromEpochMilliseconds: Long,
+    val validUntilEpochMilliseconds: Long,
+    val signature: ByteArray
+) {
+    init {
+        require(authorityNodeId.isNotBlank())
+        require(authorityPublicKey.isNotEmpty())
+        require(signingNodeId.isNotBlank())
+        require(signingPublicKey.isNotEmpty())
+        require(keyVersion >= 0L)
+        require(validFromEpochMilliseconds < validUntilEpochMilliseconds)
+    }
+}
+
+@Serializable
+internal data class UnsignedRegistrySigningCertificate(
+    val authorityNodeId: String,
+    val authorityPublicKey: ByteArray,
+    val signingNodeId: String,
+    val signingPublicKey: ByteArray,
+    val keyVersion: Long,
+    val validFromEpochMilliseconds: Long,
+    val validUntilEpochMilliseconds: Long
+)
+
+internal fun RegistrySigningCertificate.unsigned(): UnsignedRegistrySigningCertificate =
+    UnsignedRegistrySigningCertificate(
+        authorityNodeId = authorityNodeId,
+        authorityPublicKey = authorityPublicKey,
+        signingNodeId = signingNodeId,
+        signingPublicKey = signingPublicKey,
+        keyVersion = keyVersion,
+        validFromEpochMilliseconds = validFromEpochMilliseconds,
+        validUntilEpochMilliseconds = validUntilEpochMilliseconds
+    )
+
+@Serializable
 data class NodeDirectory(
     val generatedAtEpochMilliseconds: Long,
     val validUntilEpochMilliseconds: Long,
@@ -94,6 +137,7 @@ data class SignedNodeDirectory(
     val authorityNodeId: String,
     val authorityPublicKey: ByteArray,
     val authorityCertificate: RegistryAuthorityCertificate? = null,
+    val signingCertificate: RegistrySigningCertificate? = null,
     val signature: ByteArray
 )
 

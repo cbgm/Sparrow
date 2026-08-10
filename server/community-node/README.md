@@ -41,9 +41,9 @@ changed.
 CONTROL_PLANE_URLS=https://cp1.example.com,https://cp2.example.com,https://cp3.example.com
 ```
 
-At startup the node probes them from left to right and uses the first reachable control plane.
-This gives the deployment format multiple-control-plane support now; runtime switching without a
-node restart can be added later without changing the configuration format.
+The node keeps all configured control planes in priority order, tracks reachability at runtime,
+and automatically switches to another reachable control plane without a node restart. Registration,
+heartbeats, and presence publication are synchronized across the configured control planes.
 
 ## LAN mode
 

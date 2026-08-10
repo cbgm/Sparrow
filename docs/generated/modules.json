@@ -674,8 +674,8 @@
     "group": "server",
     "directory": "server/node-registry",
     "buildFile": "server/node-registry/build.gradle.kts",
-    "kotlinSourceFileCount": 9,
-    "productionKotlinFileCount": 5,
+    "kotlinSourceFileCount": 12,
+    "productionKotlinFileCount": 8,
     "testKotlinFileCount": 4,
     "resourceFileCount": 0,
     "sourceSets": [
@@ -816,8 +816,8 @@
     "group": "server",
     "directory": "server/security",
     "buildFile": "server/security/build.gradle.kts",
-    "kotlinSourceFileCount": 18,
-    "productionKotlinFileCount": 14,
+    "kotlinSourceFileCount": 19,
+    "productionKotlinFileCount": 15,
     "testKotlinFileCount": 4,
     "resourceFileCount": 0,
     "sourceSets": [

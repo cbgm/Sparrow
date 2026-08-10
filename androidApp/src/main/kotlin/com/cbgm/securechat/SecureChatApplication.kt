@@ -11,6 +11,8 @@ import com.cbgm.securechat.core.protocol.di.protocolModule
 import com.cbgm.securechat.core.transport.ControlPlaneConfiguration
 import com.cbgm.securechat.core.transport.ControlPlaneDirectorySynchronizer
 import com.cbgm.securechat.core.transport.ControlPlaneHealthMonitor
+import com.cbgm.securechat.core.transport.ControlPlaneReachability
+import com.cbgm.securechat.core.transport.ControlPlaneStatusStore
 import com.cbgm.securechat.core.ui.di.coreUiModule
 import com.cbgm.securechat.data.database.di.androidDatabaseModule
 import com.cbgm.securechat.di.appModule
@@ -41,6 +43,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
@@ -107,18 +110,32 @@ class SecureChatApplication : Application() {
 
         koin.get<ForegroundRuntimeController>().start()
 
-        observeActiveControlPlane(koin)
+        observeControlPlaneRegistrationTargets(koin)
         startControlPlaneDirectorySync(koin)
         startControlPlaneHealthMonitoring(koin)
     }
 
-    private fun observeActiveControlPlane(koin: Koin) {
+    private fun observeControlPlaneRegistrationTargets(koin: Koin) {
         applicationScope.launch {
             waitUntilLocalIdentityIsReady(koin)
 
-            koin
-                .get<ControlPlaneConfiguration>()
-                .activeEndpoint
+            val configuration = koin.get<ControlPlaneConfiguration>()
+            val statusStore = koin.get<ControlPlaneStatusStore>()
+            combine(
+                configuration.endpoints,
+                statusStore.statuses
+            ) { endpoints, statuses ->
+                val reachabilityByUrl =
+                    statuses.associate { status ->
+                        status.endpoint.baseUrl to status.reachability
+                    }
+                endpoints
+                    .filter { endpoint ->
+                        reachabilityByUrl[endpoint.baseUrl] !=
+                            ControlPlaneReachability.UNREACHABLE
+                    }.map { endpoint -> endpoint.baseUrl }
+                    .toSet()
+            }.distinctUntilChanged()
                 .drop(1)
                 .collectLatest {
                     koin.get<PushTokenRegistrationScheduler>().enqueueCurrentToken()

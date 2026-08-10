@@ -65,3 +65,54 @@ push token are generated automatically and preserved there.
 
 Ports 80 and 443 must actually reach the host. The launcher cannot change router NAT or external
 cloud-firewall rules.
+
+## Registry signing trust
+
+Release control planes do not keep the pinned registry root private key online. The release launcher
+uses a root-certified registry authority and the running node-registry uses that authority only to
+issue short-lived rotating directory-signing keys.
+
+The trust chain is:
+
+```text
+pinned offline root
+        |
+        v
+registry authority certificate
+        |
+        v
+automatically rotating directory signer
+        |
+        v
+signed node directory
+```
+
+The directory signer rotates automatically every 30 days and its certificate overlaps the next
+rotation window by seven days. Android continues to trust the same pinned root ID, so signer rotation
+does not require an app update.
+
+On the first start of an upgraded existing control plane, the launcher migrates the old registry root
+from the existing Docker volume, creates `secrets/registry-authority.identity` and
+`secrets/registry-authority-certificate.json`, and removes the temporary exported root again. The root
+private key is not mounted into the running release containers.
+
+For an additional control plane, either copy the two registry-authority files from an already trusted
+control plane or provision a separate authority once with the same offline root. Separate authorities
+are preferred when the offline root is available; both forms validate to the same pinned root.
+
+## Multiple control planes
+
+Control planes remain independent and do not connect to one another. Replication is driven by the
+nodes and clients that already know the configured control-plane addresses:
+
+- community nodes register and heartbeat against every configured control plane;
+- community nodes publish presence to every configured control plane;
+- Android registers its FCM token with every reachable configured control plane;
+- gateway nodes store an offline envelope on one notification-primary control plane and replicate the
+  opaque envelope to the other reachable control planes without sending duplicate FCM notifications;
+- pending-envelope reads merge and deduplicate replicas, repair missing replicas on reachable control
+  planes, and acknowledgements are sent to every reachable replica.
+
+If one control plane becomes unreachable, nodes and clients continue with another configured control
+plane. When the failed control plane becomes reachable again, health monitoring makes it eligible
+again; node registration/presence continue there and Android re-synchronizes its FCM registration.

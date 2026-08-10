@@ -76,6 +76,12 @@ class ControlPlaneEndpointPool(
 
     fun all(): List<String> = endpoints
 
+    fun availableEndpoints(): List<String> =
+        synchronized(lock) {
+            val currentTime = now()
+            endpoints.filterNot { endpoint -> isCoolingDown(endpoint, currentTime) }
+        }
+
     fun markAvailable(endpoint: String) {
         val normalized = normalize(endpoint)
         synchronized(lock) {

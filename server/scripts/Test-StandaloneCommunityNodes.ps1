@@ -390,7 +390,10 @@ function Send-SmokeFederatedEnvelope {
         $acknowledgement.envelopeId -ne $envelopeId -or
         $acknowledgement.state -ne "STORED_AT_DESTINATION"
     ) {
-        throw "$SourceName to $DestinationName federation did not store the envelope."
+        throw (
+            "$SourceName to $DestinationName federation did not store the envelope. " +
+            "Expected STORED_AT_DESTINATION, got '$($acknowledgement.state)'."
+        )
     }
 
     $pendingPath = "/v1/node-push/recipients/$($route['routingId'])/envelopes"

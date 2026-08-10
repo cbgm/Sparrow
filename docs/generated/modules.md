@@ -32,12 +32,12 @@ Select a module to open its generated detail page with source sets, file counts,
 | [`:server:federation`](modules/server-federation.md) | `server` | 16 | 3 | 0 | 4 | 0 |
 | [`:server:gateway`](modules/server-gateway.md) | `server` | 13 | 3 | 0 | 4 | 0 |
 | [`:server:mailbox`](modules/server-mailbox.md) | `server` | 11 | 3 | 0 | 4 | 0 |
-| [`:server:node-registry`](modules/server-node-registry.md) | `server` | 9 | 4 | 0 | 4 | 0 |
+| [`:server:node-registry`](modules/server-node-registry.md) | `server` | 12 | 4 | 0 | 4 | 0 |
 | [`:server:observability`](modules/server-observability.md) | `server` | 3 | 1 | 1 | 0 | 6 |
 | [`:server:persistence`](modules/server-persistence.md) | `server` | 3 | 1 | 0 | 1 | 6 |
 | [`:server:presence-directory`](modules/server-presence-directory.md) | `server` | 8 | 2 | 0 | 4 | 0 |
 | [`:server:protocol`](modules/server-protocol.md) | `server` | 6 | 1 | 0 | 0 | 8 |
 | [`:server:push`](modules/server-push.md) | `server` | 17 | 4 | 0 | 4 | 0 |
-| [`:server:security`](modules/server-security.md) | `server` | 18 | 4 | 0 | 1 | 6 |
+| [`:server:security`](modules/server-security.md) | `server` | 19 | 4 | 0 | 1 | 6 |
 | [`:shared`](modules/shared.md) | `shared` | 9 | 2 | 0 | 4 | 1 |
 | [`:startup`](modules/startup.md) | `startup` | 9 | 0 | 1 | 3 | 2 |
