@@ -5,6 +5,7 @@ import com.cbgm.securechat.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.securechat.core.protocol.identity.LocalSigningPublicKeyProvider
 import com.cbgm.securechat.core.protocol.phone.PhoneNumberNormalizer
 import com.cbgm.securechat.core.protocol.transport.OutgoingWireSender
+import com.cbgm.securechat.core.security.RegistryTrustRoot
 import com.cbgm.securechat.core.transport.ControlPlaneConfiguration
 import com.cbgm.securechat.core.transport.ControlPlaneDirectorySynchronizer
 import com.cbgm.securechat.core.transport.ControlPlaneHealthMonitor
@@ -53,6 +54,11 @@ import org.koin.dsl.module
 
 val transportModule =
     module {
+        single {
+            RelayTransportConfig(
+                trustedRegistryRootNodeId = RegistryTrustRoot.NODE_ID
+            )
+        }
 
         registerPlatformNodeDirectoryCache()
 

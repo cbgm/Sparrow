@@ -1,5 +1,6 @@
 package com.cbgm.securechat.notification.application
 
+import com.cbgm.securechat.core.crypto.InitializeCryptoRuntime
 import com.cbgm.securechat.core.logging.SecureChatLog
 import com.cbgm.securechat.feature.chats.domain.model.Conversation
 import com.cbgm.securechat.feature.chats.domain.usecase.ObserveConversations
@@ -12,6 +13,7 @@ import com.cbgm.securechat.notification.model.PendingMessageSyncResult
 import kotlinx.coroutines.flow.first
 
 class SynchronizePendingMessages(
+    private val initializeCryptoRuntime: InitializeCryptoRuntime,
     private val pendingRelayEnvelopeGateway: PendingRelayEnvelopeGateway,
     private val incomingEnvelopeProcessor: IncomingEnvelopeProcessor,
     private val observeConversations: ObserveConversations,
@@ -21,78 +23,16 @@ class SynchronizePendingMessages(
 
     suspend operator fun invoke(wakeUpId: String): Result<PendingMessageSyncResult> =
         runCatching {
+            initializeCryptoRuntime().getOrThrow()
             require(wakeUpId.isNotBlank()) {
                 "Wake-up ID must not be blank"
             }
 
-            val unreadCountsBeforeSync =
-                observeConversations()
-                    .first()
-                    .associate { conversation ->
-                        conversation.id to conversation.unreadCount
-                    }
-
-            var processedEnvelopeCount = 0
-
-            /*
-             * The FCM wake-up inbox is the authoritative path for a push-triggered
-             * synchronization and must be processed before any node-local mailbox.
-             *
-             * A mailbox credential can temporarily point to an unavailable node after
-             * discovery/failover. That must never prevent the central push inbox from
-             * being downloaded and acknowledged.
-             */
-            val envelopes =
-                pendingRelayEnvelopeGateway
-                    .getPendingEnvelopes(wakeUpId = wakeUpId)
-                    .getOrThrow()
-
-            envelopes.forEach { envelope ->
-                when (
-                    incomingEnvelopeProcessor
-                        .process(
-                            envelopeId = envelope.envelopeId,
-                            senderRelayId = envelope.senderId,
-                            encodedTransportPayload = envelope.payload
-                        ).getOrThrow()
-                ) {
-                    IncomingEnvelopeProcessingResult.Processed -> {
-                        pendingRelayEnvelopeGateway
-                            .acknowledge(
-                                wakeUpId = wakeUpId,
-                                envelopeId = envelope.envelopeId
-                            ).getOrThrow()
-
-                        processedEnvelopeCount += 1
-                    }
-
-                    IncomingEnvelopeProcessingResult.UnknownSender -> Unit
-                }
-            }
-
-            processedEnvelopeCount +=
-                mailboxCoordinator
-                    .synchronizePending()
-                    .getOrElse { error ->
-                        logger.warn(error) {
-                            "Mailbox synchronization failed during push wake-up; " +
-                                "central push synchronization already completed"
-                        }
-                        0
-                    }
-
-            val notifications =
-                observeConversations()
-                    .first()
-                    .mapNotNull { conversation ->
-                        val unreadCountBeforeSync =
-                            unreadCountsBeforeSync[conversation.id] ?: 0
-
-                        conversation
-                            .takeIf { current ->
-                                current.unreadCount > unreadCountBeforeSync
-                            }?.toNotification()
-                    }
+            val unreadCountsBeforeSync = loadUnreadCounts()
+            val pushProcessed = processPushEnvelopes(wakeUpId = wakeUpId)
+            val mailboxProcessed = synchronizeMailbox()
+            val processedEnvelopeCount = pushProcessed + mailboxProcessed
+            val notifications = buildNotifications(unreadCountsBeforeSync)
 
             logger.info {
                 "Push synchronization completed; " +
@@ -105,6 +45,66 @@ class SynchronizePendingMessages(
                 notifications = notifications
             )
         }
+
+    private suspend fun loadUnreadCounts(): Map<String, Int> =
+        observeConversations()
+            .first()
+            .associate { conversation ->
+                conversation.id to conversation.unreadCount
+            }
+
+    private suspend fun processPushEnvelopes(wakeUpId: String): Int {
+        val envelopes =
+            pendingRelayEnvelopeGateway
+                .getPendingEnvelopes(wakeUpId = wakeUpId)
+                .getOrThrow()
+        var processedEnvelopeCount = 0
+
+        envelopes.forEach { envelope ->
+            val result =
+                incomingEnvelopeProcessor
+                    .process(
+                        envelopeId = envelope.envelopeId,
+                        senderRelayId = envelope.senderId,
+                        encodedTransportPayload = envelope.payload
+                    ).getOrThrow()
+
+            if (result == IncomingEnvelopeProcessingResult.Processed) {
+                pendingRelayEnvelopeGateway
+                    .acknowledge(
+                        wakeUpId = wakeUpId,
+                        envelopeId = envelope.envelopeId
+                    ).getOrThrow()
+                processedEnvelopeCount += 1
+            }
+        }
+
+        return processedEnvelopeCount
+    }
+
+    private suspend fun synchronizeMailbox(): Int =
+        mailboxCoordinator
+            .synchronizePending()
+            .getOrElse { error ->
+                logger.warn(error) {
+                    "Mailbox synchronization failed during push wake-up; " +
+                        "central push synchronization already completed"
+                }
+                0
+            }
+
+    private suspend fun buildNotifications(
+        unreadCountsBeforeSync: Map<String, Int>
+    ): List<ConversationNotification> =
+        observeConversations()
+            .first()
+            .mapNotNull { conversation ->
+                val unreadCountBeforeSync = unreadCountsBeforeSync[conversation.id] ?: 0
+                conversation
+                    .takeIf { current ->
+                        current.unreadCount > unreadCountBeforeSync
+                    }?.toNotification()
+            }
 
     private fun Conversation.toNotification(): ConversationNotification =
         ConversationNotification(

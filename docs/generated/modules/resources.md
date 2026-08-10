@@ -28,5 +28,5 @@ None.
 
 ## Dependents
 
-- [`:androidApp`](../modules/androidApp.md)
 - [`:core:ui`](../modules/core-ui.md)
+- [`:notification`](../modules/notification.md)

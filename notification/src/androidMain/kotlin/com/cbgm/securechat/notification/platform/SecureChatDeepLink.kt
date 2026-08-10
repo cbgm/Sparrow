@@ -1,9 +1,9 @@
-package com.cbgm.securechat.platform.notification
+package com.cbgm.securechat.notification.platform
 
 import android.content.Intent
 import android.net.Uri
 
-object SecureChatDeepLink {
+internal object SecureChatDeepLink {
     private const val SCHEME = "securechat"
     private const val CHAT_HOST = "chat"
 

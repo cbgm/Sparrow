@@ -22,6 +22,7 @@ import com.cbgm.securechat.feature.identity.domain.usecase.GetIdentityStatus
 import com.cbgm.securechat.feature.identity.domain.usecase.GetLocalPhoneNumber
 import com.cbgm.securechat.feature.identity.domain.usecase.GetPublicIdentity
 import com.cbgm.securechat.feature.identity.domain.usecase.NormalizeLocalPhoneNumber
+import com.cbgm.securechat.feature.identity.domain.usecase.ObserveLocalIdentityReady
 import com.cbgm.securechat.feature.identity.domain.usecase.SaveLocalPhoneName
 import com.cbgm.securechat.feature.identity.presentation.screen.IdentityViewModel
 import com.cbgm.securechat.feature.identity.presentation.screen.ShareIdentityViewModel
@@ -53,6 +54,13 @@ val identityModule =
 
         single {
             GetLocalPhoneNumber(localPhoneNameStorage = get<LocalPhoneNameStorage>())
+        }
+
+        factory {
+            ObserveLocalIdentityReady(
+                identityRepository = get(),
+                localPhoneNameStorage = get()
+            )
         }
 
         single {

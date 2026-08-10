@@ -1,5 +1,3 @@
-
-
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
@@ -37,10 +35,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    buildFeatures {
-        buildConfig = true
-    }
-
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -56,32 +50,9 @@ android {
 
 dependencies {
     implementation(projects.shared)
-    implementation(projects.startup)
 
-    implementation(projects.core)
-    implementation(projects.core.crypto)
-    implementation(projects.core.protocol)
-    implementation(projects.core.ui)
-
-    implementation(projects.data.database)
-    implementation(projects.feature.messaging)
-
-    implementation(projects.feature.chats)
-    implementation(projects.feature.contactimport)
-    implementation(projects.feature.contacts)
-    implementation(projects.feature.identity)
-    implementation(projects.feature.onboarding)
-    implementation(projects.feature.settings)
-    implementation(projects.feature.transport)
-    implementation(projects.notification)
-
-    implementation(projects.resources)
-
-    implementation(libs.bundles.compose)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core.splashscreen)
-    implementation(libs.koin.android)
-    implementation(libs.koin.androidx.workmanager)
 
     debugImplementation(libs.compose.uiTooling)
 }

@@ -8,9 +8,9 @@ Generated automatically by `./gradlew architectureReport`.
 |---|---:|
 | Modules | 35 |
 | Module groups | 12 |
-| Project dependencies | 103 |
-| Kotlin files | 884 |
-| Test Kotlin files | 80 |
+| Project dependencies | 101 |
+| Kotlin files | 908 |
+| Test Kotlin files | 82 |
 | Resource files | 58 |
 
 ## Module groups
@@ -162,23 +162,7 @@ graph TD
         module_startup[":startup"]
     end
 
-    module_androidApp --> module_core
-    module_androidApp --> module_core_crypto
-    module_androidApp --> module_core_protocol
-    module_androidApp --> module_core_ui
-    module_androidApp --> module_data_database
-    module_androidApp --> module_feature_chats
-    module_androidApp --> module_feature_contactimport
-    module_androidApp --> module_feature_contacts
-    module_androidApp --> module_feature_identity
-    module_androidApp --> module_feature_messaging
-    module_androidApp --> module_feature_onboarding
-    module_androidApp --> module_feature_settings
-    module_androidApp --> module_feature_transport
-    module_androidApp --> module_notification
-    module_androidApp --> module_resources
     module_androidApp --> module_shared
-    module_androidApp --> module_startup
     module_core_protocol --> module_core
     module_core_ui --> module_resources
     module_data_database --> module_core
@@ -229,9 +213,11 @@ graph TD
     module_navigation --> module_notification
     module_navigation --> module_startup
     module_notification --> module_core
+    module_notification --> module_core_crypto
     module_notification --> module_feature_chats
     module_notification --> module_feature_messaging
     module_notification --> module_feature_transport
+    module_notification --> module_resources
     module_server_federation --> module_server_observability
     module_server_federation --> module_server_persistence
     module_server_federation --> module_server_protocol
@@ -259,9 +245,21 @@ graph TD
     module_server_push --> module_server_security
     module_server_security --> module_server_protocol
     module_shared --> module_core
+    module_shared --> module_core_crypto
+    module_shared --> module_core_protocol
     module_shared --> module_core_ui
+    module_shared --> module_data_database
+    module_shared --> module_feature_chats
+    module_shared --> module_feature_contactimport
+    module_shared --> module_feature_contacts
+    module_shared --> module_feature_identity
+    module_shared --> module_feature_messaging
+    module_shared --> module_feature_onboarding
     module_shared --> module_feature_settings
+    module_shared --> module_feature_transport
     module_shared --> module_navigation
+    module_shared --> module_notification
+    module_shared --> module_startup
     module_startup --> module_core_ui
     module_startup --> module_feature_identity
     module_startup --> module_feature_onboarding

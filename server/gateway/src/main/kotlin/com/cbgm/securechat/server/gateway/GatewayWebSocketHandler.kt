@@ -224,6 +224,12 @@ class GatewayWebSocketHandler(
         recipients: List<GatewayConnection>
     ): Boolean {
         val relayEnvelope = envelope.toRelayEnvelope()
+
+        val stored =
+            runCatching {
+                legacyPush.store(relayEnvelope)
+            }.getOrDefault(false)
+
         val delivered =
             recipients.any { recipient ->
                 runCatching {
@@ -235,7 +241,7 @@ class GatewayWebSocketHandler(
                 }.isSuccess
             }
 
-        return delivered
+        return stored || delivered
     }
 }
 

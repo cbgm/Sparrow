@@ -10,9 +10,9 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/transport` |
 | Build file | `feature/transport/build.gradle.kts` |
-| Kotlin files | 61 |
-| Production Kotlin files | 51 |
-| Test Kotlin files | 10 |
+| Kotlin files | 67 |
+| Production Kotlin files | 56 |
+| Test Kotlin files | 11 |
 | Resource files | 1 |
 | Direct dependencies | 3 |
 | Direct dependents | 3 |
@@ -34,6 +34,6 @@ Generated automatically by `./gradlew architectureReport`.
 
 ## Dependents
 
-- [`:androidApp`](../modules/androidApp.md)
 - [`:feature:messaging`](../modules/feature-messaging.md)
 - [`:notification`](../modules/notification.md)
+- [`:shared`](../modules/shared.md)

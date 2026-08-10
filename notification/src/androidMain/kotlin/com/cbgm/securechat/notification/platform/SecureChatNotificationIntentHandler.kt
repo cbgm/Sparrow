@@ -1,4 +1,4 @@
-package com.cbgm.securechat.platform.notification
+package com.cbgm.securechat.notification.platform
 
 import android.content.Intent
 import com.cbgm.securechat.notification.navigation.NotificationNavigationController

@@ -32,10 +32,10 @@ Generated automatically by `./gradlew architectureReport`.
 
 ## Dependents
 
-- [`:androidApp`](../modules/androidApp.md)
 - [`:data:database`](../modules/data-database.md)
 - [`:feature:chats`](../modules/feature-chats.md)
 - [`:feature:contacts`](../modules/feature-contacts.md)
 - [`:feature:identity`](../modules/feature-identity.md)
 - [`:feature:messaging`](../modules/feature-messaging.md)
 - [`:feature:transport`](../modules/feature-transport.md)
+- [`:shared`](../modules/shared.md)

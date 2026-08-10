@@ -1,4 +1,4 @@
-package com.cbgm.securechat.platform.notification
+package com.cbgm.securechat.notification.platform
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -32,14 +32,17 @@ class SecureChatNotificationManager(
 
     @SuppressLint("MissingPermission")
     override fun show(notification: ConversationNotification) {
+        createChannels()
         if (!canPostNotifications()) {
             return
         }
 
         val title =
-            notification.title.takeIf(String::isNotBlank) ?: context.getString(ResourcesR.string.app_name)
+            notification.title.takeIf(String::isNotBlank)
+                ?: context.getString(ResourcesR.string.app_name)
         val preview =
-            notification.messagePreview ?: context.getString(ResourcesR.string.notification_new_message)
+            notification.messagePreview
+                ?: context.getString(ResourcesR.string.notification_new_message)
 
         val androidNotification =
             NotificationCompat

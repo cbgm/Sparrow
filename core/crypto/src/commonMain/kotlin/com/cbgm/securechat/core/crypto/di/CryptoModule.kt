@@ -1,5 +1,6 @@
 package com.cbgm.securechat.core.crypto.di
 
+import com.cbgm.securechat.core.crypto.InitializeCryptoRuntime
 import com.cbgm.securechat.core.crypto.group.GroupCrypto
 import com.cbgm.securechat.core.crypto.group.SodiumGroupCrypto
 import com.cbgm.securechat.core.crypto.hash.CryptoHash
@@ -24,6 +25,9 @@ import org.koin.dsl.module
 
 val cryptoModule =
     module {
+        single {
+            InitializeCryptoRuntime()
+        }
 
         single<CryptoHash> {
             DefaultCryptoHash()

@@ -10,9 +10,9 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `server` |
 | Directory | `server/gateway` |
 | Build file | `server/gateway/build.gradle.kts` |
-| Kotlin files | 13 |
-| Production Kotlin files | 10 |
-| Test Kotlin files | 3 |
+| Kotlin files | 15 |
+| Production Kotlin files | 11 |
+| Test Kotlin files | 4 |
 | Resource files | 0 |
 | Direct dependencies | 4 |
 | Direct dependents | 0 |

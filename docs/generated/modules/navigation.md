@@ -10,8 +10,8 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `navigation` |
 | Directory | `navigation` |
 | Build file | `navigation/build.gradle.kts` |
-| Kotlin files | 12 |
-| Production Kotlin files | 12 |
+| Kotlin files | 13 |
+| Production Kotlin files | 13 |
 | Test Kotlin files | 0 |
 | Resource files | 1 |
 | Direct dependencies | 10 |

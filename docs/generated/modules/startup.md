@@ -33,5 +33,5 @@ Generated automatically by `./gradlew architectureReport`.
 
 ## Dependents
 
-- [`:androidApp`](../modules/androidApp.md)
 - [`:navigation`](../modules/navigation.md)
+- [`:shared`](../modules/shared.md)

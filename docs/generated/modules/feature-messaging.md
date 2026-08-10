@@ -35,5 +35,5 @@ Generated automatically by `./gradlew architectureReport`.
 
 ## Dependents
 
-- [`:androidApp`](../modules/androidApp.md)
 - [`:notification`](../modules/notification.md)
+- [`:shared`](../modules/shared.md)

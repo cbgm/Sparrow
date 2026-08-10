@@ -1,4 +1,4 @@
-package com.cbgm.securechat.platform.transport
+package com.cbgm.securechat.feature.transport.controlplane
 
 import android.content.Context
 import android.content.SharedPreferences

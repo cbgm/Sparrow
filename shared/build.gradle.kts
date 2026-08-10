@@ -35,9 +35,20 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(projects.core)
+            implementation(projects.core.crypto)
+            implementation(projects.core.protocol)
             implementation(projects.core.ui)
             implementation(projects.navigation)
+            implementation(projects.feature.chats)
+            implementation(projects.feature.contactimport)
+            implementation(projects.feature.contacts)
+            implementation(projects.feature.identity)
+            implementation(projects.feature.messaging)
+            implementation(projects.feature.onboarding)
             implementation(projects.feature.settings)
+            implementation(projects.feature.transport)
+            implementation(projects.notification)
+            implementation(projects.startup)
 
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)
@@ -46,6 +57,13 @@ kotlin {
 
             implementation(libs.jetbrains.navigation.compose)
             implementation(compose.materialIconsExtended)
+        }
+
+        androidMain.dependencies {
+            implementation(projects.data.database)
+
+            implementation(libs.koin.android)
+            implementation(libs.koin.androidx.workmanager)
         }
 
         commonTest.dependencies {
