@@ -56,7 +56,10 @@ class FederationRouter(
             }
 
             val queued = queue.enqueue(envelope)
-            deliver(queued)
+            deliver(
+                entry = queued,
+                allowControlPlaneFallback = false
+            )
         }
 
     suspend fun retryPending(limit: Int): Int {
@@ -70,7 +73,10 @@ class FederationRouter(
                     current?.state == EnvelopeAcceptanceState.QUEUED_AT_GATEWAY &&
                     current.nextAttemptAtEpochMilliseconds <= now()
                 ) {
-                    deliver(current)
+                    deliver(
+                        entry = current,
+                        allowControlPlaneFallback = true
+                    )
                     processed += 1
                 }
             }
@@ -122,13 +128,23 @@ class FederationRouter(
         return false
     }
 
-    private suspend fun deliver(entry: OutboundEnvelopeEntry): FederationAcknowledgement {
+    private suspend fun deliver(
+        entry: OutboundEnvelopeEntry,
+        allowControlPlaneFallback: Boolean
+    ): FederationAcknowledgement {
         val nextAttemptAt = now() + retryDelay(entry.attempts)
         val attempted = queue.markAttempt(entry.envelope.envelopeId, nextAttemptAt)
-        val onlineAcknowledgement = attempted?.let { routeOnline(it.envelope) }
+        val onlineAcknowledgement =
+            attempted?.let { candidate ->
+                routeOnline(
+                    envelope = candidate.envelope,
+                    allowControlPlaneFallback = allowControlPlaneFallback
+                )
+            }
         val acknowledgement =
             onlineAcknowledgement
                 ?: attempted
+                    ?.takeIf { allowControlPlaneFallback }
                     ?.let { candidate -> bindBootstrapRecipient(candidate) }
                     ?.let { candidate -> storeInMailbox(candidate.envelope) }
         val storedAcknowledgement =
@@ -181,7 +197,10 @@ class FederationRouter(
         return retryBaseDelayMilliseconds * multiplier
     }
 
-    private suspend fun routeOnline(envelope: FederatedEnvelope): FederationAcknowledgement? {
+    private suspend fun routeOnline(
+        envelope: FederatedEnvelope,
+        allowControlPlaneFallback: Boolean
+    ): FederationAcknowledgement? {
         val localRoutingId =
             runCatching {
                 localRouteResolver.resolve(envelope.recipientDeviceRoutingId)
@@ -200,6 +219,10 @@ class FederationRouter(
 
         peerRouter.routeEnvelope(envelope)?.let { acknowledgement ->
             return acknowledgement
+        }
+
+        if (!allowControlPlaneFallback) {
+            return null
         }
 
         val routes =

@@ -98,8 +98,9 @@ private fun createGatewayHandler(
 }
 
 internal fun Application.configureGatewayLifecycle(runtime: GatewayRuntime) {
-    if (runtime.ownsHttpClient) {
-        monitor.subscribe(ApplicationStopped) {
+    monitor.subscribe(ApplicationStopped) {
+        runtime.handler.close()
+        if (runtime.ownsHttpClient) {
             runtime.httpClient.close()
         }
     }

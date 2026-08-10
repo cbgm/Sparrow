@@ -11,12 +11,14 @@ import com.cbgm.securechat.server.protocol.NodeCapability
 import com.cbgm.securechat.server.protocol.SecureChatNodeDescriptor
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class FederationRouterTest {
     @Test
-    fun offlineRecipientFallsBackToRecipientSelectedMailbox() =
+    fun retryFallsBackToRecipientSelectedMailbox() =
         kotlinx.coroutines.test.runTest {
+            var currentTime = 1_000L
             var mailboxUsed = false
             val envelope = testEnvelope()
             val router =
@@ -28,14 +30,23 @@ class FederationRouterTest {
                     remoteFederation = { _, _ -> error("Remote federation must not be used") },
                     mailbox = {
                         mailboxUsed = true
-                        FederationAcknowledgement(it.envelopeId, EnvelopeAcceptanceState.STORED_AT_DESTINATION)
-                    }
+                        FederationAcknowledgement(
+                            it.envelopeId,
+                            EnvelopeAcceptanceState.STORED_AT_DESTINATION
+                        )
+                    },
+                    retryBaseDelayMilliseconds = 500L,
+                    now = { currentTime }
                 )
 
             val acknowledgement = router.route(envelope)
 
+            assertEquals(EnvelopeAcceptanceState.QUEUED_AT_GATEWAY, acknowledgement.state)
+            assertFalse(mailboxUsed)
+            currentTime = 1_500L
+            assertEquals(1, router.retryPending(limit = 10))
             assertTrue(mailboxUsed)
-            assertEquals(EnvelopeAcceptanceState.STORED_AT_DESTINATION, acknowledgement.state)
+            assertEquals(0, router.pendingCount())
         }
 
     @Test
@@ -68,10 +79,15 @@ class FederationRouterTest {
                 )
 
             assertEquals(EnvelopeAcceptanceState.QUEUED_AT_GATEWAY, router.route(testEnvelope()).state)
+            assertEquals(0, mailboxAttempts)
             assertEquals(1, router.pendingCount())
             currentTime = 1_499L
             assertEquals(0, router.retryPending(limit = 10))
             currentTime = 1_500L
+            assertEquals(1, router.retryPending(limit = 10))
+            assertEquals(1, mailboxAttempts)
+            assertEquals(1, router.pendingCount())
+            currentTime = 2_500L
             assertEquals(1, router.retryPending(limit = 10))
             assertEquals(2, mailboxAttempts)
             assertEquals(0, router.pendingCount())
@@ -146,6 +162,35 @@ class FederationRouterTest {
 
             assertTrue(router.routeTyping(event))
             assertEquals(event, deliveredEvent)
+        }
+
+    @Test
+    fun initialRouteDoesNotWaitForControlPlaneFallback() =
+        kotlinx.coroutines.test.runTest {
+            var controlPlaneCalls = 0
+            val router =
+                FederationRouter(
+                    localNodeId = "node-a",
+                    presenceDirectory = { routingId ->
+                        controlPlaneCalls += 1
+                        ClientRoutingResult(routingId, emptyList())
+                    },
+                    nodeRegistry = TestPeerNodeRegistry(testNodeDescriptor()),
+                    localGateway = { error("Recipient is remote") },
+                    remoteFederation =
+                        TestPeerFederationClient(
+                            resolveRoute = { null }
+                        ),
+                    mailbox = { error("Mailbox must not run on initial route") }
+                )
+
+            val acknowledgement =
+                router.route(
+                    testEnvelope().copy(mailboxRoute = null)
+                )
+
+            assertEquals(EnvelopeAcceptanceState.QUEUED_AT_GATEWAY, acknowledgement.state)
+            assertEquals(0, controlPlaneCalls)
         }
 
     @Test

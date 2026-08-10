@@ -151,17 +151,30 @@ class GatewayEnvelopeRoutingTest {
         }
 
     @Test
-    fun queuedEnvelopeIsAcceptedWhenPushIsUnavailable() =
+    fun queuedEnvelopeIsAcceptedBeforePushFallbackCompletes() =
         runTest {
+            var pushCalls = 0
+            var scheduledEnvelope: RelayEnvelope? = null
+            var scheduledEnvelopeId: String? = null
             val accepted =
                 storeAndRouteFederatedEnvelope(
                     envelope = testEnvelope(),
-                    pushStorage = { false },
+                    pushStorage = {
+                        pushCalls += 1
+                        false
+                    },
                     networkDelivery = { EnvelopeAcceptanceState.QUEUED_AT_GATEWAY },
-                    markFederationStored = { error("Queued envelope must stay in federation") }
+                    markFederationStored = { error("Queued envelope must stay in federation") },
+                    queuedPushFallback = { envelope, envelopeId ->
+                        scheduledEnvelope = envelope
+                        scheduledEnvelopeId = envelopeId
+                    }
                 )
 
             assertTrue(accepted)
+            assertEquals(0, pushCalls)
+            assertEquals("envelope-1", scheduledEnvelopeId)
+            assertEquals("envelope-1", requireNotNull(scheduledEnvelope).envelopeId)
         }
 
     @Test

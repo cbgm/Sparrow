@@ -15,12 +15,28 @@ class GatewayWebSocketHandler(
     private val legacyPush: LegacyPushClient,
     private val routeLifetimeMilliseconds: Long
 ) {
+    private val bestEffortPresence = BestEffortPresenceClient(presence)
+    private val pushDispatcher =
+        GatewayPushDispatcher(
+            pushClient = legacyPush,
+            markFederationStored = federation::markStored
+        )
+
     suspend fun handle(session: DefaultWebSocketServerSession) {
         GatewaySessionHandler(
             nodeId = nodeId,
             connections = connections,
-            presence = presence,
-            legacyPush = legacyPush,
+            presence = bestEffortPresence,
+            pushActions =
+                GatewayPushActions(
+                    deliverPending = pushDispatcher::deliverPending,
+                    acknowledge = { connection, envelopeId ->
+                        pushDispatcher.acknowledge(
+                            recipientId = connection.routingId,
+                            envelopeId = envelopeId
+                        )
+                    }
+                ),
             routeValidator = GatewayRouteValidator(routeLifetimeMilliseconds),
             actions =
                 GatewayMessageActions(
@@ -39,6 +55,11 @@ class GatewayWebSocketHandler(
                     }
                 )
         ).handle(session)
+    }
+
+    fun close() {
+        bestEffortPresence.close()
+        pushDispatcher.close()
     }
 
     suspend fun acceptIncoming(
@@ -71,7 +92,8 @@ class GatewayWebSocketHandler(
                 envelope = envelope,
                 pushStorage = legacyPush::store,
                 networkDelivery = ::routeEnvelope,
-                markFederationStored = federation::markStored
+                markFederationStored = federation::markStored,
+                queuedPushFallback = pushDispatcher::scheduleFallback
             )
 
         respondToEnvelope(
@@ -100,7 +122,8 @@ class GatewayWebSocketHandler(
                 envelope = envelope,
                 pushStorage = legacyPush::store,
                 networkDelivery = ::routeEnvelope,
-                markFederationStored = federation::markStored
+                markFederationStored = federation::markStored,
+                queuedPushFallback = pushDispatcher::scheduleFallback
             )
 
         respondToEnvelope(
@@ -212,13 +235,7 @@ class GatewayWebSocketHandler(
                 }.isSuccess
             }
 
-        if (delivered) {
-            return true
-        }
-
-        return runCatching {
-            legacyPush.store(relayEnvelope)
-        }.getOrDefault(false)
+        return delivered
     }
 }
 
@@ -238,36 +255,51 @@ internal suspend fun storeAndRouteLegacyEnvelope(
     envelope: RelayEnvelope,
     pushStorage: suspend (RelayEnvelope) -> Boolean,
     networkDelivery: suspend (FederatedEnvelope) -> EnvelopeAcceptanceState?,
-    markFederationStored: suspend (String) -> Unit
+    markFederationStored: suspend (String) -> Unit,
+    queuedPushFallback: (RelayEnvelope, String) -> Unit = { _, _ -> }
 ): Boolean =
     storeAndRouteEnvelope(
         pushEnvelope = envelope,
         networkEnvelope = envelope.toFederatedEnvelope(),
-        pushStorage = pushStorage,
         networkDelivery = networkDelivery,
-        markFederationStored = markFederationStored
+        fallbackActions =
+            EnvelopeFallbackActions(
+                pushStorage = pushStorage,
+                markFederationStored = markFederationStored,
+                queuedPushFallback = queuedPushFallback
+            )
     )
 
 internal suspend fun storeAndRouteFederatedEnvelope(
     envelope: FederatedEnvelope,
     pushStorage: suspend (RelayEnvelope) -> Boolean,
     networkDelivery: suspend (FederatedEnvelope) -> EnvelopeAcceptanceState?,
-    markFederationStored: suspend (String) -> Unit
+    markFederationStored: suspend (String) -> Unit,
+    queuedPushFallback: (RelayEnvelope, String) -> Unit = { _, _ -> }
 ): Boolean =
     storeAndRouteEnvelope(
         pushEnvelope = envelope.toRelayEnvelope(),
         networkEnvelope = envelope,
-        pushStorage = pushStorage,
         networkDelivery = networkDelivery,
-        markFederationStored = markFederationStored
+        fallbackActions =
+            EnvelopeFallbackActions(
+                pushStorage = pushStorage,
+                markFederationStored = markFederationStored,
+                queuedPushFallback = queuedPushFallback
+            )
     )
+
+private data class EnvelopeFallbackActions(
+    val pushStorage: suspend (RelayEnvelope) -> Boolean,
+    val markFederationStored: suspend (String) -> Unit,
+    val queuedPushFallback: (RelayEnvelope, String) -> Unit
+)
 
 private suspend fun storeAndRouteEnvelope(
     pushEnvelope: RelayEnvelope,
     networkEnvelope: FederatedEnvelope,
-    pushStorage: suspend (RelayEnvelope) -> Boolean,
     networkDelivery: suspend (FederatedEnvelope) -> EnvelopeAcceptanceState?,
-    markFederationStored: suspend (String) -> Unit
+    fallbackActions: EnvelopeFallbackActions
 ): Boolean {
     val routingState =
         runCatching {
@@ -278,18 +310,23 @@ private suspend fun storeAndRouteEnvelope(
         return true
     }
 
+    if (routingState == EnvelopeAcceptanceState.QUEUED_AT_GATEWAY) {
+        fallbackActions.queuedPushFallback(pushEnvelope, networkEnvelope.envelopeId)
+        return true
+    }
+
     val storedForPush =
         runCatching {
-            pushStorage(pushEnvelope)
+            fallbackActions.pushStorage(pushEnvelope)
         }.getOrDefault(false)
 
     if (storedForPush) {
         runCatching {
-            markFederationStored(networkEnvelope.envelopeId)
+            fallbackActions.markFederationStored(networkEnvelope.envelopeId)
         }
     }
 
-    return storedForPush || routingState == EnvelopeAcceptanceState.QUEUED_AT_GATEWAY
+    return storedForPush
 }
 
 internal suspend fun routeFederatedTypingEvent(

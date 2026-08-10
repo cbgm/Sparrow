@@ -15,7 +15,7 @@ internal class GatewaySessionHandler(
     private val nodeId: String,
     private val connections: ConnectionRegistry,
     private val presence: PresenceClient,
-    private val legacyPush: LegacyPushClient,
+    private val pushActions: GatewayPushActions,
     private val routeValidator: GatewayRouteValidator,
     private val actions: GatewayMessageActions
 ) {
@@ -111,12 +111,7 @@ internal class GatewaySessionHandler(
 
             is GatewayClientMessage.AcknowledgeEnvelope ->
                 state.connection?.let { connection ->
-                    runCatching {
-                        legacyPush.acknowledge(
-                            recipientId = connection.routingId,
-                            envelopeId = message.envelopeId
-                        )
-                    }
+                    pushActions.acknowledge(connection, message.envelopeId)
                 }
 
             is GatewayClientMessage.RefreshRoute ->
@@ -184,15 +179,7 @@ internal class GatewaySessionHandler(
                 relayId = connection.routingId
             )
         )
-        runCatching {
-            legacyPush.pending(recipientId = connection.routingId)
-        }.getOrDefault(emptyList()).forEach { envelope ->
-            connection.send(
-                GatewayServerMessage.IncomingEnvelope(
-                    envelope = envelope
-                )
-            )
-        }
+        pushActions.deliverPending(connection)
     }
 
     private suspend fun refreshRoute(
@@ -251,6 +238,11 @@ internal class GatewaySessionHandler(
         }
     }
 }
+
+internal data class GatewayPushActions(
+    val deliverPending: (GatewayConnection) -> Unit,
+    val acknowledge: (GatewayConnection, String) -> Unit
+)
 
 internal data class GatewayMessageActions(
     val sendEnvelope: suspend (GatewayConnection, GatewayClientMessage.SendEnvelope) -> Unit,
