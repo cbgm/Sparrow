@@ -26,6 +26,7 @@ import com.cbgm.securechat.feature.contacts.presentation.component.contactlist.L
 import com.cbgm.securechat.feature.contacts.presentation.component.contactlist.contactGroups
 import com.cbgm.securechat.feature.contacts.presentation.model.ContactGroupEntity
 import com.cbgm.securechat.feature.contacts.presentation.model.ContactsScreenMode
+import com.cbgm.securechat.feature.contacts.presentation.model.ContactsUiEvent
 import com.cbgm.securechat.feature.contacts.presentation.model.ContactsUiState
 import com.cbgm.securechat.feature.contacts.presentation.screen.group.component.GroupSelectionContactsTopBar
 import com.cbgm.securechat.feature.contacts.presentation.screen.group.component.MemberSelectionContactsTopBar
@@ -41,9 +42,7 @@ import org.jetbrains.compose.resources.stringResource
 fun ContactsScreen(
     uiState: ContactsUiState,
     mode: ContactsScreenMode,
-    searchQuery: String,
-    onSearchQueryChanged: (String) -> Unit,
-    onBack: () -> Unit,
+    onUiEvent: (ContactsUiEvent) -> Unit,
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState? = null
 ) {
@@ -60,36 +59,44 @@ fun ContactsScreen(
                 is ContactsScreenMode.Overview -> {
                     OverviewContactsTopBar(
                         containerColor = containerColor,
-                        searchQuery = searchQuery,
-                        onSearchQueryChanged = onSearchQueryChanged,
-                        onBack = onBack
+                        searchQuery = mode.searchQuery,
+                        onSearchQueryChanged = { query ->
+                            onUiEvent(ContactsUiEvent.SearchQueryChanged(query))
+                        },
+                        onBack = { onUiEvent(ContactsUiEvent.BackClicked) }
                     )
                 }
 
                 is ContactsScreenMode.GroupSelection -> {
                     GroupSelectionContactsTopBar(
                         title = mode.title,
-                        searchQuery = searchQuery,
+                        searchQuery = mode.searchQuery,
                         confirmEnabled = mode.confirmEnabled,
                         confirming = mode.confirming,
                         containerColor = containerColor,
-                        onBack = onBack,
-                        onTitleChanged = mode.onTitleChanged,
-                        onSearchQueryChanged = onSearchQueryChanged,
-                        onConfirmed = mode.onConfirmed
+                        onBack = { onUiEvent(ContactsUiEvent.BackClicked) },
+                        onTitleChanged = { title ->
+                            onUiEvent(ContactsUiEvent.SelectionTitleChanged(title))
+                        },
+                        onSearchQueryChanged = { query ->
+                            onUiEvent(ContactsUiEvent.SearchQueryChanged(query))
+                        },
+                        onConfirmed = { onUiEvent(ContactsUiEvent.SelectionConfirmed) }
                     )
                 }
 
                 is ContactsScreenMode.MemberSelection -> {
                     MemberSelectionContactsTopBar(
                         title = mode.title,
-                        searchQuery = searchQuery,
+                        searchQuery = mode.searchQuery,
                         confirmEnabled = mode.confirmEnabled,
                         confirming = mode.confirming,
                         containerColor = containerColor,
-                        onBack = onBack,
-                        onSearchQueryChanged = onSearchQueryChanged,
-                        onConfirmed = mode.onConfirmed
+                        onBack = { onUiEvent(ContactsUiEvent.BackClicked) },
+                        onSearchQueryChanged = { query ->
+                            onUiEvent(ContactsUiEvent.SearchQueryChanged(query))
+                        },
+                        onConfirmed = { onUiEvent(ContactsUiEvent.SelectionConfirmed) }
                     )
                 }
             }
@@ -111,24 +118,23 @@ fun ContactsScreen(
             uiState = uiState,
             mode = mode,
             innerPadding = innerPadding,
-            listState = listState
+            listState = listState,
+            onUiEvent = onUiEvent
         )
     }
 
-    val overviewMode = mode as? ContactsScreenMode.Overview
-
-    if (showImportSheet && overviewMode != null) {
+    if (showImportSheet && mode is ContactsScreenMode.Overview) {
         ImportContactBottomSheet(
             onDismiss = {
                 showImportSheet = false
             },
             onImportContact = {
                 showImportSheet = false
-                overviewMode.onImportContact()
+                onUiEvent(ContactsUiEvent.ImportContactClicked)
             },
             onImportDeviceContacts = {
                 showImportSheet = false
-                overviewMode.onImportDeviceContacts()
+                onUiEvent(ContactsUiEvent.ImportDeviceContacts)
             }
         )
     }
@@ -139,7 +145,8 @@ private fun ContactsContent(
     uiState: ContactsUiState,
     mode: ContactsScreenMode,
     innerPadding: PaddingValues,
-    listState: LazyListState
+    listState: LazyListState,
+    onUiEvent: (ContactsUiEvent) -> Unit
 ) {
     when (uiState) {
         ContactsUiState.Loading -> {
@@ -166,23 +173,26 @@ private fun ContactsContent(
                 groups = uiState.groups,
                 mode = mode,
                 innerPadding = innerPadding,
-                listState = listState
+                listState = listState,
+                onUiEvent = onUiEvent
             )
         }
 
         is ContactsUiState.Error -> {
-            val overviewMode = mode as? ContactsScreenMode.Overview
+            val isOverview = mode is ContactsScreenMode.Overview
 
             ContactsErrorContent(
                 message = uiState.message,
                 actionText =
-                    if (overviewMode != null) {
+                    if (isOverview) {
                         stringResource(Res.string.base_import_contact)
                     } else {
                         null
                     },
                 onAction = {
-                    overviewMode?.onImportContact?.invoke()
+                    if (isOverview) {
+                        onUiEvent(ContactsUiEvent.ImportContactClicked)
+                    }
                 },
                 modifier =
                     Modifier
@@ -199,7 +209,8 @@ private fun ContactsList(
     groups: List<ContactGroupEntity>,
     mode: ContactsScreenMode,
     innerPadding: PaddingValues,
-    listState: LazyListState
+    listState: LazyListState,
+    onUiEvent: (ContactsUiEvent) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -215,7 +226,9 @@ private fun ContactsList(
     ) {
         if (mode is ContactsScreenMode.Overview) {
             item(key = "create_group") {
-                CreateGroupListItem(onClick = mode.onCreateGroup)
+                CreateGroupListItem(
+                    onClick = { onUiEvent(ContactsUiEvent.CreateGroupClicked) }
+                )
             }
         }
 
@@ -224,18 +237,17 @@ private fun ContactsList(
             onContactClick = { contact ->
                 when (mode) {
                     is ContactsScreenMode.Overview -> {
-                        mode.onContactClick(
-                            contact.id,
-                            contact.displayName.orEmpty()
+                        onUiEvent(
+                            ContactsUiEvent.ContactClicked(
+                                contactId = contact.id,
+                                contactName = contact.displayName.orEmpty()
+                            )
                         )
                     }
 
-                    is ContactsScreenMode.GroupSelection -> {
-                        mode.onContactSelected(contact.id)
-                    }
-
+                    is ContactsScreenMode.GroupSelection,
                     is ContactsScreenMode.MemberSelection -> {
-                        mode.onContactSelected(contact.id)
+                        onUiEvent(ContactsUiEvent.ContactSelectionToggled(contact.id))
                     }
                 }
             },
@@ -271,16 +283,8 @@ fun ContactsScreenPreview() {
                 ContactsUiState.Content(
                     groups = listOf()
                 ),
-            mode =
-                ContactsScreenMode.Overview(
-                    onCreateGroup = {},
-                    onContactClick = { _, _ -> },
-                    onImportContact = {},
-                    onImportDeviceContacts = {}
-                ),
-            searchQuery = "",
-            onSearchQueryChanged = {},
-            onBack = {}
+            mode = ContactsScreenMode.Overview(searchQuery = ""),
+            onUiEvent = {}
         )
     }
 }

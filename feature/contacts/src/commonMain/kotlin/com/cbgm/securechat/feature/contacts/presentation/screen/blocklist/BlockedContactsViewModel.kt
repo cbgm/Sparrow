@@ -1,11 +1,13 @@
 package com.cbgm.securechat.feature.contacts.presentation.screen.blocklist
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.cbgm.securechat.feature.contacts.domain.model.Contact
+import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.contacts.domain.usecase.BlockContact
 import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContactBlocklist
 import com.cbgm.securechat.feature.contacts.domain.usecase.UnblockContact
+import com.cbgm.securechat.feature.contacts.presentation.model.BlockedContactsEffect
+import com.cbgm.securechat.feature.contacts.presentation.model.BlockedContactsUiEvent
+import com.cbgm.securechat.feature.contacts.presentation.model.BlockedContactsUiState
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,31 +16,32 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class BlockedContactsUiState(
-    val blockedContacts: List<Contact> = emptyList(),
-    val availableContacts: List<Contact> = emptyList(),
-    val showAddContacts: Boolean = false,
-    val phoneNumber: String = "",
-    val phoneNumberError: String? = null,
-    val processingContactId: String? = null
-)
-
-sealed interface BlockedContactsEffect {
-    data class ShowError(
-        val message: String
-    ) : BlockedContactsEffect
-}
-
 class BlockedContactsViewModel(
     observeContactBlocklist: ObserveContactBlocklist,
     private val blockContact: BlockContact,
     private val unblockContact: UnblockContact
-) : ViewModel() {
+) : BaseViewModel() {
     private val _uiState = MutableStateFlow(BlockedContactsUiState())
     val uiState: StateFlow<BlockedContactsUiState> = _uiState.asStateFlow()
 
     private val _effects = Channel<BlockedContactsEffect>(capacity = Channel.BUFFERED)
     val effects = _effects.receiveAsFlow()
+
+    fun onUiEvent(event: BlockedContactsUiEvent) {
+        when (event) {
+            BlockedContactsUiEvent.BackClicked -> navigateBack()
+            BlockedContactsUiEvent.AddContactClicked -> showAddContacts()
+            BlockedContactsUiEvent.AddContactsDismissed -> dismissAddContacts()
+            is BlockedContactsUiEvent.PhoneNumberChanged -> updatePhoneNumber(event.value)
+            BlockedContactsUiEvent.BlockPhoneNumberClicked -> blockPhoneNumber()
+            is BlockedContactsUiEvent.BlockContactClicked -> block(event.contactId)
+            is BlockedContactsUiEvent.UnblockContactClicked -> unblock(event.contactId)
+        }
+    }
+
+    private fun navigateBack() {
+        navigator.popBackStack()
+    }
 
     init {
         viewModelScope.launch {
@@ -53,7 +56,7 @@ class BlockedContactsViewModel(
         }
     }
 
-    fun showAddContacts() {
+    private fun showAddContacts() {
         _uiState.update {
             it.copy(
                 showAddContacts = true,
@@ -63,7 +66,7 @@ class BlockedContactsViewModel(
         }
     }
 
-    fun dismissAddContacts() {
+    private fun dismissAddContacts() {
         _uiState.update {
             it.copy(
                 showAddContacts = false,
@@ -73,7 +76,7 @@ class BlockedContactsViewModel(
         }
     }
 
-    fun updatePhoneNumber(phoneNumber: String) {
+    private fun updatePhoneNumber(phoneNumber: String) {
         _uiState.update {
             it.copy(
                 phoneNumber = phoneNumber,
@@ -82,13 +85,13 @@ class BlockedContactsViewModel(
         }
     }
 
-    fun block(contactId: String) {
+    private fun block(contactId: String) {
         updateContact(contactId) {
             blockContact(contactId)
         }
     }
 
-    fun blockPhoneNumber() {
+    private fun blockPhoneNumber() {
         val phoneNumber = _uiState.value.phoneNumber.trim()
 
         if (phoneNumber.isEmpty() || _uiState.value.processingContactId != null) {
@@ -125,7 +128,7 @@ class BlockedContactsViewModel(
         }
     }
 
-    fun unblock(contactId: String) {
+    private fun unblock(contactId: String) {
         updateContact(contactId) {
             unblockContact(contactId)
         }

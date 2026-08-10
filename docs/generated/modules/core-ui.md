@@ -10,12 +10,12 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `core` |
 | Directory | `core/ui` |
 | Build file | `core/ui/build.gradle.kts` |
-| Kotlin files | 27 |
-| Production Kotlin files | 27 |
-| Test Kotlin files | 0 |
+| Kotlin files | 33 |
+| Production Kotlin files | 32 |
+| Test Kotlin files | 1 |
 | Resource files | 1 |
 | Direct dependencies | 1 |
-| Direct dependents | 9 |
+| Direct dependents | 10 |
 
 ## Source sets
 
@@ -23,6 +23,7 @@ Generated automatically by `./gradlew architectureReport`.
 - `androidHostTest`
 - `androidMain`
 - `commonMain`
+- `commonTest`
 - `iosMain`
 
 ## Dependencies
@@ -31,6 +32,7 @@ Generated automatically by `./gradlew architectureReport`.
 
 ## Dependents
 
+- [`:androidApp`](../modules/androidApp.md)
 - [`:feature:chats`](../modules/feature-chats.md)
 - [`:feature:contactimport`](../modules/feature-contactimport.md)
 - [`:feature:contacts`](../modules/feature-contacts.md)

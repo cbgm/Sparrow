@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cbgm.securechat.feature.chats.presentation.model.ChatUiEvent
 import com.cbgm.securechat.feature.chats.presentation.screen.ChatScreen
 import com.cbgm.securechat.feature.chats.presentation.screen.chat.ChatViewModel
 import com.cbgm.securechat.feature.chats.presentation.screen.chat.component.ManualIdentitySetupDialog
@@ -20,11 +21,6 @@ fun ChatRoute(
     conversationId: String,
     contactId: String,
     contactName: String,
-    onBack: () -> Unit,
-    onClickHeader: () -> Unit,
-    onVerifyIdentity: () -> Unit,
-    onShareIdentity: () -> Unit,
-    onImportIdentity: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ChatViewModel =
         koinViewModel {
@@ -36,7 +32,6 @@ fun ChatRoute(
         }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
     var showManualIdentitySetupDialog by remember(contactId) { mutableStateOf(false) }
 
     LaunchedEffect(key1 = contactId) {
@@ -52,11 +47,9 @@ fun ChatRoute(
     val incomingMessageIds =
         uiState.messages
             .asSequence()
-            .filter { message ->
-                !message.isMine
-            }.map { message ->
-                message.id
-            }.toList()
+            .filter { message -> !message.isMine }
+            .map { message -> message.id }
+            .toList()
 
     LaunchedEffect(key1 = incomingMessageIds) {
         if (incomingMessageIds.isNotEmpty()) {
@@ -66,15 +59,13 @@ fun ChatRoute(
 
     ChatScreen(
         uiState = uiState,
-        onMessageTextChanged = viewModel::onMessageTextChanged,
-        onSendClick = viewModel::sendMessage,
-        onRetryMessage = viewModel::retryMessage,
-        onVerifyIdentity = onVerifyIdentity,
-        onManualIdentitySetup = {
-            showManualIdentitySetupDialog = true
+        onUiEvent = { event ->
+            if (event == ChatUiEvent.ManualIdentitySetupClicked) {
+                showManualIdentitySetupDialog = true
+            } else {
+                viewModel.onUiEvent(event)
+            }
         },
-        onClickHeader = onClickHeader,
-        onBack = onBack,
         modifier = modifier
     )
 
@@ -82,11 +73,11 @@ fun ChatRoute(
         ManualIdentitySetupDialog(
             onShareIdentity = {
                 showManualIdentitySetupDialog = false
-                onShareIdentity()
+                viewModel.onUiEvent(ChatUiEvent.ShareIdentityClicked)
             },
             onImportIdentity = {
                 showManualIdentitySetupDialog = false
-                onImportIdentity()
+                viewModel.onUiEvent(ChatUiEvent.ImportIdentityClicked)
             },
             onDismiss = {
                 showManualIdentitySetupDialog = false

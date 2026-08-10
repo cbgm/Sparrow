@@ -11,6 +11,7 @@ import com.cbgm.securechat.core.protocol.di.protocolModule
 import com.cbgm.securechat.core.transport.ControlPlaneConfiguration
 import com.cbgm.securechat.core.transport.ControlPlaneDirectorySynchronizer
 import com.cbgm.securechat.core.transport.ControlPlaneHealthMonitor
+import com.cbgm.securechat.core.ui.di.coreUiModule
 import com.cbgm.securechat.data.database.di.androidDatabaseModule
 import com.cbgm.securechat.di.appModule
 import com.cbgm.securechat.di.sharedModule
@@ -61,6 +62,7 @@ class SecureChatApplication : Application() {
         listOf(
             cryptoModule,
             protocolModule,
+            coreUiModule,
             androidDatabaseModule,
             androidIdentityStorageModule,
             identityModule,

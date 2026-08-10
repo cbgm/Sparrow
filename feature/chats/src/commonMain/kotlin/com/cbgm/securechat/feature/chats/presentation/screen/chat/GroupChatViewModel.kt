@@ -1,8 +1,9 @@
 package com.cbgm.securechat.feature.chats.presentation.screen.chat
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.logging.SecureChatLog
+import com.cbgm.securechat.core.ui.navigation.AppRoute
+import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.chats.domain.model.Conversation
 import com.cbgm.securechat.feature.chats.domain.model.GroupConversationState
 import com.cbgm.securechat.feature.chats.domain.model.GroupMemberInvitationStatus
@@ -14,14 +15,13 @@ import com.cbgm.securechat.feature.chats.domain.usecase.ObserveTypingIndicator
 import com.cbgm.securechat.feature.chats.domain.usecase.RetryMessage
 import com.cbgm.securechat.feature.chats.domain.usecase.SendGroupMessage
 import com.cbgm.securechat.feature.chats.domain.usecase.SetTypingIndicator
+import com.cbgm.securechat.feature.chats.presentation.model.ChatUiEvent
 import com.cbgm.securechat.feature.chats.presentation.model.ChatUiState
-import com.cbgm.securechat.feature.chats.presentation.model.GroupChatEffect
 import com.cbgm.securechat.feature.chats.presentation.model.GroupMemberProgressUi
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
 import com.cbgm.securechat.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContacts
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,7 +32,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -50,16 +49,13 @@ class GroupChatViewModel(
     observeContacts: ObserveContacts,
     private val observeTypingIndicator: ObserveTypingIndicator,
     private val setTypingIndicator: SetTypingIndicator
-) : ViewModel() {
+) : BaseViewModel() {
     private val logger = SecureChatLog.withTag("GroupChatViewModel")
 
     private val messageText = MutableStateFlow("")
     private val errorMessage = MutableStateFlow<String?>(null)
     private val typingContactIds = MutableStateFlow<Set<String>>(emptySet())
     private val participantContactIds = MutableStateFlow<Set<String>>(emptySet())
-
-    private val _effects = Channel<GroupChatEffect>(capacity = Channel.BUFFERED)
-    val effects = _effects.receiveAsFlow()
 
     private var localTypingStopJob: Job? = null
     private var isLocalTyping = false
@@ -180,7 +176,31 @@ class GroupChatViewModel(
         observeParticipants()
     }
 
-    fun onMessageTextChanged(value: String) {
+    fun onUiEvent(event: ChatUiEvent) {
+        when (event) {
+            is ChatUiEvent.MessageTextChanged -> onMessageTextChanged(event.text)
+            ChatUiEvent.SendClicked -> sendMessage()
+            ChatUiEvent.HeaderClicked -> openGroupDetails()
+            is ChatUiEvent.RetryMessage -> retryMessage(event.messageId)
+            ChatUiEvent.VerifyIdentityClicked -> Unit
+            ChatUiEvent.ManualIdentitySetupClicked,
+            ChatUiEvent.ShareIdentityClicked,
+            ChatUiEvent.ImportIdentityClicked -> Unit
+            ChatUiEvent.BackClicked -> navigateBack()
+            ChatUiEvent.AcceptGroupInvitation -> acceptInvitation()
+            ChatUiEvent.DeclineGroupInvitation -> declineInvitation()
+        }
+    }
+
+    private fun navigateBack() {
+        navigator.popBackStackTo(AppRoute.Main)
+    }
+
+    private fun openGroupDetails() {
+        navigator.navigateTo(AppRoute.GroupDetails(conversationId = conversationId))
+    }
+
+    private fun onMessageTextChanged(value: String) {
         messageText.value = value
         errorMessage.value = null
 
@@ -214,7 +234,7 @@ class GroupChatViewModel(
         sendTypingState(isTyping = false)
     }
 
-    fun sendMessage() {
+    private fun sendMessage() {
         if (!uiState.value.isMessageInputEnabled) return
 
         val text = messageText.value.trim()
@@ -231,7 +251,7 @@ class GroupChatViewModel(
         }
     }
 
-    fun retryMessage(messageId: String) {
+    private fun retryMessage(messageId: String) {
         viewModelScope.launch {
             retryMessageUseCase(messageId).onFailure { error ->
                 errorMessage.value = error.message ?: "Message could not be queued again"
@@ -239,7 +259,7 @@ class GroupChatViewModel(
         }
     }
 
-    fun acceptInvitation() {
+    private fun acceptInvitation() {
         viewModelScope.launch {
             acceptGroupInvitation(conversationId).onFailure { error ->
                 errorMessage.value = error.message ?: "Group invitation could not be accepted"
@@ -247,11 +267,11 @@ class GroupChatViewModel(
         }
     }
 
-    fun declineInvitation() {
+    private fun declineInvitation() {
         viewModelScope.launch {
             declineGroupInvitation(conversationId)
                 .onSuccess {
-                    _effects.send(GroupChatEffect.ConversationRemoved)
+                    navigator.popBackStackTo(AppRoute.Main)
                 }.onFailure { error ->
                     errorMessage.value = error.message ?: "Group invitation could not be declined"
                 }

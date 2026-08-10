@@ -11,14 +11,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cbgm.securechat.feature.contacts.presentation.screen.blocklist.BlockedContactsEffect
+import com.cbgm.securechat.feature.contacts.presentation.model.BlockedContactsEffect
 import com.cbgm.securechat.feature.contacts.presentation.screen.blocklist.BlockedContactsScreen
 import com.cbgm.securechat.feature.contacts.presentation.screen.blocklist.BlockedContactsViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun BlockedContactsRoute(
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: BlockedContactsViewModel = koinViewModel()
 ) {
@@ -26,9 +25,9 @@ fun BlockedContactsRoute(
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(viewModel) {
-        viewModel.effects.collect { effect ->
-            when (effect) {
-                is BlockedContactsEffect.ShowError -> snackbarHostState.showSnackbar(effect.message)
+        viewModel.effects.collect { event ->
+            when (event) {
+                is BlockedContactsEffect.ShowError -> snackbarHostState.showSnackbar(event.message)
             }
         }
     }
@@ -36,13 +35,7 @@ fun BlockedContactsRoute(
     Box(modifier = modifier.fillMaxSize()) {
         BlockedContactsScreen(
             uiState = uiState,
-            onBack = onBack,
-            onAddContact = viewModel::showAddContacts,
-            onDismissAddContacts = viewModel::dismissAddContacts,
-            onPhoneNumberChanged = viewModel::updatePhoneNumber,
-            onBlockPhoneNumber = viewModel::blockPhoneNumber,
-            onBlockContact = viewModel::block,
-            onUnblockContact = viewModel::unblock
+            onUiEvent = viewModel::onUiEvent
         )
 
         SnackbarHost(

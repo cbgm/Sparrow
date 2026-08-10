@@ -1,8 +1,10 @@
 package com.cbgm.securechat.startup.presentation.screen
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cbgm.securechat.core.ui.navigation.AppRoute
+import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.startup.AppInitializer
+import com.cbgm.securechat.startup.presentation.model.StartupUiEvent
 import com.cbgm.securechat.startup.presentation.model.StartupUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -11,18 +13,35 @@ import kotlinx.coroutines.launch
 
 class StartupViewModel(
     private val appInitializer: AppInitializer
-) : ViewModel() {
+) : BaseViewModel() {
     private val mutableUiState = MutableStateFlow<StartupUiState>(StartupUiState.Loading)
 
     val uiState: StateFlow<StartupUiState> = mutableUiState.asStateFlow()
 
     private var initializationCompleted = false
 
+    fun onUiEvent(event: StartupUiEvent) {
+        when (event) {
+            StartupUiEvent.RetryClicked -> retry()
+            StartupUiEvent.RequestPhoneNumberHint,
+            is StartupUiEvent.PhoneNumberChanged,
+            StartupUiEvent.CreateIdentityClicked -> Unit
+        }
+    }
+
     init {
         initialize()
     }
 
-    fun retry() {
+    fun completeStartup() {
+        navigator.navigateTo(
+            route = AppRoute.Main,
+            popUpTo = AppRoute.Startup,
+            inclusive = true
+        )
+    }
+
+    private fun retry() {
         if (mutableUiState.value !is StartupUiState.Error) return
 
         initializationCompleted = false

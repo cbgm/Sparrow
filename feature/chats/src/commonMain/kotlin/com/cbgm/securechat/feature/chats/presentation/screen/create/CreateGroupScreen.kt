@@ -5,19 +5,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import com.cbgm.securechat.feature.chats.presentation.model.CreateGroupUiEvent
 import com.cbgm.securechat.feature.chats.presentation.model.CreateGroupUiState
 import com.cbgm.securechat.feature.contacts.presentation.model.ContactsScreenMode
+import com.cbgm.securechat.feature.contacts.presentation.model.ContactsUiEvent
 import com.cbgm.securechat.feature.contacts.presentation.model.ContactsUiState
 import com.cbgm.securechat.feature.contacts.presentation.screen.ContactsScreen
 
 @Composable
 fun CreateGroupScreen(
     uiState: CreateGroupUiState,
-    onBack: () -> Unit,
-    onTitleChanged: (String) -> Unit,
-    onSearchQueryChanged: (String) -> Unit,
-    onContactSelected: (String) -> Unit,
-    onCreateGroup: () -> Unit,
+    onUiEvent: (CreateGroupUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -36,13 +34,21 @@ fun CreateGroupScreen(
                 selectedContactIds = uiState.selectedContactIds,
                 confirmEnabled = uiState.canCreate,
                 confirming = uiState.isCreating,
-                onTitleChanged = onTitleChanged,
-                onContactSelected = onContactSelected,
-                onConfirmed = onCreateGroup
+                searchQuery = uiState.searchQuery
             ),
-        searchQuery = uiState.searchQuery,
-        onSearchQueryChanged = onSearchQueryChanged,
-        onBack = onBack,
+        onUiEvent = { event ->
+            when (event) {
+                is ContactsUiEvent.SearchQueryChanged ->
+                    onUiEvent(CreateGroupUiEvent.SearchQueryChanged(event.query))
+                is ContactsUiEvent.SelectionTitleChanged ->
+                    onUiEvent(CreateGroupUiEvent.TitleChanged(event.title))
+                is ContactsUiEvent.ContactSelectionToggled ->
+                    onUiEvent(CreateGroupUiEvent.ContactSelected(event.contactId))
+                ContactsUiEvent.SelectionConfirmed -> onUiEvent(CreateGroupUiEvent.CreateClicked)
+                ContactsUiEvent.BackClicked -> onUiEvent(CreateGroupUiEvent.BackClicked)
+                else -> Unit
+            }
+        },
         modifier = modifier,
         snackbarHostState = snackbarHostState
     )

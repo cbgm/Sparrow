@@ -1,9 +1,10 @@
 package com.cbgm.securechat.feature.contactimport.presentation.screen
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cbgm.securechat.core.ui.navigation.AppRoute
+import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.contactimport.domain.usecase.ImportSharedIdentity
-import com.cbgm.securechat.feature.contactimport.presentation.model.ImportIdentityEvent
+import com.cbgm.securechat.feature.contactimport.presentation.model.ImportIdentityUiEvent
 import com.cbgm.securechat.feature.contactimport.presentation.model.ImportIdentityUiState
 import com.cbgm.securechat.feature.contacts.domain.model.IdentityImportTrust
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,14 +15,24 @@ import kotlinx.coroutines.launch
 
 class ImportIdentityViewModel(
     private val importSharedIdentity: ImportSharedIdentity
-) : ViewModel() {
+) : BaseViewModel() {
     private val _uiState = MutableStateFlow(ImportIdentityUiState())
     val uiState: StateFlow<ImportIdentityUiState> = _uiState.asStateFlow()
 
-    fun onEvent(event: ImportIdentityEvent) {
+    private fun scanQrCode() {
+        navigator.navigateTo(AppRoute.ScanIdentity)
+    }
+
+    private fun navigateBack() {
+        navigator.popBackStack()
+    }
+
+    fun onUiEvent(event: ImportIdentityUiEvent) {
         when (event) {
-            is ImportIdentityEvent.EncodedIdentityChanged -> updateEncodedIdentity(event.value)
-            is ImportIdentityEvent.ImportClicked -> importIdentity(event.contactId, event.identityImportTrust)
+            is ImportIdentityUiEvent.EncodedIdentityChanged -> updateEncodedIdentity(event.value)
+            is ImportIdentityUiEvent.ImportClicked -> importIdentity(event.contactId, event.identityImportTrust)
+            ImportIdentityUiEvent.BackClicked -> navigateBack()
+            ImportIdentityUiEvent.ScanQrCodeClicked -> scanQrCode()
         }
     }
 

@@ -10,7 +10,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.securechat.feature.settings.presentation.model.SettingsEffect
-import com.cbgm.securechat.feature.settings.presentation.model.SettingsEvent
 import com.cbgm.securechat.feature.settings.presentation.screen.SettingsScreen
 import com.cbgm.securechat.feature.settings.presentation.screen.SettingsViewModel
 import org.koin.compose.viewmodel.koinViewModel
@@ -20,21 +19,15 @@ fun SettingsRoute(
     modifier: Modifier = Modifier,
     scrollState: ScrollState,
     innerPadding: PaddingValues,
-    onNavigateToPrivacyPolicy: () -> Unit,
-    onNavigateToDataDisclaimer: () -> Unit,
-    onNavigateToLicenses: () -> Unit,
-    onNavigateToDeveloperMenu: () -> Unit,
-    onNavigateToBlockedContacts: () -> Unit,
-    onNavigateToControlPlanes: () -> Unit,
     viewModel: SettingsViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(viewModel) {
-        viewModel.effects.collect { effect ->
-            when (effect) {
-                is SettingsEffect.ShowSnackbar -> snackbarHostState.showSnackbar(effect.message)
+        viewModel.effects.collect { event ->
+            when (event) {
+                is SettingsEffect.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }
         }
     }
@@ -42,22 +35,7 @@ fun SettingsRoute(
     SettingsScreen(
         uiState = uiState,
         snackbarHostState = snackbarHostState,
-        onOpenPrivacyPolicy = onNavigateToPrivacyPolicy,
-        onOpenDataDisclaimer = onNavigateToDataDisclaimer,
-        onOpenLicenses = onNavigateToLicenses,
-        onOpenDeveloperMenu = onNavigateToDeveloperMenu,
-        onOpenBlockedContacts = onNavigateToBlockedContacts,
-        onOpenControlPlanes = onNavigateToControlPlanes,
-        onOpenLanguagePicker = { viewModel.onEvent(SettingsEvent.LanguagePickerOpened) },
-        onDismissLanguagePicker = { viewModel.onEvent(SettingsEvent.LanguagePickerDismissed) },
-        onLanguageSelected = { viewModel.onEvent(SettingsEvent.LanguageSelected(it)) },
-        onDirectIdentitySetupModeChanged = {
-            viewModel.onEvent(SettingsEvent.DirectIdentitySetupModeChanged(it))
-        },
-        onBlockUnknownContactInvitesChanged = {
-            viewModel.onEvent(SettingsEvent.BlockUnknownContactInvitesChanged(it))
-        },
-        onVersionRowTapped = { viewModel.onEvent(SettingsEvent.VersionRowTapped) },
+        onUiEvent = viewModel::onUiEvent,
         scrollState = scrollState,
         innerPadding = innerPadding,
         modifier = modifier

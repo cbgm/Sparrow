@@ -11,19 +11,13 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun DeveloperMenuRoute(
     modifier: Modifier = Modifier,
-    onBack: () -> Unit,
     viewModel: DeveloperMenuViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     DeveloperMenuScreen(
         uiState = uiState,
-        onBack = onBack,
-        onClearLocalData = viewModel::onClearLocalData,
-        onDisableDeveloperMode = {
-            viewModel.onDisableDeveloperMode()
-            onBack()
-        },
+        onUiEvent = viewModel::onUiEvent,
         modifier = modifier
     )
 }

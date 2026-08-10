@@ -18,6 +18,7 @@ import com.cbgm.securechat.feature.contacts.domain.model.KeyExchangeStatus
 import com.cbgm.securechat.feature.contacts.domain.model.SecureChatIdentity
 import com.cbgm.securechat.feature.contacts.presentation.component.contactdetails.ContactDetailsBody
 import com.cbgm.securechat.feature.contacts.presentation.component.contactdetails.ContactDetailsTopBar
+import com.cbgm.securechat.feature.contacts.presentation.model.ContactDetailsUiEvent
 import com.cbgm.securechat.feature.contacts.presentation.model.ContactDetailsUiState
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.base_contact
@@ -27,10 +28,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun ContactDetailsScreen(
     uiState: ContactDetailsUiState,
-    onBack: () -> Unit,
-    onRetry: () -> Unit,
-    onShareContact: () -> Unit,
-    onVerifyIdentity: () -> Unit,
+    onUiEvent: (ContactDetailsUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val title =
@@ -55,7 +53,7 @@ fun ContactDetailsScreen(
             ContactDetailsTopBar(
                 title = title,
                 containerColor = containerColor,
-                onBack = onBack
+                onBack = { onUiEvent(ContactDetailsUiEvent.BackClicked) }
             )
         }
     ) { innerPadding, scrollState ->
@@ -63,10 +61,10 @@ fun ContactDetailsScreen(
             uiState = uiState,
             innerPadding = innerPadding,
             scrollState = scrollState,
-            onBack = onBack,
-            onRetry = onRetry,
-            onShareContact = onShareContact,
-            onVerifyIdentity = onVerifyIdentity
+            onBack = { onUiEvent(ContactDetailsUiEvent.BackClicked) },
+            onRetry = { onUiEvent(ContactDetailsUiEvent.RetryClicked) },
+            onShareContact = { onUiEvent(ContactDetailsUiEvent.ShareContactClicked) },
+            onVerifyIdentity = { onUiEvent(ContactDetailsUiEvent.VerifyIdentityClicked) }
         )
     }
 }
@@ -130,10 +128,7 @@ private fun PreviewContactDetailsScreen() {
                     isSavingVerification = false,
                     verificationError = null
                 ),
-            onBack = {},
-            onRetry = {},
-            onShareContact = {},
-            onVerifyIdentity = {}
+            onUiEvent = {}
         )
     }
 }

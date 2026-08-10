@@ -4,17 +4,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.cbgm.securechat.feature.settings.domain.model.DisclaimerContent
 import com.cbgm.securechat.feature.settings.presentation.model.DisclaimerType
+import com.cbgm.securechat.feature.settings.presentation.screen.DisclaimerViewModel
 import com.cbgm.securechat.feature.settings.presentation.screen.MarkdownDisclaimerScreen
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.feature_settings_data_disclaimer
 import com.cbgm.securechat.resources.feature_settings_privacy_policy
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun DisclaimerRoute(
     type: DisclaimerType,
     modifier: Modifier = Modifier,
-    onBack: () -> Unit
+    viewModel: DisclaimerViewModel = koinViewModel()
 ) {
     MarkdownDisclaimerScreen(
         title =
@@ -27,7 +29,7 @@ fun DisclaimerRoute(
                 DisclaimerType.PRIVACY_POLICY -> DisclaimerContent.privacyPolicy
                 DisclaimerType.DATA_DISCLAIMER -> DisclaimerContent.dataDisclaimer
             },
-        onBack = onBack,
+        onUiEvent = viewModel::onUiEvent,
         modifier = modifier
     )
 }

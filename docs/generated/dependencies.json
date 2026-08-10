@@ -2,6 +2,7 @@
   {"source": ":androidApp", "target": ":core"},
   {"source": ":androidApp", "target": ":core:crypto"},
   {"source": ":androidApp", "target": ":core:protocol"},
+  {"source": ":androidApp", "target": ":core:ui"},
   {"source": ":androidApp", "target": ":data:database"},
   {"source": ":androidApp", "target": ":feature:chats"},
   {"source": ":androidApp", "target": ":feature:contactimport"},

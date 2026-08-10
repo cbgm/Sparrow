@@ -12,7 +12,6 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun ChatsRoute(
-    onChatClick: (conversationId: String, contactId: String, contactName: String, isGroup: Boolean) -> Unit,
     modifier: Modifier = Modifier,
     listState: LazyListState,
     innerPadding: PaddingValues,
@@ -22,10 +21,7 @@ fun ChatsRoute(
 
     ChatsScreen(
         uiState = uiState,
-        onChatClick = { chat ->
-            onChatClick(chat.conversationId, chat.contactId, chat.contactName, chat.isGroup)
-        },
-        onDeleteConversation = viewModel::deleteConversation,
+        onUiEvent = viewModel::onUiEvent,
         listState = listState,
         innerPadding = innerPadding,
         modifier = modifier

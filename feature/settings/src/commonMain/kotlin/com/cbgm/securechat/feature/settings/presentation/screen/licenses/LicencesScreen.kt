@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import com.cbgm.securechat.core.ui.component.SecureChatStaticScaffold
+import com.cbgm.securechat.feature.settings.presentation.model.LicensesUiEvent
 import com.cbgm.securechat.feature.settings.presentation.model.LicensesUiState
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.feature_settings_open_source_licenses
@@ -34,7 +35,7 @@ private val CardColor = Color(0xFF102A46)
 @Composable
 fun LicensesScreen(
     uiState: LicensesUiState,
-    onBack: () -> Unit,
+    onUiEvent: (LicensesUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val libraries by produceLibraries { uiState.libraries }
@@ -43,7 +44,7 @@ fun LicensesScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            LicensesTopBar(onBack = onBack)
+            LicensesTopBar(onBack = { onUiEvent(LicensesUiEvent.BackClicked) })
         }
     ) { innerPadding ->
         LibrariesContainer(

@@ -1,11 +1,14 @@
 package com.cbgm.securechat.feature.chats.presentation.screen
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.logging.SecureChatLog
+import com.cbgm.securechat.core.ui.navigation.AppRoute
+import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.chats.domain.usecase.DeleteConversation
 import com.cbgm.securechat.feature.chats.domain.usecase.ObserveConversations
 import com.cbgm.securechat.feature.chats.presentation.mapper.toChatListItem
+import com.cbgm.securechat.feature.chats.presentation.model.ChatListItem
+import com.cbgm.securechat.feature.chats.presentation.model.ChatsUiEvent
 import com.cbgm.securechat.feature.chats.presentation.model.ChatsUiState
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +19,7 @@ import kotlinx.coroutines.launch
 class ChatsViewModel(
     observeConversations: ObserveConversations,
     private val deleteConversationUseCase: DeleteConversation
-) : ViewModel() {
+) : BaseViewModel() {
     private val logger = SecureChatLog.withTag("ChatsViewModel")
     val uiState: StateFlow<ChatsUiState> =
         observeConversations()
@@ -32,7 +35,29 @@ class ChatsViewModel(
                 initialValue = ChatsUiState.Loading
             )
 
-    fun deleteConversation(conversationId: String) {
+    fun onUiEvent(event: ChatsUiEvent) {
+        when (event) {
+            is ChatsUiEvent.ChatClicked -> openChat(event.chat)
+            is ChatsUiEvent.DeleteConversation -> deleteConversation(event.conversationId)
+        }
+    }
+
+    private fun openChat(chat: ChatListItem) {
+        val route =
+            if (chat.isGroup) {
+                AppRoute.GroupConversation(conversationId = chat.conversationId)
+            } else {
+                AppRoute.Chat(
+                    conversationId = chat.conversationId,
+                    contactId = chat.contactId,
+                    contactName = chat.contactName
+                )
+            }
+
+        navigator.navigateTo(route)
+    }
+
+    private fun deleteConversation(conversationId: String) {
         viewModelScope.launch {
             deleteConversationUseCase(conversationId)
                 .onFailure { error ->

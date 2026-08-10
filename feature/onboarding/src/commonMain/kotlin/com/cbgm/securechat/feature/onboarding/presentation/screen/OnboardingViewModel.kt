@@ -1,18 +1,31 @@
 package com.cbgm.securechat.feature.onboarding.presentation.screen
 
-import androidx.lifecycle.ViewModel
+import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.onboarding.platform.PermissionRequestResult
 import com.cbgm.securechat.feature.onboarding.presentation.model.OnboardingPage
+import com.cbgm.securechat.feature.onboarding.presentation.model.OnboardingUiEvent
 import com.cbgm.securechat.feature.onboarding.presentation.model.OnboardingUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class OnboardingViewModel : ViewModel() {
+class OnboardingViewModel : BaseViewModel() {
     private val mutableState = MutableStateFlow(OnboardingUiState())
     val state: StateFlow<OnboardingUiState> = mutableState.asStateFlow()
 
-    fun next() {
+    fun onUiEvent(event: OnboardingUiEvent) {
+        when (event) {
+            OnboardingUiEvent.NextClicked -> next()
+            OnboardingUiEvent.RequestPermissionsClicked -> requestPermissions()
+            OnboardingUiEvent.RetryAutomaticNumberClicked -> retryAutomaticPhoneNumber()
+            OnboardingUiEvent.ChooseAnotherNumberClicked,
+            is OnboardingUiEvent.PhoneNumberChanged,
+            is OnboardingUiEvent.NameChanged,
+            OnboardingUiEvent.ApproveAndCreateClicked -> Unit
+        }
+    }
+
+    private fun next() {
         mutableState.value =
             when (mutableState.value.page) {
                 OnboardingPage.WELCOME -> mutableState.value.copy(page = OnboardingPage.PRIVACY)
@@ -22,7 +35,7 @@ class OnboardingViewModel : ViewModel() {
             }
     }
 
-    fun requestPermissions() {
+    private fun requestPermissions() {
         mutableState.value =
             mutableState.value.copy(
                 permissionRequestId = mutableState.value.permissionRequestId + 1
@@ -44,7 +57,7 @@ class OnboardingViewModel : ViewModel() {
             )
     }
 
-    fun retryAutomaticPhoneNumber() {
+    private fun retryAutomaticPhoneNumber() {
         if (!mutableState.value.phonePermissionGranted) return
         mutableState.value =
             mutableState.value.copy(

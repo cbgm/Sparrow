@@ -1,8 +1,9 @@
 package com.cbgm.securechat.feature.identity.presentation.screen
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.identity.domain.usecase.CreateSharedIdentity
+import com.cbgm.securechat.feature.identity.presentation.model.ShareIdentityUiEvent
 import com.cbgm.securechat.feature.identity.presentation.model.ShareIdentityUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,7 +13,7 @@ import kotlinx.coroutines.launch
 
 class ShareIdentityViewModel(
     private val createSharedIdentity: CreateSharedIdentity
-) : ViewModel() {
+) : BaseViewModel() {
     private val _uiState = MutableStateFlow(ShareIdentityUiState())
 
     val uiState: StateFlow<ShareIdentityUiState> = _uiState.asStateFlow()
@@ -21,7 +22,19 @@ class ShareIdentityViewModel(
         generateSharedIdentity()
     }
 
-    fun generateSharedIdentity() {
+    fun onUiEvent(event: ShareIdentityUiEvent) {
+        when (event) {
+            ShareIdentityUiEvent.GenerateClicked -> generateSharedIdentity()
+            ShareIdentityUiEvent.BackClicked -> navigateBack()
+            ShareIdentityUiEvent.ShareClicked -> Unit
+        }
+    }
+
+    private fun navigateBack() {
+        navigator.popBackStack()
+    }
+
+    private fun generateSharedIdentity() {
         if (_uiState.value.isGenerating) {
             return
         }

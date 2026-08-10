@@ -1,7 +1,8 @@
 package com.cbgm.securechat.feature.identity.presentation.screen
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cbgm.securechat.core.ui.navigation.AppRoute
+import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.identity.domain.model.IdentityStatus
 import com.cbgm.securechat.feature.identity.domain.usecase.CreateIdentity
 import com.cbgm.securechat.feature.identity.domain.usecase.GetIdentityStatus
@@ -9,6 +10,7 @@ import com.cbgm.securechat.feature.identity.domain.usecase.GetLocalPhoneNumber
 import com.cbgm.securechat.feature.identity.domain.usecase.GetPublicIdentity
 import com.cbgm.securechat.feature.identity.domain.usecase.NormalizeLocalPhoneNumber
 import com.cbgm.securechat.feature.identity.domain.usecase.SaveLocalPhoneName
+import com.cbgm.securechat.feature.identity.presentation.model.IdentityUiEvent
 import com.cbgm.securechat.feature.identity.presentation.model.IdentityUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +24,7 @@ class IdentityViewModel(
     private val getLocalPhoneNumber: GetLocalPhoneNumber,
     private val normalizeLocalPhoneNumber: NormalizeLocalPhoneNumber,
     private val saveLocalPhoneName: SaveLocalPhoneName
-) : ViewModel() {
+) : BaseViewModel() {
     private val mutableUiState = MutableStateFlow<IdentityUiState>(IdentityUiState.Loading)
 
     val uiState: StateFlow<IdentityUiState> = mutableUiState.asStateFlow()
@@ -31,7 +33,22 @@ class IdentityViewModel(
         loadIdentityState()
     }
 
-    fun loadIdentityState() {
+    fun onUiEvent(event: IdentityUiEvent) {
+        when (event) {
+            IdentityUiEvent.RequestPhoneNumberHint -> Unit
+            is IdentityUiEvent.PhoneNumberChanged ->
+                updatePhoneNumber(
+                    value = event.value,
+                    errorMessage = null
+                )
+            is IdentityUiEvent.NameChanged -> updateName(event.value)
+            IdentityUiEvent.CreateIdentityClicked -> createNewIdentity()
+            IdentityUiEvent.RetryClicked -> loadIdentityState()
+            IdentityUiEvent.ShareIdentityClicked -> navigator.navigateTo(AppRoute.ShareIdentity)
+        }
+    }
+
+    private fun loadIdentityState() {
         viewModelScope.launch {
             mutableUiState.value = IdentityUiState.Loading
 
@@ -45,19 +62,6 @@ class IdentityViewModel(
                         )
                 }
         }
-    }
-
-    fun onPhoneNumberChanged(value: String) {
-        updatePhoneNumber(
-            value = value,
-            errorMessage = null
-        )
-    }
-
-    fun onNameChanged(value: String) {
-        updateName(
-            value = value
-        )
     }
 
     fun onSuggestedPhoneNumber(phoneNumber: String) {
@@ -85,7 +89,7 @@ class IdentityViewModel(
         }
     }
 
-    fun createNewIdentity() {
+    private fun createNewIdentity() {
         val currentState = mutableUiState.value
 
         if (currentState !is IdentityUiState.NoIdentity) return
@@ -192,7 +196,9 @@ class IdentityViewModel(
         if (localPhoneNumber == null) {
             mutableUiState.value =
                 IdentityUiState.Error(
-                    message = "Identity exists, but the local phone number is missing. Clear app data once and complete onboarding again."
+                    message =
+                        "Identity exists, but the local phone number is missing. " +
+                            "Clear app data once and complete onboarding again."
                 )
 
             return

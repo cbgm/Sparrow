@@ -1,9 +1,10 @@
 package com.cbgm.securechat.feature.settings.presentation.screen.developer
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.transport.TransportDiagnosticsProvider
+import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.settings.domain.repository.SettingsRepository
+import com.cbgm.securechat.feature.settings.presentation.model.DeveloperMenuUiEvent
 import com.cbgm.securechat.feature.settings.presentation.model.DeveloperMenuUiState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +18,7 @@ import kotlinx.coroutines.launch
 class DeveloperMenuViewModel(
     private val settingsRepository: SettingsRepository,
     private val transportDiagnosticsProvider: TransportDiagnosticsProvider
-) : ViewModel() {
+) : BaseViewModel() {
     private val _uiState =
         MutableStateFlow(
             DeveloperMenuUiState(
@@ -32,7 +33,15 @@ class DeveloperMenuViewModel(
         refreshTransportDiagnostics()
     }
 
-    fun onClearLocalData() {
+    fun onUiEvent(event: DeveloperMenuUiEvent) {
+        when (event) {
+            DeveloperMenuUiEvent.BackClicked -> navigator.popBackStack()
+            DeveloperMenuUiEvent.ClearLocalDataClicked -> onClearLocalData()
+            DeveloperMenuUiEvent.DisableDeveloperModeClicked -> onDisableDeveloperMode()
+        }
+    }
+
+    private fun onClearLocalData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isClearingLocalData = true) }
             settingsRepository.clearLocalData()
@@ -40,9 +49,10 @@ class DeveloperMenuViewModel(
         }
     }
 
-    fun onDisableDeveloperMode() {
+    private fun onDisableDeveloperMode() {
         viewModelScope.launch {
             settingsRepository.setDeveloperModeEnabled(false)
+            navigator.popBackStack()
         }
     }
 

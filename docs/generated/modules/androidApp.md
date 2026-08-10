@@ -10,11 +10,11 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `androidApp` |
 | Directory | `androidApp` |
 | Build file | `androidApp/build.gradle.kts` |
-| Kotlin files | 9 |
-| Production Kotlin files | 9 |
+| Kotlin files | 10 |
+| Production Kotlin files | 10 |
 | Test Kotlin files | 0 |
 | Resource files | 19 |
-| Direct dependencies | 16 |
+| Direct dependencies | 17 |
 | Direct dependents | 0 |
 
 ## Source sets
@@ -26,6 +26,7 @@ Generated automatically by `./gradlew architectureReport`.
 - [`:core`](../modules/core.md)
 - [`:core:crypto`](../modules/core-crypto.md)
 - [`:core:protocol`](../modules/core-protocol.md)
+- [`:core:ui`](../modules/core-ui.md)
 - [`:data:database`](../modules/data-database.md)
 - [`:feature:chats`](../modules/feature-chats.md)
 - [`:feature:contactimport`](../modules/feature-contactimport.md)

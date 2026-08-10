@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cbgm.securechat.feature.identity.presentation.model.IdentityUiEvent
 import com.cbgm.securechat.feature.identity.presentation.model.IdentityUiState
 import com.cbgm.securechat.feature.identity.presentation.platform.PhoneNumberHintLauncher
 import com.cbgm.securechat.feature.identity.presentation.platform.PhoneNumberHintResult
@@ -19,7 +20,6 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun IdentityRoute(
-    onShareIdentity: () -> Unit,
     scrollState: ScrollState,
     innerPadding: PaddingValues,
     modifier: Modifier = Modifier,
@@ -68,13 +68,13 @@ fun IdentityRoute(
 
     IdentityScreen(
         uiState = uiState,
-        onRequestPhoneNumberHint = {
-            phoneNumberHintRequestId += 1
+        onUiEvent = { event ->
+            if (event == IdentityUiEvent.RequestPhoneNumberHint) {
+                phoneNumberHintRequestId += 1
+            } else {
+                viewModel.onUiEvent(event)
+            }
         },
-        onPhoneNumberChanged = viewModel::onPhoneNumberChanged,
-        onCreateIdentity = viewModel::createNewIdentity,
-        onRetry = viewModel::loadIdentityState,
-        onShareIdentity = onShareIdentity,
         scrollState = scrollState,
         innerPadding = innerPadding,
         modifier = modifier

@@ -1,10 +1,11 @@
 package com.cbgm.securechat.feature.chats.presentation.screen.details
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.extensions.toFingerprint
+import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.chats.domain.usecase.VerifyGroupMember
 import com.cbgm.securechat.feature.chats.presentation.model.GroupMemberQrVerificationError
+import com.cbgm.securechat.feature.chats.presentation.model.GroupMemberQrVerificationUiEvent
 import com.cbgm.securechat.feature.chats.presentation.model.GroupMemberQrVerificationUiState
 import com.cbgm.securechat.feature.contactimport.presentation.model.ScannedIdentityPreview
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
@@ -22,11 +23,21 @@ class GroupMemberQrVerificationViewModel(
     private val identityShareCodec: IdentityShareCodec,
     private val getContact: GetContact,
     private val verifyGroupMember: VerifyGroupMember
-) : ViewModel() {
+) : BaseViewModel() {
     private val _uiState = MutableStateFlow(GroupMemberQrVerificationUiState())
     val uiState: StateFlow<GroupMemberQrVerificationUiState> = _uiState.asStateFlow()
 
-    fun scan(encodedIdentity: String) {
+    fun onUiEvent(event: GroupMemberQrVerificationUiEvent) {
+        when (event) {
+            is GroupMemberQrVerificationUiEvent.QrCodeScanned -> scan(event.encodedIdentity)
+            GroupMemberQrVerificationUiEvent.BackClicked -> navigator.popBackStack()
+            GroupMemberQrVerificationUiEvent.ConfirmClicked -> confirm()
+            GroupMemberQrVerificationUiEvent.PreviewDismissed -> dismissPreview()
+            GroupMemberQrVerificationUiEvent.RetryClicked -> retry()
+        }
+    }
+
+    private fun scan(encodedIdentity: String) {
         if (_uiState.value.isProcessing || _uiState.value.preview != null) {
             return
         }
@@ -49,7 +60,7 @@ class GroupMemberQrVerificationViewModel(
         }
     }
 
-    fun confirm() {
+    private fun confirm() {
         val preview = _uiState.value.preview ?: return
 
         _uiState.update { state ->
@@ -76,6 +87,7 @@ class GroupMemberQrVerificationViewModel(
                         isVerified = true
                     )
                 }
+                navigator.popBackStack()
             }.onFailure {
                 _uiState.update { state ->
                     state.copy(
@@ -87,7 +99,7 @@ class GroupMemberQrVerificationViewModel(
         }
     }
 
-    fun dismissPreview() {
+    private fun dismissPreview() {
         _uiState.update { state ->
             state.copy(
                 preview = null,
@@ -96,7 +108,7 @@ class GroupMemberQrVerificationViewModel(
         }
     }
 
-    fun retry() {
+    private fun retry() {
         _uiState.update { state ->
             state.copy(
                 error = null,

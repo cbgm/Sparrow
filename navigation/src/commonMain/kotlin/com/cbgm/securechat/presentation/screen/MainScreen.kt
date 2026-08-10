@@ -35,7 +35,6 @@ import com.cbgm.securechat.core.ui.component.SecureChatScrollStateType
 import com.cbgm.securechat.core.ui.component.SecureChatTabbedScaffold
 import com.cbgm.securechat.core.ui.component.SecureChatTabbedScrollStates
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
-import com.cbgm.securechat.feature.chats.domain.usecase.GetOrCreateDirectConversation
 import com.cbgm.securechat.feature.chats.presentation.ChatsRoute
 import com.cbgm.securechat.feature.identity.presentation.IdentityRoute
 import com.cbgm.securechat.feature.settings.presentation.SettingsRoute
@@ -43,31 +42,14 @@ import com.cbgm.securechat.presentation.model.MainTab
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import org.koin.compose.koinInject
 
 @Suppress("UnusedContentLambdaTargetStateParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
-    onImportContact: () -> Unit,
-    onNavigateToPrivacyPolicy: () -> Unit,
-    onNavigateToDataDisclaimer: () -> Unit,
-    onNavigateToLicenses: () -> Unit,
-    onNavigateToDeveloperMenu: () -> Unit,
-    onNavigateToBlockedContacts: () -> Unit,
-    onNavigateToControlPlanes: () -> Unit,
-    onOpenChat: (
-        conversationId: String,
-        contactId: String,
-        contactName: String,
-        isGroup: Boolean
-    ) -> Unit,
-    onShareIdentity: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val getOrCreateDirectConversation = koinInject<GetOrCreateDirectConversation>()
-
     val tabs = MainTab.entries
 
     val pagerState =
@@ -124,15 +106,7 @@ fun MainScreen(
             MainContent(
                 pagerState = pagerState,
                 innerPadding = innerPadding,
-                scrollStates = scrollStates,
-                onOpenChat = onOpenChat,
-                onShareIdentity = onShareIdentity,
-                onNavigateToPrivacyPolicy = onNavigateToPrivacyPolicy,
-                onNavigateToDataDisclaimer = onNavigateToDataDisclaimer,
-                onNavigateToLicenses = onNavigateToLicenses,
-                onNavigateToDeveloperMenu = onNavigateToDeveloperMenu,
-                onNavigateToBlockedContacts = onNavigateToBlockedContacts,
-                onNavigateToControlPlanes = onNavigateToControlPlanes
+                scrollStates = scrollStates
             )
         }
 
@@ -147,23 +121,8 @@ fun MainScreen(
             // shadowElevation = 12.dp
         ) { dismissOverlay ->
             ContactsFlow(
-                modifier = Modifier.fillMaxSize(),
-                onBack = dismissOverlay,
-                onImportContact = {
-                    dismissOverlay()
-                    onImportContact()
-                },
-                onContactClick = { contactId, contactName ->
-                    coroutineScope.launch {
-                        val conversationId = getOrCreateDirectConversation(contactId)
-                        dismissOverlay()
-                        onOpenChat(conversationId, contactId, contactName, false)
-                    }
-                },
-                onGroupCreated = { conversationId ->
-                    dismissOverlay()
-                    onOpenChat(conversationId, "", "", true)
-                }
+                onDismiss = dismissOverlay,
+                modifier = Modifier.fillMaxSize()
             )
         }
     }
@@ -261,15 +220,7 @@ private fun MainBottomBar(
 private fun MainContent(
     pagerState: PagerState,
     innerPadding: PaddingValues,
-    scrollStates: SecureChatTabbedScrollStates<MainTab>,
-    onOpenChat: (String, String, String, Boolean) -> Unit,
-    onShareIdentity: () -> Unit,
-    onNavigateToPrivacyPolicy: () -> Unit,
-    onNavigateToDataDisclaimer: () -> Unit,
-    onNavigateToLicenses: () -> Unit,
-    onNavigateToDeveloperMenu: () -> Unit,
-    onNavigateToBlockedContacts: () -> Unit,
-    onNavigateToControlPlanes: () -> Unit
+    scrollStates: SecureChatTabbedScrollStates<MainTab>
 ) {
     HorizontalPager(
         state = pagerState,
@@ -278,7 +229,6 @@ private fun MainContent(
         when (MainTab.entries[page]) {
             MainTab.Chats -> {
                 ChatsRoute(
-                    onChatClick = onOpenChat,
                     listState =
                         scrollStates.lazyListState(
                             MainTab.Chats
@@ -290,7 +240,6 @@ private fun MainContent(
 
             MainTab.Me -> {
                 IdentityRoute(
-                    onShareIdentity = onShareIdentity,
                     scrollState =
                         scrollStates.scrollState(
                             MainTab.Me
@@ -306,13 +255,7 @@ private fun MainContent(
                         scrollStates.scrollState(
                             MainTab.Settings
                         ),
-                    innerPadding = innerPadding,
-                    onNavigateToPrivacyPolicy = onNavigateToPrivacyPolicy,
-                    onNavigateToDataDisclaimer = onNavigateToDataDisclaimer,
-                    onNavigateToLicenses = onNavigateToLicenses,
-                    onNavigateToDeveloperMenu = onNavigateToDeveloperMenu,
-                    onNavigateToBlockedContacts = onNavigateToBlockedContacts,
-                    onNavigateToControlPlanes = onNavigateToControlPlanes
+                    innerPadding = innerPadding
                 )
             }
         }
@@ -323,17 +266,6 @@ private fun MainContent(
 @Composable
 private fun MainScreenPreview() {
     SecureChatTheme {
-        MainScreen(
-            onImportContact = {},
-            onOpenChat = { _, _, _, _ -> },
-            onShareIdentity = {},
-            onNavigateToPrivacyPolicy = {},
-            onNavigateToDataDisclaimer = {},
-            onNavigateToLicenses = {},
-            onNavigateToDeveloperMenu = {},
-            onNavigateToBlockedContacts = {},
-            onNavigateToControlPlanes = {},
-            modifier = Modifier.fillMaxSize()
-        )
+        MainScreen(modifier = Modifier.fillMaxSize())
     }
 }

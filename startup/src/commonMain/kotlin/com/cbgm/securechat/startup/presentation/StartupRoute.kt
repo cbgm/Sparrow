@@ -11,33 +11,37 @@ import com.cbgm.securechat.startup.presentation.screen.StartupScreen
 import com.cbgm.securechat.startup.presentation.screen.StartupViewModel
 import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun StartupRoute(
-    onStartupComplete: () -> Unit,
+    onStartupReady: () -> Unit,
     startupViewModel: StartupViewModel = koinViewModel()
 ) {
     val startupUiState by startupViewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(startupUiState) {
         if (startupUiState == StartupUiState.Ready) {
-            delay(1000)
-            onStartupComplete()
+            delay(1000.milliseconds)
+            startupViewModel.completeStartup()
+            onStartupReady()
         }
     }
 
     when (val state = startupUiState) {
         StartupUiState.IdentityRequired -> {
-            OnboardingRoute(onComplete = onStartupComplete)
+            OnboardingRoute(
+                onComplete = {
+                    startupViewModel.completeStartup()
+                    onStartupReady()
+                }
+            )
         }
         else -> {
             StartupScreen(
                 uiState = state,
                 identityUiState = IdentityUiState.Loading,
-                onRequestPhoneNumberHint = {},
-                onPhoneNumberChanged = {},
-                onCreateIdentity = {},
-                onRetry = startupViewModel::retry
+                onUiEvent = startupViewModel::onUiEvent
             )
         }
     }

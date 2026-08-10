@@ -39,6 +39,8 @@ import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.core.ui.theme.spacing
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
 import com.cbgm.securechat.feature.contacts.domain.model.DeviceContactLinkStatus
+import com.cbgm.securechat.feature.contacts.presentation.model.BlockedContactsUiEvent
+import com.cbgm.securechat.feature.contacts.presentation.model.BlockedContactsUiState
 import com.cbgm.securechat.feature.contacts.presentation.screen.blocklist.component.AddBlockedContactDialog
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.feature_contacts_add_blocked_contact
@@ -52,13 +54,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun BlockedContactsScreen(
     uiState: BlockedContactsUiState,
-    onBack: () -> Unit,
-    onAddContact: () -> Unit,
-    onDismissAddContacts: () -> Unit,
-    onPhoneNumberChanged: (String) -> Unit,
-    onBlockPhoneNumber: () -> Unit,
-    onBlockContact: (String) -> Unit,
-    onUnblockContact: (String) -> Unit,
+    onUiEvent: (BlockedContactsUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     SecureChatLazyScaffold(
@@ -74,7 +70,7 @@ fun BlockedContactsScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = { onUiEvent(BlockedContactsUiEvent.BackClicked) }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = null
@@ -133,7 +129,7 @@ fun BlockedContactsScreen(
                         BlockedContactRow(
                             contact = contact,
                             enabled = uiState.processingContactId == null,
-                            onUnblock = { onUnblockContact(contact.id) }
+                            onUnblock = { onUiEvent(BlockedContactsUiEvent.UnblockContactClicked(contact.id)) }
                         )
 
                         HorizontalDivider(
@@ -148,7 +144,7 @@ fun BlockedContactsScreen(
             }
 
             FloatingActionButton(
-                onClick = onAddContact,
+                onClick = { onUiEvent(BlockedContactsUiEvent.AddContactClicked) },
                 containerColor = MaterialTheme.colorScheme.secondary,
                 contentColor = MaterialTheme.colorScheme.background,
                 modifier =
@@ -170,10 +166,14 @@ fun BlockedContactsScreen(
             phoneNumberError = uiState.phoneNumberError,
             contacts = uiState.availableContacts,
             enabled = uiState.processingContactId == null,
-            onPhoneNumberChanged = onPhoneNumberChanged,
-            onBlockPhoneNumber = onBlockPhoneNumber,
-            onContactSelected = { contact -> onBlockContact(contact.id) },
-            onDismiss = onDismissAddContacts
+            onPhoneNumberChanged = { value ->
+                onUiEvent(BlockedContactsUiEvent.PhoneNumberChanged(value))
+            },
+            onBlockPhoneNumber = { onUiEvent(BlockedContactsUiEvent.BlockPhoneNumberClicked) },
+            onContactSelected = { contact ->
+                onUiEvent(BlockedContactsUiEvent.BlockContactClicked(contact.id))
+            },
+            onDismiss = { onUiEvent(BlockedContactsUiEvent.AddContactsDismissed) }
         )
     }
 }
@@ -257,13 +257,7 @@ private fun BlockedContactsScreenPreview() {
                             )
                         )
                 ),
-            onBack = {},
-            onAddContact = {},
-            onDismissAddContacts = {},
-            onPhoneNumberChanged = {},
-            onBlockPhoneNumber = {},
-            onBlockContact = {},
-            onUnblockContact = {}
+            onUiEvent = {}
         )
     }
 }

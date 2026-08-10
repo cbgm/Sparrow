@@ -8,7 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.securechat.core.extensions.toFingerprint
-import com.cbgm.securechat.feature.contactimport.presentation.model.ImportIdentityEvent
+import com.cbgm.securechat.feature.contactimport.presentation.model.ImportIdentityUiEvent
 import com.cbgm.securechat.feature.contactimport.presentation.model.ScannedIdentityPreview
 import com.cbgm.securechat.feature.contactimport.presentation.screen.ImportIdentityScreen
 import com.cbgm.securechat.feature.contactimport.presentation.screen.ImportIdentityViewModel
@@ -26,8 +26,6 @@ fun ImportIdentityRoute(
     contactId: String?,
     scannedIdentity: String?,
     onScannedIdentityConsumed: () -> Unit,
-    onScanQrCode: () -> Unit,
-    onBack: () -> Unit,
     viewModel: ImportIdentityViewModel = koinViewModel(),
     identityShareCodec: IdentityShareCodec = koinInject()
 ) {
@@ -59,7 +57,7 @@ fun ImportIdentityRoute(
                  * the current screen can show its normal validation
                  * error when the user presses Import.
                  */
-                viewModel.onEvent(ImportIdentityEvent.EncodedIdentityChanged(encodedIdentity))
+                viewModel.onUiEvent(ImportIdentityUiEvent.EncodedIdentityChanged(encodedIdentity))
             }
 
         onScannedIdentityConsumed()
@@ -67,17 +65,8 @@ fun ImportIdentityRoute(
 
     ImportIdentityScreen(
         uiState = uiState,
-        onEncodedIdentityChanged = { viewModel.onEvent(ImportIdentityEvent.EncodedIdentityChanged(it)) },
-        onImportClick = {
-            viewModel.onEvent(
-                ImportIdentityEvent.ImportClicked(
-                    contactId = contactId,
-                    identityImportTrust = IdentityImportTrust.UNVERIFIED
-                )
-            )
-        },
-        onScanQrCode = onScanQrCode,
-        onBack = onBack
+        onUiEvent = viewModel::onUiEvent,
+        importContactId = contactId
     )
 
     scannedIdentityPreview?.let { preview ->
@@ -87,10 +76,10 @@ fun ImportIdentityRoute(
             onConfirm = {
                 scannedIdentityPreview = null
 
-                viewModel.onEvent(ImportIdentityEvent.EncodedIdentityChanged(preview.encodedIdentity))
+                viewModel.onUiEvent(ImportIdentityUiEvent.EncodedIdentityChanged(preview.encodedIdentity))
 
-                viewModel.onEvent(
-                    ImportIdentityEvent.ImportClicked(
+                viewModel.onUiEvent(
+                    ImportIdentityUiEvent.ImportClicked(
                         contactId = contactId,
                         identityImportTrust = IdentityImportTrust.VERIFIED_IN_PERSON
                     )

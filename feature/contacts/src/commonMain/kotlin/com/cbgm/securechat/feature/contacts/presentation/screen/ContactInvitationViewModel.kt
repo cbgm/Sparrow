@@ -1,11 +1,13 @@
 package com.cbgm.securechat.feature.contacts.presentation.screen
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.security.DirectIdentitySetupMode
 import com.cbgm.securechat.core.security.DirectIdentitySetupModeRepository
+import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.contacts.domain.identity.IdentityInvitationService
 import com.cbgm.securechat.feature.contacts.domain.model.PendingContactInvitation
+import com.cbgm.securechat.feature.contacts.presentation.model.ContactInvitationEffect
+import com.cbgm.securechat.feature.contacts.presentation.model.ContactInvitationUiEvent
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,7 +21,7 @@ import kotlinx.coroutines.launch
 class ContactInvitationViewModel(
     private val identityInvitationService: IdentityInvitationService,
     modeRepository: DirectIdentitySetupModeRepository
-) : ViewModel() {
+) : BaseViewModel() {
     val pendingInvitations: StateFlow<List<PendingContactInvitation>> =
         combine(
             identityInvitationService.observePendingIncoming(),
@@ -42,19 +44,27 @@ class ContactInvitationViewModel(
     private val _effects = Channel<ContactInvitationEffect>(capacity = Channel.BUFFERED)
     val effects = _effects.receiveAsFlow()
 
-    fun accept(invitationId: String) {
+    fun onUiEvent(event: ContactInvitationUiEvent) {
+        when (event) {
+            is ContactInvitationUiEvent.AcceptClicked -> accept(event.invitationId)
+            is ContactInvitationUiEvent.DeclineClicked -> decline(event.invitationId)
+            is ContactInvitationUiEvent.DeclineAndBlockClicked -> declineAndBlock(event.invitationId)
+        }
+    }
+
+    private fun accept(invitationId: String) {
         updateInvitation(invitationId) {
             identityInvitationService.accept(invitationId)
         }
     }
 
-    fun decline(invitationId: String) {
+    private fun decline(invitationId: String) {
         updateInvitation(invitationId) {
             identityInvitationService.decline(invitationId)
         }
     }
 
-    fun declineAndBlock(invitationId: String) {
+    private fun declineAndBlock(invitationId: String) {
         updateInvitation(invitationId) {
             identityInvitationService.declineAndBlock(invitationId)
         }
@@ -81,10 +91,4 @@ class ContactInvitationViewModel(
             _processingInvitationId.value = null
         }
     }
-}
-
-sealed interface ContactInvitationEffect {
-    data class ShowError(
-        val message: String
-    ) : ContactInvitationEffect
 }

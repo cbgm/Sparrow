@@ -8,8 +8,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.securechat.feature.contacts.presentation.model.ContactsEffect
-import com.cbgm.securechat.feature.contacts.presentation.model.ContactsEvent
 import com.cbgm.securechat.feature.contacts.presentation.model.ContactsScreenMode
+import com.cbgm.securechat.feature.contacts.presentation.model.ContactsUiEvent
 import com.cbgm.securechat.feature.contacts.presentation.platform.rememberDeviceContactsPermissionRequest
 import com.cbgm.securechat.feature.contacts.presentation.screen.ContactsScreen
 import com.cbgm.securechat.feature.contacts.presentation.screen.ContactsViewModel
@@ -17,13 +17,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun ContactsRoute(
-    onBack: () -> Unit,
-    onImportContact: () -> Unit,
-    onCreateGroup: () -> Unit,
-    onContactClick: (
-        contactId: String,
-        contactName: String
-    ) -> Unit,
+    onEffect: (ContactsEffect) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ContactsViewModel = koinViewModel()
 ) {
@@ -35,6 +29,7 @@ fun ContactsRoute(
         viewModel.effects.collect { effect ->
             when (effect) {
                 is ContactsEffect.ShowError -> snackbarHostState.showSnackbar(effect.message)
+                else -> onEffect(effect)
             }
         }
     }
@@ -42,10 +37,10 @@ fun ContactsRoute(
     val requestDeviceContactsPermission =
         rememberDeviceContactsPermissionRequest(
             onPermissionGranted = {
-                viewModel.onEvent(ContactsEvent.ImportDeviceContacts)
+                viewModel.onUiEvent(ContactsUiEvent.ImportDeviceContacts)
             },
             onPermissionDenied = {
-                viewModel.onEvent(ContactsEvent.DeviceContactsPermissionDenied)
+                viewModel.onUiEvent(ContactsUiEvent.DeviceContactsPermissionDenied)
             }
         )
 
@@ -55,18 +50,14 @@ fun ContactsRoute(
 
     ContactsScreen(
         uiState = uiState,
-        mode =
-            ContactsScreenMode.Overview(
-                onContactClick = onContactClick,
-                onImportContact = onImportContact,
-                onCreateGroup = onCreateGroup,
-                onImportDeviceContacts = requestDeviceContactsPermission
-            ),
-        searchQuery = searchQuery,
-        onSearchQueryChanged = { query ->
-            viewModel.onEvent(ContactsEvent.SearchQueryChanged(query))
+        mode = ContactsScreenMode.Overview(searchQuery = searchQuery),
+        onUiEvent = { event ->
+            if (event == ContactsUiEvent.ImportDeviceContacts) {
+                requestDeviceContactsPermission()
+            } else {
+                viewModel.onUiEvent(event)
+            }
         },
-        onBack = onBack,
         modifier = modifier,
         snackbarHostState = snackbarHostState
     )

@@ -1,17 +1,21 @@
 package com.cbgm.securechat.feature.chats.presentation.screen.details
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cbgm.securechat.core.ui.navigation.AppRoute
+import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.chats.domain.usecase.AddGroupMembers
 import com.cbgm.securechat.feature.chats.domain.usecase.LeaveGroup
 import com.cbgm.securechat.feature.chats.domain.usecase.ObserveGroupVerification
 import com.cbgm.securechat.feature.chats.domain.usecase.RemoveGroupMember
 import com.cbgm.securechat.feature.chats.domain.usecase.SynchronizeGroupVerification
 import com.cbgm.securechat.feature.chats.domain.usecase.VerifyGroupMember
+import com.cbgm.securechat.feature.chats.presentation.model.AddGroupMembersUiEvent
+import com.cbgm.securechat.feature.chats.presentation.model.GroupDetailsUiEvent
 import com.cbgm.securechat.feature.chats.presentation.model.GroupLeaveUiState
 import com.cbgm.securechat.feature.chats.presentation.model.GroupMemberManagementUiState
 import com.cbgm.securechat.feature.chats.presentation.model.GroupMemberVerificationUiState
 import com.cbgm.securechat.feature.chats.presentation.model.GroupVerificationSummaryUiState
+import com.cbgm.securechat.feature.chats.presentation.model.GroupVerificationUiState
 import com.cbgm.securechat.feature.chats.presentation.model.buildGroupVerificationSummary
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactSafetyNumber
 import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContacts
@@ -26,17 +30,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class GroupVerificationUiState(
-    val summary: GroupVerificationSummaryUiState = GroupVerificationSummaryUiState(),
-    val selectedMember: GroupMemberVerificationUiState? = null,
-    val safetyNumber: String = "",
-    val isLoadingSafetyNumber: Boolean = false,
-    val isVerifying: Boolean = false,
-    val errorMessage: String? = null,
-    val memberManagement: GroupMemberManagementUiState = GroupMemberManagementUiState(),
-    val leave: GroupLeaveUiState = GroupLeaveUiState()
-)
-
 class GroupVerificationViewModel(
     private val conversationId: String,
     observeGroupVerification: ObserveGroupVerification,
@@ -47,7 +40,7 @@ class GroupVerificationViewModel(
     private val addGroupMembers: AddGroupMembers,
     private val removeGroupMember: RemoveGroupMember,
     private val leaveGroup: LeaveGroup
-) : ViewModel() {
+) : BaseViewModel() {
     private val verificationState = MutableStateFlow(GroupVerificationSelectionState())
     private val memberManagementState = MutableStateFlow(GroupMemberManagementState())
     private val leaveState = MutableStateFlow(GroupLeaveUiState())
@@ -122,7 +115,45 @@ class GroupVerificationViewModel(
         synchronize()
     }
 
-    fun synchronize() {
+    fun onUiEvent(event: GroupDetailsUiEvent) {
+        when (event) {
+            GroupDetailsUiEvent.BackClicked -> navigator.popBackStack()
+            is GroupDetailsUiEvent.VerifyMemberClicked -> selectMember(event.contactId)
+            is GroupDetailsUiEvent.RemoveMemberClicked -> requestMemberRemoval(event.contactId)
+            GroupDetailsUiEvent.VerifySelectedMemberClicked -> verifySelectedMember()
+            is GroupDetailsUiEvent.ScanMemberQrClicked -> {
+                dismissVerification()
+                scanMemberQr(event.contactId)
+            }
+            GroupDetailsUiEvent.VerificationBackClicked -> dismissVerification()
+            GroupDetailsUiEvent.MemberRemovalConfirmed -> confirmMemberRemoval()
+            GroupDetailsUiEvent.MemberRemovalDismissed -> dismissMemberRemoval()
+            GroupDetailsUiEvent.LeaveGroupConfirmed -> leaveGroup()
+            GroupDetailsUiEvent.LeaveGroupDismissed -> dismissLeaveError()
+            GroupDetailsUiEvent.AddMembersClicked,
+            GroupDetailsUiEvent.LeaveGroupClicked -> Unit
+        }
+    }
+
+    fun onUiEvent(event: AddGroupMembersUiEvent) {
+        when (event) {
+            is AddGroupMembersUiEvent.SearchQueryChanged -> updateMemberSearchQuery(event.query)
+            is AddGroupMembersUiEvent.ContactSelected -> toggleMemberSelection(event.contactId)
+            AddGroupMembersUiEvent.AddMembersClicked -> addSelectedMembers()
+            AddGroupMembersUiEvent.BackClicked -> Unit
+        }
+    }
+
+    private fun scanMemberQr(contactId: String) {
+        navigator.navigateTo(
+            AppRoute.VerifyIdentityQr(
+                contactId = contactId,
+                groupId = conversationId
+            )
+        )
+    }
+
+    private fun synchronize() {
         viewModelScope.launch {
             synchronizeGroupVerification(conversationId)
                 .onFailure { error ->
@@ -137,7 +168,7 @@ class GroupVerificationViewModel(
         }
     }
 
-    fun selectMember(contactId: String) {
+    private fun selectMember(contactId: String) {
         val canVerify =
             uiState.value.summary.members.any { candidate ->
                 candidate.contactId == contactId &&
@@ -185,7 +216,7 @@ class GroupVerificationViewModel(
         }
     }
 
-    fun verifySelectedMember() {
+    private fun verifySelectedMember() {
         val current = verificationState.value
         val contactId = current.selectedContactId ?: return
 
@@ -223,19 +254,19 @@ class GroupVerificationViewModel(
         }
     }
 
-    fun dismissVerification() {
+    private fun dismissVerification() {
         if (!verificationState.value.isVerifying) {
             verificationState.value = GroupVerificationSelectionState()
         }
     }
 
-    fun updateMemberSearchQuery(query: String) {
+    private fun updateMemberSearchQuery(query: String) {
         memberManagementState.update { state ->
             state.copy(searchQuery = query, errorMessage = null)
         }
     }
 
-    fun toggleMemberSelection(contactId: String) {
+    private fun toggleMemberSelection(contactId: String) {
         if (memberManagementState.value.isUpdating) {
             return
         }
@@ -253,7 +284,7 @@ class GroupVerificationViewModel(
         }
     }
 
-    fun addSelectedMembers() {
+    private fun addSelectedMembers() {
         val selectedContactIds = memberManagementState.value.selectedContactIds
         if (selectedContactIds.isEmpty() || memberManagementState.value.isUpdating) {
             return
@@ -284,7 +315,7 @@ class GroupVerificationViewModel(
         }
     }
 
-    fun requestMemberRemoval(contactId: String) {
+    private fun requestMemberRemoval(contactId: String) {
         if (!uiState.value.summary.isLocalAdmin || memberManagementState.value.isUpdating) {
             return
         }
@@ -296,7 +327,7 @@ class GroupVerificationViewModel(
         }
     }
 
-    fun dismissMemberRemoval() {
+    private fun dismissMemberRemoval() {
         if (!memberManagementState.value.isUpdating) {
             memberManagementState.update { state ->
                 state.copy(
@@ -307,7 +338,7 @@ class GroupVerificationViewModel(
         }
     }
 
-    fun confirmMemberRemoval() {
+    private fun confirmMemberRemoval() {
         val contactId = memberManagementState.value.removalCandidateContactId ?: return
         if (memberManagementState.value.isUpdating) {
             return
@@ -337,7 +368,7 @@ class GroupVerificationViewModel(
         }
     }
 
-    fun leaveGroup() {
+    private fun leaveGroup() {
         if (
             uiState.value.summary.isLocalAdmin ||
             leaveState.value.isLeaving ||
@@ -351,6 +382,7 @@ class GroupVerificationViewModel(
             leaveGroup(conversationId)
                 .onSuccess {
                     leaveState.value = GroupLeaveUiState(isLeaveRequested = true)
+                    navigator.popBackStackTo(AppRoute.Main)
                 }.onFailure { error ->
                     leaveState.value =
                         GroupLeaveUiState(
@@ -360,7 +392,7 @@ class GroupVerificationViewModel(
         }
     }
 
-    fun dismissLeaveError() {
+    private fun dismissLeaveError() {
         if (!leaveState.value.isLeaving) {
             leaveState.update { state -> state.copy(errorMessage = null) }
         }

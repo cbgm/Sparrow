@@ -39,6 +39,7 @@ import com.cbgm.securechat.core.ui.component.SecureChatScrollScaffold
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.core.ui.theme.spacing
 import com.cbgm.securechat.feature.settings.domain.model.BuildInfo
+import com.cbgm.securechat.feature.settings.presentation.model.DeveloperMenuUiEvent
 import com.cbgm.securechat.feature.settings.presentation.model.DeveloperMenuUiState
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.base_build_type
@@ -57,9 +58,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun DeveloperMenuScreen(
     uiState: DeveloperMenuUiState,
-    onBack: () -> Unit,
-    onClearLocalData: () -> Unit,
-    onDisableDeveloperMode: () -> Unit,
+    onUiEvent: (DeveloperMenuUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     SecureChatScrollScaffold(
@@ -68,7 +67,7 @@ fun DeveloperMenuScreen(
         topBar = { containerColor ->
             DeveloperMenuTopBar(
                 containerColor = containerColor,
-                onBack = onBack
+                onBack = { onUiEvent(DeveloperMenuUiEvent.BackClicked) }
             )
         }
     ) { innerPadding, scrollState ->
@@ -91,8 +90,8 @@ fun DeveloperMenuScreen(
 
             DangerZoneCard(
                 isClearingLocalData = uiState.isClearingLocalData,
-                onClearLocalData = onClearLocalData,
-                onDisableDeveloperMode = onDisableDeveloperMode
+                onClearLocalData = { onUiEvent(DeveloperMenuUiEvent.ClearLocalDataClicked) },
+                onDisableDeveloperMode = { onUiEvent(DeveloperMenuUiEvent.DisableDeveloperModeClicked) }
             )
         }
     }
@@ -297,9 +296,7 @@ fun DeveloperScreenPreview() {
                                 )
                         )
                 ),
-            onBack = {},
-            onClearLocalData = {},
-            onDisableDeveloperMode = {}
+            onUiEvent = {}
         )
     }
 }

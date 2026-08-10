@@ -57,6 +57,7 @@ import com.cbgm.securechat.core.ui.component.SecureChatCardNoAnimation
 import com.cbgm.securechat.core.ui.component.SecureChatScrollScaffold
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.core.ui.theme.spacing
+import com.cbgm.securechat.feature.identity.presentation.model.ShareIdentityUiEvent
 import com.cbgm.securechat.feature.identity.presentation.model.ShareIdentityUiState
 import com.cbgm.securechat.feature.identity.presentation.platform.QrCode
 import com.cbgm.securechat.resources.Res
@@ -76,9 +77,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun ShareIdentityScreen(
     uiState: ShareIdentityUiState,
-    onGenerateClick: () -> Unit,
-    onBack: () -> Unit,
-    onShareIdentity: () -> Unit,
+    onUiEvent: (ShareIdentityUiEvent) -> Unit,
     modifier: Modifier = Modifier,
     showBackButton: Boolean = true
 ) {
@@ -102,7 +101,7 @@ fun ShareIdentityScreen(
                 showBackButton = showBackButton,
                 showOverflowMenu = showOverflowMenu,
                 showRawIdentity = showRawIdentity,
-                onBack = onBack,
+                onBack = { onUiEvent(ShareIdentityUiEvent.BackClicked) },
                 onShowOverflowMenuChange = {
                     showOverflowMenu = it
                 },
@@ -128,13 +127,13 @@ fun ShareIdentityScreen(
             if (uiState.encodedIdentity.isNullOrBlank()) {
                 IdentityOptionsContent(
                     uiState = uiState,
-                    onGenerateClick = onGenerateClick
+                    onGenerateClick = { onUiEvent(ShareIdentityUiEvent.GenerateClicked) }
                 )
             } else {
                 GeneratedIdentityContent(
                     encodedIdentity = uiState.encodedIdentity,
                     showRawIdentity = showRawIdentity,
-                    onShareIdentity = onShareIdentity
+                    onShareIdentity = { onUiEvent(ShareIdentityUiEvent.ShareClicked) }
                 )
             }
 
@@ -449,9 +448,7 @@ private fun ShareIdentityScreenPreview() {
     SecureChatTheme {
         ShareIdentityScreen(
             uiState = ShareIdentityUiState(encodedIdentity = "test identity"),
-            onGenerateClick = {},
-            onBack = {},
-            onShareIdentity = {}
+            onUiEvent = {}
         )
     }
 }

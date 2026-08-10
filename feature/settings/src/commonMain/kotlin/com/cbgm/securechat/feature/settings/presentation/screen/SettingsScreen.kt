@@ -45,6 +45,7 @@ import com.cbgm.securechat.core.ui.locale.AppLanguage
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.core.ui.theme.spacing
 import com.cbgm.securechat.feature.settings.domain.model.BuildInfo
+import com.cbgm.securechat.feature.settings.presentation.model.SettingsUiEvent
 import com.cbgm.securechat.feature.settings.presentation.model.SettingsUiState
 import com.cbgm.securechat.feature.settings.presentation.screen.components.LanguagePickerDialog
 import com.cbgm.securechat.resources.Res
@@ -81,18 +82,7 @@ private val CardColor = Color(0xFF102A46)
 fun SettingsScreen(
     uiState: SettingsUiState,
     snackbarHostState: SnackbarHostState,
-    onOpenPrivacyPolicy: () -> Unit,
-    onOpenDataDisclaimer: () -> Unit,
-    onOpenLicenses: () -> Unit,
-    onOpenDeveloperMenu: () -> Unit,
-    onOpenBlockedContacts: () -> Unit,
-    onOpenControlPlanes: () -> Unit,
-    onOpenLanguagePicker: () -> Unit,
-    onDismissLanguagePicker: () -> Unit,
-    onLanguageSelected: (AppLanguage) -> Unit,
-    onDirectIdentitySetupModeChanged: (DirectIdentitySetupMode) -> Unit,
-    onBlockUnknownContactInvitesChanged: (Boolean) -> Unit,
-    onVersionRowTapped: () -> Unit,
+    onUiEvent: (SettingsUiEvent) -> Unit,
     scrollState: ScrollState,
     innerPadding: PaddingValues,
     modifier: Modifier = Modifier
@@ -115,7 +105,7 @@ fun SettingsScreen(
                 icon = Icons.Default.Language,
                 title = stringResource(Res.string.base_language),
                 subtitle = uiState.currentLanguage.nativeName,
-                onClick = onOpenLanguagePicker,
+                onClick = { onUiEvent(SettingsUiEvent.LanguagePickerOpened) },
                 showChevron = false
             )
         }
@@ -125,7 +115,7 @@ fun SettingsScreen(
                 icon = Icons.Default.Cloud,
                 title = stringResource(Res.string.feature_settings_control_planes),
                 subtitle = stringResource(Res.string.feature_settings_control_planes_settings_subtitle),
-                onClick = onOpenControlPlanes
+                onClick = { onUiEvent(SettingsUiEvent.ControlPlanesClicked) }
             )
         }
 
@@ -141,12 +131,14 @@ fun SettingsScreen(
                     },
                 checked = uiState.directIdentitySetupMode == DirectIdentitySetupMode.AUTOMATIC_INVITATION,
                 onCheckedChange = { enabled ->
-                    onDirectIdentitySetupModeChanged(
-                        if (enabled) {
-                            DirectIdentitySetupMode.AUTOMATIC_INVITATION
-                        } else {
-                            DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING
-                        }
+                    onUiEvent(
+                        SettingsUiEvent.DirectIdentitySetupModeChanged(
+                            if (enabled) {
+                                DirectIdentitySetupMode.AUTOMATIC_INVITATION
+                            } else {
+                                DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING
+                            }
+                        )
                     )
                 }
             )
@@ -158,7 +150,9 @@ fun SettingsScreen(
                 title = stringResource(Res.string.feature_settings_block_unknown_invites),
                 subtitle = stringResource(Res.string.feature_settings_block_unknown_invites_subtitle),
                 checked = uiState.blockUnknownContactInvites,
-                onCheckedChange = onBlockUnknownContactInvitesChanged
+                onCheckedChange = { enabled ->
+                    onUiEvent(SettingsUiEvent.BlockUnknownContactInvitesChanged(enabled))
+                }
             )
 
             SettingsDivider()
@@ -171,7 +165,7 @@ fun SettingsScreen(
                         Res.string.feature_settings_blocked_contacts_count,
                         uiState.blockedContactCount
                     ),
-                onClick = onOpenBlockedContacts
+                onClick = { onUiEvent(SettingsUiEvent.BlockedContactsClicked) }
             )
         }
 
@@ -180,7 +174,7 @@ fun SettingsScreen(
                 icon = Icons.Default.PrivacyTip,
                 title = stringResource(Res.string.feature_settings_privacy_policy),
                 subtitle = stringResource(Res.string.feature_settings_privacy_policy_subtitle),
-                onClick = onOpenPrivacyPolicy
+                onClick = { onUiEvent(SettingsUiEvent.PrivacyPolicyClicked) }
             )
 
             SettingsDivider()
@@ -189,7 +183,7 @@ fun SettingsScreen(
                 icon = Icons.Default.Lock,
                 title = stringResource(Res.string.feature_settings_data_disclaimer),
                 subtitle = stringResource(Res.string.feature_settings_data_disclaimer_subtitle),
-                onClick = onOpenDataDisclaimer
+                onClick = { onUiEvent(SettingsUiEvent.DataDisclaimerClicked) }
             )
         }
 
@@ -198,7 +192,7 @@ fun SettingsScreen(
                 icon = Icons.Default.Code,
                 title = stringResource(Res.string.feature_settings_open_source_licenses),
                 subtitle = stringResource(Res.string.feature_settings_licenses_subtitle),
-                onClick = onOpenLicenses
+                onClick = { onUiEvent(SettingsUiEvent.LicensesClicked) }
             )
 
             SettingsDivider()
@@ -208,7 +202,7 @@ fun SettingsScreen(
                 title = stringResource(Res.string.base_version),
                 subtitle = "${uiState.buildInfo.versionName} (${uiState.buildInfo.versionCode})",
                 showChevron = false,
-                onClick = onVersionRowTapped
+                onClick = { onUiEvent(SettingsUiEvent.VersionRowTapped) }
             )
         }
 
@@ -218,7 +212,7 @@ fun SettingsScreen(
                     icon = Icons.Default.BugReport,
                     title = stringResource(Res.string.feature_settings_developer_menu),
                     subtitle = stringResource(Res.string.feature_settings_developer_menu_subtitle),
-                    onClick = onOpenDeveloperMenu,
+                    onClick = { onUiEvent(SettingsUiEvent.DeveloperMenuClicked) },
                     iconTint = MaterialTheme.colorScheme.secondary
                 )
             }
@@ -230,8 +224,10 @@ fun SettingsScreen(
     if (uiState.showLanguagePicker) {
         LanguagePickerDialog(
             currentLanguage = uiState.currentLanguage,
-            onLanguageSelected = onLanguageSelected,
-            onDismiss = onDismissLanguagePicker
+            onLanguageSelected = { language ->
+                onUiEvent(SettingsUiEvent.LanguageSelected(language))
+            },
+            onDismiss = { onUiEvent(SettingsUiEvent.LanguagePickerDismissed) }
         )
     }
 }
@@ -395,19 +391,8 @@ fun SettingsScreenPreview() {
                         ),
                     isDeveloperModeEnabled = true
                 ),
-            onOpenPrivacyPolicy = {},
-            onOpenDataDisclaimer = {},
-            onOpenLicenses = {},
-            onOpenDeveloperMenu = {},
-            onOpenBlockedContacts = {},
-            onOpenControlPlanes = {},
-            onOpenLanguagePicker = {},
-            onDismissLanguagePicker = {},
-            onLanguageSelected = {},
-            onDirectIdentitySetupModeChanged = {},
-            onBlockUnknownContactInvitesChanged = {},
-            onVersionRowTapped = {},
             snackbarHostState = SnackbarHostState(),
+            onUiEvent = {},
             scrollState = ScrollState(0),
             innerPadding = PaddingValues(0.dp)
         )

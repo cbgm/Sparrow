@@ -14,16 +14,13 @@ import com.cbgm.securechat.feature.chats.presentation.component.groupdetails.Gro
 import com.cbgm.securechat.feature.chats.presentation.component.groupdetails.GroupDetailsPreviewData
 import com.cbgm.securechat.feature.chats.presentation.component.groupdetails.GroupDetailsTopBar
 import com.cbgm.securechat.feature.chats.presentation.component.groupdetails.GroupMemberList
+import com.cbgm.securechat.feature.chats.presentation.model.GroupDetailsUiEvent
 import com.cbgm.securechat.feature.chats.presentation.model.GroupDetailsUiState
 
 @Composable
 fun GroupDetailsScreen(
     uiState: GroupDetailsUiState,
-    onVerifyMember: (String) -> Unit,
-    onAddMembers: () -> Unit,
-    onRemoveMember: (String) -> Unit,
-    onLeaveGroup: () -> Unit,
-    onBack: () -> Unit,
+    onUiEvent: (GroupDetailsUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     SecureChatLazyScaffold(
@@ -32,7 +29,7 @@ fun GroupDetailsScreen(
         topBar = { containerColor ->
             GroupDetailsTopBar(
                 containerColor = containerColor,
-                onBack = onBack
+                onBack = { onUiEvent(GroupDetailsUiEvent.BackClicked) }
             )
         }
     ) { innerPadding, listState ->
@@ -50,10 +47,14 @@ fun GroupDetailsScreen(
                     summary = uiState.summary,
                     innerPadding = innerPadding,
                     listState = listState,
-                    onVerifyMember = onVerifyMember,
-                    onAddMembers = onAddMembers,
-                    onRemoveMember = onRemoveMember,
-                    onLeaveGroup = onLeaveGroup
+                    onVerifyMember = { contactId ->
+                        onUiEvent(GroupDetailsUiEvent.VerifyMemberClicked(contactId))
+                    },
+                    onAddMembers = { onUiEvent(GroupDetailsUiEvent.AddMembersClicked) },
+                    onRemoveMember = { contactId ->
+                        onUiEvent(GroupDetailsUiEvent.RemoveMemberClicked(contactId))
+                    },
+                    onLeaveGroup = { onUiEvent(GroupDetailsUiEvent.LeaveGroupClicked) }
                 )
 
             is GroupDetailsUiState.Error ->
@@ -75,11 +76,7 @@ private fun GroupDetailsScreenPreview() {
     SecureChatTheme {
         GroupDetailsScreen(
             uiState = GroupDetailsUiState.Content(GroupDetailsPreviewData.summary),
-            onVerifyMember = {},
-            onAddMembers = {},
-            onRemoveMember = {},
-            onLeaveGroup = {},
-            onBack = {}
+            onUiEvent = {}
         )
     }
 }

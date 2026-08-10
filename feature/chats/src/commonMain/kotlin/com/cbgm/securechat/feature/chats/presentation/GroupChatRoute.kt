@@ -6,7 +6,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cbgm.securechat.feature.chats.presentation.model.GroupChatEffect
 import com.cbgm.securechat.feature.chats.presentation.screen.ChatScreen
 import com.cbgm.securechat.feature.chats.presentation.screen.chat.GroupChatViewModel
 import com.cbgm.securechat.feature.chats.presentation.screen.details.GroupVerificationViewModel
@@ -16,8 +15,6 @@ import org.koin.core.parameter.parametersOf
 @Composable
 fun GroupChatRoute(
     conversationId: String,
-    onClickHeader: () -> Unit,
-    onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val viewModel = koinViewModel<GroupChatViewModel> { parametersOf(conversationId) }
@@ -27,17 +24,9 @@ fun GroupChatRoute(
             parametersOf(conversationId)
         }
     val verificationUiState by verificationViewModel.uiState.collectAsStateWithLifecycle()
+
     LaunchedEffect(conversationId) {
         viewModel.markConversationRead()
-        verificationViewModel.synchronize()
-    }
-
-    LaunchedEffect(viewModel) {
-        viewModel.effects.collect { effect ->
-            when (effect) {
-                GroupChatEffect.ConversationRemoved -> onBack()
-            }
-        }
     }
 
     DisposableEffect(conversationId) {
@@ -66,15 +55,7 @@ fun GroupChatRoute(
                     },
                 errorMessage = verificationUiState.errorMessage ?: uiState.errorMessage
             ),
-        onMessageTextChanged = viewModel::onMessageTextChanged,
-        onSendClick = viewModel::sendMessage,
-        onClickHeader = onClickHeader,
-        onRetryMessage = viewModel::retryMessage,
-        onAcceptGroupInvitation = viewModel::acceptInvitation,
-        onDeclineGroupInvitation = viewModel::declineInvitation,
-        onVerifyIdentity = {},
-        onManualIdentitySetup = {},
-        onBack = onBack,
+        onUiEvent = viewModel::onUiEvent,
         modifier = modifier
     )
 }

@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.cbgm.securechat.feature.contactimport.platform.rememberQrScannerPermissionRequest
+import com.cbgm.securechat.feature.contactimport.presentation.model.ScanIdentityUiEvent
 import com.cbgm.securechat.feature.contactimport.presentation.screen.ScanIdentityScreen
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.base_back
@@ -26,8 +27,7 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ScanIdentityRoute(
-    onQrCodeScanned: (String) -> Unit,
-    onBack: () -> Unit
+    onUiEvent: (ScanIdentityUiEvent) -> Unit
 ) {
     var cameraPermissionGranted by remember { mutableStateOf(false) }
 
@@ -52,8 +52,7 @@ fun ScanIdentityRoute(
     when {
         cameraPermissionGranted -> {
             ScanIdentityScreen(
-                onQrCodeScanned = onQrCodeScanned,
-                onBack = onBack
+                onUiEvent = onUiEvent
             )
         }
 
@@ -76,7 +75,7 @@ fun ScanIdentityRoute(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Button(
-                    onClick = onBack
+                    onClick = { onUiEvent(ScanIdentityUiEvent.BackClicked) }
                 ) {
                     Text(stringResource(Res.string.base_back))
                 }

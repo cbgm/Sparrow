@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import com.cbgm.securechat.core.ui.component.SecureChatScrollScaffold
 import com.cbgm.securechat.core.ui.theme.spacing
+import com.cbgm.securechat.feature.settings.presentation.model.DisclaimerUiEvent
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownColor
 import com.mikepenz.markdown.m3.markdownTypography
@@ -28,7 +29,7 @@ private val MarkdownCardColor = Color(0xFF102A46)
 fun MarkdownDisclaimerScreen(
     title: String,
     markdownContent: String,
-    onBack: () -> Unit,
+    onUiEvent: (DisclaimerUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     SecureChatScrollScaffold(
@@ -38,7 +39,7 @@ fun MarkdownDisclaimerScreen(
             MarkdownDisclaimerTopBar(
                 title = title,
                 containerColor = containerColor,
-                onBack = onBack
+                onBack = { onUiEvent(DisclaimerUiEvent.BackClicked) }
             )
         }
     ) { innerPadding, scrollState ->

@@ -1,10 +1,11 @@
 package com.cbgm.securechat.feature.chats.presentation.screen.chat
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.logging.SecureChatLog
 import com.cbgm.securechat.core.security.DirectIdentitySetupMode
 import com.cbgm.securechat.core.security.DirectIdentitySetupModeRepository
+import com.cbgm.securechat.core.ui.navigation.AppRoute
+import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.chats.domain.model.ContactSecurityState
 import com.cbgm.securechat.feature.chats.domain.model.Conversation
 import com.cbgm.securechat.feature.chats.domain.usecase.MarkConversationRead
@@ -13,6 +14,7 @@ import com.cbgm.securechat.feature.chats.domain.usecase.ObserveTypingIndicator
 import com.cbgm.securechat.feature.chats.domain.usecase.RetryMessage
 import com.cbgm.securechat.feature.chats.domain.usecase.SendMessage
 import com.cbgm.securechat.feature.chats.domain.usecase.SetTypingIndicator
+import com.cbgm.securechat.feature.chats.presentation.model.ChatUiEvent
 import com.cbgm.securechat.feature.chats.presentation.model.ChatUiState
 import com.cbgm.securechat.feature.contacts.domain.identity.IdentityExchangeStarter
 import com.cbgm.securechat.feature.contacts.domain.identity.IdentityInvitationService
@@ -47,7 +49,7 @@ class ChatViewModel(
     observeContact: ObserveContact,
     private val observeTypingIndicator: ObserveTypingIndicator,
     private val setTypingIndicator: SetTypingIndicator
-) : ViewModel() {
+) : BaseViewModel() {
     private val logger = SecureChatLog.withTag("ChatViewModel")
 
     private val messageText = MutableStateFlow("")
@@ -183,7 +185,54 @@ class ChatViewModel(
         }
     }
 
-    fun onMessageTextChanged(value: String) {
+    fun onUiEvent(event: ChatUiEvent) {
+        when (event) {
+            is ChatUiEvent.MessageTextChanged -> onMessageTextChanged(event.text)
+            ChatUiEvent.SendClicked -> sendMessage()
+            ChatUiEvent.HeaderClicked -> openContactDetails()
+            is ChatUiEvent.RetryMessage -> retryMessage(event.messageId)
+            ChatUiEvent.VerifyIdentityClicked -> verifyIdentity()
+            ChatUiEvent.ManualIdentitySetupClicked -> Unit
+            ChatUiEvent.ShareIdentityClicked -> shareIdentity()
+            ChatUiEvent.ImportIdentityClicked -> importIdentity()
+            ChatUiEvent.BackClicked -> navigateBack()
+            ChatUiEvent.AcceptGroupInvitation -> Unit
+            ChatUiEvent.DeclineGroupInvitation -> Unit
+        }
+    }
+
+    private fun navigateBack() {
+        navigator.popBackStackTo(AppRoute.Main)
+    }
+
+    private fun openContactDetails() {
+        navigator.navigateTo(
+            AppRoute.ContactDetails(
+                conversationId = conversationId,
+                contactId = contactId
+            )
+        )
+    }
+
+    private fun verifyIdentity() {
+        navigator.navigateTo(
+            AppRoute.ContactDetails(
+                conversationId = conversationId,
+                contactId = contactId,
+                openVerification = true
+            )
+        )
+    }
+
+    private fun shareIdentity() {
+        navigator.navigateTo(AppRoute.ShareIdentity)
+    }
+
+    private fun importIdentity() {
+        navigator.navigateTo(AppRoute.ImportContact(contactId = contactId))
+    }
+
+    private fun onMessageTextChanged(value: String) {
         if (!uiState.value.isMessageInputEnabled) {
             return
         }
@@ -223,7 +272,7 @@ class ChatViewModel(
         sendTypingState(isTyping = false)
     }
 
-    fun sendMessage() {
+    private fun sendMessage() {
         if (!uiState.value.isMessageInputEnabled) {
             return
         }
@@ -251,7 +300,7 @@ class ChatViewModel(
         }
     }
 
-    fun retryMessage(messageId: String) {
+    private fun retryMessage(messageId: String) {
         if (messageId.isBlank()) {
             return
         }

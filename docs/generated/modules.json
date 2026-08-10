@@ -5,8 +5,8 @@
     "group": "androidApp",
     "directory": "androidApp",
     "buildFile": "androidApp/build.gradle.kts",
-    "kotlinSourceFileCount": 9,
-    "productionKotlinFileCount": 9,
+    "kotlinSourceFileCount": 10,
+    "productionKotlinFileCount": 10,
     "testKotlinFileCount": 0,
     "resourceFileCount": 19,
     "sourceSets": [
@@ -16,6 +16,7 @@
       ":core",
       ":core:crypto",
       ":core:protocol",
+      ":core:ui",
       ":data:database",
       ":feature:chats",
       ":feature:contactimport",
@@ -30,8 +31,7 @@
       ":shared",
       ":startup"
     ],
-    "dependents": [
-    ]
+    "dependents": []
   },
   {
     "name": "core",
@@ -39,8 +39,8 @@
     "group": "core",
     "directory": "core",
     "buildFile": "core/build.gradle.kts",
-    "kotlinSourceFileCount": 10,
-    "productionKotlinFileCount": 10,
+    "kotlinSourceFileCount": 13,
+    "productionKotlinFileCount": 13,
     "testKotlinFileCount": 0,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -50,8 +50,7 @@
       "commonMain",
       "iosMain"
     ],
-    "dependencies": [
-    ],
+    "dependencies": [],
     "dependents": [
       ":androidApp",
       ":core:protocol",
@@ -86,8 +85,7 @@
       "commonTest",
       "iosMain"
     ],
-    "dependencies": [
-    ],
+    "dependencies": [],
     "dependents": [
       ":androidApp",
       ":feature:chats",
@@ -134,21 +132,23 @@
     "group": "core",
     "directory": "core/ui",
     "buildFile": "core/ui/build.gradle.kts",
-    "kotlinSourceFileCount": 27,
-    "productionKotlinFileCount": 27,
-    "testKotlinFileCount": 0,
+    "kotlinSourceFileCount": 33,
+    "productionKotlinFileCount": 32,
+    "testKotlinFileCount": 1,
     "resourceFileCount": 1,
     "sourceSets": [
       "androidDeviceTest",
       "androidHostTest",
       "androidMain",
       "commonMain",
+      "commonTest",
       "iosMain"
     ],
     "dependencies": [
       ":resources"
     ],
     "dependents": [
+      ":androidApp",
       ":feature:chats",
       ":feature:contactimport",
       ":feature:contacts",
@@ -170,12 +170,9 @@
     "productionKotlinFileCount": 0,
     "testKotlinFileCount": 0,
     "resourceFileCount": 0,
-    "sourceSets": [
-    ],
-    "dependencies": [
-    ],
-    "dependents": [
-    ]
+    "sourceSets": [],
+    "dependencies": [],
+    "dependents": []
   },
   {
     "name": "database",
@@ -215,12 +212,9 @@
     "productionKotlinFileCount": 0,
     "testKotlinFileCount": 0,
     "resourceFileCount": 0,
-    "sourceSets": [
-    ],
-    "dependencies": [
-    ],
-    "dependents": [
-    ]
+    "sourceSets": [],
+    "dependencies": [],
+    "dependents": []
   },
   {
     "name": "chats",
@@ -228,8 +222,8 @@
     "group": "feature",
     "directory": "feature/chats",
     "buildFile": "feature/chats/build.gradle.kts",
-    "kotlinSourceFileCount": 146,
-    "productionKotlinFileCount": 135,
+    "kotlinSourceFileCount": 152,
+    "productionKotlinFileCount": 141,
     "testKotlinFileCount": 11,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -263,8 +257,8 @@
     "group": "feature",
     "directory": "feature/contactimport",
     "buildFile": "feature/contactimport/build.gradle.kts",
-    "kotlinSourceFileCount": 23,
-    "productionKotlinFileCount": 22,
+    "kotlinSourceFileCount": 27,
+    "productionKotlinFileCount": 26,
     "testKotlinFileCount": 1,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -292,8 +286,8 @@
     "group": "feature",
     "directory": "feature/contacts",
     "buildFile": "feature/contacts/build.gradle.kts",
-    "kotlinSourceFileCount": 102,
-    "productionKotlinFileCount": 99,
+    "kotlinSourceFileCount": 108,
+    "productionKotlinFileCount": 105,
     "testKotlinFileCount": 3,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -325,8 +319,8 @@
     "group": "feature",
     "directory": "feature/identity",
     "buildFile": "feature/identity/build.gradle.kts",
-    "kotlinSourceFileCount": 48,
-    "productionKotlinFileCount": 44,
+    "kotlinSourceFileCount": 50,
+    "productionKotlinFileCount": 46,
     "testKotlinFileCount": 4,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -386,8 +380,8 @@
     "group": "feature",
     "directory": "feature/onboarding",
     "buildFile": "feature/onboarding/build.gradle.kts",
-    "kotlinSourceFileCount": 13,
-    "productionKotlinFileCount": 13,
+    "kotlinSourceFileCount": 14,
+    "productionKotlinFileCount": 14,
     "testKotlinFileCount": 0,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -413,8 +407,8 @@
     "group": "feature",
     "directory": "feature/settings",
     "buildFile": "feature/settings/build.gradle.kts",
-    "kotlinSourceFileCount": 46,
-    "productionKotlinFileCount": 46,
+    "kotlinSourceFileCount": 56,
+    "productionKotlinFileCount": 56,
     "testKotlinFileCount": 0,
     "resourceFileCount": 2,
     "sourceSets": [
@@ -440,9 +434,9 @@
     "group": "feature",
     "directory": "feature/transport",
     "buildFile": "feature/transport/build.gradle.kts",
-    "kotlinSourceFileCount": 52,
-    "productionKotlinFileCount": 44,
-    "testKotlinFileCount": 8,
+    "kotlinSourceFileCount": 61,
+    "productionKotlinFileCount": 51,
+    "testKotlinFileCount": 10,
     "resourceFileCount": 1,
     "sourceSets": [
       "androidDeviceTest",
@@ -469,8 +463,8 @@
     "group": "navigation",
     "directory": "navigation",
     "buildFile": "navigation/build.gradle.kts",
-    "kotlinSourceFileCount": 5,
-    "productionKotlinFileCount": 5,
+    "kotlinSourceFileCount": 12,
+    "productionKotlinFileCount": 12,
     "testKotlinFileCount": 0,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -532,12 +526,9 @@
     "productionKotlinFileCount": 0,
     "testKotlinFileCount": 0,
     "resourceFileCount": 0,
-    "sourceSets": [
-    ],
-    "dependencies": [
-    ],
-    "dependents": [
-    ]
+    "sourceSets": [],
+    "dependencies": [],
+    "dependents": []
   },
   {
     "name": "detekt-rules",
@@ -552,10 +543,8 @@
     "sourceSets": [
       "main"
     ],
-    "dependencies": [
-    ],
-    "dependents": [
-    ]
+    "dependencies": [],
+    "dependents": []
   },
   {
     "name": "relay",
@@ -576,10 +565,8 @@
       "main",
       "test"
     ],
-    "dependencies": [
-    ],
-    "dependents": [
-    ]
+    "dependencies": [],
+    "dependents": []
   },
   {
     "name": "resources",
@@ -595,8 +582,7 @@
       "androidMain",
       "commonMain"
     ],
-    "dependencies": [
-    ],
+    "dependencies": [],
     "dependents": [
       ":androidApp",
       ":core:ui"
@@ -612,12 +598,9 @@
     "productionKotlinFileCount": 0,
     "testKotlinFileCount": 0,
     "resourceFileCount": 0,
-    "sourceSets": [
-    ],
-    "dependencies": [
-    ],
-    "dependents": [
-    ]
+    "sourceSets": [],
+    "dependencies": [],
+    "dependents": []
   },
   {
     "name": "federation",
@@ -625,9 +608,9 @@
     "group": "server",
     "directory": "server/federation",
     "buildFile": "server/federation/build.gradle.kts",
-    "kotlinSourceFileCount": 13,
-    "productionKotlinFileCount": 11,
-    "testKotlinFileCount": 2,
+    "kotlinSourceFileCount": 16,
+    "productionKotlinFileCount": 13,
+    "testKotlinFileCount": 3,
     "resourceFileCount": 0,
     "sourceSets": [
       "main",
@@ -639,8 +622,7 @@
       ":server:protocol",
       ":server:security"
     ],
-    "dependents": [
-    ]
+    "dependents": []
   },
   {
     "name": "gateway",
@@ -648,9 +630,9 @@
     "group": "server",
     "directory": "server/gateway",
     "buildFile": "server/gateway/build.gradle.kts",
-    "kotlinSourceFileCount": 9,
-    "productionKotlinFileCount": 8,
-    "testKotlinFileCount": 1,
+    "kotlinSourceFileCount": 13,
+    "productionKotlinFileCount": 10,
+    "testKotlinFileCount": 3,
     "resourceFileCount": 0,
     "sourceSets": [
       "main",
@@ -662,8 +644,7 @@
       ":server:protocol",
       ":server:security"
     ],
-    "dependents": [
-    ]
+    "dependents": []
   },
   {
     "name": "mailbox",
@@ -685,8 +666,7 @@
       ":server:protocol",
       ":server:security"
     ],
-    "dependents": [
-    ]
+    "dependents": []
   },
   {
     "name": "node-registry",
@@ -694,9 +674,9 @@
     "group": "server",
     "directory": "server/node-registry",
     "buildFile": "server/node-registry/build.gradle.kts",
-    "kotlinSourceFileCount": 6,
-    "productionKotlinFileCount": 4,
-    "testKotlinFileCount": 2,
+    "kotlinSourceFileCount": 9,
+    "productionKotlinFileCount": 5,
+    "testKotlinFileCount": 4,
     "resourceFileCount": 0,
     "sourceSets": [
       "main",
@@ -708,8 +688,7 @@
       ":server:protocol",
       ":server:security"
     ],
-    "dependents": [
-    ]
+    "dependents": []
   },
   {
     "name": "observability",
@@ -725,8 +704,7 @@
       "main",
       "test"
     ],
-    "dependencies": [
-    ],
+    "dependencies": [],
     "dependents": [
       ":server:federation",
       ":server:gateway",
@@ -782,8 +760,7 @@
       ":server:protocol",
       ":server:security"
     ],
-    "dependents": [
-    ]
+    "dependents": []
   },
   {
     "name": "protocol",
@@ -799,8 +776,7 @@
       "main",
       "test"
     ],
-    "dependencies": [
-    ],
+    "dependencies": [],
     "dependents": [
       ":server:federation",
       ":server:gateway",
@@ -818,8 +794,8 @@
     "group": "server",
     "directory": "server/push",
     "buildFile": "server/push/build.gradle.kts",
-    "kotlinSourceFileCount": 16,
-    "productionKotlinFileCount": 12,
+    "kotlinSourceFileCount": 17,
+    "productionKotlinFileCount": 13,
     "testKotlinFileCount": 4,
     "resourceFileCount": 0,
     "sourceSets": [
@@ -832,8 +808,7 @@
       ":server:protocol",
       ":server:security"
     ],
-    "dependents": [
-    ]
+    "dependents": []
   },
   {
     "name": "security",
@@ -841,9 +816,9 @@
     "group": "server",
     "directory": "server/security",
     "buildFile": "server/security/build.gradle.kts",
-    "kotlinSourceFileCount": 13,
-    "productionKotlinFileCount": 10,
-    "testKotlinFileCount": 3,
+    "kotlinSourceFileCount": 18,
+    "productionKotlinFileCount": 14,
+    "testKotlinFileCount": 4,
     "resourceFileCount": 0,
     "sourceSets": [
       "main",
@@ -896,8 +871,8 @@
     "group": "startup",
     "directory": "startup",
     "buildFile": "startup/build.gradle.kts",
-    "kotlinSourceFileCount": 8,
-    "productionKotlinFileCount": 8,
+    "kotlinSourceFileCount": 9,
+    "productionKotlinFileCount": 9,
     "testKotlinFileCount": 0,
     "resourceFileCount": 1,
     "sourceSets": [

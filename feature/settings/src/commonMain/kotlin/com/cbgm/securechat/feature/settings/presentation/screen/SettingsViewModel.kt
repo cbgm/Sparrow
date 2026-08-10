@@ -1,8 +1,9 @@
 package com.cbgm.securechat.feature.settings.presentation.screen
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.security.DirectIdentitySetupMode
+import com.cbgm.securechat.core.ui.navigation.AppRoute
+import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.settings.domain.usecase.GetAppLanguageUseCase
 import com.cbgm.securechat.feature.settings.domain.usecase.GetBuildInfoUseCase
 import com.cbgm.securechat.feature.settings.domain.usecase.GetDeveloperEnabledUseCase
@@ -15,7 +16,7 @@ import com.cbgm.securechat.feature.settings.domain.usecase.SetDeveloperEnabledUs
 import com.cbgm.securechat.feature.settings.domain.usecase.SetDirectIdentitySetupMode
 import com.cbgm.securechat.feature.settings.presentation.model.DEVELOPER_MODE_TAP_THRESHOLD
 import com.cbgm.securechat.feature.settings.presentation.model.SettingsEffect
-import com.cbgm.securechat.feature.settings.presentation.model.SettingsEvent
+import com.cbgm.securechat.feature.settings.presentation.model.SettingsUiEvent
 import com.cbgm.securechat.feature.settings.presentation.model.SettingsUiState
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,7 +37,7 @@ class SettingsViewModel(
     private val observeBlockUnknownContactInvites: ObserveBlockUnknownContactInvites,
     private val setBlockUnknownContactInvites: SetBlockUnknownContactInvites,
     private val observeBlockedContactIds: ObserveBlockedContactIds
-) : ViewModel() {
+) : BaseViewModel() {
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
@@ -49,16 +50,22 @@ class SettingsViewModel(
         observeContactBlockingSettings()
     }
 
-    fun onEvent(event: SettingsEvent) {
+    fun onUiEvent(event: SettingsUiEvent) {
         when (event) {
-            SettingsEvent.LanguagePickerOpened ->
+            SettingsUiEvent.LanguagePickerOpened ->
                 _uiState.update { it.copy(showLanguagePicker = true) }
-            SettingsEvent.LanguagePickerDismissed ->
+            SettingsUiEvent.LanguagePickerDismissed ->
                 _uiState.update { it.copy(showLanguagePicker = false) }
-            is SettingsEvent.LanguageSelected -> selectLanguage(event.language)
-            is SettingsEvent.DirectIdentitySetupModeChanged -> changeDirectIdentitySetupMode(event.mode)
-            is SettingsEvent.BlockUnknownContactInvitesChanged -> changeBlockUnknownContactInvites(event.enabled)
-            SettingsEvent.VersionRowTapped -> handleVersionTap()
+            is SettingsUiEvent.LanguageSelected -> selectLanguage(event.language)
+            is SettingsUiEvent.DirectIdentitySetupModeChanged -> changeDirectIdentitySetupMode(event.mode)
+            is SettingsUiEvent.BlockUnknownContactInvitesChanged -> changeBlockUnknownContactInvites(event.enabled)
+            SettingsUiEvent.PrivacyPolicyClicked -> navigator.navigateTo(AppRoute.PrivacyPolicy)
+            SettingsUiEvent.DataDisclaimerClicked -> navigator.navigateTo(AppRoute.DataDisclaimer)
+            SettingsUiEvent.LicensesClicked -> navigator.navigateTo(AppRoute.Licenses)
+            SettingsUiEvent.DeveloperMenuClicked -> navigator.navigateTo(AppRoute.DeveloperMenu)
+            SettingsUiEvent.BlockedContactsClicked -> navigator.navigateTo(AppRoute.BlockedContacts)
+            SettingsUiEvent.ControlPlanesClicked -> navigator.navigateTo(AppRoute.ControlPlanes)
+            SettingsUiEvent.VersionRowTapped -> handleVersionTap()
         }
     }
 

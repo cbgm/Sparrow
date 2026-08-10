@@ -7,8 +7,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
+import com.cbgm.securechat.feature.chats.presentation.model.AddGroupMembersUiEvent
 import com.cbgm.securechat.feature.chats.presentation.model.GroupMemberManagementUiState
 import com.cbgm.securechat.feature.contacts.presentation.model.ContactsScreenMode
+import com.cbgm.securechat.feature.contacts.presentation.model.ContactsUiEvent
 import com.cbgm.securechat.feature.contacts.presentation.model.ContactsUiState
 import com.cbgm.securechat.feature.contacts.presentation.screen.ContactsScreen
 import com.cbgm.securechat.resources.Res
@@ -18,10 +20,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun AddGroupMembersScreen(
     uiState: GroupMemberManagementUiState,
-    onSearchQueryChanged: (String) -> Unit,
-    onContactSelected: (String) -> Unit,
-    onAddMembers: () -> Unit,
-    onBack: () -> Unit,
+    onUiEvent: (AddGroupMembersUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -44,16 +43,26 @@ fun AddGroupMembersScreen(
                 selectedContactIds = uiState.selectedContactIds,
                 confirmEnabled = uiState.canAddSelected,
                 confirming = uiState.isUpdating,
-                onContactSelected = onContactSelected,
-                onConfirmed = onAddMembers
+                searchQuery = uiState.searchQuery
             ),
-        searchQuery = uiState.searchQuery,
-        onSearchQueryChanged = onSearchQueryChanged,
-        onBack = onBack,
+        onUiEvent = { event -> handleUiEvent(event) },
         modifier = modifier,
         snackbarHostState = snackbarHostState
     )
 }
+
+private fun handleUiEvent(event: ContactsUiEvent) =
+    when (event) {
+        is ContactsUiEvent.SearchQueryChanged ->
+            AddGroupMembersUiEvent.SearchQueryChanged(event.query)
+
+        is ContactsUiEvent.ContactSelectionToggled ->
+            AddGroupMembersUiEvent.ContactSelected(event.contactId)
+
+        ContactsUiEvent.SelectionConfirmed -> AddGroupMembersUiEvent.AddMembersClicked
+        ContactsUiEvent.BackClicked -> AddGroupMembersUiEvent.BackClicked
+        else -> Unit
+    }
 
 @Preview
 @Composable
@@ -61,10 +70,7 @@ private fun AddGroupMembersScreenPreview() {
     SecureChatTheme {
         AddGroupMembersScreen(
             uiState = GroupMemberManagementUiState(),
-            onSearchQueryChanged = {},
-            onContactSelected = {},
-            onAddMembers = {},
-            onBack = {}
+            onUiEvent = {}
         )
     }
 }

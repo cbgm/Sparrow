@@ -59,6 +59,7 @@ import com.cbgm.securechat.resources.feature_startup_partial_identity_no_replace
 import com.cbgm.securechat.resources.feature_startup_preparing_securechat
 import com.cbgm.securechat.resources.feature_startup_setup_failed
 import com.cbgm.securechat.resources.feature_startup_verify_phone_number
+import com.cbgm.securechat.startup.presentation.model.StartupUiEvent
 import com.cbgm.securechat.startup.presentation.model.StartupUiState
 import org.jetbrains.compose.resources.stringResource
 
@@ -66,10 +67,7 @@ import org.jetbrains.compose.resources.stringResource
 fun StartupScreen(
     uiState: StartupUiState,
     identityUiState: IdentityUiState,
-    onRequestPhoneNumberHint: () -> Unit,
-    onPhoneNumberChanged: (String) -> Unit,
-    onCreateIdentity: () -> Unit,
-    onRetry: () -> Unit,
+    onUiEvent: (StartupUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -127,10 +125,7 @@ fun StartupScreen(
                         StartupStateContent(
                             uiState = state,
                             identityUiState = identityUiState,
-                            onRequestPhoneNumberHint = onRequestPhoneNumberHint,
-                            onPhoneNumberChanged = onPhoneNumberChanged,
-                            onCreateIdentity = onCreateIdentity,
-                            onRetry = onRetry
+                            onUiEvent = onUiEvent
                         )
                     }
                 }
@@ -145,10 +140,7 @@ fun StartupScreen(
 private fun StartupStateContent(
     uiState: StartupUiState,
     identityUiState: IdentityUiState,
-    onRequestPhoneNumberHint: () -> Unit,
-    onPhoneNumberChanged: (String) -> Unit,
-    onCreateIdentity: () -> Unit,
-    onRetry: () -> Unit
+    onUiEvent: (StartupUiEvent) -> Unit
 ) {
     when (uiState) {
         StartupUiState.Loading -> {
@@ -162,17 +154,19 @@ private fun StartupStateContent(
         StartupUiState.IdentityRequired -> {
             StartupIdentityContent(
                 identityUiState = identityUiState,
-                onRequestPhoneNumberHint = onRequestPhoneNumberHint,
-                onPhoneNumberChanged = onPhoneNumberChanged,
-                onCreateIdentity = onCreateIdentity,
-                onRetry = onRetry
+                onRequestPhoneNumberHint = { onUiEvent(StartupUiEvent.RequestPhoneNumberHint) },
+                onPhoneNumberChanged = { value ->
+                    onUiEvent(StartupUiEvent.PhoneNumberChanged(value))
+                },
+                onCreateIdentity = { onUiEvent(StartupUiEvent.CreateIdentityClicked) },
+                onRetry = { onUiEvent(StartupUiEvent.RetryClicked) }
             )
         }
 
         is StartupUiState.Error -> {
             StartupErrorContent(
                 message = uiState.message,
-                onRetry = onRetry
+                onRetry = { onUiEvent(StartupUiEvent.RetryClicked) }
             )
         }
     }
@@ -396,10 +390,7 @@ private fun StartupScreenPreview() {
         StartupScreen(
             uiState = StartupUiState.IdentityRequired,
             identityUiState = IdentityUiState.NoIdentity(),
-            onRequestPhoneNumberHint = {},
-            onPhoneNumberChanged = {},
-            onCreateIdentity = {},
-            onRetry = {}
+            onUiEvent = {}
         )
     }
 }

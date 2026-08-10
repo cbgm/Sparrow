@@ -1,11 +1,13 @@
 package com.cbgm.securechat.feature.contacts.presentation.screen.details
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cbgm.securechat.core.ui.navigation.AppRoute
+import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactSafetyNumber
 import com.cbgm.securechat.feature.contacts.domain.usecase.VerifyContact
+import com.cbgm.securechat.feature.contacts.presentation.model.ContactDetailsUiEvent
 import com.cbgm.securechat.feature.contacts.presentation.model.ContactDetailsUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,7 +19,7 @@ class ContactDetailsViewModel(
     private val getContact: GetContact,
     private val getContactSafetyNumber: GetContactSafetyNumber,
     private val verifyContact: VerifyContact
-) : ViewModel() {
+) : BaseViewModel() {
     private val _uiState = MutableStateFlow<ContactDetailsUiState>(ContactDetailsUiState.Loading)
 
     val uiState: StateFlow<ContactDetailsUiState> = _uiState.asStateFlow()
@@ -26,7 +28,24 @@ class ContactDetailsViewModel(
         loadContact()
     }
 
-    fun loadContact() {
+    fun onUiEvent(event: ContactDetailsUiEvent) {
+        when (event) {
+            ContactDetailsUiEvent.BackClicked -> navigator.popBackStack()
+            ContactDetailsUiEvent.RetryClicked,
+            ContactDetailsUiEvent.RefreshRequested -> loadContact()
+            ContactDetailsUiEvent.ConfirmVerificationClicked -> confirmVerification()
+            ContactDetailsUiEvent.ScanQrCodeClicked -> scanQrCode()
+            ContactDetailsUiEvent.ShareContactClicked,
+            ContactDetailsUiEvent.VerifyIdentityClicked,
+            ContactDetailsUiEvent.VerificationBackClicked -> Unit
+        }
+    }
+
+    private fun scanQrCode() {
+        navigator.navigateTo(AppRoute.VerifyIdentityQr(contactId = contactId))
+    }
+
+    private fun loadContact() {
         viewModelScope.launch {
             _uiState.value = ContactDetailsUiState.Loading
 
@@ -80,7 +99,7 @@ class ContactDetailsViewModel(
         }
     }
 
-    fun confirmVerification() {
+    private fun confirmVerification() {
         val current = _uiState.value as? ContactDetailsUiState.Content ?: return
 
         if (current.contact.secureChatIdentity?.verificationStatus == ContactVerificationStatus.VERIFIED) {

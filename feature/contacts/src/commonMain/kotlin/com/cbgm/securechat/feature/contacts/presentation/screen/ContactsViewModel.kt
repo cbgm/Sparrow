@@ -1,14 +1,14 @@
 package com.cbgm.securechat.feature.contacts.presentation.screen
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
 import com.cbgm.securechat.feature.contacts.domain.usecase.ImportDeviceContacts
 import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContacts
 import com.cbgm.securechat.feature.contacts.presentation.mapper.filterContacts
 import com.cbgm.securechat.feature.contacts.presentation.mapper.groupContactsByInitial
 import com.cbgm.securechat.feature.contacts.presentation.model.ContactsEffect
-import com.cbgm.securechat.feature.contacts.presentation.model.ContactsEvent
+import com.cbgm.securechat.feature.contacts.presentation.model.ContactsUiEvent
 import com.cbgm.securechat.feature.contacts.presentation.model.ContactsUiState
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
 class ContactsViewModel(
     private val observeContacts: ObserveContacts,
     private val importDeviceContacts: ImportDeviceContacts
-) : ViewModel() {
+) : BaseViewModel() {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
@@ -45,11 +45,25 @@ class ContactsViewModel(
             initialValue = ContactsUiState.Loading
         )
 
-    fun onEvent(event: ContactsEvent) {
+    fun onUiEvent(event: ContactsUiEvent) {
         when (event) {
-            is ContactsEvent.SearchQueryChanged -> _searchQuery.value = event.query
-            ContactsEvent.ImportDeviceContacts -> importContacts()
-            ContactsEvent.DeviceContactsPermissionDenied -> showPermissionDenied()
+            is ContactsUiEvent.SearchQueryChanged -> _searchQuery.value = event.query
+            ContactsUiEvent.ImportDeviceContacts -> importContacts()
+            ContactsUiEvent.DeviceContactsPermissionDenied -> showPermissionDenied()
+            ContactsUiEvent.BackClicked -> emitEffect(ContactsEffect.BackRequested)
+            ContactsUiEvent.ImportContactClicked -> emitEffect(ContactsEffect.ImportContactRequested)
+            ContactsUiEvent.CreateGroupClicked -> emitEffect(ContactsEffect.CreateGroupRequested)
+            is ContactsUiEvent.ContactClicked -> {
+                emitEffect(
+                    ContactsEffect.ContactSelected(
+                        contactId = event.contactId,
+                        contactName = event.contactName
+                    )
+                )
+            }
+            is ContactsUiEvent.SelectionTitleChanged,
+            is ContactsUiEvent.ContactSelectionToggled,
+            ContactsUiEvent.SelectionConfirmed -> Unit
         }
     }
 
@@ -72,6 +86,10 @@ class ContactsViewModel(
                 )
             )
         }
+    }
+
+    private fun emitEffect(effect: ContactsEffect) {
+        _effects.trySend(effect)
     }
 
     private fun List<Contact>.toUiState(query: String): ContactsUiState {

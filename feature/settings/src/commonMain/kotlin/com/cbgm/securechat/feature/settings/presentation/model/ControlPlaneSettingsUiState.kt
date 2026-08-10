@@ -56,26 +56,28 @@ enum class ControlPlaneDirectoryError {
     SYNC_FAILED
 }
 
-sealed interface ControlPlaneSettingsEvent {
-    data object AddClicked : ControlPlaneSettingsEvent
+sealed interface ControlPlaneSettingsUiEvent {
+    data object BackClicked : ControlPlaneSettingsUiEvent
 
-    data object AddDismissed : ControlPlaneSettingsEvent
+    data object AddClicked : ControlPlaneSettingsUiEvent
 
-    data object AddConfirmed : ControlPlaneSettingsEvent
+    data object AddDismissed : ControlPlaneSettingsUiEvent
 
-    data object Refresh : ControlPlaneSettingsEvent
+    data object AddConfirmed : ControlPlaneSettingsUiEvent
 
-    data object DirectoryApply : ControlPlaneSettingsEvent
+    data object Refresh : ControlPlaneSettingsUiEvent
+
+    data object DirectoryApply : ControlPlaneSettingsUiEvent
 
     data class NewUrlChanged(
         val value: String
-    ) : ControlPlaneSettingsEvent
+    ) : ControlPlaneSettingsUiEvent
 
     data class DirectoryUrlChanged(
         val value: String
-    ) : ControlPlaneSettingsEvent
+    ) : ControlPlaneSettingsUiEvent
 
     data class Remove(
         val url: String
-    ) : ControlPlaneSettingsEvent
+    ) : ControlPlaneSettingsUiEvent
 }

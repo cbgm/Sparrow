@@ -6,38 +6,27 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.securechat.feature.chats.presentation.model.CreateGroupEffect
-import com.cbgm.securechat.feature.chats.presentation.model.CreateGroupEvent
 import com.cbgm.securechat.feature.chats.presentation.screen.CreateGroupScreen
 import com.cbgm.securechat.feature.chats.presentation.screen.create.CreateGroupViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun CreateGroupRoute(
-    onBack: () -> Unit,
-    onGroupCreated: (conversationId: String) -> Unit,
+    onEffect: (CreateGroupEffect) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: CreateGroupViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(viewModel) {
-        viewModel.effects.collect { effect ->
-            when (effect) {
-                is CreateGroupEffect.GroupCreated -> onGroupCreated(effect.conversationId)
-            }
+        viewModel.effects.collect { event ->
+            onEffect(event)
         }
     }
 
     CreateGroupScreen(
         uiState = uiState,
-        onBack = {
-            viewModel.onEvent(CreateGroupEvent.Clear)
-            onBack()
-        },
-        onTitleChanged = { viewModel.onEvent(CreateGroupEvent.TitleChanged(it)) },
-        onSearchQueryChanged = { viewModel.onEvent(CreateGroupEvent.SearchQueryChanged(it)) },
-        onContactSelected = { viewModel.onEvent(CreateGroupEvent.ContactSelectionToggled(it)) },
-        onCreateGroup = { viewModel.onEvent(CreateGroupEvent.CreateClicked) },
+        onUiEvent = viewModel::onUiEvent,
         modifier = modifier
     )
 }

@@ -40,6 +40,7 @@ import com.cbgm.securechat.core.ui.component.PatternBackground
 import com.cbgm.securechat.core.ui.component.SecureChatScrollScaffold
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.core.ui.theme.spacing
+import com.cbgm.securechat.feature.contactimport.presentation.model.ImportIdentityUiEvent
 import com.cbgm.securechat.feature.contactimport.presentation.model.ImportIdentityUiState
 import com.cbgm.securechat.feature.contacts.domain.model.IdentityImportTrust
 import com.cbgm.securechat.resources.Res
@@ -63,10 +64,8 @@ private val Field = Color(0xFF102A46)
 @Composable
 fun ImportIdentityScreen(
     uiState: ImportIdentityUiState,
-    onEncodedIdentityChanged: (String) -> Unit,
-    onImportClick: () -> Unit,
-    onBack: () -> Unit,
-    onScanQrCode: () -> Unit,
+    onUiEvent: (ImportIdentityUiEvent) -> Unit,
+    importContactId: String?,
     modifier: Modifier = Modifier
 ) {
     SecureChatScrollScaffold(
@@ -81,7 +80,7 @@ fun ImportIdentityScreen(
         topBar = { containerColor ->
             ImportIdentityTopBar(
                 containerColor = containerColor,
-                onBack = onBack
+                onBack = { onUiEvent(ImportIdentityUiEvent.BackClicked) }
             )
         }
     ) { innerPadding, scrollState ->
@@ -118,7 +117,7 @@ fun ImportIdentityScreen(
             )
 
             OutlinedButton(
-                onClick = onScanQrCode,
+                onClick = { onUiEvent(ImportIdentityUiEvent.ScanQrCodeClicked) },
                 enabled = !uiState.isImporting,
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -150,7 +149,9 @@ fun ImportIdentityScreen(
 
             OutlinedTextField(
                 value = uiState.encodedIdentity,
-                onValueChange = onEncodedIdentityChanged,
+                onValueChange = { value ->
+                    onUiEvent(ImportIdentityUiEvent.EncodedIdentityChanged(value))
+                },
                 modifier = Modifier.fillMaxWidth(),
                 label = {
                     Text(text = stringResource(Res.string.feature_contactimport_shared_identity))
@@ -178,7 +179,14 @@ fun ImportIdentityScreen(
             ImportButton(
                 isImporting = uiState.isImporting,
                 enabled = uiState.encodedIdentity.isNotBlank(),
-                onClick = onImportClick
+                onClick = {
+                    onUiEvent(
+                        ImportIdentityUiEvent.ImportClicked(
+                            contactId = importContactId,
+                            identityImportTrust = IdentityImportTrust.UNVERIFIED
+                        )
+                    )
+                }
             )
 
             uiState.importedContactName?.let { name ->
@@ -357,10 +365,8 @@ fun ImportIdentityScreenPreview() {
     SecureChatTheme {
         ImportIdentityScreen(
             uiState = ImportIdentityUiState(),
-            onEncodedIdentityChanged = {},
-            onImportClick = {},
-            onBack = {},
-            onScanQrCode = {}
+            onUiEvent = {},
+            importContactId = null
         )
     }
 }

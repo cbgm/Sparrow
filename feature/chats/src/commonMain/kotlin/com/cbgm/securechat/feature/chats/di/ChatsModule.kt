@@ -67,6 +67,7 @@ import com.cbgm.securechat.feature.contacts.domain.identity.IdentityInvitationSe
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactSafetyNumber
 import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContact
 import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContacts
+import com.cbgm.securechat.presentation.screen.ContactsFlowViewModel
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
@@ -214,6 +215,8 @@ val chatsModule =
                 mailboxCapabilityLifecycle = get()
             )
         }
+
+        viewModel { ContactsFlowViewModel(getOrCreateDirectConversation = get()) }
 
         viewModel {
             ChatsViewModel(

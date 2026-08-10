@@ -16,6 +16,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.securechat.core.ui.component.IdentityVerificationScreen
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
 import com.cbgm.securechat.feature.contacts.domain.model.ContactVerificationStatus
+import com.cbgm.securechat.feature.contacts.presentation.model.ContactDetailsUiEvent
 import com.cbgm.securechat.feature.contacts.presentation.model.ContactDetailsUiState
 import com.cbgm.securechat.feature.contacts.presentation.screen.details.ContactDetailsScreen
 import com.cbgm.securechat.feature.contacts.presentation.screen.details.ContactDetailsViewModel
@@ -35,8 +36,6 @@ fun ContactDetailsFlow(
     contactId: String,
     openVerification: Boolean,
     verificationRevision: Int,
-    onScanQrCode: () -> Unit,
-    onClose: () -> Unit,
     onShareContact: (Contact) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ContactDetailsViewModel =
@@ -82,7 +81,7 @@ fun ContactDetailsFlow(
 
     LaunchedEffect(verificationRevision) {
         if (verificationRevision > 0) {
-            viewModel.loadContact()
+            viewModel.onUiEvent(ContactDetailsUiEvent.RefreshRequested)
         }
     }
 
@@ -115,14 +114,17 @@ fun ContactDetailsFlow(
             ContactDetailsContent.Overview -> {
                 ContactDetailsScreen(
                     uiState = uiState,
-                    onBack = onClose,
-                    onRetry = viewModel::loadContact,
-                    onShareContact = {
-                        contentState?.contact?.let(onShareContact)
-                    },
-                    onVerifyIdentity = {
-                        if (contentState?.canVerify == true) {
-                            content = ContactDetailsContent.VerifyIdentity
+                    onUiEvent = { event ->
+                        when (event) {
+                            ContactDetailsUiEvent.ShareContactClicked -> {
+                                contentState?.contact?.let(onShareContact)
+                            }
+                            ContactDetailsUiEvent.VerifyIdentityClicked -> {
+                                if (contentState?.canVerify == true) {
+                                    content = ContactDetailsContent.VerifyIdentity
+                                }
+                            }
+                            else -> viewModel.onUiEvent(event)
                         }
                     }
                 )
@@ -141,10 +143,15 @@ fun ContactDetailsFlow(
                         isLoadingSafetyNumber = false,
                         isVerifying = contentState.isSavingVerification,
                         errorMessage = contentState.verificationError,
-                        onConfirm = viewModel::confirmVerification,
-                        onScanQrCode = onScanQrCode,
+                        onConfirm = {
+                            viewModel.onUiEvent(ContactDetailsUiEvent.ConfirmVerificationClicked)
+                        },
+                        onScanQrCode = {
+                            viewModel.onUiEvent(ContactDetailsUiEvent.ScanQrCodeClicked)
+                        },
                         onBack = {
                             if (!contentState.isSavingVerification) {
+                                viewModel.onUiEvent(ContactDetailsUiEvent.VerificationBackClicked)
                                 content = ContactDetailsContent.Overview
                             }
                         }

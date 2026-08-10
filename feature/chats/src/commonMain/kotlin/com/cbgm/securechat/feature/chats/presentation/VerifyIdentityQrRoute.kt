@@ -6,22 +6,14 @@ import com.cbgm.securechat.feature.contactimport.presentation.ContactQrVerificat
 @Composable
 fun VerifyIdentityQrRoute(
     contactId: String,
-    groupId: String?,
-    onVerified: () -> Unit,
-    onBack: () -> Unit
+    groupId: String?
 ) {
     if (groupId == null) {
-        ContactQrVerificationFlow(
-            contactId = contactId,
-            onVerified = onVerified,
-            onBack = onBack
-        )
+        ContactQrVerificationFlow(contactId = contactId)
     } else {
         GroupMemberQrVerificationFlow(
             groupId = groupId,
-            contactId = contactId,
-            onVerified = onVerified,
-            onBack = onBack
+            contactId = contactId
         )
     }
 }

@@ -10,7 +10,6 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun ControlPlaneSettingsRoute(
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ControlPlaneSettingsViewModel = koinViewModel()
 ) {
@@ -18,8 +17,7 @@ fun ControlPlaneSettingsRoute(
 
     ControlPlaneSettingsScreen(
         uiState = uiState,
-        onEvent = viewModel::onEvent,
-        onBack = onBack,
+        onUiEvent = viewModel::onUiEvent,
         modifier = modifier
     )
 }

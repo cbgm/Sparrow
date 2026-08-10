@@ -8,7 +8,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.securechat.feature.contacts.presentation.component.ContactInvitationDialog
-import com.cbgm.securechat.feature.contacts.presentation.screen.ContactInvitationEffect
+import com.cbgm.securechat.feature.contacts.presentation.model.ContactInvitationEffect
+import com.cbgm.securechat.feature.contacts.presentation.model.ContactInvitationUiEvent
 import com.cbgm.securechat.feature.contacts.presentation.screen.ContactInvitationViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -21,11 +22,12 @@ fun ContactInvitationRoute(
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(viewModel) {
-        viewModel.effects.collect { effect ->
-            when (effect) {
+        viewModel.effects.collect { event ->
+            when (event) {
                 is ContactInvitationEffect.ShowError -> {
-                    snackbarHostState.showSnackbar(effect.message)
+                    snackbarHostState.showSnackbar(event.message)
                 }
+                else -> Unit
             }
         }
     }
@@ -35,13 +37,13 @@ fun ContactInvitationRoute(
             invitation = invitation,
             isProcessing = processingInvitationId == invitation.invitationId,
             onAccept = {
-                viewModel.accept(invitation.invitationId)
+                viewModel.onUiEvent(ContactInvitationUiEvent.AcceptClicked(invitation.invitationId))
             },
             onDecline = {
-                viewModel.decline(invitation.invitationId)
+                viewModel.onUiEvent(ContactInvitationUiEvent.DeclineClicked(invitation.invitationId))
             },
             onDeclineAndBlock = {
-                viewModel.declineAndBlock(invitation.invitationId)
+                viewModel.onUiEvent(ContactInvitationUiEvent.DeclineAndBlockClicked(invitation.invitationId))
             }
         )
     }

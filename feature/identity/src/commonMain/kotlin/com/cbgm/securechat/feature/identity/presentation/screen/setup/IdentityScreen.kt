@@ -39,6 +39,7 @@ import com.cbgm.securechat.core.ui.component.SecureChatCard
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.core.ui.theme.spacing
 import com.cbgm.securechat.feature.identity.domain.model.PublicIdentity
+import com.cbgm.securechat.feature.identity.presentation.model.IdentityUiEvent
 import com.cbgm.securechat.feature.identity.presentation.model.IdentityUiState
 import com.cbgm.securechat.feature.identity.presentation.screen.setup.component.IconBadge
 import com.cbgm.securechat.feature.identity.presentation.screen.setup.component.PublicKeySection
@@ -70,11 +71,7 @@ private val Field = Color(0xFF102A46)
 @Composable
 fun IdentityScreen(
     uiState: IdentityUiState,
-    onRequestPhoneNumberHint: () -> Unit,
-    onPhoneNumberChanged: (String) -> Unit,
-    onCreateIdentity: () -> Unit,
-    onRetry: () -> Unit,
-    onShareIdentity: () -> Unit,
+    onUiEvent: (IdentityUiEvent) -> Unit,
     scrollState: ScrollState,
     innerPadding: PaddingValues,
     modifier: Modifier = Modifier
@@ -99,9 +96,9 @@ fun IdentityScreen(
                 NoIdentityContent(
                     phoneNumber = uiState.phoneNumber,
                     phoneNumberError = uiState.phoneNumberError,
-                    onRequestPhoneNumberHint = onRequestPhoneNumberHint,
-                    onPhoneNumberChanged = onPhoneNumberChanged,
-                    onCreateIdentity = onCreateIdentity
+                    onRequestPhoneNumberHint = { onUiEvent(IdentityUiEvent.RequestPhoneNumberHint) },
+                    onPhoneNumberChanged = { onUiEvent(IdentityUiEvent.PhoneNumberChanged(it)) },
+                    onCreateIdentity = { onUiEvent(IdentityUiEvent.CreateIdentityClicked) }
                 )
             }
 
@@ -109,16 +106,20 @@ fun IdentityScreen(
                 ReadyIdentityContent(
                     publicIdentity = uiState.publicIdentity,
                     localPhoneNumber = uiState.localPhoneNumber,
-                    onShareIdentity = onShareIdentity
+                    onShareIdentity = { onUiEvent(IdentityUiEvent.ShareIdentityClicked) }
                 )
             }
 
             IdentityUiState.IncompleteIdentity -> {
-                IncompleteIdentityContent(onRetry = onRetry)
+                IncompleteIdentityContent(onRetry = {
+                    onUiEvent(IdentityUiEvent.RetryClicked)
+                })
             }
 
             is IdentityUiState.Error -> {
-                ErrorContent(message = uiState.message, onRetry = onRetry)
+                ErrorContent(message = uiState.message, onRetry = {
+                    onUiEvent(IdentityUiEvent.RetryClicked)
+                })
             }
         }
     }
@@ -222,9 +223,15 @@ private fun NoIdentityContent(
                             focusedContainerColor = Field,
                             unfocusedContainerColor = Field,
                             focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.18f),
+                            unfocusedBorderColor =
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                    alpha = 0.18f
+                                ),
                             focusedLabelColor = MaterialTheme.colorScheme.secondary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
+                            unfocusedLabelColor =
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                    alpha = 0.72f
+                                ),
                             cursorColor = MaterialTheme.colorScheme.secondary,
                             errorBorderColor = MaterialTheme.colorScheme.error,
                             errorLabelColor = MaterialTheme.colorScheme.error,
@@ -257,7 +264,6 @@ private fun ReadyIdentityContent(
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
         IconBadge(icon = Icons.Default.VerifiedUser)
-
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
         Text(
@@ -266,7 +272,6 @@ private fun ReadyIdentityContent(
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Bold
         )
-
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
@@ -275,7 +280,6 @@ private fun ReadyIdentityContent(
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f)
         )
-
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
 
         Surface(
@@ -290,7 +294,6 @@ private fun ReadyIdentityContent(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
             )
         }
-
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.large))
 
         SecureChatCard {
@@ -323,7 +326,10 @@ private fun ReadyIdentityContent(
                             contentColor = Color(0xFF071A2E)
                         )
                 ) {
-                    Text(text = stringResource(Res.string.feature_identity_share_my_identity), fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = stringResource(Res.string.feature_identity_share_my_identity),
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
         }
@@ -360,7 +366,10 @@ private fun IncompleteIdentityContent(onRetry: () -> Unit) {
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
-        SecureChatApprovalButton(onClick = onRetry, text = stringResource(Res.string.feature_identity_check_again))
+        SecureChatApprovalButton(
+            onClick = onRetry,
+            text = stringResource(Res.string.feature_identity_check_again)
+        )
     }
 }
 
@@ -407,11 +416,7 @@ private fun NoIdentityPreview() {
     SecureChatTheme {
         IdentityScreen(
             uiState = IdentityUiState.NoIdentity(phoneNumber = "+491701111111"),
-            onRequestPhoneNumberHint = {},
-            onPhoneNumberChanged = {},
-            onCreateIdentity = {},
-            onRetry = {},
-            onShareIdentity = {},
+            onUiEvent = {},
             scrollState = ScrollState(0),
             innerPadding = PaddingValues(0.dp)
         )
@@ -432,11 +437,7 @@ private fun ReadyIdentityPreview() {
                         ),
                     localPhoneNumber = "+491701111111"
                 ),
-            onRequestPhoneNumberHint = {},
-            onPhoneNumberChanged = {},
-            onCreateIdentity = {},
-            onRetry = {},
-            onShareIdentity = {},
+            onUiEvent = {},
             scrollState = ScrollState(0),
             innerPadding = PaddingValues(0.dp)
         )
@@ -449,11 +450,7 @@ private fun IncompleteIdentityPreview() {
     SecureChatTheme {
         IdentityScreen(
             uiState = IdentityUiState.IncompleteIdentity,
-            onRequestPhoneNumberHint = {},
-            onPhoneNumberChanged = {},
-            onCreateIdentity = {},
-            onRetry = {},
-            onShareIdentity = {},
+            onUiEvent = {},
             scrollState = ScrollState(0),
             innerPadding = PaddingValues(0.dp)
         )
@@ -466,11 +463,7 @@ private fun LoadingIdentityPreview() {
     SecureChatTheme {
         IdentityScreen(
             uiState = IdentityUiState.Error("gdfgdgdg"),
-            onRequestPhoneNumberHint = {},
-            onPhoneNumberChanged = {},
-            onCreateIdentity = {},
-            onRetry = {},
-            onShareIdentity = {},
+            onUiEvent = {},
             scrollState = ScrollState(0),
             innerPadding = PaddingValues(0.dp)
         )

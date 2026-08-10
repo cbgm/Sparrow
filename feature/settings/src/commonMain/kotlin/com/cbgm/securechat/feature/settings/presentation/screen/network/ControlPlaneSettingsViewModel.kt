@@ -1,6 +1,5 @@
 package com.cbgm.securechat.feature.settings.presentation.screen
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.transport.ControlPlaneConfiguration
 import com.cbgm.securechat.core.transport.ControlPlaneDirectorySynchronizer
@@ -9,9 +8,10 @@ import com.cbgm.securechat.core.transport.ControlPlaneEndpointStatus
 import com.cbgm.securechat.core.transport.ControlPlaneHealthMonitor
 import com.cbgm.securechat.core.transport.ControlPlaneReachability
 import com.cbgm.securechat.core.transport.ControlPlaneStatusStore
+import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.settings.presentation.model.ControlPlaneDirectoryError
 import com.cbgm.securechat.feature.settings.presentation.model.ControlPlaneSettingsError
-import com.cbgm.securechat.feature.settings.presentation.model.ControlPlaneSettingsEvent
+import com.cbgm.securechat.feature.settings.presentation.model.ControlPlaneSettingsUiEvent
 import com.cbgm.securechat.feature.settings.presentation.model.ControlPlaneSettingsUiState
 import com.cbgm.securechat.feature.settings.presentation.model.ControlPlaneUiModel
 import com.cbgm.securechat.feature.settings.presentation.model.ControlPlaneUiSource
@@ -30,7 +30,7 @@ class ControlPlaneSettingsViewModel(
     private val statusStore: ControlPlaneStatusStore,
     private val healthMonitor: ControlPlaneHealthMonitor,
     private val directorySynchronizer: ControlPlaneDirectorySynchronizer
-) : ViewModel() {
+) : BaseViewModel() {
     private val _uiState = MutableStateFlow(ControlPlaneSettingsUiState())
     val uiState: StateFlow<ControlPlaneSettingsUiState> = _uiState.asStateFlow()
 
@@ -40,20 +40,21 @@ class ControlPlaneSettingsViewModel(
         refreshAll()
     }
 
-    fun onEvent(event: ControlPlaneSettingsEvent) {
+    fun onUiEvent(event: ControlPlaneSettingsUiEvent) {
         when (event) {
-            ControlPlaneSettingsEvent.AddClicked ->
+            ControlPlaneSettingsUiEvent.BackClicked -> navigator.popBackStack()
+            ControlPlaneSettingsUiEvent.AddClicked ->
                 _uiState.update { it.copy(showAddDialog = true, addError = null) }
-            ControlPlaneSettingsEvent.AddDismissed ->
+            ControlPlaneSettingsUiEvent.AddDismissed ->
                 _uiState.update { it.copy(showAddDialog = false, newUrl = "", addError = null) }
-            ControlPlaneSettingsEvent.AddConfirmed -> addControlPlane()
-            ControlPlaneSettingsEvent.DirectoryApply -> saveDirectoryUrl()
-            ControlPlaneSettingsEvent.Refresh -> refreshAll()
-            is ControlPlaneSettingsEvent.NewUrlChanged ->
+            ControlPlaneSettingsUiEvent.AddConfirmed -> addControlPlane()
+            ControlPlaneSettingsUiEvent.DirectoryApply -> saveDirectoryUrl()
+            ControlPlaneSettingsUiEvent.Refresh -> refreshAll()
+            is ControlPlaneSettingsUiEvent.NewUrlChanged ->
                 _uiState.update { it.copy(newUrl = event.value, addError = null) }
-            is ControlPlaneSettingsEvent.DirectoryUrlChanged ->
+            is ControlPlaneSettingsUiEvent.DirectoryUrlChanged ->
                 _uiState.update { it.copy(directoryDraft = event.value, directoryError = null) }
-            is ControlPlaneSettingsEvent.Remove -> removeControlPlane(event.url)
+            is ControlPlaneSettingsUiEvent.Remove -> removeControlPlane(event.url)
         }
     }
 

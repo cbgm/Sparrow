@@ -74,6 +74,7 @@ import com.cbgm.securechat.feature.chats.domain.model.GroupMemberInvitationStatu
 import com.cbgm.securechat.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.securechat.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.securechat.feature.chats.domain.model.MessageSecurity
+import com.cbgm.securechat.feature.chats.presentation.model.ChatUiEvent
 import com.cbgm.securechat.feature.chats.presentation.model.ChatUiState
 import com.cbgm.securechat.feature.chats.presentation.screen.chat.component.DeliveryLabel
 import com.cbgm.securechat.feature.chats.presentation.screen.chat.component.GroupConversationDeletedHint
@@ -163,16 +164,8 @@ private val IncomingBubbleColor = Color(0xFF17324D)
 @Composable
 fun ChatScreen(
     uiState: ChatUiState,
-    onMessageTextChanged: (String) -> Unit,
-    onSendClick: () -> Unit,
-    onClickHeader: () -> Unit,
-    onRetryMessage: (String) -> Unit,
-    onVerifyIdentity: () -> Unit,
-    onManualIdentitySetup: () -> Unit,
-    onBack: () -> Unit,
-    modifier: Modifier = Modifier,
-    onAcceptGroupInvitation: () -> Unit = {},
-    onDeclineGroupInvitation: () -> Unit = {}
+    onUiEvent: (ChatUiEvent) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     SecureChatLazyScaffold(
         modifier = modifier,
@@ -188,20 +181,22 @@ fun ChatScreen(
             ChatTopBar(
                 uiState = uiState,
                 containerColor = containerColor,
-                onClickHeader = onClickHeader,
-                onVerifyIdentity = onVerifyIdentity,
-                onManualIdentitySetup = onManualIdentitySetup,
-                onAcceptGroupInvitation = onAcceptGroupInvitation,
-                onDeclineGroupInvitation = onDeclineGroupInvitation,
-                onBack = onBack
+                onClickHeader = { onUiEvent(ChatUiEvent.HeaderClicked) },
+                onVerifyIdentity = { onUiEvent(ChatUiEvent.VerifyIdentityClicked) },
+                onManualIdentitySetup = { onUiEvent(ChatUiEvent.ManualIdentitySetupClicked) },
+                onAcceptGroupInvitation = { onUiEvent(ChatUiEvent.AcceptGroupInvitation) },
+                onDeclineGroupInvitation = { onUiEvent(ChatUiEvent.DeclineGroupInvitation) },
+                onBack = { onUiEvent(ChatUiEvent.BackClicked) }
             )
         },
         bottomBar = { containerColor ->
             ChatBottomBar(
                 uiState = uiState,
                 containerColor = containerColor,
-                onMessageTextChanged = onMessageTextChanged,
-                onSendClick = onSendClick
+                onMessageTextChanged = { text ->
+                    onUiEvent(ChatUiEvent.MessageTextChanged(text))
+                },
+                onSendClick = { onUiEvent(ChatUiEvent.SendClicked) }
             )
         }
     ) { innerPadding, listState ->
@@ -209,7 +204,9 @@ fun ChatScreen(
             uiState = uiState,
             listState = listState,
             innerPadding = innerPadding,
-            onRetryMessage = onRetryMessage
+            onRetryMessage = { messageId ->
+                onUiEvent(ChatUiEvent.RetryMessage(messageId))
+            }
         )
     }
 }
@@ -609,7 +606,10 @@ private fun SecurityBanner(
                     CombinedState(
                         icon = Icons.Default.Warning,
                         title = stringResource(Res.string.feature_chats_direct_chat_reinvite_required_title),
-                        description = stringResource(Res.string.feature_chats_direct_chat_reinvite_required_description),
+                        description =
+                            stringResource(
+                                Res.string.feature_chats_direct_chat_reinvite_required_description
+                            ),
                         containerColor = MaterialTheme.colorScheme.errorContainer,
                         contentColor = MaterialTheme.colorScheme.onErrorContainer
                     )
@@ -620,7 +620,10 @@ private fun SecurityBanner(
                     CombinedState(
                         icon = Icons.Default.Warning,
                         title = stringResource(Res.string.feature_chats_direct_chat_reinvite_required_title),
-                        description = stringResource(Res.string.feature_chats_direct_chat_reinvite_required_description),
+                        description =
+                            stringResource(
+                                Res.string.feature_chats_direct_chat_reinvite_required_description
+                            ),
                         containerColor = MaterialTheme.colorScheme.errorContainer,
                         contentColor = MaterialTheme.colorScheme.onErrorContainer
                     )
@@ -946,7 +949,11 @@ private fun MessageBubble(
                     )
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = MaterialTheme.spacing.small, vertical = MaterialTheme.spacing.base),
+                    modifier =
+                        Modifier.padding(
+                            horizontal = MaterialTheme.spacing.small,
+                            vertical = MaterialTheme.spacing.base
+                        ),
                     verticalAlignment = Alignment.Top
                 ) {
                     if (bubbleState.isContentFailed) {
@@ -1339,13 +1346,7 @@ private fun ChatScreenPreview() {
                     contactSecurityState = ContactSecurityState.MUTUAL_KEYS_VERIFIED,
                     errorMessage = "sfsfsjljljljljljlf"
                 ),
-            onMessageTextChanged = {},
-            onSendClick = {},
-            onClickHeader = {},
-            onRetryMessage = {},
-            onVerifyIdentity = {},
-            onManualIdentitySetup = {},
-            onBack = {}
+            onUiEvent = {}
         )
     }
 }
@@ -1386,13 +1387,7 @@ private fun ChatScreenMessagesPreview() {
                             )
                         )
                 ),
-            onMessageTextChanged = {},
-            onSendClick = {},
-            onClickHeader = {},
-            onRetryMessage = {},
-            onVerifyIdentity = {},
-            onManualIdentitySetup = {},
-            onBack = {}
+            onUiEvent = {}
         )
     }
 }

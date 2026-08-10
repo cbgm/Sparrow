@@ -1,8 +1,10 @@
 package com.cbgm.securechat.feature.contactimport.presentation.screen
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cbgm.securechat.core.ui.navigation.AppNavigationResult
+import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.contactimport.domain.usecase.VerifyContactByQr
+import com.cbgm.securechat.feature.contactimport.presentation.model.VerifyContactQrUiEvent
 import com.cbgm.securechat.feature.contactimport.presentation.model.VerifyContactQrUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,11 +15,19 @@ import kotlinx.coroutines.launch
 class VerifyContactQrViewModel(
     private val contactId: String,
     private val verifyContactByQr: VerifyContactByQr
-) : ViewModel() {
+) : BaseViewModel() {
     private val _uiState = MutableStateFlow(VerifyContactQrUiState())
     val uiState: StateFlow<VerifyContactQrUiState> = _uiState.asStateFlow()
 
-    fun onQrCodeScanned(encodedIdentity: String) {
+    fun onUiEvent(event: VerifyContactQrUiEvent) {
+        when (event) {
+            is VerifyContactQrUiEvent.QrCodeScanned -> onQrCodeScanned(event.encodedIdentity)
+            VerifyContactQrUiEvent.BackClicked -> navigator.popBackStack()
+            VerifyContactQrUiEvent.ErrorDismissed -> dismissError()
+        }
+    }
+
+    private fun onQrCodeScanned(encodedIdentity: String) {
         if (_uiState.value.isVerifying || _uiState.value.isVerified) {
             return
         }
@@ -41,6 +51,9 @@ class VerifyContactQrViewModel(
                         errorMessage = null
                     )
                 }
+                navigator.popBackStack(
+                    AppNavigationResult.IncrementInt(key = "verificationRevision")
+                )
             }.onFailure { error ->
                 _uiState.update {
                     it.copy(
@@ -53,7 +66,7 @@ class VerifyContactQrViewModel(
         }
     }
 
-    fun dismissError() {
+    private fun dismissError() {
         _uiState.update {
             it.copy(errorMessage = null)
         }

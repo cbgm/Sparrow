@@ -26,7 +26,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.securechat.core.ui.component.SecureChatLazyScaffold
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.core.ui.theme.spacing
-import com.cbgm.securechat.feature.settings.presentation.model.ControlPlaneSettingsEvent
+import com.cbgm.securechat.feature.settings.presentation.model.ControlPlaneSettingsUiEvent
 import com.cbgm.securechat.feature.settings.presentation.model.ControlPlaneSettingsUiState
 import com.cbgm.securechat.feature.settings.presentation.screen.components.AddControlPlaneDialog
 import com.cbgm.securechat.feature.settings.presentation.screen.components.ControlPlaneDirectoryCard
@@ -42,8 +42,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun ControlPlaneSettingsScreen(
     uiState: ControlPlaneSettingsUiState,
-    onEvent: (ControlPlaneSettingsEvent) -> Unit,
-    onBack: () -> Unit,
+    onUiEvent: (ControlPlaneSettingsUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     SecureChatLazyScaffold(
@@ -52,8 +51,8 @@ fun ControlPlaneSettingsScreen(
         topBar = {
             ControlPlaneTopBar(
                 isRefreshing = uiState.isRefreshing,
-                onBack = onBack,
-                onRefresh = { onEvent(ControlPlaneSettingsEvent.Refresh) }
+                onBack = { onUiEvent(ControlPlaneSettingsUiEvent.BackClicked) },
+                onRefresh = { onUiEvent(ControlPlaneSettingsUiEvent.Refresh) }
             )
         }
     ) { innerPadding, listState ->
@@ -71,9 +70,9 @@ fun ControlPlaneSettingsScreen(
                     ControlPlaneDirectoryCard(
                         uiState = uiState,
                         onDirectoryUrlChanged = {
-                            onEvent(ControlPlaneSettingsEvent.DirectoryUrlChanged(it))
+                            onUiEvent(ControlPlaneSettingsUiEvent.DirectoryUrlChanged(it))
                         },
-                        onApply = { onEvent(ControlPlaneSettingsEvent.DirectoryApply) }
+                        onApply = { onUiEvent(ControlPlaneSettingsUiEvent.DirectoryApply) }
                     )
                 }
 
@@ -87,13 +86,13 @@ fun ControlPlaneSettingsScreen(
                 ) { entry ->
                     ControlPlaneListItem(
                         entry = entry,
-                        onRemove = { onEvent(ControlPlaneSettingsEvent.Remove(entry.url)) }
+                        onRemove = { onUiEvent(ControlPlaneSettingsUiEvent.Remove(entry.url)) }
                     )
                 }
             }
 
             FloatingActionButton(
-                onClick = { onEvent(ControlPlaneSettingsEvent.AddClicked) },
+                onClick = { onUiEvent(ControlPlaneSettingsUiEvent.AddClicked) },
                 containerColor = MaterialTheme.colorScheme.secondary,
                 contentColor = MaterialTheme.colorScheme.background,
                 modifier =
@@ -113,9 +112,9 @@ fun ControlPlaneSettingsScreen(
         AddControlPlaneDialog(
             value = uiState.newUrl,
             error = uiState.addError,
-            onValueChanged = { onEvent(ControlPlaneSettingsEvent.NewUrlChanged(it)) },
-            onConfirm = { onEvent(ControlPlaneSettingsEvent.AddConfirmed) },
-            onDismiss = { onEvent(ControlPlaneSettingsEvent.AddDismissed) }
+            onValueChanged = { onUiEvent(ControlPlaneSettingsUiEvent.NewUrlChanged(it)) },
+            onConfirm = { onUiEvent(ControlPlaneSettingsUiEvent.AddConfirmed) },
+            onDismiss = { onUiEvent(ControlPlaneSettingsUiEvent.AddDismissed) }
         )
     }
 }
@@ -166,8 +165,7 @@ fun ControlPaneSettingsScreenPreview() {
     SecureChatTheme {
         ControlPlaneSettingsScreen(
             uiState = ControlPlaneSettingsUiState(),
-            onEvent = {},
-            onBack = {}
+            onUiEvent = {}
         )
     }
 }

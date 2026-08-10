@@ -34,6 +34,7 @@ import com.cbgm.securechat.core.ui.component.SecureChatStaticScaffold
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.core.ui.theme.spacing
 import com.cbgm.securechat.feature.contactimport.platform.QrScanner
+import com.cbgm.securechat.feature.contactimport.presentation.model.ScanIdentityUiEvent
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.feature_contactimport_scan_identity
 import com.cbgm.securechat.resources.feature_contactimport_scan_identity_instruction
@@ -42,8 +43,7 @@ import org.jetbrains.compose.resources.stringResource
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScanIdentityScreen(
-    onQrCodeScanned: (String) -> Unit,
-    onBack: () -> Unit,
+    onUiEvent: (ScanIdentityUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     SecureChatStaticScaffold(
@@ -65,7 +65,7 @@ fun ScanIdentityScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = { onUiEvent(ScanIdentityUiEvent.BackClicked) }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = null
@@ -82,7 +82,9 @@ fun ScanIdentityScreen(
                     .padding(innerPadding)
         ) {
             QrScanner(
-                onQrCodeScanned = onQrCodeScanned,
+                onQrCodeScanned = { encodedIdentity ->
+                    onUiEvent(ScanIdentityUiEvent.QrCodeScanned(encodedIdentity))
+                },
                 modifier = Modifier.fillMaxSize()
             )
 
@@ -175,8 +177,7 @@ private fun ScannerOverlay(modifier: Modifier = Modifier) {
 fun ScannedIdentityPreview() {
     SecureChatTheme {
         ScanIdentityScreen(
-            onQrCodeScanned = {},
-            onBack = {}
+            onUiEvent = {}
         )
     }
 }

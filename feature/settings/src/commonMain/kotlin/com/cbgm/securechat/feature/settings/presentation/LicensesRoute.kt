@@ -11,14 +11,13 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun LicensesRoute(
     modifier: Modifier = Modifier,
-    onBack: () -> Unit,
     licensesViewModel: LicensesViewModel = koinViewModel()
 ) {
     val uiState by licensesViewModel.uiState.collectAsState()
 
     LicensesScreen(
         uiState = uiState,
-        onBack = onBack,
+        onUiEvent = licensesViewModel::onUiEvent,
         modifier = modifier
     )
 }

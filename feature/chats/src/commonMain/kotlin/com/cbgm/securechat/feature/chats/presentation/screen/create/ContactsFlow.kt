@@ -12,7 +12,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.cbgm.securechat.feature.chats.presentation.CreateGroupRoute
+import com.cbgm.securechat.feature.chats.presentation.model.ContactsFlowUiEvent
+import com.cbgm.securechat.feature.chats.presentation.model.CreateGroupEffect
 import com.cbgm.securechat.feature.contacts.presentation.ContactsRoute
+import com.cbgm.securechat.feature.contacts.presentation.model.ContactsEffect
+import org.koin.compose.viewmodel.koinViewModel
 
 private enum class ContactsContent {
     Contacts,
@@ -21,11 +25,9 @@ private enum class ContactsContent {
 
 @Composable
 fun ContactsFlow(
-    onBack: () -> Unit,
-    onImportContact: () -> Unit,
-    onContactClick: (contactId: String, contactName: String) -> Unit,
-    onGroupCreated: (conversationId: String) -> Unit,
-    modifier: Modifier = Modifier
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: ContactsFlowViewModel = koinViewModel()
 ) {
     var content by rememberSaveable {
         mutableStateOf(ContactsContent.Contacts)
@@ -60,23 +62,70 @@ fun ContactsFlow(
         when (target) {
             ContactsContent.Contacts -> {
                 ContactsRoute(
-                    onBack = onBack,
-                    onImportContact = onImportContact,
-                    onCreateGroup = {
-                        content = ContactsContent.CreateGroup
-                    },
-                    onContactClick = onContactClick
+                    onEffect = { event ->
+                        handleContactsEffect(
+                            event = event,
+                            onDismiss = onDismiss,
+                            onCreateGroup = { content = ContactsContent.CreateGroup },
+                            onUiEvent = viewModel::onUiEvent
+                        )
+                    }
                 )
             }
 
             ContactsContent.CreateGroup -> {
                 CreateGroupRoute(
-                    onBack = {
-                        content = ContactsContent.Contacts
-                    },
-                    onGroupCreated = onGroupCreated
+                    onEffect = { event ->
+                        handleCreateGroupEffect(
+                            event = event,
+                            onDismiss = onDismiss,
+                            onBack = { content = ContactsContent.Contacts },
+                            onUiEvent = viewModel::onUiEvent
+                        )
+                    }
                 )
             }
+        }
+    }
+}
+
+private fun handleContactsEffect(
+    event: ContactsEffect,
+    onDismiss: () -> Unit,
+    onCreateGroup: () -> Unit,
+    onUiEvent: (ContactsFlowUiEvent) -> Unit
+) {
+    when (event) {
+        ContactsEffect.BackRequested -> onDismiss()
+        ContactsEffect.ImportContactRequested -> {
+            onDismiss()
+            onUiEvent(ContactsFlowUiEvent.ImportContactClicked)
+        }
+        ContactsEffect.CreateGroupRequested -> onCreateGroup()
+        is ContactsEffect.ContactSelected -> {
+            onDismiss()
+            onUiEvent(
+                ContactsFlowUiEvent.ContactSelected(
+                    contactId = event.contactId,
+                    contactName = event.contactName
+                )
+            )
+        }
+        is ContactsEffect.ShowError -> Unit
+    }
+}
+
+private fun handleCreateGroupEffect(
+    event: CreateGroupEffect,
+    onDismiss: () -> Unit,
+    onBack: () -> Unit,
+    onUiEvent: (ContactsFlowUiEvent) -> Unit
+) {
+    when (event) {
+        CreateGroupEffect.BackRequested -> onBack()
+        is CreateGroupEffect.GroupCreated -> {
+            onDismiss()
+            onUiEvent(ContactsFlowUiEvent.GroupCreated(event.conversationId))
         }
     }
 }

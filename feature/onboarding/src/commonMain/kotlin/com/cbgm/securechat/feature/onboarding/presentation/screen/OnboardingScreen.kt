@@ -31,6 +31,7 @@ import com.cbgm.securechat.core.ui.theme.spacing
 import com.cbgm.securechat.feature.identity.domain.model.PublicIdentity
 import com.cbgm.securechat.feature.identity.presentation.model.IdentityUiState
 import com.cbgm.securechat.feature.onboarding.presentation.model.OnboardingPage
+import com.cbgm.securechat.feature.onboarding.presentation.model.OnboardingUiEvent
 import com.cbgm.securechat.feature.onboarding.presentation.model.OnboardingUiState
 import com.cbgm.securechat.feature.onboarding.presentation.screen.pages.PermissionsPage
 import com.cbgm.securechat.feature.onboarding.presentation.screen.pages.PhonePage
@@ -46,13 +47,7 @@ import org.jetbrains.compose.resources.stringResource
 fun OnboardingScreen(
     state: OnboardingUiState,
     identityState: IdentityUiState,
-    onNext: () -> Unit,
-    onRequestPermissions: () -> Unit,
-    onChooseAnotherNumber: () -> Unit,
-    onRetryAutomaticNumber: () -> Unit,
-    onPhoneNumberChanged: (String) -> Unit,
-    onApproveAndCreate: () -> Unit,
-    onNameChanged: (String) -> Unit
+    onUiEvent: (OnboardingUiEvent) -> Unit
 ) {
     Box(
         modifier =
@@ -89,23 +84,27 @@ fun OnboardingScreen(
                 ) { page ->
 
                     when (page) {
-                        OnboardingPage.WELCOME -> WelcomePage(onNext)
-                        OnboardingPage.PRIVACY -> PrivacyPage(onNext)
+                        OnboardingPage.WELCOME -> WelcomePage { onUiEvent(OnboardingUiEvent.NextClicked) }
+                        OnboardingPage.PRIVACY -> PrivacyPage { onUiEvent(OnboardingUiEvent.NextClicked) }
                         OnboardingPage.PERMISSIONS ->
-                            PermissionsPage(
-                                onRequestPermissions
-                            )
+                            PermissionsPage {
+                                onUiEvent(OnboardingUiEvent.RequestPermissionsClicked)
+                            }
 
                         OnboardingPage.PHONE ->
                             PhonePage(
                                 identityState = identityState,
                                 isCreating = state.isCreatingIdentity,
                                 canRetryAutomatic = state.phonePermissionGranted,
-                                onChooseAnotherNumber = onChooseAnotherNumber,
-                                onRetryAutomaticNumber = onRetryAutomaticNumber,
-                                onPhoneNumberChanged = onPhoneNumberChanged,
-                                onApproveAndCreate = onApproveAndCreate,
-                                onNameChanged = onNameChanged
+                                onChooseAnotherNumber = { onUiEvent(OnboardingUiEvent.ChooseAnotherNumberClicked) },
+                                onRetryAutomaticNumber = { onUiEvent(OnboardingUiEvent.RetryAutomaticNumberClicked) },
+                                onPhoneNumberChanged = { value ->
+                                    onUiEvent(OnboardingUiEvent.PhoneNumberChanged(value))
+                                },
+                                onApproveAndCreate = { onUiEvent(OnboardingUiEvent.ApproveAndCreateClicked) },
+                                onNameChanged = { value ->
+                                    onUiEvent(OnboardingUiEvent.NameChanged(value))
+                                }
                             )
                     }
                 }
@@ -129,13 +128,7 @@ private fun OnboardingScreenPreview() {
                             ByteArray(size = 0)
                         )
                 ),
-            onNext = {},
-            onRequestPermissions = {},
-            onChooseAnotherNumber = {},
-            onRetryAutomaticNumber = {},
-            onPhoneNumberChanged = {},
-            onApproveAndCreate = {},
-            onNameChanged = {}
+            onUiEvent = {}
         )
     }
 }
@@ -147,13 +140,7 @@ private fun OnboardingScreen2Preview() {
         OnboardingScreen(
             state = OnboardingUiState(page = OnboardingPage.WELCOME),
             identityState = IdentityUiState.NoIdentity(),
-            onNext = {},
-            onRequestPermissions = {},
-            onChooseAnotherNumber = {},
-            onRetryAutomaticNumber = {},
-            onPhoneNumberChanged = {},
-            onApproveAndCreate = {},
-            onNameChanged = {}
+            onUiEvent = {}
         )
     }
 }

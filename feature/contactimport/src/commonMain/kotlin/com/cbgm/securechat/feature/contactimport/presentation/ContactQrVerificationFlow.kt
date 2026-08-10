@@ -1,7 +1,6 @@
 package com.cbgm.securechat.feature.contactimport.presentation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -12,7 +11,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.securechat.core.extensions.toFingerprint
 import com.cbgm.securechat.feature.contactimport.presentation.component.verification.QrVerificationErrorDialog
 import com.cbgm.securechat.feature.contactimport.presentation.component.verification.QrVerificationProgressDialog
+import com.cbgm.securechat.feature.contactimport.presentation.model.ScanIdentityUiEvent
 import com.cbgm.securechat.feature.contactimport.presentation.model.ScannedIdentityPreview
+import com.cbgm.securechat.feature.contactimport.presentation.model.VerifyContactQrUiEvent
 import com.cbgm.securechat.feature.contactimport.presentation.screen.VerifyContactQrViewModel
 import com.cbgm.securechat.feature.contactimport.presentation.screen.components.ScannedIdentityConfirmationDialog
 import com.cbgm.securechat.feature.identity.domain.service.IdentityShareCodec
@@ -27,8 +28,6 @@ import org.koin.core.parameter.parametersOf
 @Composable
 fun ContactQrVerificationFlow(
     contactId: String,
-    onVerified: () -> Unit,
-    onBack: () -> Unit,
     viewModel: VerifyContactQrViewModel =
         koinViewModel {
             parametersOf(contactId)
@@ -44,31 +43,32 @@ fun ContactQrVerificationFlow(
     val invalidIdentityQrMessage =
         stringResource(Res.string.feature_contactimport_invalid_identity_qr)
 
-    LaunchedEffect(uiState.isVerified) {
-        if (uiState.isVerified) {
-            onVerified()
-        }
-    }
-
     key(scanAttempt) {
         ScanIdentityRoute(
-            onQrCodeScanned = { encodedIdentity ->
-                identityShareCodec
-                    .decode(encodedValue = encodedIdentity)
-                    .onSuccess { payload ->
-                        scannedIdentityPreview =
-                            ScannedIdentityPreview(
-                                encodedIdentity = encodedIdentity,
-                                displayName = payload.contactDetails.displayName,
-                                phoneNumber = payload.contactDetails.phoneNumber,
-                                signingKeyFingerprint = payload.signingPublicKey.toFingerprint(),
-                                encryptionKeyFingerprint = payload.encryptionPublicKey.toFingerprint()
-                            )
-                    }.onFailure { error ->
-                        scanErrorMessage = error.message ?: invalidIdentityQrMessage
+            onUiEvent = { event ->
+                when (event) {
+                    is ScanIdentityUiEvent.QrCodeScanned -> {
+                        val encodedIdentity = event.encodedIdentity
+                        identityShareCodec
+                            .decode(encodedValue = encodedIdentity)
+                            .onSuccess { payload ->
+                                scannedIdentityPreview =
+                                    ScannedIdentityPreview(
+                                        encodedIdentity = encodedIdentity,
+                                        displayName = payload.contactDetails.displayName,
+                                        phoneNumber = payload.contactDetails.phoneNumber,
+                                        signingKeyFingerprint = payload.signingPublicKey.toFingerprint(),
+                                        encryptionKeyFingerprint = payload.encryptionPublicKey.toFingerprint()
+                                    )
+                            }.onFailure { error ->
+                                scanErrorMessage = error.message ?: invalidIdentityQrMessage
+                            }
                     }
-            },
-            onBack = onBack
+
+                    ScanIdentityUiEvent.BackClicked ->
+                        viewModel.onUiEvent(VerifyContactQrUiEvent.BackClicked)
+                }
+            }
         )
     }
 
@@ -78,7 +78,7 @@ fun ContactQrVerificationFlow(
             confirmButtonText = stringResource(Res.string.feature_contactimport_trust_and_verify),
             onConfirm = {
                 scannedIdentityPreview = null
-                viewModel.onQrCodeScanned(preview.encodedIdentity)
+                viewModel.onUiEvent(VerifyContactQrUiEvent.QrCodeScanned(preview.encodedIdentity))
             },
             onDismiss = {
                 scannedIdentityPreview = null
@@ -98,10 +98,10 @@ fun ContactQrVerificationFlow(
             message = errorMessage,
             onRetry = {
                 scanErrorMessage = null
-                viewModel.dismissError()
+                viewModel.onUiEvent(VerifyContactQrUiEvent.ErrorDismissed)
                 scanAttempt++
             },
-            onCancel = onBack
+            onCancel = { viewModel.onUiEvent(VerifyContactQrUiEvent.BackClicked) }
         )
     }
 }

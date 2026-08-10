@@ -1,10 +1,10 @@
 package com.cbgm.securechat.feature.chats.presentation.screen.create
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.chats.domain.usecase.CreateGroupConversation
 import com.cbgm.securechat.feature.chats.presentation.model.CreateGroupEffect
-import com.cbgm.securechat.feature.chats.presentation.model.CreateGroupEvent
+import com.cbgm.securechat.feature.chats.presentation.model.CreateGroupUiEvent
 import com.cbgm.securechat.feature.chats.presentation.model.CreateGroupUiState
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
 import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContacts
@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
 class CreateGroupViewModel(
     private val observeContacts: ObserveContacts,
     private val createGroupConversation: CreateGroupConversation
-) : ViewModel() {
+) : BaseViewModel() {
     private val _uiState = MutableStateFlow(CreateGroupUiState())
     val uiState: StateFlow<CreateGroupUiState> = _uiState.asStateFlow()
 
@@ -35,14 +35,19 @@ class CreateGroupViewModel(
         observeAvailableContacts()
     }
 
-    fun onEvent(event: CreateGroupEvent) {
+    fun onUiEvent(event: CreateGroupUiEvent) {
         when (event) {
-            is CreateGroupEvent.TitleChanged -> updateTitle(event.title)
-            is CreateGroupEvent.SearchQueryChanged -> updateSearchQuery(event.query)
-            is CreateGroupEvent.ContactSelectionToggled -> toggleContactSelection(event.contactId)
-            CreateGroupEvent.CreateClicked -> createGroup()
-            CreateGroupEvent.Clear -> clearData()
+            CreateGroupUiEvent.BackClicked -> requestBack()
+            is CreateGroupUiEvent.TitleChanged -> updateTitle(event.title)
+            is CreateGroupUiEvent.SearchQueryChanged -> updateSearchQuery(event.query)
+            is CreateGroupUiEvent.ContactSelected -> toggleContactSelection(event.contactId)
+            CreateGroupUiEvent.CreateClicked -> createGroup()
         }
+    }
+
+    private fun requestBack() {
+        clearData()
+        _effects.trySend(CreateGroupEffect.BackRequested)
     }
 
     private fun clearData() {

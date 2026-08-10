@@ -32,11 +32,7 @@ sealed interface DetailsTarget {
 fun DetailsRoute(
     target: DetailsTarget,
     openVerification: Boolean,
-    verificationRevision: Int,
-    onBack: () -> Unit,
-    onGroupLeft: () -> Unit,
-    onScanContactQr: (String) -> Unit,
-    onScanGroupMemberQr: (String, String) -> Unit
+    verificationRevision: Int
 ) {
     val identityShareCodec = koinInject<IdentityShareCodec>()
     var encodedContactToShare by remember { mutableStateOf("") }
@@ -60,10 +56,6 @@ fun DetailsRoute(
                 contactId = target.contactId,
                 openVerification = openVerification,
                 verificationRevision = verificationRevision,
-                onScanQrCode = {
-                    onScanContactQr(target.contactId)
-                },
-                onClose = onBack,
                 onShareContact = { contact ->
                     encodeContactForSharing(
                         contact = contact,
@@ -78,14 +70,7 @@ fun DetailsRoute(
         }
 
         is DetailsTarget.Group -> {
-            GroupDetailsFlow(
-                conversationId = target.conversationId,
-                onScanMemberQr = { memberContactId ->
-                    onScanGroupMemberQr(target.conversationId, memberContactId)
-                },
-                onGroupLeft = onGroupLeft,
-                onClose = onBack
-            )
+            GroupDetailsFlow(conversationId = target.conversationId)
         }
     }
 }

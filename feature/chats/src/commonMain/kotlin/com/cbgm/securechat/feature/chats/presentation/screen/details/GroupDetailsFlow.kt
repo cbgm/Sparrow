@@ -16,6 +16,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.securechat.core.ui.component.IdentityVerificationScreen
+import com.cbgm.securechat.feature.chats.presentation.model.AddGroupMembersUiEvent
+import com.cbgm.securechat.feature.chats.presentation.model.GroupDetailsUiEvent
 import com.cbgm.securechat.feature.chats.presentation.model.GroupDetailsUiState
 import com.cbgm.securechat.feature.chats.presentation.screen.details.component.LeaveGroupDialog
 import com.cbgm.securechat.feature.chats.presentation.screen.details.component.RemoveMemberDialog
@@ -31,9 +33,6 @@ private enum class DetailsContent {
 @Composable
 fun GroupDetailsFlow(
     conversationId: String,
-    onScanMemberQr: (String) -> Unit,
-    onGroupLeft: () -> Unit,
-    onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val verificationViewModel =
@@ -55,13 +54,6 @@ fun GroupDetailsFlow(
         if (revision > observedMembershipRevision) {
             observedMembershipRevision = revision
             content = DetailsContent.Overview
-        }
-    }
-
-    LaunchedEffect(uiState.leave.isLeaveRequested) {
-        if (uiState.leave.isLeaveRequested) {
-            showLeaveDialog = false
-            onGroupLeft()
         }
     }
 
@@ -101,19 +93,13 @@ fun GroupDetailsFlow(
             DetailsContent.Overview -> {
                 GroupDetailsScreen(
                     uiState = GroupDetailsUiState.Content(uiState.summary),
-                    onBack = onClose,
-                    onAddMembers = {
-                        content = DetailsContent.AddMembers
-                    },
-                    onRemoveMember = { contactId ->
-                        verificationViewModel.requestMemberRemoval(contactId)
-                    },
-                    onLeaveGroup = {
-                        showLeaveDialog = true
-                    },
-                    onVerifyMember = {
-                        verificationViewModel.selectMember(it)
-                        content = DetailsContent.VerifyIdentity
+                    onUiEvent = { event ->
+                        handleOverviewUiEvent(
+                            event = event,
+                            viewModel = verificationViewModel,
+                            onContentChanged = { content = it },
+                            onLeaveRequested = { showLeaveDialog = true }
+                        )
                     }
                 )
             }
@@ -126,13 +112,18 @@ fun GroupDetailsFlow(
                         isLoadingSafetyNumber = uiState.isLoadingSafetyNumber,
                         isVerifying = uiState.isVerifying,
                         errorMessage = uiState.errorMessage,
-                        onConfirm = verificationViewModel::verifySelectedMember,
+                        onConfirm = {
+                            verificationViewModel.onUiEvent(GroupDetailsUiEvent.VerifySelectedMemberClicked)
+                        },
                         onScanQrCode = {
-                            verificationViewModel.dismissVerification()
-                            member.contactId?.let(onScanMemberQr)
+                            member.contactId?.let { contactId ->
+                                verificationViewModel.onUiEvent(
+                                    GroupDetailsUiEvent.ScanMemberQrClicked(contactId)
+                                )
+                            }
                         },
                         onBack = {
-                            verificationViewModel.dismissVerification()
+                            verificationViewModel.onUiEvent(GroupDetailsUiEvent.VerificationBackClicked)
                             content = DetailsContent.Overview
                         }
                     )
@@ -142,11 +133,12 @@ fun GroupDetailsFlow(
             DetailsContent.AddMembers -> {
                 AddGroupMembersScreen(
                     uiState = uiState.memberManagement,
-                    onSearchQueryChanged = verificationViewModel::updateMemberSearchQuery,
-                    onContactSelected = verificationViewModel::toggleMemberSelection,
-                    onAddMembers = verificationViewModel::addSelectedMembers,
-                    onBack = {
-                        content = DetailsContent.Overview
+                    onUiEvent = { event ->
+                        if (event == AddGroupMembersUiEvent.BackClicked) {
+                            content = DetailsContent.Overview
+                        } else {
+                            verificationViewModel.onUiEvent(event)
+                        }
                     }
                 )
             }
@@ -157,8 +149,8 @@ fun GroupDetailsFlow(
             member = member,
             isRemoving = uiState.memberManagement.isUpdating,
             errorMessage = uiState.memberManagement.errorMessage,
-            onApprove = verificationViewModel::confirmMemberRemoval,
-            onDismiss = verificationViewModel::dismissMemberRemoval
+            onApprove = { verificationViewModel.onUiEvent(GroupDetailsUiEvent.MemberRemovalConfirmed) },
+            onDismiss = { verificationViewModel.onUiEvent(GroupDetailsUiEvent.MemberRemovalDismissed) }
         )
     }
 
@@ -166,11 +158,28 @@ fun GroupDetailsFlow(
         LeaveGroupDialog(
             isRemoving = uiState.memberManagement.isUpdating,
             errorMessage = uiState.memberManagement.errorMessage,
-            onApprove = verificationViewModel::leaveGroup,
+            onApprove = { verificationViewModel.onUiEvent(GroupDetailsUiEvent.LeaveGroupConfirmed) },
             onDismiss = {
-                verificationViewModel.dismissLeaveError()
+                verificationViewModel.onUiEvent(GroupDetailsUiEvent.LeaveGroupDismissed)
                 showLeaveDialog = false
             }
         )
+    }
+}
+
+private fun handleOverviewUiEvent(
+    event: GroupDetailsUiEvent,
+    viewModel: GroupVerificationViewModel,
+    onContentChanged: (DetailsContent) -> Unit,
+    onLeaveRequested: () -> Unit
+) {
+    when (event) {
+        GroupDetailsUiEvent.AddMembersClicked -> onContentChanged(DetailsContent.AddMembers)
+        GroupDetailsUiEvent.LeaveGroupClicked -> onLeaveRequested()
+        is GroupDetailsUiEvent.VerifyMemberClicked -> {
+            viewModel.onUiEvent(event)
+            onContentChanged(DetailsContent.VerifyIdentity)
+        }
+        else -> viewModel.onUiEvent(event)
     }
 }

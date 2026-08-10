@@ -37,6 +37,7 @@ import com.cbgm.securechat.core.ui.component.ContactAvatar
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.core.ui.theme.spacing
 import com.cbgm.securechat.feature.chats.presentation.model.ChatListItem
+import com.cbgm.securechat.feature.chats.presentation.model.ChatsUiEvent
 import com.cbgm.securechat.feature.chats.presentation.model.ChatsUiState
 import com.cbgm.securechat.feature.chats.presentation.screen.overview.component.SwipeRevealDeleteContainer
 import com.cbgm.securechat.resources.Res
@@ -48,8 +49,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun ChatsScreen(
     uiState: ChatsUiState,
-    onChatClick: (ChatListItem) -> Unit,
-    onDeleteConversation: (String) -> Unit,
+    onUiEvent: (ChatsUiEvent) -> Unit,
     listState: LazyListState,
     innerPadding: PaddingValues,
     modifier: Modifier = Modifier
@@ -89,12 +89,12 @@ fun ChatsScreen(
                     key = { chat -> chat.conversationId }
                 ) { chat ->
                     SwipeRevealDeleteContainer(
-                        onDelete = { onDeleteConversation(chat.conversationId) }
+                        onDelete = { onUiEvent(ChatsUiEvent.DeleteConversation(chat.conversationId)) }
                     ) {
                         ChatItem(
                             chat = chat,
                             onClick = {
-                                onChatClick(chat)
+                                onUiEvent(ChatsUiEvent.ChatClicked(chat))
                             }
                         )
                         HorizontalDivider(
@@ -268,8 +268,7 @@ private fun ChatsScreenPreview() {
                             )
                         )
                 ),
-            onChatClick = {},
-            onDeleteConversation = {},
+            onUiEvent = {},
             listState = LazyListState(),
             innerPadding = PaddingValues()
         )
