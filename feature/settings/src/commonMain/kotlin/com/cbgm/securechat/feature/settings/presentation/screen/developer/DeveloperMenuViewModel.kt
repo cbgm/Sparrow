@@ -3,7 +3,9 @@ package com.cbgm.securechat.feature.settings.presentation.screen.developer
 import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.transport.TransportDiagnosticsProvider
 import com.cbgm.securechat.core.ui.presentation.BaseViewModel
-import com.cbgm.securechat.feature.settings.domain.repository.SettingsRepository
+import com.cbgm.securechat.feature.settings.domain.usecase.ClearLocalDataUseCase
+import com.cbgm.securechat.feature.settings.domain.usecase.GetBuildInfoUseCase
+import com.cbgm.securechat.feature.settings.domain.usecase.SetDeveloperEnabledUseCase
 import com.cbgm.securechat.feature.settings.presentation.model.DeveloperMenuUiEvent
 import com.cbgm.securechat.feature.settings.presentation.model.DeveloperMenuUiState
 import kotlinx.coroutines.delay
@@ -14,15 +16,18 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 class DeveloperMenuViewModel(
-    private val settingsRepository: SettingsRepository,
+    private val clearLocalDataUseCase: ClearLocalDataUseCase,
+    private val getBuildInfoUseCase: GetBuildInfoUseCase,
+    private val setDeveloperEnabledUseCase: SetDeveloperEnabledUseCase,
     private val transportDiagnosticsProvider: TransportDiagnosticsProvider
 ) : BaseViewModel() {
     private val _uiState =
         MutableStateFlow(
             DeveloperMenuUiState(
-                buildInfo = settingsRepository.getBuildInfo(),
+                buildInfo = getBuildInfoUseCase(),
                 transportDiagnostics = transportDiagnosticsProvider.diagnostics.value
             )
         )
@@ -44,14 +49,14 @@ class DeveloperMenuViewModel(
     private fun onClearLocalData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isClearingLocalData = true) }
-            settingsRepository.clearLocalData()
+            clearLocalDataUseCase()
             _uiState.update { it.copy(isClearingLocalData = false) }
         }
     }
 
     private fun onDisableDeveloperMode() {
         viewModelScope.launch {
-            settingsRepository.setDeveloperModeEnabled(false)
+            setDeveloperEnabledUseCase(false)
             navigator.popBackStack()
         }
     }
@@ -70,7 +75,7 @@ class DeveloperMenuViewModel(
         viewModelScope.launch {
             while (isActive) {
                 transportDiagnosticsProvider.refreshDiagnostics()
-                delay(DIAGNOSTICS_REFRESH_INTERVAL_MILLISECONDS)
+                delay(DIAGNOSTICS_REFRESH_INTERVAL_MILLISECONDS.milliseconds)
             }
         }
     }

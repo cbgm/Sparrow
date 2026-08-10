@@ -9,6 +9,7 @@ import com.cbgm.securechat.feature.settings.data.repository.SettingsRepositoryIm
 import com.cbgm.securechat.feature.settings.data.storage.registerPlatformSettingsStorage
 import com.cbgm.securechat.feature.settings.domain.repository.LicensesRepository
 import com.cbgm.securechat.feature.settings.domain.repository.SettingsRepository
+import com.cbgm.securechat.feature.settings.domain.usecase.ClearLocalDataUseCase
 import com.cbgm.securechat.feature.settings.domain.usecase.GetAppLanguageUseCase
 import com.cbgm.securechat.feature.settings.domain.usecase.GetBuildInfoUseCase
 import com.cbgm.securechat.feature.settings.domain.usecase.GetDeveloperEnabledUseCase
@@ -95,6 +96,10 @@ val settingsModule =
             ObserveBlockedContactIds(repository = get())
         }
 
+        factory {
+            ClearLocalDataUseCase(settingsRepository = get())
+        }
+
         viewModel { DisclaimerViewModel() }
 
         viewModel {
@@ -123,7 +128,9 @@ val settingsModule =
 
         viewModel {
             DeveloperMenuViewModel(
-                settingsRepository = get(),
+                clearLocalDataUseCase = get(),
+                getBuildInfoUseCase = get(),
+                setDeveloperEnabledUseCase = get(),
                 transportDiagnosticsProvider = get()
             )
         }
