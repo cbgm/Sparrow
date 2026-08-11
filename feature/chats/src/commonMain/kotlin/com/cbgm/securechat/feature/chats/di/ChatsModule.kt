@@ -62,11 +62,12 @@ import com.cbgm.securechat.feature.chats.presentation.screen.chat.GroupChatViewM
 import com.cbgm.securechat.feature.chats.presentation.screen.create.CreateGroupViewModel
 import com.cbgm.securechat.feature.chats.presentation.screen.details.GroupMemberQrVerificationViewModel
 import com.cbgm.securechat.feature.chats.presentation.screen.details.GroupVerificationViewModel
-import com.cbgm.securechat.feature.contacts.domain.identity.IdentityExchangeStarter
-import com.cbgm.securechat.feature.contacts.domain.identity.IdentityInvitationService
+import com.cbgm.securechat.feature.contacts.domain.usecase.EnsureIdentityExchangeStarted
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactSafetyNumber
 import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContact
 import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContacts
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveIdentityHandshakeState
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveIdentitySetupMode
 import com.cbgm.securechat.presentation.screen.ContactsFlowViewModel
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
@@ -216,7 +217,12 @@ val chatsModule =
             )
         }
 
-        viewModel { ContactsFlowViewModel(getOrCreateDirectConversation = get()) }
+        viewModel {
+            ContactsFlowViewModel(
+                getOrCreateDirectConversation = get(),
+                ensureIdentityExchangeStarted = get<EnsureIdentityExchangeStarted>()
+            )
+        }
 
         viewModel {
             ChatsViewModel(
@@ -262,7 +268,7 @@ val chatsModule =
             GroupMemberQrVerificationViewModel(
                 groupId = parameters.get(),
                 contactId = parameters.get(),
-                identityShareCodec = get(),
+                decodeSharedIdentity = get(),
                 getContact = get(),
                 verifyGroupMember = get()
             )
@@ -277,9 +283,9 @@ val chatsModule =
                 sendMessageUseCase = get(),
                 markConversationReadUseCase = get(),
                 retryFailedMessage = get(),
-                directIdentitySetupModeRepository = get(),
-                identityExchangeStarter = get<IdentityExchangeStarter>(),
-                identityInvitationService = get<IdentityInvitationService>(),
+                observeIdentitySetupMode = get<ObserveIdentitySetupMode>(),
+                ensureIdentityExchangeStarted = get<EnsureIdentityExchangeStarted>(),
+                observeIdentityHandshakeState = get<ObserveIdentityHandshakeState>(),
                 observeContact = get<ObserveContact>(),
                 observeTypingIndicator = get(),
                 setTypingIndicator = get()

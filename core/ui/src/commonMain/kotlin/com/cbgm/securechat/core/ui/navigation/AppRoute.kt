@@ -71,4 +71,7 @@ sealed interface AppRoute {
 
     @Serializable
     data object BlockedContacts : AppRoute
+
+    @Serializable
+    data object ContactInvitations : AppRoute
 }

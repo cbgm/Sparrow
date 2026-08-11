@@ -10,7 +10,7 @@ import com.cbgm.securechat.feature.chats.presentation.model.GroupMemberQrVerific
 import com.cbgm.securechat.feature.contactimport.presentation.model.ScannedIdentityPreview
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
 import com.cbgm.securechat.feature.identity.domain.model.SharedIdentityPayload
-import com.cbgm.securechat.feature.identity.domain.service.IdentityShareCodec
+import com.cbgm.securechat.feature.identity.domain.usecase.DecodeSharedIdentity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 class GroupMemberQrVerificationViewModel(
     private val groupId: String,
     private val contactId: String,
-    private val identityShareCodec: IdentityShareCodec,
+    private val decodeSharedIdentity: DecodeSharedIdentity,
     private val getContact: GetContact,
     private val verifyGroupMember: VerifyGroupMember
 ) : BaseViewModel() {
@@ -119,8 +119,7 @@ class GroupMemberQrVerificationViewModel(
 
     private suspend fun validateIdentity(encodedIdentity: String): ScannedIdentityPreview? {
         val scannedIdentity =
-            identityShareCodec
-                .decode(encodedIdentity)
+            decodeSharedIdentity(encodedIdentity)
                 .getOrElse {
                     setError(GroupMemberQrVerificationError.INVALID_QR)
                     return null

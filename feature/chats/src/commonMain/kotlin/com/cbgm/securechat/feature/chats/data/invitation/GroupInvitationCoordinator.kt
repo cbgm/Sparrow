@@ -27,7 +27,6 @@ import com.cbgm.securechat.data.database.entity.ConversationParticipantEntity
 import com.cbgm.securechat.data.database.entity.GroupInvitationEntity
 import com.cbgm.securechat.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.securechat.feature.chats.data.message.GroupMembershipMessageFactory
-import com.cbgm.securechat.feature.chats.data.message.GroupMessageSender
 import com.cbgm.securechat.feature.chats.data.security.GroupInvitationManager
 import com.cbgm.securechat.feature.chats.data.security.GroupSecurityManager
 import com.cbgm.securechat.feature.chats.data.security.GroupWelcomeRecipient
@@ -51,7 +50,6 @@ class GroupInvitationCoordinator(
     private val protocolOutbox: ProtocolOutbox,
     private val groupInvitationManager: GroupInvitationManager,
     private val groupSecurityManager: GroupSecurityManager,
-    private val groupMessageSender: GroupMessageSender,
     private val groupVerificationCoordinator: GroupVerificationCoordinator,
     private val groupVerificationDao: GroupVerificationDao
 ) {
@@ -714,7 +712,6 @@ class GroupInvitationCoordinator(
                     ).getOrThrow()
 
                 if (invitation.status == GroupInvitationStatus.ACTIVE.name) {
-                    flushQueuedIfGroupHasActiveMembers(packet.groupId)
                     return@withLock
                 }
                 check(invitation.status == GroupInvitationStatus.WELCOME_SENT.name) {
@@ -794,7 +791,6 @@ class GroupInvitationCoordinator(
                 groupVerificationCoordinator
                     .onOwnedMembershipChanged(packet.groupId)
                     .getOrThrow()
-                flushQueuedIfGroupHasActiveMembers(packet.groupId)
             }
         }
 
@@ -1062,12 +1058,6 @@ class GroupInvitationCoordinator(
             .singleOrNull { invitation ->
                 invitation.direction == GroupInvitationDirection.INCOMING.name
             } ?: error("Incoming group invitation was not found")
-    }
-
-    private suspend fun flushQueuedIfGroupHasActiveMembers(groupId: String) {
-        if (chatDao.findConversationParticipants(groupId).isNotEmpty()) {
-            groupMessageSender.flushQueued(groupId).getOrThrow()
-        }
     }
 
     private fun Contact.hasMutualIdentity(): Boolean {

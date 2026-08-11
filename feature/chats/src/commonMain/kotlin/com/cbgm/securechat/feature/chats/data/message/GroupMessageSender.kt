@@ -6,6 +6,7 @@ import com.cbgm.securechat.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.securechat.core.protocol.packet.GroupChatMessagePacket
 import com.cbgm.securechat.core.time.SystemClock
 import com.cbgm.securechat.data.database.dao.ChatDao
+import com.cbgm.securechat.data.database.entity.ConversationParticipantEntity
 import com.cbgm.securechat.data.database.entity.GroupInvitationEntity
 import com.cbgm.securechat.data.database.entity.MessageEntity
 import com.cbgm.securechat.data.database.entity.MessageRecipientStateEntity
@@ -87,31 +88,29 @@ class GroupMessageSender(
                     )
 
                 val activeParticipants = chatDao.findConversationParticipants(conversationId)
-                if (!canSendToActiveGroupMembers(activeParticipants.size)) {
-                    chatDao.upsertMessage(message)
-                    chatDao.updateConversationTimestamp(conversationId, message.createdAtEpochMilliseconds)
+                if (canSendToActiveGroupMembers(activeParticipants.size)) {
+                    encryptAndEnqueue(
+                        message = message,
+                        participants = activeParticipants
+                    )
                 } else {
-                    flushQueuedNow(conversationId)
-                    encryptAndEnqueue(message)
+                    storeLocalOnly(message)
                 }
             }
         }
 
-    suspend fun flushQueued(conversationId: String): Result<Unit> =
-        runCatching {
-            sendMutex.withLock {
-                flushQueuedNow(conversationId)
-            }
-        }
-
-    private suspend fun flushQueuedNow(conversationId: String) {
-        chatDao.findQueuedGroupMessages(conversationId).forEach { message ->
-            encryptAndEnqueue(message)
-        }
+    private suspend fun storeLocalOnly(message: MessageEntity) {
+        chatDao.upsertMessage(message.copy(deliveryStatus = MessageDeliveryStatus.SENT.name))
+        chatDao.updateConversationTimestamp(
+            conversationId = message.conversationId,
+            timestamp = message.createdAtEpochMilliseconds
+        )
     }
 
-    private suspend fun encryptAndEnqueue(message: MessageEntity) {
-        val participants = chatDao.findConversationParticipants(message.conversationId)
+    private suspend fun encryptAndEnqueue(
+        message: MessageEntity,
+        participants: List<ConversationParticipantEntity>
+    ) {
         check(participants.isNotEmpty()) { "Group has no active participants" }
 
         val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()

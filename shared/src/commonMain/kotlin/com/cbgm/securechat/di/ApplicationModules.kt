@@ -11,6 +11,7 @@ import com.cbgm.securechat.feature.messaging.di.messagingModule
 import com.cbgm.securechat.feature.onboarding.di.onboardingModule
 import com.cbgm.securechat.feature.settings.di.settingsModule
 import com.cbgm.securechat.feature.transport.di.transportModule
+import com.cbgm.securechat.navigation.di.navigationModule
 import com.cbgm.securechat.notification.di.notificationModule
 import com.cbgm.securechat.startup.di.startupModule
 import org.koin.core.module.Module
@@ -30,5 +31,6 @@ internal val commonApplicationModules: List<Module> =
         contactImportModule,
         startupModule,
         settingsModule,
+        navigationModule,
         sharedModule
     )

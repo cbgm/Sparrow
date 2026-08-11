@@ -13,6 +13,15 @@ interface ContactRelayIdDao {
     @Query("SELECT relayId FROM contact_relay_ids WHERE contactId = :contactId LIMIT 1")
     suspend fun findRelayIdByContactId(contactId: String): String?
 
+    @Query(
+        "DELETE FROM contact_relay_ids " +
+            "WHERE relayId = :relayId AND contactId != :contactId"
+    )
+    suspend fun deleteOtherContactMapping(
+        relayId: String,
+        contactId: String
+    )
+
     @Upsert
     suspend fun upsert(entity: ContactRelayIdEntity)
 }

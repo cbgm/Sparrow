@@ -40,6 +40,7 @@ import com.cbgm.securechat.feature.chats.domain.model.MessageSecurity
 import com.cbgm.securechat.feature.chats.domain.repository.ChatsRepository
 import com.cbgm.securechat.feature.contacts.domain.identity.IdentityInvitationService
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
+import com.cbgm.securechat.feature.contacts.domain.model.IdentityHandshakeState
 import com.cbgm.securechat.feature.contacts.domain.model.KeyExchangeStatus
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
 import kotlinx.coroutines.flow.Flow
@@ -67,7 +68,9 @@ class DefaultChatsRepository(
         chatDao
             .observeConversationSummaries(
                 localDeletionTransportMode =
-                    GroupMembershipMessageFactory.LOCAL_CONVERSATION_DELETED_TRANSPORT_MODE
+                    GroupMembershipMessageFactory.LOCAL_CONVERSATION_DELETED_TRANSPORT_MODE,
+                directChatAuthorizedState = IdentityHandshakeState.MUTUAL_UNVERIFIED.name,
+                directChatDeletedState = IdentityHandshakeState.CONVERSATION_DELETED.name
             ).map { summaries ->
                 summaries.map { summary ->
                     summary.toDomain()

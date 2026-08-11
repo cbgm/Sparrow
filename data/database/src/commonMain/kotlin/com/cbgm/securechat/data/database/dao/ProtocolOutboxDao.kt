@@ -118,6 +118,21 @@ interface ProtocolOutboxDao {
         SET status = 'PENDING',
             lastError = NULL,
             updatedAtEpochMilliseconds = :updatedAt
+        WHERE packetId = :packetId
+          AND status IN ('SENT', 'FAILED')
+        """
+    )
+    suspend fun requeueForResend(
+        packetId: String,
+        updatedAt: Long
+    ): Int
+
+    @Query(
+        """
+        UPDATE protocol_outbox
+        SET status = 'PENDING',
+            lastError = NULL,
+            updatedAtEpochMilliseconds = :updatedAt
         WHERE status = 'PROCESSING'
         """
     )

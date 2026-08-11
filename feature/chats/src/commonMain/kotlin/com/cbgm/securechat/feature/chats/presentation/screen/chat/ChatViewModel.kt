@@ -3,7 +3,6 @@ package com.cbgm.securechat.feature.chats.presentation.screen.chat
 import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.logging.SecureChatLog
 import com.cbgm.securechat.core.security.DirectIdentitySetupMode
-import com.cbgm.securechat.core.security.DirectIdentitySetupModeRepository
 import com.cbgm.securechat.core.ui.navigation.AppRoute
 import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.chats.domain.model.ContactSecurityState
@@ -16,13 +15,14 @@ import com.cbgm.securechat.feature.chats.domain.usecase.SendMessage
 import com.cbgm.securechat.feature.chats.domain.usecase.SetTypingIndicator
 import com.cbgm.securechat.feature.chats.presentation.model.ChatUiEvent
 import com.cbgm.securechat.feature.chats.presentation.model.ChatUiState
-import com.cbgm.securechat.feature.contacts.domain.identity.IdentityExchangeStarter
-import com.cbgm.securechat.feature.contacts.domain.identity.IdentityInvitationService
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
 import com.cbgm.securechat.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.securechat.feature.contacts.domain.model.IdentityHandshakeState
 import com.cbgm.securechat.feature.contacts.domain.model.KeyExchangeStatus
+import com.cbgm.securechat.feature.contacts.domain.usecase.EnsureIdentityExchangeStarted
 import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContact
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveIdentityHandshakeState
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveIdentitySetupMode
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -43,9 +43,9 @@ class ChatViewModel(
     private val sendMessageUseCase: SendMessage,
     private val markConversationReadUseCase: MarkConversationRead,
     private val retryFailedMessage: RetryMessage,
-    private val directIdentitySetupModeRepository: DirectIdentitySetupModeRepository,
-    private val identityExchangeStarter: IdentityExchangeStarter,
-    identityInvitationService: IdentityInvitationService,
+    observeIdentitySetupMode: ObserveIdentitySetupMode,
+    private val ensureIdentityExchangeStarted: EnsureIdentityExchangeStarted,
+    observeIdentityHandshakeState: ObserveIdentityHandshakeState,
     observeContact: ObserveContact,
     private val observeTypingIndicator: ObserveTypingIndicator,
     private val setTypingIndicator: SetTypingIndicator
@@ -71,11 +71,10 @@ class ChatViewModel(
         observeConversation(conversationId)
 
     private val identityHandshakeStateFlow: Flow<IdentityHandshakeState?> =
-        identityInvitationService.observeState(contactId)
+        observeIdentityHandshakeState(contactId)
 
     private val directIdentitySetupModeFlow: StateFlow<DirectIdentitySetupMode> =
-        directIdentitySetupModeRepository
-            .observeMode()
+        observeIdentitySetupMode()
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.Eagerly,
@@ -175,8 +174,7 @@ class ChatViewModel(
             directIdentitySetupModeFlow
                 .collect { mode ->
                     if (mode == DirectIdentitySetupMode.AUTOMATIC_INVITATION) {
-                        identityExchangeStarter
-                            .ensureStarted(contactId)
+                        ensureIdentityExchangeStarted(contactId)
                             .onFailure { error ->
                                 errorMessage.value = error.message ?: "Contact invitation could not be started"
                             }

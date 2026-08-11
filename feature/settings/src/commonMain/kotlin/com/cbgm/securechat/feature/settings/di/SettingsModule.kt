@@ -13,6 +13,7 @@ import com.cbgm.securechat.feature.settings.domain.usecase.ClearLocalDataUseCase
 import com.cbgm.securechat.feature.settings.domain.usecase.GetAppLanguageUseCase
 import com.cbgm.securechat.feature.settings.domain.usecase.GetBuildInfoUseCase
 import com.cbgm.securechat.feature.settings.domain.usecase.GetDeveloperEnabledUseCase
+import com.cbgm.securechat.feature.settings.domain.usecase.GetLicenses
 import com.cbgm.securechat.feature.settings.domain.usecase.InitAppLanguageUseCase
 import com.cbgm.securechat.feature.settings.domain.usecase.ObserveBlockUnknownContactInvites
 import com.cbgm.securechat.feature.settings.domain.usecase.ObserveBlockedContactIds
@@ -22,9 +23,9 @@ import com.cbgm.securechat.feature.settings.domain.usecase.SetBlockUnknownContac
 import com.cbgm.securechat.feature.settings.domain.usecase.SetDeveloperEnabledUseCase
 import com.cbgm.securechat.feature.settings.domain.usecase.SetDirectIdentitySetupMode
 import com.cbgm.securechat.feature.settings.presentation.screen.ControlPlaneSettingsViewModel
-import com.cbgm.securechat.feature.settings.presentation.screen.DisclaimerViewModel
 import com.cbgm.securechat.feature.settings.presentation.screen.SettingsViewModel
 import com.cbgm.securechat.feature.settings.presentation.screen.developer.DeveloperMenuViewModel
+import com.cbgm.securechat.feature.settings.presentation.screen.disclaimer.DisclaimerViewModel
 import com.cbgm.securechat.feature.settings.presentation.screen.licenses.LicensesViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
@@ -100,6 +101,10 @@ val settingsModule =
             ClearLocalDataUseCase(settingsRepository = get())
         }
 
+        factory {
+            GetLicenses(repository = get())
+        }
+
         viewModel { DisclaimerViewModel() }
 
         viewModel {
@@ -136,6 +141,6 @@ val settingsModule =
         }
 
         viewModel {
-            LicensesViewModel(licensesRepository = get())
+            LicensesViewModel(getLicenses = get())
         }
     }

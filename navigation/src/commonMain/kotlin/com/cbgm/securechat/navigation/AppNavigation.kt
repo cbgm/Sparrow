@@ -15,7 +15,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import com.cbgm.securechat.core.ui.navigation.AppNavigator
 import com.cbgm.securechat.core.ui.navigation.AppRoute
-import com.cbgm.securechat.feature.contacts.presentation.ContactInvitationRoute
 import com.cbgm.securechat.navigation.graph.chatsNavGraph
 import com.cbgm.securechat.navigation.graph.contactsNavGraph
 import com.cbgm.securechat.navigation.graph.identityNavGraph
@@ -103,7 +102,5 @@ fun AppNavigation(
             identityNavGraph()
             settingsNavGraph()
         }
-
-        ContactInvitationRoute()
     }
 }

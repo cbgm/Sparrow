@@ -2,7 +2,7 @@ package com.cbgm.securechat.feature.settings.presentation.screen.licenses
 
 import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.ui.presentation.BaseViewModel
-import com.cbgm.securechat.feature.settings.domain.repository.LicensesRepository
+import com.cbgm.securechat.feature.settings.domain.usecase.GetLicenses
 import com.cbgm.securechat.feature.settings.presentation.model.LicensesUiEvent
 import com.cbgm.securechat.feature.settings.presentation.model.LicensesUiState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class LicensesViewModel(
-    private val licensesRepository: LicensesRepository
+    private val getLicenses: GetLicenses
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow(LicensesUiState())
     val uiState: StateFlow<LicensesUiState> = _uiState.asStateFlow()
@@ -27,7 +27,7 @@ class LicensesViewModel(
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
-                    libraries = licensesRepository.getLibraries()
+                    libraries = getLicenses()
                 )
             }
         }

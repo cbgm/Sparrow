@@ -28,7 +28,11 @@ import com.cbgm.securechat.feature.contacts.domain.identity.IdentityExchangeStar
 import com.cbgm.securechat.feature.contacts.domain.identity.IdentityInvitationService
 import com.cbgm.securechat.feature.contacts.domain.repository.ContactKeyExchangeStore
 import com.cbgm.securechat.feature.contacts.domain.repository.ContactRepository
+import com.cbgm.securechat.feature.contacts.domain.usecase.AcceptContactInvitation
 import com.cbgm.securechat.feature.contacts.domain.usecase.BlockContact
+import com.cbgm.securechat.feature.contacts.domain.usecase.DeclineAndBlockContactInvitation
+import com.cbgm.securechat.feature.contacts.domain.usecase.DeclineContactInvitation
+import com.cbgm.securechat.feature.contacts.domain.usecase.EnsureIdentityExchangeStarted
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactSafetyNumber
 import com.cbgm.securechat.feature.contacts.domain.usecase.ImportContact
@@ -36,12 +40,16 @@ import com.cbgm.securechat.feature.contacts.domain.usecase.ImportDeviceContacts
 import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContact
 import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContactBlocklist
 import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContacts
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveIdentityHandshakeState
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveIdentitySetupMode
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObservePendingContactInvitationCount
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObservePendingContactInvitations
 import com.cbgm.securechat.feature.contacts.domain.usecase.UnblockContact
 import com.cbgm.securechat.feature.contacts.domain.usecase.VerifyContact
-import com.cbgm.securechat.feature.contacts.presentation.screen.ContactInvitationViewModel
 import com.cbgm.securechat.feature.contacts.presentation.screen.ContactsViewModel
 import com.cbgm.securechat.feature.contacts.presentation.screen.blocklist.BlockedContactsViewModel
 import com.cbgm.securechat.feature.contacts.presentation.screen.details.ContactDetailsViewModel
+import com.cbgm.securechat.feature.contacts.presentation.screen.invite.ContactInvitationViewModel
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
@@ -99,6 +107,7 @@ val contactsModule =
             IdentityInvitationCoordinator(
                 invitationDao = get(),
                 contactDao = get(),
+                contactRelayIdDao = get(),
                 contactKeyExchangeStore = get(),
                 localPublicIdentityProvider = get(),
                 localSigningKeyPairProvider = get(),
@@ -239,10 +248,26 @@ val contactsModule =
             )
         }
 
-        viewModel {
-            ContactInvitationViewModel(
+        factory { AcceptContactInvitation(identityInvitationService = get()) }
+        factory { DeclineContactInvitation(identityInvitationService = get()) }
+        factory { DeclineAndBlockContactInvitation(identityInvitationService = get()) }
+        factory {
+            ObservePendingContactInvitations(
                 identityInvitationService = get(),
                 modeRepository = get()
+            )
+        }
+        factory { ObservePendingContactInvitationCount(observePendingContactInvitations = get()) }
+        factory { ObserveIdentityHandshakeState(identityInvitationService = get()) }
+        factory { ObserveIdentitySetupMode(repository = get()) }
+        factory { EnsureIdentityExchangeStarted(identityExchangeStarter = get()) }
+
+        viewModel {
+            ContactInvitationViewModel(
+                observePendingContactInvitations = get(),
+                acceptContactInvitation = get(),
+                declineContactInvitation = get(),
+                declineAndBlockContactInvitation = get()
             )
         }
 

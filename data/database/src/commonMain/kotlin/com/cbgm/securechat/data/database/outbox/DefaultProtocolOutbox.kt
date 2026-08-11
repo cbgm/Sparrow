@@ -188,6 +188,39 @@ class DefaultProtocolOutbox(
             )
         }
 
+    override suspend fun resend(packetId: String): Result<Unit> =
+        runCatching {
+            require(packetId.isNotBlank()) {
+                "Packet ID must not be blank"
+            }
+
+            val existing = outboxDao.findByPacketId(packetId = packetId) ?: return@runCatching
+
+            when (existing.status.toOutboxStatus()) {
+                OutboxStatus.PENDING,
+                OutboxStatus.PROCESSING -> Unit
+
+                OutboxStatus.SENT,
+                OutboxStatus.FAILED -> {
+                    val updatedRows =
+                        outboxDao.requeueForResend(
+                            packetId = packetId,
+                            updatedAt = SystemClock.nowEpochMilliseconds()
+                        )
+                    if (updatedRows == 0) {
+                        val refreshed = outboxDao.findByPacketId(packetId = packetId)
+                        check(
+                            refreshed != null &&
+                                refreshed.status.toOutboxStatus() in
+                                setOf(OutboxStatus.PENDING, OutboxStatus.PROCESSING)
+                        ) {
+                            "Outbox packet could not be re-queued for resend"
+                        }
+                    }
+                }
+            }
+        }
+
     private fun ProtocolOutboxEntity.toDomain(): ProtocolOutboxItem =
         ProtocolOutboxItem(
             id = id,

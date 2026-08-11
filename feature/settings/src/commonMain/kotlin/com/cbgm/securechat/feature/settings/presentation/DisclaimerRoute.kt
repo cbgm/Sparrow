@@ -4,8 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.cbgm.securechat.feature.settings.domain.model.DisclaimerContent
 import com.cbgm.securechat.feature.settings.presentation.model.DisclaimerType
-import com.cbgm.securechat.feature.settings.presentation.screen.DisclaimerViewModel
 import com.cbgm.securechat.feature.settings.presentation.screen.MarkdownDisclaimerScreen
+import com.cbgm.securechat.feature.settings.presentation.screen.disclaimer.DisclaimerViewModel
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.feature_settings_data_disclaimer
 import com.cbgm.securechat.resources.feature_settings_privacy_policy

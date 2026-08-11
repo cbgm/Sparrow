@@ -15,23 +15,44 @@ class DefaultContactRelayIdResolver(
 ) : ContactRelayIdResolver {
     override suspend fun resolve(contactId: String): Result<String> =
         runCatching {
-            require(contactId.isNotBlank()) { "Contact ID must not be blank" }
-
-            val contact = getContact(contactId).getOrThrow() ?: error("Contact was not found")
-            val relayId =
-                if (contact.secureChatIdentity?.keyExchangeStatus == KeyExchangeStatus.MUTUAL) {
-                    contact.canonicalRelayId()
-                } else {
-                    contact.bootstrapRelayId(contactId)
-                }
-
-            if (contactRelayIdDao.findRelayIdByContactId(contactId) == relayId) {
-                return@runCatching relayId
+            val contact = requireContact(contactId)
+            if (contact.secureChatIdentity?.keyExchangeStatus == KeyExchangeStatus.MUTUAL) {
+                return@runCatching contact.canonicalRelayId()
             }
 
-            contactRelayIdDao.upsert(ContactRelayIdEntity(contactId, relayId))
-            relayId
+            persistAndReturnBootstrapRelayId(
+                contactId = contactId,
+                contact = contact
+            )
         }
+
+    override suspend fun resolveBootstrap(contactId: String): Result<String> =
+        runCatching {
+            persistAndReturnBootstrapRelayId(
+                contactId = contactId,
+                contact = requireContact(contactId)
+            )
+        }
+
+    private suspend fun requireContact(contactId: String): Contact {
+        require(contactId.isNotBlank()) { "Contact ID must not be blank" }
+        return getContact(contactId).getOrThrow() ?: error("Contact was not found")
+    }
+
+    private suspend fun persistAndReturnBootstrapRelayId(
+        contactId: String,
+        contact: Contact
+    ): String {
+        val relayId = contact.bootstrapRelayId(contactId)
+        if (contactRelayIdDao.findRelayIdByContactId(contactId) != relayId) {
+            contactRelayIdDao.deleteOtherContactMapping(
+                relayId = relayId,
+                contactId = contactId
+            )
+            contactRelayIdDao.upsert(ContactRelayIdEntity(contactId, relayId))
+        }
+        return relayId
+    }
 
     private fun Contact.canonicalRelayId(): String =
         relayIdGenerator

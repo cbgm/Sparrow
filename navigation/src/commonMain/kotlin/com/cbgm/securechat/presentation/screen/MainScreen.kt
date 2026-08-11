@@ -9,6 +9,9 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.MarkEmailUnread
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,6 +42,8 @@ import com.cbgm.securechat.feature.chats.presentation.ChatsRoute
 import com.cbgm.securechat.feature.identity.presentation.IdentityRoute
 import com.cbgm.securechat.feature.settings.presentation.SettingsRoute
 import com.cbgm.securechat.presentation.model.MainTab
+import com.cbgm.securechat.resources.Res
+import com.cbgm.securechat.resources.feature_contacts_open_invitations
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -47,6 +52,8 @@ import org.jetbrains.compose.resources.stringResource
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
+    invitationCount: Int,
+    onOpenInvitations: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -59,23 +66,16 @@ fun MainScreen(
         )
 
     val selectedTab = tabs[pagerState.currentPage]
-    var showContactsOverlay by rememberSaveable {
-        mutableStateOf(false)
-    }
+    var showContactsOverlay by rememberSaveable { mutableStateOf(false) }
 
     val mainScrollTargets =
         mapOf(
-            MainTab.Chats to
-                SecureChatScrollStateType.LazyList,
-            MainTab.Me to
-                SecureChatScrollStateType.Scroll,
-            MainTab.Settings to
-                SecureChatScrollStateType.Scroll
+            MainTab.Chats to SecureChatScrollStateType.LazyList,
+            MainTab.Me to SecureChatScrollStateType.Scroll,
+            MainTab.Settings to SecureChatScrollStateType.Scroll
         )
 
-    Box(
-        modifier = modifier.fillMaxSize()
-    ) {
+    Box(modifier = modifier.fillMaxSize()) {
         SecureChatTabbedScaffold(
             modifier = Modifier.fillMaxSize(),
             selectedScrollTarget = selectedTab,
@@ -84,9 +84,9 @@ fun MainScreen(
                 MainTopBar(
                     selectedTab = selectedTab,
                     containerColor = containerColor,
-                    onAddChat = {
-                        showContactsOverlay = true
-                    }
+                    invitationCount = invitationCount,
+                    onOpenInvitations = onOpenInvitations,
+                    onAddChat = { showContactsOverlay = true }
                 )
             },
             bottomBar = { containerColor ->
@@ -95,9 +95,7 @@ fun MainScreen(
                     containerColor = containerColor,
                     onTabSelected = { tab ->
                         coroutineScope.launch {
-                            pagerState.animateScrollToPage(
-                                page = tabs.indexOf(tab)
-                            )
+                            pagerState.animateScrollToPage(page = tabs.indexOf(tab))
                         }
                     }
                 )
@@ -112,13 +110,9 @@ fun MainScreen(
 
         SecureChatOverlayHost(
             visible = showContactsOverlay,
-            onDismissRequest = {
-                showContactsOverlay = false
-            },
+            onDismissRequest = { showContactsOverlay = false },
             horizontalPadding = 0.dp,
             topPadding = 48.dp
-            // tonalElevation = 8.dp,
-            // shadowElevation = 12.dp
         ) { dismissOverlay ->
             ContactsFlow(
                 onDismiss = dismissOverlay,
@@ -133,6 +127,8 @@ fun MainScreen(
 private fun MainTopBar(
     selectedTab: MainTab,
     containerColor: Color,
+    invitationCount: Int,
+    onOpenInvitations: () -> Unit,
     onAddChat: () -> Unit
 ) {
     TopAppBar(
@@ -145,6 +141,25 @@ private fun MainTopBar(
         },
         actions = {
             if (selectedTab == MainTab.Chats) {
+                IconButton(
+                    onClick = onOpenInvitations,
+                    enabled = invitationCount > 0
+                ) {
+                    BadgedBox(
+                        badge = {
+                            if (invitationCount > 0) {
+                                Badge {
+                                    Text(invitationCount.toString())
+                                }
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.MarkEmailUnread,
+                            contentDescription = stringResource(Res.string.feature_contacts_open_invitations)
+                        )
+                    }
+                }
                 IconButton(onClick = onAddChat) {
                     Icon(
                         imageVector = Icons.Default.Add,
@@ -178,19 +193,10 @@ private fun MainBottomBar(
 
             NavigationBarItem(
                 selected = isSelected,
-                onClick = {
-                    onTabSelected(tab)
-                },
+                onClick = { onTabSelected(tab) },
                 icon = {
                     Icon(
-                        painter =
-                            painterResource(
-                                if (isSelected) {
-                                    tab.res
-                                } else {
-                                    tab.resOutlined
-                                }
-                            ),
+                        painter = painterResource(if (isSelected) tab.res else tab.resOutlined),
                         contentDescription = null,
                         modifier = Modifier.size(28.dp)
                     )
@@ -229,10 +235,7 @@ private fun MainContent(
         when (MainTab.entries[page]) {
             MainTab.Chats -> {
                 ChatsRoute(
-                    listState =
-                        scrollStates.lazyListState(
-                            MainTab.Chats
-                        ),
+                    listState = scrollStates.lazyListState(MainTab.Chats),
                     innerPadding = innerPadding,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -240,10 +243,7 @@ private fun MainContent(
 
             MainTab.Me -> {
                 IdentityRoute(
-                    scrollState =
-                        scrollStates.scrollState(
-                            MainTab.Me
-                        ),
+                    scrollState = scrollStates.scrollState(MainTab.Me),
                     innerPadding = innerPadding,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -251,10 +251,7 @@ private fun MainContent(
 
             MainTab.Settings -> {
                 SettingsRoute(
-                    scrollState =
-                        scrollStates.scrollState(
-                            MainTab.Settings
-                        ),
+                    scrollState = scrollStates.scrollState(MainTab.Settings),
                     innerPadding = innerPadding
                 )
             }
@@ -266,6 +263,10 @@ private fun MainContent(
 @Composable
 private fun MainScreenPreview() {
     SecureChatTheme {
-        MainScreen(modifier = Modifier.fillMaxSize())
+        MainScreen(
+            invitationCount = 0,
+            onOpenInvitations = {},
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }

@@ -45,24 +45,33 @@ fun AddGroupMembersScreen(
                 confirming = uiState.isUpdating,
                 searchQuery = uiState.searchQuery
             ),
-        onUiEvent = { event -> handleUiEvent(event) },
+        onUiEvent = { event ->
+            handleUiEvent(
+                event = event,
+                onUiEvent = onUiEvent
+            )
+        },
         modifier = modifier,
         snackbarHostState = snackbarHostState
     )
 }
 
-private fun handleUiEvent(event: ContactsUiEvent) =
+private fun handleUiEvent(
+    event: ContactsUiEvent,
+    onUiEvent: (AddGroupMembersUiEvent) -> Unit
+) {
     when (event) {
         is ContactsUiEvent.SearchQueryChanged ->
-            AddGroupMembersUiEvent.SearchQueryChanged(event.query)
+            onUiEvent(AddGroupMembersUiEvent.SearchQueryChanged(event.query))
 
         is ContactsUiEvent.ContactSelectionToggled ->
-            AddGroupMembersUiEvent.ContactSelected(event.contactId)
+            onUiEvent(AddGroupMembersUiEvent.ContactSelected(event.contactId))
 
-        ContactsUiEvent.SelectionConfirmed -> AddGroupMembersUiEvent.AddMembersClicked
-        ContactsUiEvent.BackClicked -> AddGroupMembersUiEvent.BackClicked
+        ContactsUiEvent.SelectionConfirmed -> onUiEvent(AddGroupMembersUiEvent.AddMembersClicked)
+        ContactsUiEvent.BackClicked -> onUiEvent(AddGroupMembersUiEvent.BackClicked)
         else -> Unit
     }
+}
 
 @Preview
 @Composable

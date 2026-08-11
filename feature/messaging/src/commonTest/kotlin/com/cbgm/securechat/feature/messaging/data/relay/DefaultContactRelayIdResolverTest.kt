@@ -45,7 +45,7 @@ class DefaultContactRelayIdResolverTest {
         }
 
     @Test
-    fun signingIdentityIsDerivedAndPersisted() =
+    fun signingIdentityIsDerivedWithoutReplacingBootstrapMapping() =
         runTest {
             val contact = createContact(signingPublicKey = byteArrayOf(1, 2, 3))
             val relayIdDao = FakeContactRelayIdDao()
@@ -61,14 +61,11 @@ class DefaultContactRelayIdResolverTest {
 
             assertEquals("derived-relay-id", relayId)
             assertTrue(byteArrayOf(1, 2, 3).contentEquals(relayIdGenerator.signingPublicKey))
-            assertEquals(
-                expected = listOf(ContactRelayIdEntity("contact-1", "derived-relay-id")),
-                actual = relayIdDao.upsertedEntities
-            )
+            assertTrue(relayIdDao.upsertedEntities.isEmpty())
         }
 
     @Test
-    fun stalePhoneDerivedMappingIsReplaced() =
+    fun stalePhoneDerivedMappingIsPreservedForHandshakeReplies() =
         runTest {
             val relayIdDao =
                 FakeContactRelayIdDao(
@@ -85,10 +82,8 @@ class DefaultContactRelayIdResolverTest {
             val relayId = resolver.resolve("contact-1").getOrThrow()
 
             assertEquals("derived-relay-id", relayId)
-            assertEquals(
-                listOf(ContactRelayIdEntity("contact-1", "derived-relay-id")),
-                relayIdDao.upsertedEntities
-            )
+            assertTrue(relayIdDao.upsertedEntities.isEmpty())
+            assertEquals("scphone1_legacy", relayIdDao.findRelayIdByContactId("contact-1"))
         }
 
     @Test
@@ -148,6 +143,17 @@ class DefaultContactRelayIdResolverTest {
         override suspend fun findContactIdByRelayId(relayId: String): String? = contactIdByRelayId[relayId]
 
         override suspend fun findRelayIdByContactId(contactId: String): String? = relayIdByContactId[contactId]
+
+        override suspend fun deleteOtherContactMapping(
+            relayId: String,
+            contactId: String
+        ) {
+            val owner = contactIdByRelayId[relayId]
+            if (owner != null && owner != contactId) {
+                contactIdByRelayId.remove(relayId)
+                relayIdByContactId.remove(owner)
+            }
+        }
 
         override suspend fun upsert(entity: ContactRelayIdEntity) {
             upsertedEntities += entity

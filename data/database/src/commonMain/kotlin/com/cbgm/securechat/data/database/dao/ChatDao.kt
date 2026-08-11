@@ -261,6 +261,23 @@ interface ChatDao {
             FROM messages
             WHERE messages.conversationId = conversations.id
         )
+        OR (
+            conversations.type = 'DIRECT'
+            AND conversations.contactId IS NOT NULL
+            AND (
+                SELECT identity_invitations.state
+                FROM identity_invitations
+                WHERE identity_invitations.contactId = conversations.contactId
+                  AND identity_invitations.state IN (
+                      :directChatAuthorizedState,
+                      :directChatDeletedState
+                  )
+                ORDER BY
+                    identity_invitations.updatedAtEpochMilliseconds DESC,
+                    identity_invitations.createdAtEpochMilliseconds DESC
+                LIMIT 1
+            ) = :directChatAuthorizedState
+        )
     )
       AND NOT EXISTS (
         SELECT 1
@@ -271,7 +288,11 @@ interface ChatDao {
     ORDER BY conversations.updatedAtEpochMilliseconds DESC
     """
     )
-    fun observeConversationSummaries(localDeletionTransportMode: String): Flow<List<ConversationSummary>>
+    fun observeConversationSummaries(
+        localDeletionTransportMode: String,
+        directChatAuthorizedState: String,
+        directChatDeletedState: String
+    ): Flow<List<ConversationSummary>>
 
     @Query("DELETE FROM messages WHERE conversationId = :conversationId")
     suspend fun deleteConversationMessages(conversationId: String)

@@ -442,6 +442,8 @@ class IdentityPacketHandlerTest {
 
         override suspend fun retry(itemId: String): Result<Unit> = Result.failure(UnsupportedOperationException())
 
+        override suspend fun resend(packetId: String): Result<Unit> = Result.success(Unit)
+
         override suspend fun requeueInterrupted(): Result<Unit> = Result.failure(UnsupportedOperationException())
 
         override suspend fun retryFailed(): Result<Unit> = Result.failure(UnsupportedOperationException())

@@ -1,6 +1,8 @@
 package com.cbgm.securechat.feature.contacts.presentation.model
 
 sealed interface ContactInvitationUiEvent {
+    data object CloseClicked : ContactInvitationUiEvent
+
     data class AcceptClicked(
         val invitationId: String
     ) : ContactInvitationUiEvent

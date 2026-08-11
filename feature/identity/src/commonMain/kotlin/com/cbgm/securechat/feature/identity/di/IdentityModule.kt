@@ -18,6 +18,7 @@ import com.cbgm.securechat.feature.identity.domain.repository.storage.LocalPhone
 import com.cbgm.securechat.feature.identity.domain.service.IdentityShareCodec
 import com.cbgm.securechat.feature.identity.domain.usecase.CreateIdentity
 import com.cbgm.securechat.feature.identity.domain.usecase.CreateSharedIdentity
+import com.cbgm.securechat.feature.identity.domain.usecase.DecodeSharedIdentity
 import com.cbgm.securechat.feature.identity.domain.usecase.GetIdentityStatus
 import com.cbgm.securechat.feature.identity.domain.usecase.GetLocalPhoneNumber
 import com.cbgm.securechat.feature.identity.domain.usecase.GetPublicIdentity
@@ -96,6 +97,10 @@ val identityModule =
 
         single<IdentityShareCodec> {
             DefaultIdentityShareCodec()
+        }
+
+        factory {
+            DecodeSharedIdentity(identityShareCodec = get<IdentityShareCodec>())
         }
 
         factory {

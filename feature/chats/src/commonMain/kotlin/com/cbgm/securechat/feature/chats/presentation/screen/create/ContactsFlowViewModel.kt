@@ -5,10 +5,12 @@ import com.cbgm.securechat.core.ui.navigation.AppRoute
 import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.chats.domain.usecase.GetOrCreateDirectConversation
 import com.cbgm.securechat.feature.chats.presentation.model.ContactsFlowUiEvent
+import com.cbgm.securechat.feature.contacts.domain.usecase.EnsureIdentityExchangeStarted
 import kotlinx.coroutines.launch
 
 class ContactsFlowViewModel(
-    private val getOrCreateDirectConversation: GetOrCreateDirectConversation
+    private val getOrCreateDirectConversation: GetOrCreateDirectConversation,
+    private val ensureIdentityExchangeStarted: EnsureIdentityExchangeStarted
 ) : BaseViewModel() {
     fun onUiEvent(event: ContactsFlowUiEvent) {
         when (event) {
@@ -28,6 +30,7 @@ class ContactsFlowViewModel(
     ) {
         viewModelScope.launch {
             val conversationId = getOrCreateDirectConversation(contactId)
+            ensureIdentityExchangeStarted(contactId)
             navigator.navigateTo(
                 AppRoute.Chat(
                     conversationId = conversationId,

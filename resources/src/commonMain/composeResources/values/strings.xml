@@ -203,6 +203,11 @@
     <string name="feature_contacts_invitation_unverified_warning">Accepting enables encrypted messages, but does not prove this identity belongs to the expected person. Compare the safety number separately.</string>
     <string name="feature_contacts_accept_invitation">Accept</string>
     <string name="feature_contacts_decline_invitation">Decline</string>
+    <string name="feature_contacts_invitations_title">Invitations</string>
+    <string name="feature_contacts_invitations_empty">No open invitations</string>
+    <string name="feature_contacts_open_invitations">Open invitations</string>
+    <string name="feature_contacts_close_invitations">Close invitations</string>
+    <string name="feature_contacts_block_invitation">Decline and block</string>
 
     <!-- Feature: identity -->
     <string name="feature_identity_approve_number_create_identity">Approve number and create identity</string>

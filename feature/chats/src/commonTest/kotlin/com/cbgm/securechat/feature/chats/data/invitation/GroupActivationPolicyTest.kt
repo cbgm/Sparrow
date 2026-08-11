@@ -6,12 +6,12 @@ import kotlin.test.assertTrue
 
 class GroupActivationPolicyTest {
     @Test
-    fun pendingInviteesDoNotBlockAnExistingActiveMember() {
+    fun activeMembersReceiveGroupMessages() {
         assertTrue(canSendToActiveGroupMembers(activeParticipantCount = 1))
     }
 
     @Test
-    fun groupWithoutAnActiveRemoteMemberStillQueues() {
+    fun groupWithoutActiveMembersHasNoRecipients() {
         assertFalse(canSendToActiveGroupMembers(activeParticipantCount = 0))
     }
 }

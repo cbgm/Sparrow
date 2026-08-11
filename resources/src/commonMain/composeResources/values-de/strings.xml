@@ -203,6 +203,11 @@
     <string name="feature_contacts_invitation_unverified_warning">Das Annehmen aktiviert verschlüsselte Nachrichten, beweist aber nicht, dass diese Identität zur erwarteten Person gehört. Vergleiche die Sicherheitsnummer separat.</string>
     <string name="feature_contacts_accept_invitation">Annehmen</string>
     <string name="feature_contacts_decline_invitation">Ablehnen</string>
+    <string name="feature_contacts_invitations_title">Einladungen</string>
+    <string name="feature_contacts_invitations_empty">Keine offenen Einladungen</string>
+    <string name="feature_contacts_open_invitations">Einladungen öffnen</string>
+    <string name="feature_contacts_close_invitations">Einladungen schließen</string>
+    <string name="feature_contacts_block_invitation">Ablehnen und blockieren</string>
 
     <!-- Feature: identity -->
     <string name="feature_identity_approve_number_create_identity">Nummer bestätigen und Identität erstellen</string>

@@ -7,6 +7,10 @@ import com.cbgm.securechat.core.protocol.outbox.OutboxProcessingResult
 import com.cbgm.securechat.core.protocol.outbox.OutboxProcessor
 import com.cbgm.securechat.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.securechat.core.protocol.outbox.ProtocolOutboxItem
+import com.cbgm.securechat.core.protocol.packet.ContactInviteAcceptedPacket
+import com.cbgm.securechat.core.protocol.packet.ContactInviteDeclinedPacket
+import com.cbgm.securechat.core.protocol.packet.ContactInvitePacket
+import com.cbgm.securechat.core.protocol.packet.SecureChatPacket
 import com.cbgm.securechat.core.protocol.transport.OutgoingWireSender
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
 import com.cbgm.securechat.feature.messaging.domain.relay.ContactRelayIdResolver
@@ -135,9 +139,10 @@ class DefaultOutboxProcessor(
             ).getOrThrow()
 
         val recipientRelayId =
-            contactRelayIdResolver
-                .resolve(contactId = item.contactId)
-                .getOrThrow()
+            resolveRecipientRelayId(
+                contactId = item.contactId,
+                packet = packet
+            )
 
         outgoingWireSender
             .send(
@@ -147,6 +152,19 @@ class DefaultOutboxProcessor(
 
         protocolOutbox.markSent(itemId = item.id).getOrThrow()
     }
+
+    private suspend fun resolveRecipientRelayId(
+        contactId: String,
+        packet: SecureChatPacket
+    ): String =
+        when (packet) {
+            is ContactInvitePacket,
+            is ContactInviteAcceptedPacket,
+            is ContactInviteDeclinedPacket ->
+                contactRelayIdResolver.resolveBootstrap(contactId).getOrThrow()
+
+            else -> contactRelayIdResolver.resolve(contactId).getOrThrow()
+        }
 
     private companion object {
         const val MAX_CONCURRENT_RECIPIENTS = 8

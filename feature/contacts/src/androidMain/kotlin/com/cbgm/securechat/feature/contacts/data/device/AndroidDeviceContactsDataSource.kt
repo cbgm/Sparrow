@@ -79,8 +79,8 @@ class AndroidDeviceContactsDataSource(
     /**
      * Loads all usable phone numbers for one Android contact.
      *
-     * Android's Phone table exposes the entered number, its type,
-     * and an optional custom label.
+     * Prefer Android's normalized number when the provider exposes one.
+     * Fall back to the entered number while keeping its type and label.
      */
     private fun loadPhoneNumbers(contactId: String): List<DevicePhoneNumber> {
         val phoneNumbers = mutableListOf<DevicePhoneNumber>()
@@ -90,6 +90,7 @@ class AndroidDeviceContactsDataSource(
                 ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
                 arrayOf(
                     ContactsContract.CommonDataKinds.Phone.NUMBER,
+                    ContactsContract.CommonDataKinds.Phone.NORMALIZED_NUMBER,
                     ContactsContract.CommonDataKinds.Phone.TYPE,
                     ContactsContract.CommonDataKinds.Phone.LABEL
                 ),
@@ -102,6 +103,9 @@ class AndroidDeviceContactsDataSource(
 
                 val numberColumn = cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER)
 
+                val normalizedNumberColumn =
+                    cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NORMALIZED_NUMBER)
+
                 val typeColumn = cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.TYPE)
 
                 val labelColumn = cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.LABEL)
@@ -109,9 +113,13 @@ class AndroidDeviceContactsDataSource(
                 while (cursor.moveToNext()) {
                     val number =
                         cursor
-                            .getString(numberColumn)
+                            .getString(normalizedNumberColumn)
                             ?.trim()
                             ?.takeIf { it.isNotEmpty() }
+                            ?: cursor
+                                .getString(numberColumn)
+                                ?.trim()
+                                ?.takeIf { it.isNotEmpty() }
                             ?: continue
 
                     val androidType = cursor.getInt(typeColumn)
