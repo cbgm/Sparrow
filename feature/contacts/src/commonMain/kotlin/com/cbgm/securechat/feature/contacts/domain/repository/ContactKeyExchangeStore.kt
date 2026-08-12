@@ -29,6 +29,12 @@ interface ContactKeyExchangeStore {
         expectedRemoteSigningPublicKey: ByteArray
     ): Result<Unit>
 
+    suspend fun acceptInvitationIdentityForHandshake(
+        contactId: String,
+        remoteEncryptionPublicKey: ByteArray,
+        remoteSigningPublicKey: ByteArray
+    ): Result<Unit>
+
     suspend fun markMutual(
         contactId: String,
         expectedRemoteEncryptionPublicKey: ByteArray,

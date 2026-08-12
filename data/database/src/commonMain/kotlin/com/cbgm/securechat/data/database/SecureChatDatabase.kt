@@ -50,7 +50,7 @@ import com.cbgm.securechat.data.database.entity.RemoteMailboxRouteEntity
         LocalMailboxCredentialEntity::class,
         RemoteMailboxRouteEntity::class
     ],
-    version = 22,
+    version = 24,
     exportSchema = true
 )
 @ConstructedBy(SecureChatDatabaseConstructor::class)

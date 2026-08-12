@@ -15,6 +15,7 @@ import com.cbgm.securechat.core.protocol.packet.ContactReadyPacket
 import com.cbgm.securechat.core.protocol.packet.ContactVerificationReceiptPacket
 import com.cbgm.securechat.core.protocol.packet.GroupChatMessagePacket
 import com.cbgm.securechat.core.protocol.packet.GroupCreatedPacket
+import com.cbgm.securechat.core.protocol.packet.GroupInvitePacket
 import com.cbgm.securechat.core.protocol.packet.GroupMemberPayload
 import com.cbgm.securechat.core.protocol.packet.SecureChatPacket
 import com.cbgm.securechat.core.protocol.transport.OutgoingWireSender
@@ -181,7 +182,7 @@ class DefaultOutboxProcessorTest {
         }
 
     @Test
-    fun contactInviteUsesBootstrapRoutingEvenWhenContactIsAlreadyMutual() =
+    fun contactInviteUsesPlainBootstrapTransportEvenWhenContactIsAlreadyMutual() =
         runTest {
             val outbox =
                 FakeProtocolOutbox(
@@ -189,10 +190,14 @@ class DefaultOutboxProcessorTest {
                 )
             val resolver = RecordingContactRelayIdResolver()
             val sender = RecordingOutgoingWireSender()
+            val cipher = RecordingTransportMessageCipher()
+            val payloadCodec = RecordingTransportPayloadCodec()
             val processor =
                 createProcessor(
                     outbox = outbox,
                     contact = createContact(keyExchangeStatus = KeyExchangeStatus.MUTUAL),
+                    cipher = cipher,
+                    payloadCodec = payloadCodec,
                     packetCodec = TestPacketCodec(),
                     sender = sender,
                     contactRelayIdResolver = resolver
@@ -201,6 +206,43 @@ class DefaultOutboxProcessorTest {
             val result = processor.processPending().getOrThrow()
 
             assertEquals(1, result.sentCount)
+            assertEquals(0, cipher.callCount)
+            assertEquals(TransportEncryptionMode.PLAINTEXT, payloadCodec.payloads.single().mode)
+            assertEquals(0, resolver.canonicalResolveCount)
+            assertEquals(1, resolver.bootstrapResolveCount)
+            assertEquals(
+                listOf("bootstrap-recipient-relay-id" to "encoded-transport-payload"),
+                sender.sent
+            )
+        }
+
+    @Test
+    fun groupInviteUsesPlainBootstrapTransportEvenWhenContactIsAlreadyMutual() =
+        runTest {
+            val outbox =
+                FakeProtocolOutbox(
+                    listOf(createItem(encodedPacket = GROUP_INVITE_PACKET_BYTES))
+                )
+            val resolver = RecordingContactRelayIdResolver()
+            val sender = RecordingOutgoingWireSender()
+            val cipher = RecordingTransportMessageCipher()
+            val payloadCodec = RecordingTransportPayloadCodec()
+            val processor =
+                createProcessor(
+                    outbox = outbox,
+                    contact = createContact(keyExchangeStatus = KeyExchangeStatus.MUTUAL),
+                    cipher = cipher,
+                    payloadCodec = payloadCodec,
+                    packetCodec = TestPacketCodec(),
+                    sender = sender,
+                    contactRelayIdResolver = resolver
+                )
+
+            val result = processor.processPending().getOrThrow()
+
+            assertEquals(1, result.sentCount)
+            assertEquals(0, cipher.callCount)
+            assertEquals(TransportEncryptionMode.PLAINTEXT, payloadCodec.payloads.single().mode)
             assertEquals(0, resolver.canonicalResolveCount)
             assertEquals(1, resolver.bootstrapResolveCount)
             assertEquals(
@@ -581,6 +623,21 @@ class DefaultOutboxProcessorTest {
                         senderSignature = byteArrayOf(3)
                     )
                 )
+            } else if (encodedPacket.contentEquals(GROUP_INVITE_PACKET_BYTES)) {
+                Result.success(
+                    GroupInvitePacket(
+                        packetId = "group-invite-invitation-1",
+                        invitationId = "group-invitation-1",
+                        groupId = "group-1",
+                        title = "Group",
+                        createdAtEpochMilliseconds = 1L,
+                        expiresAtEpochMilliseconds = 2L,
+                        challenge = ByteArray(32) { 1 },
+                        ownerEncryptionPublicKey = ByteArray(32) { 2 },
+                        ownerSigningPublicKey = ByteArray(32) { 3 },
+                        ownerSignature = ByteArray(64) { 4 }
+                    )
+                )
             } else if (encodedPacket.contentEquals(CONTACT_INVITE_PACKET_BYTES)) {
                 Result.success(
                     ContactInvitePacket(
@@ -739,6 +796,7 @@ class DefaultOutboxProcessorTest {
         val CONTACT_INVITE_PACKET_BYTES = byteArrayOf(10, 11, 12)
         val CONTACT_READY_PACKET_BYTES = byteArrayOf(13, 14, 15)
         val VERIFICATION_RECEIPT_PACKET_BYTES = byteArrayOf(16, 17, 18)
+        val GROUP_INVITE_PACKET_BYTES = byteArrayOf(19, 20, 21)
         val REMOTE_ENCRYPTION_KEY = ByteArray(32) { 13 }
         val REMOTE_SIGNING_KEY = ByteArray(32) { 16 }
     }

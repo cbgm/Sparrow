@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.contacts.presentation.screen.invite
+package com.cbgm.securechat.feature.contacts.presentation.screen
 
 import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.ui.presentation.BaseViewModel

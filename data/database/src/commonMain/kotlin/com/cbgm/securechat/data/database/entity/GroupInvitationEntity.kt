@@ -37,6 +37,8 @@ data class GroupInvitationEntity(
     val direction: String,
     val status: String,
     val challenge: ByteArray,
+    val ownerEncryptionPublicKey: ByteArray? = null,
+    val ownerSigningPublicKey: ByteArray? = null,
     val createdAtEpochMilliseconds: Long,
     val expiresAtEpochMilliseconds: Long,
     val updatedAtEpochMilliseconds: Long
@@ -67,6 +69,8 @@ data class GroupInvitationEntity(
             direction == other.direction &&
             status == other.status &&
             challenge.contentEquals(other.challenge) &&
+            ownerEncryptionPublicKey.contentEqualsNullable(other.ownerEncryptionPublicKey) &&
+            ownerSigningPublicKey.contentEqualsNullable(other.ownerSigningPublicKey) &&
             createdAtEpochMilliseconds == other.createdAtEpochMilliseconds &&
             expiresAtEpochMilliseconds == other.expiresAtEpochMilliseconds &&
             updatedAtEpochMilliseconds == other.updatedAtEpochMilliseconds
@@ -79,9 +83,18 @@ data class GroupInvitationEntity(
         result = 31 * result + direction.hashCode()
         result = 31 * result + status.hashCode()
         result = 31 * result + challenge.contentHashCode()
+        result = 31 * result + (ownerEncryptionPublicKey?.contentHashCode() ?: 0)
+        result = 31 * result + (ownerSigningPublicKey?.contentHashCode() ?: 0)
         result = 31 * result + createdAtEpochMilliseconds.hashCode()
         result = 31 * result + expiresAtEpochMilliseconds.hashCode()
         result = 31 * result + updatedAtEpochMilliseconds.hashCode()
         return result
     }
 }
+
+private fun ByteArray?.contentEqualsNullable(other: ByteArray?): Boolean =
+    when {
+        this == null -> other == null
+        other == null -> false
+        else -> contentEquals(other)
+    }

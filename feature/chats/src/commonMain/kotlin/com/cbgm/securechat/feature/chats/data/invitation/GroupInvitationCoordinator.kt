@@ -32,6 +32,7 @@ import com.cbgm.securechat.feature.chats.data.security.GroupSecurityManager
 import com.cbgm.securechat.feature.chats.data.security.GroupWelcomeRecipient
 import com.cbgm.securechat.feature.chats.data.verification.GroupVerificationCoordinator
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
+import com.cbgm.securechat.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.securechat.feature.contacts.domain.model.KeyExchangeStatus
 import com.cbgm.securechat.feature.contacts.domain.repository.ContactKeyExchangeStore
 import com.cbgm.securechat.feature.contacts.domain.repository.RemoteIdentityOrigin
@@ -394,13 +395,13 @@ class GroupInvitationCoordinator(
                 }
             }
 
-            val replacesUntrustedIdentity =
-                validateContactIdentity(
+            val identityChanged =
+                stageIncomingOwnerIdentity(
                     contactId = ownerContactId,
                     encryptionPublicKey = packet.ownerEncryptionPublicKey,
                     signingPublicKey = packet.ownerSigningPublicKey
                 )
-            if (replacesUntrustedIdentity) {
+            if (identityChanged) {
                 groupInvitationDao.failSupersededIncomingInvitations(
                     contactId = ownerContactId,
                     currentInvitationId = packet.invitationId,
@@ -409,11 +410,6 @@ class GroupInvitationCoordinator(
                     updatedAt = persistedAtEpochMilliseconds
                 )
             }
-            storeRemoteIdentity(
-                contactId = ownerContactId,
-                encryptionPublicKey = packet.ownerEncryptionPublicKey,
-                signingPublicKey = packet.ownerSigningPublicKey
-            )
 
             chatDao.upsertConversation(
                 ConversationEntity(
@@ -433,6 +429,8 @@ class GroupInvitationCoordinator(
                     direction = GroupInvitationDirection.INCOMING.name,
                     status = GroupInvitationStatus.AWAITING_ACCEPTANCE.name,
                     challenge = packet.challenge.copyOf(),
+                    ownerEncryptionPublicKey = packet.ownerEncryptionPublicKey.copyOf(),
+                    ownerSigningPublicKey = packet.ownerSigningPublicKey.copyOf(),
                     createdAtEpochMilliseconds = packet.createdAtEpochMilliseconds,
                     expiresAtEpochMilliseconds = packet.expiresAtEpochMilliseconds,
                     updatedAtEpochMilliseconds = persistedAtEpochMilliseconds
@@ -465,17 +463,7 @@ class GroupInvitationCoordinator(
                 error("Group invitation has expired")
             }
 
-            val ownerIdentity =
-                loadContact(invitation.contactId).secureChatIdentity
-                    ?: error("Group owner identity was not stored")
-            if (ownerIdentity.keyExchangeStatus != KeyExchangeStatus.MUTUAL) {
-                contactKeyExchangeStore
-                    .acceptRemoteIdentityForHandshake(
-                        contactId = invitation.contactId,
-                        expectedRemoteEncryptionPublicKey = ownerIdentity.encryptionPublicKey,
-                        expectedRemoteSigningPublicKey = ownerIdentity.signingPublicKey
-                    ).getOrThrow()
-            }
+            requireAcceptedOwnerIdentity(invitation)
             val memberIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
             val memberSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
             val joinRequest =
@@ -584,11 +572,6 @@ class GroupInvitationCoordinator(
                 return@runCatching
             }
 
-            validateContactIdentity(
-                contactId = memberContactId,
-                encryptionPublicKey = packet.memberEncryptionPublicKey,
-                signingPublicKey = packet.memberSigningPublicKey
-            )
             storeMutualIdentity(
                 contactId = memberContactId,
                 encryptionPublicKey = packet.memberEncryptionPublicKey,
@@ -986,33 +969,101 @@ class GroupInvitationCoordinator(
 
     private suspend fun loadContact(contactId: String): Contact = getContact(contactId).getOrThrow() ?: error("Contact was not found: $contactId")
 
-    private suspend fun validateContactIdentity(
+    private suspend fun stageIncomingOwnerIdentity(
         contactId: String,
         encryptionPublicKey: ByteArray,
         signingPublicKey: ByteArray
-    ): Boolean =
-        InvitationIdentityPolicy.requiresReplacement(
-            existing = loadContact(contactId).secureChatIdentity,
-            encryptionPublicKey = encryptionPublicKey,
-            signingPublicKey = signingPublicKey
-        )
+    ): Boolean {
+        val existing = loadContact(contactId).secureChatIdentity
+        val identityChanged =
+            existing != null &&
+                (
+                    !existing.encryptionPublicKey.contentEquals(encryptionPublicKey) ||
+                        !existing.signingPublicKey.contentEquals(signingPublicKey)
+                )
+        val pinnedIdentityChanged =
+            existing?.let { identity ->
+                identityChanged &&
+                    (
+                        identity.keyExchangeStatus == KeyExchangeStatus.MUTUAL ||
+                            identity.verificationStatus == ContactVerificationStatus.VERIFIED
+                    )
+            } ?: false
+
+        if (!pinnedIdentityChanged) {
+            storeRemoteIdentity(
+                contactId = contactId,
+                encryptionPublicKey = encryptionPublicKey,
+                signingPublicKey = signingPublicKey
+            )
+        }
+
+        return identityChanged
+    }
+
+    private suspend fun requireAcceptedOwnerIdentity(
+        invitation: GroupInvitationEntity
+    ) {
+        val existingIdentity = loadContact(invitation.contactId).secureChatIdentity
+        val stagedEncryptionPublicKey =
+            invitation.ownerEncryptionPublicKey
+                ?: existingIdentity?.encryptionPublicKey
+                ?: error("Group owner encryption identity was not stored")
+        val stagedSigningPublicKey =
+            invitation.ownerSigningPublicKey
+                ?: existingIdentity?.signingPublicKey
+                ?: error("Group owner signing identity was not stored")
+        val sameIdentity =
+            existingIdentity != null &&
+                existingIdentity.encryptionPublicKey.contentEquals(stagedEncryptionPublicKey) &&
+                existingIdentity.signingPublicKey.contentEquals(stagedSigningPublicKey)
+
+        if (!sameIdentity) {
+            contactKeyExchangeStore
+                .acceptInvitationIdentityForHandshake(
+                    contactId = invitation.contactId,
+                    remoteEncryptionPublicKey = stagedEncryptionPublicKey,
+                    remoteSigningPublicKey = stagedSigningPublicKey
+                ).getOrThrow()
+        } else if (existingIdentity.keyExchangeStatus != KeyExchangeStatus.MUTUAL) {
+            contactKeyExchangeStore
+                .acceptRemoteIdentityForHandshake(
+                    contactId = invitation.contactId,
+                    expectedRemoteEncryptionPublicKey = stagedEncryptionPublicKey,
+                    expectedRemoteSigningPublicKey = stagedSigningPublicKey
+                ).getOrThrow()
+        }
+
+        val acceptedIdentity =
+            loadContact(invitation.contactId).secureChatIdentity
+                ?: error("Group owner identity was not stored")
+        check(acceptedIdentity.encryptionPublicKey.contentEquals(stagedEncryptionPublicKey)) {
+            "Group owner encryption identity changed while the invitation was accepted"
+        }
+        check(acceptedIdentity.signingPublicKey.contentEquals(stagedSigningPublicKey)) {
+            "Group owner signing identity changed while the invitation was accepted"
+        }
+    }
 
     private suspend fun storeMutualIdentity(
         contactId: String,
         encryptionPublicKey: ByteArray,
         signingPublicKey: ByteArray
     ) {
-        contactKeyExchangeStore
-            .storeRemoteIdentity(
-                contactId = contactId,
-                encryptionPublicKey = encryptionPublicKey,
-                signingPublicKey = signingPublicKey,
-                origin = RemoteIdentityOrigin.CONTACT_INVITATION
-            ).getOrThrow()
-        val storedIdentity =
-            loadContact(contactId).secureChatIdentity
-                ?: error("Contact identity was not stored")
-        if (storedIdentity.keyExchangeStatus != KeyExchangeStatus.MUTUAL) {
+        val existingIdentity = loadContact(contactId).secureChatIdentity
+        val sameIdentity =
+            existingIdentity != null &&
+                existingIdentity.encryptionPublicKey.contentEquals(encryptionPublicKey) &&
+                existingIdentity.signingPublicKey.contentEquals(signingPublicKey)
+
+        if (!sameIdentity) {
+            contactKeyExchangeStore
+                .acceptInvitationIdentityForHandshake(
+                    contactId = contactId,
+                    remoteEncryptionPublicKey = encryptionPublicKey,
+                    remoteSigningPublicKey = signingPublicKey
+                ).getOrThrow()
+        } else if (existingIdentity.keyExchangeStatus != KeyExchangeStatus.MUTUAL) {
             contactKeyExchangeStore
                 .acceptRemoteIdentityForHandshake(
                     contactId = contactId,
@@ -1020,6 +1071,7 @@ class GroupInvitationCoordinator(
                     expectedRemoteSigningPublicKey = signingPublicKey
                 ).getOrThrow()
         }
+
         contactKeyExchangeStore
             .markMutual(
                 contactId = contactId,

@@ -83,14 +83,25 @@ class IdentityInvitationCoordinator(
 
             mutex.withLock {
                 val contact = contactDao.findById(contactId) ?: error("Contact was not found: $contactId")
+                val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
+                val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+                requireLocalKeysMatch(localIdentity, signingKeyPair)
 
-                if (hasActiveDirectChatAuthorization(contactId)) {
+                if (hasActiveDirectChatAuthorization(contactId, localIdentity)) {
                     return@withLock
                 }
 
                 val now = SystemClock.nowEpochMilliseconds()
                 invitationDao.findActiveForContact(contactId, TERMINAL_STATES)?.let { activeInvitation ->
-                    if (activeInvitation.expiresAtEpochMilliseconds > now) {
+                    if (!isBoundToLocalIdentity(activeInvitation, localIdentity)) {
+                        invitationDao.upsert(
+                            activeInvitation.copy(
+                                state = IdentityHandshakeState.FAILED.name,
+                                updatedAtEpochMilliseconds = now,
+                                lastError = "Handshake belongs to a previous local identity"
+                            )
+                        )
+                    } else if (activeInvitation.expiresAtEpochMilliseconds > now) {
                         if (resumeActiveHandshake(activeInvitation)) {
                             return@withLock
                         }
@@ -112,10 +123,6 @@ class IdentityInvitationCoordinator(
                         )
                     }
                 }
-
-                val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
-                val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
-                requireLocalKeysMatch(localIdentity, signingKeyPair)
 
                 val invitationId = IdGenerator.generate()
                 val packetId = invitePacketId(invitationId)
@@ -163,7 +170,9 @@ class IdentityInvitationCoordinator(
                         createdAtEpochMilliseconds = now,
                         expiresAtEpochMilliseconds = expiresAt,
                         updatedAtEpochMilliseconds = now,
-                        lastError = null
+                        lastError = null,
+                        localEncryptionPublicKey = localIdentity.encryptionPublicKey.copyOf(),
+                        localSigningPublicKey = localIdentity.signingPublicKey.copyOf()
                     )
                 )
 
@@ -249,10 +258,25 @@ class IdentityInvitationCoordinator(
                 states = AUTHORIZATION_EVENT_STATES
             )
         ) { latestInvitation, latestAuthorizationEvent ->
-            resolveObservedState(
-                latestInvitation = latestInvitation,
-                latestAuthorizationEvent = latestAuthorizationEvent
-            )
+            val state =
+                resolveObservedState(
+                    latestInvitation = latestInvitation,
+                    latestAuthorizationEvent = latestAuthorizationEvent
+                )
+            if (state != IdentityHandshakeState.MUTUAL_UNVERIFIED) {
+                return@combine state
+            }
+
+            val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrNull()
+            if (
+                latestAuthorizationEvent != null &&
+                localIdentity != null &&
+                isBoundToLocalIdentity(latestAuthorizationEvent, localIdentity)
+            ) {
+                IdentityHandshakeState.MUTUAL_UNVERIFIED
+            } else {
+                null
+            }
         }
     }
 
@@ -316,20 +340,17 @@ class IdentityInvitationCoordinator(
                         signature = signature.copyOf()
                     )
 
+                acceptInvitationIdentity(invitation)
                 invitationDao.upsert(
                     invitation.copy(
                         state = IdentityHandshakeState.ACCEPTANCE_SENT.name,
                         responseChallenge = responseChallenge.copyOf(),
                         updatedAtEpochMilliseconds = now,
-                        lastError = null
+                        lastError = null,
+                        localEncryptionPublicKey = localIdentity.encryptionPublicKey.copyOf(),
+                        localSigningPublicKey = localIdentity.signingPublicKey.copyOf()
                     )
                 )
-                contactKeyExchangeStore
-                    .acceptRemoteIdentityForHandshake(
-                        contactId = invitation.contactId,
-                        expectedRemoteEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
-                        expectedRemoteSigningPublicKey = invitation.remoteSigningPublicKey
-                    ).getOrThrow()
                 enqueueOrResend(invitation.contactId, packet).getOrElse { error ->
                     invitationDao.upsert(
                         requireNotNull(invitationDao.findById(invitationId)).copy(
@@ -472,7 +493,8 @@ class IdentityInvitationCoordinator(
 
             when (modeRepository.getMode()) {
                 DirectIdentitySetupMode.AUTOMATIC_INVITATION -> {
-                    if (!hasActiveDirectChatAuthorization(contactId)) {
+                    val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
+                    if (!hasActiveDirectChatAuthorization(contactId, localIdentity)) {
                         throw DirectChatAuthorizationRequiredException(
                             "A contact invitation must be accepted before messages can be sent"
                         )
@@ -594,6 +616,7 @@ class IdentityInvitationCoordinator(
                         remoteEncryptionPublicKey = packet.encryptionPublicKey,
                         remoteSigningPublicKey = packet.signingPublicKey
                     )
+                val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
 
                 if (shouldAutomaticallyDecline(contactId)) {
                     queueDecline(
@@ -646,7 +669,13 @@ class IdentityInvitationCoordinator(
                     check(existing.remoteSigningPublicKey.contentEquals(packet.signingPublicKey)) {
                         "Invitation replay changed its signing key"
                     }
-                    recoverIncomingInviteReplay(existing)
+                    val reboundExisting =
+                        existing.copy(
+                            localEncryptionPublicKey = localIdentity.encryptionPublicKey.copyOf(),
+                            localSigningPublicKey = localIdentity.signingPublicKey.copyOf()
+                        )
+                    invitationDao.upsert(reboundExisting)
+                    recoverIncomingInviteReplay(reboundExisting)
                     return@withLock
                 }
 
@@ -691,13 +720,11 @@ class IdentityInvitationCoordinator(
                     )
                 }
 
-                contactKeyExchangeStore
-                    .storeRemoteIdentity(
-                        contactId = contactId,
-                        encryptionPublicKey = packet.encryptionPublicKey,
-                        signingPublicKey = packet.signingPublicKey,
-                        origin = RemoteIdentityOrigin.CONTACT_INVITATION
-                    ).getOrThrow()
+                stageIncomingInvitationIdentity(
+                    contactId = contactId,
+                    remoteEncryptionPublicKey = packet.encryptionPublicKey,
+                    remoteSigningPublicKey = packet.signingPublicKey
+                )
 
                 invitationDao.upsert(
                     IdentityInvitationEntity(
@@ -713,7 +740,9 @@ class IdentityInvitationCoordinator(
                         createdAtEpochMilliseconds = packet.createdAtEpochMilliseconds,
                         expiresAtEpochMilliseconds = packet.expiresAtEpochMilliseconds,
                         updatedAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
-                        lastError = null
+                        lastError = null,
+                        localEncryptionPublicKey = localIdentity.encryptionPublicKey.copyOf(),
+                        localSigningPublicKey = localIdentity.signingPublicKey.copyOf()
                     )
                 )
             }
@@ -839,7 +868,9 @@ class IdentityInvitationCoordinator(
                         remoteEncryptionPublicKey = packet.responderEncryptionPublicKey.copyOf(),
                         remoteSigningPublicKey = packet.responderSigningPublicKey.copyOf(),
                         updatedAtEpochMilliseconds = now,
-                        lastError = null
+                        lastError = null,
+                        localEncryptionPublicKey = localIdentity.encryptionPublicKey.copyOf(),
+                        localSigningPublicKey = localIdentity.signingPublicKey.copyOf()
                     )
                 )
 
@@ -937,7 +968,9 @@ class IdentityInvitationCoordinator(
                     invitation.copy(
                         state = IdentityHandshakeState.MUTUAL_UNVERIFIED.name,
                         updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
-                        lastError = null
+                        lastError = null,
+                        localEncryptionPublicKey = localIdentity.encryptionPublicKey.copyOf(),
+                        localSigningPublicKey = localIdentity.signingPublicKey.copyOf()
                     )
                 )
 
@@ -1088,13 +1121,11 @@ class IdentityInvitationCoordinator(
             return invitation
         }
 
-        contactKeyExchangeStore
-            .storeRemoteIdentity(
-                contactId = contactId,
-                encryptionPublicKey = invitation.remoteEncryptionPublicKey,
-                signingPublicKey = invitation.remoteSigningPublicKey,
-                origin = RemoteIdentityOrigin.CONTACT_INVITATION
-            ).getOrThrow()
+        stageIncomingInvitationIdentity(
+            contactId = contactId,
+            remoteEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
+            remoteSigningPublicKey = invitation.remoteSigningPublicKey
+        )
         remotePhoneNumber?.let { phoneNumber ->
             persistIncomingPhoneNumber(
                 contactId = contactId,
@@ -1135,11 +1166,13 @@ class IdentityInvitationCoordinator(
                 ?.id
         val targetContactId = phoneContactId ?: identityContactId ?: return resolvedContactId
 
-        requireCompatiblePinnedIdentity(
-            contactId = targetContactId,
-            encryptionPublicKey = remoteEncryptionPublicKey,
-            signingPublicKey = remoteSigningPublicKey
-        )
+        if (phoneContactId == null) {
+            requireCompatiblePinnedIdentity(
+                contactId = targetContactId,
+                encryptionPublicKey = remoteEncryptionPublicKey,
+                signingPublicKey = remoteSigningPublicKey
+            )
+        }
 
         if (targetContactId == resolvedContactId) {
             return targetContactId
@@ -1309,6 +1342,46 @@ class IdentityInvitationCoordinator(
         )
     }
 
+    private suspend fun acceptInvitationIdentity(invitation: IdentityInvitationEntity) {
+        contactKeyExchangeStore
+            .acceptInvitationIdentityForHandshake(
+                contactId = invitation.contactId,
+                remoteEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
+                remoteSigningPublicKey = invitation.remoteSigningPublicKey
+            ).getOrThrow()
+    }
+
+    private suspend fun stageIncomingInvitationIdentity(
+        contactId: String,
+        remoteEncryptionPublicKey: ByteArray,
+        remoteSigningPublicKey: ByteArray
+    ) {
+        val existingIdentity = contactDao.findPublicIdentityByContactId(contactId)
+        val sameIdentity =
+            existingIdentity != null &&
+                existingIdentity.encryptionPublicKey.contentEquals(remoteEncryptionPublicKey) &&
+                existingIdentity.signingPublicKey.contentEquals(remoteSigningPublicKey)
+        val pinnedIdentityChanged =
+            existingIdentity != null &&
+                !sameIdentity &&
+                (
+                    existingIdentity.keyExchangeStatus == KeyExchangeStatus.MUTUAL.name ||
+                        existingIdentity.verificationStatus == ContactVerificationStatus.VERIFIED.name
+                )
+
+        if (pinnedIdentityChanged) {
+            return
+        }
+
+        contactKeyExchangeStore
+            .storeRemoteIdentity(
+                contactId = contactId,
+                encryptionPublicKey = remoteEncryptionPublicKey,
+                signingPublicKey = remoteSigningPublicKey,
+                origin = RemoteIdentityOrigin.CONTACT_INVITATION
+            ).getOrThrow()
+    }
+
     private suspend fun requireCompatiblePinnedIdentity(
         contactId: String,
         encryptionPublicKey: ByteArray,
@@ -1408,18 +1481,45 @@ class IdentityInvitationCoordinator(
         }
     }
 
-    private suspend fun hasActiveDirectChatAuthorization(contactId: String): Boolean =
-        invitationDao
-            .findLatestForContactByStates(
+    private suspend fun hasActiveDirectChatAuthorization(
+        contactId: String,
+        localIdentity: LocalPublicIdentity
+    ): Boolean {
+        val latestInvitation = invitationDao.findLatestForContact(contactId)
+        val latestAuthorizationEvent =
+            invitationDao.findLatestForContactByStates(
                 contactId = contactId,
                 states = AUTHORIZATION_EVENT_STATES
-            )?.state == IdentityHandshakeState.MUTUAL_UNVERIFIED.name
+            )
+
+        return resolveObservedState(
+            latestInvitation = latestInvitation,
+            latestAuthorizationEvent = latestAuthorizationEvent
+        ) == IdentityHandshakeState.MUTUAL_UNVERIFIED &&
+            latestAuthorizationEvent != null &&
+            isBoundToLocalIdentity(latestAuthorizationEvent, localIdentity)
+    }
+
+    private fun isBoundToLocalIdentity(
+        invitation: IdentityInvitationEntity,
+        localIdentity: LocalPublicIdentity
+    ): Boolean =
+        invitation.localEncryptionPublicKey?.contentEquals(localIdentity.encryptionPublicKey) == true &&
+            invitation.localSigningPublicKey?.contentEquals(localIdentity.signingPublicKey) == true
 
     private fun resolveObservedState(
         latestInvitation: IdentityInvitationEntity?,
         latestAuthorizationEvent: IdentityInvitationEntity?
     ): IdentityHandshakeState? {
-        if (latestAuthorizationEvent?.state == IdentityHandshakeState.MUTUAL_UNVERIFIED.name) {
+        val authorizationIsCurrent =
+            latestAuthorizationEvent?.state == IdentityHandshakeState.MUTUAL_UNVERIFIED.name &&
+                (
+                    latestInvitation == null ||
+                        latestAuthorizationEvent.updatedAtEpochMilliseconds >=
+                        latestInvitation.updatedAtEpochMilliseconds
+                )
+
+        if (authorizationIsCurrent) {
             return IdentityHandshakeState.MUTUAL_UNVERIFIED
         }
 
@@ -1476,6 +1576,7 @@ class IdentityInvitationCoordinator(
     }
 
     private suspend fun queueAcceptanceReplay(invitation: IdentityInvitationEntity) {
+        acceptInvitationIdentity(invitation)
         val responseChallenge =
             checkNotNull(invitation.responseChallenge) {
                 "Accepted invitation is missing its response challenge"

@@ -33,6 +33,14 @@ class DefaultOutgoingTransportPayloadFactory(
                 packetTransportPolicy
                     .resolve(packet = packet, contact = contact)
                     .getOrThrow()
+            if (requirement.forcePlaintext) {
+                return@runCatching EncryptedTransportPayload(
+                    version = TRANSPORT_VERSION,
+                    mode = TransportEncryptionMode.PLAINTEXT,
+                    payload = encodedPacket
+                )
+            }
+
             val identity = contact.secureChatIdentity
             val canEncrypt =
                 identity != null &&

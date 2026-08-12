@@ -120,6 +120,13 @@ class DefaultIdentityRepository(
         }
     }
 
+    override suspend fun resetIdentity(): Result<Unit> =
+        runCatching {
+            privateKeyStorage.deleteIdentityPrivateKeys().getOrThrow()
+            publicIdentityStorage.delete().getOrThrow()
+            identityUpdates.emit(null)
+        }
+
     override suspend fun getIdentity(): Result<PublicIdentity?> = publicIdentityStorage.load()
 
     @OptIn(ExperimentalUnsignedTypes::class)

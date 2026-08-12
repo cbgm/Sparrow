@@ -8,8 +8,8 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.securechat.feature.contacts.presentation.model.ContactInvitationEffect
 import com.cbgm.securechat.feature.contacts.presentation.model.ContactInvitationUiEvent
+import com.cbgm.securechat.feature.contacts.presentation.screen.ContactInvitationViewModel
 import com.cbgm.securechat.feature.contacts.presentation.screen.ContactInvitationsScreen
-import com.cbgm.securechat.feature.contacts.presentation.screen.invite.ContactInvitationViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable

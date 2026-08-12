@@ -46,10 +46,10 @@ import com.cbgm.securechat.feature.contacts.domain.usecase.ObservePendingContact
 import com.cbgm.securechat.feature.contacts.domain.usecase.ObservePendingContactInvitations
 import com.cbgm.securechat.feature.contacts.domain.usecase.UnblockContact
 import com.cbgm.securechat.feature.contacts.domain.usecase.VerifyContact
+import com.cbgm.securechat.feature.contacts.presentation.screen.ContactInvitationViewModel
 import com.cbgm.securechat.feature.contacts.presentation.screen.ContactsViewModel
 import com.cbgm.securechat.feature.contacts.presentation.screen.blocklist.BlockedContactsViewModel
 import com.cbgm.securechat.feature.contacts.presentation.screen.details.ContactDetailsViewModel
-import com.cbgm.securechat.feature.contacts.presentation.screen.invite.ContactInvitationViewModel
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
@@ -75,7 +75,7 @@ val contactsModule =
 
         single<LocalIdentityChangeHandler> {
             ContactLocalIdentityChangeHandler(
-                contactKeyExchangeStore = get(),
+                localIdentityDataResetter = get(),
                 mailboxCapabilityLifecycle = get()
             )
         }

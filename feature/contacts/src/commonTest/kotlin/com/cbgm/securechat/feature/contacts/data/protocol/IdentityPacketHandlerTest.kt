@@ -345,6 +345,12 @@ class IdentityPacketHandlerTest {
             expectedRemoteSigningPublicKey: ByteArray
         ): Result<Unit> = Result.failure(UnsupportedOperationException())
 
+        override suspend fun acceptInvitationIdentityForHandshake(
+            contactId: String,
+            remoteEncryptionPublicKey: ByteArray,
+            remoteSigningPublicKey: ByteArray
+        ): Result<Unit> = Result.failure(UnsupportedOperationException())
+
         override suspend fun markMutual(
             contactId: String,
             expectedRemoteEncryptionPublicKey: ByteArray,

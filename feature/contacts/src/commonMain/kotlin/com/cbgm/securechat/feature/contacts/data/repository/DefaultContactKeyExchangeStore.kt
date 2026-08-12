@@ -192,6 +192,56 @@ class DefaultContactKeyExchangeStore(
             }
         }
 
+    override suspend fun acceptInvitationIdentityForHandshake(
+        contactId: String,
+        remoteEncryptionPublicKey: ByteArray,
+        remoteSigningPublicKey: ByteArray
+    ): Result<Unit> =
+        runCatching {
+            require(contactId.isNotBlank()) {
+                "Contact ID must not be blank"
+            }
+            require(remoteEncryptionPublicKey.isNotEmpty()) {
+                "Remote encryption key must not be empty"
+            }
+            require(remoteSigningPublicKey.isNotEmpty()) {
+                "Remote signing key must not be empty"
+            }
+
+            val existing = contactDao.findPublicIdentityByContactId(contactId)
+            val sameIdentity =
+                existing != null &&
+                    existing.encryptionPublicKey.contentEquals(remoteEncryptionPublicKey) &&
+                    existing.signingPublicKey.contentEquals(remoteSigningPublicKey)
+
+            if (sameIdentity) {
+                acceptRemoteIdentityForHandshake(
+                    contactId = contactId,
+                    expectedRemoteEncryptionPublicKey = remoteEncryptionPublicKey,
+                    expectedRemoteSigningPublicKey = remoteSigningPublicKey
+                ).getOrThrow()
+                return@runCatching
+            }
+
+            if (existing != null) {
+                mailboxCapabilityLifecycle.revokeForContact(contactId).getOrThrow()
+            }
+
+            contactDao.upsertPublicIdentity(
+                ContactPublicIdentityEntity(
+                    contactId = contactId,
+                    encryptionPublicKey = remoteEncryptionPublicKey.copyOf(),
+                    signingPublicKey = remoteSigningPublicKey.copyOf(),
+                    verificationStatus = ContactVerificationStatus.UNVERIFIED.name,
+                    verifiedByContact = false,
+                    keyExchangeStatus = KeyExchangeStatus.ONE_WAY.name,
+                    locallyImported = true,
+                    remoteIdentityPacketReceived = true,
+                    updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+                )
+            )
+        }
+
     override suspend fun markMutual(
         contactId: String,
         expectedRemoteEncryptionPublicKey: ByteArray,

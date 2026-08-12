@@ -192,10 +192,20 @@ class AndroidPrivateKeyStorage(
      */
     override suspend fun hasIdentityPrivateKeys(): Result<Boolean> =
         runCatching {
-            preferences.contains(ENCRYPTION_PRIVATE_KEY_CIPHERTEXT) &&
-                preferences.contains(ENCRYPTION_PRIVATE_KEY_IV) &&
-                preferences.contains(SIGNING_PRIVATE_KEY_CIPHERTEXT) &&
-                preferences.contains(SIGNING_PRIVATE_KEY_IV)
+            val encryptedStateExists =
+                preferences.contains(ENCRYPTION_PRIVATE_KEY_CIPHERTEXT) &&
+                    preferences.contains(ENCRYPTION_PRIVATE_KEY_IV) &&
+                    preferences.contains(SIGNING_PRIVATE_KEY_CIPHERTEXT) &&
+                    preferences.contains(SIGNING_PRIVATE_KEY_IV)
+
+            if (!encryptedStateExists || getExistingWrappingKey() == null) {
+                return@runCatching false
+            }
+
+            val encryptionPrivateKey = loadEncryptionPrivateKey().getOrNull()
+            val signingPrivateKey = loadSigningPrivateKey().getOrNull()
+
+            encryptionPrivateKey != null && signingPrivateKey != null
         }
 
     /**
@@ -647,6 +657,10 @@ class AndroidPrivateKeyStorage(
              */
             check(deleted) {
                 "Failed to delete encrypted identity private keys"
+            }
+
+            if (keyStore.containsAlias(WRAPPING_KEY_ALIAS)) {
+                keyStore.deleteEntry(WRAPPING_KEY_ALIAS)
             }
         }
 }

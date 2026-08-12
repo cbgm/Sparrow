@@ -244,6 +244,46 @@ class DefaultContactKeyExchangeStoreIntegrationTest {
             assertTrue(identity.remoteIdentityPacketReceived)
         }
 
+    @Test
+    fun acceptedInvitationCanReplaceOldMutualIdentityAfterRemoteReinstall() =
+        runBlocking {
+            createContact()
+            store
+                .storeRemoteIdentity(
+                    contactId = CONTACT_ID,
+                    encryptionPublicKey = ENCRYPTION_KEY,
+                    signingPublicKey = SIGNING_KEY,
+                    origin = RemoteIdentityOrigin.LOCAL_IMPORT
+                ).getOrThrow()
+            store
+                .storeRemoteIdentity(
+                    contactId = CONTACT_ID,
+                    encryptionPublicKey = ENCRYPTION_KEY,
+                    signingPublicKey = SIGNING_KEY,
+                    origin = RemoteIdentityOrigin.REMOTE_PACKET
+                ).getOrThrow()
+
+            store
+                .acceptInvitationIdentityForHandshake(
+                    contactId = CONTACT_ID,
+                    remoteEncryptionPublicKey = REINSTALLED_ENCRYPTION_KEY,
+                    remoteSigningPublicKey = REINSTALLED_SIGNING_KEY
+                ).getOrThrow()
+
+            val identity =
+                requireNotNull(
+                    database.contactDao().findPublicIdentityByContactId(CONTACT_ID)
+                )
+
+            assertTrue(identity.encryptionPublicKey.contentEquals(REINSTALLED_ENCRYPTION_KEY))
+            assertTrue(identity.signingPublicKey.contentEquals(REINSTALLED_SIGNING_KEY))
+            assertEquals(KeyExchangeStatus.ONE_WAY.name, identity.keyExchangeStatus)
+            assertEquals(ContactVerificationStatus.UNVERIFIED.name, identity.verificationStatus)
+            assertTrue(identity.locallyImported)
+            assertTrue(identity.remoteIdentityPacketReceived)
+            assertFalse(identity.verifiedByContact)
+        }
+
     private suspend fun createContact() {
         database.contactDao().upsertContact(
             ContactEntity(
@@ -262,5 +302,7 @@ class DefaultContactKeyExchangeStoreIntegrationTest {
         const val CONTACT_ID = "contact-1"
         val ENCRYPTION_KEY = byteArrayOf(1, 2, 3)
         val SIGNING_KEY = byteArrayOf(4, 5, 6)
+        val REINSTALLED_ENCRYPTION_KEY = byteArrayOf(7, 8, 9)
+        val REINSTALLED_SIGNING_KEY = byteArrayOf(10, 11, 12)
     }
 }

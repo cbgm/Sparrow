@@ -5,6 +5,8 @@ import com.cbgm.securechat.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.securechat.data.database.SecureChatDatabase
 import com.cbgm.securechat.data.database.factory.buildSecureChatDatabase
 import com.cbgm.securechat.data.database.factory.createAndroidDatabaseBuilder
+import com.cbgm.securechat.data.database.identity.LocalIdentityDataResetter
+import com.cbgm.securechat.data.database.identity.RoomLocalIdentityDataResetter
 import com.cbgm.securechat.data.database.mailbox.RoomMailboxRouteRepository
 import com.cbgm.securechat.data.database.outbox.DefaultProtocolOutbox
 import org.koin.android.ext.koin.androidContext
@@ -18,6 +20,10 @@ val androidDatabaseModule =
 
         single<SecureChatDatabase> {
             buildSecureChatDatabase(builder = createAndroidDatabaseBuilder(context = androidContext()))
+        }
+
+        single<LocalIdentityDataResetter> {
+            RoomLocalIdentityDataResetter(database = get())
         }
 
         single {

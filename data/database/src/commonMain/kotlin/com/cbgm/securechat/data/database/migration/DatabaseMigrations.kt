@@ -452,4 +452,31 @@ object DatabaseMigrations {
                 )
             }
         }
+
+    val Migration22To23 =
+        object : Migration(22, 23) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL(
+                    "ALTER TABLE group_invitations " +
+                        "ADD COLUMN ownerEncryptionPublicKey BLOB"
+                )
+                connection.execSQL(
+                    "ALTER TABLE group_invitations " +
+                        "ADD COLUMN ownerSigningPublicKey BLOB"
+                )
+            }
+        }
+    val Migration23To24 =
+        object : Migration(23, 24) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL(
+                    "ALTER TABLE identity_invitations " +
+                        "ADD COLUMN localEncryptionPublicKey BLOB"
+                )
+                connection.execSQL(
+                    "ALTER TABLE identity_invitations " +
+                        "ADD COLUMN localSigningPublicKey BLOB"
+                )
+            }
+        }
 }

@@ -13,6 +13,8 @@ interface IdentityRepository {
 
     suspend fun createIdentity(): Result<PublicIdentity>
 
+    suspend fun resetIdentity(): Result<Unit>
+
     suspend fun getIdentity(): Result<PublicIdentity?>
 
     suspend fun getEncryptionPrivateKey(): Result<ByteArray>

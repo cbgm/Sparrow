@@ -10,6 +10,9 @@ import com.cbgm.securechat.core.protocol.outbox.ProtocolOutboxItem
 import com.cbgm.securechat.core.protocol.packet.ContactInviteAcceptedPacket
 import com.cbgm.securechat.core.protocol.packet.ContactInviteDeclinedPacket
 import com.cbgm.securechat.core.protocol.packet.ContactInvitePacket
+import com.cbgm.securechat.core.protocol.packet.GroupInviteDeclinedPacket
+import com.cbgm.securechat.core.protocol.packet.GroupInvitePacket
+import com.cbgm.securechat.core.protocol.packet.GroupJoinRequestPacket
 import com.cbgm.securechat.core.protocol.packet.SecureChatPacket
 import com.cbgm.securechat.core.protocol.transport.OutgoingWireSender
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
@@ -160,7 +163,10 @@ class DefaultOutboxProcessor(
         when (packet) {
             is ContactInvitePacket,
             is ContactInviteAcceptedPacket,
-            is ContactInviteDeclinedPacket ->
+            is ContactInviteDeclinedPacket,
+            is GroupInvitePacket,
+            is GroupJoinRequestPacket,
+            is GroupInviteDeclinedPacket ->
                 contactRelayIdResolver.resolveBootstrap(contactId).getOrThrow()
 
             else -> contactRelayIdResolver.resolve(contactId).getOrThrow()
