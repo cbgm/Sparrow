@@ -7,6 +7,8 @@ data class GroupMemberManagementUiState(
     val selectedContactIds: Set<String> = emptySet(),
     val searchQuery: String = "",
     val removalCandidate: GroupMemberVerificationUiState? = null,
+    val promotionCandidate: GroupMemberVerificationUiState? = null,
+    val promotionRequiredForLeave: Boolean = false,
     val isUpdating: Boolean = false,
     val errorMessage: String? = null,
     val completedRevision: Int = 0

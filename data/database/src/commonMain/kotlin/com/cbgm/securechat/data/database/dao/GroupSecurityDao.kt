@@ -74,4 +74,45 @@ interface GroupSecurityDao {
         groupId: String,
         epoch: Int
     )
+
+    @Query(
+        """
+        SELECT *
+        FROM group_member_keys
+        WHERE groupId = :groupId
+          AND epoch = :epoch
+        ORDER BY contactId
+        """
+    )
+    suspend fun findMemberKeys(
+        groupId: String,
+        epoch: Int
+    ): List<GroupMemberKeyEntity>
+
+    @Query(
+        """
+        SELECT member.*
+        FROM group_member_keys AS member
+        INNER JOIN group_security_states AS state
+            ON state.groupId = member.groupId
+           AND state.currentEpoch = member.epoch
+        WHERE member.groupId = :groupId
+        ORDER BY member.contactId
+        """
+    )
+    fun observeCurrentMemberKeys(groupId: String): Flow<List<GroupMemberKeyEntity>>
+
+    @Query(
+        """
+        UPDATE group_security_states
+        SET localRole = :role,
+            updatedAtEpochMilliseconds = :updatedAtEpochMilliseconds
+        WHERE groupId = :groupId
+        """
+    )
+    suspend fun updateLocalRole(
+        groupId: String,
+        role: String,
+        updatedAtEpochMilliseconds: Long
+    ): Int
 }

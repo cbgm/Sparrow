@@ -4,8 +4,11 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.cbgm.securechat.core.crypto.SodiumRuntime
 import com.cbgm.securechat.core.crypto.identity.SodiumIdentityKeyGenerator
+import com.cbgm.securechat.core.crypto.signature.SodiumDetachedSignatureCrypto
 import com.cbgm.securechat.feature.identity.data.storage.AndroidPrivateKeyStorage
 import com.cbgm.securechat.feature.identity.data.storage.AndroidPublicIdentityStorage
+import com.cbgm.securechat.feature.identity.domain.model.IdentityStatus
+import com.cbgm.securechat.feature.identity.domain.model.PublicIdentity
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -71,6 +74,7 @@ class DefaultIdentityRepositoryTest {
                 val repository =
                     DefaultIdentityRepository(
                         identityKeyGenerator = SodiumIdentityKeyGenerator(),
+                        signatureCrypto = SodiumDetachedSignatureCrypto(),
                         privateKeyStorage = privateKeyStorage,
                         publicIdentityStorage = publicIdentityStorage
                     )
@@ -201,6 +205,7 @@ class DefaultIdentityRepositoryTest {
                 val repository =
                     DefaultIdentityRepository(
                         identityKeyGenerator = SodiumIdentityKeyGenerator(),
+                        signatureCrypto = SodiumDetachedSignatureCrypto(),
                         privateKeyStorage = privateKeyStorage,
                         publicIdentityStorage = publicIdentityStorage
                     )
@@ -316,6 +321,58 @@ class DefaultIdentityRepositoryTest {
                  */
                 privateKeyStorage.deleteIdentityPrivateKeys().getOrThrow()
 
+                publicIdentityStorage.delete().getOrThrow()
+            }
+        }
+
+    @OptIn(ExperimentalUnsignedTypes::class)
+    @Test
+    fun mismatchedSigningPublicAndPrivateKeysAreIncomplete() =
+        runBlocking {
+            SodiumRuntime.initialize().getOrThrow()
+
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val privateKeyStorage = AndroidPrivateKeyStorage(context = context)
+            val publicIdentityStorage = AndroidPublicIdentityStorage(context = context)
+
+            privateKeyStorage.deleteIdentityPrivateKeys().getOrThrow()
+            publicIdentityStorage.delete().getOrThrow()
+
+            try {
+                val keyGenerator = SodiumIdentityKeyGenerator()
+                val privateIdentity = keyGenerator.generate().getOrThrow()
+                val unrelatedPublicIdentity = keyGenerator.generate().getOrThrow()
+
+                privateKeyStorage
+                    .saveIdentityPrivateKeys(
+                        encryptionPrivateKey = privateIdentity.encryptionPrivateKey,
+                        signingPrivateKey = privateIdentity.signingPrivateKey
+                    ).getOrThrow()
+
+                publicIdentityStorage
+                    .save(
+                        PublicIdentity(
+                            encryptionPublicKey = unrelatedPublicIdentity.encryptionPublicKey.toByteArray(),
+                            signingPublicKey = unrelatedPublicIdentity.signingPublicKey.toByteArray()
+                        )
+                    ).getOrThrow()
+
+                val repository =
+                    DefaultIdentityRepository(
+                        identityKeyGenerator = keyGenerator,
+                        signatureCrypto = SodiumDetachedSignatureCrypto(),
+                        privateKeyStorage = privateKeyStorage,
+                        publicIdentityStorage = publicIdentityStorage
+                    )
+
+                val status = repository.getStatus().getOrThrow()
+
+                assertTrue(
+                    status == IdentityStatus.INCOMPLETE,
+                    "A public identity that does not match the stored private signing key must be incomplete"
+                )
+            } finally {
+                privateKeyStorage.deleteIdentityPrivateKeys().getOrThrow()
                 publicIdentityStorage.delete().getOrThrow()
             }
         }

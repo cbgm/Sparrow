@@ -9,6 +9,7 @@ enum class GroupMemberVerificationState {
     ADMIN_VERIFIED_PARTICIPANT,
     PARTICIPANT_VERIFIED_ADMIN,
     UNVERIFIED,
+    UNAVAILABLE,
     INVITATION_PENDING
 }
 
@@ -39,7 +40,12 @@ data class GroupVerificationSummaryUiState(
     val activeParticipantCount: Int = 0,
     val totalMemberCount: Int = 0,
     val members: List<GroupMemberVerificationUiState> = emptyList(),
-    val canLeaveGroup: Boolean = false
+    val canLeaveGroup: Boolean = false,
+    val isOrphaned: Boolean = false,
+    val adminCount: Int = 0,
+    val currentMemberContactIds: Set<String> = emptySet(),
+    val requiresAdminPromotionBeforeLeave: Boolean = false,
+    val promotableContactIds: Set<String> = emptySet()
 ) {
     val isFullyVerified: Boolean
         get() =
@@ -54,7 +60,12 @@ internal fun buildGroupVerificationSummary(
     ownerDisplayName: String,
     ownInvitationId: String?,
     rows: List<GroupVerificationPair>,
-    isLeavePending: Boolean = false
+    isLeavePending: Boolean = false,
+    remoteAdminContactIds: Set<String> = emptySet(),
+    currentMemberContactIds: Set<String> = emptySet(),
+    promotableContactIds: Set<String> = emptySet(),
+    isOrphaned: Boolean = false,
+    requiresAdminPromotionBeforeLeave: Boolean = false
 ): GroupVerificationSummaryUiState {
     val participantRows =
         rows
@@ -64,15 +75,21 @@ internal fun buildGroupVerificationSummary(
     val participantMembers =
         participantRows.map { row ->
             val isActive =
-                row.membershipStatus == GroupVerificationMembershipStatus.ACTIVE
+                row.membershipStatus == GroupVerificationMembershipStatus.ACTIVE &&
+                    (row.contactId == null || row.contactId in currentMemberContactIds)
 
             GroupMemberVerificationUiState(
                 invitationId = row.invitationId,
                 contactId = if (isLocalAdmin) row.contactId else null,
                 displayName = row.displayName,
-                isGroupAdmin = false,
+                isGroupAdmin = row.contactId in remoteAdminContactIds,
                 isActive = isActive,
-                state = row.toVerificationState(),
+                state =
+                    if (!isActive && row.membershipStatus == GroupVerificationMembershipStatus.ACTIVE) {
+                        GroupMemberVerificationState.UNAVAILABLE
+                    } else {
+                        row.toVerificationState()
+                    },
                 canVerify =
                     isLocalAdmin &&
                         isActive &&
@@ -85,32 +102,42 @@ internal fun buildGroupVerificationSummary(
         participantRows.firstOrNull { row ->
             row.invitationId == ownInvitationId
         }
+    val isReferenceAdminCurrent =
+        ownerContactId != null &&
+            ownerContactId in remoteAdminContactIds &&
+            ownerContactId in currentMemberContactIds
     val adminMember =
         GroupMemberVerificationUiState(
             invitationId = ownInvitationId,
             contactId = ownerContactId,
             displayName = ownerDisplayName,
-            isGroupAdmin = true,
-            isActive = isLocalAdmin || ownPair?.isActive() == true,
+            isGroupAdmin = isLocalAdmin || isReferenceAdminCurrent,
+            isActive = isLocalAdmin || (isReferenceAdminCurrent && ownPair?.isActive() == true),
             state =
-                if (isLocalAdmin) {
-                    GroupMemberVerificationState.GROUP_ADMIN
-                } else {
-                    ownPair?.toVerificationState()
-                        ?: GroupMemberVerificationState.INVITATION_PENDING
+                when {
+                    isLocalAdmin -> GroupMemberVerificationState.GROUP_ADMIN
+                    !isReferenceAdminCurrent && ownPair?.isActive() == true ->
+                        GroupMemberVerificationState.UNAVAILABLE
+                    else ->
+                        ownPair?.toVerificationState()
+                            ?: GroupMemberVerificationState.INVITATION_PENDING
                 },
             canVerify =
                 !isLocalAdmin &&
-                    ownerContactId != null &&
+                    isReferenceAdminCurrent &&
                     ownPair != null &&
                     ownPair.isActive() &&
                     !ownPair.participantVerifiedAdmin
         )
 
-    val activeRows = participantRows.filter { row -> row.isActive() }
+    val activeRows =
+        participantRows.filter { row ->
+            row.isActive() &&
+                (row.contactId == null || row.contactId in currentMemberContactIds)
+        }
 
     return GroupVerificationSummaryUiState(
-        hasAuthoritativeState = participantRows.isNotEmpty(),
+        hasAuthoritativeState = isLocalAdmin || participantRows.isNotEmpty(),
         isLocalAdmin = isLocalAdmin,
         mutuallyVerifiedParticipantCount =
             activeRows.count { row ->
@@ -119,9 +146,13 @@ internal fun buildGroupVerificationSummary(
         activeParticipantCount = activeRows.size,
         totalMemberCount = participantRows.size + 1,
         canLeaveGroup =
-            !isLocalAdmin &&
-                !isLeavePending &&
-                ownPair?.isActive() == true,
+            !isLeavePending &&
+                (isLocalAdmin || ownPair?.isActive() == true),
+        isOrphaned = isOrphaned,
+        adminCount = remoteAdminContactIds.size + if (isLocalAdmin) 1 else 0,
+        currentMemberContactIds = currentMemberContactIds,
+        requiresAdminPromotionBeforeLeave = requiresAdminPromotionBeforeLeave,
+        promotableContactIds = promotableContactIds,
         members =
             buildList {
                 add(adminMember)

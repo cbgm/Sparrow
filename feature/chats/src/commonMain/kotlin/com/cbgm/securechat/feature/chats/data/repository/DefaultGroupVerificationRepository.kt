@@ -6,6 +6,7 @@ import com.cbgm.securechat.data.database.dao.GroupVerificationDao
 import com.cbgm.securechat.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.securechat.feature.chats.data.invitation.GroupInvitationDirection
 import com.cbgm.securechat.feature.chats.data.invitation.GroupInvitationStatus
+import com.cbgm.securechat.feature.chats.data.security.isGroupAdminRole
 import com.cbgm.securechat.feature.chats.domain.model.GroupVerificationContext
 import com.cbgm.securechat.feature.chats.domain.model.GroupVerificationMembershipStatus
 import com.cbgm.securechat.feature.chats.domain.model.GroupVerificationPair
@@ -31,13 +32,15 @@ class DefaultGroupVerificationRepository(
             groupVerificationDao.observeByGroupId(groupId)
         ) { securityState, invitations, rows ->
             val isLocalAdmin =
-                securityState?.ownerContactId == null &&
+                securityState?.localRole?.isGroupAdminRole() == true ||
                     (
-                        securityState != null ||
-                            rows.any { row -> row.contactId != null } ||
-                            invitations.any { invitation ->
-                                invitation.direction == GroupInvitationDirection.OUTGOING.name
-                            }
+                        securityState == null &&
+                            (
+                                rows.any { row -> row.contactId != null } ||
+                                    invitations.any { invitation ->
+                                        invitation.direction == GroupInvitationDirection.OUTGOING.name
+                                    }
+                            )
                     )
             val localInvitation =
                 if (isLocalAdmin) {

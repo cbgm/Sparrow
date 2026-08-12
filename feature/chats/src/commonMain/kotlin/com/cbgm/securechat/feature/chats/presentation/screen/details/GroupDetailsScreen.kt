@@ -54,6 +54,9 @@ fun GroupDetailsScreen(
                     onRemoveMember = { contactId ->
                         onUiEvent(GroupDetailsUiEvent.RemoveMemberClicked(contactId))
                     },
+                    onPromoteMember = { contactId ->
+                        onUiEvent(GroupDetailsUiEvent.PromoteMemberClicked(contactId))
+                    },
                     onLeaveGroup = { onUiEvent(GroupDetailsUiEvent.LeaveGroupClicked) }
                 )
 

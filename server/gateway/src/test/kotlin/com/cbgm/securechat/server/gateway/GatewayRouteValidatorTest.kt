@@ -8,6 +8,7 @@ import com.cbgm.securechat.server.security.ClientRoutingIds
 import com.cbgm.securechat.server.security.NodeIdentity
 import com.cbgm.securechat.server.security.Signatures
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -58,6 +59,43 @@ class GatewayRouteValidatorTest {
 
         assertFalse(
             validator.isValid(
+                registration = registration,
+                connectionRoutingId = registration.route.routingId,
+                connectionId = "connection-a",
+                expectedNodeId = "node-a"
+            )
+        )
+        assertEquals(
+            GatewayRouteValidationFailure.EXPIRATION,
+            validator.validationFailure(
+                registration = registration,
+                connectionRoutingId = registration.route.routingId,
+                connectionId = "connection-a",
+                expectedNodeId = "node-a"
+            )
+        )
+    }
+
+    @Test
+    fun routeBeyondMaximumLifetimeIsReportedAsExpirationFailure() {
+        val currentTime = 100_000L
+        val identity = NodeIdentity.generate()
+        val registration =
+            registration(
+                identity = identity,
+                nodeId = "node-a",
+                connectionId = "connection-a",
+                expiresAtEpochMilliseconds = currentTime + 90_001L
+            )
+        val validator =
+            GatewayRouteValidator(
+                maximumTtlMilliseconds = 90_000L,
+                now = { currentTime }
+            )
+
+        assertEquals(
+            GatewayRouteValidationFailure.EXPIRATION,
+            validator.validationFailure(
                 registration = registration,
                 connectionRoutingId = registration.route.routingId,
                 connectionId = "connection-a",

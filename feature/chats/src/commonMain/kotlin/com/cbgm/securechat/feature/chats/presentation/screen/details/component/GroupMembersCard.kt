@@ -22,7 +22,8 @@ import org.jetbrains.compose.resources.stringResource
 internal fun GroupMembersCard(
     summary: GroupVerificationSummaryUiState,
     onVerifyMember: (String) -> Unit,
-    onRemoveMember: (String) -> Unit
+    onRemoveMember: (String) -> Unit,
+    onPromoteMember: (String) -> Unit
 ) {
     Column {
         Text(
@@ -53,12 +54,18 @@ internal fun GroupMembersCard(
                             summary.isLocalAdmin &&
                                 !member.isGroupAdmin &&
                                 member.contactId != null,
+                        showPromoteAction =
+                            summary.isLocalAdmin &&
+                                member.contactId in summary.promotableContactIds,
                         showDivider = index < summary.members.lastIndex,
                         onVerify = {
                             member.contactId?.let(onVerifyMember)
                         },
                         onRemove = {
                             member.contactId?.let(onRemoveMember)
+                        },
+                        onPromote = {
+                            member.contactId?.let(onPromoteMember)
                         }
                     )
                 }
@@ -74,7 +81,8 @@ private fun GroupMembersCardPreview() {
         GroupMembersCard(
             summary = GroupDetailsPreviewData.summary,
             onVerifyMember = {},
-            onRemoveMember = {}
+            onRemoveMember = {},
+            onPromoteMember = {}
         )
     }
 }

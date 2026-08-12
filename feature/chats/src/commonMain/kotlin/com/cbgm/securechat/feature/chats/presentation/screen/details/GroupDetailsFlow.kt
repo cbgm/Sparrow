@@ -20,6 +20,8 @@ import com.cbgm.securechat.feature.chats.presentation.model.AddGroupMembersUiEve
 import com.cbgm.securechat.feature.chats.presentation.model.GroupDetailsUiEvent
 import com.cbgm.securechat.feature.chats.presentation.model.GroupDetailsUiState
 import com.cbgm.securechat.feature.chats.presentation.screen.details.component.LeaveGroupDialog
+import com.cbgm.securechat.feature.chats.presentation.screen.details.component.PromoteAdminBeforeLeaveDialog
+import com.cbgm.securechat.feature.chats.presentation.screen.details.component.PromoteMemberDialog
 import com.cbgm.securechat.feature.chats.presentation.screen.details.component.RemoveMemberDialog
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -33,6 +35,7 @@ private enum class DetailsContent {
 @Composable
 fun GroupDetailsFlow(
     conversationId: String,
+    requestLeave: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val verificationViewModel =
@@ -48,6 +51,20 @@ fun GroupDetailsFlow(
     }
 
     var showLeaveDialog by remember { mutableStateOf(false) }
+    var showPromoteBeforeLeaveDialog by remember { mutableStateOf(false) }
+
+    var initialLeaveRequestHandled by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(requestLeave, uiState.summary.hasAuthoritativeState) {
+        if (requestLeave && uiState.summary.hasAuthoritativeState && !initialLeaveRequestHandled) {
+            initialLeaveRequestHandled = true
+            if (uiState.summary.requiresAdminPromotionBeforeLeave) {
+                showPromoteBeforeLeaveDialog = true
+            } else {
+                showLeaveDialog = true
+            }
+        }
+    }
 
     LaunchedEffect(uiState.memberManagement.completedRevision) {
         val revision = uiState.memberManagement.completedRevision
@@ -98,7 +115,13 @@ fun GroupDetailsFlow(
                             event = event,
                             viewModel = verificationViewModel,
                             onContentChanged = { content = it },
-                            onLeaveRequested = { showLeaveDialog = true }
+                            onLeaveRequested = {
+                                if (uiState.summary.requiresAdminPromotionBeforeLeave) {
+                                    showPromoteBeforeLeaveDialog = true
+                                } else {
+                                    showLeaveDialog = true
+                                }
+                            }
                         )
                     }
                 )
@@ -151,6 +174,34 @@ fun GroupDetailsFlow(
             errorMessage = uiState.memberManagement.errorMessage,
             onApprove = { verificationViewModel.onUiEvent(GroupDetailsUiEvent.MemberRemovalConfirmed) },
             onDismiss = { verificationViewModel.onUiEvent(GroupDetailsUiEvent.MemberRemovalDismissed) }
+        )
+    }
+
+    uiState.memberManagement.promotionCandidate?.let { member ->
+        PromoteMemberDialog(
+            member = member,
+            isUpdating = uiState.memberManagement.isUpdating,
+            errorMessage = uiState.memberManagement.errorMessage,
+            onApprove = { verificationViewModel.onUiEvent(GroupDetailsUiEvent.MemberPromotionConfirmed) },
+            onDismiss = { verificationViewModel.onUiEvent(GroupDetailsUiEvent.MemberPromotionDismissed) }
+        )
+    }
+
+    if (showPromoteBeforeLeaveDialog) {
+        val promotableMembers =
+            uiState.summary.members.filter { member ->
+                member.contactId in uiState.summary.promotableContactIds
+            }
+        PromoteAdminBeforeLeaveDialog(
+            members = promotableMembers,
+            isUpdating = uiState.memberManagement.isUpdating,
+            errorMessage = uiState.memberManagement.errorMessage,
+            onSelect = { contactId ->
+                verificationViewModel.onUiEvent(
+                    GroupDetailsUiEvent.PromoteMemberAndLeaveClicked(contactId)
+                )
+            },
+            onDismiss = { showPromoteBeforeLeaveDialog = false }
         )
     }
 

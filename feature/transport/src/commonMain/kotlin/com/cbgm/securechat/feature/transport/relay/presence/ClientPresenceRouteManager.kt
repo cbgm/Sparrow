@@ -11,6 +11,8 @@ import io.ktor.client.request.get
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
+private const val MAX_COMPATIBILITY_CLOCK_SKEW_MILLISECONDS = 30_000L
+
 internal class ClientPresenceRouteManager(
     private val httpClient: HttpClient,
     private val registrationFactory: ClientRouteRegistrationFactory,
@@ -20,24 +22,38 @@ internal class ClientPresenceRouteManager(
 
     suspend fun fetchGatewayInformation(serverUrl: String): Result<GatewayNodeInformation> =
         runCatching {
-            httpClient
-                .get(gatewayInformationUrl(serverUrl))
-                .body<GatewayNodeInformation>()
+            val response = httpClient.get(gatewayInformationUrl(serverUrl))
+            val gatewayInformation = response.body<GatewayNodeInformation>()
+            val serverTimeEpochMilliseconds =
+                response.headers[SERVER_TIME_HEADER]
+                    ?.toLongOrNull()
+
+            gatewayInformation.copy(
+                serverTimeEpochMilliseconds = serverTimeEpochMilliseconds
+            )
         }
 
     suspend fun createRegistration(
         connection: PresenceRouteConnection,
         gatewayInformation: GatewayNodeInformation
-    ): Result<ClientRouteRegistration> =
-        registrationFactory.create(
+    ): Result<ClientRouteRegistration> {
+        val expiresAtEpochMilliseconds =
+            routeExpirationEpochMilliseconds(gatewayInformation)
+        logger.debug {
+            "Preparing signed presence route for ${gatewayInformation.nodeId}; " +
+                "expiresAt=$expiresAtEpochMilliseconds; " +
+                "gatewayClock=${gatewayInformation.serverTimeEpochMilliseconds != null}"
+        }
+
+        return registrationFactory.create(
             routingId = connection.routingId,
             nodeId = gatewayInformation.nodeId,
             connectionId = connection.connectionId,
             generation = connection.generation,
-            expiresAtEpochMilliseconds =
-                SystemClock.nowEpochMilliseconds() + gatewayInformation.routeLifetimeMilliseconds,
+            expiresAtEpochMilliseconds = expiresAtEpochMilliseconds,
             aliases = bootstrapRoutingAliases()
         )
+    }
 
     private suspend fun bootstrapRoutingAliases(): List<String> =
         localBootstrapRelayIdProvider
@@ -108,6 +124,7 @@ internal class ClientPresenceRouteManager(
 
     private companion object {
         const val ROUTE_INFORMATION_RETRY_MILLISECONDS = 5_000L
+        const val SERVER_TIME_HEADER = "X-SecureChat-Server-Time"
     }
 }
 
@@ -137,4 +154,31 @@ internal fun gatewayInformationUrl(serverUrl: String): String {
             ?: error("Relay server URL must include a host")
 
     return "$httpScheme$authority/v1/gateway"
+}
+
+internal fun routeExpirationEpochMilliseconds(
+    gatewayInformation: GatewayNodeInformation,
+    localNowEpochMilliseconds: Long = SystemClock.nowEpochMilliseconds()
+): Long {
+    val serverTimeEpochMilliseconds = gatewayInformation.serverTimeEpochMilliseconds
+    if (serverTimeEpochMilliseconds != null) {
+        return serverTimeEpochMilliseconds + gatewayInformation.routeLifetimeMilliseconds
+    }
+
+    val maximumSafetyMargin =
+        (
+            gatewayInformation.routeLifetimeMilliseconds -
+                gatewayInformation.routeRefreshIntervalMilliseconds -
+                1L
+        ).coerceAtLeast(0L)
+    val preferredSafetyMargin =
+        minOf(
+            MAX_COMPATIBILITY_CLOCK_SKEW_MILLISECONDS,
+            gatewayInformation.routeLifetimeMilliseconds / 3L
+        )
+    val safetyMargin = minOf(preferredSafetyMargin, maximumSafetyMargin)
+
+    return localNowEpochMilliseconds +
+        gatewayInformation.routeLifetimeMilliseconds -
+        safetyMargin
 }

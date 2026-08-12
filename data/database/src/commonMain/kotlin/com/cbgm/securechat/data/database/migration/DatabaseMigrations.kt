@@ -466,6 +466,7 @@ object DatabaseMigrations {
                 )
             }
         }
+
     val Migration23To24 =
         object : Migration(23, 24) {
             override fun migrate(connection: SQLiteConnection) {
@@ -476,6 +477,20 @@ object DatabaseMigrations {
                 connection.execSQL(
                     "ALTER TABLE identity_invitations " +
                         "ADD COLUMN localSigningPublicKey BLOB"
+                )
+            }
+        }
+
+    val Migration24To25 =
+        object : Migration(24, 25) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL(
+                    "ALTER TABLE group_security_states " +
+                        "ADD COLUMN localRole TEXT NOT NULL DEFAULT 'MEMBER'"
+                )
+                connection.execSQL(
+                    "UPDATE group_security_states " +
+                        "SET localRole = 'OWNER' WHERE ownerContactId IS NULL"
                 )
             }
         }

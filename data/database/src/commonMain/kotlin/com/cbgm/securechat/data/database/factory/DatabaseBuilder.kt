@@ -26,7 +26,8 @@ fun buildSecureChatDatabase(builder: RoomDatabase.Builder<SecureChatDatabase>): 
             DatabaseMigrations.Migration20To21,
             DatabaseMigrations.Migration21To22,
             DatabaseMigrations.Migration22To23,
-            DatabaseMigrations.Migration23To24
+            DatabaseMigrations.Migration23To24,
+            DatabaseMigrations.Migration24To25
         ).setDriver(BundledSQLiteDriver())
         .setQueryCoroutineContext(Dispatchers.IO)
         .build()

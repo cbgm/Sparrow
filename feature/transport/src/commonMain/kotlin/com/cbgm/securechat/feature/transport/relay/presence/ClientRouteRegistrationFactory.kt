@@ -38,6 +38,18 @@ class ClientRouteRegistrationFactory(
                     .sign(payload = payload, signingPrivateKey = signingKeyPair.privateKey)
                     .getOrThrow()
 
+            signatureCrypto
+                .verify(
+                    payload = payload,
+                    signingPublicKey = signingKeyPair.publicKey,
+                    signature = signature
+                ).getOrElse { error ->
+                    throw IllegalStateException(
+                        "Local signing public/private key pair is inconsistent",
+                        error
+                    )
+                }
+
             ClientRouteRegistration(
                 route =
                     ClientRoute(

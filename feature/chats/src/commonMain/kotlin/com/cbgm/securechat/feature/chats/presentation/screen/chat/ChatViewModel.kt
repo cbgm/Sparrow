@@ -10,6 +10,7 @@ import com.cbgm.securechat.feature.chats.domain.model.Conversation
 import com.cbgm.securechat.feature.chats.domain.usecase.MarkConversationRead
 import com.cbgm.securechat.feature.chats.domain.usecase.ObserveConversation
 import com.cbgm.securechat.feature.chats.domain.usecase.ObserveTypingIndicator
+import com.cbgm.securechat.feature.chats.domain.usecase.RefreshDeliveryState
 import com.cbgm.securechat.feature.chats.domain.usecase.RetryMessage
 import com.cbgm.securechat.feature.chats.domain.usecase.SendMessage
 import com.cbgm.securechat.feature.chats.domain.usecase.SetTypingIndicator
@@ -43,6 +44,7 @@ class ChatViewModel(
     private val sendMessageUseCase: SendMessage,
     private val markConversationReadUseCase: MarkConversationRead,
     private val retryFailedMessage: RetryMessage,
+    private val refreshDeliveryState: RefreshDeliveryState,
     observeIdentitySetupMode: ObserveIdentitySetupMode,
     private val ensureIdentityExchangeStarted: EnsureIdentityExchangeStarted,
     observeIdentityHandshakeState: ObserveIdentityHandshakeState,
@@ -167,6 +169,7 @@ class ChatViewModel(
     init {
         observeIdentitySetupMode()
         observeIncomingTypingEvents()
+        observeDeliveryTimeouts()
     }
 
     private fun observeIdentitySetupMode() {
@@ -322,6 +325,15 @@ class ChatViewModel(
         }
     }
 
+    private fun observeDeliveryTimeouts() {
+        viewModelScope.launch {
+            while (true) {
+                refreshDeliveryState(conversationId)
+                delay(DELIVERY_REFRESH_INTERVAL_MILLISECONDS.milliseconds)
+            }
+        }
+    }
+
     private fun observeIncomingTypingEvents() {
         viewModelScope.launch {
             observeTypingIndicator(contactId = contactId)
@@ -434,6 +446,7 @@ class ChatViewModel(
     )
 
     private companion object {
+        const val DELIVERY_REFRESH_INTERVAL_MILLISECONDS = 15_000L
         const val LOCAL_TYPING_TIMEOUT_MILLISECONDS = 1500
         const val REMOTE_TYPING_TIMEOUT_MILLISECONDS = 3000
     }

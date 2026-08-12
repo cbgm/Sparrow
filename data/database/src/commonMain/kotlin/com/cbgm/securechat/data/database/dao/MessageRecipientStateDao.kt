@@ -57,6 +57,23 @@ interface MessageRecipientStateDao {
 
     @Query(
         """
+        SELECT message_recipient_states.*
+        FROM message_recipient_states
+        INNER JOIN messages ON messages.id = message_recipient_states.messageId
+        WHERE messages.conversationId = :conversationId
+          AND message_recipient_states.deliveryStatus = :deliveryStatus
+          AND message_recipient_states.updatedAtEpochMilliseconds <= :updatedBeforeEpochMilliseconds
+        ORDER BY message_recipient_states.messageId, message_recipient_states.contactId
+        """
+    )
+    suspend fun findByConversationAndDeliveryStatusBefore(
+        conversationId: String,
+        deliveryStatus: String,
+        updatedBeforeEpochMilliseconds: Long
+    ): List<MessageRecipientStateEntity>
+
+    @Query(
+        """
         UPDATE message_recipient_states
         SET deliveryStatus = :deliveryStatus,
             lastError = :lastError,

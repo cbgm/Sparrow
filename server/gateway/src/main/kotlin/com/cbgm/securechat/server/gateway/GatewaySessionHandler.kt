@@ -141,20 +141,20 @@ internal class GatewaySessionHandler(
     ): GatewayConnection? {
         val connection = message.toConnection(session)
         val registration = message.toRouteRegistration(connection, nodeId)
-        val routeIsValid =
+        val routeValidationFailure =
             registration?.let { currentRegistration ->
-                routeValidator.isValid(
+                routeValidator.validationFailure(
                     registration = currentRegistration,
                     connectionRoutingId = connection.routingId,
                     connectionId = connection.connectionId,
                     expectedNodeId = nodeId
                 )
-            } ?: true
+            }
 
-        if (!routeIsValid) {
+        if (routeValidationFailure != null) {
             connection.sendError(
                 code = "INVALID_ROUTE",
-                message = "Signed route is invalid"
+                message = "Signed route is invalid: ${routeValidationFailure.name}"
             )
             return null
         }
@@ -190,8 +190,8 @@ internal class GatewaySessionHandler(
             return
         }
 
-        val routeIsValid =
-            routeValidator.isValid(
+        val routeValidationFailure =
+            routeValidator.validationFailure(
                 registration = registration,
                 connectionRoutingId = connection.routingId,
                 connectionId = connection.connectionId,
@@ -199,10 +199,10 @@ internal class GatewaySessionHandler(
             )
 
         when {
-            !routeIsValid ->
+            routeValidationFailure != null ->
                 connection.sendError(
                     code = "INVALID_ROUTE_REFRESH",
-                    message = "Signed route is invalid"
+                    message = "Signed route is invalid: ${routeValidationFailure.name}"
                 )
 
             !synchronizePresence(registration) ->

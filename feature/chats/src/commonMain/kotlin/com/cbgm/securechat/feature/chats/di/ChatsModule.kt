@@ -41,20 +41,25 @@ import com.cbgm.securechat.feature.chats.domain.usecase.AddGroupMembers
 import com.cbgm.securechat.feature.chats.domain.usecase.CreateGroupConversation
 import com.cbgm.securechat.feature.chats.domain.usecase.DeclineGroupInvitation
 import com.cbgm.securechat.feature.chats.domain.usecase.DeleteConversation
+import com.cbgm.securechat.feature.chats.domain.usecase.GetGroupLeaveRequirement
 import com.cbgm.securechat.feature.chats.domain.usecase.GetOrCreateDirectConversation
 import com.cbgm.securechat.feature.chats.domain.usecase.LeaveGroup
 import com.cbgm.securechat.feature.chats.domain.usecase.MarkConversationRead
 import com.cbgm.securechat.feature.chats.domain.usecase.ObserveConversation
 import com.cbgm.securechat.feature.chats.domain.usecase.ObserveConversations
+import com.cbgm.securechat.feature.chats.domain.usecase.ObserveGroupAdministration
 import com.cbgm.securechat.feature.chats.domain.usecase.ObserveGroupConversation
 import com.cbgm.securechat.feature.chats.domain.usecase.ObserveGroupVerification
 import com.cbgm.securechat.feature.chats.domain.usecase.ObserveTypingIndicator
+import com.cbgm.securechat.feature.chats.domain.usecase.PromoteGroupMember
+import com.cbgm.securechat.feature.chats.domain.usecase.RefreshDeliveryState
 import com.cbgm.securechat.feature.chats.domain.usecase.RemoveGroupMember
 import com.cbgm.securechat.feature.chats.domain.usecase.RetryMessage
 import com.cbgm.securechat.feature.chats.domain.usecase.SendGroupMessage
 import com.cbgm.securechat.feature.chats.domain.usecase.SendMessage
 import com.cbgm.securechat.feature.chats.domain.usecase.SetTypingIndicator
 import com.cbgm.securechat.feature.chats.domain.usecase.SynchronizeGroupVerification
+import com.cbgm.securechat.feature.chats.domain.usecase.TransferGroupAdminAndLeave
 import com.cbgm.securechat.feature.chats.domain.usecase.VerifyGroupMember
 import com.cbgm.securechat.feature.chats.presentation.screen.ChatsViewModel
 import com.cbgm.securechat.feature.chats.presentation.screen.chat.ChatViewModel
@@ -171,11 +176,13 @@ val chatsModule =
         single { CreateGroupConversation(repository = get()) }
         single { DeclineGroupInvitation(repository = get()) }
         single { DeleteConversation(repository = get()) }
+        single { GetGroupLeaveRequirement(repository = get()) }
         single { GetOrCreateDirectConversation(repository = get()) }
         single { LeaveGroup(repository = get()) }
         single { MarkConversationRead(repository = get()) }
         single { ObserveConversation(repository = get()) }
         single { ObserveConversations(repository = get()) }
+        single { ObserveGroupAdministration(repository = get()) }
         single { ObserveGroupConversation(repository = get()) }
         single {
             ObserveGroupVerification(
@@ -185,11 +192,14 @@ val chatsModule =
         }
         single { ObserveTypingIndicator(gateway = get()) }
         single { RetryMessage(repository = get()) }
+        single { PromoteGroupMember(repository = get()) }
         single { RemoveGroupMember(repository = get()) }
+        single { RefreshDeliveryState(repository = get()) }
         single { SendMessage(repository = get()) }
         single { SendGroupMessage(repository = get()) }
         single { SetTypingIndicator(gateway = get()) }
         single { SynchronizeGroupVerification(gateway = get()) }
+        single { TransferGroupAdminAndLeave(repository = get()) }
         single { VerifyGroupMember(gateway = get()) }
 
         single<GroupVerificationRepository> {
@@ -210,6 +220,7 @@ val chatsModule =
                 localPhoneNumberProvider = get(),
                 protocolOutbox = get(),
                 groupInvitationDao = get(),
+                groupSecurityDao = get(),
                 groupInvitationCoordinator = get(),
                 groupMessageSender = get(),
                 identityInvitationService = get(),
@@ -227,7 +238,8 @@ val chatsModule =
         viewModel {
             ChatsViewModel(
                 observeConversations = get(),
-                deleteConversationUseCase = get()
+                deleteConversationUseCase = get(),
+                getGroupLeaveRequirement = get()
             )
         }
 
@@ -239,9 +251,11 @@ val chatsModule =
             GroupChatViewModel(
                 conversationId = parameters.get(),
                 observeConversation = get(),
+                observeGroupAdministration = get(),
                 sendGroupMessage = get(),
                 markConversationReadUseCase = get(),
                 retryMessageUseCase = get(),
+                refreshDeliveryState = get(),
                 acceptGroupInvitation = get(),
                 declineGroupInvitation = get(),
                 observeContacts = get<ObserveContacts>(),
@@ -260,6 +274,9 @@ val chatsModule =
                 observeContacts = get(),
                 addGroupMembers = get(),
                 removeGroupMember = get(),
+                promoteGroupMember = get(),
+                transferGroupAdminAndLeave = get(),
+                observeGroupAdministration = get(),
                 leaveGroup = get()
             )
         }
@@ -283,6 +300,7 @@ val chatsModule =
                 sendMessageUseCase = get(),
                 markConversationReadUseCase = get(),
                 retryFailedMessage = get(),
+                refreshDeliveryState = get(),
                 observeIdentitySetupMode = get<ObserveIdentitySetupMode>(),
                 ensureIdentityExchangeStarted = get<EnsureIdentityExchangeStarted>(),
                 observeIdentityHandshakeState = get<ObserveIdentityHandshakeState>(),

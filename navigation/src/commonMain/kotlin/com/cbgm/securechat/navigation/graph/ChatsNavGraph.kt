@@ -60,7 +60,8 @@ fun NavGraphBuilder.chatsNavGraph() {
 
         DetailsRoute(
             target = DetailsTarget.Group(conversationId = destination.conversationId),
-            openVerification = false
+            openVerification = false,
+            requestGroupLeave = destination.requestLeave
         )
     }
 

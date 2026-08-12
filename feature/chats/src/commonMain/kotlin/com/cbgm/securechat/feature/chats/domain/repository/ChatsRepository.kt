@@ -1,7 +1,9 @@
 package com.cbgm.securechat.feature.chats.domain.repository
 
 import com.cbgm.securechat.feature.chats.domain.model.Conversation
+import com.cbgm.securechat.feature.chats.domain.model.GroupAdministrationState
 import com.cbgm.securechat.feature.chats.domain.model.GroupConversation
+import com.cbgm.securechat.feature.chats.domain.model.GroupLeaveRequirement
 import kotlinx.coroutines.flow.Flow
 
 interface ChatsRepository {
@@ -26,6 +28,20 @@ interface ChatsRepository {
         contactId: String
     ): Result<Unit>
 
+    suspend fun promoteGroupMember(
+        conversationId: String,
+        contactId: String
+    ): Result<Unit>
+
+    suspend fun transferGroupAdminAndLeave(
+        conversationId: String,
+        contactId: String
+    ): Result<Unit>
+
+    fun observeGroupAdministration(conversationId: String): Flow<GroupAdministrationState>
+
+    suspend fun getGroupLeaveRequirement(conversationId: String): Result<GroupLeaveRequirement>
+
     suspend fun leaveGroup(conversationId: String): Result<Unit>
 
     suspend fun deleteConversation(conversationId: String): Result<Unit>
@@ -47,6 +63,8 @@ interface ChatsRepository {
     )
 
     suspend fun retryMessage(messageId: String): Result<Unit>
+
+    suspend fun refreshDeliveryState(conversationId: String): Result<Unit>
 
     suspend fun markConversationRead(conversationId: String): Result<Unit>
 }

@@ -12,6 +12,7 @@ import com.cbgm.securechat.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.securechat.core.time.SystemClock
 import com.cbgm.securechat.data.database.dao.ChatDao
 import com.cbgm.securechat.data.database.dao.GroupInvitationDao
+import com.cbgm.securechat.data.database.dao.GroupSecurityDao
 import com.cbgm.securechat.data.database.dao.MessageRecipientStateDao
 import com.cbgm.securechat.data.database.entity.MessageEntity
 import com.cbgm.securechat.data.database.entity.MessageRecipientStateEntity
@@ -25,11 +26,14 @@ import com.cbgm.securechat.feature.chats.data.invitation.GroupInvitationStatus
 import com.cbgm.securechat.feature.chats.data.message.GroupMembershipMessageFactory
 import com.cbgm.securechat.feature.chats.data.message.GroupMessageSender
 import com.cbgm.securechat.feature.chats.data.security.GROUP_END_TO_END_ENCRYPTED_MODE
+import com.cbgm.securechat.feature.chats.data.security.isGroupAdminRole
 import com.cbgm.securechat.feature.chats.domain.model.ChatMessage
 import com.cbgm.securechat.feature.chats.domain.model.ChatMessageType
 import com.cbgm.securechat.feature.chats.domain.model.Conversation
+import com.cbgm.securechat.feature.chats.domain.model.GroupAdministrationState
 import com.cbgm.securechat.feature.chats.domain.model.GroupConversation
 import com.cbgm.securechat.feature.chats.domain.model.GroupConversationState
+import com.cbgm.securechat.feature.chats.domain.model.GroupLeaveRequirement
 import com.cbgm.securechat.feature.chats.domain.model.GroupMemberInvitationState
 import com.cbgm.securechat.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.securechat.feature.chats.domain.model.MessageDeliveryEvent
@@ -46,6 +50,7 @@ import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.transformLatest
 
 class DefaultChatsRepository(
     private val chatDao: ChatDao,
@@ -56,6 +61,7 @@ class DefaultChatsRepository(
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
     private val protocolOutbox: ProtocolOutbox,
     private val groupInvitationDao: GroupInvitationDao,
+    private val groupSecurityDao: GroupSecurityDao,
     private val groupInvitationCoordinator: GroupInvitationCoordinator,
     private val groupMessageSender: GroupMessageSender,
     private val identityInvitationService: IdentityInvitationService,
@@ -129,6 +135,68 @@ class DefaultChatsRepository(
         conversationId: String,
         contactId: String
     ): Result<Unit> = groupInvitationCoordinator.removeMember(conversationId, contactId)
+
+    override suspend fun promoteGroupMember(
+        conversationId: String,
+        contactId: String
+    ): Result<Unit> = groupInvitationCoordinator.promoteMember(conversationId, contactId)
+
+    override suspend fun transferGroupAdminAndLeave(
+        conversationId: String,
+        contactId: String
+    ): Result<Unit> = groupInvitationCoordinator.transferAdminAndLeave(conversationId, contactId)
+
+    override fun observeGroupAdministration(conversationId: String): Flow<GroupAdministrationState> =
+        combine(
+            chatDao.observeConversationParticipants(conversationId),
+            groupSecurityDao.observeState(conversationId),
+            groupSecurityDao.observeCurrentMemberKeys(conversationId)
+        ) { participants, securityState, memberKeys ->
+            Triple(participants, securityState, memberKeys)
+        }.transformLatest { (participants, securityState, memberKeys) ->
+            if (securityState == null) {
+                emit(GroupAdministrationState())
+                return@transformLatest
+            }
+
+            val memberKeysByContactId = memberKeys.associateBy { member -> member.contactId }
+            val currentAdminContactIds = mutableSetOf<String>()
+            val currentMemberContactIds = mutableSetOf<String>()
+            participants.forEach { participant ->
+                val pinned = memberKeysByContactId[participant.contactId] ?: return@forEach
+                val contact = getContact(participant.contactId).getOrNull() ?: return@forEach
+                val currentIdentity = contact.secureChatIdentity ?: return@forEach
+                if (!pinned.signingPublicKey.contentEquals(currentIdentity.signingPublicKey)) {
+                    return@forEach
+                }
+                currentMemberContactIds += participant.contactId
+                if (pinned.role.isGroupAdminRole()) {
+                    currentAdminContactIds += participant.contactId
+                }
+            }
+            val isLocalAdmin = securityState.localRole.isGroupAdminRole()
+            val promotable =
+                currentMemberContactIds.filterTo(mutableSetOf()) { contactId ->
+                    contactId !in currentAdminContactIds
+                }
+            emit(
+                GroupAdministrationState(
+                    isLocalAdmin = isLocalAdmin,
+                    isOrphaned = !isLocalAdmin && currentAdminContactIds.isEmpty(),
+                    adminContactIds = currentAdminContactIds,
+                    currentMemberContactIds = currentMemberContactIds,
+                    promotableContactIds = promotable,
+                    requiresPromotionBeforeLeave =
+                        isLocalAdmin && currentMemberContactIds.isNotEmpty() && currentAdminContactIds.isEmpty(),
+                    activeMemberCount = currentMemberContactIds.size + 1
+                )
+            )
+        }
+
+    override suspend fun getGroupLeaveRequirement(
+        conversationId: String
+    ): Result<GroupLeaveRequirement> =
+        groupInvitationCoordinator.getLeaveRequirement(conversationId)
 
     override suspend fun leaveGroup(conversationId: String): Result<Unit> = groupInvitationCoordinator.leaveGroup(conversationId)
 
@@ -309,12 +377,27 @@ class DefaultChatsRepository(
             } else {
                 val packetId =
                     message.packetId?.takeIf(String::isNotBlank)
-                        ?: error("Message has no linked protocol packet")
+                        ?: if (conversation.type == GROUP_CONVERSATION_TYPE) {
+                            error("No active group member was available when this message was sent")
+                        } else {
+                            error("Message has no linked protocol packet")
+                        }
                 val outboxItem =
                     protocolOutbox.findByPacketId(packetId).getOrThrow()
                         ?: error("Linked outbox item was not found")
                 protocolOutbox.retry(outboxItem.id).getOrThrow()
                 deliveryStateCoordinator.applyRetryEvent(messageId = messageId)
+            }
+        }
+
+    override suspend fun refreshDeliveryState(conversationId: String): Result<Unit> =
+        runCatching {
+            when (chatDao.findConversationById(conversationId)?.type) {
+                DIRECT_CONVERSATION_TYPE ->
+                    deliveryStateCoordinator.expireUnconfirmedDirectMessages(conversationId)
+
+                GROUP_CONVERSATION_TYPE ->
+                    deliveryStateCoordinator.expireUnconfirmedGroupRecipients(conversationId)
             }
         }
 

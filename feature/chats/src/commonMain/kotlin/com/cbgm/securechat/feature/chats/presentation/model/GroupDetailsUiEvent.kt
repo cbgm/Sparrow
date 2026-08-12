@@ -13,6 +13,14 @@ sealed interface GroupDetailsUiEvent {
         val contactId: String
     ) : GroupDetailsUiEvent
 
+    data class PromoteMemberClicked(
+        val contactId: String
+    ) : GroupDetailsUiEvent
+
+    data class PromoteMemberAndLeaveClicked(
+        val contactId: String
+    ) : GroupDetailsUiEvent
+
     data object LeaveGroupClicked : GroupDetailsUiEvent
 
     data object VerifySelectedMemberClicked : GroupDetailsUiEvent
@@ -26,6 +34,10 @@ sealed interface GroupDetailsUiEvent {
     data object MemberRemovalConfirmed : GroupDetailsUiEvent
 
     data object MemberRemovalDismissed : GroupDetailsUiEvent
+
+    data object MemberPromotionConfirmed : GroupDetailsUiEvent
+
+    data object MemberPromotionDismissed : GroupDetailsUiEvent
 
     data object LeaveGroupConfirmed : GroupDetailsUiEvent
 

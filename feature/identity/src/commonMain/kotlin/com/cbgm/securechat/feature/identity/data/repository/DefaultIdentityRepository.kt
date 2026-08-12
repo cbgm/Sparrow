@@ -1,6 +1,7 @@
 package com.cbgm.securechat.feature.identity.data.repository
 
 import com.cbgm.securechat.core.crypto.identity.IdentityKeyGenerator
+import com.cbgm.securechat.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.securechat.feature.identity.domain.model.IdentityStatus
 import com.cbgm.securechat.feature.identity.domain.model.PublicIdentity
 import com.cbgm.securechat.feature.identity.domain.repository.IdentityRepository
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.flow
 
 class DefaultIdentityRepository(
     private val identityKeyGenerator: IdentityKeyGenerator,
+    private val signatureCrypto: DetachedSignatureCrypto,
     private val privateKeyStorage: PrivateKeyStorage,
     private val publicIdentityStorage: PublicIdentityStorage
 ) : IdentityRepository {
@@ -31,23 +33,40 @@ class DefaultIdentityRepository(
     override suspend fun getStatus(): Result<IdentityStatus> =
         runCatching {
             val publicIdentityExists = publicIdentityStorage.exists().getOrThrow()
-
             val privateKeysExist = privateKeyStorage.hasIdentityPrivateKeys().getOrThrow()
 
             when {
-                publicIdentityExists && privateKeysExist -> {
-                    IdentityStatus.READY
-                }
-
-                !publicIdentityExists && !privateKeysExist -> {
-                    IdentityStatus.NOT_CREATED
-                }
-
-                else -> {
-                    IdentityStatus.INCOMPLETE
-                }
+                !publicIdentityExists && !privateKeysExist -> IdentityStatus.NOT_CREATED
+                !publicIdentityExists || !privateKeysExist -> IdentityStatus.INCOMPLETE
+                !hasConsistentSigningIdentity() -> IdentityStatus.INCOMPLETE
+                else -> IdentityStatus.READY
             }
         }
+
+    @OptIn(ExperimentalUnsignedTypes::class)
+    private suspend fun hasConsistentSigningIdentity(): Boolean {
+        val publicIdentity = publicIdentityStorage.load().getOrNull() ?: return false
+        val signingPrivateKey =
+            privateKeyStorage
+                .loadSigningPrivateKey()
+                .getOrNull()
+                ?.toByteArray()
+                ?: return false
+        val signature =
+            signatureCrypto
+                .sign(
+                    payload = IDENTITY_INTEGRITY_PAYLOAD,
+                    signingPrivateKey = signingPrivateKey
+                ).getOrNull()
+                ?: return false
+
+        return signatureCrypto
+            .verify(
+                payload = IDENTITY_INTEGRITY_PAYLOAD,
+                signingPublicKey = publicIdentity.signingPublicKey,
+                signature = signature
+            ).isSuccess
+    }
 
     override suspend fun hasIdentity(): Result<Boolean> = getStatus().map { status -> status == IdentityStatus.READY }
 
@@ -142,4 +161,9 @@ class DefaultIdentityRepository(
             privateKeyStorage.loadSigningPrivateKey().getOrThrow()?.toByteArray()
                 ?: error("Local signing private key does not exist")
         }
+
+    private companion object {
+        val IDENTITY_INTEGRITY_PAYLOAD =
+            "securechat-local-identity-integrity-v1".encodeToByteArray()
+    }
 }

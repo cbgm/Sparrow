@@ -21,6 +21,7 @@ import com.cbgm.securechat.data.database.entity.ConversationParticipantEntity
 import com.cbgm.securechat.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.securechat.feature.chats.data.invitation.GroupInvitationStatus
 import com.cbgm.securechat.feature.chats.data.security.GroupInvitationManager
+import com.cbgm.securechat.feature.chats.data.security.GroupSecurityManager
 import com.cbgm.securechat.feature.chats.data.verification.GroupVerificationCoordinator
 import com.cbgm.securechat.feature.contacts.domain.model.ContactPhoneNumberType
 import com.cbgm.securechat.feature.contacts.domain.model.DeviceContactLinkStatus
@@ -35,6 +36,7 @@ class GroupMemberActivatedPacketHandler(
     private val protocolOutbox: ProtocolOutbox,
     private val phoneNumberNormalizer: PhoneNumberNormalizer,
     private val groupInvitationManager: GroupInvitationManager,
+    private val groupSecurityManager: GroupSecurityManager,
     private val groupVerificationCoordinator: GroupVerificationCoordinator
 ) : TypedProtocolPacketHandler {
     override fun canHandle(packet: SecureChatPacket): Boolean = packet is GroupMemberActivatedPacket
@@ -62,12 +64,12 @@ class GroupMemberActivatedPacketHandler(
             check(securityState.currentEpoch == activationPacket.epoch) {
                 "Group member activation uses the wrong epoch"
             }
-            check(securityState.ownerContactId == context.contactId) {
-                "Group member activation was not sent by the group owner"
-            }
-            check(securityState.ownerSigningPublicKey.contentEquals(ownerIdentity.signingPublicKey)) {
-                "Stored group owner identity does not match the authenticated contact"
-            }
+            groupSecurityManager
+                .requireRemoteAdmin(
+                    groupId = activationPacket.groupId,
+                    contactId = context.contactId,
+                    signingPublicKey = ownerIdentity.signingPublicKey
+                ).getOrThrow()
 
             groupInvitationManager
                 .verifyMemberActivated(

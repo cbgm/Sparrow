@@ -49,6 +49,20 @@ interface ChatDao {
         contactId: String
     )
 
+    @Query(
+        """
+        UPDATE conversation_participants
+        SET role = :role
+        WHERE conversationId = :conversationId
+          AND contactId = :contactId
+        """
+    )
+    suspend fun updateConversationParticipantRole(
+        conversationId: String,
+        contactId: String,
+        role: String
+    ): Int
+
     @Transaction
     suspend fun replaceConversationParticipants(
         conversationId: String,

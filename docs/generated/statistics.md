@@ -14,10 +14,10 @@ Generated automatically by `./gradlew architectureReport`.
 | Maximum direct dependencies | 16 |
 | Maximum direct dependents | 12 |
 | Distinct source sets | 9 |
-| Kotlin files | 908 |
-| Production Kotlin files | 826 |
-| Test Kotlin files | 82 |
-| Resource files | 58 |
+| Kotlin files | 934 |
+| Production Kotlin files | 851 |
+| Test Kotlin files | 83 |
+| Resource files | 60 |
 
 ## Modules by group
 
@@ -41,7 +41,7 @@ Generated automatically by `./gradlew architectureReport`.
 | Source set | Modules |
 |---|---:|
 | `androidDeviceTest` | 16 |
-| `androidHostTest` | 16 |
+| `androidHostTest` | 15 |
 | `androidMain` | 19 |
 | `commonMain` | 19 |
 | `commonTest` | 9 |

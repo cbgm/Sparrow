@@ -258,6 +258,7 @@ class GroupSecurityManagerTest {
                 manager
                     .openWelcome(
                         packet = packet,
+                        senderContactId = REMOTE_CONTACT_ID,
                         expectedOwnerEncryptionPublicKey = byteArrayOf(5),
                         expectedOwnerSigningPublicKey = REMOTE_SIGNING_KEY,
                         localEncryptionKeyPair =
@@ -363,6 +364,92 @@ class GroupSecurityManagerTest {
             )
         }
 
+    @Test
+    fun promotedAdminCanRotateGroupEpoch() =
+        runTest {
+            dao.upsertState(
+                GroupSecurityStateEntity(
+                    groupId = GROUP_ID,
+                    currentEpoch = EPOCH,
+                    welcomePacketId = "welcome-1",
+                    ownerContactId = REMOTE_CONTACT_ID,
+                    ownerSigningPublicKey = REMOTE_SIGNING_KEY,
+                    localSigningPublicKey = LOCAL_SIGNING_KEY,
+                    localRole = GROUP_ADMIN_ROLE,
+                    updatedAtEpochMilliseconds = 100L
+                )
+            )
+            dao.upsertMemberKeys(listOf(memberKey(epoch = EPOCH)))
+            keyStorage.save(GROUP_ID, EPOCH, GROUP_KEY).getOrThrow()
+
+            val nextEpoch = EPOCH + 1
+            manager
+                .rotateOwnedGroup(
+                    groupId = GROUP_ID,
+                    title = "Group",
+                    createdAtEpochMilliseconds = 100L,
+                    updatedAtEpochMilliseconds = 200L,
+                    memberPayloads =
+                        listOf(
+                            GroupMemberPayload(
+                                displayName = null,
+                                encryptionPublicKey = byteArrayOf(8),
+                                signingPublicKey = LOCAL_SIGNING_KEY,
+                                role = GROUP_ADMIN_ROLE,
+                                phoneNumber = "+491"
+                            ),
+                            GroupMemberPayload(
+                                displayName = null,
+                                encryptionPublicKey = byteArrayOf(5),
+                                signingPublicKey = REMOTE_SIGNING_KEY,
+                                role = GROUP_MEMBER_ROLE,
+                                phoneNumber = "+492"
+                            )
+                        ),
+                    memberKeys = listOf(memberKey(epoch = nextEpoch)),
+                    recipients =
+                        listOf(
+                            GroupWelcomeRecipient(
+                                contactId = REMOTE_CONTACT_ID,
+                                invitationId = INVITATION_ID,
+                                encryptionPublicKey = byteArrayOf(5)
+                            )
+                        ),
+                    localSigningKeyPair =
+                        LocalSigningKeyPair(
+                            publicKey = LOCAL_SIGNING_KEY,
+                            privateKey = LOCAL_SIGNING_KEY
+                        )
+                ).getOrThrow()
+
+            assertEquals(nextEpoch, manager.findOwnedGroupEpoch(GROUP_ID).getOrThrow())
+        }
+
+    @Test
+    fun normalMemberCannotRotateGroupEpoch() =
+        runTest {
+            seedSecurityState()
+
+            val result =
+                manager.rotateOwnedGroup(
+                    groupId = GROUP_ID,
+                    title = "Group",
+                    createdAtEpochMilliseconds = 100L,
+                    updatedAtEpochMilliseconds = 200L,
+                    memberPayloads = emptyList(),
+                    memberKeys = emptyList(),
+                    recipients = emptyList(),
+                    localSigningKeyPair =
+                        LocalSigningKeyPair(
+                            publicKey = LOCAL_SIGNING_KEY,
+                            privateKey = LOCAL_SIGNING_KEY
+                        )
+                )
+
+            assertTrue(result.isFailure)
+            assertEquals(EPOCH, manager.findCurrentEpoch(GROUP_ID).getOrThrow())
+        }
+
     private suspend fun seedSecurityState() {
         dao.upsertState(
             GroupSecurityStateEntity(
@@ -372,6 +459,7 @@ class GroupSecurityManagerTest {
                 ownerContactId = REMOTE_CONTACT_ID,
                 ownerSigningPublicKey = REMOTE_SIGNING_KEY,
                 localSigningPublicKey = LOCAL_SIGNING_KEY,
+                localRole = "MEMBER",
                 updatedAtEpochMilliseconds = 100L
             )
         )
@@ -573,6 +661,33 @@ class GroupSecurityManagerTest {
             epoch: Int
         ) {
             memberKeys.removeAll { member -> member.groupId == groupId && member.epoch < epoch }
+        }
+
+        override suspend fun findMemberKeys(
+            groupId: String,
+            epoch: Int
+        ): List<GroupMemberKeyEntity> =
+            memberKeys.filter { member -> member.groupId == groupId && member.epoch == epoch }
+
+        override fun observeCurrentMemberKeys(groupId: String): Flow<List<GroupMemberKeyEntity>> =
+            state.map { currentState ->
+                val epoch = currentState?.takeIf { it.groupId == groupId }?.currentEpoch
+                if (epoch == null) {
+                    emptyList()
+                } else {
+                    memberKeys.filter { member -> member.groupId == groupId && member.epoch == epoch }
+                }
+            }
+
+        override suspend fun updateLocalRole(
+            groupId: String,
+            role: String,
+            updatedAtEpochMilliseconds: Long
+        ): Int {
+            val current = state.value ?: return 0
+            if (current.groupId != groupId) return 0
+            state.value = current.copy(localRole = role, updatedAtEpochMilliseconds = updatedAtEpochMilliseconds)
+            return 1
         }
     }
 

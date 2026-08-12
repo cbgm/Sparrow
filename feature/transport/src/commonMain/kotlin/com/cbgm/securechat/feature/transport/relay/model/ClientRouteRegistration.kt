@@ -1,12 +1,15 @@
 package com.cbgm.securechat.feature.transport.relay.model
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 @Serializable
 data class GatewayNodeInformation(
     val nodeId: String,
     val routeLifetimeMilliseconds: Long,
-    val routeRefreshIntervalMilliseconds: Long
+    val routeRefreshIntervalMilliseconds: Long,
+    @Transient
+    val serverTimeEpochMilliseconds: Long? = null
 ) {
     init {
         require(nodeId.isNotBlank()) { "Gateway node ID must not be blank" }

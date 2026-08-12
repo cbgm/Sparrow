@@ -127,6 +127,8 @@ import com.cbgm.securechat.resources.feature_chats_group_member_failed
 import com.cbgm.securechat.resources.feature_chats_group_member_invited
 import com.cbgm.securechat.resources.feature_chats_group_member_key_sent
 import com.cbgm.securechat.resources.feature_chats_group_message_queued
+import com.cbgm.securechat.resources.feature_chats_group_orphaned_description
+import com.cbgm.securechat.resources.feature_chats_group_orphaned_title
 import com.cbgm.securechat.resources.feature_chats_group_status_declined
 import com.cbgm.securechat.resources.feature_chats_group_status_distributing
 import com.cbgm.securechat.resources.feature_chats_group_status_expired
@@ -325,6 +327,8 @@ private fun ChatTopBar(
             GroupMembershipRemovedHint()
         } else if (uiState.groupState == GroupConversationState.LEAVING) {
             GroupMembershipLeavingHint()
+        } else if (uiState.groupState == GroupConversationState.ORPHANED) {
+            GroupOrphanedHint()
         } else if (
             uiState.isGroup &&
             uiState.groupState != GroupConversationState.READY &&
@@ -343,6 +347,8 @@ private fun groupStateSubtitle(uiState: ChatUiState): String =
     when (uiState.groupState) {
         GroupConversationState.READY ->
             stringResource(Res.string.feature_chats_group_member_count, uiState.groupMemberCount)
+        GroupConversationState.ORPHANED ->
+            stringResource(Res.string.feature_chats_group_orphaned_title)
         GroupConversationState.INVITED ->
             stringResource(Res.string.feature_chats_group_status_invited)
         GroupConversationState.JOINING ->
@@ -386,6 +392,34 @@ private fun groupStateSubtitle(uiState: ChatUiState): String =
         GroupConversationState.FAILED ->
             stringResource(Res.string.feature_chats_group_status_failed)
     }
+
+@Composable
+private fun GroupOrphanedHint() {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal = MaterialTheme.spacing.medium,
+                        vertical = MaterialTheme.spacing.small
+                    )
+        ) {
+            Text(
+                text = stringResource(Res.string.feature_chats_group_orphaned_title),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.error
+            )
+            Text(
+                text = stringResource(Res.string.feature_chats_group_orphaned_description),
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
 
 @Composable
 private fun PendingGroupMessageHint(uiState: ChatUiState) {

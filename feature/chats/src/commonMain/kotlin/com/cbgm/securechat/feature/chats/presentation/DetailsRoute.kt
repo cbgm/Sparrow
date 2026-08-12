@@ -31,7 +31,8 @@ sealed interface DetailsTarget {
 @Composable
 fun DetailsRoute(
     target: DetailsTarget,
-    openVerification: Boolean
+    openVerification: Boolean,
+    requestGroupLeave: Boolean = false
 ) {
     val identityShareCodec = koinInject<IdentityShareCodec>()
     var encodedContactToShare by remember { mutableStateOf("") }
@@ -68,7 +69,10 @@ fun DetailsRoute(
         }
 
         is DetailsTarget.Group -> {
-            GroupDetailsFlow(conversationId = target.conversationId)
+            GroupDetailsFlow(
+                conversationId = target.conversationId,
+                requestLeave = requestGroupLeave
+            )
         }
     }
 }

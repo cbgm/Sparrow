@@ -21,6 +21,7 @@ internal fun GroupMemberList(
     onVerifyMember: (String) -> Unit,
     onAddMembers: () -> Unit,
     onRemoveMember: (String) -> Unit,
+    onPromoteMember: (String) -> Unit,
     onLeaveGroup: () -> Unit,
     innerPadding: PaddingValues,
     listState: LazyListState
@@ -54,11 +55,12 @@ internal fun GroupMemberList(
             GroupDetailsSummary(summary = summary)
         }
 
-        if (summary.isLocalAdmin) {
+        if (summary.isLocalAdmin && !summary.isOrphaned) {
             item(key = "member-management") {
                 GroupMemberManagementActions(onAddMembers = onAddMembers)
             }
-        } else if (summary.canLeaveGroup) {
+        }
+        if (summary.canLeaveGroup) {
             item(key = "leave-group") {
                 LeaveGroupAction(onLeaveGroup = onLeaveGroup)
             }
@@ -68,7 +70,8 @@ internal fun GroupMemberList(
             GroupMembersCard(
                 summary = summary,
                 onVerifyMember = onVerifyMember,
-                onRemoveMember = onRemoveMember
+                onRemoveMember = onRemoveMember,
+                onPromoteMember = onPromoteMember
             )
         }
     }
@@ -83,6 +86,7 @@ private fun GroupMemberListPreview() {
             onVerifyMember = {},
             onAddMembers = {},
             onRemoveMember = {},
+            onPromoteMember = {},
             onLeaveGroup = {},
             innerPadding = PaddingValues(),
             listState = rememberLazyListState()

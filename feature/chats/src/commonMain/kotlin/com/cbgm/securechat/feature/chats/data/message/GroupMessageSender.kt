@@ -6,6 +6,7 @@ import com.cbgm.securechat.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.securechat.core.protocol.packet.GroupChatMessagePacket
 import com.cbgm.securechat.core.time.SystemClock
 import com.cbgm.securechat.data.database.dao.ChatDao
+import com.cbgm.securechat.data.database.dao.ContactDao
 import com.cbgm.securechat.data.database.entity.ConversationParticipantEntity
 import com.cbgm.securechat.data.database.entity.GroupInvitationEntity
 import com.cbgm.securechat.data.database.entity.MessageEntity
@@ -23,6 +24,7 @@ import kotlinx.coroutines.sync.withLock
 
 class GroupMessageSender(
     private val chatDao: ChatDao,
+    private val contactDao: ContactDao,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val protocolOutbox: ProtocolOutbox,
     private val groupSecurityManager: GroupSecurityManager,
@@ -87,7 +89,7 @@ class GroupMessageSender(
                         createdAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
                     )
 
-                val activeParticipants = chatDao.findConversationParticipants(conversationId)
+                val activeParticipants = findCurrentEpochParticipants(conversationId)
                 if (canSendToActiveGroupMembers(activeParticipants.size)) {
                     encryptAndEnqueue(
                         message = message,
@@ -99,8 +101,28 @@ class GroupMessageSender(
             }
         }
 
+    private suspend fun findCurrentEpochParticipants(
+        conversationId: String
+    ): List<ConversationParticipantEntity> =
+        chatDao
+            .findConversationParticipants(conversationId)
+            .filter { participant ->
+                val signingPublicKey =
+                    contactDao
+                        .findPublicIdentityByContactId(participant.contactId)
+                        ?.signingPublicKey
+                        ?: return@filter false
+
+                groupSecurityManager
+                    .isRemoteMemberIdentityCurrent(
+                        groupId = conversationId,
+                        contactId = participant.contactId,
+                        signingPublicKey = signingPublicKey
+                    ).getOrDefault(false)
+            }
+
     private suspend fun storeLocalOnly(message: MessageEntity) {
-        chatDao.upsertMessage(message.copy(deliveryStatus = MessageDeliveryStatus.SENT.name))
+        chatDao.upsertMessage(message.copy(deliveryStatus = MessageDeliveryStatus.FAILED.name))
         chatDao.updateConversationTimestamp(
             conversationId = message.conversationId,
             timestamp = message.createdAtEpochMilliseconds

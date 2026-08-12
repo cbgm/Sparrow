@@ -286,13 +286,12 @@ class DefaultWebSocketTransportClient internal constructor(
                             .createRegistration(
                                 connection = presenceConnection,
                                 gatewayInformation = information
-                            ).onFailure { error ->
-                                logger.warn {
-                                    "Could not sign initial presence route; " +
-                                        "using compatible registration: " +
-                                        (error.message ?: "unknown error")
-                                }
-                            }.getOrNull()
+                            ).getOrElse { error ->
+                                throw IllegalStateException(
+                                    "Could not create signed presence route",
+                                    error
+                                )
+                            }
                     }
 
                 val signedRegistrationSent =
@@ -611,8 +610,10 @@ class DefaultWebSocketTransportClient internal constructor(
 
         val FATAL_ROUTE_ERROR_CODES =
             setOf(
+                "INVALID_ROUTE",
+                "INVALID_ROUTE_REFRESH",
                 "ROUTE_REJECTED",
-                "INVALID_ROUTE_REFRESH"
+                "ALREADY_REGISTERED"
             )
     }
 }

@@ -43,7 +43,9 @@ import com.cbgm.securechat.resources.feature_chats_group_member_admin_verified_p
 import com.cbgm.securechat.resources.feature_chats_group_member_invitation_pending
 import com.cbgm.securechat.resources.feature_chats_group_member_mutually_verified
 import com.cbgm.securechat.resources.feature_chats_group_member_participant_verified_admin
+import com.cbgm.securechat.resources.feature_chats_group_member_unavailable
 import com.cbgm.securechat.resources.feature_chats_group_member_unverified
+import com.cbgm.securechat.resources.feature_chats_group_promote_admin
 import com.cbgm.securechat.resources.feature_chats_group_remove_member_name
 import org.jetbrains.compose.resources.stringResource
 
@@ -52,9 +54,11 @@ internal fun GroupMemberRow(
     member: GroupMemberVerificationUiState,
     showVerifyAction: Boolean,
     showRemoveAction: Boolean,
+    showPromoteAction: Boolean,
     showDivider: Boolean,
     onVerify: () -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    onPromote: () -> Unit
 ) {
     val statusColor = member.verificationStatusColor()
     val displayName =
@@ -116,6 +120,16 @@ internal fun GroupMemberRow(
                             color = statusColor
                         )
                     }
+                    if (showPromoteAction) {
+                        IconButton(onClick = onPromote) {
+                            Icon(
+                                imageVector = Icons.Default.Verified,
+                                contentDescription =
+                                    stringResource(Res.string.feature_chats_group_promote_admin),
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
+                        }
+                    }
                     if (showRemoveAction) {
                         IconButton(onClick = onRemove) {
                             Icon(
@@ -167,6 +181,9 @@ internal fun GroupMemberVerificationUiState.verificationStatusText(): String =
             GroupMemberVerificationState.UNVERIFIED ->
                 stringResource(Res.string.feature_chats_group_member_unverified)
 
+            GroupMemberVerificationState.UNAVAILABLE ->
+                stringResource(Res.string.feature_chats_group_member_unavailable)
+
             GroupMemberVerificationState.INVITATION_PENDING ->
                 stringResource(Res.string.feature_chats_group_member_invitation_pending)
         }
@@ -188,7 +205,8 @@ private fun GroupMemberVerificationUiState.verificationStatusColor(): Color =
             GroupMemberVerificationState.PARTICIPANT_VERIFIED_ADMIN ->
                 MaterialTheme.colorScheme.secondary.copy(alpha = 0.73f)
 
-            GroupMemberVerificationState.UNVERIFIED ->
+            GroupMemberVerificationState.UNVERIFIED,
+            GroupMemberVerificationState.UNAVAILABLE ->
                 MaterialTheme.colorScheme.error
 
             GroupMemberVerificationState.INVITATION_PENDING ->
@@ -205,7 +223,8 @@ private fun GroupMemberVerificationUiState.verificationStatusIcon(): ImageVector
             GroupMemberVerificationState.ADMIN_VERIFIED_PARTICIPANT,
             GroupMemberVerificationState.PARTICIPANT_VERIFIED_ADMIN -> Icons.Default.Lock
 
-            GroupMemberVerificationState.UNVERIFIED -> Icons.Default.Warning
+            GroupMemberVerificationState.UNVERIFIED,
+            GroupMemberVerificationState.UNAVAILABLE -> Icons.Default.Warning
             GroupMemberVerificationState.INVITATION_PENDING -> Icons.Default.Schedule
             GroupMemberVerificationState.GROUP_ADMIN -> Icons.Default.Group
         }
@@ -219,9 +238,11 @@ private fun GroupMemberRowPreview() {
             member = GroupDetailsPreviewData.participant,
             showVerifyAction = true,
             showRemoveAction = true,
+            showPromoteAction = true,
             showDivider = false,
             onVerify = {},
-            onRemove = {}
+            onRemove = {},
+            onPromote = {}
         )
     }
 }

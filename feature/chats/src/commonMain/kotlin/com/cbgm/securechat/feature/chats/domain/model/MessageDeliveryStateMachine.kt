@@ -53,6 +53,13 @@ object MessageDeliveryStateMachine {
                     else -> current
                 }
 
+            MessageDeliveryEvent.DELIVERY_TIMED_OUT ->
+                if (current == MessageDeliveryStatus.SENT) {
+                    MessageDeliveryStatus.FAILED
+                } else {
+                    current
+                }
+
             MessageDeliveryEvent.READ_CONFIRMED ->
                 if (current == MessageDeliveryStatus.NOT_APPLICABLE) {
                     current
@@ -76,8 +83,9 @@ object MessageDeliveryStateMachine {
         if (states.all { it == MessageDeliveryStatus.DELIVERED || it == MessageDeliveryStatus.READ }) {
             return MessageDeliveryStatus.DELIVERED
         }
-        if (states.all { it == MessageDeliveryStatus.FAILED }) return MessageDeliveryStatus.FAILED
         if (states.any { it == MessageDeliveryStatus.SENDING }) return MessageDeliveryStatus.SENDING
+        if (states.any { it == MessageDeliveryStatus.QUEUED }) return MessageDeliveryStatus.QUEUED
+        if (states.any { it == MessageDeliveryStatus.FAILED }) return MessageDeliveryStatus.FAILED
         if (states.all { it == MessageDeliveryStatus.SENT || it == MessageDeliveryStatus.DELIVERED || it == MessageDeliveryStatus.READ }) {
             return MessageDeliveryStatus.SENT
         }

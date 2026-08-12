@@ -4,7 +4,9 @@ import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.logging.SecureChatLog
 import com.cbgm.securechat.core.ui.navigation.AppRoute
 import com.cbgm.securechat.core.ui.presentation.BaseViewModel
+import com.cbgm.securechat.feature.chats.domain.model.GroupLeaveRequirement
 import com.cbgm.securechat.feature.chats.domain.usecase.DeleteConversation
+import com.cbgm.securechat.feature.chats.domain.usecase.GetGroupLeaveRequirement
 import com.cbgm.securechat.feature.chats.domain.usecase.ObserveConversations
 import com.cbgm.securechat.feature.chats.presentation.mapper.toChatListItem
 import com.cbgm.securechat.feature.chats.presentation.model.ChatListItem
@@ -18,7 +20,8 @@ import kotlinx.coroutines.launch
 
 class ChatsViewModel(
     observeConversations: ObserveConversations,
-    private val deleteConversationUseCase: DeleteConversation
+    private val deleteConversationUseCase: DeleteConversation,
+    private val getGroupLeaveRequirement: GetGroupLeaveRequirement
 ) : BaseViewModel() {
     private val logger = SecureChatLog.withTag("ChatsViewModel")
     val uiState: StateFlow<ChatsUiState> =
@@ -59,6 +62,27 @@ class ChatsViewModel(
 
     private fun deleteConversation(conversationId: String) {
         viewModelScope.launch {
+            val chat =
+                (uiState.value as? ChatsUiState.Content)
+                    ?.conversations
+                    ?.firstOrNull { item -> item.conversationId == conversationId }
+            if (chat?.isGroup == true) {
+                getGroupLeaveRequirement(conversationId)
+                    .onSuccess { requirement ->
+                        if (requirement is GroupLeaveRequirement.PromoteAdminFirst) {
+                            navigator.navigateTo(
+                                AppRoute.GroupDetails(
+                                    conversationId = conversationId,
+                                    requestLeave = true
+                                )
+                            )
+                            return@launch
+                        }
+                    }.onFailure { error ->
+                        logger.error(error) { "Group leave requirement could not be resolved" }
+                        return@launch
+                    }
+            }
             deleteConversationUseCase(conversationId)
                 .onFailure { error ->
                     logger.error(error) { "Conversation deletion failed" }

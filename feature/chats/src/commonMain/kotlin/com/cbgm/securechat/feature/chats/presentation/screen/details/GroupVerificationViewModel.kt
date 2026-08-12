@@ -5,16 +5,19 @@ import com.cbgm.securechat.core.ui.navigation.AppRoute
 import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.chats.domain.usecase.AddGroupMembers
 import com.cbgm.securechat.feature.chats.domain.usecase.LeaveGroup
+import com.cbgm.securechat.feature.chats.domain.usecase.ObserveGroupAdministration
 import com.cbgm.securechat.feature.chats.domain.usecase.ObserveGroupVerification
+import com.cbgm.securechat.feature.chats.domain.usecase.PromoteGroupMember
 import com.cbgm.securechat.feature.chats.domain.usecase.RemoveGroupMember
 import com.cbgm.securechat.feature.chats.domain.usecase.SynchronizeGroupVerification
+import com.cbgm.securechat.feature.chats.domain.usecase.TransferGroupAdminAndLeave
 import com.cbgm.securechat.feature.chats.domain.usecase.VerifyGroupMember
 import com.cbgm.securechat.feature.chats.presentation.model.AddGroupMembersUiEvent
 import com.cbgm.securechat.feature.chats.presentation.model.GroupDetailsUiEvent
 import com.cbgm.securechat.feature.chats.presentation.model.GroupLeaveUiState
 import com.cbgm.securechat.feature.chats.presentation.model.GroupMemberManagementUiState
+import com.cbgm.securechat.feature.chats.presentation.model.GroupMemberVerificationState
 import com.cbgm.securechat.feature.chats.presentation.model.GroupMemberVerificationUiState
-import com.cbgm.securechat.feature.chats.presentation.model.GroupVerificationSummaryUiState
 import com.cbgm.securechat.feature.chats.presentation.model.GroupVerificationUiState
 import com.cbgm.securechat.feature.chats.presentation.model.buildGroupVerificationSummary
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactSafetyNumber
@@ -25,7 +28,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -39,6 +41,9 @@ class GroupVerificationViewModel(
     observeContacts: ObserveContacts,
     private val addGroupMembers: AddGroupMembers,
     private val removeGroupMember: RemoveGroupMember,
+    private val promoteGroupMember: PromoteGroupMember,
+    private val transferGroupAdminAndLeave: TransferGroupAdminAndLeave,
+    observeGroupAdministration: ObserveGroupAdministration,
     private val leaveGroup: LeaveGroup
 ) : BaseViewModel() {
     private val verificationState = MutableStateFlow(GroupVerificationSelectionState())
@@ -46,14 +51,22 @@ class GroupVerificationViewModel(
     private val leaveState = MutableStateFlow(GroupLeaveUiState())
     private val contactsFlow = observeContacts()
     private val summaryFlow =
-        observeGroupVerification(conversationId).map { groupState ->
+        combine(
+            observeGroupVerification(conversationId),
+            observeGroupAdministration(conversationId)
+        ) { groupState, administration ->
             buildGroupVerificationSummary(
-                isLocalAdmin = groupState.context.isLocalAdmin,
+                isLocalAdmin = administration.isLocalAdmin || groupState.context.isLocalAdmin,
                 ownerContactId = groupState.context.ownerContactId,
                 ownerDisplayName = groupState.ownerDisplayName,
                 ownInvitationId = groupState.context.ownInvitationId,
                 isLeavePending = groupState.context.isLeavePending,
-                rows = groupState.pairs
+                rows = groupState.pairs,
+                remoteAdminContactIds = administration.adminContactIds,
+                currentMemberContactIds = administration.currentMemberContactIds,
+                promotableContactIds = administration.promotableContactIds,
+                isOrphaned = administration.isOrphaned,
+                requiresAdminPromotionBeforeLeave = administration.requiresPromotionBeforeLeave
             )
         }
 
@@ -65,10 +78,15 @@ class GroupVerificationViewModel(
             memberManagementState,
             leaveState
         ) { summary, verification, contacts, memberManagement, leave ->
-            val currentContactIds =
-                summary.members.mapNotNullTo(mutableSetOf(), GroupMemberVerificationUiState::contactId)
+            val blockedContactIds =
+                summary.currentMemberContactIds.toMutableSet().also { blocked ->
+                    summary.members
+                        .filterNot(GroupMemberVerificationUiState::isActive)
+                        .filter { member -> member.state == GroupMemberVerificationState.INVITATION_PENDING }
+                        .mapNotNullTo(blocked, GroupMemberVerificationUiState::contactId)
+                }
             val availableContacts =
-                contacts.filterNot { contact -> contact.id in currentContactIds }
+                contacts.filterNot { contact -> contact.id in blockedContactIds }
             GroupVerificationUiState(
                 summary = summary,
                 selectedMember =
@@ -99,6 +117,13 @@ class GroupVerificationViewModel(
                                     !member.isGroupAdmin && member.contactId == contactId
                                 }
                             },
+                        promotionCandidate =
+                            memberManagement.promotionCandidateContactId?.let { contactId ->
+                                summary.members.firstOrNull { member ->
+                                    !member.isGroupAdmin && member.contactId == contactId
+                                }
+                            },
+                        promotionRequiredForLeave = summary.requiresAdminPromotionBeforeLeave,
                         isUpdating = memberManagement.isUpdating,
                         errorMessage = memberManagement.errorMessage,
                         completedRevision = memberManagement.completedRevision
@@ -120,6 +145,8 @@ class GroupVerificationViewModel(
             GroupDetailsUiEvent.BackClicked -> navigator.popBackStack()
             is GroupDetailsUiEvent.VerifyMemberClicked -> selectMember(event.contactId)
             is GroupDetailsUiEvent.RemoveMemberClicked -> requestMemberRemoval(event.contactId)
+            is GroupDetailsUiEvent.PromoteMemberClicked -> requestMemberPromotion(event.contactId)
+            is GroupDetailsUiEvent.PromoteMemberAndLeaveClicked -> promoteMemberAndLeave(event.contactId)
             GroupDetailsUiEvent.VerifySelectedMemberClicked -> verifySelectedMember()
             is GroupDetailsUiEvent.ScanMemberQrClicked -> {
                 dismissVerification()
@@ -128,6 +155,8 @@ class GroupVerificationViewModel(
             GroupDetailsUiEvent.VerificationBackClicked -> dismissVerification()
             GroupDetailsUiEvent.MemberRemovalConfirmed -> confirmMemberRemoval()
             GroupDetailsUiEvent.MemberRemovalDismissed -> dismissMemberRemoval()
+            GroupDetailsUiEvent.MemberPromotionConfirmed -> confirmMemberPromotion()
+            GroupDetailsUiEvent.MemberPromotionDismissed -> dismissMemberPromotion()
             GroupDetailsUiEvent.LeaveGroupConfirmed -> leaveGroup()
             GroupDetailsUiEvent.LeaveGroupDismissed -> dismissLeaveError()
             GroupDetailsUiEvent.AddMembersClicked,
@@ -368,9 +397,67 @@ class GroupVerificationViewModel(
         }
     }
 
+    private fun requestMemberPromotion(contactId: String) {
+        val summary = uiState.value.summary
+        if (!summary.isLocalAdmin || contactId !in summary.promotableContactIds || memberManagementState.value.isUpdating) {
+            return
+        }
+        memberManagementState.update { state ->
+            state.copy(promotionCandidateContactId = contactId, errorMessage = null)
+        }
+    }
+
+    private fun dismissMemberPromotion() {
+        if (!memberManagementState.value.isUpdating) {
+            memberManagementState.update { state ->
+                state.copy(promotionCandidateContactId = null, errorMessage = null)
+            }
+        }
+    }
+
+    private fun confirmMemberPromotion() {
+        val contactId = memberManagementState.value.promotionCandidateContactId ?: return
+        if (memberManagementState.value.isUpdating) return
+        memberManagementState.update { state -> state.copy(isUpdating = true, errorMessage = null) }
+        viewModelScope.launch {
+            promoteGroupMember(conversationId, contactId)
+                .onSuccess {
+                    memberManagementState.update { state ->
+                        state.copy(
+                            promotionCandidateContactId = null,
+                            isUpdating = false,
+                            completedRevision = state.completedRevision + 1
+                        )
+                    }
+                }.onFailure { error ->
+                    memberManagementState.update { state ->
+                        state.copy(isUpdating = false, errorMessage = error.message ?: "Group member could not be promoted")
+                    }
+                }
+        }
+    }
+
+    private fun promoteMemberAndLeave(contactId: String) {
+        if (memberManagementState.value.isUpdating || leaveState.value.isLeaving) return
+        memberManagementState.update { state -> state.copy(isUpdating = true, errorMessage = null) }
+        leaveState.value = GroupLeaveUiState(isLeaving = true)
+        viewModelScope.launch {
+            transferGroupAdminAndLeave(conversationId, contactId)
+                .onSuccess {
+                    memberManagementState.update { state -> state.copy(isUpdating = false) }
+                    leaveState.value = GroupLeaveUiState(isLeaveRequested = true)
+                    navigator.popBackStackTo(AppRoute.Main)
+                }.onFailure { error ->
+                    leaveState.value = GroupLeaveUiState()
+                    memberManagementState.update { state ->
+                        state.copy(isUpdating = false, errorMessage = error.message ?: "Group member could not be promoted")
+                    }
+                }
+        }
+    }
+
     private fun leaveGroup() {
         if (
-            uiState.value.summary.isLocalAdmin ||
             leaveState.value.isLeaving ||
             leaveState.value.isLeaveRequested
         ) {
@@ -410,6 +497,7 @@ class GroupVerificationViewModel(
         val selectedContactIds: Set<String> = emptySet(),
         val searchQuery: String = "",
         val removalCandidateContactId: String? = null,
+        val promotionCandidateContactId: String? = null,
         val isUpdating: Boolean = false,
         val errorMessage: String? = null,
         val completedRevision: Int = 0

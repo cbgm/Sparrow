@@ -81,4 +81,32 @@ interface MessageDeliveryStatusDao {
         messageId: String,
         deliveryStatus: String
     ): Int
+
+    @Query(
+        """
+        UPDATE messages
+        SET deliveryStatus = :failedStatus
+        WHERE conversationId = :conversationId
+          AND isMine = 1
+          AND deliveryStatus = :sentStatus
+          AND EXISTS (
+              SELECT 1
+              FROM protocol_outbox
+              WHERE protocol_outbox.packetId = messages.packetId
+                AND protocol_outbox.status = 'SENT'
+                AND protocol_outbox.updatedAtEpochMilliseconds <= :sentBeforeEpochMilliseconds
+          )
+          AND NOT EXISTS (
+              SELECT 1
+              FROM message_recipient_states
+              WHERE message_recipient_states.messageId = messages.id
+          )
+        """
+    )
+    suspend fun markUnconfirmedDirectMessagesFailed(
+        conversationId: String,
+        sentStatus: String,
+        failedStatus: String,
+        sentBeforeEpochMilliseconds: Long
+    ): Int
 }

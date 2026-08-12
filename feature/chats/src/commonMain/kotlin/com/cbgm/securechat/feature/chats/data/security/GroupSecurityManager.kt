@@ -27,10 +27,72 @@ class GroupSecurityManager(
     suspend fun findOwnedGroupEpoch(groupId: String): Result<Int?> =
         runCatching {
             groupSecurityDao.findState(groupId)?.let { state ->
-                check(state.ownerContactId == null) {
-                    "Only the group owner may change group membership"
+                check(state.localRole.isGroupAdminRole()) {
+                    "Only a group admin may change group membership"
                 }
                 state.currentEpoch
+            }
+        }
+
+    suspend fun isLocalAdmin(groupId: String): Result<Boolean?> =
+        runCatching {
+            groupSecurityDao.findState(groupId)?.localRole?.isGroupAdminRole()
+        }
+
+    suspend fun findCurrentEpoch(groupId: String): Result<Int?> =
+        runCatching { groupSecurityDao.findState(groupId)?.currentEpoch }
+
+    suspend fun findLocalRole(groupId: String): Result<String?> =
+        runCatching { groupSecurityDao.findState(groupId)?.localRole }
+
+    suspend fun isRemoteMemberIdentityCurrent(
+        groupId: String,
+        contactId: String,
+        signingPublicKey: ByteArray
+    ): Result<Boolean> =
+        runCatching {
+            val state = groupSecurityDao.findState(groupId) ?: return@runCatching false
+            val memberKey =
+                groupSecurityDao.findMemberKey(
+                    groupId = groupId,
+                    epoch = state.currentEpoch,
+                    contactId = contactId
+                ) ?: return@runCatching false
+            memberKey.signingPublicKey.contentEquals(signingPublicKey)
+        }
+
+    suspend fun findRemoteMemberKey(
+        groupId: String,
+        contactId: String
+    ): Result<GroupMemberKeyEntity?> =
+        runCatching {
+            val state = groupSecurityDao.findState(groupId) ?: return@runCatching null
+            groupSecurityDao.findMemberKey(
+                groupId = groupId,
+                epoch = state.currentEpoch,
+                contactId = contactId
+            )
+        }
+
+    suspend fun requireRemoteAdmin(
+        groupId: String,
+        contactId: String,
+        signingPublicKey: ByteArray
+    ): Result<Unit> =
+        runCatching {
+            val state = groupSecurityDao.findState(groupId)
+                ?: error("Group security state was not found")
+            val memberKey =
+                groupSecurityDao.findMemberKey(
+                    groupId = groupId,
+                    epoch = state.currentEpoch,
+                    contactId = contactId
+                ) ?: error("Group authority is not part of the current epoch")
+            check(memberKey.role.isGroupAdminRole()) {
+                "Group update sender is not an admin"
+            }
+            check(memberKey.signingPublicKey.contentEquals(signingPublicKey)) {
+                "Group admin signing identity changed"
             }
         }
 
@@ -47,10 +109,7 @@ class GroupSecurityManager(
             }
         }
 
-    suspend fun isOwnedGroup(groupId: String): Result<Boolean?> =
-        runCatching {
-            groupSecurityDao.findState(groupId)?.let { state -> state.ownerContactId == null }
-        }
+    suspend fun isOwnedGroup(groupId: String): Result<Boolean?> = isLocalAdmin(groupId)
 
     suspend fun deleteLocalGroup(groupId: String): Result<Unit> =
         runCatching {
@@ -68,8 +127,14 @@ class GroupSecurityManager(
             val state = groupSecurityDao.findState(packet.groupId)
             if (packet.epoch > GroupMemberRemovedPacket.PENDING_INVITATION_EPOCH) {
                 state?.let { activeState ->
-                    check(activeState.ownerContactId == ownerContactId) {
-                        "Group removal came from a contact that is not the group owner"
+                    val authority =
+                        groupSecurityDao.findMemberKey(
+                            groupId = packet.groupId,
+                            epoch = activeState.currentEpoch,
+                            contactId = ownerContactId
+                        ) ?: error("Group removal sender is not part of the current epoch")
+                    check(authority.role.isGroupAdminRole()) {
+                        "Group removal came from a contact that is not an admin"
                     }
                     check(packet.epoch > activeState.currentEpoch) {
                         "Group removal must reference a later epoch"
@@ -80,10 +145,6 @@ class GroupSecurityManager(
                 }
                 check(packet.removedMemberSigningPublicKey.contentEquals(localSigningPublicKey)) {
                     "Group removal targets a different member"
-                }
-            } else {
-                check(state == null || state.ownerContactId == ownerContactId) {
-                    "Pending group removal came from a contact that is not the group owner"
                 }
             }
 
@@ -111,13 +172,14 @@ class GroupSecurityManager(
                         ownerContactId = null,
                         ownerSigningPublicKey = localSigningKeyPair.publicKey.copyOf(),
                         localSigningPublicKey = localSigningKeyPair.publicKey.copyOf(),
+                        localRole = GROUP_OWNER_ROLE,
                         updatedAtEpochMilliseconds = createdAtEpochMilliseconds
                     )
                 } else {
                     check(
                         existingState.currentEpoch == INITIAL_EPOCH &&
                             existingState.welcomePacketId == null &&
-                            existingState.ownerContactId == null &&
+                            existingState.localRole.isGroupAdminRole() &&
                             existingState.ownerSigningPublicKey.contentEquals(localSigningKeyPair.publicKey) &&
                             existingState.localSigningPublicKey.contentEquals(localSigningKeyPair.publicKey)
                     ) {
@@ -195,11 +257,11 @@ class GroupSecurityManager(
             val existingState =
                 groupSecurityDao.findState(groupId)
                     ?: error("Group security state was not found")
-            check(existingState.ownerContactId == null) {
-                "Only the group owner may rotate the group epoch"
+            check(existingState.localRole.isGroupAdminRole()) {
+                "Only a group admin may rotate the group epoch"
             }
-            check(existingState.ownerSigningPublicKey.contentEquals(localSigningKeyPair.publicKey)) {
-                "Group owner signing key does not match the current security state"
+            check(existingState.localSigningPublicKey.contentEquals(localSigningKeyPair.publicKey)) {
+                "Local admin signing key does not match the current security state"
             }
 
             val nextEpoch = existingState.currentEpoch + 1
@@ -307,6 +369,7 @@ class GroupSecurityManager(
 
     suspend fun openWelcome(
         packet: GroupCreatedPacket,
+        senderContactId: String,
         expectedOwnerEncryptionPublicKey: ByteArray,
         expectedOwnerSigningPublicKey: ByteArray,
         localEncryptionKeyPair: LocalEncryptionKeyPair,
@@ -325,8 +388,17 @@ class GroupSecurityManager(
                 ) {
                     "Group welcome epoch must repeat the current epoch or advance it by one"
                 }
-                check(existingState.ownerSigningPublicKey.contentEquals(expectedOwnerSigningPublicKey)) {
-                    "Group owner signing key changed during the epoch update"
+                val authority =
+                    groupSecurityDao.findMemberKey(
+                        groupId = packet.groupId,
+                        epoch = existingState.currentEpoch,
+                        contactId = senderContactId
+                    ) ?: error("Group update sender is not part of the current epoch")
+                check(authority.role.isGroupAdminRole()) {
+                    "Group update sender is not an admin"
+                }
+                check(authority.signingPublicKey.contentEquals(expectedOwnerSigningPublicKey)) {
+                    "Group admin signing key changed during the epoch update"
                 }
                 check(existingState.localSigningPublicKey.contentEquals(localSigningPublicKey)) {
                     "Local signing identity changed during the epoch update"
@@ -340,14 +412,20 @@ class GroupSecurityManager(
                 "Secure group members must all have public keys"
             }
 
-            val owner =
-                packet.members.singleOrNull { member -> member.role == GROUP_OWNER_ROLE }
-                    ?: error("Group welcome must contain exactly one owner")
-            check(owner.encryptionPublicKey.contentEquals(expectedOwnerEncryptionPublicKey)) {
-                "Group owner encryption key does not match the authenticated contact"
+            check(packet.members.any { member -> member.role.isGroupAdminRole() }) {
+                "Group welcome must contain at least one admin"
             }
-            check(owner.signingPublicKey.contentEquals(expectedOwnerSigningPublicKey)) {
-                "Group owner signing key does not match the authenticated contact"
+            if (existingState == null) {
+                val authority =
+                    packet.members.singleOrNull { member ->
+                        member.signingPublicKey.contentEquals(expectedOwnerSigningPublicKey)
+                    } ?: error("Authenticated group admin is missing from the group welcome")
+                check(authority.role.isGroupAdminRole()) {
+                    "Group welcome signer is not an admin"
+                }
+                check(authority.encryptionPublicKey.contentEquals(expectedOwnerEncryptionPublicKey)) {
+                    "Group admin encryption key does not match the authenticated contact"
+                }
             }
 
             groupCrypto
@@ -361,7 +439,6 @@ class GroupSecurityManager(
                 check(
                     existingState.currentEpoch == packet.epoch &&
                         existingState.welcomePacketId == packet.packetId &&
-                        existingState.ownerSigningPublicKey.contentEquals(expectedOwnerSigningPublicKey) &&
                         existingState.localSigningPublicKey.contentEquals(localSigningPublicKey)
                 ) {
                     "Group welcome conflicts with existing security state"
@@ -401,14 +478,28 @@ class GroupSecurityManager(
     suspend fun persistJoinedGroup(
         openedWelcome: OpenedGroupWelcome,
         ownerContactId: String,
+        authoritySigningPublicKey: ByteArray,
         localSigningPublicKey: ByteArray,
         memberKeys: List<GroupMemberKeyEntity>,
         receivedAtEpochMilliseconds: Long
     ): Result<Unit> =
         runCatching {
             val packet = openedWelcome.packet
-            val owner =
-                packet.members.single { member -> member.role == GROUP_OWNER_ROLE }
+            val localMember =
+                packet.members.single { member ->
+                    member.signingPublicKey.contentEquals(localSigningPublicKey)
+                }
+            val authority =
+                packet.members.firstOrNull { member ->
+                    member.signingPublicKey.contentEquals(authoritySigningPublicKey)
+                }
+            val authorityLeft =
+                authority == null &&
+                    packet.membershipChange?.reason == GroupMemberRemovedPacket.REASON_MEMBER_LEFT &&
+                    packet.membershipChange?.memberSigningPublicKey.contentEquals(authoritySigningPublicKey)
+            check(authority?.role?.isGroupAdminRole() == true || authorityLeft) {
+                "Group welcome authority is not an admin"
+            }
 
             groupKeyStorage
                 .save(
@@ -424,8 +515,9 @@ class GroupSecurityManager(
                     currentEpoch = packet.epoch,
                     welcomePacketId = packet.packetId,
                     ownerContactId = ownerContactId,
-                    ownerSigningPublicKey = owner.signingPublicKey.copyOf(),
+                    ownerSigningPublicKey = authority?.signingPublicKey?.copyOf() ?: authoritySigningPublicKey.copyOf(),
                     localSigningPublicKey = localSigningPublicKey.copyOf(),
+                    localRole = localMember.role,
                     updatedAtEpochMilliseconds = receivedAtEpochMilliseconds
                 )
             if (existingState == null || packet.epoch > existingState.currentEpoch) {
@@ -438,8 +530,8 @@ class GroupSecurityManager(
                     existingState.currentEpoch == joinedState.currentEpoch &&
                         existingState.welcomePacketId == joinedState.welcomePacketId &&
                         existingState.ownerContactId == joinedState.ownerContactId &&
-                        existingState.ownerSigningPublicKey.contentEquals(joinedState.ownerSigningPublicKey) &&
-                        existingState.localSigningPublicKey.contentEquals(joinedState.localSigningPublicKey)
+                        existingState.localSigningPublicKey.contentEquals(joinedState.localSigningPublicKey) &&
+                        existingState.localRole == joinedState.localRole
                 ) {
                     "Repeated group welcome conflicts with the installed group state"
                 }
@@ -569,7 +661,6 @@ class GroupSecurityManager(
 
     private companion object {
         const val INITIAL_EPOCH = 1
-        const val GROUP_OWNER_ROLE = "OWNER"
         val GROUP_KEY_CONFIRMATION_DOMAIN = "securechat.group-key-confirmation.v1".encodeToByteArray()
         val UNSIGNED_PACKET_MARKER = byteArrayOf(0)
     }

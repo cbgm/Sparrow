@@ -49,6 +49,10 @@ private fun Route.installInformationRoute(
     config: GatewayConfig
 ) {
     get("/v1/gateway") {
+        call.response.headers.append(
+            SERVER_TIME_HEADER,
+            System.currentTimeMillis().toString()
+        )
         call.respond(
             GatewayNodeInformation(
                 nodeId = identity.nodeId,
@@ -181,3 +185,5 @@ private fun ApplicationCall.hasInternalAccess(expectedToken: String?): Boolean =
 private data class GatewayControlPlaneDirectory(
     val controlPlanes: List<String>
 )
+
+private const val SERVER_TIME_HEADER = "X-SecureChat-Server-Time"

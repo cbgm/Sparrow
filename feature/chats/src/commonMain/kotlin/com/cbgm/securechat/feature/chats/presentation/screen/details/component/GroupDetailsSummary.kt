@@ -18,6 +18,8 @@ import com.cbgm.securechat.resources.feature_chats_group_details_accepted
 import com.cbgm.securechat.resources.feature_chats_group_details_description
 import com.cbgm.securechat.resources.feature_chats_group_details_total
 import com.cbgm.securechat.resources.feature_chats_group_details_verified
+import com.cbgm.securechat.resources.feature_chats_group_orphaned_description
+import com.cbgm.securechat.resources.feature_chats_group_orphaned_title
 import com.cbgm.securechat.resources.feature_chats_group_verification_pending_note
 import org.jetbrains.compose.resources.stringResource
 
@@ -29,6 +31,21 @@ internal fun GroupDetailsSummary(summary: GroupVerificationSummaryUiState) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+
+        if (summary.isOrphaned) {
+            Text(
+                text = stringResource(Res.string.feature_chats_group_orphaned_title),
+                modifier = Modifier.padding(top = MaterialTheme.spacing.small),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.error
+            )
+            Text(
+                text = stringResource(Res.string.feature_chats_group_orphaned_description),
+                modifier = Modifier.padding(top = MaterialTheme.spacing.base.div(2)),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
 
         Row(
             modifier =

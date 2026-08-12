@@ -114,6 +114,18 @@ class MessageDeliveryStateMachineTest {
     }
 
     @Test
+    fun deliveryTimeoutMarksRelayAcceptedMessageAsFailed() {
+        assertEquals(
+            expected = MessageDeliveryStatus.FAILED,
+            actual =
+                MessageDeliveryStateMachine.transition(
+                    current = MessageDeliveryStatus.SENT,
+                    event = MessageDeliveryEvent.DELIVERY_TIMED_OUT
+                )
+        )
+    }
+
+    @Test
     fun groupStatusIsDerivedFromRecipientStates() {
         assertEquals(
             expected = MessageDeliveryStatus.SENT,
@@ -175,7 +187,7 @@ class MessageDeliveryStateMachineTest {
                 )
         )
         assertEquals(
-            expected = MessageDeliveryStatus.QUEUED,
+            expected = MessageDeliveryStatus.FAILED,
             actual =
                 MessageDeliveryStateMachine.aggregate(
                     listOf(

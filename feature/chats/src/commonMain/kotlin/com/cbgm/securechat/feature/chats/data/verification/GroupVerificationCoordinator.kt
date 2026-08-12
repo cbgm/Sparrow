@@ -14,12 +14,14 @@ import com.cbgm.securechat.core.protocol.packet.GroupVerificationSnapshotPacket
 import com.cbgm.securechat.core.protocol.packet.GroupVerificationSnapshotRequestPacket
 import com.cbgm.securechat.core.protocol.version.ProtocolVersion
 import com.cbgm.securechat.core.time.SystemClock
+import com.cbgm.securechat.data.database.dao.ChatDao
 import com.cbgm.securechat.data.database.dao.GroupInvitationDao
 import com.cbgm.securechat.data.database.dao.GroupSecurityDao
 import com.cbgm.securechat.data.database.dao.GroupVerificationDao
 import com.cbgm.securechat.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.securechat.feature.chats.data.invitation.GroupInvitationDirection
 import com.cbgm.securechat.feature.chats.data.invitation.GroupInvitationStatus
+import com.cbgm.securechat.feature.chats.data.security.isGroupAdminRole
 import com.cbgm.securechat.feature.chats.domain.repository.GroupVerificationGateway
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
 import com.cbgm.securechat.feature.contacts.domain.model.KeyExchangeStatus
@@ -28,6 +30,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 class GroupVerificationCoordinator(
+    private val chatDao: ChatDao,
     private val groupVerificationDao: GroupVerificationDao,
     private val groupInvitationDao: GroupInvitationDao,
     private val groupSecurityDao: GroupSecurityDao,
@@ -73,14 +76,16 @@ class GroupVerificationCoordinator(
                 }
 
                 val ownerContactId = securityState.ownerContactId
-                if (ownerContactId == null) {
+                if (securityState.localRole.isGroupAdminRole()) {
                     refreshOwnedStateLocked(groupId)
                     broadcastSnapshotLocked(groupId)
                 } else {
-                    enqueueSnapshotRequestLocked(
-                        groupId = groupId,
-                        ownerContactId = ownerContactId
-                    )
+                    ownerContactId?.let { adminContactId ->
+                        enqueueSnapshotRequestLocked(
+                            groupId = groupId,
+                            ownerContactId = adminContactId
+                        )
+                    }
                 }
             }
         }
@@ -90,8 +95,8 @@ class GroupVerificationCoordinator(
             mutex.withLock {
                 val securityState = groupSecurityDao.findState(groupId)
                 if (securityState != null) {
-                    check(securityState.ownerContactId == null) {
-                        "Only the group owner may publish membership verification state"
+                    check(securityState.localRole.isGroupAdminRole()) {
+                        "Only a group admin may publish membership verification state"
                     }
                 } else {
                     val ownsGroup =
@@ -128,7 +133,7 @@ class GroupVerificationCoordinator(
                     groupSecurityDao.findState(groupId)
                         ?: error("Group security state was not found")
 
-                if (securityState.ownerContactId == null) {
+                if (securityState.localRole.isGroupAdminRole()) {
                     verifyParticipantAsOwnerLocked(
                         groupId = groupId,
                         participantContactId = contactId
@@ -163,22 +168,14 @@ class GroupVerificationCoordinator(
                 val securityState =
                     groupSecurityDao.findState(packet.groupId)
                         ?: error("Group security state was not found")
-                check(securityState.ownerContactId == null) {
-                    "Only the group owner may receive participant verification receipts"
+                check(securityState.localRole.isGroupAdminRole()) {
+                    "Only a group admin may receive participant verification receipts"
                 }
 
-                val invitation =
-                    groupInvitationDao.findByInvitationId(packet.invitationId)
-                        ?: error("Group invitation was not found")
-                check(invitation.groupId == packet.groupId) {
-                    "Group verification receipt belongs to a different group"
-                }
-                check(invitation.contactId == context.contactId) {
-                    "Group verification receipt came from the wrong participant"
-                }
-                check(invitation.status == GroupInvitationStatus.ACTIVE.name) {
-                    "Only an active participant may verify the group admin"
-                }
+                requireCurrentParticipant(
+                    groupId = packet.groupId,
+                    contactId = context.contactId
+                )
 
                 val participant = loadContact(context.contactId)
                 val participantIdentity =
@@ -219,10 +216,15 @@ class GroupVerificationCoordinator(
                     ).getOrThrow()
 
                 refreshOwnedStateLocked(packet.groupId)
+                val verificationRow =
+                    groupVerificationDao
+                        .findByGroupId(packet.groupId)
+                        .firstOrNull { row -> row.contactId == context.contactId }
+                        ?: error("Participant verification state was not found")
                 val updated =
                     groupVerificationDao.markParticipantVerifiedAdmin(
                         groupId = packet.groupId,
-                        invitationId = packet.invitationId,
+                        invitationId = verificationRow.invitationId,
                         updatedAt =
                             maxOf(
                                 packet.verifiedAtEpochMilliseconds,
@@ -255,22 +257,14 @@ class GroupVerificationCoordinator(
                 val securityState =
                     groupSecurityDao.findState(packet.groupId)
                         ?: error("Group security state was not found")
-                check(securityState.ownerContactId == null) {
-                    "Only the group owner may answer verification snapshot requests"
+                check(securityState.localRole.isGroupAdminRole()) {
+                    "Only a group admin may answer verification snapshot requests"
                 }
 
-                val invitation =
-                    groupInvitationDao.findByInvitationId(packet.invitationId)
-                        ?: error("Group invitation was not found")
-                check(invitation.groupId == packet.groupId) {
-                    "Snapshot request belongs to a different group"
-                }
-                check(invitation.contactId == context.contactId) {
-                    "Snapshot request came from the wrong participant"
-                }
-                check(invitation.status == GroupInvitationStatus.ACTIVE.name) {
-                    "Only an active participant may request group verification state"
-                }
+                requireCurrentParticipant(
+                    groupId = packet.groupId,
+                    contactId = context.contactId
+                )
 
                 val participantIdentity =
                     loadContact(context.contactId).secureChatIdentity
@@ -319,13 +313,14 @@ class GroupVerificationCoordinator(
                 val securityState =
                     groupSecurityDao.findState(packet.groupId)
                         ?: error("Group security state was not found")
-                val ownerContactId =
-                    securityState.ownerContactId
-                        ?: error("The group owner must not consume its own verification snapshot")
-                check(ownerContactId == context.contactId) {
-                    "Group verification snapshot was not sent by the group admin"
+                check(!securityState.localRole.isGroupAdminRole()) {
+                    "A group admin must not consume another admin's verification snapshot"
                 }
-
+                requireCurrentRemoteAdmin(
+                    groupId = packet.groupId,
+                    contactId = context.contactId
+                )
+                val ownerContactId = context.contactId
                 val ownerIdentity =
                     loadContact(ownerContactId).secureChatIdentity
                         ?: error("Group admin has no SecureChat identity")
@@ -335,10 +330,6 @@ class GroupVerificationCoordinator(
                 check(ownerIdentity.signingPublicKey.contentEquals(packet.ownerSigningPublicKey)) {
                     "Group verification snapshot admin signing key changed"
                 }
-                check(securityState.ownerSigningPublicKey.contentEquals(packet.ownerSigningPublicKey)) {
-                    "Group verification snapshot does not match the pinned group admin"
-                }
-
                 detachedSignatureCrypto
                     .verify(
                         payload = payloadEncoder.encodeSnapshot(packet),
@@ -383,14 +374,10 @@ class GroupVerificationCoordinator(
     ) {
         refreshOwnedStateLocked(groupId)
 
-        val invitation =
-            groupInvitationDao.findByGroupAndContact(
-                groupId = groupId,
-                contactId = participantContactId
-            ) ?: error("Participant invitation was not found")
-        check(invitation.status == GroupInvitationStatus.ACTIVE.name) {
-            "The participant must accept the invitation before verification"
-        }
+        requireCurrentParticipant(
+            groupId = groupId,
+            contactId = participantContactId
+        )
 
         val participantIdentity =
             loadContact(participantContactId).secureChatIdentity
@@ -400,10 +387,10 @@ class GroupVerificationCoordinator(
         }
 
         val row =
-            groupVerificationDao.findPair(
-                groupId = groupId,
-                invitationId = invitation.invitationId
-            ) ?: error("Participant verification state was not found")
+            groupVerificationDao
+                .findByGroupId(groupId)
+                .firstOrNull { candidate -> candidate.contactId == participantContactId }
+                ?: error("Participant verification state was not found")
         check(
             row.participantEncryptionPublicKey?.contentEquals(
                 participantIdentity.encryptionPublicKey
@@ -418,7 +405,7 @@ class GroupVerificationCoordinator(
         val updated =
             groupVerificationDao.markAdminVerifiedParticipant(
                 groupId = groupId,
-                invitationId = invitation.invitationId,
+                invitationId = row.invitationId,
                 updatedAt = SystemClock.nowEpochMilliseconds()
             )
         check(updated == 1) {
@@ -437,9 +424,6 @@ class GroupVerificationCoordinator(
                 .findByGroupId(groupId)
                 .singleOrNull()
                 ?: error("Local group invitation was not found")
-        check(invitation.contactId == ownerContactId) {
-            "Local group invitation does not belong to the group admin"
-        }
         check(invitation.status == GroupInvitationStatus.ACTIVE.name) {
             "The group invitation must be active before verification"
         }
@@ -543,76 +527,102 @@ class GroupVerificationCoordinator(
             ).getOrThrow()
     }
 
+    private suspend fun requireCurrentParticipant(
+        groupId: String,
+        contactId: String
+    ) {
+        val state = groupSecurityDao.findState(groupId) ?: error("Group security state was not found")
+        check(
+            chatDao.findConversationParticipants(groupId)
+                .any { participant -> participant.contactId == contactId }
+        ) { "Contact is not an active group participant" }
+        val identity =
+            loadContact(contactId).secureChatIdentity
+                ?: error("Group participant has no SecureChat identity")
+        val memberKey =
+            groupSecurityDao.findMemberKey(
+                groupId = groupId,
+                epoch = state.currentEpoch,
+                contactId = contactId
+            ) ?: error("Group participant is not part of the current epoch")
+        check(memberKey.signingPublicKey.contentEquals(identity.signingPublicKey)) {
+            "Group participant identity no longer matches the current epoch"
+        }
+    }
+
+    private suspend fun requireCurrentRemoteAdmin(
+        groupId: String,
+        contactId: String
+    ) {
+        requireCurrentParticipant(groupId, contactId)
+        val state = groupSecurityDao.findState(groupId) ?: error("Group security state was not found")
+        val memberKey =
+            groupSecurityDao.findMemberKey(
+                groupId = groupId,
+                epoch = state.currentEpoch,
+                contactId = contactId
+            ) ?: error("Group admin is not part of the current epoch")
+        check(memberKey.role.isGroupAdminRole()) { "Group participant is not an admin" }
+    }
+
     private suspend fun refreshOwnedStateLocked(groupId: String) {
-        val existing =
-            groupVerificationDao
-                .findByGroupId(groupId)
-                .associateBy(GroupVerificationPairEntity::invitationId)
+        val existingRows = groupVerificationDao.findByGroupId(groupId)
+        val existingByContactId = existingRows.mapNotNull { row -> row.contactId?.let { it to row } }.toMap()
+        val invitations = groupInvitationDao.findByGroupId(groupId)
+        val invitationByContactId = invitations.associateBy { invitation -> invitation.contactId }
+        val participants = chatDao.findConversationParticipants(groupId)
         val now = SystemClock.nowEpochMilliseconds()
-        val rows =
-            groupInvitationDao
-                .findByGroupId(groupId)
-                .filterNot { invitation -> invitation.status.isTerminalStatus() }
-                .map { invitation ->
+
+        val activeRows =
+            participants.map { participant ->
+                val contact = loadContact(participant.contactId)
+                val identity = contact.secureChatIdentity
+                val invitation = invitationByContactId[participant.contactId]
+                val previous = existingByContactId[participant.contactId]
+                val sameIdentity =
+                    previous?.participantEncryptionPublicKey != null &&
+                        previous.participantSigningPublicKey != null &&
+                        identity != null &&
+                        previous.participantEncryptionPublicKey.contentEquals(identity.encryptionPublicKey) &&
+                        previous.participantSigningPublicKey.contentEquals(identity.signingPublicKey)
+                GroupVerificationPairEntity(
+                    groupId = groupId,
+                    invitationId = invitation?.invitationId ?: previous?.invitationId ?: "member-${participant.contactId}",
+                    contactId = participant.contactId,
+                    displayName = contact.displayName?.trim()?.takeIf(String::isNotBlank) ?: "Unknown member",
+                    membershipStatus = GroupVerificationPairEntity.ACTIVE_STATUS,
+                    participantEncryptionPublicKey = identity?.encryptionPublicKey?.copyOf(),
+                    participantSigningPublicKey = identity?.signingPublicKey?.copyOf(),
+                    adminVerifiedParticipant = sameIdentity && previous?.adminVerifiedParticipant == true,
+                    participantVerifiedAdmin = sameIdentity && previous?.participantVerifiedAdmin == true,
+                    updatedAtEpochMilliseconds = maxOf(invitation?.updatedAtEpochMilliseconds ?: 0L, now)
+                )
+            }
+
+        val activeContactIds = participants.mapTo(mutableSetOf()) { participant -> participant.contactId }
+        val pendingRows =
+            invitations
+                .filterNot { invitation ->
+                    invitation.status.isTerminalStatus() || invitation.contactId in activeContactIds
+                }.map { invitation ->
                     val contact = loadContact(invitation.contactId)
                     val identity = contact.secureChatIdentity
-                    val previous = existing[invitation.invitationId]
-                    val previousEncryptionPublicKey =
-                        previous?.participantEncryptionPublicKey
-                    val previousSigningPublicKey =
-                        previous?.participantSigningPublicKey
-                    val sameIdentity =
-                        previousEncryptionPublicKey != null &&
-                            previousSigningPublicKey != null &&
-                            identity != null &&
-                            previousEncryptionPublicKey.contentEquals(
-                                identity.encryptionPublicKey
-                            ) &&
-                            previousSigningPublicKey.contentEquals(
-                                identity.signingPublicKey
-                            )
-                    val isActive =
-                        invitation.status == GroupInvitationStatus.ACTIVE.name
-
+                    val previous = existingByContactId[invitation.contactId]
                     GroupVerificationPairEntity(
                         groupId = groupId,
                         invitationId = invitation.invitationId,
                         contactId = invitation.contactId,
-                        displayName =
-                            contact.displayName
-                                ?.trim()
-                                ?.takeIf(String::isNotBlank)
-                                ?: "Unknown member",
-                        membershipStatus =
-                            if (isActive) {
-                                GroupVerificationPairEntity.ACTIVE_STATUS
-                            } else {
-                                GroupVerificationPairEntity.PENDING_STATUS
-                            },
-                        participantEncryptionPublicKey =
-                            identity?.encryptionPublicKey?.copyOf(),
-                        participantSigningPublicKey =
-                            identity?.signingPublicKey?.copyOf(),
-                        adminVerifiedParticipant =
-                            isActive &&
-                                sameIdentity &&
-                                previous?.adminVerifiedParticipant == true,
-                        participantVerifiedAdmin =
-                            isActive &&
-                                sameIdentity &&
-                                previous?.participantVerifiedAdmin == true,
-                        updatedAtEpochMilliseconds =
-                            maxOf(
-                                invitation.updatedAtEpochMilliseconds,
-                                now
-                            )
+                        displayName = contact.displayName?.trim()?.takeIf(String::isNotBlank) ?: "Unknown member",
+                        membershipStatus = GroupVerificationPairEntity.PENDING_STATUS,
+                        participantEncryptionPublicKey = identity?.encryptionPublicKey?.copyOf(),
+                        participantSigningPublicKey = identity?.signingPublicKey?.copyOf(),
+                        adminVerifiedParticipant = false,
+                        participantVerifiedAdmin = false,
+                        updatedAtEpochMilliseconds = maxOf(invitation.updatedAtEpochMilliseconds, previous?.updatedAtEpochMilliseconds ?: 0L)
                     )
                 }
 
-        groupVerificationDao.replaceGroup(
-            groupId = groupId,
-            rows = rows
-        )
+        groupVerificationDao.replaceGroup(groupId = groupId, rows = activeRows + pendingRows)
     }
 
     private suspend fun broadcastSnapshotLocked(groupId: String) {
@@ -625,10 +635,13 @@ class GroupVerificationCoordinator(
                 }
 
         activeRows.forEach { row ->
-            sendSnapshotLocked(
-                groupId = groupId,
-                recipientContactId = checkNotNull(row.contactId)
-            )
+            val contactId = checkNotNull(row.contactId)
+            if (runCatching { requireCurrentParticipant(groupId, contactId) }.isSuccess) {
+                sendSnapshotLocked(
+                    groupId = groupId,
+                    recipientContactId = contactId
+                )
+            }
         }
     }
 

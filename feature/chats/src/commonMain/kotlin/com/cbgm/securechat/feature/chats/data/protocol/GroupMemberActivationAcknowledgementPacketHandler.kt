@@ -4,16 +4,16 @@ import com.cbgm.securechat.core.protocol.handler.IncomingPacketContext
 import com.cbgm.securechat.core.protocol.handler.TypedProtocolPacketHandler
 import com.cbgm.securechat.core.protocol.packet.GroupMemberActivationAcknowledgementPacket
 import com.cbgm.securechat.core.protocol.packet.SecureChatPacket
+import com.cbgm.securechat.data.database.dao.ChatDao
 import com.cbgm.securechat.data.database.dao.ContactDao
-import com.cbgm.securechat.data.database.dao.GroupInvitationDao
 import com.cbgm.securechat.data.database.dao.GroupSecurityDao
 import com.cbgm.securechat.feature.chats.data.invitation.GroupInvitationCoordinator
-import com.cbgm.securechat.feature.chats.data.invitation.GroupInvitationStatus
 import com.cbgm.securechat.feature.chats.data.security.GroupInvitationManager
+import com.cbgm.securechat.feature.chats.data.security.isGroupAdminRole
 
 class GroupMemberActivationAcknowledgementPacketHandler(
+    private val chatDao: ChatDao,
     private val contactDao: ContactDao,
-    private val groupInvitationDao: GroupInvitationDao,
     private val groupSecurityDao: GroupSecurityDao,
     private val groupInvitationManager: GroupInvitationManager,
     private val groupInvitationCoordinator: GroupInvitationCoordinator
@@ -38,8 +38,8 @@ class GroupMemberActivationAcknowledgementPacketHandler(
             check(securityState.currentEpoch == acknowledgement.epoch) {
                 "Group member activation acknowledgement uses the wrong epoch"
             }
-            check(securityState.ownerContactId == null) {
-                "Only the group owner may receive member activation acknowledgements"
+            check(securityState.localRole.isGroupAdminRole()) {
+                "Only a group admin may receive member activation acknowledgements"
             }
 
             val acknowledgingIdentity =
@@ -55,10 +55,10 @@ class GroupMemberActivationAcknowledgementPacketHandler(
             ) {
                 "Acknowledgement signing identity does not match the authenticated contact"
             }
-            val invitation =
-                groupInvitationDao.findByGroupAndContact(acknowledgement.groupId, context.contactId)
-                    ?: error("Acknowledging group member invitation was not found")
-            check(invitation.status == GroupInvitationStatus.ACTIVE.name) {
+            check(
+                chatDao.findConversationParticipants(acknowledgement.groupId)
+                    .any { participant -> participant.contactId == context.contactId }
+            ) {
                 "Only an active group member may acknowledge another member"
             }
 

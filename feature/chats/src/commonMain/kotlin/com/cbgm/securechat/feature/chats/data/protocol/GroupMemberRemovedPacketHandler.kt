@@ -33,47 +33,40 @@ class GroupMemberRemovedPacketHandler(
             val removal =
                 packet as? GroupMemberRemovedPacket
                     ?: error("GroupMemberRemovedPacketHandler received an incompatible packet")
-            val invitation =
-                groupInvitationDao.findByInvitationId(removal.invitationId)
-                    ?: error("Removed group invitation was not found")
-            check(invitation.groupId == removal.groupId) {
-                "Group removal references the wrong group"
-            }
-            check(invitation.contactId == context.contactId) {
-                "Group removal came from a contact that is not the inviter"
-            }
-            check(invitation.challenge.contentEquals(removal.challenge)) {
-                "Group removal invitation challenge does not match"
-            }
-            val ownerIdentity =
+            val authorityIdentity =
                 contactDao.findPublicIdentityByContactId(context.contactId)
-                    ?: error("Group owner identity was not found")
+                    ?: error("Group admin identity was not found")
             groupInvitationManager
                 .verifyMemberRemoved(
                     packet = removal,
-                    expectedOwnerSigningPublicKey = ownerIdentity.signingPublicKey
+                    expectedOwnerSigningPublicKey = authorityIdentity.signingPublicKey
                 ).getOrThrow()
-            val isAlreadyRemoved = invitation.status == GroupInvitationStatus.REMOVED.name
-            if (
-                !isAlreadyRemoved &&
-                removal.epoch == GroupMemberRemovedPacket.PENDING_INVITATION_EPOCH
-            ) {
+
+            val invitation = groupInvitationDao.findByInvitationId(removal.invitationId)
+            if (removal.epoch == GroupMemberRemovedPacket.PENDING_INVITATION_EPOCH) {
+                val pending = invitation ?: error("Removed group invitation was not found")
+                check(pending.groupId == removal.groupId) { "Group removal references the wrong group" }
+                check(pending.contactId == context.contactId) {
+                    "Pending group removal came from a contact that is not the inviter"
+                }
+                check(pending.challenge.contentEquals(removal.challenge)) {
+                    "Group removal invitation challenge does not match"
+                }
                 check(
-                    invitation.status == GroupInvitationStatus.AWAITING_ACCEPTANCE.name ||
-                        invitation.status == GroupInvitationStatus.JOIN_SENT.name
+                    pending.status == GroupInvitationStatus.AWAITING_ACCEPTANCE.name ||
+                        pending.status == GroupInvitationStatus.JOIN_SENT.name
                 ) {
                     "An installed group key requires an epoch-advancing removal"
                 }
-            } else if (!isAlreadyRemoved) {
-                check(
-                    invitation.status == GroupInvitationStatus.JOIN_SENT.name ||
-                        invitation.status == GroupInvitationStatus.WAITING_FOR_ACTIVATION.name ||
-                        invitation.status == GroupInvitationStatus.ACTIVE.name ||
-                        invitation.status == GroupInvitationStatus.LEAVE_SENT.name
-                ) {
-                    "Group membership cannot be removed from status ${invitation.status}"
-                }
+            } else {
+                groupSecurityManager
+                    .requireRemoteAdmin(
+                        groupId = removal.groupId,
+                        contactId = context.contactId,
+                        signingPublicKey = authorityIdentity.signingPublicKey
+                    ).getOrThrow()
             }
+
             val isLocallyHidden =
                 chatDao.hasMessageWithTransportMode(
                     conversationId = removal.groupId,
@@ -106,15 +99,15 @@ class GroupMemberRemovedPacketHandler(
                     }
                 )
             }
-            if (!isAlreadyRemoved) {
-                val updated =
+            invitation?.let { existing ->
+                if (existing.status != GroupInvitationStatus.REMOVED.name) {
                     groupInvitationDao.updateStatus(
-                        invitationId = invitation.invitationId,
-                        expectedStatus = invitation.status,
+                        invitationId = existing.invitationId,
+                        expectedStatus = existing.status,
                         newStatus = GroupInvitationStatus.REMOVED.name,
                         updatedAt = removal.removedAtEpochMilliseconds
                     )
-                check(updated == 1) { "Group invitation changed while removal was applied" }
+                }
             }
             groupVerificationDao.deleteByGroupId(removal.groupId)
         }

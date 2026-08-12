@@ -5,13 +5,16 @@ import com.cbgm.securechat.core.logging.SecureChatLog
 import com.cbgm.securechat.core.ui.navigation.AppRoute
 import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.chats.domain.model.Conversation
+import com.cbgm.securechat.feature.chats.domain.model.GroupAdministrationState
 import com.cbgm.securechat.feature.chats.domain.model.GroupConversationState
 import com.cbgm.securechat.feature.chats.domain.model.GroupMemberInvitationStatus
 import com.cbgm.securechat.feature.chats.domain.usecase.AcceptGroupInvitation
 import com.cbgm.securechat.feature.chats.domain.usecase.DeclineGroupInvitation
 import com.cbgm.securechat.feature.chats.domain.usecase.MarkConversationRead
 import com.cbgm.securechat.feature.chats.domain.usecase.ObserveConversation
+import com.cbgm.securechat.feature.chats.domain.usecase.ObserveGroupAdministration
 import com.cbgm.securechat.feature.chats.domain.usecase.ObserveTypingIndicator
+import com.cbgm.securechat.feature.chats.domain.usecase.RefreshDeliveryState
 import com.cbgm.securechat.feature.chats.domain.usecase.RetryMessage
 import com.cbgm.securechat.feature.chats.domain.usecase.SendGroupMessage
 import com.cbgm.securechat.feature.chats.domain.usecase.SetTypingIndicator
@@ -41,9 +44,11 @@ import kotlin.time.Duration.Companion.milliseconds
 class GroupChatViewModel(
     private val conversationId: String,
     observeConversation: ObserveConversation,
+    observeGroupAdministration: ObserveGroupAdministration,
     private val sendGroupMessage: SendGroupMessage,
     private val markConversationReadUseCase: MarkConversationRead,
     private val retryMessageUseCase: RetryMessage,
+    private val refreshDeliveryState: RefreshDeliveryState,
     private val acceptGroupInvitation: AcceptGroupInvitation,
     private val declineGroupInvitation: DeclineGroupInvitation,
     observeContacts: ObserveContacts,
@@ -79,14 +84,24 @@ class GroupChatViewModel(
             .onStart { emit(emptyList()) }
             .catch { emit(emptyList()) }
 
-    val uiState: StateFlow<ChatUiState> =
+    private val conversationAdministrationFlow =
         combine(
             conversationFlow,
+            observeGroupAdministration(conversationId)
+                .onStart { emit(GroupAdministrationState()) }
+        ) { observation, administration ->
+            observation to administration
+        }
+
+    val uiState: StateFlow<ChatUiState> =
+        combine(
+            conversationAdministrationFlow,
             contactsFlow,
             messageText,
             errorMessage,
             typingContactIds
-        ) { observation, contacts, currentMessageText, currentError, currentTypingContactIds ->
+        ) { conversationAndAdministration, contacts, currentMessageText, currentError, currentTypingContactIds ->
+            val (observation, administration) = conversationAndAdministration
             val conversation = observation.conversation
             val contactsById = contacts.associateBy { it.id }
             val messages =
@@ -117,11 +132,23 @@ class GroupChatViewModel(
                             it.groupMemberInvitationStates.map { member -> member.contactId }
                     ).distinct().size + 1
                 } ?: 0
-            val groupState = conversation?.groupState ?: GroupConversationState.READY
+            val baseGroupState = conversation?.groupState ?: GroupConversationState.READY
+            val groupState =
+                if (conversation != null && baseGroupState == GroupConversationState.READY && administration.isOrphaned) {
+                    GroupConversationState.ORPHANED
+                } else {
+                    baseGroupState
+                }
+            val readyForMessaging =
+                if (groupState == GroupConversationState.ORPHANED) {
+                    administration.currentMemberContactIds.isNotEmpty()
+                } else {
+                    conversation?.isGroupReady == true
+                }
             val messageInputEnabled =
                 conversation != null &&
                     (
-                        conversation.isGroupReady ||
+                        readyForMessaging ||
                             (
                                 !conversation.isIncomingGroupInvitation &&
                                     (
@@ -174,6 +201,7 @@ class GroupChatViewModel(
 
     init {
         observeParticipants()
+        observeDeliveryTimeouts()
     }
 
     fun onUiEvent(event: ChatUiEvent) {
@@ -189,6 +217,15 @@ class GroupChatViewModel(
             ChatUiEvent.BackClicked -> navigateBack()
             ChatUiEvent.AcceptGroupInvitation -> acceptInvitation()
             ChatUiEvent.DeclineGroupInvitation -> declineInvitation()
+        }
+    }
+
+    private fun observeDeliveryTimeouts() {
+        viewModelScope.launch {
+            while (true) {
+                refreshDeliveryState(conversationId)
+                delay(DELIVERY_REFRESH_INTERVAL_MILLISECONDS.milliseconds)
+            }
         }
     }
 
@@ -395,6 +432,7 @@ class GroupChatViewModel(
     }
 
     private companion object {
+        const val DELIVERY_REFRESH_INTERVAL_MILLISECONDS = 15_000L
         const val LOCAL_TYPING_TIMEOUT_MILLISECONDS = 1500
         const val REMOTE_TYPING_TIMEOUT_MILLISECONDS = 3000
     }

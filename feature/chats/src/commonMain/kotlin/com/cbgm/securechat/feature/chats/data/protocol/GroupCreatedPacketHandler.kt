@@ -27,6 +27,7 @@ import com.cbgm.securechat.feature.chats.data.invitation.GroupInvitationStatus
 import com.cbgm.securechat.feature.chats.data.message.GroupMembershipMessageFactory
 import com.cbgm.securechat.feature.chats.data.security.GroupInvitationManager
 import com.cbgm.securechat.feature.chats.data.security.GroupSecurityManager
+import com.cbgm.securechat.feature.chats.data.security.isGroupAdminRole
 import com.cbgm.securechat.feature.contacts.domain.model.ContactPhoneNumberType
 import com.cbgm.securechat.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.securechat.feature.contacts.domain.repository.ContactKeyExchangeStore
@@ -56,35 +57,38 @@ class GroupCreatedPacketHandler(
             val groupPacket =
                 packet as? GroupCreatedPacket
                     ?: error("GroupCreatedPacketHandler received an incompatible packet")
+            val existingSecurityState = groupSecurityDao.findState(groupPacket.groupId)
             val invitation =
                 groupInvitationDao.findByGroupAndContact(groupPacket.groupId, context.contactId)
-                    ?: error("Accepted group invitation was not found")
-            check(
-                invitation.status == GroupInvitationStatus.JOIN_SENT.name ||
-                    invitation.status == GroupInvitationStatus.WAITING_FOR_ACTIVATION.name ||
-                    invitation.status == GroupInvitationStatus.ACTIVE.name ||
-                    invitation.status == GroupInvitationStatus.LEAVE_SENT.name
-            ) {
-                "Group welcome arrived before the invitation was accepted"
-            }
-            check(
-                groupPacket.packetId ==
-                    groupSecurityManager.welcomePacketId(
-                        groupId = groupPacket.groupId,
-                        invitationId = invitation.invitationId,
-                        epoch = groupPacket.epoch
-                    )
-            ) {
-                "Group welcome does not belong to the current invitation"
+            if (existingSecurityState == null) {
+                val acceptedInvitation = invitation ?: error("Accepted group invitation was not found")
+                check(
+                    acceptedInvitation.status == GroupInvitationStatus.JOIN_SENT.name ||
+                        acceptedInvitation.status == GroupInvitationStatus.WAITING_FOR_ACTIVATION.name ||
+                        acceptedInvitation.status == GroupInvitationStatus.ACTIVE.name ||
+                        acceptedInvitation.status == GroupInvitationStatus.LEAVE_SENT.name
+                ) {
+                    "Group welcome arrived before the invitation was accepted"
+                }
+                check(
+                    groupPacket.packetId ==
+                        groupSecurityManager.welcomePacketId(
+                            groupId = groupPacket.groupId,
+                            invitationId = acceptedInvitation.invitationId,
+                            epoch = groupPacket.epoch
+                        )
+                ) {
+                    "Group welcome does not belong to the current invitation"
+                }
             }
             val persistedAtEpochMilliseconds =
                 maxOf(
                     groupPacket.createdAtEpochMilliseconds,
                     context.receivedAtEpochMilliseconds
                 )
-            val ownerIdentity =
+            val authorityIdentity =
                 contactDao.findPublicIdentityByContactId(context.contactId)
-                    ?: error("Group owner has no SecureChat identity")
+                    ?: error("Group admin has no SecureChat identity")
             val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
             val localEncryptionKeyPair =
                 localEncryptionKeyPairProvider.getEncryptionKeyPair().getOrThrow()
@@ -92,8 +96,9 @@ class GroupCreatedPacketHandler(
                 groupSecurityManager
                     .openWelcome(
                         packet = groupPacket,
-                        expectedOwnerEncryptionPublicKey = ownerIdentity.encryptionPublicKey,
-                        expectedOwnerSigningPublicKey = ownerIdentity.signingPublicKey,
+                        senderContactId = context.contactId,
+                        expectedOwnerEncryptionPublicKey = authorityIdentity.encryptionPublicKey,
+                        expectedOwnerSigningPublicKey = authorityIdentity.signingPublicKey,
                         localEncryptionKeyPair = localEncryptionKeyPair,
                         localSigningPublicKey = localIdentity.signingPublicKey
                     ).getOrThrow()
@@ -101,8 +106,8 @@ class GroupCreatedPacketHandler(
             contactKeyExchangeStore
                 .markMutual(
                     contactId = context.contactId,
-                    expectedRemoteEncryptionPublicKey = ownerIdentity.encryptionPublicKey,
-                    expectedRemoteSigningPublicKey = ownerIdentity.signingPublicKey
+                    expectedRemoteEncryptionPublicKey = authorityIdentity.encryptionPublicKey,
+                    expectedRemoteSigningPublicKey = authorityIdentity.signingPublicKey
                 ).getOrThrow()
 
             val previousParticipants =
@@ -148,7 +153,12 @@ class GroupCreatedPacketHandler(
                     return@forEach
                 }
 
-                val contactId = resolveMemberContact(member, context.contactId)
+                val contactId =
+                    resolveMemberContact(
+                        member = member,
+                        senderContactId = context.contactId,
+                        senderSigningPublicKey = authorityIdentity.signingPublicKey
+                    )
 
                 participants +=
                     ConversationParticipantEntity(
@@ -168,14 +178,39 @@ class GroupCreatedPacketHandler(
                     )
             }
 
-            check(memberKeys.any { member -> member.contactId == context.contactId }) {
-                "Authenticated sender is not the group owner"
+            val authorityLeft =
+                groupPacket.membershipChange?.reason == GroupMemberRemovedPacket.REASON_MEMBER_LEFT &&
+                    groupPacket.membershipChange?.memberSigningPublicKey.contentEquals(authorityIdentity.signingPublicKey)
+            check(
+                authorityLeft ||
+                    memberKeys.any { member ->
+                        member.contactId == context.contactId &&
+                            member.role.isGroupAdminRole()
+                    }
+            ) {
+                "Authenticated sender is not a group admin"
             }
+
+            val continuingRemoteAdmin =
+                memberKeys.firstOrNull { member -> member.role.isGroupAdminRole() }
+            val referenceAdminContactId =
+                if (authorityLeft) {
+                    continuingRemoteAdmin?.contactId ?: context.contactId
+                } else {
+                    context.contactId
+                }
+            val referenceAdminSigningPublicKey =
+                if (authorityLeft) {
+                    continuingRemoteAdmin?.signingPublicKey ?: authorityIdentity.signingPublicKey
+                } else {
+                    authorityIdentity.signingPublicKey
+                }
 
             groupSecurityManager
                 .persistJoinedGroup(
                     openedWelcome = openedWelcome,
-                    ownerContactId = context.contactId,
+                    ownerContactId = referenceAdminContactId,
+                    authoritySigningPublicKey = referenceAdminSigningPublicKey,
                     localSigningPublicKey = localIdentity.signingPublicKey,
                     memberKeys = memberKeys,
                     receivedAtEpochMilliseconds = persistedAtEpochMilliseconds
@@ -253,22 +288,34 @@ class GroupCreatedPacketHandler(
                     ).getOrThrow()
             protocolOutbox.enqueue(context.contactId, readyAcknowledgement).getOrThrow()
 
-            when (invitation.status) {
-                GroupInvitationStatus.JOIN_SENT.name -> {
-                    val updated =
-                        groupInvitationDao.updateStatus(
-                            invitationId = invitation.invitationId,
-                            expectedStatus = GroupInvitationStatus.JOIN_SENT.name,
-                            newStatus = GroupInvitationStatus.WAITING_FOR_ACTIVATION.name,
-                            updatedAt = maxOf(invitation.createdAtEpochMilliseconds, persistedAtEpochMilliseconds)
-                        )
-                    check(updated == 1) { "Group invitation changed while the welcome was applied" }
-                }
+            invitation?.let { acceptedInvitation ->
+                when (acceptedInvitation.status) {
+                    GroupInvitationStatus.JOIN_SENT.name -> {
+                        val updated =
+                            groupInvitationDao.updateStatus(
+                                invitationId = acceptedInvitation.invitationId,
+                                expectedStatus = GroupInvitationStatus.JOIN_SENT.name,
+                                newStatus = GroupInvitationStatus.WAITING_FOR_ACTIVATION.name,
+                                updatedAt =
+                                    maxOf(
+                                        acceptedInvitation.createdAtEpochMilliseconds,
+                                        persistedAtEpochMilliseconds
+                                    )
+                            )
+                        check(updated == 1) {
+                            "Group invitation changed while the welcome was applied"
+                        }
+                    }
 
-                GroupInvitationStatus.WAITING_FOR_ACTIVATION.name,
-                GroupInvitationStatus.ACTIVE.name,
-                GroupInvitationStatus.LEAVE_SENT.name -> Unit
-                else -> error("Group welcome arrived before the invitation was accepted")
+                    GroupInvitationStatus.WAITING_FOR_ACTIVATION.name,
+                    GroupInvitationStatus.ACTIVE.name,
+                    GroupInvitationStatus.LEAVE_SENT.name -> Unit
+                    else -> {
+                        if (existingSecurityState == null) {
+                            error("Group welcome arrived before the invitation was accepted")
+                        }
+                    }
+                }
             }
         }
 
@@ -283,9 +330,10 @@ class GroupCreatedPacketHandler(
 
     private suspend fun resolveMemberContact(
         member: GroupMemberPayload,
-        senderContactId: String
+        senderContactId: String,
+        senderSigningPublicKey: ByteArray
     ): String {
-        if (member.role == GROUP_OWNER_ROLE) {
+        if (member.signingPublicKey.contentEquals(senderSigningPublicKey)) {
             member.phoneNumber
                 ?.trim()
                 ?.takeIf { it.isNotEmpty() }
@@ -408,6 +456,5 @@ class GroupCreatedPacketHandler(
 
     private companion object {
         const val GROUP_CONVERSATION_TYPE = "GROUP"
-        const val GROUP_OWNER_ROLE = "OWNER"
     }
 }

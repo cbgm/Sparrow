@@ -8,6 +8,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ClientRouteRegistrationFactoryTest {
     @Test
@@ -68,5 +69,49 @@ class ClientRouteRegistrationFactoryTest {
             assertContentEquals(byteArrayOf(4, 5, 6), capturedPrivateKey)
             assertContentEquals(byteArrayOf(1, 2, 3), registration.clientSigningPublicKey)
             assertContentEquals(byteArrayOf(7, 8, 9), registration.route.clientSignature)
+        }
+
+    @Test
+    fun rejectsLocallyInconsistentSigningKeyPair() =
+        runTest {
+            val factory =
+                ClientRouteRegistrationFactory(
+                    signingKeyPairProvider =
+                        object : LocalSigningKeyPairProvider {
+                            override suspend fun getSigningKeyPair(): Result<LocalSigningKeyPair> =
+                                Result.success(
+                                    LocalSigningKeyPair(
+                                        publicKey = byteArrayOf(1, 2, 3),
+                                        privateKey = byteArrayOf(4, 5, 6)
+                                    )
+                                )
+                        },
+                    signatureCrypto =
+                        object : DetachedSignatureCrypto {
+                            override suspend fun sign(
+                                payload: ByteArray,
+                                signingPrivateKey: ByteArray
+                            ): Result<ByteArray> = Result.success(byteArrayOf(7, 8, 9))
+
+                            override suspend fun verify(
+                                payload: ByteArray,
+                                signingPublicKey: ByteArray,
+                                signature: ByteArray
+                            ): Result<Unit> =
+                                Result.failure(IllegalArgumentException("Mismatched signing key pair"))
+                        },
+                    json = createRelayJson()
+                )
+
+            val result =
+                factory.create(
+                    routingId = "scrouting1_test",
+                    nodeId = "node-a",
+                    connectionId = "connection-a",
+                    generation = 123L,
+                    expiresAtEpochMilliseconds = 456L
+                )
+
+            assertTrue(result.isFailure)
         }
 }

@@ -17,37 +17,55 @@ internal class GatewayRouteValidator(
         connectionRoutingId: String,
         connectionId: String,
         expectedNodeId: String
-    ): Boolean {
+    ): Boolean =
+        validationFailure(
+            registration = registration,
+            connectionRoutingId = connectionRoutingId,
+            connectionId = connectionId,
+            expectedNodeId = expectedNodeId
+        ) == null
+
+    fun validationFailure(
+        registration: ClientRouteRegistration,
+        connectionRoutingId: String,
+        connectionId: String,
+        expectedNodeId: String
+    ): GatewayRouteValidationFailure? {
         val route = registration.route
         val currentTime = now()
         val aliases = route.aliases.orEmpty()
-        val routeMatchesConnection =
-            route.routingId == connectionRoutingId &&
-                route.connectionId == connectionId &&
-                route.nodeId == expectedNodeId
-        val routingIdentityMatches =
-            ClientRoutingIds.matchesSigningPublicKey(
+
+        return when {
+            route.routingId != connectionRoutingId ||
+                route.connectionId != connectionId ||
+                route.nodeId != expectedNodeId -> GatewayRouteValidationFailure.ROUTE_BINDING
+
+            !ClientRoutingIds.matchesSigningPublicKey(
                 route.routingId,
                 registration.clientSigningPublicKey
-            )
-        val aliasesAreValid =
-            aliases.all(ClientRoutingIds::isBootstrapRoutingId) &&
-                aliases.distinct().size == aliases.size
-        val expirationIsValid =
-            route.expiresAtEpochMilliseconds > currentTime &&
-                route.expiresAtEpochMilliseconds - currentTime <= maximumTtlMilliseconds
-        val signatureIsValid =
-            ProtocolSignatures.verifyClientRoute(
+            ) -> GatewayRouteValidationFailure.ROUTING_IDENTITY
+
+            aliases.any { alias -> !ClientRoutingIds.isBootstrapRoutingId(alias) } ||
+                aliases.distinct().size != aliases.size -> GatewayRouteValidationFailure.ALIASES
+
+            route.expiresAtEpochMilliseconds <= currentTime ||
+                route.expiresAtEpochMilliseconds - currentTime > maximumTtlMilliseconds ->
+                GatewayRouteValidationFailure.EXPIRATION
+
+            !ProtocolSignatures.verifyClientRoute(
                 route,
                 registration.clientSigningPublicKey
-            )
+            ) -> GatewayRouteValidationFailure.SIGNATURE
 
-        return listOf(
-            routeMatchesConnection,
-            routingIdentityMatches,
-            aliasesAreValid,
-            expirationIsValid,
-            signatureIsValid
-        ).all { it }
+            else -> null
+        }
     }
+}
+
+internal enum class GatewayRouteValidationFailure {
+    ROUTE_BINDING,
+    ROUTING_IDENTITY,
+    ALIASES,
+    EXPIRATION,
+    SIGNATURE
 }

@@ -37,6 +37,7 @@ val identityModule =
         single<IdentityRepository> {
             DefaultIdentityRepository(
                 identityKeyGenerator = get(),
+                signatureCrypto = get(),
                 privateKeyStorage = get(),
                 publicIdentityStorage = get()
             )

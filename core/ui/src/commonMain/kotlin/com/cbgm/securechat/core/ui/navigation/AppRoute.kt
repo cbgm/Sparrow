@@ -30,7 +30,8 @@ sealed interface AppRoute {
 
     @Serializable
     data class GroupDetails(
-        val conversationId: String
+        val conversationId: String,
+        val requestLeave: Boolean = false
     ) : AppRoute
 
     @Serializable

@@ -90,7 +90,7 @@
     <string name="feature_chats_group_member_active">Ready</string>
     <string name="feature_chats_group_member_declined">Declined</string>
     <string name="feature_chats_group_member_expired">Expired</string>
-    <string name="feature_chats_group_member_failed">Failed</string>
+    <string name="feature_chats_group_member_failed">Not delivered</string>
     <string name="feature_chats_group_member_invited">Invited</string>
     <string name="feature_chats_group_member_key_sent">Storing group key</string>
     <string name="feature_chats_compare_safety_number_contact">Compare this safety number with %1$s through a trusted channel, such as a phone call or in person.</string>
@@ -101,7 +101,7 @@
     <string name="feature_chats_decryption_failed">Decryption failed</string>
     <string name="feature_chats_delivered">Delivered</string>
     <string name="feature_chats_encrypted">Encrypted</string>
-    <string name="feature_chats_failed">Failed</string>
+    <string name="feature_chats_failed">Not delivered</string>
     <string name="feature_chats_invalid_message_packet">Invalid message packet</string>
     <string name="feature_chats_invalid_packet">Invalid packet</string>
     <string name="feature_chats_invalid_plaintext">Invalid plaintext</string>
@@ -114,7 +114,7 @@
     <string name="feature_chats_read">Read</string>
     <string name="feature_chats_safety_number_unavailable">Safety number unavailable</string>
     <string name="feature_chats_sending">Sending</string>
-    <string name="feature_chats_sent">Sent</string>
+    <string name="feature_chats_sent">Waiting for delivery</string>
     <string name="feature_chats_start_conversation_with">Start a conversation with %1$s</string>
     <string name="feature_chats_unable_decrypt_secure_message">Unable to decrypt secure message</string>
     <string name="feature_chats_unable_read_plaintext">Unable to read plaintext message</string>
@@ -310,7 +310,7 @@
     <string name="feature_settings_status_connected">Connected</string>
     <string name="feature_settings_status_connecting">Connecting</string>
     <string name="feature_settings_status_disconnected">Disconnected</string>
-    <string name="feature_settings_status_failed">Failed</string>
+    <string name="feature_settings_status_failed">Not delivered</string>
     <string name="feature_settings_disable_developer_mode">Disable developer mode</string>
     <string name="feature_settings_general">General</string>
     <string name="feature_settings_licenses_subtitle">Libraries used in this app</string>
@@ -447,4 +447,11 @@
     <string name="feature_settings_control_plane_source_manual_and_directory">Manual + directory</string>
     <string name="feature_settings_control_planes_summary">%1$d available · %2$d unavailable</string>
     <string name="feature_settings_control_planes_auto_health">Availability is checked automatically. Unreachable addresses are de-prioritized and retried in the background.</string>
+    <string name="feature_chats_group_promote_admin">Promote to admin</string>
+    <string name="feature_chats_group_promote_admin_description">Promote %1$s to group admin? Admins can add and remove members and promote other admins.</string>
+    <string name="feature_chats_group_promote_before_leave">Choose a new admin</string>
+    <string name="feature_chats_group_promote_before_leave_description">You are the only admin. Promote another active member before leaving this group.</string>
+    <string name="feature_chats_group_orphaned_title">Group administrator unavailable</string>
+    <string name="feature_chats_group_orphaned_description">No current admin identity is available. Messages can continue between active members, but membership changes are disabled.</string>
+    <string name="feature_chats_group_member_unavailable">Unavailable — re-invite required</string>
 </resources>

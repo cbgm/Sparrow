@@ -42,7 +42,8 @@ class GroupVerificationSummaryTest {
                             adminVerified = false,
                             participantVerified = false
                         )
-                    )
+                    ),
+                currentMemberContactIds = setOf("contact-a", "contact-b")
             )
 
         assertEquals(4, summary.totalMemberCount)
@@ -80,7 +81,9 @@ class GroupVerificationSummaryTest {
                 ownerContactId = "admin-contact",
                 ownerDisplayName = "Admin",
                 ownInvitationId = "self",
-                rows = rows
+                rows = rows,
+                remoteAdminContactIds = setOf("admin-contact"),
+                currentMemberContactIds = setOf("admin-contact")
             )
 
         assertEquals(3, summary.totalMemberCount)
@@ -112,7 +115,9 @@ class GroupVerificationSummaryTest {
                             adminVerified = false,
                             participantVerified = false
                         )
-                    )
+                    ),
+                remoteAdminContactIds = setOf("admin-contact"),
+                currentMemberContactIds = setOf("admin-contact")
             )
 
         assertEquals(
@@ -123,6 +128,50 @@ class GroupVerificationSummaryTest {
                     .distinct()
                     .size
         )
+    }
+
+    @Test
+    fun missingCurrentAdminIsShownAsUnavailableAndGroupIsOrphaned() {
+        val summary =
+            buildGroupVerificationSummary(
+                isLocalAdmin = false,
+                ownerContactId = "admin-contact",
+                ownerDisplayName = "Admin",
+                ownInvitationId = "self",
+                rows =
+                    listOf(
+                        pair(
+                            invitationId = "self",
+                            contactId = null,
+                            displayName = "Participant",
+                            active = true,
+                            adminVerified = true,
+                            participantVerified = true
+                        )
+                    ),
+                isOrphaned = true
+            )
+
+        val admin = summary.members.first()
+        assertFalse(admin.isGroupAdmin)
+        assertFalse(admin.isActive)
+        assertEquals(GroupMemberVerificationState.UNAVAILABLE, admin.state)
+        assertTrue(summary.isOrphaned)
+    }
+
+    @Test
+    fun soleLocalAdminHasAuthoritativeStateWithoutRemoteMembers() {
+        val summary =
+            buildGroupVerificationSummary(
+                isLocalAdmin = true,
+                ownerContactId = null,
+                ownerDisplayName = "Admin",
+                ownInvitationId = null,
+                rows = emptyList()
+            )
+
+        assertTrue(summary.hasAuthoritativeState)
+        assertEquals(1, summary.totalMemberCount)
     }
 
     @Test

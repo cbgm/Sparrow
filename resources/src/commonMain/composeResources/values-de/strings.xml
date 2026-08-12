@@ -90,7 +90,7 @@
     <string name="feature_chats_group_member_active">Bereit</string>
     <string name="feature_chats_group_member_declined">Abgelehnt</string>
     <string name="feature_chats_group_member_expired">Abgelaufen</string>
-    <string name="feature_chats_group_member_failed">Fehlgeschlagen</string>
+    <string name="feature_chats_group_member_failed">Nicht zugestellt</string>
     <string name="feature_chats_group_member_invited">Eingeladen</string>
     <string name="feature_chats_group_member_key_sent">Gruppenschlüssel wird gespeichert</string>
     <string name="feature_chats_compare_safety_number_contact">Vergleiche diese Sicherheitsnummer mit %1$s über einen vertrauenswürdigen Kanal, z.B. telefonisch oder persönlich.</string>
@@ -101,7 +101,7 @@
     <string name="feature_chats_decryption_failed">Entschlüsselung fehlgeschlagen</string>
     <string name="feature_chats_delivered">Zugestellt</string>
     <string name="feature_chats_encrypted">Verschlüsselt</string>
-    <string name="feature_chats_failed">Fehlgeschlagen</string>
+    <string name="feature_chats_failed">Nicht zugestellt</string>
     <string name="feature_chats_invalid_message_packet">Ungültiges Nachrichtenpaket</string>
     <string name="feature_chats_invalid_packet">Ungültiges Paket</string>
     <string name="feature_chats_invalid_plaintext">Ungültiger Klartext</string>
@@ -114,7 +114,7 @@
     <string name="feature_chats_read">Gelesen</string>
     <string name="feature_chats_safety_number_unavailable">Sicherheitsnummer nicht verfügbar</string>
     <string name="feature_chats_sending">Wird gesendet</string>
-    <string name="feature_chats_sent">Gesendet</string>
+    <string name="feature_chats_sent">Warte auf Zustellung</string>
     <string name="feature_chats_start_conversation_with">Unterhaltung mit %1$s beginnen</string>
     <string name="feature_chats_unable_decrypt_secure_message">Sichere Nachricht konnte nicht entschlüsselt werden</string>
     <string name="feature_chats_unable_read_plaintext">Klartextnachricht konnte nicht gelesen werden</string>
@@ -311,7 +311,7 @@
     <string name="feature_settings_status_connected">Verbunden</string>
     <string name="feature_settings_status_connecting">Verbindungsaufbau</string>
     <string name="feature_settings_status_disconnected">Getrennt</string>
-    <string name="feature_settings_status_failed">Fehlgeschlagen</string>
+    <string name="feature_settings_status_failed">Nicht zugestellt</string>
     <string name="feature_settings_disable_developer_mode">Entwicklermodus deaktivieren</string>
     <string name="feature_settings_general">Allgemein</string>
     <string name="feature_settings_licenses_subtitle">In dieser App verwendete Bibliotheken</string>
@@ -448,4 +448,11 @@
     <string name="feature_settings_control_plane_source_manual_and_directory">Manuell + Verzeichnis</string>
     <string name="feature_settings_control_planes_summary">%1$d verfügbar · %2$d nicht erreichbar</string>
     <string name="feature_settings_control_planes_auto_health">Die Erreichbarkeit wird automatisch geprüft. Nicht erreichbare Adressen werden nachrangig verwendet und im Hintergrund erneut geprüft.</string>
+    <string name="feature_chats_group_promote_admin">Zum Admin machen</string>
+    <string name="feature_chats_group_promote_admin_description">%1$s zum Gruppen-Admin machen? Admins können Mitglieder hinzufügen und entfernen sowie weitere Admins ernennen.</string>
+    <string name="feature_chats_group_promote_before_leave">Neuen Admin auswählen</string>
+    <string name="feature_chats_group_promote_before_leave_description">Du bist der einzige Admin. Ernenne ein anderes aktives Mitglied zum Admin, bevor du die Gruppe verlässt.</string>
+    <string name="feature_chats_group_orphaned_title">Gruppen-Admin nicht verfügbar</string>
+    <string name="feature_chats_group_orphaned_description">Es ist keine aktuelle Admin-Identität verfügbar. Aktive Mitglieder können weiter schreiben, aber die Mitgliedschaft kann nicht geändert werden.</string>
+    <string name="feature_chats_group_member_unavailable">Nicht verfügbar — erneut einladen</string>
 </resources>

@@ -112,6 +112,49 @@ class MessageDeliveryStateCoordinator(
         }
     }
 
+    suspend fun expireUnconfirmedDirectMessages(
+        conversationId: String,
+        timeoutMilliseconds: Long = DIRECT_DELIVERY_TIMEOUT_MILLISECONDS
+    ) {
+        require(conversationId.isNotBlank()) { "Conversation ID must not be blank" }
+        require(timeoutMilliseconds > 0L) { "Delivery timeout must be positive" }
+
+        messageDeliveryStatusDao.markUnconfirmedDirectMessagesFailed(
+            conversationId = conversationId,
+            sentStatus = MessageDeliveryStatus.SENT.name,
+            failedStatus = MessageDeliveryStatus.FAILED.name,
+            sentBeforeEpochMilliseconds =
+                SystemClock.nowEpochMilliseconds() - timeoutMilliseconds
+        )
+    }
+
+    suspend fun expireUnconfirmedGroupRecipients(
+        conversationId: String,
+        timeoutMilliseconds: Long = GROUP_DELIVERY_TIMEOUT_MILLISECONDS
+    ) {
+        require(conversationId.isNotBlank()) { "Conversation ID must not be blank" }
+        require(timeoutMilliseconds > 0L) { "Delivery timeout must be positive" }
+
+        val cutoff = SystemClock.nowEpochMilliseconds() - timeoutMilliseconds
+        recipientStateMutex.withLock {
+            val staleRecipients =
+                messageRecipientStateDao.findByConversationAndDeliveryStatusBefore(
+                    conversationId = conversationId,
+                    deliveryStatus = MessageDeliveryStatus.SENT.name,
+                    updatedBeforeEpochMilliseconds = cutoff
+                )
+
+            staleRecipients.forEach { recipientState ->
+                updateRecipientState(
+                    recipientState = recipientState,
+                    event = MessageDeliveryEvent.DELIVERY_TIMED_OUT,
+                    errorMessage = "Recipient did not confirm delivery"
+                )
+                updateAggregatedStatus(recipientState.messageId)
+            }
+        }
+    }
+
     suspend fun applyRetryEvent(
         messageId: String,
         contactId: String? = null
@@ -194,4 +237,9 @@ class MessageDeliveryStateCoordinator(
     private fun String.toMessageDeliveryStatus(): MessageDeliveryStatus =
         MessageDeliveryStatus.entries.firstOrNull { status -> status.name == this }
             ?: error("Unknown message delivery status: $this")
+
+    private companion object {
+        const val DIRECT_DELIVERY_TIMEOUT_MILLISECONDS = 60_000L
+        const val GROUP_DELIVERY_TIMEOUT_MILLISECONDS = 60_000L
+    }
 }
