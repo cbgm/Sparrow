@@ -172,21 +172,42 @@ class DefaultRelayConnectionManager(
     }
 
     private suspend fun resolveEndpoint(relayId: String): NodeEndpoint {
-        val endpoints = nodeEndpointResolver.resolve(relayId).getOrThrow()
-        resolvedEndpoints = endpoints
-        val availableEndpoints = failedNodeTracker.available(endpoints)
-        val cooldowns =
-            failedNodeTracker.cooldownUntilEpochMillisecondsByNodeId(endpoints)
+        var endpoints = nodeEndpointResolver.resolve(relayId).getOrThrow()
+        var availableEndpoints = failedNodeTracker.available(endpoints)
 
+        if (availableEndpoints.isEmpty()) {
+            nodeEndpointResolver
+                .resolve(
+                    localRelayId = relayId,
+                    forceRefresh = true
+                ).onSuccess { refreshedEndpoints ->
+                    endpoints = refreshedEndpoints
+                    availableEndpoints = failedNodeTracker.available(refreshedEndpoints)
+                }.onFailure { error ->
+                    logger.warn {
+                        "Node directory refresh before cooldown probe failed: " +
+                            (error.message ?: "unknown error")
+                    }
+                }
+        }
+
+        resolvedEndpoints = endpoints
         diagnosticsState.resolved(
             endpoints = endpoints,
-            cooldownUntilEpochMillisecondsByNodeId = cooldowns,
+            cooldownUntilEpochMillisecondsByNodeId =
+                failedNodeTracker.cooldownUntilEpochMillisecondsByNodeId(endpoints),
             registryAuthorityVerified = true,
             registryUrl = controlPlaneConfiguration.activeEndpoint.value?.baseUrl
         )
 
-        return checkNotNull(availableEndpoints.firstOrNull()) {
-            "Every discovered relay node is temporarily unavailable"
+        availableEndpoints.firstOrNull()?.let { return it }
+
+        return checkNotNull(failedNodeTracker.probeCandidate(endpoints)) {
+            "Node directory does not contain a relay node to probe"
+        }.also { endpoint ->
+            logger.warn {
+                "Every discovered relay node is cooling down; probing ${endpoint.nodeId}"
+            }
         }
     }
 
@@ -246,7 +267,14 @@ class DefaultRelayConnectionManager(
         endpoint: NodeEndpoint,
         state: TransportConnectionState
     ) {
-        failedNodeTracker.recordFailure(endpoint.nodeId)
+        if (state is TransportConnectionState.Failed) {
+            failedNodeTracker.recordFailure(endpoint.nodeId)
+        } else {
+            logger.info {
+                "Relay session on ${endpoint.nodeId} ended without a transport failure; " +
+                    "retrying without node cooldown"
+            }
+        }
         diagnosticsState.connectedNodeEnded(
             endpoint = endpoint,
             state = state,

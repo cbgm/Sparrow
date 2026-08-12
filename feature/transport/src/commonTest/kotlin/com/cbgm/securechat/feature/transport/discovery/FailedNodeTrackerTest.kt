@@ -31,6 +31,21 @@ class FailedNodeTrackerTest {
     }
 
     @Test
+    fun oldestFailureIsUsedAsProbeWhenEveryNodeIsCoolingDown() {
+        var now = 1_000L
+        val tracker = FailedNodeTracker(cooldownMilliseconds = 30_000L, now = { now })
+        val nodeA = NodeEndpoint("node-a", "wss://a.example/relay")
+        val nodeB = NodeEndpoint("node-b", "wss://b.example/relay")
+
+        tracker.recordFailure(nodeA.nodeId)
+        now += 1_000L
+        tracker.recordFailure(nodeB.nodeId)
+
+        assertEquals(emptyList(), tracker.available(listOf(nodeA, nodeB)))
+        assertEquals(nodeA, tracker.probeCandidate(listOf(nodeA, nodeB)))
+    }
+
+    @Test
     fun successfulConnectionRemovesPreviousFailure() {
         val tracker = FailedNodeTracker(cooldownMilliseconds = 30_000L, now = { 1_000L })
         val node = NodeEndpoint("node-a", "wss://a.example/relay")

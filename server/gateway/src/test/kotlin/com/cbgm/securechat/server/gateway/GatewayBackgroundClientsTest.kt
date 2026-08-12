@@ -8,40 +8,49 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
 class GatewayBackgroundClientsTest {
     @Test
-    fun presenceRegistrationDoesNotWaitForControlPlane() =
+    fun presenceRegistrationMustBeConfirmedBeforeGatewayAcceptsRoute() =
         runTest {
-            val started = CompletableDeferred<Unit>()
-            val release = CompletableDeferred<Unit>()
-            val client =
-                BestEffortPresenceClient(
-                    delegate =
-                        object : PresenceClient {
-                            override suspend fun register(registration: ClientRouteRegistration): Boolean {
-                                started.complete(Unit)
-                                release.await()
-                                return false
-                            }
+            val rejectedPresence =
+                object : PresenceClient {
+                    override suspend fun register(registration: ClientRouteRegistration): Boolean = false
 
-                            override suspend fun remove(
-                                routingId: String,
-                                connectionId: String
-                            ) = Unit
-                        }
-                )
-
-            try {
-                assertTrue(client.register(testRegistration()))
-                withTimeout(TEST_TIMEOUT_MILLISECONDS) {
-                    started.await()
+                    override suspend fun remove(
+                        routingId: String,
+                        connectionId: String
+                    ) = Unit
                 }
-            } finally {
-                release.complete(Unit)
-                client.close()
-            }
+
+            assertFalse(
+                synchronizePresenceRegistration(
+                    presence = rejectedPresence,
+                    registration = testRegistration()
+                )
+            )
+        }
+
+    @Test
+    fun presenceRegistrationExceptionIsNotReportedAsSuccess() =
+        runTest {
+            val failingPresence =
+                object : PresenceClient {
+                    override suspend fun register(registration: ClientRouteRegistration): Boolean =
+                        error("presence unavailable")
+
+                    override suspend fun remove(
+                        routingId: String,
+                        connectionId: String
+                    ) = Unit
+                }
+
+            assertFalse(
+                synchronizePresenceRegistration(
+                    presence = failingPresence,
+                    registration = testRegistration()
+                )
+            )
         }
 
     @Test

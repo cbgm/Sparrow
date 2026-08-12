@@ -15,7 +15,6 @@ class GatewayWebSocketHandler(
     private val legacyPush: LegacyPushClient,
     private val routeLifetimeMilliseconds: Long
 ) {
-    private val bestEffortPresence = BestEffortPresenceClient(presence)
     private val pushDispatcher =
         GatewayPushDispatcher(
             pushClient = legacyPush,
@@ -26,7 +25,7 @@ class GatewayWebSocketHandler(
         GatewaySessionHandler(
             nodeId = nodeId,
             connections = connections,
-            presence = bestEffortPresence,
+            presence = presence,
             pushActions =
                 GatewayPushActions(
                     deliverPending = pushDispatcher::deliverPending,
@@ -58,7 +57,6 @@ class GatewayWebSocketHandler(
     }
 
     fun close() {
-        bestEffortPresence.close()
         pushDispatcher.close()
     }
 

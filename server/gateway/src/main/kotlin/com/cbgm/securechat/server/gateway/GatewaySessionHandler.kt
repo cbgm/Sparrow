@@ -220,11 +220,10 @@ internal class GatewaySessionHandler(
     }
 
     private suspend fun synchronizePresence(registration: ClientRouteRegistration): Boolean =
-        runCatching {
-            presence.register(registration)
-        }.getOrElse {
-            true
-        }
+        synchronizePresenceRegistration(
+            presence = presence,
+            registration = registration
+        )
 
     private suspend fun cleanup(connection: GatewayConnection?) {
         connection?.let { current ->
@@ -238,6 +237,14 @@ internal class GatewaySessionHandler(
         }
     }
 }
+
+internal suspend fun synchronizePresenceRegistration(
+    presence: PresenceClient,
+    registration: ClientRouteRegistration
+): Boolean =
+    runCatching {
+        presence.register(registration)
+    }.getOrDefault(false)
 
 internal data class GatewayPushActions(
     val deliverPending: (GatewayConnection) -> Unit,

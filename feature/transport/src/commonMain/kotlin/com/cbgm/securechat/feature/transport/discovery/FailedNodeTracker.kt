@@ -25,6 +25,18 @@ class FailedNodeTracker(
         return failedAt.keys.filterTo(mutableSetOf()) { nodeId -> nodeId in endpointIds }
     }
 
+    /**
+     * Returns the least-recently failed endpoint as a half-open probe when every
+     * discovered node is cooling down. This prevents a total client-side blackout
+     * while still preferring non-failed nodes whenever one is available.
+     */
+    fun probeCandidate(endpoints: List<NodeEndpoint>): NodeEndpoint? {
+        removeExpiredFailures()
+        return endpoints
+            .filter { endpoint -> endpoint.nodeId in failedAt }
+            .minByOrNull { endpoint -> failedAt.getValue(endpoint.nodeId) }
+    }
+
     fun cooldownUntilEpochMillisecondsByNodeId(
         endpoints: List<NodeEndpoint>
     ): Map<String, Long> {
