@@ -4,7 +4,7 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
-import com.cbgm.securechat.feature.chats.domain.repository.GroupKeyStorage
+import com.cbgm.securechat.feature.chats.domain.repository.GroupKeyRepository
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -17,7 +17,7 @@ import javax.crypto.spec.GCMParameterSpec
  */
 class AndroidGroupKeyStorage(
     context: Context
-) : GroupKeyStorage {
+) : GroupKeyRepository {
     private val preferences =
         context.getSharedPreferences(
             PREFERENCES_NAME,

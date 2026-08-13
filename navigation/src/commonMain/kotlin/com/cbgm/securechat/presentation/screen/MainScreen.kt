@@ -38,7 +38,8 @@ import com.cbgm.securechat.core.ui.component.SecureChatScrollStateType
 import com.cbgm.securechat.core.ui.component.SecureChatTabbedScaffold
 import com.cbgm.securechat.core.ui.component.SecureChatTabbedScrollStates
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
-import com.cbgm.securechat.feature.chats.presentation.ChatsRoute
+import com.cbgm.securechat.feature.chats.presentation.ContactsFlow
+import com.cbgm.securechat.feature.chats.presentation.overview.OverviewRoute
 import com.cbgm.securechat.feature.identity.presentation.IdentityRoute
 import com.cbgm.securechat.feature.settings.presentation.settings.SettingsRoute
 import com.cbgm.securechat.presentation.model.MainTab
@@ -234,7 +235,7 @@ private fun MainContent(
     ) { page ->
         when (MainTab.entries[page]) {
             MainTab.Chats -> {
-                ChatsRoute(
+                OverviewRoute(
                     listState = scrollStates.lazyListState(MainTab.Chats),
                     innerPadding = innerPadding,
                     modifier = Modifier.fillMaxSize()

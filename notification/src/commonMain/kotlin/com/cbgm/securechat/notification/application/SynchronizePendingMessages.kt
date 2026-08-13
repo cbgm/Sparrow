@@ -3,7 +3,7 @@ package com.cbgm.securechat.notification.application
 import com.cbgm.securechat.core.crypto.InitializeCryptoRuntime
 import com.cbgm.securechat.core.logging.SecureChatLog
 import com.cbgm.securechat.feature.chats.domain.model.Conversation
-import com.cbgm.securechat.feature.chats.domain.usecase.ObserveConversations
+import com.cbgm.securechat.feature.chats.domain.usecase.ObserveConversationsUseCase
 import com.cbgm.securechat.feature.messaging.application.incoming.IncomingEnvelopeProcessingResult
 import com.cbgm.securechat.feature.messaging.application.incoming.IncomingEnvelopeProcessor
 import com.cbgm.securechat.feature.messaging.application.mailbox.MailboxCoordinator
@@ -16,7 +16,7 @@ class SynchronizePendingMessages(
     private val initializeCryptoRuntime: InitializeCryptoRuntime,
     private val pendingRelayEnvelopeGateway: PendingRelayEnvelopeGateway,
     private val incomingEnvelopeProcessor: IncomingEnvelopeProcessor,
-    private val observeConversations: ObserveConversations,
+    private val observeConversations: ObserveConversationsUseCase,
     private val mailboxCoordinator: MailboxCoordinator
 ) {
     private val logger = SecureChatLog.withTag("SynchronizePendingMessages")

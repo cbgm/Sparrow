@@ -4,11 +4,11 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.cbgm.securechat.core.ui.navigation.AppRoute
-import com.cbgm.securechat.feature.chats.presentation.ChatRoute
-import com.cbgm.securechat.feature.chats.presentation.GroupChatRoute
-import com.cbgm.securechat.feature.chats.presentation.VerifyIdentityQrRoute
-import com.cbgm.securechat.feature.chats.presentation.details.DetailsRoute
-import com.cbgm.securechat.feature.chats.presentation.details.DetailsTarget
+import com.cbgm.securechat.feature.chats.presentation.details.model.DetailsTarget
+import com.cbgm.securechat.feature.chats.presentation.details.screen.DetailsRoute
+import com.cbgm.securechat.feature.chats.presentation.direct.DirectRoute
+import com.cbgm.securechat.feature.chats.presentation.group.GroupRoute
+import com.cbgm.securechat.feature.chats.presentation.verification.VerificationRoute
 import com.cbgm.securechat.navigation.slideInFromLeft
 import com.cbgm.securechat.navigation.slideInFromRight
 import com.cbgm.securechat.navigation.slideOutToLeft
@@ -21,7 +21,7 @@ fun NavGraphBuilder.chatsNavGraph() {
     ) { backStackEntry ->
         val destination = backStackEntry.toRoute<AppRoute.Chat>()
 
-        ChatRoute(
+        DirectRoute(
             conversationId = destination.conversationId,
             contactId = destination.contactId,
             contactName = destination.contactName
@@ -33,7 +33,7 @@ fun NavGraphBuilder.chatsNavGraph() {
         exitTransition = { slideOutToRight() }
     ) { backStackEntry ->
         val destination = backStackEntry.toRoute<AppRoute.GroupConversation>()
-        GroupChatRoute(conversationId = destination.conversationId)
+        GroupRoute(conversationId = destination.conversationId)
     }
 
     composable<AppRoute.ContactDetails>(
@@ -67,7 +67,7 @@ fun NavGraphBuilder.chatsNavGraph() {
 
     composable<AppRoute.VerifyIdentityQr> { backStackEntry ->
         val destination = backStackEntry.toRoute<AppRoute.VerifyIdentityQr>()
-        VerifyIdentityQrRoute(
+        VerificationRoute(
             contactId = destination.contactId,
             groupId = destination.groupId
         )

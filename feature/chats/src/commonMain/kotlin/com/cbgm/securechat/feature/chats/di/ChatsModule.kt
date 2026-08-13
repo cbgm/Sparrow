@@ -34,46 +34,46 @@ import com.cbgm.securechat.feature.chats.data.security.GroupSecurityManager
 import com.cbgm.securechat.feature.chats.data.verification.GroupVerificationCoordinator
 import com.cbgm.securechat.feature.chats.data.verification.GroupVerificationPayloadEncoder
 import com.cbgm.securechat.feature.chats.domain.repository.ChatsRepository
-import com.cbgm.securechat.feature.chats.domain.repository.GroupVerificationGateway
+import com.cbgm.securechat.feature.chats.domain.repository.GroupVerificationActionRepository
 import com.cbgm.securechat.feature.chats.domain.repository.GroupVerificationRepository
-import com.cbgm.securechat.feature.chats.domain.usecase.AcceptGroupInvitation
-import com.cbgm.securechat.feature.chats.domain.usecase.AddGroupMembers
-import com.cbgm.securechat.feature.chats.domain.usecase.CreateGroupConversation
-import com.cbgm.securechat.feature.chats.domain.usecase.DeclineGroupInvitation
-import com.cbgm.securechat.feature.chats.domain.usecase.DeleteConversation
-import com.cbgm.securechat.feature.chats.domain.usecase.GetGroupLeaveRequirement
-import com.cbgm.securechat.feature.chats.domain.usecase.GetOrCreateDirectConversation
-import com.cbgm.securechat.feature.chats.domain.usecase.LeaveGroup
-import com.cbgm.securechat.feature.chats.domain.usecase.MarkConversationRead
-import com.cbgm.securechat.feature.chats.domain.usecase.ObserveConversation
-import com.cbgm.securechat.feature.chats.domain.usecase.ObserveConversations
-import com.cbgm.securechat.feature.chats.domain.usecase.ObserveGroupAdministration
-import com.cbgm.securechat.feature.chats.domain.usecase.ObserveGroupConversation
-import com.cbgm.securechat.feature.chats.domain.usecase.ObserveGroupVerification
-import com.cbgm.securechat.feature.chats.domain.usecase.ObserveTypingIndicator
-import com.cbgm.securechat.feature.chats.domain.usecase.PromoteGroupMember
-import com.cbgm.securechat.feature.chats.domain.usecase.RefreshDeliveryState
-import com.cbgm.securechat.feature.chats.domain.usecase.RemoveGroupMember
-import com.cbgm.securechat.feature.chats.domain.usecase.RetryMessage
-import com.cbgm.securechat.feature.chats.domain.usecase.SendGroupMessage
-import com.cbgm.securechat.feature.chats.domain.usecase.SendMessage
-import com.cbgm.securechat.feature.chats.domain.usecase.SetTypingIndicator
-import com.cbgm.securechat.feature.chats.domain.usecase.SynchronizeGroupVerification
-import com.cbgm.securechat.feature.chats.domain.usecase.TransferGroupAdminAndLeave
-import com.cbgm.securechat.feature.chats.domain.usecase.VerifyGroupMember
-import com.cbgm.securechat.feature.chats.presentation.screen.chat.ChatViewModel
-import com.cbgm.securechat.feature.chats.presentation.screen.chat.GroupChatViewModel
-import com.cbgm.securechat.feature.chats.presentation.screen.create.CreateGroupViewModel
-import com.cbgm.securechat.feature.chats.presentation.screen.details.GroupMemberQrVerificationViewModel
-import com.cbgm.securechat.feature.chats.presentation.screen.details.GroupVerificationViewModel
-import com.cbgm.securechat.feature.chats.presentation.screen.overview.ChatsViewModel
+import com.cbgm.securechat.feature.chats.domain.usecase.AcceptGroupInvitationUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.AddGroupMembersUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.CreateGroupConversationUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.DeclineGroupInvitationUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.DeleteConversationUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.GetGroupLeaveRequirementUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.GetOrCreateDirectConversationUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.LeaveGroupUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.MarkConversationReadUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.ObserveConversationUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.ObserveConversationsUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.ObserveGroupAdministrationUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.ObserveGroupConversationUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.ObserveGroupVerificationUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.ObserveTypingIndicatorUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.PromoteGroupMemberUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.RefreshDeliveryStateUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.RemoveGroupMemberUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.RetryMessageUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.SendGroupMessageUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.SendMessageUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.SetTypingIndicatorUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.SynchronizeGroupVerificationUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.TransferGroupAdminAndLeaveUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.VerifyGroupMemberUseCase
+import com.cbgm.securechat.feature.chats.presentation.ContactsFlowViewModel
+import com.cbgm.securechat.feature.chats.presentation.create.CreateGroupViewModel
+import com.cbgm.securechat.feature.chats.presentation.details.GroupVerificationViewModel
+import com.cbgm.securechat.feature.chats.presentation.direct.DirectViewModel
+import com.cbgm.securechat.feature.chats.presentation.group.GroupViewModel
+import com.cbgm.securechat.feature.chats.presentation.overview.OverviewViewModel
+import com.cbgm.securechat.feature.chats.presentation.verification.GroupMemberQrVerificationViewModel
 import com.cbgm.securechat.feature.contacts.domain.usecase.EnsureIdentityExchangeStarted
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactSafetyNumber
 import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContact
 import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContacts
 import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveIdentityHandshakeState
 import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveIdentitySetupMode
-import com.cbgm.securechat.presentation.screen.ContactsFlowViewModel
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
@@ -89,7 +89,7 @@ val chatsModule =
         singleOf(::GroupSecurityManager)
         singleOf(::GroupVerificationPayloadEncoder)
         singleOf(::GroupVerificationCoordinator) {
-            bind<GroupVerificationGateway>()
+            bind<GroupVerificationActionRepository>()
         }
         singleOf(::GroupMessageSender)
         singleOf(::GroupInvitationCoordinator)
@@ -171,36 +171,36 @@ val chatsModule =
             )
         }
 
-        single { AcceptGroupInvitation(repository = get()) }
-        single { AddGroupMembers(repository = get()) }
-        single { CreateGroupConversation(repository = get()) }
-        single { DeclineGroupInvitation(repository = get()) }
-        single { DeleteConversation(repository = get()) }
-        single { GetGroupLeaveRequirement(repository = get()) }
-        single { GetOrCreateDirectConversation(repository = get()) }
-        single { LeaveGroup(repository = get()) }
-        single { MarkConversationRead(repository = get()) }
-        single { ObserveConversation(repository = get()) }
-        single { ObserveConversations(repository = get()) }
-        single { ObserveGroupAdministration(repository = get()) }
-        single { ObserveGroupConversation(repository = get()) }
+        single { AcceptGroupInvitationUseCase(repository = get()) }
+        single { AddGroupMembersUseCase(repository = get()) }
+        single { CreateGroupConversationUseCase(repository = get()) }
+        single { DeclineGroupInvitationUseCase(repository = get()) }
+        single { DeleteConversationUseCase(repository = get()) }
+        single { GetGroupLeaveRequirementUseCase(repository = get()) }
+        single { GetOrCreateDirectConversationUseCase(repository = get()) }
+        single { LeaveGroupUseCase(repository = get()) }
+        single { MarkConversationReadUseCase(repository = get()) }
+        single { ObserveConversationUseCase(repository = get()) }
+        single { ObserveConversationsUseCase(repository = get()) }
+        single { ObserveGroupAdministrationUseCase(repository = get()) }
+        single { ObserveGroupConversationUseCase(repository = get()) }
         single {
-            ObserveGroupVerification(
+            ObserveGroupVerificationUseCase(
                 repository = get(),
                 observeContacts = get<ObserveContacts>()
             )
         }
-        single { ObserveTypingIndicator(gateway = get()) }
-        single { RetryMessage(repository = get()) }
-        single { PromoteGroupMember(repository = get()) }
-        single { RemoveGroupMember(repository = get()) }
-        single { RefreshDeliveryState(repository = get()) }
-        single { SendMessage(repository = get()) }
-        single { SendGroupMessage(repository = get()) }
-        single { SetTypingIndicator(gateway = get()) }
-        single { SynchronizeGroupVerification(gateway = get()) }
-        single { TransferGroupAdminAndLeave(repository = get()) }
-        single { VerifyGroupMember(gateway = get()) }
+        single { ObserveTypingIndicatorUseCase(repository = get()) }
+        single { RetryMessageUseCase(repository = get()) }
+        single { PromoteGroupMemberUseCase(repository = get()) }
+        single { RemoveGroupMemberUseCase(repository = get()) }
+        single { RefreshDeliveryStateUseCase(repository = get()) }
+        single { SendMessageUseCase(repository = get()) }
+        single { SendGroupMessageUseCase(repository = get()) }
+        single { SetTypingIndicatorUseCase(repository = get()) }
+        single { SynchronizeGroupVerificationUseCase(repository = get()) }
+        single { TransferGroupAdminAndLeaveUseCase(repository = get()) }
+        single { VerifyGroupMemberUseCase(repository = get()) }
 
         single<GroupVerificationRepository> {
             DefaultGroupVerificationRepository(
@@ -236,7 +236,7 @@ val chatsModule =
         }
 
         viewModel {
-            ChatsViewModel(
+            OverviewViewModel(
                 observeConversations = get(),
                 deleteConversationUseCase = get(),
                 getGroupLeaveRequirement = get()
@@ -248,10 +248,11 @@ val chatsModule =
         }
 
         viewModel { parameters ->
-            GroupChatViewModel(
+            GroupViewModel(
                 conversationId = parameters.get(),
                 observeConversation = get(),
                 observeGroupAdministration = get(),
+                observeGroupVerification = get(),
                 sendGroupMessage = get(),
                 markConversationReadUseCase = get(),
                 retryMessageUseCase = get(),
@@ -292,7 +293,7 @@ val chatsModule =
         }
 
         viewModel { parameters ->
-            ChatViewModel(
+            DirectViewModel(
                 conversationId = parameters.get(),
                 contactId = parameters.get(),
                 fallbackContactName = parameters.get(),

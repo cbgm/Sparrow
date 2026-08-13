@@ -13,7 +13,7 @@ import com.cbgm.securechat.core.protocol.packet.GroupMembershipChangePayload
 import com.cbgm.securechat.data.database.dao.GroupSecurityDao
 import com.cbgm.securechat.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.securechat.data.database.entity.GroupSecurityStateEntity
-import com.cbgm.securechat.feature.chats.domain.repository.GroupKeyStorage
+import com.cbgm.securechat.feature.chats.domain.repository.GroupKeyRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -573,7 +573,7 @@ class GroupSecurityManagerTest {
             }
     }
 
-    private class InMemoryGroupKeyStorage : GroupKeyStorage {
+    private class InMemoryGroupKeyStorage : GroupKeyRepository {
         private val values = mutableMapOf<Pair<String, Int>, ByteArray>()
 
         override suspend fun save(

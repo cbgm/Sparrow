@@ -1,11 +1,11 @@
 package com.cbgm.securechat.notification.application
 
-import com.cbgm.securechat.feature.chats.domain.usecase.ObserveConversations
+import com.cbgm.securechat.feature.chats.domain.usecase.ObserveConversationsUseCase
 import com.cbgm.securechat.notification.model.NotificationConversationTarget
 import kotlinx.coroutines.flow.first
 
 class ResolveNotificationConversation(
-    private val observeConversations: ObserveConversations
+    private val observeConversations: ObserveConversationsUseCase
 ) {
     suspend operator fun invoke(conversationId: String): NotificationConversationTarget? {
         val conversation =

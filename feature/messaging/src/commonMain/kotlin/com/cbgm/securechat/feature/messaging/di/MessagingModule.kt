@@ -7,7 +7,7 @@ import com.cbgm.securechat.core.protocol.outbox.OutboxRunner
 import com.cbgm.securechat.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.securechat.core.protocol.transport.OutgoingWireSender
 import com.cbgm.securechat.data.database.dao.ContactDao
-import com.cbgm.securechat.feature.chats.domain.repository.TypingIndicatorGateway
+import com.cbgm.securechat.feature.chats.domain.repository.TypingIndicatorRepository
 import com.cbgm.securechat.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
 import com.cbgm.securechat.feature.messaging.application.incoming.DefaultIncomingEnvelopeProcessor
@@ -57,7 +57,7 @@ val messagingModule =
             )
         }
 
-        single<TypingIndicatorGateway> {
+        single<TypingIndicatorRepository> {
             RelayTypingIndicatorGateway(
                 webSocketTransportClient = get<WebSocketTransportClient>(),
                 contactRelayIdResolver = get<ContactRelayIdResolver>()

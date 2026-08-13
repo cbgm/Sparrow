@@ -1,6 +1,6 @@
 package com.cbgm.securechat.feature.messaging.data.typing
 
-import com.cbgm.securechat.feature.chats.domain.repository.TypingIndicatorGateway
+import com.cbgm.securechat.feature.chats.domain.repository.TypingIndicatorRepository
 import com.cbgm.securechat.feature.messaging.domain.relay.ContactRelayIdResolver
 import com.cbgm.securechat.feature.transport.websocket.WebSocketTransportClient
 import kotlinx.coroutines.flow.Flow
@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.transform
 class RelayTypingIndicatorGateway(
     private val webSocketTransportClient: WebSocketTransportClient,
     private val contactRelayIdResolver: ContactRelayIdResolver
-) : TypingIndicatorGateway {
+) : TypingIndicatorRepository {
     override fun observeTyping(contactId: String): Flow<Boolean> =
         webSocketTransportClient.incomingTypingEvents
             .transform { event ->

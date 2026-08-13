@@ -22,7 +22,7 @@ import com.cbgm.securechat.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.securechat.feature.chats.data.invitation.GroupInvitationDirection
 import com.cbgm.securechat.feature.chats.data.invitation.GroupInvitationStatus
 import com.cbgm.securechat.feature.chats.data.security.isGroupAdminRole
-import com.cbgm.securechat.feature.chats.domain.repository.GroupVerificationGateway
+import com.cbgm.securechat.feature.chats.domain.repository.GroupVerificationActionRepository
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
 import com.cbgm.securechat.feature.contacts.domain.model.KeyExchangeStatus
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
@@ -40,7 +40,7 @@ class GroupVerificationCoordinator(
     private val detachedSignatureCrypto: DetachedSignatureCrypto,
     private val payloadEncoder: GroupVerificationPayloadEncoder,
     private val protocolOutbox: ProtocolOutbox
-) : GroupVerificationGateway {
+) : GroupVerificationActionRepository {
     private val mutex = Mutex()
 
     suspend fun initializeOwnedGroup(groupId: String): Result<Unit> =
@@ -593,8 +593,8 @@ class GroupVerificationCoordinator(
                     membershipStatus = GroupVerificationPairEntity.ACTIVE_STATUS,
                     participantEncryptionPublicKey = identity?.encryptionPublicKey?.copyOf(),
                     participantSigningPublicKey = identity?.signingPublicKey?.copyOf(),
-                    adminVerifiedParticipant = sameIdentity && previous?.adminVerifiedParticipant == true,
-                    participantVerifiedAdmin = sameIdentity && previous?.participantVerifiedAdmin == true,
+                    adminVerifiedParticipant = sameIdentity && previous.adminVerifiedParticipant,
+                    participantVerifiedAdmin = sameIdentity && previous.participantVerifiedAdmin,
                     updatedAtEpochMilliseconds = maxOf(invitation?.updatedAtEpochMilliseconds ?: 0L, now)
                 )
             }

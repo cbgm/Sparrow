@@ -1,0 +1,690 @@
+package com.cbgm.securechat.feature.chats.presentation.direct
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.cbgm.securechat.core.security.DirectIdentitySetupMode
+import com.cbgm.securechat.core.ui.component.ContactAvatar
+import com.cbgm.securechat.core.ui.component.PatternBackground
+import com.cbgm.securechat.core.ui.component.SecureChatLazyScaffold
+import com.cbgm.securechat.core.ui.theme.SecureChatTheme
+import com.cbgm.securechat.core.ui.theme.spacing
+import com.cbgm.securechat.feature.chats.domain.model.ChatMessage
+import com.cbgm.securechat.feature.chats.domain.model.ContactSecurityState
+import com.cbgm.securechat.feature.chats.domain.model.MessageContentStatus
+import com.cbgm.securechat.feature.chats.domain.model.MessageDeliveryStatus
+import com.cbgm.securechat.feature.chats.domain.model.MessageSecurity
+import com.cbgm.securechat.feature.chats.presentation.component.MessageBubble
+import com.cbgm.securechat.feature.chats.presentation.component.MessageInput
+import com.cbgm.securechat.feature.chats.presentation.direct.model.DirectUiEvent
+import com.cbgm.securechat.feature.chats.presentation.direct.model.DirectUiState
+import com.cbgm.securechat.feature.contacts.domain.model.IdentityHandshakeState
+import com.cbgm.securechat.resources.Res
+import com.cbgm.securechat.resources.base_verify
+import com.cbgm.securechat.resources.feature_chats_chat_key_exchange_incomplete_description
+import com.cbgm.securechat.resources.feature_chats_chat_key_exchange_incomplete_title
+import com.cbgm.securechat.resources.feature_chats_chat_no_keys_description
+import com.cbgm.securechat.resources.feature_chats_chat_one_way_keys_description
+import com.cbgm.securechat.resources.feature_chats_chat_typing
+import com.cbgm.securechat.resources.feature_chats_chat_unencrypted_description
+import com.cbgm.securechat.resources.feature_chats_chat_unencrypted_title
+import com.cbgm.securechat.resources.feature_chats_chat_unverified_description
+import com.cbgm.securechat.resources.feature_chats_chat_unverified_keys_description
+import com.cbgm.securechat.resources.feature_chats_chat_unverified_title
+import com.cbgm.securechat.resources.feature_chats_chat_verified_by_contact_description
+import com.cbgm.securechat.resources.feature_chats_chat_verified_by_contact_keys_description
+import com.cbgm.securechat.resources.feature_chats_chat_verified_by_contact_title
+import com.cbgm.securechat.resources.feature_chats_chat_verified_by_me_description
+import com.cbgm.securechat.resources.feature_chats_chat_verified_by_me_keys_description
+import com.cbgm.securechat.resources.feature_chats_chat_verified_by_me_title
+import com.cbgm.securechat.resources.feature_chats_chat_verified_e2ee
+import com.cbgm.securechat.resources.feature_chats_chat_verified_keys_description
+import com.cbgm.securechat.resources.feature_chats_contact_invitation_declined_description
+import com.cbgm.securechat.resources.feature_chats_contact_invitation_declined_title
+import com.cbgm.securechat.resources.feature_chats_contact_invitation_finishing_description
+import com.cbgm.securechat.resources.feature_chats_contact_invitation_finishing_title
+import com.cbgm.securechat.resources.feature_chats_contact_invitation_received_description
+import com.cbgm.securechat.resources.feature_chats_contact_invitation_received_title
+import com.cbgm.securechat.resources.feature_chats_contact_invitation_sent_description
+import com.cbgm.securechat.resources.feature_chats_contact_invitation_sent_title
+import com.cbgm.securechat.resources.feature_chats_direct_chat_reinvite_required_description
+import com.cbgm.securechat.resources.feature_chats_direct_chat_reinvite_required_title
+import com.cbgm.securechat.resources.feature_chats_loading_chat
+import com.cbgm.securechat.resources.feature_chats_manual_identity_incomplete_description
+import com.cbgm.securechat.resources.feature_chats_manual_identity_incomplete_title
+import com.cbgm.securechat.resources.feature_chats_manual_identity_required_description
+import com.cbgm.securechat.resources.feature_chats_manual_identity_required_title
+import com.cbgm.securechat.resources.feature_chats_manual_identity_setup_action
+import com.cbgm.securechat.resources.feature_chats_start_conversation_with
+import org.jetbrains.compose.resources.stringResource
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DirectScreen(
+    uiState: DirectUiState,
+    onUiEvent: (DirectUiEvent) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    SecureChatLazyScaffold(
+        modifier = modifier,
+        barColor = MaterialTheme.colorScheme.background,
+        background = {
+            PatternBackground(
+                modifier = Modifier.fillMaxSize(),
+                backgroundColor = MaterialTheme.colorScheme.background,
+                alpha = 0.04f
+            )
+        },
+        topBar = { containerColor ->
+            TopBar(
+                uiState = uiState,
+                containerColor = containerColor,
+                onUiEvent = onUiEvent
+            )
+        },
+        bottomBar = { containerColor ->
+            BottomBar(
+                uiState = uiState,
+                containerColor = containerColor,
+                onUiEvent = onUiEvent
+            )
+        }
+    ) { innerPadding, listState ->
+        Content(
+            uiState = uiState,
+            listState = listState,
+            innerPadding = innerPadding,
+            onRetryMessage = { messageId ->
+                onUiEvent(DirectUiEvent.RetryMessage(messageId))
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TopBar(
+    uiState: DirectUiState,
+    containerColor: Color,
+    onUiEvent: (DirectUiEvent) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        TopAppBar(
+            colors =
+                TopAppBarDefaults.topAppBarColors(
+                    containerColor = containerColor,
+                    scrolledContainerColor = containerColor,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
+                ),
+            title = {
+                Row(
+                    modifier = Modifier.clickable { onUiEvent(DirectUiEvent.HeaderClicked) },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ContactAvatar(name = uiState.contactName, size = 36.dp)
+                    Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
+                    Text(
+                        text = uiState.contactName,
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            },
+            navigationIcon = {
+                IconButton(onClick = { onUiEvent(DirectUiEvent.BackClicked) }) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = null
+                    )
+                }
+            }
+        )
+
+        SecurityBanner(
+            securityState = uiState.contactSecurityState,
+            identityHandshakeState = uiState.identityHandshakeState,
+            identitySetupMode = uiState.identitySetupMode,
+            isChatAuthorized = uiState.isMessageInputEnabled,
+            onVerifyIdentity = { onUiEvent(DirectUiEvent.VerifyIdentityClicked) },
+            onManualIdentitySetup = { onUiEvent(DirectUiEvent.ManualIdentitySetupClicked) }
+        )
+
+        uiState.errorMessage?.let { message -> ErrorMessage(message = message) }
+    }
+}
+
+@Composable
+private fun BottomBar(
+    uiState: DirectUiState,
+    containerColor: Color,
+    onUiEvent: (DirectUiEvent) -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = containerColor
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text =
+                    if (uiState.isContactTyping) {
+                        stringResource(
+                            Res.string.feature_chats_chat_typing,
+                            uiState.contactName
+                        )
+                    } else {
+                        ""
+                    },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = MaterialTheme.spacing.large,
+                            vertical = MaterialTheme.spacing.base / 2
+                        ),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            MessageInput(
+                value = uiState.messageText,
+                onValueChange = { onUiEvent(DirectUiEvent.MessageTextChanged(it)) },
+                onSendClick = { onUiEvent(DirectUiEvent.SendClicked) },
+                enabled = !uiState.isLoading && uiState.isMessageInputEnabled
+            )
+        }
+    }
+}
+
+@Composable
+private fun Content(
+    uiState: DirectUiState,
+    listState: LazyListState,
+    innerPadding: PaddingValues,
+    onRetryMessage: (String) -> Unit
+) {
+    when {
+        uiState.isLoading -> LoadingContent(
+            modifier = Modifier.fillMaxSize().padding(innerPadding)
+        )
+        uiState.messages.isEmpty() -> EmptyContent(
+            contactName = uiState.contactName,
+            securityState = uiState.contactSecurityState,
+            modifier = Modifier.fillMaxSize().padding(innerPadding)
+        )
+        else -> MessageList(
+            messages = uiState.messages,
+            listState = listState,
+            onRetryMessage = onRetryMessage,
+            contentPadding = innerPadding
+        )
+    }
+}
+
+@Composable
+private fun MessageList(
+    messages: List<ChatMessage>,
+    listState: LazyListState,
+    onRetryMessage: (String) -> Unit,
+    contentPadding: PaddingValues
+) {
+    val newestMessage = messages.firstOrNull()
+    LaunchedEffect(newestMessage?.id) {
+        if (newestMessage?.isMine == true) {
+            listState.animateScrollToItem(index = 0)
+        }
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        state = listState,
+        reverseLayout = true,
+        contentPadding =
+            PaddingValues(
+                start = 12.dp,
+                top = contentPadding.calculateTopPadding() + MaterialTheme.spacing.small,
+                end = 12.dp,
+                bottom = contentPadding.calculateBottomPadding() + MaterialTheme.spacing.small
+            ),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(items = messages, key = ChatMessage::id) { message ->
+            MessageBubble(
+                message = message,
+                onRetryClick = { onRetryMessage(message.id) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmptyContent(
+    contactName: String,
+    securityState: ContactSecurityState,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.padding(horizontal = MaterialTheme.spacing.large),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = stringResource(Res.string.feature_chats_start_conversation_with, contactName),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = securityDescription(securityState),
+                modifier = Modifier.padding(top = MaterialTheme.spacing.base),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+private fun securityDescription(securityState: ContactSecurityState): String =
+    when (securityState) {
+        ContactSecurityState.NO_REMOTE_PUBLIC_KEYS -> stringResource(Res.string.feature_chats_chat_no_keys_description)
+        ContactSecurityState.ONE_WAY_KEYS -> stringResource(Res.string.feature_chats_chat_one_way_keys_description)
+        ContactSecurityState.MUTUAL_KEYS_UNVERIFIED -> stringResource(Res.string.feature_chats_chat_unverified_keys_description)
+        ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_ME -> stringResource(Res.string.feature_chats_chat_verified_by_me_keys_description)
+        ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_CONTACT -> stringResource(Res.string.feature_chats_chat_verified_by_contact_keys_description)
+        ContactSecurityState.MUTUAL_KEYS_VERIFIED -> stringResource(Res.string.feature_chats_chat_verified_keys_description)
+    }
+
+@Composable
+private fun LoadingContent(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
+        Text(
+            text = stringResource(Res.string.feature_chats_loading_chat),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun ErrorMessage(
+    message: String,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        text = message,
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = MaterialTheme.spacing.small,
+                    vertical = MaterialTheme.spacing.base
+                ),
+        color = MaterialTheme.colorScheme.onErrorContainer,
+        style = MaterialTheme.typography.bodySmall,
+        textAlign = TextAlign.Center
+    )
+}
+
+@Composable
+private fun SecurityBanner(
+    securityState: ContactSecurityState,
+    identityHandshakeState: IdentityHandshakeState?,
+    identitySetupMode: DirectIdentitySetupMode,
+    isChatAuthorized: Boolean,
+    onVerifyIdentity: () -> Unit,
+    onManualIdentitySetup: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (securityState == ContactSecurityState.MUTUAL_KEYS_VERIFIED && isChatAuthorized) {
+        VerifiedSecurityIndicator(modifier = modifier)
+        return
+    }
+
+    val state =
+        invitationState(
+            identityHandshakeState = identityHandshakeState,
+            identitySetupMode = identitySetupMode
+        ) ?: securityState(
+            securityState = securityState,
+            identitySetupMode = identitySetupMode
+        )
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = state.containerColor,
+        contentColor = state.contentColor
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = state.icon,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp)
+            )
+            Column(
+                modifier = Modifier.padding(start = MaterialTheme.spacing.small).weight(1f)
+            ) {
+                Text(
+                    text = state.title,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = state.description,
+                    modifier = Modifier.padding(top = 2.dp),
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+            SecurityAction(
+                securityState = securityState,
+                identitySetupMode = identitySetupMode,
+                contentColor = state.contentColor,
+                onVerifyIdentity = onVerifyIdentity,
+                onManualIdentitySetup = onManualIdentitySetup
+            )
+        }
+    }
+}
+
+@Composable
+private fun SecurityAction(
+    securityState: ContactSecurityState,
+    identitySetupMode: DirectIdentitySetupMode,
+    contentColor: Color,
+    onVerifyIdentity: () -> Unit,
+    onManualIdentitySetup: () -> Unit
+) {
+    when {
+        identitySetupMode == DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING &&
+            securityState in setOf(
+                ContactSecurityState.NO_REMOTE_PUBLIC_KEYS,
+                ContactSecurityState.ONE_WAY_KEYS
+            ) -> {
+            TextButton(onClick = onManualIdentitySetup) {
+                Text(
+                    text = stringResource(Res.string.feature_chats_manual_identity_setup_action),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = contentColor,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+        securityState == ContactSecurityState.MUTUAL_KEYS_UNVERIFIED ||
+            securityState == ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_CONTACT -> {
+            TextButton(onClick = onVerifyIdentity) {
+                Text(
+                    text = stringResource(Res.string.base_verify),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = contentColor,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun invitationState(
+    identityHandshakeState: IdentityHandshakeState?,
+    identitySetupMode: DirectIdentitySetupMode
+): SecurityBannerState? {
+    if (identitySetupMode != DirectIdentitySetupMode.AUTOMATIC_INVITATION) return null
+
+    return when (identityHandshakeState) {
+        IdentityHandshakeState.INVITE_SENT ->
+            SecurityBannerState(
+                icon = Icons.Default.Schedule,
+                title = stringResource(Res.string.feature_chats_contact_invitation_sent_title),
+                description = stringResource(Res.string.feature_chats_contact_invitation_sent_description),
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+        IdentityHandshakeState.AWAITING_ACCEPTANCE ->
+            SecurityBannerState(
+                icon = Icons.Default.Warning,
+                title = stringResource(Res.string.feature_chats_contact_invitation_received_title),
+                description = stringResource(Res.string.feature_chats_contact_invitation_received_description),
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+            )
+        IdentityHandshakeState.ACCEPTANCE_SENT,
+        IdentityHandshakeState.WAITING_FOR_READY ->
+            SecurityBannerState(
+                icon = Icons.Default.Schedule,
+                title = stringResource(Res.string.feature_chats_contact_invitation_finishing_title),
+                description = stringResource(Res.string.feature_chats_contact_invitation_finishing_description),
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+        IdentityHandshakeState.DECLINED ->
+            errorBanner(
+                title = stringResource(Res.string.feature_chats_contact_invitation_declined_title),
+                description = stringResource(Res.string.feature_chats_contact_invitation_declined_description)
+            )
+        IdentityHandshakeState.CONVERSATION_DELETED,
+        IdentityHandshakeState.EXPIRED,
+        IdentityHandshakeState.FAILED,
+        null -> reinviteBanner()
+        IdentityHandshakeState.MUTUAL_UNVERIFIED -> null
+    }
+}
+
+@Composable
+private fun securityState(
+    securityState: ContactSecurityState,
+    identitySetupMode: DirectIdentitySetupMode
+): SecurityBannerState =
+    when (securityState) {
+        ContactSecurityState.NO_REMOTE_PUBLIC_KEYS ->
+            errorBanner(
+                icon = Icons.Default.LockOpen,
+                title =
+                    if (identitySetupMode == DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING) {
+                        stringResource(Res.string.feature_chats_manual_identity_required_title)
+                    } else {
+                        stringResource(Res.string.feature_chats_chat_unencrypted_title)
+                    },
+                description =
+                    if (identitySetupMode == DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING) {
+                        stringResource(Res.string.feature_chats_manual_identity_required_description)
+                    } else {
+                        stringResource(Res.string.feature_chats_chat_unencrypted_description)
+                    }
+            )
+        ContactSecurityState.ONE_WAY_KEYS ->
+            errorBanner(
+                icon = Icons.Default.LockOpen,
+                title =
+                    if (identitySetupMode == DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING) {
+                        stringResource(Res.string.feature_chats_manual_identity_incomplete_title)
+                    } else {
+                        stringResource(Res.string.feature_chats_chat_key_exchange_incomplete_title)
+                    },
+                description =
+                    if (identitySetupMode == DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING) {
+                        stringResource(Res.string.feature_chats_manual_identity_incomplete_description)
+                    } else {
+                        stringResource(Res.string.feature_chats_chat_key_exchange_incomplete_description)
+                    }
+            )
+        ContactSecurityState.MUTUAL_KEYS_UNVERIFIED ->
+            errorBanner(
+                title = stringResource(Res.string.feature_chats_chat_unverified_title),
+                description = stringResource(Res.string.feature_chats_chat_unverified_description)
+            )
+        ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_ME ->
+            SecurityBannerState(
+                icon = Icons.Default.Schedule,
+                title = stringResource(Res.string.feature_chats_chat_verified_by_me_title),
+                description = stringResource(Res.string.feature_chats_chat_verified_by_me_description),
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+        ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_CONTACT ->
+            SecurityBannerState(
+                icon = Icons.Default.Security,
+                title = stringResource(Res.string.feature_chats_chat_verified_by_contact_title),
+                description = stringResource(Res.string.feature_chats_chat_verified_by_contact_description),
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+            )
+        ContactSecurityState.MUTUAL_KEYS_VERIFIED -> reinviteBanner()
+    }
+
+@Composable
+private fun reinviteBanner() =
+    errorBanner(
+        title = stringResource(Res.string.feature_chats_direct_chat_reinvite_required_title),
+        description = stringResource(Res.string.feature_chats_direct_chat_reinvite_required_description)
+    )
+
+@Composable
+private fun errorBanner(
+    title: String,
+    description: String,
+    icon: ImageVector = Icons.Default.Warning
+) =
+    SecurityBannerState(
+        icon = icon,
+        title = title,
+        description = description,
+        containerColor = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer
+    )
+
+@Composable
+private fun VerifiedSecurityIndicator(modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Lock,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.secondary
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = stringResource(Res.string.feature_chats_chat_verified_e2ee),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.secondary
+            )
+        }
+    }
+}
+
+private data class SecurityBannerState(
+    val icon: ImageVector,
+    val title: String,
+    val description: String,
+    val containerColor: Color,
+    val contentColor: Color
+)
+
+@Preview
+@Composable
+private fun DirectScreenPreview() {
+    SecureChatTheme {
+        DirectScreen(
+            uiState =
+                DirectUiState(
+                    contactName = "Alex",
+                    isLoading = false,
+                    isMessageInputEnabled = true,
+                    contactSecurityState = ContactSecurityState.MUTUAL_KEYS_VERIFIED
+                ),
+            onUiEvent = {}
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun DirectMessagesPreview() {
+    SecureChatTheme {
+        DirectScreen(
+            uiState =
+                DirectUiState(
+                    contactName = "Alex",
+                    isLoading = false,
+                    isMessageInputEnabled = true,
+                    contactSecurityState = ContactSecurityState.MUTUAL_KEYS_VERIFIED,
+                    messages =
+                        listOf(
+                            ChatMessage(
+                                id = "1",
+                                isMine = true,
+                                text = "Hello from a direct chat",
+                                security = MessageSecurity.END_TO_END_ENCRYPTED,
+                                contentStatus = MessageContentStatus.READABLE,
+                                deliveryStatus = MessageDeliveryStatus.DELIVERED,
+                                timestamp = 0L,
+                                contactId = "2"
+                            )
+                        )
+                ),
+            onUiEvent = {}
+        )
+    }
+}

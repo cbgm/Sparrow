@@ -1,14 +1,14 @@
 package com.cbgm.securechat.notification.application
 
 import com.cbgm.securechat.feature.chats.domain.model.Conversation
-import com.cbgm.securechat.feature.chats.domain.usecase.ObserveConversations
+import com.cbgm.securechat.feature.chats.domain.usecase.ObserveConversationsUseCase
 import com.cbgm.securechat.notification.model.ConversationNotification
 import com.cbgm.securechat.notification.model.ConversationNotificationEvent
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
 class ObserveConversationNotificationEvents(
-    private val observeConversations: ObserveConversations,
+    private val observeConversations: ObserveConversationsUseCase,
     private val appVisibilityState: AppVisibilityState
 ) {
     operator fun invoke(): Flow<ConversationNotificationEvent> =

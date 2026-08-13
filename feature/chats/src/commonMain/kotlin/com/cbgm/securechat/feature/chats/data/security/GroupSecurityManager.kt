@@ -15,14 +15,14 @@ import com.cbgm.securechat.core.protocol.version.ProtocolVersion
 import com.cbgm.securechat.data.database.dao.GroupSecurityDao
 import com.cbgm.securechat.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.securechat.data.database.entity.GroupSecurityStateEntity
-import com.cbgm.securechat.feature.chats.domain.repository.GroupKeyStorage
+import com.cbgm.securechat.feature.chats.domain.repository.GroupKeyRepository
 
 class GroupSecurityManager(
     private val groupCrypto: GroupCrypto,
     private val cryptoHash: CryptoHash,
     private val payloadEncoder: GroupProtocolPayloadEncoder,
     private val groupSecurityDao: GroupSecurityDao,
-    private val groupKeyStorage: GroupKeyStorage
+    private val groupKeyStorage: GroupKeyRepository
 ) {
     suspend fun findOwnedGroupEpoch(groupId: String): Result<Int?> =
         runCatching {
@@ -93,19 +93,6 @@ class GroupSecurityManager(
             }
             check(memberKey.signingPublicKey.contentEquals(signingPublicKey)) {
                 "Group admin signing identity changed"
-            }
-        }
-
-    suspend fun findJoinedGroupEpoch(
-        groupId: String,
-        ownerContactId: String
-    ): Result<Int?> =
-        runCatching {
-            groupSecurityDao.findState(groupId)?.let { state ->
-                check(state.ownerContactId == ownerContactId) {
-                    "Group security state does not belong to this group owner"
-                }
-                state.currentEpoch
             }
         }
 
