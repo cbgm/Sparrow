@@ -16,10 +16,10 @@ import com.cbgm.securechat.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.securechat.feature.chats.domain.model.MessageDeliveryEvent
 import com.cbgm.securechat.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.securechat.feature.chats.domain.model.direct.DirectMessageDeliveryStateMachine
-import com.cbgm.securechat.feature.contacts.domain.identity.IdentityInvitationService
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
 import com.cbgm.securechat.feature.contacts.domain.model.KeyExchangeStatus
-import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
+import com.cbgm.securechat.feature.contacts.domain.repository.IdentityInvitationRepository
+import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactUseCase
 
 /**
  * Owns every outgoing direct-message operation.
@@ -29,10 +29,10 @@ import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
  */
 class DirectOutgoingMessageProcessor(
     private val chatDao: ChatDao,
-    private val getContact: GetContact,
+    private val getContact: GetContactUseCase,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
     private val protocolOutbox: ProtocolOutbox,
-    private val identityInvitationService: IdentityInvitationService,
+    private val identityInvitationRepository: IdentityInvitationRepository,
     private val deliveryCoordinator: DirectMessageDeliveryCoordinator
 ) {
     private val logger = SecureChatLog.withTag("DirectOutgoingMessageProcessor")
@@ -46,7 +46,7 @@ class DirectOutgoingMessageProcessor(
             require(normalizedText.isNotEmpty()) { "Message text must not be blank" }
 
             val target = loadTarget(conversationId)
-            identityInvitationService
+            identityInvitationRepository
                 .requireDirectChatAuthorization(target.contactId)
                 .getOrThrow()
 
@@ -72,7 +72,7 @@ class DirectOutgoingMessageProcessor(
             }
 
             val target = loadTarget(message.conversationId)
-            identityInvitationService
+            identityInvitationRepository
                 .requireDirectChatAuthorization(target.contactId)
                 .getOrThrow()
 

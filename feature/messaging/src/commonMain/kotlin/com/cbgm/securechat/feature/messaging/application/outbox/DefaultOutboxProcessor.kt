@@ -29,9 +29,9 @@ import com.cbgm.securechat.core.protocol.packet.GroupVerificationSnapshotRequest
 import com.cbgm.securechat.core.protocol.packet.ReadReceiptPacket
 import com.cbgm.securechat.core.protocol.packet.SecureChatPacket
 import com.cbgm.securechat.core.protocol.transport.OutgoingWireSender
-import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
-import com.cbgm.securechat.feature.messaging.domain.relay.ContactRelayIdResolver
-import com.cbgm.securechat.feature.messaging.domain.relay.GroupRelayIdResolver
+import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactUseCase
+import com.cbgm.securechat.feature.messaging.application.relay.ContactRelayIdResolver
+import com.cbgm.securechat.feature.messaging.application.relay.GroupRelayIdResolver
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -40,7 +40,7 @@ import kotlinx.coroutines.sync.withPermit
 
 class DefaultOutboxProcessor(
     private val protocolOutbox: ProtocolOutbox,
-    private val getContact: GetContact,
+    private val getContact: GetContactUseCase,
     private val transportPayloadFactory: OutgoingTransportPayloadFactory,
     private val transportPayloadCodec: TransportPayloadCodec,
     private val packetCodec: PacketCodec,

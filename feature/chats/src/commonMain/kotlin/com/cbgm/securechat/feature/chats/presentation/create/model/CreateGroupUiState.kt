@@ -1,6 +1,6 @@
 package com.cbgm.securechat.feature.chats.presentation.create.model
 
-import com.cbgm.securechat.feature.contacts.presentation.model.ContactGroupEntity
+import com.cbgm.securechat.feature.contacts.presentation.overview.model.ContactGroupEntity
 
 data class CreateGroupUiState(
     val title: String = "",

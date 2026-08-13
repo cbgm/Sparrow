@@ -4,11 +4,11 @@ import android.Manifest
 import android.content.ContentResolver
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
-import com.cbgm.securechat.feature.contacts.data.device.AndroidDeviceContactWriter
-import com.cbgm.securechat.feature.contacts.data.device.AndroidDeviceContactsDataSource
-import com.cbgm.securechat.feature.contacts.domain.device.DeviceContactWriter
-import com.cbgm.securechat.feature.contacts.domain.device.DeviceContactsDataSource
-import com.cbgm.securechat.feature.contacts.domain.device.DeviceContactsPermissionChecker
+import com.cbgm.securechat.feature.contacts.data.repository.AndroidDeviceContactWriterRepositoryImpl
+import com.cbgm.securechat.feature.contacts.data.repository.AndroidDeviceContactsRepositoryImpl
+import com.cbgm.securechat.feature.contacts.domain.repository.DeviceContactWriterRepository
+import com.cbgm.securechat.feature.contacts.domain.repository.DeviceContactsPermissionRepository
+import com.cbgm.securechat.feature.contacts.domain.repository.DeviceContactsRepository
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -18,21 +18,21 @@ val androidContactsModule =
             androidContext().contentResolver
         }
 
-        single<DeviceContactsDataSource> {
-            AndroidDeviceContactsDataSource(
+        single<DeviceContactsRepository> {
+            AndroidDeviceContactsRepositoryImpl(
                 contentResolver = get()
             )
         }
 
-        single<DeviceContactWriter> {
-            AndroidDeviceContactWriter(
+        single<DeviceContactWriterRepository> {
+            AndroidDeviceContactWriterRepositoryImpl(
                 context = androidContext()
             )
         }
 
-        single<DeviceContactsPermissionChecker> {
+        single<DeviceContactsPermissionRepository> {
             val context = androidContext()
-            DeviceContactsPermissionChecker {
+            DeviceContactsPermissionRepository {
                 ContextCompat.checkSelfPermission(
                     context,
                     Manifest.permission.READ_CONTACTS

@@ -4,52 +4,52 @@ import com.cbgm.securechat.core.protocol.handler.TypedProtocolPacketHandler
 import com.cbgm.securechat.core.protocol.identity.LocalIdentityChangeHandler
 import com.cbgm.securechat.core.protocol.phone.PhoneNumberNormalizer
 import com.cbgm.securechat.data.database.dao.ContactDao
-import com.cbgm.securechat.feature.contacts.data.identity.ContactLocalIdentityChangeHandler
-import com.cbgm.securechat.feature.contacts.data.identity.ContactVerificationCoordinator
-import com.cbgm.securechat.feature.contacts.data.identity.ContactVerificationPayloadEncoder
-import com.cbgm.securechat.feature.contacts.data.identity.DefaultIdentityExchangeStarter
-import com.cbgm.securechat.feature.contacts.data.identity.IdentityInvitationCoordinator
-import com.cbgm.securechat.feature.contacts.data.identity.IdentityInvitationPayloadEncoder
-import com.cbgm.securechat.feature.contacts.data.identity.ManualIdentityExchangeStarter
+import com.cbgm.securechat.feature.contacts.data.exchange.ManualIdentityExchange
+import com.cbgm.securechat.feature.contacts.data.incoming.handler.ContactInviteAcceptedPacketHandler
+import com.cbgm.securechat.feature.contacts.data.incoming.handler.ContactInviteDeclinedPacketHandler
+import com.cbgm.securechat.feature.contacts.data.incoming.handler.ContactInvitePacketHandler
+import com.cbgm.securechat.feature.contacts.data.incoming.handler.ContactReadyPacketHandler
+import com.cbgm.securechat.feature.contacts.data.incoming.handler.ContactVerificationReceiptPacketHandler
+import com.cbgm.securechat.feature.contacts.data.incoming.handler.DirectChatAuthorizationRevokedPacketHandler
+import com.cbgm.securechat.feature.contacts.data.incoming.handler.IdentityAcknowledgementPacketHandler
+import com.cbgm.securechat.feature.contacts.data.incoming.handler.IdentityPacketHandler
+import com.cbgm.securechat.feature.contacts.data.invitation.IdentityInvitationPayloadEncoder
 import com.cbgm.securechat.feature.contacts.data.merge.ContactMergeService
-import com.cbgm.securechat.feature.contacts.data.merge.DefaultContactMergeService
-import com.cbgm.securechat.feature.contacts.data.protocol.ContactInviteAcceptedPacketHandler
-import com.cbgm.securechat.feature.contacts.data.protocol.ContactInviteDeclinedPacketHandler
-import com.cbgm.securechat.feature.contacts.data.protocol.ContactInvitePacketHandler
-import com.cbgm.securechat.feature.contacts.data.protocol.ContactReadyPacketHandler
-import com.cbgm.securechat.feature.contacts.data.protocol.ContactVerificationReceiptPacketHandler
-import com.cbgm.securechat.feature.contacts.data.protocol.DirectChatAuthorizationRevokedPacketHandler
-import com.cbgm.securechat.feature.contacts.data.protocol.IdentityAcknowledgementPacketHandler
-import com.cbgm.securechat.feature.contacts.data.protocol.IdentityPacketHandler
-import com.cbgm.securechat.feature.contacts.data.repository.DefaultContactKeyExchangeStore
-import com.cbgm.securechat.feature.contacts.data.repository.DefaultContactRepository
-import com.cbgm.securechat.feature.contacts.domain.identity.ContactVerificationService
-import com.cbgm.securechat.feature.contacts.domain.identity.IdentityExchangeStarter
-import com.cbgm.securechat.feature.contacts.domain.identity.IdentityInvitationService
-import com.cbgm.securechat.feature.contacts.domain.repository.ContactKeyExchangeStore
+import com.cbgm.securechat.feature.contacts.data.merge.ContactMergeServiceImpl
+import com.cbgm.securechat.feature.contacts.data.repository.ContactKeyExchangeRepositoryImpl
+import com.cbgm.securechat.feature.contacts.data.repository.ContactRepositoryImpl
+import com.cbgm.securechat.feature.contacts.data.repository.ContactVerificationRepositoryImpl
+import com.cbgm.securechat.feature.contacts.data.repository.IdentityExchangeRepositoryImpl
+import com.cbgm.securechat.feature.contacts.data.repository.IdentityInvitationRepositoryImpl
+import com.cbgm.securechat.feature.contacts.data.verification.ContactLocalIdentityChangeHandler
+import com.cbgm.securechat.feature.contacts.data.verification.ContactVerificationPayloadEncoder
+import com.cbgm.securechat.feature.contacts.domain.repository.ContactKeyExchangeRepository
 import com.cbgm.securechat.feature.contacts.domain.repository.ContactRepository
-import com.cbgm.securechat.feature.contacts.domain.usecase.AcceptContactInvitation
-import com.cbgm.securechat.feature.contacts.domain.usecase.BlockContact
-import com.cbgm.securechat.feature.contacts.domain.usecase.DeclineAndBlockContactInvitation
-import com.cbgm.securechat.feature.contacts.domain.usecase.DeclineContactInvitation
-import com.cbgm.securechat.feature.contacts.domain.usecase.EnsureIdentityExchangeStarted
-import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
-import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactSafetyNumber
-import com.cbgm.securechat.feature.contacts.domain.usecase.ImportContact
-import com.cbgm.securechat.feature.contacts.domain.usecase.ImportDeviceContacts
-import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContact
-import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContactBlocklist
-import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContacts
-import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveIdentityHandshakeState
-import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveIdentitySetupMode
-import com.cbgm.securechat.feature.contacts.domain.usecase.ObservePendingContactInvitationCount
-import com.cbgm.securechat.feature.contacts.domain.usecase.ObservePendingContactInvitations
-import com.cbgm.securechat.feature.contacts.domain.usecase.UnblockContact
-import com.cbgm.securechat.feature.contacts.domain.usecase.VerifyContact
-import com.cbgm.securechat.feature.contacts.presentation.screen.ContactInvitationViewModel
-import com.cbgm.securechat.feature.contacts.presentation.screen.ContactsViewModel
-import com.cbgm.securechat.feature.contacts.presentation.screen.blocklist.BlockedContactsViewModel
-import com.cbgm.securechat.feature.contacts.presentation.screen.details.ContactDetailsViewModel
+import com.cbgm.securechat.feature.contacts.domain.repository.ContactVerificationRepository
+import com.cbgm.securechat.feature.contacts.domain.repository.IdentityExchangeRepository
+import com.cbgm.securechat.feature.contacts.domain.repository.IdentityInvitationRepository
+import com.cbgm.securechat.feature.contacts.domain.usecase.AcceptContactInvitationUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.BlockContactUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.DeclineAndBlockContactInvitationUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.DeclineContactInvitationUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.EnsureIdentityExchangeStartedUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.ImportContactUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.ImportDeviceContactsUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContactBlocklistUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContactUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContactsUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveIdentityHandshakeStateUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveIdentitySetupModeUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObservePendingContactInvitationCountUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObservePendingContactInvitationsUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.UnblockContactUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.VerifyContactUseCase
+import com.cbgm.securechat.feature.contacts.presentation.blocklist.BlockedContactsViewModel
+import com.cbgm.securechat.feature.contacts.presentation.details.ContactDetailsViewModel
+import com.cbgm.securechat.feature.contacts.presentation.invitations.ContactInvitationViewModel
+import com.cbgm.securechat.feature.contacts.presentation.overview.ContactsViewModel
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
@@ -60,14 +60,14 @@ val contactsModule =
     module {
 
         single<ContactMergeService> {
-            DefaultContactMergeService(
+            ContactMergeServiceImpl(
                 contactDao = get<ContactDao>(),
                 phoneNumberNormalizer = get<PhoneNumberNormalizer>()
             )
         }
 
-        single<ContactKeyExchangeStore> {
-            DefaultContactKeyExchangeStore(
+        single<ContactKeyExchangeRepository> {
+            ContactKeyExchangeRepositoryImpl(
                 contactDao = get(),
                 mailboxCapabilityLifecycle = get()
             )
@@ -89,7 +89,7 @@ val contactsModule =
         }
 
         single {
-            ContactVerificationCoordinator(
+            ContactVerificationRepositoryImpl(
                 contactDao = get(),
                 localPublicIdentityProvider = get(),
                 localSigningKeyPairProvider = get(),
@@ -99,16 +99,16 @@ val contactsModule =
             )
         }
 
-        single<ContactVerificationService> {
-            get<ContactVerificationCoordinator>()
+        single<ContactVerificationRepository> {
+            get<ContactVerificationRepositoryImpl>()
         }
 
         single {
-            IdentityInvitationCoordinator(
+            IdentityInvitationRepositoryImpl(
                 invitationDao = get(),
                 contactDao = get(),
                 contactRelayIdDao = get(),
-                contactKeyExchangeStore = get(),
+                contactKeyExchangeRepository = get(),
                 localPublicIdentityProvider = get(),
                 localSigningKeyPairProvider = get(),
                 detachedSignatureCrypto = get(),
@@ -117,22 +117,22 @@ val contactsModule =
                 protocolOutbox = get(),
                 localPhoneNumberProvider = get(),
                 phoneNumberNormalizer = get(),
-                contactVerificationService = get(),
+                contactVerificationRepository = get(),
                 modeRepository = get(),
                 contactBlocklistRepository = get()
             )
         }
 
-        single<IdentityInvitationService> {
-            get<IdentityInvitationCoordinator>()
+        single<IdentityInvitationRepository> {
+            get<IdentityInvitationRepositoryImpl>()
         }
 
         single {
-            ManualIdentityExchangeStarter(
+            ManualIdentityExchange(
                 contactDao = get(),
                 localPublicIdentityProvider = get(),
                 protocolOutbox = get(),
-                identityInvitationService = get()
+                identityInvitationRepository = get()
             )
         }
 
@@ -171,35 +171,35 @@ val contactsModule =
             bind<TypedProtocolPacketHandler>()
         }
 
-        single<IdentityExchangeStarter> {
-            DefaultIdentityExchangeStarter(
+        single<IdentityExchangeRepository> {
+            IdentityExchangeRepositoryImpl(
                 modeRepository = get(),
-                identityInvitationService = get(),
-                manualIdentityExchangeStarter = get()
+                identityInvitationRepository = get(),
+                manualIdentityExchange = get()
             )
         }
 
         single<ContactRepository> {
-            DefaultContactRepository(
+            ContactRepositoryImpl(
                 contactDao = get(),
                 mergeService = get(),
-                contactKeyExchangeStore = get(),
-                identityExchangeStarter = get(),
+                contactKeyExchangeRepository = get(),
+                identityExchangeRepository = get(),
                 phoneNumberNormalizer = get<PhoneNumberNormalizer>(),
-                deviceContactWriter = get()
+                deviceContactWriterRepository = get()
             )
         }
 
         factory {
-            ImportContact(repository = get())
+            ImportContactUseCase(repository = get())
         }
 
         factory {
-            GetContact(repository = get())
+            GetContactUseCase(repository = get())
         }
 
         factory {
-            GetContactSafetyNumber(
+            GetContactSafetyNumberUseCase(
                 localPublicIdentityProvider = get(),
                 contactRepository = get(),
                 safetyNumberGenerator = get()
@@ -207,60 +207,60 @@ val contactsModule =
         }
 
         factory {
-            ObserveContact(repository = get())
+            ObserveContactUseCase(repository = get())
         }
 
         factory {
-            ObserveContacts(repository = get())
+            ObserveContactsUseCase(repository = get())
         }
 
         factory {
-            ImportDeviceContacts(
-                deviceContactsDataSource = get(),
+            ImportDeviceContactsUseCase(
+                deviceContactsRepository = get(),
                 repository = get()
             )
         }
 
         factory {
-            ObserveContactBlocklist(
+            ObserveContactBlocklistUseCase(
                 observeContacts = get(),
                 repository = get()
             )
         }
 
         factory {
-            BlockContact(
+            BlockContactUseCase(
                 blocklistRepository = get(),
                 contactRepository = get(),
-                identityInvitationService = get(),
+                identityInvitationRepository = get(),
                 mailboxCapabilityLifecycle = get()
             )
         }
 
         factory {
-            UnblockContact(repository = get())
+            UnblockContactUseCase(repository = get())
         }
 
         factory {
-            VerifyContact(
+            VerifyContactUseCase(
                 repository = get(),
-                contactVerificationService = get()
+                contactVerificationRepository = get()
             )
         }
 
-        factory { AcceptContactInvitation(identityInvitationService = get()) }
-        factory { DeclineContactInvitation(identityInvitationService = get()) }
-        factory { DeclineAndBlockContactInvitation(identityInvitationService = get()) }
+        factory { AcceptContactInvitationUseCase(identityInvitationRepository = get()) }
+        factory { DeclineContactInvitationUseCase(identityInvitationRepository = get()) }
+        factory { DeclineAndBlockContactInvitationUseCase(identityInvitationRepository = get()) }
         factory {
-            ObservePendingContactInvitations(
-                identityInvitationService = get(),
+            ObservePendingContactInvitationsUseCase(
+                identityInvitationRepository = get(),
                 modeRepository = get()
             )
         }
-        factory { ObservePendingContactInvitationCount(observePendingContactInvitations = get()) }
-        factory { ObserveIdentityHandshakeState(identityInvitationService = get()) }
-        factory { ObserveIdentitySetupMode(repository = get()) }
-        factory { EnsureIdentityExchangeStarted(identityExchangeStarter = get()) }
+        factory { ObservePendingContactInvitationCountUseCase(observePendingContactInvitations = get()) }
+        factory { ObserveIdentityHandshakeStateUseCase(identityInvitationRepository = get()) }
+        factory { ObserveIdentitySetupModeUseCase(repository = get()) }
+        factory { EnsureIdentityExchangeStartedUseCase(identityExchangeRepository = get()) }
 
         viewModel {
             ContactInvitationViewModel(

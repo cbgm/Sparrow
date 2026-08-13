@@ -29,10 +29,10 @@ import com.cbgm.securechat.feature.contacts.domain.model.ImportDeviceContactRequ
 import com.cbgm.securechat.feature.contacts.domain.model.KeyExchangeStatus
 import com.cbgm.securechat.feature.contacts.domain.model.SecureChatIdentity
 import com.cbgm.securechat.feature.contacts.domain.repository.ContactRepository
-import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
-import com.cbgm.securechat.feature.messaging.domain.relay.ContactRelayIdResolver
-import com.cbgm.securechat.feature.messaging.domain.relay.GroupRelayIdResolver
-import com.cbgm.securechat.feature.messaging.domain.relay.GroupTransportKeyResolver
+import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactUseCase
+import com.cbgm.securechat.feature.messaging.application.relay.ContactRelayIdResolver
+import com.cbgm.securechat.feature.messaging.application.relay.GroupRelayIdResolver
+import com.cbgm.securechat.feature.messaging.application.relay.GroupTransportKeyResolver
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -434,7 +434,7 @@ class DefaultOutboxProcessorTest {
     ): DefaultOutboxProcessor =
         DefaultOutboxProcessor(
             protocolOutbox = outbox,
-            getContact = GetContact(FakeContactRepository(contact)),
+            getContact = GetContactUseCase(FakeContactRepository(contact)),
             transportPayloadFactory =
                 DefaultOutgoingTransportPayloadFactory(
                     transportMessageCipher = cipher,

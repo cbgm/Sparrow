@@ -6,14 +6,14 @@ import com.cbgm.securechat.feature.chats.data.direct.mapper.toDirectConversation
 import com.cbgm.securechat.feature.chats.data.direct.storage.DirectConversationStorage
 import com.cbgm.securechat.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.securechat.feature.chats.domain.repository.direct.DirectConversationRepository
-import com.cbgm.securechat.feature.contacts.domain.identity.IdentityInvitationService
+import com.cbgm.securechat.feature.contacts.domain.repository.IdentityInvitationRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 class DirectConversationRepositoryImpl(
     private val chatDao: ChatDao,
     private val conversationStorage: DirectConversationStorage,
-    private val identityInvitationService: IdentityInvitationService,
+    private val identityInvitationRepository: IdentityInvitationRepository,
     private val mailboxCapabilityLifecycle: MailboxCapabilityLifecycle
 ) : DirectConversationRepository {
     override fun observe(conversationId: String): Flow<DirectConversation?> =
@@ -39,7 +39,7 @@ class DirectConversationRepositoryImpl(
                 requireNotNull(conversation.contactId) {
                     "Direct conversation has no contact"
                 }
-            identityInvitationService.revokeDirectChatAuthorization(contactId).getOrThrow()
+            identityInvitationRepository.revokeDirectChatAuthorization(contactId).getOrThrow()
             mailboxCapabilityLifecycle.revokeForContact(contactId).getOrThrow()
             chatDao.deleteConversation(conversationId)
         }

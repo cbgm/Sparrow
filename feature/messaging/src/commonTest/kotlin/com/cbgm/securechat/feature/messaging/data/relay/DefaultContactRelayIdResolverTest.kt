@@ -10,7 +10,7 @@ import com.cbgm.securechat.feature.contacts.domain.model.ImportDeviceContactRequ
 import com.cbgm.securechat.feature.contacts.domain.model.KeyExchangeStatus
 import com.cbgm.securechat.feature.contacts.domain.model.SecureChatIdentity
 import com.cbgm.securechat.feature.contacts.domain.repository.ContactRepository
-import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
+import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactUseCase
 import com.cbgm.securechat.feature.transport.relay.identity.RelayIdGenerator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -31,7 +31,7 @@ class DefaultContactRelayIdResolverTest {
             val relayIdGenerator = RecordingRelayIdGenerator(result = "stored-relay-id")
             val resolver =
                 DefaultContactRelayIdResolver(
-                    getContact = GetContact(contactRepository),
+                    getContact = GetContactUseCase(contactRepository),
                     contactRelayIdDao = relayIdDao,
                     relayIdGenerator = relayIdGenerator
                 )
@@ -52,7 +52,7 @@ class DefaultContactRelayIdResolverTest {
             val relayIdGenerator = RecordingRelayIdGenerator()
             val resolver =
                 DefaultContactRelayIdResolver(
-                    getContact = GetContact(FakeContactRepository(contact)),
+                    getContact = GetContactUseCase(FakeContactRepository(contact)),
                     contactRelayIdDao = relayIdDao,
                     relayIdGenerator = relayIdGenerator
                 )
@@ -74,7 +74,7 @@ class DefaultContactRelayIdResolverTest {
             val relayIdGenerator = RecordingRelayIdGenerator()
             val resolver =
                 DefaultContactRelayIdResolver(
-                    getContact = GetContact(FakeContactRepository(createContact())),
+                    getContact = GetContactUseCase(FakeContactRepository(createContact())),
                     contactRelayIdDao = relayIdDao,
                     relayIdGenerator = relayIdGenerator
                 )
@@ -94,7 +94,7 @@ class DefaultContactRelayIdResolverTest {
             val resolver =
                 DefaultContactRelayIdResolver(
                     getContact =
-                        GetContact(
+                        GetContactUseCase(
                             FakeContactRepository(
                                 createContact(signingPublicKey = null)
                             )

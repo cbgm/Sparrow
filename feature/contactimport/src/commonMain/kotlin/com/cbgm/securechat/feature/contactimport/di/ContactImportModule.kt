@@ -13,14 +13,14 @@ val contactImportModule =
 
         factory {
             ImportSharedIdentityUseCase(
-                identityShareCodec = get(),
+                identityShareRepository = get(),
                 importContact = get()
             )
         }
 
         factory {
             VerifyContactByQrUseCase(
-                identityShareCodec = get(),
+                identityShareRepository = get(),
                 importContact = get(),
                 verifyContact = get()
             )

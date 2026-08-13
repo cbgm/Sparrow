@@ -3,9 +3,9 @@ package com.cbgm.securechat.feature.contacts.data.mapper
 import com.cbgm.securechat.core.id.IdGenerator
 import com.cbgm.securechat.core.protocol.phone.PhoneNumberNormalizer
 import com.cbgm.securechat.data.database.entity.ContactPhoneNumberEntity
-import com.cbgm.securechat.feature.contacts.domain.device.DevicePhoneNumber
-import com.cbgm.securechat.feature.contacts.domain.device.DevicePhoneNumberType
 import com.cbgm.securechat.feature.contacts.domain.model.ContactPhoneNumberType
+import com.cbgm.securechat.feature.contacts.domain.model.device.DevicePhoneNumber
+import com.cbgm.securechat.feature.contacts.domain.model.device.DevicePhoneNumberType
 
 internal fun DevicePhoneNumber.toEntity(
     contactId: String,

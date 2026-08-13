@@ -3,8 +3,8 @@ package com.cbgm.securechat.feature.contactimport.domain.usecase
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
 import com.cbgm.securechat.feature.contacts.domain.model.IdentityImportTrust
 import com.cbgm.securechat.feature.contacts.domain.model.ImportContactRequest
-import com.cbgm.securechat.feature.contacts.domain.usecase.ImportContact
-import com.cbgm.securechat.feature.identity.domain.service.IdentityShareCodec
+import com.cbgm.securechat.feature.contacts.domain.usecase.ImportContactUseCase
+import com.cbgm.securechat.feature.identity.domain.repository.IdentityShareRepository
 
 /**
  * Decodes and imports a shared SecureChat identity.
@@ -14,8 +14,8 @@ import com.cbgm.securechat.feature.identity.domain.service.IdentityShareCodec
  * merges by normalized phone number before considering public keys.
  */
 class ImportSharedIdentityUseCase(
-    private val identityShareCodec: IdentityShareCodec,
-    private val importContact: ImportContact
+    private val identityShareRepository: IdentityShareRepository,
+    private val importContact: ImportContactUseCase
 ) {
     suspend operator fun invoke(
         encodedIdentity: String,
@@ -23,7 +23,7 @@ class ImportSharedIdentityUseCase(
         identityImportTrust: IdentityImportTrust = IdentityImportTrust.UNVERIFIED
     ): Result<Contact> =
         runCatching {
-            val sharedIdentity = identityShareCodec.decode(encodedIdentity).getOrThrow()
+            val sharedIdentity = identityShareRepository.decode(encodedIdentity).getOrThrow()
 
             val phoneNumber =
                 sharedIdentity

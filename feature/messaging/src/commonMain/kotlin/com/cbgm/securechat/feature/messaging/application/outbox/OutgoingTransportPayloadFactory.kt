@@ -6,7 +6,7 @@ import com.cbgm.securechat.core.crypto.transport.TransportMessageCipher
 import com.cbgm.securechat.core.protocol.packet.SecureChatPacket
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
 import com.cbgm.securechat.feature.contacts.domain.model.KeyExchangeStatus
-import com.cbgm.securechat.feature.messaging.domain.relay.GroupTransportKeyResolver
+import com.cbgm.securechat.feature.messaging.application.relay.GroupTransportKeyResolver
 
 interface OutgoingTransportPayloadFactory {
     suspend fun create(

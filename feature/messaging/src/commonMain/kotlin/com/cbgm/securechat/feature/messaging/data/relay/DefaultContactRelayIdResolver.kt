@@ -4,12 +4,12 @@ import com.cbgm.securechat.data.database.dao.ContactRelayIdDao
 import com.cbgm.securechat.data.database.entity.ContactRelayIdEntity
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
 import com.cbgm.securechat.feature.contacts.domain.model.KeyExchangeStatus
-import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
-import com.cbgm.securechat.feature.messaging.domain.relay.ContactRelayIdResolver
+import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactUseCase
+import com.cbgm.securechat.feature.messaging.application.relay.ContactRelayIdResolver
 import com.cbgm.securechat.feature.transport.relay.identity.RelayIdGenerator
 
 class DefaultContactRelayIdResolver(
-    private val getContact: GetContact,
+    private val getContact: GetContactUseCase,
     private val contactRelayIdDao: ContactRelayIdDao,
     private val relayIdGenerator: RelayIdGenerator
 ) : ContactRelayIdResolver {

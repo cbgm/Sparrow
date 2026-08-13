@@ -9,10 +9,10 @@ import androidx.compose.runtime.setValue
 import com.cbgm.securechat.feature.chats.presentation.details.GroupDetailsFlow
 import com.cbgm.securechat.feature.chats.presentation.details.model.DetailsTarget
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
-import com.cbgm.securechat.feature.contacts.presentation.ContactDetailsFlow
+import com.cbgm.securechat.feature.contacts.presentation.details.ContactDetailsRoute
 import com.cbgm.securechat.feature.identity.domain.model.SharedContactDetails
 import com.cbgm.securechat.feature.identity.domain.model.SharedIdentityPayload
-import com.cbgm.securechat.feature.identity.domain.service.IdentityShareCodec
+import com.cbgm.securechat.feature.identity.domain.repository.IdentityShareRepository
 import com.cbgm.securechat.feature.identity.presentation.platform.rememberIdentityShareLauncher
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.base_share_contact
@@ -25,7 +25,7 @@ fun DetailsRoute(
     openVerification: Boolean,
     requestGroupLeave: Boolean = false
 ) {
-    val identityShareCodec = koinInject<IdentityShareCodec>()
+    val identityShareRepository = koinInject<IdentityShareRepository>()
     var encodedContactToShare by remember { mutableStateOf("") }
     val launchContactShare =
         rememberIdentityShareLauncher(
@@ -43,13 +43,13 @@ fun DetailsRoute(
 
     when (target) {
         is DetailsTarget.Contact -> {
-            ContactDetailsFlow(
+            ContactDetailsRoute(
                 contactId = target.contactId,
                 openVerification = openVerification,
                 onShareContact = { contact ->
                     encodeContactForSharing(
                         contact = contact,
-                        identityShareCodec = identityShareCodec,
+                        identityShareRepository = identityShareRepository,
                         onEncoded = { encodedIdentity ->
                             encodedContactToShare = encodedIdentity
                             shouldLaunchShare = true
@@ -70,7 +70,7 @@ fun DetailsRoute(
 
 private fun encodeContactForSharing(
     contact: Contact,
-    identityShareCodec: IdentityShareCodec,
+    identityShareRepository: IdentityShareRepository,
     onEncoded: (String) -> Unit
 ) {
     val identity = contact.secureChatIdentity
@@ -81,7 +81,7 @@ private fun encodeContactForSharing(
             ?.takeIf(String::isNotBlank)
 
     if (identity != null && phoneNumber != null) {
-        identityShareCodec
+        identityShareRepository
             .encode(
                 payload =
                     SharedIdentityPayload(

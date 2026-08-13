@@ -14,7 +14,7 @@ import com.cbgm.securechat.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.securechat.feature.contacts.domain.model.ImportContactRequest
 import com.cbgm.securechat.feature.contacts.domain.model.ImportDeviceContactRequest
 import com.cbgm.securechat.feature.contacts.domain.repository.ContactRepository
-import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
+import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
@@ -32,7 +32,7 @@ class GroupVerificationStateTest {
                     groupVerificationDao = verificationDao,
                     groupInvitationDao = invitationDao,
                     groupSecurityDao = EmptyGroupSecurityDao(),
-                    getContact = GetContact(FakeContactRepository())
+                    getContact = GetContactUseCase(FakeContactRepository())
                 )
             invitationDao.invitations = listOf(outgoingInvitation())
 
@@ -53,7 +53,7 @@ class GroupVerificationStateTest {
                     groupVerificationDao = verificationDao,
                     groupInvitationDao = invitationDao,
                     groupSecurityDao = EmptyGroupSecurityDao(),
-                    getContact = GetContact(FakeContactRepository())
+                    getContact = GetContactUseCase(FakeContactRepository())
                 )
             invitationDao.invitations =
                 listOf(

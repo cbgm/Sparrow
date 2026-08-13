@@ -3,14 +3,14 @@ package com.cbgm.securechat.feature.contactimport.domain.usecase
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
 import com.cbgm.securechat.feature.contacts.domain.model.IdentityImportTrust
 import com.cbgm.securechat.feature.contacts.domain.model.ImportContactRequest
-import com.cbgm.securechat.feature.contacts.domain.usecase.ImportContact
-import com.cbgm.securechat.feature.contacts.domain.usecase.VerifyContact
-import com.cbgm.securechat.feature.identity.domain.service.IdentityShareCodec
+import com.cbgm.securechat.feature.contacts.domain.usecase.ImportContactUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.VerifyContactUseCase
+import com.cbgm.securechat.feature.identity.domain.repository.IdentityShareRepository
 
 class VerifyContactByQrUseCase(
-    private val identityShareCodec: IdentityShareCodec,
-    private val importContact: ImportContact,
-    private val verifyContact: VerifyContact
+    private val identityShareRepository: IdentityShareRepository,
+    private val importContact: ImportContactUseCase,
+    private val verifyContact: VerifyContactUseCase
 ) {
     suspend operator fun invoke(
         contactId: String,
@@ -21,7 +21,7 @@ class VerifyContactByQrUseCase(
                 "Contact ID must not be blank"
             }
 
-            val sharedIdentity = identityShareCodec.decode(encodedIdentity).getOrThrow()
+            val sharedIdentity = identityShareRepository.decode(encodedIdentity).getOrThrow()
 
             val importedContact =
                 importContact(

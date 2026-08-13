@@ -8,9 +8,9 @@ import com.cbgm.securechat.feature.chats.presentation.verification.model.GroupMe
 import com.cbgm.securechat.feature.chats.presentation.verification.model.GroupMemberQrVerificationUiEvent
 import com.cbgm.securechat.feature.chats.presentation.verification.model.GroupMemberQrVerificationUiState
 import com.cbgm.securechat.feature.contactimport.presentation.scan.model.ScannedIdentityPreview
-import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
+import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactUseCase
 import com.cbgm.securechat.feature.identity.domain.model.SharedIdentityPayload
-import com.cbgm.securechat.feature.identity.domain.usecase.DecodeSharedIdentity
+import com.cbgm.securechat.feature.identity.domain.usecase.DecodeSharedIdentityUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,8 +20,8 @@ import kotlinx.coroutines.launch
 class GroupMemberQrVerificationViewModel(
     private val groupId: String,
     private val contactId: String,
-    private val decodeSharedIdentity: DecodeSharedIdentity,
-    private val getContact: GetContact,
+    private val decodeSharedIdentity: DecodeSharedIdentityUseCase,
+    private val getContact: GetContactUseCase,
     private val verifyGroupMember: VerifyGroupMemberUseCase
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow(GroupMemberQrVerificationUiState())

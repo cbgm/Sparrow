@@ -3,13 +3,13 @@ package com.cbgm.securechat.presentation.screen
 import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.ui.navigation.AppRoute
 import com.cbgm.securechat.core.ui.presentation.BaseViewModel
-import com.cbgm.securechat.feature.contacts.domain.usecase.ObservePendingContactInvitationCount
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObservePendingContactInvitationCountUseCase
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 
 class MainViewModel(
-    observePendingContactInvitationCount: ObservePendingContactInvitationCount
+    observePendingContactInvitationCount: ObservePendingContactInvitationCountUseCase
 ) : BaseViewModel() {
     val invitationCount: StateFlow<Int> =
         observePendingContactInvitationCount()

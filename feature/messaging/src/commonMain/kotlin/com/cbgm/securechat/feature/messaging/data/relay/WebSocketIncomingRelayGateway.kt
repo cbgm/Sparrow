@@ -1,7 +1,7 @@
 package com.cbgm.securechat.feature.messaging.data.relay
 
-import com.cbgm.securechat.feature.messaging.domain.relay.IncomingRelayEnvelope
-import com.cbgm.securechat.feature.messaging.domain.relay.IncomingRelayGateway
+import com.cbgm.securechat.feature.messaging.application.relay.IncomingRelayEnvelope
+import com.cbgm.securechat.feature.messaging.application.relay.IncomingRelayGateway
 import com.cbgm.securechat.feature.transport.websocket.WebSocketTransportClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map

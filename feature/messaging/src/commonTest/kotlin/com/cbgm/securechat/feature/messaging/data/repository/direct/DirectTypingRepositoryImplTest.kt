@@ -1,6 +1,6 @@
 package com.cbgm.securechat.feature.messaging.data.repository.direct
 
-import com.cbgm.securechat.feature.messaging.domain.relay.ContactRelayIdResolver
+import com.cbgm.securechat.feature.messaging.application.relay.ContactRelayIdResolver
 import com.cbgm.securechat.feature.transport.connection.TransportConnectionState
 import com.cbgm.securechat.feature.transport.relay.model.RelayEnvelope
 import com.cbgm.securechat.feature.transport.relay.model.RelayTypingEvent

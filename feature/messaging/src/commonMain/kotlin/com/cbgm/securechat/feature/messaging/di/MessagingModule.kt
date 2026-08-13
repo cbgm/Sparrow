@@ -10,7 +10,7 @@ import com.cbgm.securechat.data.database.dao.ContactDao
 import com.cbgm.securechat.feature.chats.domain.repository.direct.DirectTypingRepository
 import com.cbgm.securechat.feature.chats.domain.repository.group.GroupTypingRepository
 import com.cbgm.securechat.feature.contacts.domain.repository.ContactRepository
-import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
+import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactUseCase
 import com.cbgm.securechat.feature.messaging.application.incoming.DefaultIncomingEnvelopeProcessor
 import com.cbgm.securechat.feature.messaging.application.incoming.DefaultIncomingRelayRunner
 import com.cbgm.securechat.feature.messaging.application.incoming.IncomingEnvelopeProcessor
@@ -26,6 +26,11 @@ import com.cbgm.securechat.feature.messaging.application.outbox.DefaultOutgoingP
 import com.cbgm.securechat.feature.messaging.application.outbox.DefaultOutgoingTransportPayloadFactory
 import com.cbgm.securechat.feature.messaging.application.outbox.OutgoingPacketTransportPolicy
 import com.cbgm.securechat.feature.messaging.application.outbox.OutgoingTransportPayloadFactory
+import com.cbgm.securechat.feature.messaging.application.relay.ContactByRelayIdResolver
+import com.cbgm.securechat.feature.messaging.application.relay.ContactRelayIdResolver
+import com.cbgm.securechat.feature.messaging.application.relay.GroupRelayIdResolver
+import com.cbgm.securechat.feature.messaging.application.relay.GroupTransportKeyResolver
+import com.cbgm.securechat.feature.messaging.application.relay.IncomingRelayGateway
 import com.cbgm.securechat.feature.messaging.data.relay.DefaultContactByRelayIdResolver
 import com.cbgm.securechat.feature.messaging.data.relay.DefaultContactRelayIdResolver
 import com.cbgm.securechat.feature.messaging.data.relay.DefaultGroupRelayIdResolver
@@ -33,11 +38,6 @@ import com.cbgm.securechat.feature.messaging.data.relay.DefaultGroupTransportKey
 import com.cbgm.securechat.feature.messaging.data.relay.WebSocketIncomingRelayGateway
 import com.cbgm.securechat.feature.messaging.data.repository.direct.DirectTypingRepositoryImpl
 import com.cbgm.securechat.feature.messaging.data.repository.group.GroupTypingRepositoryImpl
-import com.cbgm.securechat.feature.messaging.domain.relay.ContactByRelayIdResolver
-import com.cbgm.securechat.feature.messaging.domain.relay.ContactRelayIdResolver
-import com.cbgm.securechat.feature.messaging.domain.relay.GroupRelayIdResolver
-import com.cbgm.securechat.feature.messaging.domain.relay.GroupTransportKeyResolver
-import com.cbgm.securechat.feature.messaging.domain.relay.IncomingRelayGateway
 import com.cbgm.securechat.feature.transport.relay.identity.RelayIdGenerator
 import com.cbgm.securechat.feature.transport.websocket.WebSocketTransportClient
 import org.koin.core.module.dsl.bind
@@ -48,7 +48,7 @@ val messagingModule =
     module {
         single<ContactRelayIdResolver> {
             DefaultContactRelayIdResolver(
-                getContact = get<GetContact>(),
+                getContact = get<GetContactUseCase>(),
                 contactRelayIdDao = get(),
                 relayIdGenerator = get<RelayIdGenerator>()
             )
@@ -114,7 +114,7 @@ val messagingModule =
         single<OutboxProcessor> {
             DefaultOutboxProcessor(
                 protocolOutbox = get<ProtocolOutbox>(),
-                getContact = get<GetContact>(),
+                getContact = get<GetContactUseCase>(),
                 transportPayloadFactory = get<OutgoingTransportPayloadFactory>(),
                 transportPayloadCodec = get(),
                 packetCodec = get(),

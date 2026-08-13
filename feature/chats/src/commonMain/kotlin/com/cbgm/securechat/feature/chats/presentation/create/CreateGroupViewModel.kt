@@ -7,9 +7,9 @@ import com.cbgm.securechat.feature.chats.presentation.create.model.CreateGroupEf
 import com.cbgm.securechat.feature.chats.presentation.create.model.CreateGroupUiEvent
 import com.cbgm.securechat.feature.chats.presentation.create.model.CreateGroupUiState
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
-import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContacts
-import com.cbgm.securechat.feature.contacts.presentation.mapper.filterContacts
-import com.cbgm.securechat.feature.contacts.presentation.mapper.groupContactsByInitial
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContactsUseCase
+import com.cbgm.securechat.feature.contacts.presentation.overview.mapper.filterContacts
+import com.cbgm.securechat.feature.contacts.presentation.overview.mapper.groupContactsByInitial
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class CreateGroupViewModel(
-    private val observeContacts: ObserveContacts,
+    private val observeContacts: ObserveContactsUseCase,
     private val createGroupConversation: CreateGroupConversationUseCase
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow(CreateGroupUiState())

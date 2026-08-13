@@ -9,10 +9,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.feature.chats.presentation.details.model.AddGroupMembersUiEvent
 import com.cbgm.securechat.feature.chats.presentation.details.model.GroupMemberManagementUiState
-import com.cbgm.securechat.feature.contacts.presentation.model.ContactsScreenMode
-import com.cbgm.securechat.feature.contacts.presentation.model.ContactsUiEvent
-import com.cbgm.securechat.feature.contacts.presentation.model.ContactsUiState
-import com.cbgm.securechat.feature.contacts.presentation.screen.ContactsScreen
+import com.cbgm.securechat.feature.contacts.presentation.overview.ContactsScreen
+import com.cbgm.securechat.feature.contacts.presentation.overview.model.ContactsScreenMode
+import com.cbgm.securechat.feature.contacts.presentation.overview.model.ContactsUiEvent
+import com.cbgm.securechat.feature.contacts.presentation.overview.model.ContactsUiState
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.feature_chats_group_add_members
 import org.jetbrains.compose.resources.stringResource

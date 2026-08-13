@@ -40,7 +40,7 @@ import com.cbgm.securechat.core.ui.component.SecureChatTabbedScrollStates
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.feature.chats.presentation.ContactsFlow
 import com.cbgm.securechat.feature.chats.presentation.overview.OverviewRoute
-import com.cbgm.securechat.feature.identity.presentation.IdentityRoute
+import com.cbgm.securechat.feature.identity.presentation.setup.IdentityRoute
 import com.cbgm.securechat.feature.settings.presentation.overview.SettingsRoute
 import com.cbgm.securechat.presentation.model.MainTab
 import com.cbgm.securechat.resources.Res

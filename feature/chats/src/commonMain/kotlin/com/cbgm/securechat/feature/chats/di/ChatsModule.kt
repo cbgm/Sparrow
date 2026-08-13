@@ -108,12 +108,12 @@ import com.cbgm.securechat.feature.chats.presentation.direct.screen.DirectViewMo
 import com.cbgm.securechat.feature.chats.presentation.group.screen.GroupViewModel
 import com.cbgm.securechat.feature.chats.presentation.overview.OverviewViewModel
 import com.cbgm.securechat.feature.chats.presentation.verification.GroupMemberQrVerificationViewModel
-import com.cbgm.securechat.feature.contacts.domain.usecase.EnsureIdentityExchangeStarted
-import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactSafetyNumber
-import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContact
-import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContacts
-import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveIdentityHandshakeState
-import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveIdentitySetupMode
+import com.cbgm.securechat.feature.contacts.domain.usecase.EnsureIdentityExchangeStartedUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContactUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContactsUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveIdentityHandshakeStateUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveIdentitySetupModeUseCase
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
@@ -262,7 +262,7 @@ private fun org.koin.core.module.Module.registerViewModels() {
     viewModel {
         ContactsFlowViewModel(
             getOrCreateDirectConversation = get(),
-            ensureIdentityExchangeStarted = get<EnsureIdentityExchangeStarted>()
+            ensureIdentityExchangeStarted = get<EnsureIdentityExchangeStartedUseCase>()
         )
     }
 
@@ -293,7 +293,7 @@ private fun org.koin.core.module.Module.registerViewModels() {
             refreshDeliveryState = get(),
             acceptInvitation = get(),
             declineInvitation = get(),
-            observeContacts = get<ObserveContacts>(),
+            observeContacts = get<ObserveContactsUseCase>(),
             observeMemberTyping = get(),
             setGroupTyping = get()
         )
@@ -305,7 +305,7 @@ private fun org.koin.core.module.Module.registerViewModels() {
             observeGroupVerification = get(),
             synchronizeGroupVerification = get(),
             verifyGroupMember = get(),
-            getContactSafetyNumber = get<GetContactSafetyNumber>(),
+            getContactSafetyNumber = get<GetContactSafetyNumberUseCase>(),
             observeContacts = get(),
             addGroupMembers = get(),
             removeGroupMember = get(),
@@ -337,10 +337,10 @@ private fun org.koin.core.module.Module.registerViewModels() {
             markConversationRead = get(),
             retryMessage = get(),
             refreshDeliveryState = get(),
-            observeIdentitySetupMode = get<ObserveIdentitySetupMode>(),
-            ensureIdentityExchangeStarted = get<EnsureIdentityExchangeStarted>(),
-            observeIdentityHandshakeState = get<ObserveIdentityHandshakeState>(),
-            observeContact = get<ObserveContact>(),
+            observeIdentitySetupMode = get<ObserveIdentitySetupModeUseCase>(),
+            ensureIdentityExchangeStarted = get<EnsureIdentityExchangeStartedUseCase>(),
+            observeIdentityHandshakeState = get<ObserveIdentityHandshakeStateUseCase>(),
+            observeContact = get<ObserveContactUseCase>(),
             observeTyping = get(),
             setTyping = get()
         )

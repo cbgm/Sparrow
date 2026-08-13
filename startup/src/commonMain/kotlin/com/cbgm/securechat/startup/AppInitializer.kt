@@ -1,12 +1,12 @@
 package com.cbgm.securechat.startup
 
 import com.cbgm.securechat.feature.identity.domain.model.IdentityStatus
-import com.cbgm.securechat.feature.identity.domain.usecase.GetIdentityStatus
-import com.cbgm.securechat.feature.identity.domain.usecase.RecoverIncompleteIdentity
+import com.cbgm.securechat.feature.identity.domain.usecase.GetIdentityStatusUseCase
+import com.cbgm.securechat.feature.identity.domain.usecase.RecoverIncompleteIdentityUseCase
 
 class AppInitializer(
-    private val getIdentityStatus: GetIdentityStatus,
-    private val recoverIncompleteIdentity: RecoverIncompleteIdentity
+    private val getIdentityStatus: GetIdentityStatusUseCase,
+    private val recoverIncompleteIdentity: RecoverIncompleteIdentityUseCase
 ) {
     suspend fun initialize(): Result<AppInitializationResult> =
         runCatching {

@@ -23,10 +23,10 @@ import com.cbgm.securechat.feature.chats.presentation.details.model.GroupMemberM
 import com.cbgm.securechat.feature.chats.presentation.details.model.GroupMemberVerificationState
 import com.cbgm.securechat.feature.chats.presentation.details.model.GroupMemberVerificationUiState
 import com.cbgm.securechat.feature.chats.presentation.details.model.GroupVerificationUiState
-import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactSafetyNumber
-import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContacts
-import com.cbgm.securechat.feature.contacts.presentation.mapper.filterContacts
-import com.cbgm.securechat.feature.contacts.presentation.mapper.groupContactsByInitial
+import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContactsUseCase
+import com.cbgm.securechat.feature.contacts.presentation.overview.mapper.filterContacts
+import com.cbgm.securechat.feature.contacts.presentation.overview.mapper.groupContactsByInitial
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -40,8 +40,8 @@ class GroupVerificationViewModel(
     observeGroupVerification: ObserveGroupVerificationUseCase,
     private val synchronizeGroupVerification: SynchronizeGroupVerificationUseCase,
     private val verifyGroupMember: VerifyGroupMemberUseCase,
-    private val getContactSafetyNumber: GetContactSafetyNumber,
-    observeContacts: ObserveContacts,
+    private val getContactSafetyNumber: GetContactSafetyNumberUseCase,
+    observeContacts: ObserveContactsUseCase,
     private val addGroupMembers: AddGroupMembersUseCase,
     private val removeGroupMember: RemoveGroupMemberUseCase,
     private val promoteGroupMember: PromoteGroupMemberUseCase,

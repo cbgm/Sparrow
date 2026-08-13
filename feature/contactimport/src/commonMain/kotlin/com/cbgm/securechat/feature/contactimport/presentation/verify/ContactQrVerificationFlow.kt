@@ -15,7 +15,7 @@ import com.cbgm.securechat.feature.contactimport.presentation.component.verifica
 import com.cbgm.securechat.feature.contactimport.presentation.scan.model.ScanIdentityUiEvent
 import com.cbgm.securechat.feature.contactimport.presentation.scan.model.ScannedIdentityPreview
 import com.cbgm.securechat.feature.contactimport.presentation.verify.model.VerifyContactQrUiEvent
-import com.cbgm.securechat.feature.identity.domain.service.IdentityShareCodec
+import com.cbgm.securechat.feature.identity.domain.repository.IdentityShareRepository
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.feature_contactimport_invalid_identity_qr
 import com.cbgm.securechat.resources.feature_contactimport_trust_and_verify
@@ -31,7 +31,7 @@ fun ContactQrVerificationFlow(
         koinViewModel {
             parametersOf(contactId)
         },
-    identityShareCodec: IdentityShareCodec = koinInject()
+    identityShareRepository: IdentityShareRepository = koinInject()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -48,7 +48,7 @@ fun ContactQrVerificationFlow(
                 when (event) {
                     is ScanIdentityUiEvent.QrCodeScanned -> {
                         val encodedIdentity = event.encodedIdentity
-                        identityShareCodec
+                        identityShareRepository
                             .decode(encodedValue = encodedIdentity)
                             .onSuccess { payload ->
                                 scannedIdentityPreview =

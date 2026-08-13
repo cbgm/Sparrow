@@ -2,13 +2,13 @@ package com.cbgm.securechat.feature.chats.domain.usecase.group
 
 import com.cbgm.securechat.feature.chats.domain.model.group.GroupVerificationState
 import com.cbgm.securechat.feature.chats.domain.repository.group.GroupVerificationRepository
-import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContacts
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContactsUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
 class ObserveGroupVerificationUseCase(
     private val repository: GroupVerificationRepository,
-    private val observeContacts: ObserveContacts
+    private val observeContacts: ObserveContactsUseCase
 ) {
     operator fun invoke(groupId: String): Flow<GroupVerificationState> =
         combine(repository.observePairs(groupId), observeContacts(), repository.observeContext(groupId)) { pairs, contacts, context ->

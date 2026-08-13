@@ -3,7 +3,7 @@ package com.cbgm.securechat.feature.messaging.data.relay
 import com.cbgm.securechat.data.database.dao.ChatDao
 import com.cbgm.securechat.data.database.dao.GroupSecurityDao
 import com.cbgm.securechat.data.database.entity.GroupMemberKeyEntity
-import com.cbgm.securechat.feature.messaging.domain.relay.GroupRelayIdResolver
+import com.cbgm.securechat.feature.messaging.application.relay.GroupRelayIdResolver
 import com.cbgm.securechat.feature.transport.relay.identity.RelayIdGenerator
 
 class DefaultGroupRelayIdResolver(

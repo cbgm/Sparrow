@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.cbgm.securechat.core.crypto.SodiumRuntime
 import com.cbgm.securechat.core.crypto.identity.SodiumIdentityKeyGenerator
-import com.cbgm.securechat.feature.identity.data.storage.AndroidPrivateKeyStorage
+import com.cbgm.securechat.feature.identity.data.datasource.AndroidPrivateKeyStorage
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertContentEquals

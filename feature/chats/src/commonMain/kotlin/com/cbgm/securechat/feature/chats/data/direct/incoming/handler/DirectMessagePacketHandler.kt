@@ -13,14 +13,14 @@ import com.cbgm.securechat.data.database.entity.ConversationType
 import com.cbgm.securechat.data.database.entity.MessageEntity
 import com.cbgm.securechat.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.securechat.feature.chats.domain.model.MessageDeliveryStatus
-import com.cbgm.securechat.feature.contacts.domain.identity.IdentityInvitationService
+import com.cbgm.securechat.feature.contacts.domain.repository.IdentityInvitationRepository
 
 /** Direct-only incoming chat-message handler. */
 class DirectMessagePacketHandler(
     private val chatDao: ChatDao,
     private val contactDao: ContactDao,
     private val protocolOutbox: ProtocolOutbox,
-    private val identityInvitationService: IdentityInvitationService
+    private val identityInvitationRepository: IdentityInvitationRepository
 ) {
     private val logger = SecureChatLog.withTag("DirectMessagePacketHandler")
 
@@ -42,7 +42,7 @@ class DirectMessagePacketHandler(
         packet: ChatMessagePacket
     ) {
         require(packet.text.isNotBlank()) { "Incoming chat message must not be blank" }
-        identityInvitationService.requireDirectChatAuthorization(contactId).getOrThrow()
+        identityInvitationRepository.requireDirectChatAuthorization(contactId).getOrThrow()
     }
 
     private suspend fun updateSenderDisplayName(

@@ -13,7 +13,7 @@ import com.cbgm.securechat.feature.contactimport.presentation.component.ScannedI
 import com.cbgm.securechat.feature.contactimport.presentation.importing.model.ImportIdentityUiEvent
 import com.cbgm.securechat.feature.contactimport.presentation.scan.model.ScannedIdentityPreview
 import com.cbgm.securechat.feature.contacts.domain.model.IdentityImportTrust
-import com.cbgm.securechat.feature.identity.domain.service.IdentityShareCodec
+import com.cbgm.securechat.feature.identity.domain.repository.IdentityShareRepository
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.feature_contactimport_trust_and_import
 import org.jetbrains.compose.resources.stringResource
@@ -30,7 +30,7 @@ fun ImportIdentityRoute(
                 parametersOf(route)
             }
         ),
-    identityShareCodec: IdentityShareCodec = koinInject()
+    identityShareRepository: IdentityShareRepository = koinInject()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var pendingScannedIdentity by remember(route.scannedIdentity) {
@@ -45,7 +45,7 @@ fun ImportIdentityRoute(
                 ?.takeIf { it.isNotEmpty() }
                 ?: return@LaunchedEffect
 
-        identityShareCodec
+        identityShareRepository
             .decode(encodedValue = encodedIdentity)
             .onSuccess { payload ->
                 scannedIdentityPreview =

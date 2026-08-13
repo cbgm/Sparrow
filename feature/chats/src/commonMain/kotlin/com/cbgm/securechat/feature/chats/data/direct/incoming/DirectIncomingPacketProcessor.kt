@@ -6,7 +6,7 @@ import com.cbgm.securechat.core.protocol.packet.SecureChatPacket
 import com.cbgm.securechat.feature.chats.data.direct.incoming.handler.DirectMessagePacketHandler
 import com.cbgm.securechat.feature.chats.data.direct.storage.DirectConversationStorage
 import com.cbgm.securechat.feature.chats.data.model.DecodedIncomingPacket
-import com.cbgm.securechat.feature.contacts.domain.identity.DirectChatAuthorizationRequiredException
+import com.cbgm.securechat.feature.contacts.domain.model.DirectChatAuthorizationRequiredException
 
 class DirectIncomingPacketProcessor(
     private val conversationStorage: DirectConversationStorage,

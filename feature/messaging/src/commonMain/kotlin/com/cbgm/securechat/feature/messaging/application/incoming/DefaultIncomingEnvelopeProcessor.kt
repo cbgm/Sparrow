@@ -3,7 +3,7 @@ package com.cbgm.securechat.feature.messaging.application.incoming
 import com.cbgm.securechat.core.logging.SecureChatLog
 import com.cbgm.securechat.core.protocol.handler.IncomingMessageHandler
 import com.cbgm.securechat.core.protocol.identity.LocalEncryptionKeyPairProvider
-import com.cbgm.securechat.feature.messaging.domain.relay.ContactByRelayIdResolver
+import com.cbgm.securechat.feature.messaging.application.relay.ContactByRelayIdResolver
 
 class DefaultIncomingEnvelopeProcessor(
     private val contactByRelayIdResolver: ContactByRelayIdResolver,

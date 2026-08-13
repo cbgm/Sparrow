@@ -1,7 +1,7 @@
 package com.cbgm.securechat.feature.messaging.data.repository.group
 
 import com.cbgm.securechat.feature.chats.domain.repository.group.GroupTypingRepository
-import com.cbgm.securechat.feature.messaging.domain.relay.GroupRelayIdResolver
+import com.cbgm.securechat.feature.messaging.application.relay.GroupRelayIdResolver
 import com.cbgm.securechat.feature.transport.websocket.WebSocketTransportClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.transform

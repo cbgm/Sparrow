@@ -4,13 +4,13 @@ import com.cbgm.securechat.data.database.entity.GroupInvitationEntity
 import com.cbgm.securechat.feature.chats.data.group.invitation.InvitationIdentityPolicy
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
 import com.cbgm.securechat.feature.contacts.domain.model.KeyExchangeStatus
-import com.cbgm.securechat.feature.contacts.domain.repository.ContactKeyExchangeStore
-import com.cbgm.securechat.feature.contacts.domain.repository.RemoteIdentityOrigin
-import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
+import com.cbgm.securechat.feature.contacts.domain.model.RemoteIdentityOrigin
+import com.cbgm.securechat.feature.contacts.domain.repository.ContactKeyExchangeRepository
+import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactUseCase
 
 internal class GroupMembershipIdentity(
-    private val getContact: GetContact,
-    private val contactKeyExchangeStore: ContactKeyExchangeStore
+    private val getContact: GetContactUseCase,
+    private val contactKeyExchangeRepository: ContactKeyExchangeRepository
 ) {
     suspend fun requireContact(contactId: String): Contact =
         getContact(contactId).getOrThrow()
@@ -54,14 +54,14 @@ internal class GroupMembershipIdentity(
                 existingIdentity.signingPublicKey.contentEquals(stagedSigningPublicKey)
 
         if (!sameIdentity) {
-            contactKeyExchangeStore
+            contactKeyExchangeRepository
                 .acceptInvitationIdentityForHandshake(
                     contactId = invitation.contactId,
                     remoteEncryptionPublicKey = stagedEncryptionPublicKey,
                     remoteSigningPublicKey = stagedSigningPublicKey
                 ).getOrThrow()
         } else if (existingIdentity.keyExchangeStatus != KeyExchangeStatus.MUTUAL) {
-            contactKeyExchangeStore
+            contactKeyExchangeRepository
                 .acceptRemoteIdentityForHandshake(
                     contactId = invitation.contactId,
                     expectedRemoteEncryptionPublicKey = stagedEncryptionPublicKey,
@@ -92,14 +92,14 @@ internal class GroupMembershipIdentity(
                 existingIdentity.signingPublicKey.contentEquals(signingPublicKey)
 
         if (!sameIdentity) {
-            contactKeyExchangeStore
+            contactKeyExchangeRepository
                 .acceptInvitationIdentityForHandshake(
                     contactId = contactId,
                     remoteEncryptionPublicKey = encryptionPublicKey,
                     remoteSigningPublicKey = signingPublicKey
                 ).getOrThrow()
         } else if (existingIdentity.keyExchangeStatus != KeyExchangeStatus.MUTUAL) {
-            contactKeyExchangeStore
+            contactKeyExchangeRepository
                 .acceptRemoteIdentityForHandshake(
                     contactId = contactId,
                     expectedRemoteEncryptionPublicKey = encryptionPublicKey,
@@ -107,7 +107,7 @@ internal class GroupMembershipIdentity(
                 ).getOrThrow()
         }
 
-        contactKeyExchangeStore
+        contactKeyExchangeRepository
             .markMutual(
                 contactId = contactId,
                 expectedRemoteEncryptionPublicKey = encryptionPublicKey,
@@ -130,7 +130,7 @@ internal class GroupMembershipIdentity(
         encryptionPublicKey: ByteArray,
         signingPublicKey: ByteArray
     ) {
-        contactKeyExchangeStore
+        contactKeyExchangeRepository
             .storeRemoteIdentity(
                 contactId = contactId,
                 encryptionPublicKey = encryptionPublicKey,

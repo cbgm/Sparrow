@@ -3,9 +3,9 @@ package com.cbgm.securechat.feature.messaging.application.incoming
 import com.cbgm.securechat.core.protocol.handler.IncomingMessageHandler
 import com.cbgm.securechat.core.protocol.identity.LocalEncryptionKeyPair
 import com.cbgm.securechat.core.protocol.identity.LocalEncryptionKeyPairProvider
-import com.cbgm.securechat.feature.messaging.domain.relay.ContactByRelayIdResolver
-import com.cbgm.securechat.feature.messaging.domain.relay.IncomingRelayEnvelope
-import com.cbgm.securechat.feature.messaging.domain.relay.IncomingRelayGateway
+import com.cbgm.securechat.feature.messaging.application.relay.ContactByRelayIdResolver
+import com.cbgm.securechat.feature.messaging.application.relay.IncomingRelayEnvelope
+import com.cbgm.securechat.feature.messaging.application.relay.IncomingRelayGateway
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow

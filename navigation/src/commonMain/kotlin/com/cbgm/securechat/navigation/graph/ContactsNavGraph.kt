@@ -6,8 +6,8 @@ import androidx.navigation.toRoute
 import com.cbgm.securechat.core.ui.navigation.AppRoute
 import com.cbgm.securechat.feature.contactimport.presentation.importing.ImportIdentityRoute
 import com.cbgm.securechat.feature.contactimport.presentation.scan.ScanIdentityNavigationRoute
-import com.cbgm.securechat.feature.contacts.presentation.BlockedContactsRoute
-import com.cbgm.securechat.feature.contacts.presentation.ContactInvitationRoute
+import com.cbgm.securechat.feature.contacts.presentation.blocklist.BlockedContactsRoute
+import com.cbgm.securechat.feature.contacts.presentation.invitations.ContactInvitationRoute
 import com.cbgm.securechat.navigation.slideInFromRight
 import com.cbgm.securechat.navigation.slideOutToRight
 

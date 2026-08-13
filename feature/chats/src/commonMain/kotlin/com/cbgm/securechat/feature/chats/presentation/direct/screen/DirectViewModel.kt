@@ -21,10 +21,10 @@ import com.cbgm.securechat.feature.chats.presentation.direct.model.DirectUiEvent
 import com.cbgm.securechat.feature.chats.presentation.direct.model.DirectUiState
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
 import com.cbgm.securechat.feature.contacts.domain.model.IdentityHandshakeState
-import com.cbgm.securechat.feature.contacts.domain.usecase.EnsureIdentityExchangeStarted
-import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContact
-import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveIdentityHandshakeState
-import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveIdentitySetupMode
+import com.cbgm.securechat.feature.contacts.domain.usecase.EnsureIdentityExchangeStartedUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContactUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveIdentityHandshakeStateUseCase
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveIdentitySetupModeUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -45,10 +45,10 @@ class DirectViewModel(
     private val markConversationRead: MarkDirectConversationReadUseCase,
     private val retryMessage: RetryDirectMessageUseCase,
     private val refreshDeliveryState: RefreshDirectDeliveryStateUseCase,
-    observeIdentitySetupMode: ObserveIdentitySetupMode,
-    private val ensureIdentityExchangeStarted: EnsureIdentityExchangeStarted,
-    observeIdentityHandshakeState: ObserveIdentityHandshakeState,
-    observeContact: ObserveContact,
+    observeIdentitySetupMode: ObserveIdentitySetupModeUseCase,
+    private val ensureIdentityExchangeStarted: EnsureIdentityExchangeStartedUseCase,
+    observeIdentityHandshakeState: ObserveIdentityHandshakeStateUseCase,
+    observeContact: ObserveContactUseCase,
     private val observeTyping: ObserveDirectTypingUseCase,
     private val setTyping: SetDirectTypingUseCase
 ) : BaseViewModel() {

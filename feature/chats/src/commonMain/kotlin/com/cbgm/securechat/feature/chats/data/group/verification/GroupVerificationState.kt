@@ -11,13 +11,13 @@ import com.cbgm.securechat.feature.chats.data.group.invitation.GroupInvitationSt
 import com.cbgm.securechat.feature.chats.data.group.security.isGroupAdminRole
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
 import com.cbgm.securechat.feature.contacts.domain.model.SecureChatIdentity
-import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
+import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactUseCase
 
 internal class GroupVerificationState(
     private val groupVerificationDao: GroupVerificationDao,
     private val groupInvitationDao: GroupInvitationDao,
     private val groupSecurityDao: GroupSecurityDao,
-    private val getContact: GetContact
+    private val getContact: GetContactUseCase
 ) {
     suspend fun ownsGroup(groupId: String): Boolean =
         groupVerificationDao

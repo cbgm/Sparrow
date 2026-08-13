@@ -24,7 +24,7 @@ import com.cbgm.securechat.feature.chats.presentation.group.model.GroupUiEvent
 import com.cbgm.securechat.feature.chats.presentation.group.model.GroupUiState
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
 import com.cbgm.securechat.feature.contacts.domain.model.DeviceContactLinkStatus
-import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContacts
+import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContactsUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -51,7 +51,7 @@ class GroupViewModel(
     private val refreshDeliveryState: RefreshGroupDeliveryStateUseCase,
     private val acceptInvitation: AcceptGroupInvitationUseCase,
     private val declineInvitation: DeclineGroupInvitationUseCase,
-    observeContacts: ObserveContacts,
+    observeContacts: ObserveContactsUseCase,
     private val observeMemberTyping: ObserveGroupMemberTypingUseCase,
     private val setGroupTyping: SetGroupTypingUseCase
 ) : BaseViewModel() {

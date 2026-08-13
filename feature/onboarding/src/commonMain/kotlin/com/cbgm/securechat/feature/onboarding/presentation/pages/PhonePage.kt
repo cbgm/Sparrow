@@ -24,7 +24,7 @@ import com.cbgm.securechat.core.ui.component.SecureChatSecondaryButton
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.core.ui.theme.spacing
 import com.cbgm.securechat.feature.identity.domain.model.PublicIdentity
-import com.cbgm.securechat.feature.identity.presentation.model.IdentityUiState
+import com.cbgm.securechat.feature.identity.presentation.setup.model.IdentityUiState
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.base_choose_another_number
 import com.cbgm.securechat.resources.base_choose_phone_number

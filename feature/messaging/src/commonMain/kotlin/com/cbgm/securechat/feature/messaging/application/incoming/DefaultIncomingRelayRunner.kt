@@ -1,7 +1,7 @@
 package com.cbgm.securechat.feature.messaging.application.incoming
 
 import com.cbgm.securechat.core.logging.SecureChatLog
-import com.cbgm.securechat.feature.messaging.domain.relay.IncomingRelayGateway
+import com.cbgm.securechat.feature.messaging.application.relay.IncomingRelayGateway
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

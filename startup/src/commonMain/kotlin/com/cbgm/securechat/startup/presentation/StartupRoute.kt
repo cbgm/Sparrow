@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cbgm.securechat.feature.identity.presentation.model.IdentityUiState
+import com.cbgm.securechat.feature.identity.presentation.setup.model.IdentityUiState
 import com.cbgm.securechat.feature.onboarding.presentation.OnboardingRoute
 import com.cbgm.securechat.startup.presentation.model.StartupUiState
 import com.cbgm.securechat.startup.presentation.screen.StartupScreen

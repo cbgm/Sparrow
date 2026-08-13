@@ -39,7 +39,7 @@ import com.cbgm.securechat.core.ui.component.SecureChatApprovalButton
 import com.cbgm.securechat.core.ui.component.SecureChatCard
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.core.ui.theme.spacing
-import com.cbgm.securechat.feature.identity.presentation.model.IdentityUiState
+import com.cbgm.securechat.feature.identity.presentation.setup.model.IdentityUiState
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.base_app_name
 import com.cbgm.securechat.resources.base_choose_another_number

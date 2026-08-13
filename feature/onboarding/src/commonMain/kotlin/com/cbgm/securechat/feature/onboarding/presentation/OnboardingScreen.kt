@@ -29,7 +29,7 @@ import com.cbgm.securechat.core.ui.component.SecureChatCard
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.core.ui.theme.spacing
 import com.cbgm.securechat.feature.identity.domain.model.PublicIdentity
-import com.cbgm.securechat.feature.identity.presentation.model.IdentityUiState
+import com.cbgm.securechat.feature.identity.presentation.setup.model.IdentityUiState
 import com.cbgm.securechat.feature.onboarding.presentation.model.OnboardingPage
 import com.cbgm.securechat.feature.onboarding.presentation.model.OnboardingUiEvent
 import com.cbgm.securechat.feature.onboarding.presentation.model.OnboardingUiState

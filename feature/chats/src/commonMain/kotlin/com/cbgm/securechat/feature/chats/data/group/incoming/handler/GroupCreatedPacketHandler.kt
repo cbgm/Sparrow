@@ -34,7 +34,7 @@ import com.cbgm.securechat.feature.chats.data.group.security.OpenedGroupWelcome
 import com.cbgm.securechat.feature.chats.data.group.security.isGroupAdminRole
 import com.cbgm.securechat.feature.contacts.domain.model.ContactPhoneNumberType
 import com.cbgm.securechat.feature.contacts.domain.model.DeviceContactLinkStatus
-import com.cbgm.securechat.feature.contacts.domain.repository.ContactKeyExchangeStore
+import com.cbgm.securechat.feature.contacts.domain.repository.ContactKeyExchangeRepository
 
 /**
  * Applies a GroupCreatedPacket / group welcome.
@@ -56,7 +56,7 @@ class GroupCreatedPacketHandler(
     private val groupInvitationDao: GroupInvitationDao,
     private val membershipPacketProtocol: GroupMembershipPacketProtocol,
     private val protocolOutbox: ProtocolOutbox,
-    private val contactKeyExchangeStore: ContactKeyExchangeStore
+    private val contactKeyExchangeRepository: ContactKeyExchangeRepository
 ) : GroupPacketHandler {
     override fun canHandle(packet: SecureChatPacket): Boolean = packet is GroupCreatedPacket
 
@@ -151,7 +151,7 @@ class GroupCreatedPacketHandler(
                 ).getOrThrow()
 
         if (isFirstWelcome) {
-            contactKeyExchangeStore
+            contactKeyExchangeRepository
                 .markMutual(
                     contactId = senderContactId,
                     expectedRemoteEncryptionPublicKey = authorityIdentity.encryptionPublicKey,

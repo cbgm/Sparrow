@@ -1,6 +1,6 @@
 package com.cbgm.securechat.feature.chats.presentation.details.model
 
-import com.cbgm.securechat.feature.contacts.presentation.model.ContactGroupEntity
+import com.cbgm.securechat.feature.contacts.presentation.overview.model.ContactGroupEntity
 
 data class GroupMemberManagementUiState(
     val availableContactGroups: List<ContactGroupEntity> = emptyList(),

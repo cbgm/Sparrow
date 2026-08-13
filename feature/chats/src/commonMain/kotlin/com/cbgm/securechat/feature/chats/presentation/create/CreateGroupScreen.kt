@@ -9,10 +9,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.feature.chats.presentation.create.model.CreateGroupUiEvent
 import com.cbgm.securechat.feature.chats.presentation.create.model.CreateGroupUiState
-import com.cbgm.securechat.feature.contacts.presentation.model.ContactsScreenMode
-import com.cbgm.securechat.feature.contacts.presentation.model.ContactsUiEvent
-import com.cbgm.securechat.feature.contacts.presentation.model.ContactsUiState
-import com.cbgm.securechat.feature.contacts.presentation.screen.ContactsScreen
+import com.cbgm.securechat.feature.contacts.presentation.overview.ContactsScreen
+import com.cbgm.securechat.feature.contacts.presentation.overview.model.ContactsScreenMode
+import com.cbgm.securechat.feature.contacts.presentation.overview.model.ContactsUiEvent
+import com.cbgm.securechat.feature.contacts.presentation.overview.model.ContactsUiState
 
 @Composable
 fun CreateGroupScreen(

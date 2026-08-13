@@ -19,7 +19,7 @@ import com.cbgm.securechat.core.protocol.packet.ReadReceiptPacket
 import com.cbgm.securechat.core.protocol.packet.SecureChatPacket
 import com.cbgm.securechat.data.database.dao.ChatDao
 import com.cbgm.securechat.data.database.dao.GroupSecurityDao
-import com.cbgm.securechat.feature.messaging.domain.relay.GroupTransportKeyResolver
+import com.cbgm.securechat.feature.messaging.application.relay.GroupTransportKeyResolver
 
 class DefaultGroupTransportKeyResolver(
     private val chatDao: ChatDao,

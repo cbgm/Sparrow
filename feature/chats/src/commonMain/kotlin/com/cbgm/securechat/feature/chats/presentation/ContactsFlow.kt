@@ -14,8 +14,8 @@ import androidx.compose.ui.Modifier
 import com.cbgm.securechat.feature.chats.presentation.create.CreateGroupRoute
 import com.cbgm.securechat.feature.chats.presentation.create.model.ContactsFlowUiEvent
 import com.cbgm.securechat.feature.chats.presentation.create.model.CreateGroupEffect
-import com.cbgm.securechat.feature.contacts.presentation.ContactsRoute
-import com.cbgm.securechat.feature.contacts.presentation.model.ContactsEffect
+import com.cbgm.securechat.feature.contacts.presentation.overview.ContactsRoute
+import com.cbgm.securechat.feature.contacts.presentation.overview.model.ContactsEffect
 import org.koin.compose.viewmodel.koinViewModel
 
 private enum class ContactsContent {
