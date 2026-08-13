@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.contacts.presentation.screen.overview.component
+package com.cbgm.securechat.feature.contacts.presentation.screen.component
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.PaddingValues

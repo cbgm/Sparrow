@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.onboarding.presentation.screen
+package com.cbgm.securechat.feature.onboarding.presentation
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn

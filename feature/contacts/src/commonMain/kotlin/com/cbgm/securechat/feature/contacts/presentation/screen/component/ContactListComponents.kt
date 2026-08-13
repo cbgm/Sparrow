@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.contacts.presentation.component.contactlist
+package com.cbgm.securechat.feature.contacts.presentation.screen.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

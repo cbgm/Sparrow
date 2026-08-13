@@ -14,8 +14,8 @@ import com.cbgm.securechat.feature.identity.presentation.model.IdentityUiEvent
 import com.cbgm.securechat.feature.identity.presentation.model.IdentityUiState
 import com.cbgm.securechat.feature.identity.presentation.platform.PhoneNumberHintLauncher
 import com.cbgm.securechat.feature.identity.presentation.platform.PhoneNumberHintResult
-import com.cbgm.securechat.feature.identity.presentation.screen.IdentityScreen
-import com.cbgm.securechat.feature.identity.presentation.screen.IdentityViewModel
+import com.cbgm.securechat.feature.identity.presentation.screen.setup.IdentityScreen
+import com.cbgm.securechat.feature.identity.presentation.screen.setup.IdentityViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable

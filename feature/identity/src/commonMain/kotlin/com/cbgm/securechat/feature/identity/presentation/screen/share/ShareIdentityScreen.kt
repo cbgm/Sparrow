@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.identity.presentation.screen
+package com.cbgm.securechat.feature.identity.presentation.screen.share
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically

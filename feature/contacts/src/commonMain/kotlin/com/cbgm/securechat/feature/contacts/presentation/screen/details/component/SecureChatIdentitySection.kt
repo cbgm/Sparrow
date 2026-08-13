@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.contacts.presentation.component.contactdetails
+package com.cbgm.securechat.feature.contacts.presentation.screen.details.component
 
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -21,7 +21,6 @@ import com.cbgm.securechat.core.ui.theme.spacing
 import com.cbgm.securechat.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.securechat.feature.contacts.domain.model.KeyExchangeStatus
 import com.cbgm.securechat.feature.contacts.domain.model.SecureChatIdentity
-import com.cbgm.securechat.feature.contacts.presentation.screen.details.component.SectionTitle
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.base_not_verified
 import com.cbgm.securechat.resources.feature_contacts_compare_before_trusting

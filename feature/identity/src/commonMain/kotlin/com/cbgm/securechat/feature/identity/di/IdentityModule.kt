@@ -26,8 +26,8 @@ import com.cbgm.securechat.feature.identity.domain.usecase.NormalizeLocalPhoneNu
 import com.cbgm.securechat.feature.identity.domain.usecase.ObserveLocalIdentityReady
 import com.cbgm.securechat.feature.identity.domain.usecase.RecoverIncompleteIdentity
 import com.cbgm.securechat.feature.identity.domain.usecase.SaveLocalPhoneName
-import com.cbgm.securechat.feature.identity.presentation.screen.IdentityViewModel
-import com.cbgm.securechat.feature.identity.presentation.screen.ShareIdentityViewModel
+import com.cbgm.securechat.feature.identity.presentation.screen.setup.IdentityViewModel
+import com.cbgm.securechat.feature.identity.presentation.screen.share.ShareIdentityViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 

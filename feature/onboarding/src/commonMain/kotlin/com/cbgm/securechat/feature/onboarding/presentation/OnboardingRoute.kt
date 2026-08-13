@@ -11,13 +11,12 @@ import com.cbgm.securechat.feature.identity.presentation.model.IdentityUiEvent
 import com.cbgm.securechat.feature.identity.presentation.model.IdentityUiState
 import com.cbgm.securechat.feature.identity.presentation.platform.PhoneNumberHintLauncher
 import com.cbgm.securechat.feature.identity.presentation.platform.PhoneNumberHintResult
-import com.cbgm.securechat.feature.identity.presentation.screen.IdentityViewModel
+import com.cbgm.securechat.feature.identity.presentation.screen.setup.IdentityViewModel
 import com.cbgm.securechat.feature.onboarding.device.AutomaticPhoneNumberReader
 import com.cbgm.securechat.feature.onboarding.device.AutomaticPhoneNumberResult
 import com.cbgm.securechat.feature.onboarding.device.OnboardingPermissionRequester
 import com.cbgm.securechat.feature.onboarding.presentation.model.OnboardingPage
 import com.cbgm.securechat.feature.onboarding.presentation.model.OnboardingUiEvent
-import com.cbgm.securechat.feature.onboarding.presentation.screen.OnboardingScreen
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable

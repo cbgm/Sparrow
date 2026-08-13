@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.contacts.presentation.component.contactdetails
+package com.cbgm.securechat.feature.contacts.presentation.screen.details.component
 
 import com.cbgm.securechat.core.crypto.safety.SafetyNumber
 import com.cbgm.securechat.feature.contacts.domain.model.Contact

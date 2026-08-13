@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.contacts.presentation.component.contactdetails
+package com.cbgm.securechat.feature.contacts.presentation.screen.details.component
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size

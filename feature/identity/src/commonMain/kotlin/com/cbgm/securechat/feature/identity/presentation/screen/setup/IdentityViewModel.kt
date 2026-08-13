@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.identity.presentation.screen
+package com.cbgm.securechat.feature.identity.presentation.screen.setup
 
 import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.ui.navigation.AppRoute

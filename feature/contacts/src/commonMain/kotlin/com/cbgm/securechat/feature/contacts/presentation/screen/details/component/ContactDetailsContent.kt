@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.contacts.presentation.component.contactdetails
+package com.cbgm.securechat.feature.contacts.presentation.screen.details.component
 
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
@@ -26,7 +26,6 @@ import com.cbgm.securechat.core.ui.component.SecureChatApprovalButton
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.core.ui.theme.spacing
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
-import com.cbgm.securechat.feature.contacts.presentation.screen.details.component.NoSecureChatIdentityContent
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.base_share_contact
 import com.cbgm.securechat.resources.feature_contacts_share_contact_missing_keys

@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.contactimport.presentation.screen.component
+package com.cbgm.securechat.feature.contactimport.presentation.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
