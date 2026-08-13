@@ -3,7 +3,7 @@ package com.cbgm.securechat.feature.chats.presentation.verification
 import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.extensions.toFingerprint
 import com.cbgm.securechat.core.ui.presentation.BaseViewModel
-import com.cbgm.securechat.feature.chats.domain.usecase.VerifyGroupMemberUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.VerifyGroupMemberUseCase
 import com.cbgm.securechat.feature.chats.presentation.verification.model.GroupMemberQrVerificationError
 import com.cbgm.securechat.feature.chats.presentation.verification.model.GroupMemberQrVerificationUiEvent
 import com.cbgm.securechat.feature.chats.presentation.verification.model.GroupMemberQrVerificationUiState

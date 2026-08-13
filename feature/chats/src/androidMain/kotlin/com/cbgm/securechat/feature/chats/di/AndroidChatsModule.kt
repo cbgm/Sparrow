@@ -1,13 +1,17 @@
 package com.cbgm.securechat.feature.chats.di
 
-import com.cbgm.securechat.feature.chats.data.security.AndroidGroupKeyStorage
-import com.cbgm.securechat.feature.chats.domain.repository.GroupKeyRepository
+import com.cbgm.securechat.feature.chats.data.group.repository.GroupKeyRepositoryImpl
+import com.cbgm.securechat.feature.chats.data.group.storage.AndroidGroupKeyStorage
+import com.cbgm.securechat.feature.chats.domain.repository.group.GroupKeyRepository
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
 val androidChatsModule =
     module {
-        single<GroupKeyRepository> {
+        single {
             AndroidGroupKeyStorage(context = androidContext())
+        }
+        single<GroupKeyRepository> {
+            GroupKeyRepositoryImpl(storage = get())
         }
     }

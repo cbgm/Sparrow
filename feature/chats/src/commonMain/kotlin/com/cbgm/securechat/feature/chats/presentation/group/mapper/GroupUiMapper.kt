@@ -1,7 +1,11 @@
 package com.cbgm.securechat.feature.chats.presentation.group.mapper
 
-import com.cbgm.securechat.feature.chats.domain.model.GroupVerificationMembershipStatus
-import com.cbgm.securechat.feature.chats.domain.model.GroupVerificationState
+import com.cbgm.securechat.feature.chats.domain.model.group.GroupMessage
+import com.cbgm.securechat.feature.chats.domain.model.group.GroupVerificationMembershipStatus
+import com.cbgm.securechat.feature.chats.domain.model.group.GroupVerificationState
+import com.cbgm.securechat.feature.chats.presentation.component.model.DeliveryProgressModel
+import com.cbgm.securechat.feature.chats.presentation.component.model.MessageBubbleModel
+import com.cbgm.securechat.feature.chats.presentation.group.model.GroupMessageUiModel
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
 
 internal data class GroupMemberCounts(
@@ -28,6 +32,31 @@ internal fun GroupVerificationState?.toMemberCounts(
         active = activeCount
     )
 }
+
+internal fun GroupMessage.toUiModel(
+    senderName: String?,
+    senderIsInContacts: Boolean
+): GroupMessageUiModel =
+    GroupMessageUiModel(
+        bubble =
+            MessageBubbleModel(
+                id = id,
+                text = text,
+                isMine = isMine,
+                security = security,
+                contentStatus = contentStatus,
+                deliveryStatus = deliveryStatus,
+                senderName = senderName,
+                senderIsInContacts = senderIsInContacts,
+                deliveryProgress =
+                    DeliveryProgressModel(
+                        recipientCount = deliveryProgress.recipientCount,
+                        deliveredCount = deliveryProgress.deliveredCount,
+                        readCount = deliveryProgress.readCount
+                    )
+            ),
+        type = type
+    )
 
 internal fun Contact?.displayNameForChat(isInContacts: Boolean): String {
     if (this == null) return "Unknown contact"

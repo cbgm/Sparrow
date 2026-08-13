@@ -1,14 +1,14 @@
 package com.cbgm.securechat.notification.application
 
-import com.cbgm.securechat.feature.chats.domain.model.Conversation
-import com.cbgm.securechat.feature.chats.domain.usecase.ObserveConversationsUseCase
+import com.cbgm.securechat.feature.chats.domain.model.overview.ConversationOverview
+import com.cbgm.securechat.feature.chats.domain.usecase.overview.ObserveConversationOverviewsUseCase
 import com.cbgm.securechat.notification.model.ConversationNotification
 import com.cbgm.securechat.notification.model.ConversationNotificationEvent
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
 class ObserveConversationNotificationEvents(
-    private val observeConversations: ObserveConversationsUseCase,
+    private val observeConversations: ObserveConversationOverviewsUseCase,
     private val appVisibilityState: AppVisibilityState
 ) {
     operator fun invoke(): Flow<ConversationNotificationEvent> =
@@ -65,11 +65,11 @@ class ObserveConversationNotificationEvents(
             }
         }
 
-    private fun Conversation.toNotification(): ConversationNotification =
+    private fun ConversationOverview.toNotification(): ConversationNotification =
         ConversationNotification(
             conversationId = id,
-            title = contactName,
-            messagePreview = lastMessage?.text?.takeIf(String::isNotBlank),
+            title = displayName,
+            messagePreview = lastMessageText?.takeIf(String::isNotBlank),
             unreadCount = unreadCount
         )
 }

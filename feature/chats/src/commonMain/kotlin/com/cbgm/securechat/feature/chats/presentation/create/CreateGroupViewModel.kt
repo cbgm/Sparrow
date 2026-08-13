@@ -2,7 +2,7 @@ package com.cbgm.securechat.feature.chats.presentation.create
 
 import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.ui.presentation.BaseViewModel
-import com.cbgm.securechat.feature.chats.domain.usecase.CreateGroupConversationUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.CreateGroupConversationUseCase
 import com.cbgm.securechat.feature.chats.presentation.create.model.CreateGroupEffect
 import com.cbgm.securechat.feature.chats.presentation.create.model.CreateGroupUiEvent
 import com.cbgm.securechat.feature.chats.presentation.create.model.CreateGroupUiState

@@ -3,7 +3,7 @@ package com.cbgm.securechat.feature.chats.presentation
 import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.ui.navigation.AppRoute
 import com.cbgm.securechat.core.ui.presentation.BaseViewModel
-import com.cbgm.securechat.feature.chats.domain.usecase.GetOrCreateDirectConversationUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.direct.GetOrCreateDirectConversationUseCase
 import com.cbgm.securechat.feature.chats.presentation.create.model.ContactsFlowUiEvent
 import com.cbgm.securechat.feature.contacts.domain.usecase.EnsureIdentityExchangeStarted
 import kotlinx.coroutines.launch

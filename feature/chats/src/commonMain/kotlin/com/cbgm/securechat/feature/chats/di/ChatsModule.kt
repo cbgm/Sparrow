@@ -1,71 +1,109 @@
 package com.cbgm.securechat.feature.chats.di
 
 import com.cbgm.securechat.core.protocol.handler.IncomingMessageHandler
-import com.cbgm.securechat.core.protocol.handler.TypedProtocolPacketHandler
 import com.cbgm.securechat.core.protocol.outbox.OutboxDeliveryStateListener
-import com.cbgm.securechat.feature.chats.data.conversation.DirectConversationStore
-import com.cbgm.securechat.feature.chats.data.delivery.MessageDeliveryStateCoordinator
-import com.cbgm.securechat.feature.chats.data.incoming.IncomingMessageProcessor
-import com.cbgm.securechat.feature.chats.data.invitation.GroupInvitationCoordinator
-import com.cbgm.securechat.feature.chats.data.message.GroupMessageSender
-import com.cbgm.securechat.feature.chats.data.outbox.ChatOutboxDeliveryStateListener
-import com.cbgm.securechat.feature.chats.data.protocol.ChatMessagePacketHandler
-import com.cbgm.securechat.feature.chats.data.protocol.DeliveryReceiptPacketHandler
-import com.cbgm.securechat.feature.chats.data.protocol.GroupChatMessagePacketHandler
-import com.cbgm.securechat.feature.chats.data.protocol.GroupConversationDeletedPacketHandler
-import com.cbgm.securechat.feature.chats.data.protocol.GroupCreatedPacketHandler
-import com.cbgm.securechat.feature.chats.data.protocol.GroupInviteDeclinedPacketHandler
-import com.cbgm.securechat.feature.chats.data.protocol.GroupInvitePacketHandler
-import com.cbgm.securechat.feature.chats.data.protocol.GroupJoinRequestPacketHandler
-import com.cbgm.securechat.feature.chats.data.protocol.GroupLeaveRequestPacketHandler
-import com.cbgm.securechat.feature.chats.data.protocol.GroupMemberActivatedPacketHandler
-import com.cbgm.securechat.feature.chats.data.protocol.GroupMemberActivationAcknowledgementPacketHandler
-import com.cbgm.securechat.feature.chats.data.protocol.GroupMemberRemovedPacketHandler
-import com.cbgm.securechat.feature.chats.data.protocol.GroupReadyAcknowledgementPacketHandler
-import com.cbgm.securechat.feature.chats.data.protocol.GroupVerificationReceiptPacketHandler
-import com.cbgm.securechat.feature.chats.data.protocol.GroupVerificationSnapshotPacketHandler
-import com.cbgm.securechat.feature.chats.data.protocol.GroupVerificationSnapshotRequestPacketHandler
-import com.cbgm.securechat.feature.chats.data.protocol.ReadReceiptPacketHandler
-import com.cbgm.securechat.feature.chats.data.repository.DefaultChatsRepository
-import com.cbgm.securechat.feature.chats.data.repository.DefaultGroupVerificationRepository
-import com.cbgm.securechat.feature.chats.data.security.GroupInvitationManager
-import com.cbgm.securechat.feature.chats.data.security.GroupProtocolPayloadEncoder
-import com.cbgm.securechat.feature.chats.data.security.GroupSecurityManager
-import com.cbgm.securechat.feature.chats.data.verification.GroupVerificationCoordinator
-import com.cbgm.securechat.feature.chats.data.verification.GroupVerificationPayloadEncoder
-import com.cbgm.securechat.feature.chats.domain.repository.ChatsRepository
-import com.cbgm.securechat.feature.chats.domain.repository.GroupVerificationActionRepository
-import com.cbgm.securechat.feature.chats.domain.repository.GroupVerificationRepository
-import com.cbgm.securechat.feature.chats.domain.usecase.AcceptGroupInvitationUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.AddGroupMembersUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.CreateGroupConversationUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.DeclineGroupInvitationUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.DeleteConversationUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.GetGroupLeaveRequirementUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.GetOrCreateDirectConversationUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.LeaveGroupUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.MarkConversationReadUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.ObserveConversationUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.ObserveConversationsUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.ObserveGroupAdministrationUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.ObserveGroupConversationUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.ObserveGroupVerificationUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.ObserveTypingIndicatorUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.PromoteGroupMemberUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.RefreshDeliveryStateUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.RemoveGroupMemberUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.RetryMessageUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.SendGroupMessageUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.SendMessageUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.SetTypingIndicatorUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.SynchronizeGroupVerificationUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.TransferGroupAdminAndLeaveUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.VerifyGroupMemberUseCase
+import com.cbgm.securechat.feature.chats.data.direct.delivery.DirectMessageDeliveryCoordinator
+import com.cbgm.securechat.feature.chats.data.direct.delivery.DirectOutboxDeliveryHandler
+import com.cbgm.securechat.feature.chats.data.direct.incoming.DirectIncomingPacketProcessor
+import com.cbgm.securechat.feature.chats.data.direct.incoming.handler.DirectMessagePacketHandler
+import com.cbgm.securechat.feature.chats.data.direct.incoming.handler.DirectReceiptPacketHandler
+import com.cbgm.securechat.feature.chats.data.direct.outgoing.DirectOutgoingMessageProcessor
+import com.cbgm.securechat.feature.chats.data.direct.repository.DirectConversationRepositoryImpl
+import com.cbgm.securechat.feature.chats.data.direct.repository.DirectMessageRepositoryImpl
+import com.cbgm.securechat.feature.chats.data.direct.storage.DirectConversationStorage
+import com.cbgm.securechat.feature.chats.data.group.delivery.GroupMessageDeliveryCoordinator
+import com.cbgm.securechat.feature.chats.data.group.delivery.GroupOutboxDeliveryHandler
+import com.cbgm.securechat.feature.chats.data.group.incoming.GroupIncomingPacketPolicy
+import com.cbgm.securechat.feature.chats.data.group.incoming.GroupIncomingPacketProcessor
+import com.cbgm.securechat.feature.chats.data.group.incoming.GroupPacketHandlerRegistry
+import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupChatMessagePacketHandler
+import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupConversationDeletedPacketHandler
+import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupCreatedPacketHandler
+import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupInviteDeclinedPacketHandler
+import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupInvitePacketHandler
+import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupJoinRequestPacketHandler
+import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupLeaveRequestPacketHandler
+import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupMemberActivatedPacketHandler
+import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupMemberActivationAcknowledgementPacketHandler
+import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupMemberRemovedPacketHandler
+import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupReadyAcknowledgementPacketHandler
+import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupReceiptPacketHandler
+import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupVerificationReceiptPacketHandler
+import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupVerificationSnapshotPacketHandler
+import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupVerificationSnapshotRequestPacketHandler
+import com.cbgm.securechat.feature.chats.data.group.membership.GroupEpochCoordinator
+import com.cbgm.securechat.feature.chats.data.group.membership.GroupInvitationCoordinator
+import com.cbgm.securechat.feature.chats.data.group.membership.GroupMembershipActivationCoordinator
+import com.cbgm.securechat.feature.chats.data.group.membership.GroupMembershipAdministrationCoordinator
+import com.cbgm.securechat.feature.chats.data.group.membership.GroupMembershipCoordinator
+import com.cbgm.securechat.feature.chats.data.group.membership.GroupMembershipDeletionCoordinator
+import com.cbgm.securechat.feature.chats.data.group.membership.GroupMembershipIdentity
+import com.cbgm.securechat.feature.chats.data.group.membership.GroupMembershipLock
+import com.cbgm.securechat.feature.chats.data.group.outgoing.GroupOutgoingMessageProcessor
+import com.cbgm.securechat.feature.chats.data.group.protocol.GroupMembershipPacketProtocol
+import com.cbgm.securechat.feature.chats.data.group.protocol.GroupProtocolPayloadEncoder
+import com.cbgm.securechat.feature.chats.data.group.repository.GroupConversationRepositoryImpl
+import com.cbgm.securechat.feature.chats.data.group.repository.GroupMembershipRepositoryImpl
+import com.cbgm.securechat.feature.chats.data.group.repository.GroupMessageRepositoryImpl
+import com.cbgm.securechat.feature.chats.data.group.repository.GroupVerificationActionRepositoryImpl
+import com.cbgm.securechat.feature.chats.data.group.repository.GroupVerificationRepositoryImpl
+import com.cbgm.securechat.feature.chats.data.group.security.GroupSecurityManager
+import com.cbgm.securechat.feature.chats.data.group.security.GroupWelcomeSecurity
+import com.cbgm.securechat.feature.chats.data.group.storage.GroupLocalDataCleaner
+import com.cbgm.securechat.feature.chats.data.group.verification.GroupVerificationCoordinator
+import com.cbgm.securechat.feature.chats.data.group.verification.GroupVerificationPayloadEncoder
+import com.cbgm.securechat.feature.chats.data.group.verification.GroupVerificationSnapshotSender
+import com.cbgm.securechat.feature.chats.data.group.verification.GroupVerificationState
+import com.cbgm.securechat.feature.chats.data.incoming.IncomingPacketProcessor
+import com.cbgm.securechat.feature.chats.data.incoming.IncomingPacketRouter
+import com.cbgm.securechat.feature.chats.data.incoming.ReceiptIncomingPacketRouter
+import com.cbgm.securechat.feature.chats.data.outbox.ChatOutboxDeliveryStateRouter
+import com.cbgm.securechat.feature.chats.data.overview.repository.ConversationOverviewRepositoryImpl
+import com.cbgm.securechat.feature.chats.data.storage.UnreadableTransportMessageStorage
+import com.cbgm.securechat.feature.chats.domain.repository.direct.DirectConversationRepository
+import com.cbgm.securechat.feature.chats.domain.repository.direct.DirectMessageRepository
+import com.cbgm.securechat.feature.chats.domain.repository.group.GroupConversationRepository
+import com.cbgm.securechat.feature.chats.domain.repository.group.GroupMembershipRepository
+import com.cbgm.securechat.feature.chats.domain.repository.group.GroupMessageRepository
+import com.cbgm.securechat.feature.chats.domain.repository.group.GroupVerificationActionRepository
+import com.cbgm.securechat.feature.chats.domain.repository.group.GroupVerificationRepository
+import com.cbgm.securechat.feature.chats.domain.repository.overview.ConversationOverviewRepository
+import com.cbgm.securechat.feature.chats.domain.usecase.direct.DeleteDirectConversationUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.direct.GetOrCreateDirectConversationUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.direct.MarkDirectConversationReadUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.direct.ObserveDirectConversationUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.direct.ObserveDirectTypingUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.direct.RefreshDirectDeliveryStateUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.direct.RetryDirectMessageUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.direct.SendDirectMessageUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.direct.SetDirectTypingUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.AcceptGroupInvitationUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.AddGroupMembersUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.CreateGroupConversationUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.DeclineGroupInvitationUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.DeleteGroupConversationUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.GetGroupLeaveRequirementUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.LeaveGroupUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.MarkGroupConversationReadUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.ObserveGroupAdministrationUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.ObserveGroupConversationUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.ObserveGroupMemberTypingUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.ObserveGroupVerificationUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.PromoteGroupMemberUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.RefreshGroupDeliveryStateUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.RemoveGroupMemberUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.RetryGroupMessageUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.SendGroupMessageUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.SetGroupTypingUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.SynchronizeGroupVerificationUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.TransferGroupAdminAndLeaveUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.VerifyGroupMemberUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.overview.ObserveConversationOverviewsUseCase
 import com.cbgm.securechat.feature.chats.presentation.ContactsFlowViewModel
 import com.cbgm.securechat.feature.chats.presentation.create.CreateGroupViewModel
 import com.cbgm.securechat.feature.chats.presentation.details.GroupVerificationViewModel
-import com.cbgm.securechat.feature.chats.presentation.direct.DirectViewModel
-import com.cbgm.securechat.feature.chats.presentation.group.GroupViewModel
+import com.cbgm.securechat.feature.chats.presentation.direct.screen.DirectViewModel
+import com.cbgm.securechat.feature.chats.presentation.group.screen.GroupViewModel
 import com.cbgm.securechat.feature.chats.presentation.overview.OverviewViewModel
 import com.cbgm.securechat.feature.chats.presentation.verification.GroupMemberQrVerificationViewModel
 import com.cbgm.securechat.feature.contacts.domain.usecase.EnsureIdentityExchangeStarted
@@ -81,233 +119,226 @@ import org.koin.dsl.module
 
 val chatsModule =
     module {
-
-        singleOf(::MessageDeliveryStateCoordinator)
-        singleOf(::DirectConversationStore)
-        singleOf(::GroupProtocolPayloadEncoder)
-        singleOf(::GroupInvitationManager)
-        singleOf(::GroupSecurityManager)
-        singleOf(::GroupVerificationPayloadEncoder)
-        singleOf(::GroupVerificationCoordinator) {
-            bind<GroupVerificationActionRepository>()
-        }
-        singleOf(::GroupMessageSender)
-        singleOf(::GroupInvitationCoordinator)
-        singleOf(::IncomingMessageProcessor) {
-            bind<IncomingMessageHandler>()
-        }
-
-        singleOf(::ChatMessagePacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-
-        singleOf(::ReadReceiptPacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-
-        singleOf(::DeliveryReceiptPacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-
-        singleOf(::GroupCreatedPacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-
-        singleOf(::GroupConversationDeletedPacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-
-        singleOf(::GroupInvitePacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-
-        singleOf(::GroupJoinRequestPacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-
-        singleOf(::GroupLeaveRequestPacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-
-        singleOf(::GroupInviteDeclinedPacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-
-        singleOf(::GroupReadyAcknowledgementPacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-
-        singleOf(::GroupMemberActivatedPacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-
-        singleOf(::GroupMemberActivationAcknowledgementPacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-
-        singleOf(::GroupMemberRemovedPacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-
-        singleOf(::GroupVerificationReceiptPacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-
-        singleOf(::GroupVerificationSnapshotRequestPacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-
-        singleOf(::GroupVerificationSnapshotPacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-
-        singleOf(::GroupChatMessagePacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-
-        single<OutboxDeliveryStateListener> {
-            ChatOutboxDeliveryStateListener(
-                deliveryStateCoordinator = get()
-            )
-        }
-
-        single { AcceptGroupInvitationUseCase(repository = get()) }
-        single { AddGroupMembersUseCase(repository = get()) }
-        single { CreateGroupConversationUseCase(repository = get()) }
-        single { DeclineGroupInvitationUseCase(repository = get()) }
-        single { DeleteConversationUseCase(repository = get()) }
-        single { GetGroupLeaveRequirementUseCase(repository = get()) }
-        single { GetOrCreateDirectConversationUseCase(repository = get()) }
-        single { LeaveGroupUseCase(repository = get()) }
-        single { MarkConversationReadUseCase(repository = get()) }
-        single { ObserveConversationUseCase(repository = get()) }
-        single { ObserveConversationsUseCase(repository = get()) }
-        single { ObserveGroupAdministrationUseCase(repository = get()) }
-        single { ObserveGroupConversationUseCase(repository = get()) }
-        single {
-            ObserveGroupVerificationUseCase(
-                repository = get(),
-                observeContacts = get<ObserveContacts>()
-            )
-        }
-        single { ObserveTypingIndicatorUseCase(repository = get()) }
-        single { RetryMessageUseCase(repository = get()) }
-        single { PromoteGroupMemberUseCase(repository = get()) }
-        single { RemoveGroupMemberUseCase(repository = get()) }
-        single { RefreshDeliveryStateUseCase(repository = get()) }
-        single { SendMessageUseCase(repository = get()) }
-        single { SendGroupMessageUseCase(repository = get()) }
-        single { SetTypingIndicatorUseCase(repository = get()) }
-        single { SynchronizeGroupVerificationUseCase(repository = get()) }
-        single { TransferGroupAdminAndLeaveUseCase(repository = get()) }
-        single { VerifyGroupMemberUseCase(repository = get()) }
-
-        single<GroupVerificationRepository> {
-            DefaultGroupVerificationRepository(
-                groupVerificationDao = get(),
-                groupInvitationDao = get(),
-                groupSecurityDao = get()
-            )
-        }
-
-        single<ChatsRepository> {
-            DefaultChatsRepository(
-                chatDao = get(),
-                messageRecipientStateDao = get(),
-                directConversationStore = get(),
-                deliveryStateCoordinator = get(),
-                getContact = get(),
-                localPhoneNumberProvider = get(),
-                protocolOutbox = get(),
-                groupInvitationDao = get(),
-                groupSecurityDao = get(),
-                groupInvitationCoordinator = get(),
-                groupMessageSender = get(),
-                identityInvitationService = get(),
-                mailboxCapabilityLifecycle = get()
-            )
-        }
-
-        viewModel {
-            ContactsFlowViewModel(
-                getOrCreateDirectConversation = get(),
-                ensureIdentityExchangeStarted = get<EnsureIdentityExchangeStarted>()
-            )
-        }
-
-        viewModel {
-            OverviewViewModel(
-                observeConversations = get(),
-                deleteConversationUseCase = get(),
-                getGroupLeaveRequirement = get()
-            )
-        }
-
-        viewModel {
-            CreateGroupViewModel(observeContacts = get(), createGroupConversation = get())
-        }
-
-        viewModel { parameters ->
-            GroupViewModel(
-                conversationId = parameters.get(),
-                observeConversation = get(),
-                observeGroupAdministration = get(),
-                observeGroupVerification = get(),
-                sendGroupMessage = get(),
-                markConversationReadUseCase = get(),
-                retryMessageUseCase = get(),
-                refreshDeliveryState = get(),
-                acceptGroupInvitation = get(),
-                declineGroupInvitation = get(),
-                observeContacts = get<ObserveContacts>(),
-                observeTypingIndicator = get(),
-                setTypingIndicator = get()
-            )
-        }
-
-        viewModel { parameters ->
-            GroupVerificationViewModel(
-                conversationId = parameters.get(),
-                observeGroupVerification = get(),
-                synchronizeGroupVerification = get(),
-                verifyGroupMember = get(),
-                getContactSafetyNumber = get<GetContactSafetyNumber>(),
-                observeContacts = get(),
-                addGroupMembers = get(),
-                removeGroupMember = get(),
-                promoteGroupMember = get(),
-                transferGroupAdminAndLeave = get(),
-                observeGroupAdministration = get(),
-                leaveGroup = get()
-            )
-        }
-
-        viewModel { parameters ->
-            GroupMemberQrVerificationViewModel(
-                groupId = parameters.get(),
-                contactId = parameters.get(),
-                decodeSharedIdentity = get(),
-                getContact = get(),
-                verifyGroupMember = get()
-            )
-        }
-
-        viewModel { parameters ->
-            DirectViewModel(
-                conversationId = parameters.get(),
-                contactId = parameters.get(),
-                fallbackContactName = parameters.get(),
-                observeConversation = get(),
-                sendMessageUseCase = get(),
-                markConversationReadUseCase = get(),
-                retryFailedMessage = get(),
-                refreshDeliveryState = get(),
-                observeIdentitySetupMode = get<ObserveIdentitySetupMode>(),
-                ensureIdentityExchangeStarted = get<EnsureIdentityExchangeStarted>(),
-                observeIdentityHandshakeState = get<ObserveIdentityHandshakeState>(),
-                observeContact = get<ObserveContact>(),
-                observeTypingIndicator = get(),
-                setTypingIndicator = get()
-            )
-        }
+        registerDirectData()
+        registerGroupData()
+        registerIncomingRouting()
+        registerRepositories()
+        registerUseCases()
+        registerViewModels()
     }
+
+private fun org.koin.core.module.Module.registerDirectData() {
+    singleOf(::DirectConversationStorage)
+    singleOf(::DirectMessageDeliveryCoordinator)
+    singleOf(::DirectOutboxDeliveryHandler)
+    singleOf(::DirectOutgoingMessageProcessor)
+    singleOf(::DirectMessagePacketHandler)
+    singleOf(::DirectReceiptPacketHandler)
+    singleOf(::DirectIncomingPacketProcessor)
+}
+
+private fun org.koin.core.module.Module.registerGroupData() {
+    singleOf(::GroupMessageDeliveryCoordinator)
+    singleOf(::GroupOutboxDeliveryHandler)
+    singleOf(::GroupProtocolPayloadEncoder)
+    singleOf(::GroupMembershipPacketProtocol)
+    singleOf(::GroupWelcomeSecurity)
+    singleOf(::GroupSecurityManager)
+    singleOf(::GroupVerificationPayloadEncoder)
+    singleOf(::GroupVerificationState)
+    singleOf(::GroupVerificationSnapshotSender)
+    singleOf(::GroupVerificationCoordinator)
+    singleOf(::GroupOutgoingMessageProcessor)
+    singleOf(::GroupMembershipLock)
+    singleOf(::GroupLocalDataCleaner)
+    singleOf(::GroupMembershipIdentity)
+    singleOf(::GroupEpochCoordinator)
+    singleOf(::GroupMembershipActivationCoordinator)
+    singleOf(::GroupMembershipAdministrationCoordinator)
+    singleOf(::GroupMembershipDeletionCoordinator)
+    singleOf(::GroupInvitationCoordinator)
+    singleOf(::GroupMembershipCoordinator)
+    singleOf(::GroupIncomingPacketPolicy)
+
+    singleOf(::GroupCreatedPacketHandler)
+    singleOf(::GroupConversationDeletedPacketHandler)
+    singleOf(::GroupInvitePacketHandler)
+    singleOf(::GroupJoinRequestPacketHandler)
+    singleOf(::GroupLeaveRequestPacketHandler)
+    singleOf(::GroupInviteDeclinedPacketHandler)
+    singleOf(::GroupReadyAcknowledgementPacketHandler)
+    singleOf(::GroupReceiptPacketHandler)
+    singleOf(::GroupMemberActivatedPacketHandler)
+    singleOf(::GroupMemberActivationAcknowledgementPacketHandler)
+    singleOf(::GroupMemberRemovedPacketHandler)
+    singleOf(::GroupVerificationReceiptPacketHandler)
+    singleOf(::GroupVerificationSnapshotRequestPacketHandler)
+    singleOf(::GroupVerificationSnapshotPacketHandler)
+    singleOf(::GroupChatMessagePacketHandler)
+    singleOf(::GroupPacketHandlerRegistry)
+    singleOf(::GroupIncomingPacketProcessor)
+}
+
+private fun org.koin.core.module.Module.registerIncomingRouting() {
+    singleOf(::UnreadableTransportMessageStorage)
+    singleOf(::ReceiptIncomingPacketRouter)
+    singleOf(::IncomingPacketRouter)
+    singleOf(::IncomingPacketProcessor) {
+        bind<IncomingMessageHandler>()
+    }
+    singleOf(::ChatOutboxDeliveryStateRouter) {
+        bind<OutboxDeliveryStateListener>()
+    }
+}
+
+private fun org.koin.core.module.Module.registerRepositories() {
+    singleOf(::DirectConversationRepositoryImpl) {
+        bind<DirectConversationRepository>()
+    }
+    singleOf(::DirectMessageRepositoryImpl) {
+        bind<DirectMessageRepository>()
+    }
+    singleOf(::GroupConversationRepositoryImpl) {
+        bind<GroupConversationRepository>()
+    }
+    singleOf(::GroupMembershipRepositoryImpl) {
+        bind<GroupMembershipRepository>()
+    }
+    singleOf(::GroupMessageRepositoryImpl) {
+        bind<GroupMessageRepository>()
+    }
+    singleOf(::GroupVerificationActionRepositoryImpl) {
+        bind<GroupVerificationActionRepository>()
+    }
+    singleOf(::GroupVerificationRepositoryImpl) {
+        bind<GroupVerificationRepository>()
+    }
+    singleOf(::ConversationOverviewRepositoryImpl) {
+        bind<ConversationOverviewRepository>()
+    }
+}
+
+private fun org.koin.core.module.Module.registerUseCases() {
+    singleOf(::GetOrCreateDirectConversationUseCase)
+    singleOf(::ObserveDirectConversationUseCase)
+    singleOf(::SendDirectMessageUseCase)
+    singleOf(::RetryDirectMessageUseCase)
+    singleOf(::RefreshDirectDeliveryStateUseCase)
+    singleOf(::MarkDirectConversationReadUseCase)
+    singleOf(::DeleteDirectConversationUseCase)
+    singleOf(::ObserveDirectTypingUseCase)
+    singleOf(::SetDirectTypingUseCase)
+
+    singleOf(::CreateGroupConversationUseCase)
+    singleOf(::ObserveGroupConversationUseCase)
+    singleOf(::SendGroupMessageUseCase)
+    singleOf(::RetryGroupMessageUseCase)
+    singleOf(::RefreshGroupDeliveryStateUseCase)
+    singleOf(::MarkGroupConversationReadUseCase)
+    singleOf(::DeleteGroupConversationUseCase)
+    singleOf(::AcceptGroupInvitationUseCase)
+    singleOf(::DeclineGroupInvitationUseCase)
+    singleOf(::AddGroupMembersUseCase)
+    singleOf(::RemoveGroupMemberUseCase)
+    singleOf(::PromoteGroupMemberUseCase)
+    singleOf(::TransferGroupAdminAndLeaveUseCase)
+    singleOf(::GetGroupLeaveRequirementUseCase)
+    singleOf(::LeaveGroupUseCase)
+    singleOf(::ObserveGroupAdministrationUseCase)
+    singleOf(::ObserveGroupMemberTypingUseCase)
+    singleOf(::SetGroupTypingUseCase)
+    singleOf(::ObserveGroupVerificationUseCase)
+    singleOf(::SynchronizeGroupVerificationUseCase)
+    singleOf(::VerifyGroupMemberUseCase)
+
+    singleOf(::ObserveConversationOverviewsUseCase)
+}
+
+private fun org.koin.core.module.Module.registerViewModels() {
+    viewModel {
+        ContactsFlowViewModel(
+            getOrCreateDirectConversation = get(),
+            ensureIdentityExchangeStarted = get<EnsureIdentityExchangeStarted>()
+        )
+    }
+
+    viewModel {
+        OverviewViewModel(
+            observeConversations = get(),
+            deleteDirectConversation = get(),
+            deleteGroupConversation = get(),
+            getGroupLeaveRequirement = get()
+        )
+    }
+
+    viewModel {
+        CreateGroupViewModel(
+            observeContacts = get(),
+            createGroupConversation = get()
+        )
+    }
+
+    viewModel { parameters ->
+        GroupViewModel(
+            groupId = parameters.get(),
+            observeConversation = get(),
+            observeAdministration = get(),
+            observeVerification = get(),
+            sendMessage = get(),
+            markConversationRead = get(),
+            retryMessage = get(),
+            refreshDeliveryState = get(),
+            acceptInvitation = get(),
+            declineInvitation = get(),
+            observeContacts = get<ObserveContacts>(),
+            observeMemberTyping = get(),
+            setGroupTyping = get()
+        )
+    }
+
+    viewModel { parameters ->
+        GroupVerificationViewModel(
+            conversationId = parameters.get(),
+            observeGroupVerification = get(),
+            synchronizeGroupVerification = get(),
+            verifyGroupMember = get(),
+            getContactSafetyNumber = get<GetContactSafetyNumber>(),
+            observeContacts = get(),
+            addGroupMembers = get(),
+            removeGroupMember = get(),
+            promoteGroupMember = get(),
+            transferGroupAdminAndLeave = get(),
+            observeGroupAdministration = get(),
+            leaveGroup = get()
+        )
+    }
+
+    viewModel { parameters ->
+        GroupMemberQrVerificationViewModel(
+            groupId = parameters.get(),
+            contactId = parameters.get(),
+            decodeSharedIdentity = get(),
+            getContact = get(),
+            verifyGroupMember = get()
+        )
+    }
+
+    viewModel { parameters ->
+        DirectViewModel(
+            conversationId = parameters.get(),
+            contactId = parameters.get(),
+            fallbackContactName = parameters.get(),
+            observeConversation = get(),
+            sendMessage = get(),
+            markConversationRead = get(),
+            retryMessage = get(),
+            refreshDeliveryState = get(),
+            observeIdentitySetupMode = get<ObserveIdentitySetupMode>(),
+            ensureIdentityExchangeStarted = get<EnsureIdentityExchangeStarted>(),
+            observeIdentityHandshakeState = get<ObserveIdentityHandshakeState>(),
+            observeContact = get<ObserveContact>(),
+            observeTyping = get(),
+            setTyping = get()
+        )
+    }
+}

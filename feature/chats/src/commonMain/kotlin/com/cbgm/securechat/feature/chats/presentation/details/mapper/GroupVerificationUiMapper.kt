@@ -1,7 +1,7 @@
 package com.cbgm.securechat.feature.chats.presentation.details.mapper
 
-import com.cbgm.securechat.feature.chats.domain.model.GroupVerificationMembershipStatus
-import com.cbgm.securechat.feature.chats.domain.model.GroupVerificationPair
+import com.cbgm.securechat.feature.chats.domain.model.group.GroupVerificationMembershipStatus
+import com.cbgm.securechat.feature.chats.domain.model.group.GroupVerificationPair
 import com.cbgm.securechat.feature.chats.presentation.details.model.GroupMemberVerificationState
 import com.cbgm.securechat.feature.chats.presentation.details.model.GroupMemberVerificationUiState
 import com.cbgm.securechat.feature.chats.presentation.details.model.GroupVerificationSummaryUiState

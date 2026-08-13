@@ -1,15 +1,16 @@
 package com.cbgm.securechat.feature.chats.presentation.overview.mapper
 
-import com.cbgm.securechat.feature.chats.domain.model.Conversation
+import com.cbgm.securechat.feature.chats.domain.model.overview.ConversationOverview
+import com.cbgm.securechat.feature.chats.domain.model.overview.ConversationOverviewType
 import com.cbgm.securechat.feature.chats.presentation.overview.model.ConversationListItem
 
-fun Conversation.toConversationListItem() =
+internal fun ConversationOverview.toConversationListItem(): ConversationListItem =
     ConversationListItem(
         conversationId = id,
         contactId = contactId,
-        contactName = contactName,
-        lastMessage = lastMessage?.text ?: "",
-        timestamp = lastMessage?.timestamp?.toString().orEmpty(),
+        contactName = displayName,
+        lastMessage = lastMessageText.orEmpty(),
+        timestamp = lastMessageTimestamp?.toString().orEmpty(),
         unreadCount = unreadCount,
-        isGroup = isGroup
+        isGroup = type == ConversationOverviewType.GROUP
     )

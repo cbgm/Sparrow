@@ -1,8 +1,9 @@
 package com.cbgm.securechat.feature.chats.presentation.direct.mapper
 
 import com.cbgm.securechat.core.security.DirectIdentitySetupMode
-import com.cbgm.securechat.feature.chats.domain.model.ContactSecurityState
-import com.cbgm.securechat.feature.chats.domain.model.Conversation
+import com.cbgm.securechat.feature.chats.domain.model.direct.ContactSecurityState
+import com.cbgm.securechat.feature.chats.domain.model.direct.DirectMessage
+import com.cbgm.securechat.feature.chats.presentation.component.model.MessageBubbleModel
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
 import com.cbgm.securechat.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.securechat.feature.contacts.domain.model.IdentityHandshakeState
@@ -10,17 +11,23 @@ import com.cbgm.securechat.feature.contacts.domain.model.KeyExchangeStatus
 
 internal fun resolveContactName(
     contact: Contact?,
-    conversation: Conversation?,
     fallbackContactName: String
 ): String =
     contact
         ?.displayName
         ?.takeIf(String::isNotBlank)
-        ?: conversation
-            ?.contactName
-            ?.takeIf(String::isNotBlank)
         ?: fallbackContactName.takeIf(String::isNotBlank)
         ?: "Unknown contact"
+
+internal fun DirectMessage.toUiModel(): MessageBubbleModel =
+    MessageBubbleModel(
+        id = id,
+        text = text,
+        isMine = isMine,
+        security = security,
+        contentStatus = contentStatus,
+        deliveryStatus = deliveryStatus
+    )
 
 internal fun Contact?.toSecurityState(): ContactSecurityState {
     val identity = this?.secureChatIdentity ?: return ContactSecurityState.NO_REMOTE_PUBLIC_KEYS

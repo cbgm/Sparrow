@@ -1,8 +1,7 @@
 package com.cbgm.securechat.feature.chats.presentation.group.model
 
-import com.cbgm.securechat.feature.chats.domain.model.ChatMessage
-import com.cbgm.securechat.feature.chats.domain.model.GroupConversationState
-import com.cbgm.securechat.feature.chats.domain.model.GroupMemberInvitationStatus
+import com.cbgm.securechat.feature.chats.domain.model.group.GroupConversationState
+import com.cbgm.securechat.feature.chats.domain.model.group.GroupMemberInvitationStatus
 
 data class GroupMemberProgressUi(
     val displayName: String,
@@ -11,7 +10,7 @@ data class GroupMemberProgressUi(
 
 data class GroupUiState(
     val title: String = "",
-    val messages: List<ChatMessage> = emptyList(),
+    val messages: List<GroupMessageUiModel> = emptyList(),
     val messageText: String = "",
     val isSomeoneTyping: Boolean = false,
     val typingDisplayName: String = "",

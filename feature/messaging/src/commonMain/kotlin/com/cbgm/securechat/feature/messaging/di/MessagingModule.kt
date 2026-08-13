@@ -7,7 +7,8 @@ import com.cbgm.securechat.core.protocol.outbox.OutboxRunner
 import com.cbgm.securechat.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.securechat.core.protocol.transport.OutgoingWireSender
 import com.cbgm.securechat.data.database.dao.ContactDao
-import com.cbgm.securechat.feature.chats.domain.repository.TypingIndicatorRepository
+import com.cbgm.securechat.feature.chats.domain.repository.direct.DirectTypingRepository
+import com.cbgm.securechat.feature.chats.domain.repository.group.GroupTypingRepository
 import com.cbgm.securechat.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
 import com.cbgm.securechat.feature.messaging.application.incoming.DefaultIncomingEnvelopeProcessor
@@ -28,7 +29,8 @@ import com.cbgm.securechat.feature.messaging.application.outbox.OutgoingTranspor
 import com.cbgm.securechat.feature.messaging.data.relay.DefaultContactByRelayIdResolver
 import com.cbgm.securechat.feature.messaging.data.relay.DefaultContactRelayIdResolver
 import com.cbgm.securechat.feature.messaging.data.relay.WebSocketIncomingRelayGateway
-import com.cbgm.securechat.feature.messaging.data.typing.RelayTypingIndicatorGateway
+import com.cbgm.securechat.feature.messaging.data.repository.direct.DirectTypingRepositoryImpl
+import com.cbgm.securechat.feature.messaging.data.repository.group.GroupTypingRepositoryImpl
 import com.cbgm.securechat.feature.messaging.domain.relay.ContactByRelayIdResolver
 import com.cbgm.securechat.feature.messaging.domain.relay.ContactRelayIdResolver
 import com.cbgm.securechat.feature.messaging.domain.relay.IncomingRelayGateway
@@ -57,8 +59,15 @@ val messagingModule =
             )
         }
 
-        single<TypingIndicatorRepository> {
-            RelayTypingIndicatorGateway(
+        single<DirectTypingRepository> {
+            DirectTypingRepositoryImpl(
+                webSocketTransportClient = get<WebSocketTransportClient>(),
+                contactRelayIdResolver = get<ContactRelayIdResolver>()
+            )
+        }
+
+        single<GroupTypingRepository> {
+            GroupTypingRepositoryImpl(
                 webSocketTransportClient = get<WebSocketTransportClient>(),
                 contactRelayIdResolver = get<ContactRelayIdResolver>()
             )

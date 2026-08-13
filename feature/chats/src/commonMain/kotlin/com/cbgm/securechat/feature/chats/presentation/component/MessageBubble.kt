@@ -31,10 +31,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.core.ui.theme.spacing
-import com.cbgm.securechat.feature.chats.domain.model.ChatMessage
 import com.cbgm.securechat.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.securechat.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.securechat.feature.chats.domain.model.MessageSecurity
+import com.cbgm.securechat.feature.chats.presentation.component.model.MessageBubbleModel
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.feature_chats_decryption_failed
 import com.cbgm.securechat.resources.feature_chats_delivered
@@ -57,7 +57,7 @@ private val IncomingBubbleColor = Color(0xFF17324D)
 
 @Composable
 internal fun MessageBubble(
-    message: ChatMessage,
+    message: MessageBubbleModel,
     onRetryClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -83,7 +83,7 @@ internal fun MessageBubble(
 }
 
 @Composable
-private fun SenderLabel(message: ChatMessage) {
+private fun SenderLabel(message: MessageBubbleModel) {
     if (message.isMine || message.senderName.isNullOrBlank()) return
 
     val senderLabel =
@@ -107,7 +107,7 @@ private fun SenderLabel(message: ChatMessage) {
 
 @Composable
 private fun BubbleBody(
-    message: ChatMessage,
+    message: MessageBubbleModel,
     state: BubbleState
 ) {
     Surface(
@@ -145,7 +145,7 @@ private fun BubbleBody(
 
 @Composable
 private fun Metadata(
-    message: ChatMessage,
+    message: MessageBubbleModel,
     onRetryClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -167,7 +167,7 @@ private fun Metadata(
 }
 
 @Composable
-private fun DeliveryProgress(message: ChatMessage) {
+private fun DeliveryProgress(message: MessageBubbleModel) {
     val progress = message.deliveryProgress
     if (progress.recipientCount <= 1) return
 
@@ -186,7 +186,7 @@ private fun DeliveryProgress(message: ChatMessage) {
 }
 
 @Composable
-private fun SecurityIndicator(message: ChatMessage) {
+private fun SecurityIndicator(message: MessageBubbleModel) {
     val text =
         when (message.contentStatus) {
             MessageContentStatus.INVALID_PACKET -> stringResource(Res.string.feature_chats_invalid_packet)
@@ -354,7 +354,7 @@ private fun DeliveryLabel(
 }
 
 @Composable
-private fun bubbleState(message: ChatMessage): BubbleState =
+private fun bubbleState(message: MessageBubbleModel): BubbleState =
     when (message.contentStatus) {
         MessageContentStatus.READABLE ->
             BubbleState(
@@ -398,12 +398,10 @@ private fun MessageBubblePreview() {
     SecureChatTheme {
         MessageBubble(
             message =
-                ChatMessage(
+                MessageBubbleModel(
                     id = "preview",
-                    contactId = "contact",
                     text = "Encrypted message",
                     isMine = true,
-                    timestamp = 0L,
                     security = MessageSecurity.END_TO_END_ENCRYPTED,
                     contentStatus = MessageContentStatus.READABLE,
                     deliveryStatus = MessageDeliveryStatus.DELIVERED

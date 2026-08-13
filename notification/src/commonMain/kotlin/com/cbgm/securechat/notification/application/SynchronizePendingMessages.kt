@@ -2,8 +2,8 @@ package com.cbgm.securechat.notification.application
 
 import com.cbgm.securechat.core.crypto.InitializeCryptoRuntime
 import com.cbgm.securechat.core.logging.SecureChatLog
-import com.cbgm.securechat.feature.chats.domain.model.Conversation
-import com.cbgm.securechat.feature.chats.domain.usecase.ObserveConversationsUseCase
+import com.cbgm.securechat.feature.chats.domain.model.overview.ConversationOverview
+import com.cbgm.securechat.feature.chats.domain.usecase.overview.ObserveConversationOverviewsUseCase
 import com.cbgm.securechat.feature.messaging.application.incoming.IncomingEnvelopeProcessingResult
 import com.cbgm.securechat.feature.messaging.application.incoming.IncomingEnvelopeProcessor
 import com.cbgm.securechat.feature.messaging.application.mailbox.MailboxCoordinator
@@ -16,7 +16,7 @@ class SynchronizePendingMessages(
     private val initializeCryptoRuntime: InitializeCryptoRuntime,
     private val pendingRelayEnvelopeGateway: PendingRelayEnvelopeGateway,
     private val incomingEnvelopeProcessor: IncomingEnvelopeProcessor,
-    private val observeConversations: ObserveConversationsUseCase,
+    private val observeConversations: ObserveConversationOverviewsUseCase,
     private val mailboxCoordinator: MailboxCoordinator
 ) {
     private val logger = SecureChatLog.withTag("SynchronizePendingMessages")
@@ -106,11 +106,11 @@ class SynchronizePendingMessages(
                     }?.toNotification()
             }
 
-    private fun Conversation.toNotification(): ConversationNotification =
+    private fun ConversationOverview.toNotification(): ConversationNotification =
         ConversationNotification(
             conversationId = id,
-            title = contactName,
-            messagePreview = lastMessage?.text?.takeIf(String::isNotBlank),
+            title = displayName,
+            messagePreview = lastMessageText?.takeIf(String::isNotBlank),
             unreadCount = unreadCount
         )
 

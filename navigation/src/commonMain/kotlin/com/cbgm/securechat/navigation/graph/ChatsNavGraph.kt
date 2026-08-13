@@ -6,8 +6,8 @@ import androidx.navigation.toRoute
 import com.cbgm.securechat.core.ui.navigation.AppRoute
 import com.cbgm.securechat.feature.chats.presentation.details.model.DetailsTarget
 import com.cbgm.securechat.feature.chats.presentation.details.screen.DetailsRoute
-import com.cbgm.securechat.feature.chats.presentation.direct.DirectRoute
-import com.cbgm.securechat.feature.chats.presentation.group.GroupRoute
+import com.cbgm.securechat.feature.chats.presentation.direct.screen.DirectRoute
+import com.cbgm.securechat.feature.chats.presentation.group.screen.GroupRoute
 import com.cbgm.securechat.feature.chats.presentation.verification.VerificationRoute
 import com.cbgm.securechat.navigation.slideInFromLeft
 import com.cbgm.securechat.navigation.slideInFromRight
