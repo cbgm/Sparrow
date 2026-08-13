@@ -89,6 +89,35 @@ class WebSocketOutgoingWireSenderTest {
         }
 
     @Test
+    fun bootstrapSendWaitsUntilLocalBootstrapAliasIsRegistered() =
+        runTest {
+            val client = RecordingWebSocketTransportClient()
+            val sender =
+                WebSocketOutgoingWireSender(
+                    webSocketTransportClient = client,
+                    localRelayIdProvider = SuccessfulLocalRelayIdProvider(),
+                    localBootstrapRelayIdProvider = SuccessfulLocalBootstrapRelayIdProvider(),
+                    relayTransportConfig =
+                        RelayTransportConfig(
+                            acknowledgementTimeoutMilliseconds = 2_500L
+                        )
+                )
+
+            val result =
+                sender.send(
+                    recipientAddress = "scphone1_recipient",
+                    encodedTransportPayload = "encoded-payload"
+                )
+
+            assertTrue(result.isSuccess)
+            assertEquals("local-bootstrap-relay-id", client.awaitedRoutingAlias)
+            assertEquals(2_500L, client.aliasTimeoutMilliseconds)
+            val envelope = requireNotNull(client.envelope)
+            assertEquals("local-bootstrap-relay-id", envelope.senderId)
+            assertEquals("scphone1_recipient", envelope.recipientId)
+        }
+
+    @Test
     fun relayAcceptanceFailureIsPropagated() =
         runTest {
             val expectedError = IllegalStateException("relay rejected envelope")
@@ -158,6 +187,8 @@ class WebSocketOutgoingWireSenderTest {
         var envelope: RelayEnvelope? = null
         var federatedEnvelope: FederatedEnvelope? = null
         var timeoutMilliseconds: Long? = null
+        var awaitedRoutingAlias: String? = null
+        var aliasTimeoutMilliseconds: Long? = null
 
         override val connectionState: StateFlow<TransportConnectionState> =
             MutableStateFlow(TransportConnectionState.Connected("local-relay-id"))
@@ -168,6 +199,15 @@ class WebSocketOutgoingWireSenderTest {
             serverUrl: String,
             localRelayId: String
         ) = Unit
+
+        override suspend fun awaitRoutingAlias(
+            routingAlias: String,
+            timeoutMilliseconds: Long
+        ): Result<Unit> {
+            awaitedRoutingAlias = routingAlias
+            aliasTimeoutMilliseconds = timeoutMilliseconds
+            return Result.success(Unit)
+        }
 
         override suspend fun sendEnvelopeAndAwaitAcceptance(
             envelope: RelayEnvelope,

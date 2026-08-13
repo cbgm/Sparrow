@@ -116,9 +116,21 @@ class GroupVerificationStateTest {
 
         override suspend fun findByGroupAndContact(groupId: String, contactId: String): GroupInvitationEntity? = null
 
+        override suspend fun findByGroupContactAndDirection(
+            groupId: String,
+            contactId: String,
+            direction: String
+        ): GroupInvitationEntity? = null
+
         override suspend fun findByGroupId(groupId: String): List<GroupInvitationEntity> = invitations
 
         override suspend fun deleteByGroupAndContact(groupId: String, contactId: String) = unused()
+
+        override suspend fun deleteByGroupContactAndDirection(
+            groupId: String,
+            contactId: String,
+            direction: String
+        ) = unused()
 
         override suspend fun deleteByGroupId(groupId: String) = unused()
 

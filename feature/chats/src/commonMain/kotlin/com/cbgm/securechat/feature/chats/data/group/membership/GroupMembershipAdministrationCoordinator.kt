@@ -393,7 +393,12 @@ internal class GroupMembershipAdministrationCoordinator(
     ): MemberRemoval {
         groupSecurityManager.findOwnedGroupEpoch(groupId).getOrThrow()
         val currentMemberKey = currentMemberKey(groupId, contactId)
-        val invitation = groupInvitationDao.findByGroupAndContact(groupId, contactId)
+        val invitation =
+            groupInvitationDao.findByGroupContactAndDirection(
+                groupId = groupId,
+                contactId = contactId,
+                direction = GroupInvitationDirection.OUTGOING.name
+            )
         check(currentMemberKey != null || invitation != null) { "Group member was not found" }
         check(invitation?.status?.isTerminalStatus() != true) { "Group member is already inactive" }
 

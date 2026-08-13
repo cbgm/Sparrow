@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -54,6 +55,8 @@ class DefaultWebSocketTransportClient internal constructor(
 
     override val connectionState: StateFlow<TransportConnectionState> =
         mutableConnectionState.asStateFlow()
+
+    private val mutableRegisteredRoutingAliases = MutableStateFlow<Set<String>>(emptySet())
 
     private val mutableIncomingEnvelopes =
         MutableSharedFlow<RelayEnvelope>(extraBufferCapacity = INCOMING_BUFFER_CAPACITY)
@@ -143,6 +146,18 @@ class DefaultWebSocketTransportClient internal constructor(
     ): Result<Unit> =
         awaitEnvelopeAcceptance(envelope.envelopeId, timeoutMilliseconds) {
             sendFederatedEnvelopeFrame(envelope)
+        }
+
+    override suspend fun awaitRoutingAlias(
+        routingAlias: String,
+        timeoutMilliseconds: Long
+    ): Result<Unit> =
+        runCatching {
+            require(routingAlias.isNotBlank()) { "Routing alias must not be blank" }
+            require(timeoutMilliseconds > 0L) { "Routing alias timeout must be positive" }
+            withTimeout(timeoutMilliseconds.milliseconds) {
+                mutableRegisteredRoutingAliases.first { aliases -> routingAlias in aliases }
+            }
         }
 
     override suspend fun acknowledgeIncomingEnvelope(envelopeId: String): Result<Unit> =
@@ -239,6 +254,7 @@ class DefaultWebSocketTransportClient internal constructor(
 
         failPendingAcknowledgements(error = IllegalStateException("WebSocket disconnected"))
 
+        mutableRegisteredRoutingAliases.value = emptySet()
         mutableConnectionState.value = TransportConnectionState.Disconnected
     }
 
@@ -321,6 +337,8 @@ class DefaultWebSocketTransportClient internal constructor(
                                             )
                                         )
                                     }
+                                    mutableRegisteredRoutingAliases.value =
+                                        registration.route.aliases.orEmpty().toSet()
                                 }
                             },
                             reconnect = {
@@ -352,7 +370,13 @@ class DefaultWebSocketTransportClient internal constructor(
                             is Frame.Text -> {
                                 handleTextFrame(
                                     encodedMessage = frame.readText(),
-                                    expectedRelayId = localRelayId
+                                    expectedRelayId = localRelayId,
+                                    registeredAliases =
+                                        routeRegistration
+                                            ?.route
+                                            ?.aliases
+                                            .orEmpty()
+                                            .toSet()
                                 )
                             }
 
@@ -415,6 +439,7 @@ class DefaultWebSocketTransportClient internal constructor(
                     message = error.message ?: "WebSocket connection failed"
                 )
         } finally {
+            mutableRegisteredRoutingAliases.value = emptySet()
             sessionMutex.withLock {
                 session = null
             }
@@ -515,7 +540,8 @@ class DefaultWebSocketTransportClient internal constructor(
 
     private suspend fun handleTextFrame(
         encodedMessage: String,
-        expectedRelayId: String
+        expectedRelayId: String,
+        registeredAliases: Set<String>
     ) {
         val message =
             runCatching {
@@ -542,6 +568,7 @@ class DefaultWebSocketTransportClient internal constructor(
 
                 logger.info { "Relay registration accepted for ${message.relayId}" }
 
+                mutableRegisteredRoutingAliases.value = registeredAliases
                 mutableConnectionState.value =
                     TransportConnectionState.Connected(relayId = message.relayId)
             }

@@ -26,9 +26,16 @@ class WebSocketOutgoingWireSender(
             require(recipientAddress.isNotBlank()) { "Recipient address must not be blank" }
             require(encodedTransportPayload.isNotBlank()) { "Transport payload must not be blank" }
 
+            val usesBootstrapRouting = recipientAddress.startsWith(BOOTSTRAP_ROUTING_ID_PREFIX)
             val senderRelayId =
-                if (recipientAddress.startsWith(BOOTSTRAP_ROUTING_ID_PREFIX)) {
-                    localBootstrapRelayIdProvider.getLocalBootstrapRelayId().getOrThrow()
+                if (usesBootstrapRouting) {
+                    localBootstrapRelayIdProvider.getLocalBootstrapRelayId().getOrThrow().also { alias ->
+                        webSocketTransportClient
+                            .awaitRoutingAlias(
+                                routingAlias = alias,
+                                timeoutMilliseconds = relayTransportConfig.acknowledgementTimeoutMilliseconds
+                            ).getOrThrow()
+                    }
                 } else {
                     localRelayIdProvider.getLocalRelayId().getOrThrow()
                 }

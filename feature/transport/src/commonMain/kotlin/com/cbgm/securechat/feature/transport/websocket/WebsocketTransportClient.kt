@@ -22,6 +22,11 @@ interface WebSocketTransportClient {
         timeoutMilliseconds: Long
     ): Result<Unit>
 
+    suspend fun awaitRoutingAlias(
+        routingAlias: String,
+        timeoutMilliseconds: Long
+    ): Result<Unit> = Result.success(Unit)
+
     suspend fun sendFederatedEnvelopeAndAwaitAcceptance(
         envelope: FederatedEnvelope,
         timeoutMilliseconds: Long

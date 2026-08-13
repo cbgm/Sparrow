@@ -101,11 +101,20 @@ internal class GroupInvitationCoordinator(
                 val newInvitations = mutableListOf<OutgoingInvitation>()
 
                 loadContacts(contactIds).forEach { contact ->
-                    val existing = groupInvitationDao.findByGroupAndContact(groupId, contact.id)
+                    val existing =
+                        groupInvitationDao.findByGroupContactAndDirection(
+                            groupId = groupId,
+                            contactId = contact.id,
+                            direction = GroupInvitationDirection.OUTGOING.name
+                        )
                     when {
                         existing?.isUnacknowledgedOutgoingInvite() == true -> {
                             if (!resendUnacknowledgedInvite(existing)) {
-                                groupInvitationDao.deleteByGroupAndContact(groupId, contact.id)
+                                groupInvitationDao.deleteByGroupContactAndDirection(
+                                    groupId = groupId,
+                                    contactId = contact.id,
+                                    direction = GroupInvitationDirection.OUTGOING.name
+                                )
                                 newInvitations +=
                                     createOutgoingInvitation(
                                         groupId = groupId,
@@ -119,7 +128,11 @@ internal class GroupInvitationCoordinator(
                         }
 
                         existing == null || existing.status.isTerminalStatus() -> {
-                            groupInvitationDao.deleteByGroupAndContact(groupId, contact.id)
+                            groupInvitationDao.deleteByGroupContactAndDirection(
+                                groupId = groupId,
+                                contactId = contact.id,
+                                direction = GroupInvitationDirection.OUTGOING.name
+                            )
                             newInvitations +=
                                 createOutgoingInvitation(
                                     groupId = groupId,
@@ -334,7 +347,12 @@ internal class GroupInvitationCoordinator(
         ownerContactId: String,
         packet: GroupInvitePacket
     ): GroupInvitationEntity? {
-        val existing = groupInvitationDao.findByGroupAndContact(packet.groupId, ownerContactId)
+        val existing =
+            groupInvitationDao.findByGroupContactAndDirection(
+                groupId = packet.groupId,
+                contactId = ownerContactId,
+                direction = GroupInvitationDirection.INCOMING.name
+            )
         if (existing != null) {
             check(existing.status.isTerminalStatus()) {
                 "A current group invitation already exists for this group"

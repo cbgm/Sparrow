@@ -37,6 +37,23 @@ interface GroupInvitationDao {
         SELECT *
         FROM group_invitations
         WHERE groupId = :groupId
+          AND contactId = :contactId
+          AND direction = :direction
+        ORDER BY createdAtEpochMilliseconds DESC, invitationId DESC
+        LIMIT 1
+        """
+    )
+    suspend fun findByGroupContactAndDirection(
+        groupId: String,
+        contactId: String,
+        direction: String
+    ): GroupInvitationEntity?
+
+    @Query(
+        """
+        SELECT *
+        FROM group_invitations
+        WHERE groupId = :groupId
         ORDER BY createdAtEpochMilliseconds, invitationId
         """
     )
@@ -52,6 +69,20 @@ interface GroupInvitationDao {
     suspend fun deleteByGroupAndContact(
         groupId: String,
         contactId: String
+    )
+
+    @Query(
+        """
+        DELETE FROM group_invitations
+        WHERE groupId = :groupId
+          AND contactId = :contactId
+          AND direction = :direction
+        """
+    )
+    suspend fun deleteByGroupContactAndDirection(
+        groupId: String,
+        contactId: String,
+        direction: String
     )
 
     @Query("DELETE FROM group_invitations WHERE groupId = :groupId")
