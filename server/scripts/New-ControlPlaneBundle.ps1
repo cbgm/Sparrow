@@ -61,10 +61,11 @@ Copy-Item `
     (Join-Path $bundleRoot "securechat.conf"),
     @(
         "# SecureChat control-plane configuration",
-        "# MODE: lan or public",
-        "# PUBLIC_DOMAIN: leave blank to derive <public-ip>.sslip.io in public mode",
-        "MODE=lan",
+        "# The launcher opens configuration on every start, prefilled from this file, and writes any changes back here.",
+        "CONFIGURED=false",
+        "MODE=",
         "PUBLIC_DOMAIN=",
+        "CONTROL_PLANE_ID=",
         "SECURECHAT_IMAGE_PREFIX=$ImagePrefix",
         "SECURECHAT_IMAGE_TAG=$ImageTag"
     ),
@@ -83,7 +84,13 @@ Copy-Item `
     [System.Text.UTF8Encoding]::new($false)
 )
 
-foreach ($required in @("Start-SecureChatControlPlane.cmd", "securechat.conf")) {
+[System.IO.File]::WriteAllText(
+    (Join-Path $bundleRoot "secrets/README.txt"),
+    "Place firebase-admin.json and required registry authority files in this folder before first start.`nThe launcher creates the remaining generated secret files here automatically.`n",
+    [System.Text.UTF8Encoding]::new($false)
+)
+
+foreach ($required in @("Start-SecureChatControlPlane.cmd", "securechat.conf", "secrets/README.txt")) {
     if (-not (Test-Path -LiteralPath (Join-Path $bundleRoot $required) -PathType Leaf)) {
         throw "Control-plane bundle is missing $required."
     }

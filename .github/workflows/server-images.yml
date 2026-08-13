@@ -291,7 +291,8 @@ jobs:
               "Start-SecureChatControlPlane.cmd",
               "Bootstrap-ControlPlane.ps1",
               "securechat.conf",
-              "docker-compose.production.yml"
+              "docker-compose.production.yml",
+              "secrets/README.txt"
           )) {
               if (-not (Test-Path -LiteralPath "dist-control-plane/artifact/$required" -PathType Leaf)) {
                   throw "Control-plane artifact is missing $required."
@@ -299,8 +300,11 @@ jobs:
           }
 
           $controlConfig = Get-Content -LiteralPath dist-control-plane/artifact/securechat.conf -Raw
-          if ($controlConfig -match '(?m)^CONTROL_PLANE_URLS=') {
-              throw "Control-plane securechat.conf must not contain CONTROL_PLANE_URLS."
+          if ($controlConfig -notmatch '(?m)^CONFIGURED=false$') {
+              throw "Control-plane securechat.conf must start with CONFIGURED=false in the distributable template."
+          }
+          if ($controlConfig -notmatch '(?m)^CONTROL_PLANE_ID=$') {
+              throw "Control-plane securechat.conf is missing the instance-ID field."
           }
 
       - name: Upload control-plane bundle
@@ -368,8 +372,17 @@ jobs:
           }
 
           $nodeConfig = Get-Content -LiteralPath dist-community/artifact/securechat.conf -Raw
-          if ($nodeConfig -notmatch '(?m)^CONTROL_PLANE_URLS=') {
-              throw "Community-node securechat.conf is missing CONTROL_PLANE_URLS."
+          if ($nodeConfig -notmatch '(?m)^CONFIGURED=false$') {
+              throw "Community-node securechat.conf must start with CONFIGURED=false in the distributable template."
+          }
+          if ($nodeConfig -match '(?m)^CONTROL_PLANE_URLS=') {
+              throw "Community-node securechat.conf must not require a manual CONTROL_PLANE_URLS list."
+          }
+          if ($nodeConfig -notmatch '(?m)^CONTROL_PLANE_DIRECTORY_URL=$') {
+              throw "Community-node securechat.conf is missing CONTROL_PLANE_DIRECTORY_URL."
+          }
+          if ($nodeConfig -match '(?m)^CONTROL_PLANE_BOOTSTRAP_URL=') {
+              throw "Community-node securechat.conf must not contain a bootstrap fallback URL."
           }
 
       - name: Upload community-node bundle

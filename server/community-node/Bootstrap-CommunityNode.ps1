@@ -139,6 +139,273 @@ function Read-EnvironmentFile {
     return $values
 }
 
+function Write-NetworkConfiguration {
+    param(
+        [Parameter(Mandatory = $true)][hashtable]$Config,
+        [Parameter(Mandatory = $true)][string]$Mode,
+        [string]$PublicDomain,
+        [Parameter(Mandatory = $true)][string]$DirectoryUrl
+    )
+
+    $lines = @(
+        "# SecureChat community-node configuration",
+        "# Generated and updated by the launcher. You may also edit this file by hand while the stack is stopped.",
+        "CONFIGURED=true",
+        "MODE=$Mode",
+        "PUBLIC_DOMAIN=$PublicDomain",
+        "CONTROL_PLANE_DIRECTORY_URL=$DirectoryUrl",
+        "SECURECHAT_IMAGE_PREFIX=$($Config['SECURECHAT_IMAGE_PREFIX'])",
+        "SECURECHAT_IMAGE_TAG=$($Config['SECURECHAT_IMAGE_TAG'])"
+    )
+
+    [System.IO.File]::WriteAllLines(
+        $networkConfigPath,
+        $lines,
+        [System.Text.UTF8Encoding]::new($false)
+    )
+}
+
+function Read-LauncherConfiguration {
+    param([Parameter(Mandatory = $true)][hashtable]$Config)
+
+    $panel = New-Object System.Windows.Forms.Panel
+    $panel.Location = New-Object System.Drawing.Point(24, 58)
+    $panel.Size = New-Object System.Drawing.Size(705, 316)
+
+    $modeLabel = New-Object System.Windows.Forms.Label
+    $modeLabel.Location = New-Object System.Drawing.Point(0, 4)
+    $modeLabel.Size = New-Object System.Drawing.Size(205, 22)
+    $modeLabel.Text = "Reachability"
+    $panel.Controls.Add($modeLabel)
+
+    $modeCombo = New-Object System.Windows.Forms.ComboBox
+    $modeCombo.Location = New-Object System.Drawing.Point(220, 0)
+    $modeCombo.Size = New-Object System.Drawing.Size(460, 28)
+    $modeCombo.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
+    [void]$modeCombo.Items.Add("LAN")
+    [void]$modeCombo.Items.Add("Public")
+    $configuredMode = if ($Config.ContainsKey("MODE")) { $Config["MODE"].Trim().ToLowerInvariant() } else { "lan" }
+    $modeCombo.SelectedIndex = if ($configuredMode -eq "public") { 1 } else { 0 }
+    $panel.Controls.Add($modeCombo)
+
+    $publicModeLabel = New-Object System.Windows.Forms.Label
+    $publicModeLabel.Location = New-Object System.Drawing.Point(0, 52)
+    $publicModeLabel.Size = New-Object System.Drawing.Size(205, 22)
+    $publicModeLabel.Text = "Public address"
+    $panel.Controls.Add($publicModeLabel)
+
+    $publicModeCombo = New-Object System.Windows.Forms.ComboBox
+    $publicModeCombo.Location = New-Object System.Drawing.Point(220, 48)
+    $publicModeCombo.Size = New-Object System.Drawing.Size(460, 28)
+    $publicModeCombo.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
+    [void]$publicModeCombo.Items.Add("Automatic (sslip.io)")
+    [void]$publicModeCombo.Items.Add("Own address")
+    $configuredPublicDomain = if ($Config.ContainsKey("PUBLIC_DOMAIN")) { $Config["PUBLIC_DOMAIN"].Trim() } else { "" }
+    $publicModeCombo.SelectedIndex = if ([string]::IsNullOrWhiteSpace($configuredPublicDomain)) { 0 } else { 1 }
+    $panel.Controls.Add($publicModeCombo)
+
+    $publicAddressLabel = New-Object System.Windows.Forms.Label
+    $publicAddressLabel.Location = New-Object System.Drawing.Point(0, 100)
+    $publicAddressLabel.Size = New-Object System.Drawing.Size(205, 22)
+    $publicAddressLabel.Text = "Own public domain / host"
+    $panel.Controls.Add($publicAddressLabel)
+
+    $publicAddressText = New-Object System.Windows.Forms.TextBox
+    $publicAddressText.Location = New-Object System.Drawing.Point(220, 96)
+    $publicAddressText.Size = New-Object System.Drawing.Size(460, 27)
+    $publicAddressText.Text = $configuredPublicDomain
+    $panel.Controls.Add($publicAddressText)
+
+    $directoryLabel = New-Object System.Windows.Forms.Label
+    $directoryLabel.Location = New-Object System.Drawing.Point(0, 148)
+    $directoryLabel.Size = New-Object System.Drawing.Size(205, 22)
+    $directoryLabel.Text = "Control-plane directory URL"
+    $panel.Controls.Add($directoryLabel)
+
+    $directoryText = New-Object System.Windows.Forms.TextBox
+    $directoryText.Location = New-Object System.Drawing.Point(220, 144)
+    $directoryText.Size = New-Object System.Drawing.Size(460, 27)
+    $directoryText.Text = if ($Config.ContainsKey("CONTROL_PLANE_DIRECTORY_URL")) { $Config["CONTROL_PLANE_DIRECTORY_URL"].Trim() } else { "" }
+    $panel.Controls.Add($directoryText)
+
+    $hint = New-Object System.Windows.Forms.Label
+    $hint.Location = New-Object System.Drawing.Point(220, 176)
+    $hint.Size = New-Object System.Drawing.Size(460, 36)
+    $hint.Text = "The directory URL must return JSON containing a controlPlanes array. This is the only configured source of control-plane addresses."
+    $panel.Controls.Add($hint)
+
+    $validation = New-Object System.Windows.Forms.Label
+    $validation.Location = New-Object System.Drawing.Point(0, 218)
+    $validation.Size = New-Object System.Drawing.Size(470, 50)
+    $validation.ForeColor = [System.Drawing.Color]::Firebrick
+    $validation.Text = ""
+    $panel.Controls.Add($validation)
+
+    $startButton = New-Object System.Windows.Forms.Button
+    $startButton.Location = New-Object System.Drawing.Point(480, 250)
+    $startButton.Size = New-Object System.Drawing.Size(95, 34)
+    $startButton.Text = "Start"
+    $panel.Controls.Add($startButton)
+
+    $cancelButton = New-Object System.Windows.Forms.Button
+    $cancelButton.Location = New-Object System.Drawing.Point(585, 250)
+    $cancelButton.Size = New-Object System.Drawing.Size(95, 34)
+    $cancelButton.Text = "Cancel"
+    $panel.Controls.Add($cancelButton)
+
+    $state = @{
+        Done = $false
+        Cancelled = $false
+        Mode = "lan"
+        PublicDomain = ""
+        DirectoryUrl = ""
+    }
+
+    $updatePublicControls = {
+        $isPublic = $modeCombo.SelectedIndex -eq 1
+        $publicModeLabel.Enabled = $isPublic
+        $publicModeCombo.Enabled = $isPublic
+        $publicAddressLabel.Enabled = $isPublic
+        $publicAddressText.Enabled = $isPublic -and $publicModeCombo.SelectedIndex -eq 1
+    }
+
+    $modeCombo.Add_SelectedIndexChanged($updatePublicControls)
+    $publicModeCombo.Add_SelectedIndexChanged($updatePublicControls)
+    & $updatePublicControls
+
+    $startButton.Add_Click({
+        $validation.Text = ""
+        $mode = if ($modeCombo.SelectedIndex -eq 1) { "public" } else { "lan" }
+        $publicDomain = ""
+        $directoryUrl = $directoryText.Text.Trim()
+
+        if ($mode -eq "public" -and $publicModeCombo.SelectedIndex -eq 1) {
+            $publicDomain = $publicAddressText.Text.Trim().TrimEnd(".")
+            if ([string]::IsNullOrWhiteSpace($publicDomain)) {
+                $validation.Text = "Enter your public domain / host, or select Automatic (sslip.io)."
+                return
+            }
+            if ($publicDomain.Contains("://") -or $publicDomain.Contains("/") -or $publicDomain.Contains(" ")) {
+                $validation.Text = "Enter only the public domain / host, without a scheme or path."
+                return
+            }
+        }
+
+        $directoryUri = $null
+        if (
+            [string]::IsNullOrWhiteSpace($directoryUrl) -or
+            -not [Uri]::TryCreate($directoryUrl, [UriKind]::Absolute, [ref]$directoryUri) -or
+            $directoryUri.Scheme -notin @("http", "https")
+        ) {
+            $validation.Text = "Enter a valid HTTP or HTTPS control-plane directory URL."
+            return
+        }
+
+        $state.Mode = $mode
+        $state.PublicDomain = $publicDomain
+        $state.DirectoryUrl = $directoryUrl
+        $state.Done = $true
+    })
+
+    $cancelButton.Add_Click({
+        $state.Cancelled = $true
+        $state.Done = $true
+    })
+
+    $title.Text = "Configure SecureChat community node"
+    $status.Visible = $false
+    $progress.Visible = $false
+    $details.Visible = $false
+    $form.Controls.Add($panel)
+    $panel.BringToFront()
+    $form.AcceptButton = $startButton
+    $form.CancelButton = $cancelButton
+
+    while (-not $state.Done -and -not $form.IsDisposed) {
+        [System.Windows.Forms.Application]::DoEvents()
+        Start-Sleep -Milliseconds 40
+    }
+
+    $form.AcceptButton = $null
+    $form.CancelButton = $null
+    $form.Controls.Remove($panel)
+    $panel.Dispose()
+    $status.Visible = $true
+    $progress.Visible = $true
+    $details.Visible = $true
+    $title.Text = "Starting SecureChat community node"
+    [System.Windows.Forms.Application]::DoEvents()
+
+    if ($state.Cancelled -or $form.IsDisposed) {
+        throw "Community-node setup was cancelled."
+    }
+
+    return [PSCustomObject]@{
+        Mode = $state.Mode
+        PublicDomain = $state.PublicDomain
+        DirectoryUrl = $state.DirectoryUrl
+    }
+}
+
+function Initialize-NetworkConfiguration {
+    param([Parameter(Mandatory = $true)][hashtable]$Config)
+
+    $launcherConfig = Read-LauncherConfiguration -Config $Config
+
+    Write-NetworkConfiguration `
+        -Config $Config `
+        -Mode $launcherConfig.Mode `
+        -PublicDomain $launcherConfig.PublicDomain `
+        -DirectoryUrl $launcherConfig.DirectoryUrl
+
+    return Read-EnvironmentFile -Path $networkConfigPath
+}
+
+function Get-DirectoryControlPlaneUrls {
+    param(
+        [Parameter(Mandatory = $true)][string]$DirectoryUrl,
+        [Parameter(Mandatory = $true)][string]$Mode
+    )
+
+    $response = Invoke-RestMethod -Uri $DirectoryUrl -Method Get -TimeoutSec 8
+    if ($null -eq $response.controlPlanes) {
+        throw "Control-plane directory response does not contain controlPlanes."
+    }
+
+    $urls = @(
+        $response.controlPlanes |
+            ForEach-Object { Normalize-ControlPlaneUrl -Value $_.ToString() -Mode $Mode } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+            Select-Object -Unique
+    )
+
+    if ($urls.Count -eq 0) {
+        throw "Control-plane directory returned no control-plane addresses."
+    }
+
+    return $urls
+}
+
+function Resolve-ConfiguredControlPlaneUrls {
+    param(
+        [Parameter(Mandatory = $true)][hashtable]$Config,
+        [Parameter(Mandatory = $true)][string]$Mode
+    )
+
+    $directoryUrl = if ($Config.ContainsKey("CONTROL_PLANE_DIRECTORY_URL")) {
+        $Config["CONTROL_PLANE_DIRECTORY_URL"].Trim()
+    } else {
+        ""
+    }
+
+    if ([string]::IsNullOrWhiteSpace($directoryUrl)) {
+        throw "securechat.conf is missing CONTROL_PLANE_DIRECTORY_URL."
+    }
+
+    Set-Status "Loading control-plane directory..."
+    return @(Get-DirectoryControlPlaneUrls -DirectoryUrl $directoryUrl -Mode $Mode)
+}
+
 function Find-Docker {
     $command = Get-Command docker -ErrorAction SilentlyContinue
 
@@ -429,24 +696,13 @@ function Resolve-ControlPlaneCandidates {
         [Parameter(Mandatory = $true)][string]$Mode
     )
 
-    if (
-        -not $Config.ContainsKey("CONTROL_PLANE_URLS") -or
-        [string]::IsNullOrWhiteSpace($Config["CONTROL_PLANE_URLS"])
-    ) {
-        throw "securechat.conf is missing CONTROL_PLANE_URLS."
-    }
-
     $failures = @()
     $containerUrls = [System.Collections.Generic.List[string]]::new()
     $advertisedUrls = [System.Collections.Generic.List[string]]::new()
     $selected = $null
+    $configuredUrls = Resolve-ConfiguredControlPlaneUrls -Config $Config -Mode $Mode
 
-    foreach ($rawCandidate in ($Config["CONTROL_PLANE_URLS"] -split '[,;]')) {
-        $candidate = Normalize-ControlPlaneUrl -Value $rawCandidate -Mode $Mode
-        if ([string]::IsNullOrWhiteSpace($candidate)) {
-            continue
-        }
-
+    foreach ($candidate in $configuredUrls) {
         $containerUrl = Convert-ControlPlaneUrlForContainer -ConfiguredUrl $candidate
         if (-not $containerUrls.Contains($containerUrl)) {
             $containerUrls.Add($containerUrl)
@@ -468,12 +724,9 @@ function Resolve-ControlPlaneCandidates {
         }
     }
 
-    if ($containerUrls.Count -eq 0) {
-        throw "securechat.conf CONTROL_PLANE_URLS contains no usable addresses."
-    }
-
     if ($null -eq $selected) {
-        throw "No configured SecureChat control plane is reachable.`n$($failures -join "`n")"
+        $failureDetails = $failures -join "`n"
+        throw "None of the control planes returned by CONTROL_PLANE_DIRECTORY_URL are reachable.`n$failureDetails"
     }
 
     return [PSCustomObject]@{
@@ -900,6 +1153,7 @@ try {
     Assert-ComposeVersion
 
     $config = Read-EnvironmentFile -Path $networkConfigPath
+    $config = Initialize-NetworkConfiguration -Config $config
 
     foreach ($requiredValue in @("SECURECHAT_IMAGE_PREFIX", "SECURECHAT_IMAGE_TAG")) {
         if (-not $config.ContainsKey($requiredValue) -or [string]::IsNullOrWhiteSpace($config[$requiredValue])) {
@@ -1057,7 +1311,8 @@ try {
     Set-Status "Verifying control-plane registration..."
 
     if (-not (Test-ControlPlane -Url $controlPlane.HostProbeUrl)) {
-        throw "The SecureChat control plane became unreachable."
+        Write-Log "Control plane is currently unavailable; node registration will recover automatically."
+        Write-Detail "Control plane unavailable; registration will retry in the background."
     }
 
     Set-ProgressValue -Value 100

@@ -52,12 +52,11 @@ foreach ($relativePath in $bundleFiles) {
     (Join-Path $bundleRoot "securechat.conf"),
     @(
         "# SecureChat community-node configuration",
-        "# MODE: lan or public",
-        "# PUBLIC_DOMAIN: leave blank to derive <public-ip>.sslip.io in public mode",
-        "# CONTROL_PLANE_URLS: comma-separated priority list; first reachable control plane is used",
-        "MODE=lan",
+        "# The launcher opens configuration on every start, prefilled from this file, and writes any changes back here.",
+        "CONFIGURED=false",
+        "MODE=",
         "PUBLIC_DOMAIN=",
-        "CONTROL_PLANE_URLS=http://192.168.178.60:8390",
+        "CONTROL_PLANE_DIRECTORY_URL=",
         "SECURECHAT_IMAGE_PREFIX=$ImagePrefix",
         "SECURECHAT_IMAGE_TAG=$ImageTag"
     ),

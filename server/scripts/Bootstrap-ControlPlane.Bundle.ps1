@@ -176,6 +176,211 @@ function Read-EnvironmentFile {
     return $values
 }
 
+function Write-NetworkConfiguration {
+    param(
+        [Parameter(Mandatory = $true)][hashtable]$Config,
+        [Parameter(Mandatory = $true)][string]$Mode,
+        [string]$PublicDomain,
+        [Parameter(Mandatory = $true)][string]$ControlPlaneId
+    )
+
+    [System.IO.File]::WriteAllLines(
+        $networkConfigPath,
+        @(
+            "# SecureChat control-plane configuration",
+            "# Generated and updated by the launcher. You may also edit this file by hand while the stack is stopped.",
+            "CONFIGURED=true",
+            "MODE=$Mode",
+            "PUBLIC_DOMAIN=$PublicDomain",
+            "CONTROL_PLANE_ID=$ControlPlaneId",
+            "SECURECHAT_IMAGE_PREFIX=$($Config['SECURECHAT_IMAGE_PREFIX'])",
+            "SECURECHAT_IMAGE_TAG=$($Config['SECURECHAT_IMAGE_TAG'])"
+        ),
+        [System.Text.UTF8Encoding]::new($false)
+    )
+}
+
+function Read-LauncherConfiguration {
+    param([Parameter(Mandatory = $true)][hashtable]$Config)
+
+    $panel = New-Object System.Windows.Forms.Panel
+    $panel.Location = New-Object System.Drawing.Point(24, 58)
+    $panel.Size = New-Object System.Drawing.Size(705, 316)
+
+    $modeLabel = New-Object System.Windows.Forms.Label
+    $modeLabel.Location = New-Object System.Drawing.Point(0, 4)
+    $modeLabel.Size = New-Object System.Drawing.Size(205, 22)
+    $modeLabel.Text = "Reachability"
+    $panel.Controls.Add($modeLabel)
+
+    $modeCombo = New-Object System.Windows.Forms.ComboBox
+    $modeCombo.Location = New-Object System.Drawing.Point(220, 0)
+    $modeCombo.Size = New-Object System.Drawing.Size(460, 28)
+    $modeCombo.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
+    [void]$modeCombo.Items.Add("LAN")
+    [void]$modeCombo.Items.Add("Public")
+    $configuredMode = if ($Config.ContainsKey("MODE")) { $Config["MODE"].Trim().ToLowerInvariant() } else { "lan" }
+    $modeCombo.SelectedIndex = if ($configuredMode -eq "public") { 1 } else { 0 }
+    $panel.Controls.Add($modeCombo)
+
+    $publicModeLabel = New-Object System.Windows.Forms.Label
+    $publicModeLabel.Location = New-Object System.Drawing.Point(0, 52)
+    $publicModeLabel.Size = New-Object System.Drawing.Size(205, 22)
+    $publicModeLabel.Text = "Public address"
+    $panel.Controls.Add($publicModeLabel)
+
+    $publicModeCombo = New-Object System.Windows.Forms.ComboBox
+    $publicModeCombo.Location = New-Object System.Drawing.Point(220, 48)
+    $publicModeCombo.Size = New-Object System.Drawing.Size(460, 28)
+    $publicModeCombo.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
+    [void]$publicModeCombo.Items.Add("Automatic (sslip.io)")
+    [void]$publicModeCombo.Items.Add("Own address")
+    $configuredPublicDomain = if ($Config.ContainsKey("PUBLIC_DOMAIN")) { $Config["PUBLIC_DOMAIN"].Trim() } else { "" }
+    $publicModeCombo.SelectedIndex = if ([string]::IsNullOrWhiteSpace($configuredPublicDomain)) { 0 } else { 1 }
+    $panel.Controls.Add($publicModeCombo)
+
+    $publicAddressLabel = New-Object System.Windows.Forms.Label
+    $publicAddressLabel.Location = New-Object System.Drawing.Point(0, 100)
+    $publicAddressLabel.Size = New-Object System.Drawing.Size(205, 22)
+    $publicAddressLabel.Text = "Own public domain / host"
+    $panel.Controls.Add($publicAddressLabel)
+
+    $publicAddressText = New-Object System.Windows.Forms.TextBox
+    $publicAddressText.Location = New-Object System.Drawing.Point(220, 96)
+    $publicAddressText.Size = New-Object System.Drawing.Size(460, 27)
+    $publicAddressText.Text = $configuredPublicDomain
+    $panel.Controls.Add($publicAddressText)
+
+    $hint = New-Object System.Windows.Forms.Label
+    $hint.Location = New-Object System.Drawing.Point(220, 128)
+    $hint.Size = New-Object System.Drawing.Size(460, 42)
+    $hint.Text = "Automatic detects the public IPv4 address and uses <public-ip>.sslip.io. Own address expects a domain or host such as cp.example.com."
+    $panel.Controls.Add($hint)
+
+    $validation = New-Object System.Windows.Forms.Label
+    $validation.Location = New-Object System.Drawing.Point(0, 184)
+    $validation.Size = New-Object System.Drawing.Size(680, 40)
+    $validation.ForeColor = [System.Drawing.Color]::Firebrick
+    $validation.Text = ""
+    $panel.Controls.Add($validation)
+
+    $startButton = New-Object System.Windows.Forms.Button
+    $startButton.Location = New-Object System.Drawing.Point(480, 250)
+    $startButton.Size = New-Object System.Drawing.Size(95, 34)
+    $startButton.Text = "Start"
+    $panel.Controls.Add($startButton)
+
+    $cancelButton = New-Object System.Windows.Forms.Button
+    $cancelButton.Location = New-Object System.Drawing.Point(585, 250)
+    $cancelButton.Size = New-Object System.Drawing.Size(95, 34)
+    $cancelButton.Text = "Cancel"
+    $panel.Controls.Add($cancelButton)
+
+    $state = @{
+        Done = $false
+        Cancelled = $false
+        Mode = "lan"
+        PublicDomain = ""
+    }
+
+    $updatePublicControls = {
+        $isPublic = $modeCombo.SelectedIndex -eq 1
+        $publicModeLabel.Enabled = $isPublic
+        $publicModeCombo.Enabled = $isPublic
+        $publicAddressLabel.Enabled = $isPublic
+        $publicAddressText.Enabled = $isPublic -and $publicModeCombo.SelectedIndex -eq 1
+    }
+
+    $modeCombo.Add_SelectedIndexChanged($updatePublicControls)
+    $publicModeCombo.Add_SelectedIndexChanged($updatePublicControls)
+    & $updatePublicControls
+
+    $startButton.Add_Click({
+        $validation.Text = ""
+        $mode = if ($modeCombo.SelectedIndex -eq 1) { "public" } else { "lan" }
+        $publicDomain = ""
+
+        if ($mode -eq "public" -and $publicModeCombo.SelectedIndex -eq 1) {
+            $publicDomain = $publicAddressText.Text.Trim().TrimEnd(".")
+            if ([string]::IsNullOrWhiteSpace($publicDomain)) {
+                $validation.Text = "Enter your public domain / host, or select Automatic (sslip.io)."
+                return
+            }
+            if ($publicDomain.Contains("://") -or $publicDomain.Contains("/") -or $publicDomain.Contains(" ")) {
+                $validation.Text = "Enter only the public domain / host, without a scheme or path."
+                return
+            }
+        }
+
+        $state.Mode = $mode
+        $state.PublicDomain = $publicDomain
+        $state.Done = $true
+    })
+
+    $cancelButton.Add_Click({
+        $state.Cancelled = $true
+        $state.Done = $true
+    })
+
+    $title.Text = "Configure SecureChat control plane"
+    $status.Visible = $false
+    $progress.Visible = $false
+    $details.Visible = $false
+    $form.Controls.Add($panel)
+    $panel.BringToFront()
+    $form.AcceptButton = $startButton
+    $form.CancelButton = $cancelButton
+
+    while (-not $state.Done -and -not $form.IsDisposed) {
+        [System.Windows.Forms.Application]::DoEvents()
+        Start-Sleep -Milliseconds 40
+    }
+
+    $form.AcceptButton = $null
+    $form.CancelButton = $null
+    $form.Controls.Remove($panel)
+    $panel.Dispose()
+    $status.Visible = $true
+    $progress.Visible = $true
+    $details.Visible = $true
+    $title.Text = "Starting SecureChat control plane"
+    [System.Windows.Forms.Application]::DoEvents()
+
+    if ($state.Cancelled -or $form.IsDisposed) {
+        throw "Control-plane setup was cancelled."
+    }
+
+    return [PSCustomObject]@{
+        Mode = $state.Mode
+        PublicDomain = $state.PublicDomain
+    }
+}
+
+function New-ControlPlaneId {
+    return [Guid]::NewGuid().ToString("N")
+}
+
+function Initialize-NetworkConfiguration {
+    param([Parameter(Mandatory = $true)][hashtable]$Config)
+
+    $controlPlaneId =
+        if ($Config.ContainsKey("CONTROL_PLANE_ID") -and -not [string]::IsNullOrWhiteSpace($Config["CONTROL_PLANE_ID"])) {
+            $Config["CONTROL_PLANE_ID"].Trim()
+        } else {
+            New-ControlPlaneId
+        }
+
+    $launcherConfig = Read-LauncherConfiguration -Config $Config
+
+    Write-NetworkConfiguration `
+        -Config $Config `
+        -Mode $launcherConfig.Mode `
+        -PublicDomain $launcherConfig.PublicDomain `
+        -ControlPlaneId $controlPlaneId
+
+    return Read-EnvironmentFile -Path $networkConfigPath
+}
+
 function Get-NetworkMode {
     param([hashtable]$Config)
 
@@ -725,8 +930,9 @@ try {
     }
 
     $config = Read-EnvironmentFile -Path $networkConfigPath
+    $config = Initialize-NetworkConfiguration -Config $config
 
-    foreach ($requiredValue in @("SECURECHAT_IMAGE_PREFIX", "SECURECHAT_IMAGE_TAG")) {
+    foreach ($requiredValue in @("SECURECHAT_IMAGE_PREFIX", "SECURECHAT_IMAGE_TAG", "CONTROL_PLANE_ID")) {
         if (-not $config.ContainsKey($requiredValue) -or [string]::IsNullOrWhiteSpace($config[$requiredValue])) {
             throw "securechat.conf is missing $requiredValue."
         }
@@ -777,6 +983,7 @@ try {
     $siteAddress = if ($mode -eq "public") { $publicDomain } else { ":80" }
     $runtime = @(
         "CONTROL_PLANE_PROJECT_NAME=securechat-control-plane",
+        "CONTROL_PLANE_ID=$($config['CONTROL_PLANE_ID'])",
         "CONTROL_PLANE_BIND_ADDRESS=0.0.0.0",
         "CONTROL_PLANE_HTTP_PORT=$controlPlanePort",
         "CONTROL_PLANE_SITE_ADDRESS=$siteAddress",
