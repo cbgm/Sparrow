@@ -7,6 +7,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
 class GatewayBackgroundClientsTest {
@@ -50,6 +51,80 @@ class GatewayBackgroundClientsTest {
                     presence = failingPresence,
                     registration = testRegistration()
                 )
+            )
+        }
+
+    @Test
+    fun pendingEnvelopesAreLoadedForCanonicalAndAliasRoutingIds() =
+        runTest {
+            val requestedRoutingIds = mutableListOf<String>()
+            val client =
+                object : LegacyPushClient {
+                    override suspend fun store(envelope: RelayEnvelope): Boolean = true
+
+                    override suspend fun pending(recipientId: String): List<RelayEnvelope> {
+                        requestedRoutingIds += recipientId
+                        return when (recipientId) {
+                            "canonical" ->
+                                listOf(testEnvelope().copy(envelopeId = "canonical-envelope"))
+
+                            "scphone1_alias" ->
+                                listOf(testEnvelope().copy(envelopeId = "bootstrap-envelope"))
+                            else -> emptyList()
+                        }
+                    }
+
+                    override suspend fun acknowledge(
+                        recipientId: String,
+                        envelopeId: String
+                    ) = Unit
+                }
+
+            val pending =
+                client.pendingForRoutingIds(
+                    setOf("canonical", "scphone1_alias")
+                )
+
+            assertEquals(
+                setOf("canonical", "scphone1_alias"),
+                requestedRoutingIds.toSet()
+            )
+            assertEquals(2, pending.size)
+            assertEquals(
+                setOf("canonical-envelope", "bootstrap-envelope"),
+                pending.map { envelope -> envelope.envelopeId }.toSet()
+            )
+        }
+
+    @Test
+    fun acknowledgementIsAppliedToCanonicalAndAliasRoutingIds() =
+        runTest {
+            val acknowledgements = mutableListOf<Pair<String, String>>()
+            val client =
+                object : LegacyPushClient {
+                    override suspend fun store(envelope: RelayEnvelope): Boolean = true
+
+                    override suspend fun pending(recipientId: String): List<RelayEnvelope> = emptyList()
+
+                    override suspend fun acknowledge(
+                        recipientId: String,
+                        envelopeId: String
+                    ) {
+                        acknowledgements += recipientId to envelopeId
+                    }
+                }
+
+            client.acknowledgeForRoutingIds(
+                routingIds = setOf("canonical", "scphone1_alias"),
+                envelopeId = "envelope-1"
+            )
+
+            assertEquals(
+                setOf(
+                    "canonical" to "envelope-1",
+                    "scphone1_alias" to "envelope-1"
+                ),
+                acknowledgements.toSet()
             )
         }
 

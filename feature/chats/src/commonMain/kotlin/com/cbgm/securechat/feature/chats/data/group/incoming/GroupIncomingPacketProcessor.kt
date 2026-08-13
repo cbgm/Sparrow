@@ -6,6 +6,7 @@ import com.cbgm.securechat.core.protocol.packet.GroupConversationDeletedPacket
 import com.cbgm.securechat.core.protocol.packet.GroupCreatedPacket
 import com.cbgm.securechat.core.protocol.packet.GroupInviteDeclinedPacket
 import com.cbgm.securechat.core.protocol.packet.GroupInvitePacket
+import com.cbgm.securechat.core.protocol.packet.GroupInviteReceivedPacket
 import com.cbgm.securechat.core.protocol.packet.GroupJoinRequestPacket
 import com.cbgm.securechat.core.protocol.packet.GroupLeaveRequestPacket
 import com.cbgm.securechat.core.protocol.packet.GroupMemberActivatedPacket
@@ -52,6 +53,7 @@ internal fun SecureChatPacket.groupIdOrNull(): String? =
         is GroupMemberActivationAcknowledgementPacket -> groupId
         is GroupChatMessagePacket -> groupId
         is GroupInvitePacket -> groupId
+        is GroupInviteReceivedPacket -> groupId
         is GroupJoinRequestPacket -> groupId
         is GroupLeaveRequestPacket -> groupId
         is GroupInviteDeclinedPacket -> groupId

@@ -2,6 +2,7 @@ package com.cbgm.securechat.feature.chats.data.group.invitation
 
 enum class GroupInvitationStatus {
     INVITE_SENT,
+    INVITE_RECEIVED,
     WAITING_FOR_IDENTITY,
     IDENTITY_READY,
     AWAITING_ACCEPTANCE,

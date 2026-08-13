@@ -3,6 +3,7 @@ package com.cbgm.securechat.core.protocol.codec
 import com.cbgm.securechat.core.protocol.packet.GroupConversationDeletedPacket
 import com.cbgm.securechat.core.protocol.packet.GroupInviteDeclinedPacket
 import com.cbgm.securechat.core.protocol.packet.GroupInvitePacket
+import com.cbgm.securechat.core.protocol.packet.GroupInviteReceivedPacket
 import com.cbgm.securechat.core.protocol.packet.GroupJoinRequestPacket
 import com.cbgm.securechat.core.protocol.packet.GroupLeaveRequestPacket
 import com.cbgm.securechat.core.protocol.packet.GroupMemberRemovedPacket
@@ -41,6 +42,27 @@ class GroupInvitationPacketCodecTest {
         assertContentEquals(original.ownerEncryptionPublicKey, packet.ownerEncryptionPublicKey)
         assertContentEquals(original.ownerSigningPublicKey, packet.ownerSigningPublicKey)
         assertContentEquals(original.ownerSignature, packet.ownerSignature)
+    }
+
+    @Test
+    fun groupInviteReceivedRoundTrip() {
+        val original =
+            GroupInviteReceivedPacket(
+                packetId = "group-invite-received-invite-1",
+                invitationId = "invite-1",
+                groupId = "group-1",
+                challenge = byteArrayOf(1, 2),
+                memberSigningPublicKey = byteArrayOf(3, 4),
+                receivedAtEpochMilliseconds = 150L,
+                memberSignature = byteArrayOf(5, 6)
+            )
+
+        val packet =
+            assertIs<GroupInviteReceivedPacket>(
+                codec.decode(codec.encode(original).getOrThrow()).getOrThrow()
+            )
+
+        assertEquals(original, packet)
     }
 
     @Test

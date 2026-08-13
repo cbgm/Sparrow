@@ -211,11 +211,13 @@ internal class GatewaySessionHandler(
                     message = "Presence route rejected"
                 )
 
-            else ->
+            else -> {
                 connections.updateRoutingAliases(
                     connection = connection,
                     routingAliases = registration.route.aliases.orEmpty()
                 )
+                pushActions.deliverPending(connection)
+            }
         }
     }
 

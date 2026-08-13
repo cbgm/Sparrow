@@ -99,7 +99,7 @@ internal class GroupVerificationState(
             invitations
                 .filter { invitation ->
                     invitation.direction == GroupInvitationDirection.OUTGOING.name &&
-                        !invitation.status.isTerminalStatus() &&
+                        invitation.status.isVisiblePendingStatus() &&
                         invitation.contactId !in activeContactIds
                 }.map { invitation ->
                     val contact = requireContact(invitation.contactId)
@@ -153,6 +153,12 @@ internal class GroupVerificationState(
 
     private fun Contact.verificationDisplayName(): String =
         displayName?.trim()?.takeIf(String::isNotBlank) ?: "Unknown member"
+
+    private fun String.isVisiblePendingStatus(): Boolean =
+        this == GroupInvitationStatus.INVITE_RECEIVED.name ||
+            this == GroupInvitationStatus.WAITING_FOR_IDENTITY.name ||
+            this == GroupInvitationStatus.IDENTITY_READY.name ||
+            this == GroupInvitationStatus.WELCOME_SENT.name
 
     private fun String.isTerminalStatus(): Boolean =
         this == GroupInvitationStatus.DECLINED.name ||

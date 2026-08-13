@@ -216,6 +216,17 @@ class GroupMembershipStateMachineTest {
     }
 
     @Test
+    fun outgoingInviteIsPendingOnlyAfterRecipientReceipt() {
+        val received =
+            GroupMembershipStateMachine.transition(
+                GroupInvitationStatus.INVITE_SENT.name,
+                GroupMembershipEvent.INVITE_RECEIVED
+            )
+
+        assertEquals(GroupInvitationStatus.INVITE_RECEIVED, received)
+    }
+
+    @Test
     fun failedInvitationSendBecomesRetryableTerminalState() {
         val failed =
             GroupMembershipStateMachine.transition(

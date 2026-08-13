@@ -8,6 +8,7 @@ import com.cbgm.securechat.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.securechat.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.securechat.core.protocol.packet.GroupInviteDeclinedPacket
 import com.cbgm.securechat.core.protocol.packet.GroupInvitePacket
+import com.cbgm.securechat.core.protocol.packet.GroupInviteReceivedPacket
 import com.cbgm.securechat.core.protocol.packet.GroupJoinRequestPacket
 import com.cbgm.securechat.core.time.SystemClock
 import com.cbgm.securechat.data.database.dao.ChatDao
@@ -92,27 +93,51 @@ internal class GroupInvitationCoordinator(
 
             membershipLock.withLock {
                 val conversation = requireOwnedGroupConversation(groupId)
-                requireContactsCanBeAdded(groupId, contactIds)
+                requireContactsAreNotCurrentMembers(groupId, contactIds)
 
                 val ownerIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
                 val ownerSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
                 val now = SystemClock.nowEpochMilliseconds()
-                val invitations =
-                    loadContacts(contactIds).map { contact ->
-                        groupInvitationDao.deleteByGroupAndContact(groupId, contact.id)
-                        createOutgoingInvitation(
-                            groupId = groupId,
-                            title = requireNotNull(conversation.title),
-                            contact = contact,
-                            ownerIdentity = ownerIdentity,
-                            ownerSigningKeyPair = ownerSigningKeyPair,
-                            createdAt = now
-                        )
-                    }
+                val newInvitations = mutableListOf<OutgoingInvitation>()
 
-                persistInvitations(invitations)
+                loadContacts(contactIds).forEach { contact ->
+                    val existing = groupInvitationDao.findByGroupAndContact(groupId, contact.id)
+                    when {
+                        existing?.isUnacknowledgedOutgoingInvite() == true -> {
+                            if (!resendUnacknowledgedInvite(existing)) {
+                                groupInvitationDao.deleteByGroupAndContact(groupId, contact.id)
+                                newInvitations +=
+                                    createOutgoingInvitation(
+                                        groupId = groupId,
+                                        title = requireNotNull(conversation.title),
+                                        contact = contact,
+                                        ownerIdentity = ownerIdentity,
+                                        ownerSigningKeyPair = ownerSigningKeyPair,
+                                        createdAt = now
+                                    )
+                            }
+                        }
+
+                        existing == null || existing.status.isTerminalStatus() -> {
+                            groupInvitationDao.deleteByGroupAndContact(groupId, contact.id)
+                            newInvitations +=
+                                createOutgoingInvitation(
+                                    groupId = groupId,
+                                    title = requireNotNull(conversation.title),
+                                    contact = contact,
+                                    ownerIdentity = ownerIdentity,
+                                    ownerSigningKeyPair = ownerSigningKeyPair,
+                                    createdAt = now
+                                )
+                        }
+
+                        else -> error("Contact already has an active group invitation")
+                    }
+                }
+
+                persistInvitations(newInvitations)
                 groupVerificationCoordinator.onOwnedMembershipChanged(groupId).getOrThrow()
-                sendInvitations(invitations)
+                sendInvitations(newInvitations)
                 chatDao.updateConversationTimestamp(groupId, now)
             }
         }
@@ -126,29 +151,33 @@ internal class GroupInvitationCoordinator(
         return conversation
     }
 
-    private suspend fun requireContactsCanBeAdded(
+    private suspend fun requireContactsAreNotCurrentMembers(
         groupId: String,
         contactIds: Set<String>
     ) {
-        val unavailableContactIds = currentOrPendingContactIds(groupId)
-        check(contactIds.none(unavailableContactIds::contains)) {
+        val currentContactIds =
+            epochCoordinator
+                .findCurrentParticipants(groupId)
+                .mapTo(mutableSetOf()) { participant -> participant.contactId }
+        check(contactIds.none(currentContactIds::contains)) {
             "One or more contacts already belong to this group"
         }
     }
 
-    private suspend fun currentOrPendingContactIds(groupId: String): Set<String> {
-        val result =
-            epochCoordinator
-                .findCurrentParticipants(groupId)
-                .mapTo(mutableSetOf()) { participant -> participant.contactId }
-        groupInvitationDao
-            .findByGroupId(groupId)
-            .filter { invitation ->
-                !invitation.status.isTerminalStatus() &&
-                    invitation.status != GroupInvitationStatus.ACTIVE.name
-            }.mapTo(result, GroupInvitationEntity::contactId)
-        return result
+    private suspend fun resendUnacknowledgedInvite(invitation: GroupInvitationEntity): Boolean {
+        val packetId = INVITE_PACKET_ID_PREFIX + invitation.invitationId
+        val queuedPacket = protocolOutbox.findByPacketId(packetId).getOrThrow()
+        if (queuedPacket == null) {
+            markInvitationSendFailed(invitation)
+            return false
+        }
+        protocolOutbox.resend(packetId).getOrThrow()
+        return true
     }
+
+    private fun GroupInvitationEntity.isUnacknowledgedOutgoingInvite(): Boolean =
+        direction == GroupInvitationDirection.OUTGOING.name &&
+            status == GroupInvitationStatus.INVITE_SENT.name
 
     private suspend fun loadContacts(contactIds: Set<String>): List<Contact> =
         contactIds.map { contactId -> identity.requireContact(contactId) }.sortedBy(Contact::id)
@@ -201,6 +230,16 @@ internal class GroupInvitationCoordinator(
         }
     }
 
+    suspend fun markInvitationTransportFailed(packetId: String) {
+        if (!packetId.startsWith(INVITE_PACKET_ID_PREFIX)) return
+        val invitationId = packetId.removePrefix(INVITE_PACKET_ID_PREFIX)
+        if (invitationId.isBlank()) return
+        val invitation = groupInvitationDao.findByInvitationId(invitationId) ?: return
+        if (invitation.direction != GroupInvitationDirection.OUTGOING.name) return
+        if (invitation.status != GroupInvitationStatus.INVITE_SENT.name) return
+        markInvitationSendFailed(invitation)
+    }
+
     private suspend fun markInvitationSendFailed(invitation: GroupInvitationEntity) {
         groupInvitationDao.updateStatus(
             invitationId = invitation.invitationId,
@@ -223,7 +262,14 @@ internal class GroupInvitationCoordinator(
         runCatching {
             membershipPacketProtocol.verifyInvite(packet).getOrThrow()
             if (shouldIgnoreIncomingInvite(packet)) return@runCatching
-            if (isExistingIncomingInvite(ownerContactId, packet)) return@runCatching
+            if (isExistingIncomingInvite(ownerContactId, packet)) {
+                sendInviteReceivedAcknowledgement(
+                    ownerContactId = ownerContactId,
+                    packet = packet,
+                    receivedAtEpochMilliseconds = receivedAtEpochMilliseconds
+                )
+                return@runCatching
+            }
 
             groupSecurityManager.clearRetiredMembershipBeforeRejoin(packet.groupId).getOrThrow()
             val replacedInvitation = findReplaceableInvitation(ownerContactId, packet)
@@ -234,7 +280,28 @@ internal class GroupInvitationCoordinator(
                 )
             updateIncomingOwnerIdentity(ownerContactId, packet, persistedAt)
             storeIncomingInvite(ownerContactId, packet, persistedAt, replacedInvitation != null)
+            sendInviteReceivedAcknowledgement(
+                ownerContactId = ownerContactId,
+                packet = packet,
+                receivedAtEpochMilliseconds = receivedAtEpochMilliseconds
+            )
         }
+
+    private suspend fun sendInviteReceivedAcknowledgement(
+        ownerContactId: String,
+        packet: GroupInvitePacket,
+        receivedAtEpochMilliseconds: Long
+    ) {
+        val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+        val acknowledgement =
+            membershipPacketProtocol
+                .createInviteReceived(
+                    invite = packet,
+                    receivedAtEpochMilliseconds = receivedAtEpochMilliseconds,
+                    memberSigningKeyPair = signingKeyPair
+                ).getOrThrow()
+        protocolOutbox.enqueue(ownerContactId, acknowledgement).getOrThrow()
+    }
 
     private suspend fun shouldIgnoreIncomingInvite(packet: GroupInvitePacket): Boolean {
         val localDeletionTimestamp =
@@ -439,6 +506,55 @@ internal class GroupInvitationCoordinator(
             }
         }
 
+    suspend fun receiveInviteReceived(
+        memberContactId: String,
+        packet: GroupInviteReceivedPacket,
+        receivedAtEpochMilliseconds: Long
+    ): Result<Unit> =
+        runCatching {
+            val invitation =
+                groupInvitationDao.findByInvitationId(packet.invitationId)
+                    ?: error("Group invitation was not found")
+            check(invitation.direction == GroupInvitationDirection.OUTGOING.name) {
+                "Invite receipt does not belong to an outgoing invitation"
+            }
+            check(invitation.groupId == packet.groupId) { "Invite receipt uses the wrong group" }
+            check(invitation.contactId == memberContactId) { "Invite receipt came from the wrong contact" }
+            check(invitation.challenge.contentEquals(packet.challenge)) { "Invite receipt challenge does not match" }
+            check(receivedAtEpochMilliseconds <= invitation.expiresAtEpochMilliseconds) {
+                "Group invitation has expired"
+            }
+
+            membershipPacketProtocol.verifyInviteReceived(packet).getOrThrow()
+            identity.ensureSigningIdentityMatches(memberContactId, packet.memberSigningPublicKey)
+
+            if (invitation.status != GroupInvitationStatus.INVITE_SENT.name) {
+                return@runCatching
+            }
+
+            val updated =
+                groupInvitationDao.updateStatus(
+                    invitationId = invitation.invitationId,
+                    expectedStatus = GroupInvitationStatus.INVITE_SENT.name,
+                    newStatus =
+                        GroupMembershipStateMachine
+                            .transition(
+                                GroupInvitationStatus.INVITE_SENT.name,
+                                GroupMembershipEvent.INVITE_RECEIVED
+                            ).name,
+                    updatedAt =
+                        resolveInvitationUpdatedAt(
+                            createdAtEpochMilliseconds = invitation.createdAtEpochMilliseconds,
+                            candidateAtEpochMilliseconds = maxOf(
+                                packet.receivedAtEpochMilliseconds,
+                                receivedAtEpochMilliseconds
+                            )
+                        )
+                )
+            check(updated == 1) { "Group invitation changed while the receipt was applied" }
+            groupVerificationCoordinator.onOwnedMembershipChanged(packet.groupId).getOrThrow()
+        }
+
     suspend fun receiveJoinRequest(
         memberContactId: String,
         packet: GroupJoinRequestPacket,
@@ -473,6 +589,7 @@ internal class GroupInvitationCoordinator(
 
             if (
                 invitation.status == GroupInvitationStatus.INVITE_SENT.name ||
+                invitation.status == GroupInvitationStatus.INVITE_RECEIVED.name ||
                 invitation.status == GroupInvitationStatus.WAITING_FOR_IDENTITY.name
             ) {
                 val updated =
@@ -530,6 +647,7 @@ internal class GroupInvitationCoordinator(
             }
             check(
                 invitation.status == GroupInvitationStatus.INVITE_SENT.name ||
+                    invitation.status == GroupInvitationStatus.INVITE_RECEIVED.name ||
                     invitation.status == GroupInvitationStatus.WAITING_FOR_IDENTITY.name ||
                     invitation.status == GroupInvitationStatus.IDENTITY_READY.name
             ) {
@@ -585,6 +703,7 @@ internal class GroupInvitationCoordinator(
 
     private companion object {
         const val GROUP_CONVERSATION_TYPE = "GROUP"
+        const val INVITE_PACKET_ID_PREFIX = "group-invite-"
         const val INVITATION_VALIDITY_MILLISECONDS = 7L * 24L * 60L * 60L * 1_000L
     }
 }

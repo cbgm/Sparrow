@@ -6,6 +6,7 @@ import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupConver
 import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupCreatedPacketHandler
 import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupInviteDeclinedPacketHandler
 import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupInvitePacketHandler
+import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupInviteReceivedPacketHandler
 import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupJoinRequestPacketHandler
 import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupLeaveRequestPacketHandler
 import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupMemberActivatedPacketHandler
@@ -21,6 +22,7 @@ class GroupPacketHandlerRegistry(
     groupCreated: GroupCreatedPacketHandler,
     conversationDeleted: GroupConversationDeletedPacketHandler,
     invite: GroupInvitePacketHandler,
+    inviteReceived: GroupInviteReceivedPacketHandler,
     joinRequest: GroupJoinRequestPacketHandler,
     leaveRequest: GroupLeaveRequestPacketHandler,
     inviteDeclined: GroupInviteDeclinedPacketHandler,
@@ -38,6 +40,7 @@ class GroupPacketHandlerRegistry(
             groupCreated,
             conversationDeleted,
             invite,
+            inviteReceived,
             joinRequest,
             leaveRequest,
             inviteDeclined,

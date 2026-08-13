@@ -16,6 +16,7 @@ import com.cbgm.securechat.core.protocol.packet.GroupConversationDeletedPacket
 import com.cbgm.securechat.core.protocol.packet.GroupCreatedPacket
 import com.cbgm.securechat.core.protocol.packet.GroupInviteDeclinedPacket
 import com.cbgm.securechat.core.protocol.packet.GroupInvitePacket
+import com.cbgm.securechat.core.protocol.packet.GroupInviteReceivedPacket
 import com.cbgm.securechat.core.protocol.packet.GroupJoinRequestPacket
 import com.cbgm.securechat.core.protocol.packet.GroupLeaveRequestPacket
 import com.cbgm.securechat.core.protocol.packet.GroupMemberActivatedPacket
@@ -180,6 +181,7 @@ class DefaultOutboxProcessor(
             is ContactInviteAcceptedPacket,
             is ContactInviteDeclinedPacket,
             is GroupInvitePacket,
+            is GroupInviteReceivedPacket,
             is GroupJoinRequestPacket,
             is GroupInviteDeclinedPacket ->
                 contactRelayIdResolver.resolveBootstrap(contactId).getOrThrow()

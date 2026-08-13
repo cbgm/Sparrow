@@ -11,6 +11,7 @@ internal enum class GroupMembershipEvent {
     ACCEPT,
     EXPIRE,
     INVITE_SEND_FAILED,
+    INVITE_RECEIVED,
     JOIN_SEND_FAILED,
     IDENTITY_CONFIRMED,
     WELCOME_SENT,
@@ -81,7 +82,7 @@ internal object GroupMembershipStateMachine {
 
     fun memberStates(invitations: List<GroupInvitationEntity>): List<GroupMemberInvitationState> =
         invitations
-            .filterNot { invitation -> invitation.status.isHiddenMemberStatus() }
+            .filter { invitation -> invitation.shouldExposeMemberState() }
             .map { invitation ->
                 GroupMemberInvitationState(
                     contactId = invitation.contactId,
@@ -109,6 +110,11 @@ internal object GroupMembershipStateMachine {
                     current == GroupInvitationStatus.INVITE_SENT
                 }
 
+            GroupMembershipEvent.INVITE_RECEIVED ->
+                GroupInvitationStatus.INVITE_RECEIVED.takeIf {
+                    current == GroupInvitationStatus.INVITE_SENT
+                }
+
             GroupMembershipEvent.JOIN_SEND_FAILED ->
                 GroupInvitationStatus.FAILED.takeIf {
                     current == GroupInvitationStatus.JOIN_SENT
@@ -117,6 +123,7 @@ internal object GroupMembershipStateMachine {
             GroupMembershipEvent.IDENTITY_CONFIRMED ->
                 GroupInvitationStatus.IDENTITY_READY.takeIf {
                     current == GroupInvitationStatus.INVITE_SENT ||
+                        current == GroupInvitationStatus.INVITE_RECEIVED ||
                         current == GroupInvitationStatus.WAITING_FOR_IDENTITY
                 }
 
@@ -195,6 +202,10 @@ internal object GroupMembershipStateMachine {
             this == GroupInvitationStatus.WAITING_FOR_ACTIVATION.name ||
             this == GroupInvitationStatus.LEAVE_SENT.name
 
+    private fun GroupInvitationEntity.shouldExposeMemberState(): Boolean =
+        !status.isHiddenMemberStatus() &&
+            !(direction == "OUTGOING" && status == GroupInvitationStatus.INVITE_SENT.name)
+
     private fun String.isHiddenMemberStatus(): Boolean =
         this == GroupInvitationStatus.REMOVED.name ||
             this == GroupInvitationStatus.GROUP_DELETED.name
@@ -215,6 +226,7 @@ internal object GroupMembershipStateMachine {
         setOf(
             GroupInvitationStatus.AWAITING_ACCEPTANCE,
             GroupInvitationStatus.INVITE_SENT,
+            GroupInvitationStatus.INVITE_RECEIVED,
             GroupInvitationStatus.WAITING_FOR_IDENTITY,
             GroupInvitationStatus.IDENTITY_READY
         )

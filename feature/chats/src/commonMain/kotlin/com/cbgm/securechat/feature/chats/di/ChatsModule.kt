@@ -21,6 +21,7 @@ import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupConver
 import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupCreatedPacketHandler
 import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupInviteDeclinedPacketHandler
 import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupInvitePacketHandler
+import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupInviteReceivedPacketHandler
 import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupJoinRequestPacketHandler
 import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupLeaveRequestPacketHandler
 import com.cbgm.securechat.feature.chats.data.group.incoming.handler.GroupMemberActivatedPacketHandler
@@ -165,6 +166,7 @@ private fun org.koin.core.module.Module.registerGroupData() {
     singleOf(::GroupCreatedPacketHandler)
     singleOf(::GroupConversationDeletedPacketHandler)
     singleOf(::GroupInvitePacketHandler)
+    singleOf(::GroupInviteReceivedPacketHandler)
     singleOf(::GroupJoinRequestPacketHandler)
     singleOf(::GroupLeaveRequestPacketHandler)
     singleOf(::GroupInviteDeclinedPacketHandler)

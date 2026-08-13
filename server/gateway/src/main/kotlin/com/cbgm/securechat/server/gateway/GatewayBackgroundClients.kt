@@ -31,7 +31,7 @@ internal class GatewayPushDispatcher(
     fun deliverPending(connection: GatewayConnection) {
         launchPushOperation {
             pushClient
-                .pending(recipientId = connection.routingId)
+                .pendingForRoutingIds(connection.routingIds())
                 .forEach { envelope ->
                     connection.send(
                         GatewayServerMessage.IncomingEnvelope(
@@ -43,12 +43,12 @@ internal class GatewayPushDispatcher(
     }
 
     fun acknowledge(
-        recipientId: String,
+        connection: GatewayConnection,
         envelopeId: String
     ) {
         launchPushOperation {
-            pushClient.acknowledge(
-                recipientId = recipientId,
+            pushClient.acknowledgeForRoutingIds(
+                routingIds = connection.routingIds(),
                 envelopeId = envelopeId
             )
         }
@@ -70,5 +70,24 @@ internal class GatewayPushDispatcher(
 
     private companion object {
         const val MAX_CONCURRENT_PUSH_OPERATIONS = 8
+    }
+}
+
+internal suspend fun LegacyPushClient.pendingForRoutingIds(
+    routingIds: Set<String>
+): List<RelayEnvelope> =
+    routingIds
+        .flatMap { routingId -> pending(recipientId = routingId) }
+        .distinctBy(RelayEnvelope::envelopeId)
+
+internal suspend fun LegacyPushClient.acknowledgeForRoutingIds(
+    routingIds: Set<String>,
+    envelopeId: String
+) {
+    routingIds.forEach { routingId ->
+        acknowledge(
+            recipientId = routingId,
+            envelopeId = envelopeId
+        )
     }
 }

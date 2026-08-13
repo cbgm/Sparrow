@@ -2,6 +2,7 @@ package com.cbgm.securechat.feature.chats.data.group.membership
 
 import com.cbgm.securechat.core.protocol.packet.GroupInviteDeclinedPacket
 import com.cbgm.securechat.core.protocol.packet.GroupInvitePacket
+import com.cbgm.securechat.core.protocol.packet.GroupInviteReceivedPacket
 import com.cbgm.securechat.core.protocol.packet.GroupJoinRequestPacket
 import com.cbgm.securechat.core.protocol.packet.GroupLeaveRequestPacket
 import com.cbgm.securechat.core.protocol.packet.GroupMemberActivationAcknowledgementPacket
@@ -69,6 +70,17 @@ class GroupMembershipCoordinator internal constructor(
 
     suspend fun declineInvitation(groupId: String): Result<Unit> =
         invitations.declineInvitation(groupId)
+
+    suspend fun receiveInviteReceived(
+        memberContactId: String,
+        packet: GroupInviteReceivedPacket,
+        receivedAtEpochMilliseconds: Long
+    ): Result<Unit> =
+        invitations.receiveInviteReceived(
+            memberContactId = memberContactId,
+            packet = packet,
+            receivedAtEpochMilliseconds = receivedAtEpochMilliseconds
+        )
 
     suspend fun receiveJoinRequest(
         memberContactId: String,

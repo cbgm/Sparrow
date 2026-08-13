@@ -103,10 +103,7 @@ internal fun String.toGroupDeliveryStatus(): MessageDeliveryStatus =
         ?: MessageDeliveryStatus.NOT_APPLICABLE
 
 private fun String.isPendingMembershipStatus(): Boolean =
-    this != GroupInvitationStatus.ACTIVE.name &&
-        this != GroupInvitationStatus.LEAVE_SENT.name &&
-        this != GroupInvitationStatus.DECLINED.name &&
-        this != GroupInvitationStatus.EXPIRED.name &&
-        this != GroupInvitationStatus.FAILED.name &&
-        this != GroupInvitationStatus.REMOVED.name &&
-        this != GroupInvitationStatus.GROUP_DELETED.name
+    this == GroupInvitationStatus.INVITE_RECEIVED.name ||
+        this == GroupInvitationStatus.WAITING_FOR_IDENTITY.name ||
+        this == GroupInvitationStatus.IDENTITY_READY.name ||
+        this == GroupInvitationStatus.WELCOME_SENT.name

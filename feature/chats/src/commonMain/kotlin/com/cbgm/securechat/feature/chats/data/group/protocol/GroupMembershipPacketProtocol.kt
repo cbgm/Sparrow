@@ -6,6 +6,7 @@ import com.cbgm.securechat.core.protocol.identity.LocalSigningKeyPair
 import com.cbgm.securechat.core.protocol.packet.GroupConversationDeletedPacket
 import com.cbgm.securechat.core.protocol.packet.GroupInviteDeclinedPacket
 import com.cbgm.securechat.core.protocol.packet.GroupInvitePacket
+import com.cbgm.securechat.core.protocol.packet.GroupInviteReceivedPacket
 import com.cbgm.securechat.core.protocol.packet.GroupJoinRequestPacket
 import com.cbgm.securechat.core.protocol.packet.GroupLeaveRequestPacket
 import com.cbgm.securechat.core.protocol.packet.GroupMemberActivatedPacket
@@ -99,6 +100,39 @@ class GroupMembershipPacketProtocol(
             payload = payloadEncoder.encodeInvite(packet),
             signature = packet.ownerSignature,
             signingPublicKey = packet.ownerSigningPublicKey
+        )
+
+    suspend fun createInviteReceived(
+        invite: GroupInvitePacket,
+        receivedAtEpochMilliseconds: Long,
+        memberSigningKeyPair: LocalSigningKeyPair
+    ): Result<GroupInviteReceivedPacket> =
+        runCatching {
+            val unsignedPacket =
+                GroupInviteReceivedPacket(
+                    packetId = inviteReceivedPacketId(invite.invitationId),
+                    invitationId = invite.invitationId,
+                    groupId = invite.groupId,
+                    challenge = invite.challenge.copyOf(),
+                    memberSigningPublicKey = memberSigningKeyPair.publicKey.copyOf(),
+                    receivedAtEpochMilliseconds = receivedAtEpochMilliseconds,
+                    memberSignature = UNSIGNED_PACKET_MARKER
+                )
+            val signature =
+                groupCrypto
+                    .sign(
+                        payload = payloadEncoder.encodeInviteReceived(unsignedPacket),
+                        signingPrivateKey = memberSigningKeyPair.privateKey
+                    ).getOrThrow()
+
+            unsignedPacket.copy(memberSignature = signature)
+        }
+
+    suspend fun verifyInviteReceived(packet: GroupInviteReceivedPacket): Result<Unit> =
+        groupCrypto.verify(
+            payload = payloadEncoder.encodeInviteReceived(packet),
+            signature = packet.memberSignature,
+            signingPublicKey = packet.memberSigningPublicKey
         )
 
     suspend fun createJoinRequest(
@@ -428,6 +462,9 @@ class GroupMembershipPacketProtocol(
         epoch: Int,
         welcomePacketId: String
     ): String = "group-ready-$groupId-$epoch-$welcomePacketId"
+
+    private fun inviteReceivedPacketId(invitationId: String): String =
+        "group-invite-received-$invitationId"
 
     private companion object {
         val UNSIGNED_PACKET_MARKER = byteArrayOf(0)

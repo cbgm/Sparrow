@@ -29,12 +29,7 @@ class GatewayWebSocketHandler(
             pushActions =
                 GatewayPushActions(
                     deliverPending = pushDispatcher::deliverPending,
-                    acknowledge = { connection, envelopeId ->
-                        pushDispatcher.acknowledge(
-                            recipientId = connection.routingId,
-                            envelopeId = envelopeId
-                        )
-                    }
+                    acknowledge = pushDispatcher::acknowledge
                 ),
             routeValidator = GatewayRouteValidator(routeLifetimeMilliseconds),
             actions =
