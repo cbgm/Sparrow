@@ -32,18 +32,14 @@ class DefaultContactByRelayIdResolver(
             if (bootstrap) {
                 val mappedContactId = contactRelayIdDao.findContactIdByRelayId(relayId)
                 if (mappedContactId != null) {
-                    val mappedContact = contacts.firstOrNull { contact -> contact.id == mappedContactId }
-                    val linkedContactId = findLinkedBootstrapContactId(relayId, contacts)
-                    if (
-                        mappedContact?.deviceContactLinkStatus != DeviceContactLinkStatus.LINKED &&
-                        linkedContactId != null &&
-                        linkedContactId != mappedContactId
-                    ) {
+                    val matchingContactId = findMatchingContactId(relayId, contacts)
+                    if (matchingContactId != null && matchingContactId != mappedContactId) {
                         persistBootstrapMapping(
-                            contactId = linkedContactId,
+                            contactId = matchingContactId,
                             relayId = relayId
                         )
-                        return@runCatching linkedContactId
+                        deleteAnonymousBootstrapPlaceholder(mappedContactId)
+                        return@runCatching matchingContactId
                     }
                     return@runCatching mappedContactId
                 }
@@ -83,19 +79,37 @@ class DefaultContactByRelayIdResolver(
             contactId
         }
 
-    private fun findLinkedBootstrapContactId(
-        relayId: String,
-        contacts: List<Contact>
-    ): String? =
-        contacts
-            .firstOrNull { contact ->
-                contact.deviceContactLinkStatus == DeviceContactLinkStatus.LINKED &&
-                    contact.phoneNumbers.any { phoneNumber ->
-                        relayIdGenerator
-                            .deriveFromPhoneNumber(phoneNumber.value)
-                            .getOrNull() == relayId
-                    }
-            }?.id
+    override suspend fun reconcileKnownContacts(): Result<Unit> =
+        runCatching {
+            val contacts = contactRepository.observeContacts().first()
+            val bootstrapRelayIds =
+                contacts
+                    .flatMap { contact ->
+                        contact.phoneNumbers.mapNotNull { phoneNumber ->
+                            relayIdGenerator
+                                .deriveFromPhoneNumber(phoneNumber.value)
+                                .getOrNull()
+                        }
+                    }.distinct()
+
+            bootstrapRelayIds.forEach { relayId ->
+                val mappedContactId =
+                    contactRelayIdDao.findContactIdByRelayId(relayId)
+                        ?: return@forEach
+                val matchingContactId =
+                    findMatchingContactId(relayId, contacts)
+                        ?: return@forEach
+                if (matchingContactId == mappedContactId) {
+                    return@forEach
+                }
+
+                persistBootstrapMapping(
+                    contactId = matchingContactId,
+                    relayId = relayId
+                )
+                deleteAnonymousBootstrapPlaceholder(mappedContactId)
+            }
+        }
 
     private suspend fun findMatchingContactId(
         relayId: String,
@@ -138,6 +152,18 @@ class DefaultContactByRelayIdResolver(
         contactRelayIdDao
             .findRelayIdByContactId(contactId)
             ?.startsWith(BOOTSTRAP_ROUTING_ID_PREFIX) == true
+
+    private suspend fun deleteAnonymousBootstrapPlaceholder(contactId: String) {
+        val contact = contactDao.findById(contactId) ?: return
+        val isAnonymousPlaceholder =
+            contact.contact.displayName.isNullOrBlank() &&
+                contact.contact.deviceContactId == null &&
+                contact.phoneNumbers.isEmpty() &&
+                contact.publicIdentity == null
+        if (!isAnonymousPlaceholder) return
+
+        contactDao.deleteById(contactId)
+    }
 
     private suspend fun persistBootstrapMapping(
         contactId: String,

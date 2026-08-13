@@ -43,6 +43,14 @@ class DefaultIncomingEnvelopeProcessor(
                 localEncryptionPrivateKey = keyPair.privateKey
             )
 
+            contactByRelayIdResolver
+                .reconcileKnownContacts()
+                .onFailure { error ->
+                    logger.warn {
+                        "Contact relay reconciliation failed after envelope $envelopeId: ${error.message}"
+                    }
+                }
+
             logger.debug {
                 "Incoming envelope stored: envelopeId=$envelopeId, contactId=$contactId"
             }
