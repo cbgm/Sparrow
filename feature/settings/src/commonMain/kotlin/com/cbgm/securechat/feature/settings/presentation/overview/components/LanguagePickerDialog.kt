@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.settings.presentation.settings.components
+package com.cbgm.securechat.feature.settings.presentation.overview.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column

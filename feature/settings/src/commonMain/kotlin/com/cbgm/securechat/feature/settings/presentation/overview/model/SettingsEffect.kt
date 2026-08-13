@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.settings.presentation.settings.model
+package com.cbgm.securechat.feature.settings.presentation.overview.model
 
 sealed interface SettingsEffect {
     data class ShowSnackbar(

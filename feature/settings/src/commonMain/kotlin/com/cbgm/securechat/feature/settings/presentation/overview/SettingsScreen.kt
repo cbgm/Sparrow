@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.settings.presentation.settings
+package com.cbgm.securechat.feature.settings.presentation.overview
 
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
@@ -45,9 +45,9 @@ import com.cbgm.securechat.core.ui.locale.AppLanguage
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.core.ui.theme.spacing
 import com.cbgm.securechat.feature.settings.domain.model.BuildInfo
-import com.cbgm.securechat.feature.settings.presentation.settings.components.LanguagePickerDialog
-import com.cbgm.securechat.feature.settings.presentation.settings.model.SettingsUiEvent
-import com.cbgm.securechat.feature.settings.presentation.settings.model.SettingsUiState
+import com.cbgm.securechat.feature.settings.presentation.overview.components.LanguagePickerDialog
+import com.cbgm.securechat.feature.settings.presentation.overview.model.SettingsUiEvent
+import com.cbgm.securechat.feature.settings.presentation.overview.model.SettingsUiState
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.base_developer
 import com.cbgm.securechat.resources.base_language

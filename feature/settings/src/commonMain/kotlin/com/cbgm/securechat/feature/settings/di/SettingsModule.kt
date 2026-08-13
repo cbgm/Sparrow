@@ -26,7 +26,7 @@ import com.cbgm.securechat.feature.settings.presentation.developer.DeveloperMenu
 import com.cbgm.securechat.feature.settings.presentation.disclaimer.DisclaimerViewModel
 import com.cbgm.securechat.feature.settings.presentation.licenses.LicensesViewModel
 import com.cbgm.securechat.feature.settings.presentation.network.ControlPlaneSettingsViewModel
-import com.cbgm.securechat.feature.settings.presentation.settings.SettingsViewModel
+import com.cbgm.securechat.feature.settings.presentation.overview.SettingsViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 

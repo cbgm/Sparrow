@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.settings.presentation.settings
+package com.cbgm.securechat.feature.settings.presentation.overview
 
 import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.security.DirectIdentitySetupMode
@@ -15,10 +15,10 @@ import com.cbgm.securechat.feature.settings.domain.usecase.SetAppLanguageUseCase
 import com.cbgm.securechat.feature.settings.domain.usecase.SetBlockUnknownContactInvitesUseCase
 import com.cbgm.securechat.feature.settings.domain.usecase.SetDeveloperEnabledUseCase
 import com.cbgm.securechat.feature.settings.domain.usecase.SetDirectIdentitySetupModeUseCase
-import com.cbgm.securechat.feature.settings.presentation.settings.model.DEVELOPER_MODE_TAP_THRESHOLD
-import com.cbgm.securechat.feature.settings.presentation.settings.model.SettingsEffect
-import com.cbgm.securechat.feature.settings.presentation.settings.model.SettingsUiEvent
-import com.cbgm.securechat.feature.settings.presentation.settings.model.SettingsUiState
+import com.cbgm.securechat.feature.settings.presentation.overview.model.DEVELOPER_MODE_TAP_THRESHOLD
+import com.cbgm.securechat.feature.settings.presentation.overview.model.SettingsEffect
+import com.cbgm.securechat.feature.settings.presentation.overview.model.SettingsUiEvent
+import com.cbgm.securechat.feature.settings.presentation.overview.model.SettingsUiState
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

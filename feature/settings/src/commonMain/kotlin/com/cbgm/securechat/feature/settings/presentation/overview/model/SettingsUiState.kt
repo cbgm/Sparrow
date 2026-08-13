@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.settings.presentation.settings.model
+package com.cbgm.securechat.feature.settings.presentation.overview.model
 
 import com.cbgm.securechat.core.security.DirectIdentitySetupMode
 import com.cbgm.securechat.core.ui.locale.AppLanguage
