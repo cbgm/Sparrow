@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.contactimport.presentation
+package com.cbgm.securechat.feature.contactimport.presentation.verify
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -11,11 +11,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.securechat.core.extensions.toFingerprint
 import com.cbgm.securechat.feature.contactimport.presentation.component.verification.QrVerificationErrorDialog
 import com.cbgm.securechat.feature.contactimport.presentation.component.verification.QrVerificationProgressDialog
-import com.cbgm.securechat.feature.contactimport.presentation.model.ScanIdentityUiEvent
-import com.cbgm.securechat.feature.contactimport.presentation.model.ScannedIdentityPreview
-import com.cbgm.securechat.feature.contactimport.presentation.model.VerifyContactQrUiEvent
-import com.cbgm.securechat.feature.contactimport.presentation.screen.VerifyContactQrViewModel
-import com.cbgm.securechat.feature.contactimport.presentation.screen.components.ScannedIdentityConfirmationDialog
+import com.cbgm.securechat.feature.contactimport.presentation.scan.model.ScanIdentityUiEvent
+import com.cbgm.securechat.feature.contactimport.presentation.scan.model.ScannedIdentityPreview
+import com.cbgm.securechat.feature.contactimport.presentation.screen.component.ScannedIdentityConfirmationDialog
+import com.cbgm.securechat.feature.contactimport.presentation.verify.model.VerifyContactQrUiEvent
 import com.cbgm.securechat.feature.identity.domain.service.IdentityShareCodec
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.feature_contactimport_invalid_identity_qr

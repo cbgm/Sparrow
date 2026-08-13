@@ -1,11 +1,11 @@
-package com.cbgm.securechat.feature.contactimport.presentation.screen
+package com.cbgm.securechat.feature.contactimport.presentation.importing
 
 import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.ui.navigation.AppRoute
 import com.cbgm.securechat.core.ui.presentation.BaseViewModel
-import com.cbgm.securechat.feature.contactimport.domain.usecase.ImportSharedIdentity
-import com.cbgm.securechat.feature.contactimport.presentation.model.ImportIdentityUiEvent
-import com.cbgm.securechat.feature.contactimport.presentation.model.ImportIdentityUiState
+import com.cbgm.securechat.feature.contactimport.domain.usecase.ImportSharedIdentityUseCase
+import com.cbgm.securechat.feature.contactimport.presentation.importing.model.ImportIdentityUiEvent
+import com.cbgm.securechat.feature.contactimport.presentation.importing.model.ImportIdentityUiState
 import com.cbgm.securechat.feature.contacts.domain.model.IdentityImportTrust
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 
 class ImportIdentityViewModel(
     private val route: AppRoute.ImportContact,
-    private val importSharedIdentity: ImportSharedIdentity
+    private val importSharedIdentity: ImportSharedIdentityUseCase
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow(ImportIdentityUiState())
     val uiState: StateFlow<ImportIdentityUiState> = _uiState.asStateFlow()

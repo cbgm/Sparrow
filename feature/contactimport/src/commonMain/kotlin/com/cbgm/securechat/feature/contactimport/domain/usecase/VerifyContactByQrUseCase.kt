@@ -7,7 +7,7 @@ import com.cbgm.securechat.feature.contacts.domain.usecase.ImportContact
 import com.cbgm.securechat.feature.contacts.domain.usecase.VerifyContact
 import com.cbgm.securechat.feature.identity.domain.service.IdentityShareCodec
 
-class VerifyContactByQr(
+class VerifyContactByQrUseCase(
     private val identityShareCodec: IdentityShareCodec,
     private val importContact: ImportContact,
     private val verifyContact: VerifyContact

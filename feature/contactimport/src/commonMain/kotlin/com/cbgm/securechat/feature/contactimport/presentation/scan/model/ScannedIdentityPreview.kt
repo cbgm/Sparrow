@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.contactimport.presentation.model
+package com.cbgm.securechat.feature.contactimport.presentation.scan.model
 
 data class ScannedIdentityPreview(
     val encodedIdentity: String,

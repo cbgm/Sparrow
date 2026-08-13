@@ -13,7 +13,7 @@ import com.cbgm.securechat.feature.identity.domain.service.IdentityShareCodec
  * conversation, and relay-routing anchor. The contact repository then
  * merges by normalized phone number before considering public keys.
  */
-class ImportSharedIdentity(
+class ImportSharedIdentityUseCase(
     private val identityShareCodec: IdentityShareCodec,
     private val importContact: ImportContact
 ) {

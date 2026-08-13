@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.contactimport.presentation.screen
+package com.cbgm.securechat.feature.contactimport.presentation.importing
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -40,8 +40,8 @@ import com.cbgm.securechat.core.ui.component.PatternBackground
 import com.cbgm.securechat.core.ui.component.SecureChatScrollScaffold
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.core.ui.theme.spacing
-import com.cbgm.securechat.feature.contactimport.presentation.model.ImportIdentityUiEvent
-import com.cbgm.securechat.feature.contactimport.presentation.model.ImportIdentityUiState
+import com.cbgm.securechat.feature.contactimport.presentation.importing.model.ImportIdentityUiEvent
+import com.cbgm.securechat.feature.contactimport.presentation.importing.model.ImportIdentityUiState
 import com.cbgm.securechat.feature.contacts.domain.model.IdentityImportTrust
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.feature_contactimport_import_identity

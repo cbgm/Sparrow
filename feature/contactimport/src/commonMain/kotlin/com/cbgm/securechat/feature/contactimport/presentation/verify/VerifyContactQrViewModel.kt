@@ -1,10 +1,10 @@
-package com.cbgm.securechat.feature.contactimport.presentation.screen
+package com.cbgm.securechat.feature.contactimport.presentation.verify
 
 import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.ui.presentation.BaseViewModel
-import com.cbgm.securechat.feature.contactimport.domain.usecase.VerifyContactByQr
-import com.cbgm.securechat.feature.contactimport.presentation.model.VerifyContactQrUiEvent
-import com.cbgm.securechat.feature.contactimport.presentation.model.VerifyContactQrUiState
+import com.cbgm.securechat.feature.contactimport.domain.usecase.VerifyContactByQrUseCase
+import com.cbgm.securechat.feature.contactimport.presentation.verify.model.VerifyContactQrUiEvent
+import com.cbgm.securechat.feature.contactimport.presentation.verify.model.VerifyContactQrUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 
 class VerifyContactQrViewModel(
     private val contactId: String,
-    private val verifyContactByQr: VerifyContactByQr
+    private val verifyContactByQr: VerifyContactByQrUseCase
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow(VerifyContactQrUiState())
     val uiState: StateFlow<VerifyContactQrUiState> = _uiState.asStateFlow()

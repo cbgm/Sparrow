@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.contactimport.presentation.model
+package com.cbgm.securechat.feature.contactimport.presentation.verify.model
 
 sealed interface VerifyContactQrUiEvent {
     data class QrCodeScanned(

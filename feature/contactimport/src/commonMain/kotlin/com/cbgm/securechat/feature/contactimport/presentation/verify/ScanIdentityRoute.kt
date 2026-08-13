@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.contactimport.presentation
+package com.cbgm.securechat.feature.contactimport.presentation.verify
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,9 +16,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.cbgm.securechat.feature.contactimport.platform.rememberQrScannerPermissionRequest
-import com.cbgm.securechat.feature.contactimport.presentation.model.ScanIdentityUiEvent
-import com.cbgm.securechat.feature.contactimport.presentation.screen.ScanIdentityScreen
+import com.cbgm.securechat.feature.contactimport.device.rememberQrScannerPermissionRequest
+import com.cbgm.securechat.feature.contactimport.presentation.scan.ScanIdentityScreen
+import com.cbgm.securechat.feature.contactimport.presentation.scan.model.ScanIdentityUiEvent
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.base_back
 import com.cbgm.securechat.resources.feature_contactimport_camera_permission_required

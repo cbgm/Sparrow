@@ -1,8 +1,8 @@
-package com.cbgm.securechat.feature.contactimport.presentation.screen
+package com.cbgm.securechat.feature.contactimport.presentation.scan
 
 import com.cbgm.securechat.core.ui.navigation.AppRoute
 import com.cbgm.securechat.core.ui.presentation.BaseViewModel
-import com.cbgm.securechat.feature.contactimport.presentation.model.ScanIdentityUiEvent
+import com.cbgm.securechat.feature.contactimport.presentation.scan.model.ScanIdentityUiEvent
 
 class ScanIdentityNavigationViewModel(
     private val route: AppRoute.ScanIdentity

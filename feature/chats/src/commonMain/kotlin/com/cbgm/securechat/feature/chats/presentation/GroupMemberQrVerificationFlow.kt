@@ -7,11 +7,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.securechat.feature.chats.presentation.model.GroupMemberQrVerificationError
 import com.cbgm.securechat.feature.chats.presentation.model.GroupMemberQrVerificationUiEvent
 import com.cbgm.securechat.feature.chats.presentation.screen.details.GroupMemberQrVerificationViewModel
-import com.cbgm.securechat.feature.contactimport.presentation.ScanIdentityRoute
 import com.cbgm.securechat.feature.contactimport.presentation.component.verification.QrVerificationErrorDialog
 import com.cbgm.securechat.feature.contactimport.presentation.component.verification.QrVerificationProgressDialog
-import com.cbgm.securechat.feature.contactimport.presentation.model.ScanIdentityUiEvent
-import com.cbgm.securechat.feature.contactimport.presentation.screen.components.ScannedIdentityConfirmationDialog
+import com.cbgm.securechat.feature.contactimport.presentation.scan.model.ScanIdentityUiEvent
+import com.cbgm.securechat.feature.contactimport.presentation.screen.component.ScannedIdentityConfirmationDialog
+import com.cbgm.securechat.feature.contactimport.presentation.verify.ScanIdentityRoute
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.feature_chats_group_qr_identity_mismatch
 import com.cbgm.securechat.resources.feature_contactimport_invalid_identity_qr

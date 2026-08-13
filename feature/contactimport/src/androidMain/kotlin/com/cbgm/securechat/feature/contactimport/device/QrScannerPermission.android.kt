@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.contactimport.platform
+package com.cbgm.securechat.feature.contactimport.device
 
 import android.Manifest
 import android.content.pm.PackageManager

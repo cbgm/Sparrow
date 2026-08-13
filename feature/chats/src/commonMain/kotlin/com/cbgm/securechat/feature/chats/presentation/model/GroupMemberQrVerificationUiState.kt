@@ -1,6 +1,6 @@
 package com.cbgm.securechat.feature.chats.presentation.model
 
-import com.cbgm.securechat.feature.contactimport.presentation.model.ScannedIdentityPreview
+import com.cbgm.securechat.feature.contactimport.presentation.scan.model.ScannedIdentityPreview
 
 data class GroupMemberQrVerificationUiState(
     val scanAttempt: Int = 0,

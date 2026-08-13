@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.contactimport.presentation.model
+package com.cbgm.securechat.feature.contactimport.presentation.importing.model
 
 import com.cbgm.securechat.feature.contacts.domain.model.IdentityImportTrust
 

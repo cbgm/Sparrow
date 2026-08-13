@@ -1,7 +1,7 @@
 package com.cbgm.securechat.feature.chats.presentation
 
 import androidx.compose.runtime.Composable
-import com.cbgm.securechat.feature.contactimport.presentation.ContactQrVerificationFlow
+import com.cbgm.securechat.feature.contactimport.presentation.verify.ContactQrVerificationFlow
 
 @Composable
 fun VerifyIdentityQrRoute(

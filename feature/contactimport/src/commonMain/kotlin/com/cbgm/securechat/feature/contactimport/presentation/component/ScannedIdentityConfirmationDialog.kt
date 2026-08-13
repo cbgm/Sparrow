@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.contactimport.presentation.screen.components
+package com.cbgm.securechat.feature.contactimport.presentation.screen.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,7 +16,7 @@ import com.cbgm.securechat.core.ui.component.SecureChatApprovalButton
 import com.cbgm.securechat.core.ui.component.SecureChatSecondaryButton
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.core.ui.theme.spacing
-import com.cbgm.securechat.feature.contactimport.presentation.model.ScannedIdentityPreview
+import com.cbgm.securechat.feature.contactimport.presentation.scan.model.ScannedIdentityPreview
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.base_cancel
 import com.cbgm.securechat.resources.feature_contactimport_encryption_key

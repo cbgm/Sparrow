@@ -6,7 +6,7 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import com.cbgm.securechat.core.protocol.phone.DefaultPhoneNumberNormalizer
 import com.cbgm.securechat.data.database.SecureChatDatabase
-import com.cbgm.securechat.feature.contactimport.domain.usecase.ImportSharedIdentity
+import com.cbgm.securechat.feature.contactimport.domain.usecase.ImportSharedIdentityUseCase
 import com.cbgm.securechat.feature.contacts.data.merge.DefaultContactMergeService
 import com.cbgm.securechat.feature.contacts.data.repository.DefaultContactKeyExchangeStore
 import com.cbgm.securechat.feature.contacts.data.repository.DefaultContactRepository
@@ -36,7 +36,7 @@ import kotlin.test.assertTrue
 class ImportSharedIdentityIntegrationTest {
     private lateinit var database: SecureChatDatabase
     private lateinit var contactRepository: DefaultContactRepository
-    private lateinit var importSharedIdentity: ImportSharedIdentity
+    private lateinit var importSharedIdentity: ImportSharedIdentityUseCase
     private val identityShareCodec = DefaultIdentityShareCodec()
 
     @BeforeTest
@@ -68,7 +68,7 @@ class ImportSharedIdentityIntegrationTest {
             )
 
         importSharedIdentity =
-            ImportSharedIdentity(
+            ImportSharedIdentityUseCase(
                 identityShareCodec = identityShareCodec,
                 importContact = ImportContact(contactRepository)
             )

@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.contactimport.presentation.screen
+package com.cbgm.securechat.feature.contactimport.presentation.scan
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
@@ -33,8 +33,8 @@ import androidx.compose.ui.unit.dp
 import com.cbgm.securechat.core.ui.component.SecureChatStaticScaffold
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.core.ui.theme.spacing
-import com.cbgm.securechat.feature.contactimport.platform.QrScanner
-import com.cbgm.securechat.feature.contactimport.presentation.model.ScanIdentityUiEvent
+import com.cbgm.securechat.feature.contactimport.device.QrScanner
+import com.cbgm.securechat.feature.contactimport.presentation.scan.model.ScanIdentityUiEvent
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.feature_contactimport_scan_identity
 import com.cbgm.securechat.resources.feature_contactimport_scan_identity_instruction

@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.contactimport.presentation
+package com.cbgm.securechat.feature.contactimport.presentation.importing
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -9,11 +9,9 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.securechat.core.extensions.toFingerprint
 import com.cbgm.securechat.core.ui.navigation.AppRoute
-import com.cbgm.securechat.feature.contactimport.presentation.model.ImportIdentityUiEvent
-import com.cbgm.securechat.feature.contactimport.presentation.model.ScannedIdentityPreview
-import com.cbgm.securechat.feature.contactimport.presentation.screen.ImportIdentityScreen
-import com.cbgm.securechat.feature.contactimport.presentation.screen.ImportIdentityViewModel
-import com.cbgm.securechat.feature.contactimport.presentation.screen.components.ScannedIdentityConfirmationDialog
+import com.cbgm.securechat.feature.contactimport.presentation.importing.model.ImportIdentityUiEvent
+import com.cbgm.securechat.feature.contactimport.presentation.scan.model.ScannedIdentityPreview
+import com.cbgm.securechat.feature.contactimport.presentation.screen.component.ScannedIdentityConfirmationDialog
 import com.cbgm.securechat.feature.contacts.domain.model.IdentityImportTrust
 import com.cbgm.securechat.feature.identity.domain.service.IdentityShareCodec
 import com.cbgm.securechat.resources.Res

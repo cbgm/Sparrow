@@ -7,7 +7,7 @@ import com.cbgm.securechat.feature.chats.domain.usecase.VerifyGroupMember
 import com.cbgm.securechat.feature.chats.presentation.model.GroupMemberQrVerificationError
 import com.cbgm.securechat.feature.chats.presentation.model.GroupMemberQrVerificationUiEvent
 import com.cbgm.securechat.feature.chats.presentation.model.GroupMemberQrVerificationUiState
-import com.cbgm.securechat.feature.contactimport.presentation.model.ScannedIdentityPreview
+import com.cbgm.securechat.feature.contactimport.presentation.scan.model.ScannedIdentityPreview
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
 import com.cbgm.securechat.feature.identity.domain.model.SharedIdentityPayload
 import com.cbgm.securechat.feature.identity.domain.usecase.DecodeSharedIdentity
