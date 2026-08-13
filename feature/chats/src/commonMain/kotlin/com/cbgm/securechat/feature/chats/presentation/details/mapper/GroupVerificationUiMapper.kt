@@ -17,7 +17,6 @@ internal fun buildGroupVerificationSummary(
     remoteAdminContactIds: Set<String> = emptySet(),
     currentMemberContactIds: Set<String> = emptySet(),
     promotableContactIds: Set<String> = emptySet(),
-    isOrphaned: Boolean = false,
     requiresAdminPromotionBeforeLeave: Boolean = false
 ): GroupVerificationSummaryUiState {
     val participantRows =
@@ -105,7 +104,6 @@ internal fun buildGroupVerificationSummary(
         activeParticipantCount = activeRows.size,
         totalMemberCount = participantRows.size + if (adminMember != null) 1 else 0,
         canLeaveGroup = !isLeavePending && isLocalMemberActive,
-        isOrphaned = isOrphaned,
         adminCount = remoteAdminContactIds.size + if (isLocalAdmin) 1 else 0,
         currentMemberContactIds = currentMemberContactIds,
         requiresAdminPromotionBeforeLeave = requiresAdminPromotionBeforeLeave,

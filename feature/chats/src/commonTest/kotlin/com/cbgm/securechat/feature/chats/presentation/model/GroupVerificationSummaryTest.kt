@@ -134,7 +134,7 @@ class GroupVerificationSummaryTest {
     }
 
     @Test
-    fun missingCurrentAdminIsShownAsUnavailableAndGroupIsOrphaned() {
+    fun missingReferenceAdminIsNotRenderedAsCurrentMember() {
         val summary =
             buildGroupVerificationSummary(
                 isLocalAdmin = false,
@@ -151,15 +151,12 @@ class GroupVerificationSummaryTest {
                             adminVerified = true,
                             participantVerified = true
                         )
-                    ),
-                isOrphaned = true
+                    )
             )
 
-        val admin = summary.members.first()
-        assertFalse(admin.isGroupAdmin)
-        assertFalse(admin.isActive)
-        assertEquals(GroupMemberVerificationState.UNAVAILABLE, admin.state)
-        assertTrue(summary.isOrphaned)
+        assertEquals(listOf("Participant"), summary.members.map { member -> member.displayName })
+        assertEquals(0, summary.adminCount)
+        assertEquals(1, summary.totalMemberCount)
     }
 
     @Test

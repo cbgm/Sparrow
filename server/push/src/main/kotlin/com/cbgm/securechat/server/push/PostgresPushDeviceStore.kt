@@ -11,12 +11,12 @@ internal class PostgresPushDeviceStore(
                     """
                     INSERT INTO push_devices (
                         token,
-                        relay_id,
+                        routing_id,
                         platform,
                         updated_at_epoch_milliseconds
                     ) VALUES (?, ?, ?, ?)
                     ON CONFLICT (token) DO UPDATE SET
-                        relay_id = EXCLUDED.relay_id,
+                        routing_id = EXCLUDED.routing_id,
                         platform = EXCLUDED.platform,
                         updated_at_epoch_milliseconds = EXCLUDED.updated_at_epoch_milliseconds
                     """.trimIndent()
@@ -36,9 +36,9 @@ internal class PostgresPushDeviceStore(
             connection
                 .prepareStatement(
                     """
-                    SELECT relay_id, token, platform
+                    SELECT routing_id, token, platform
                     FROM push_devices
-                    WHERE relay_id = ?
+                    WHERE routing_id = ?
                     ORDER BY token
                     """.trimIndent()
                 ).use { statement ->

@@ -67,7 +67,7 @@ class PostgresOutboundEnvelopeStorageIntegrationTest {
             gatewayInternalApiToken = null,
             maximumDeduplicationEntries = 100,
             registerNode = false,
-            clientEndpoint = "ws://localhost:8094/relay",
+            clientEndpoint = "ws://localhost:8094/v1/gateway",
             federationEndpoint = "http://localhost:8093",
             mailboxEndpoint = "http://localhost:8092",
             outboundRetryPollIntervalMilliseconds = 1_000L,

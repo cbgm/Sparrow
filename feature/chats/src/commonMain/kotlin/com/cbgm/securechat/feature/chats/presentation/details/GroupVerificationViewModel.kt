@@ -70,7 +70,6 @@ class GroupVerificationViewModel(
                 remoteAdminContactIds = administration.adminContactIds,
                 currentMemberContactIds = administration.currentMemberContactIds,
                 promotableContactIds = administration.promotableContactIds,
-                isOrphaned = administration.isOrphaned,
                 requiresAdminPromotionBeforeLeave = administration.requiresPromotionBeforeLeave
             )
         }

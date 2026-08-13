@@ -15,7 +15,7 @@ class ProtocolSignaturesTest {
         val unsigned =
             SecureChatNodeDescriptor(
                 nodeId = identity.nodeId,
-                clientEndpoint = "ws://node-a:8080/relay",
+                clientEndpoint = "ws://node-a:8080/v1/gateway",
                 federationEndpoint = "http://node-a:8081",
                 mailboxEndpoint = "http://node-a:8082",
                 identityPublicKey = identity.encodedPublicKey,

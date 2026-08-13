@@ -236,7 +236,7 @@
     <string name="feature_identity_signing_public_key">Öffentlicher Signaturschlüssel</string>
     <string name="feature_identity_signing_public_key_description">Wird zur Überprüfung der Identitätsinformationen verwendet.</string>
     <string name="feature_identity_something_went_wrong">Etwas ist schiefgelaufen</string>
-    <string name="feature_identity_stable_relay_address_description">Diese Nummer wird deine dauerhafte SecureChat-Relay-Adresse.</string>
+    <string name="feature_identity_stable_routing_address_description">Diese Nummer wird deine dauerhafte SecureChat-Routing-Adresse.</string>
     <string name="feature_identity_your_phone_number">Deine Telefonnummer</string>
     <string name="feature_identity_your_securechat_identity">Deine SecureChat-Identität</string>
 
@@ -267,7 +267,7 @@
     <string name="feature_onboarding_permissions_description">SecureChat fordert nur Berechtigungen für Funktionen an, die du verwenden möchtest.</string>
     <string name="feature_onboarding_permissions_settings_hint">Abgelehnte Berechtigungen können später in den Systemeinstellungen aktiviert werden.</string>
     <string name="feature_onboarding_phone_number_permission_description">Versucht, deine SIM-Telefonnummer automatisch zu erkennen, ohne eine Auswahl anzuzeigen.</string>
-    <string name="feature_onboarding_phone_routing_description">Sie dient als deine dauerhafte Kontakt- und Relay-Adresse. Du kannst sie vor dem Fortfahren noch ändern.</string>
+    <string name="feature_onboarding_phone_routing_description">Sie dient als deine dauerhafte Kontakt- und Routing-Adresse. Du kannst sie vor dem Fortfahren noch ändern.</string>
     <string name="feature_onboarding_preparing_phone_setup">Telefoneinrichtung wird vorbereitet…</string>
     <string name="feature_onboarding_privacy_first">Deine Privatsphäre steht an erster Stelle</string>
     <string name="feature_onboarding_try_sim_number_again">SIM-Telefonnummer erneut erkennen</string>
@@ -286,7 +286,7 @@
     <string name="feature_settings_danger_zone">Gefahrenbereich</string>
     <string name="feature_settings_danger_zone_description">Diese Aktionen sind destruktiv und nur für lokale Debugging-Zwecke vorgesehen.</string>
     <string name="feature_settings_data_disclaimer">Datenschutzhinweis</string>
-    <string name="feature_settings_data_disclaimer_subtitle">Welche Daten SecureChat lokal und auf dem Relay speichert</string>
+    <string name="feature_settings_data_disclaimer_subtitle">Welche Daten SecureChat lokal und in der Server-Infrastruktur speichert</string>
     <string name="feature_settings_developer_menu">Entwicklermenü</string>
     <string name="feature_settings_developer_menu_subtitle">Build-Informationen, Feature-Flags und Diagnose</string>
     <string name="feature_settings_network_diagnostics">Netzwerkdiagnose</string>
@@ -452,7 +452,5 @@
     <string name="feature_chats_group_promote_admin_description">%1$s zum Gruppen-Admin machen? Admins können Mitglieder hinzufügen und entfernen sowie weitere Admins ernennen.</string>
     <string name="feature_chats_group_promote_before_leave">Neuen Admin auswählen</string>
     <string name="feature_chats_group_promote_before_leave_description">Du bist der einzige Admin. Ernenne ein anderes aktives Mitglied zum Admin, bevor du die Gruppe verlässt.</string>
-    <string name="feature_chats_group_orphaned_title">Gruppen-Admin nicht verfügbar</string>
-    <string name="feature_chats_group_orphaned_description">Es ist keine aktuelle Admin-Identität verfügbar. Aktive Mitglieder können weiter schreiben, aber die Mitgliedschaft kann nicht geändert werden.</string>
     <string name="feature_chats_group_member_unavailable">Nicht verfügbar — erneut einladen</string>
 </resources>

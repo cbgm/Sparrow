@@ -141,7 +141,7 @@ class GroupViewModel(
     ): GroupUiState {
         val conversation = observation.conversation
         val contactsById = contacts.associateBy(Contact::id)
-        val groupState = resolveGroupState(conversation, administration)
+        val groupState = conversation?.state ?: GroupConversationState.READY
 
         return GroupUiState(
             title = conversation?.title.orEmpty(),
@@ -151,7 +151,7 @@ class GroupViewModel(
             typingDisplayName = typingDisplayName(currentTypingIds, contactsById),
             errorMessage = currentError ?: observation.errorMessage,
             isLoading = observation is GroupConversationObservation.Loading,
-            isMessageInputEnabled = isMessageInputEnabled(conversation, groupState, administration),
+            isMessageInputEnabled = isMessageInputEnabled(conversation, groupState),
             state = groupState,
             memberCount = administration.activeMemberCount + (conversation?.pendingParticipantCount ?: 0),
             readyMemberCount = administration.activeMemberCount,
@@ -190,31 +190,12 @@ class GroupViewModel(
                 )
             }
 
-    private fun resolveGroupState(
-        conversation: GroupConversation?,
-        administration: GroupAdministrationState
-    ): GroupConversationState {
-        val state = conversation?.state ?: GroupConversationState.READY
-        return if (conversation != null && state == GroupConversationState.READY && administration.isOrphaned) {
-            GroupConversationState.ORPHANED
-        } else {
-            state
-        }
-    }
-
     private fun isMessageInputEnabled(
         conversation: GroupConversation?,
-        state: GroupConversationState,
-        administration: GroupAdministrationState
+        state: GroupConversationState
     ): Boolean {
         conversation ?: return false
-        val readyForMessaging =
-            if (state == GroupConversationState.ORPHANED) {
-                administration.currentMemberContactIds.isNotEmpty()
-            } else {
-                conversation.isReady
-            }
-        return readyForMessaging ||
+        return conversation.isReady ||
             (!conversation.isIncomingInvitation && state.canQueueMessagesWhilePreparing())
     }
 

@@ -4,19 +4,14 @@
 transport envelopes from connected clients, delivers locally connected recipients directly, and
 hands remote/offline routing to federation. It never interprets SecureChat packet payloads.
 
-The deleted standalone `:server:gateway` application is no longer part of the project.
-
 ## Public endpoints
 
 | Endpoint | Purpose |
 |---|---|
 | `GET /health` | Liveness and active-connection count |
-| `GET /v1/gateway` | Signed-route timing information used by current clients |
+| `GET /v1/gateway/info` | Signed-route timing information used by current clients |
 | `GET /v1/control-planes` | Control-plane URLs advertised by this node |
-| `WS /relay` | Client WebSocket endpoint |
-
-The WebSocket path deliberately remains `/relay` for protocol compatibility. Renaming Kotlin types
-or packages does not change that external endpoint.
+| `WS /v1/gateway` | Client WebSocket endpoint |
 
 ## Internal endpoints
 
@@ -34,13 +29,12 @@ enabled.
 
 ## Client registration
 
-After opening `WS /relay`, the client sends `GatewayClientMessage.Register`. The Kotlin property is
-`routingId`, but the serialized JSON field remains `relayId` for wire compatibility:
+After opening `WS /v1/gateway`, the client sends `GatewayClientMessage.Register`. The routing identifier is serialized as `routingId`:
 
 ```json
 {
   "type": "register",
-  "relayId": "scrouting1_..."
+  "routingId": "scrouting1_..."
 }
 ```
 

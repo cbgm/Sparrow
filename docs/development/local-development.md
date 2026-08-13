@@ -36,8 +36,8 @@ For a second independent node, also apply `server/docker-compose.multinode.yml`;
 
 ## 2. Verify gateway discovery
 
-The gateway still exposes the compatibility WebSocket endpoint `/relay`, but clients obtain gateway
-endpoints from verified node/control-plane discovery instead of relying on a hard-coded gateway service.
+The gateway exposes `WS /v1/gateway`. Clients obtain gateway endpoints from verified node/control-plane
+discovery instead of relying on a hard-coded gateway service.
 
 Check at minimum:
 
@@ -89,8 +89,7 @@ Check:
 - the gateway WebSocket process is running;
 - firewall/network rules permit the connection.
 
-The `/relay` path is an external compatibility endpoint and should not be renamed as part of the
-client package cleanup.
+`/v1/gateway` is the canonical WebSocket endpoint.
 
 ### Message remains queued
 

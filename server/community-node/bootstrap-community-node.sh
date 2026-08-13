@@ -203,11 +203,11 @@ if [[ "$MODE" == "public" ]]; then
     PUBLIC_DOMAIN="${PUBLIC_IP//./-}.sslip.io"
   fi
   SITE_ADDRESS="$PUBLIC_DOMAIN"
-  CLIENT_ENDPOINT="wss://$PUBLIC_DOMAIN/relay"
+  CLIENT_ENDPOINT="wss://$PUBLIC_DOMAIN/v1/gateway"
   HTTP_ENDPOINT="https://$PUBLIC_DOMAIN"
 else
   SITE_ADDRESS=":80"
-  CLIENT_ENDPOINT="ws://$HOST_ADDRESS:8490/relay"
+  CLIENT_ENDPOINT="ws://$HOST_ADDRESS:8490/v1/gateway"
   HTTP_ENDPOINT="http://$HOST_ADDRESS:8490"
 fi
 

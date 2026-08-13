@@ -32,7 +32,7 @@ class DefaultNodeEndpointResolverTest {
             val second = resolver.resolve("routing-a").getOrThrow()
 
             assertEquals(
-                setOf("wss://a.example/relay", "wss://b.example/relay"),
+                setOf("wss://a.example/v1/gateway", "wss://b.example/v1/gateway"),
                 first.map(NodeEndpoint::websocketUrl).toSet()
             )
             assertEquals(first, second)
@@ -49,13 +49,13 @@ class DefaultNodeEndpointResolverTest {
                         listOf(
                             descriptor(
                                 name = "node-a",
-                                endpoint = "wss://a.example/relay",
+                                endpoint = "wss://a.example/v1/gateway",
                                 seed = 2,
                                 activeConnections = 0
                             ),
                             descriptor(
                                 name = "node-b",
-                                endpoint = "wss://b.example/relay",
+                                endpoint = "wss://b.example/v1/gateway",
                                 seed = 3,
                                 activeConnections = 5
                             )
@@ -67,13 +67,13 @@ class DefaultNodeEndpointResolverTest {
                         listOf(
                             descriptor(
                                 name = "node-a",
-                                endpoint = "wss://a.example/relay",
+                                endpoint = "wss://a.example/v1/gateway",
                                 seed = 2,
                                 activeConnections = 5
                             ),
                             descriptor(
                                 name = "node-b",
-                                endpoint = "wss://b.example/relay",
+                                endpoint = "wss://b.example/v1/gateway",
                                 seed = 3,
                                 activeConnections = 0
                             )
@@ -94,7 +94,7 @@ class DefaultNodeEndpointResolverTest {
 
             val endpoints = resolver.resolve("routing-a").getOrThrow()
 
-            assertEquals("wss://b.example/relay", endpoints.first().websocketUrl)
+            assertEquals("wss://b.example/v1/gateway", endpoints.first().websocketUrl)
             assertEquals(1, source.fetchCount)
         }
 
@@ -107,7 +107,7 @@ class DefaultNodeEndpointResolverTest {
                         listOf(
                             descriptor(
                                 name = "node-a",
-                                endpoint = "wss://a.example/relay",
+                                endpoint = "wss://a.example/v1/gateway",
                                 seed = 2,
                                 activeConnections = 1
                             )
@@ -119,7 +119,7 @@ class DefaultNodeEndpointResolverTest {
                         listOf(
                             descriptor(
                                 name = "node-a",
-                                endpoint = "wss://a.example/relay",
+                                endpoint = "wss://a.example/v1/gateway",
                                 seed = 2,
                                 activeConnections = 2
                             )
@@ -159,13 +159,13 @@ class DefaultNodeEndpointResolverTest {
                         listOf(
                             descriptor(
                                 name = "node-a",
-                                endpoint = "wss://a.example/relay",
+                                endpoint = "wss://a.example/v1/gateway",
                                 seed = 2,
                                 activeConnections = 4
                             ),
                             descriptor(
                                 name = "node-b",
-                                endpoint = "wss://b.example/relay",
+                                endpoint = "wss://b.example/v1/gateway",
                                 seed = 3,
                                 activeConnections = 1
                             )
@@ -183,7 +183,7 @@ class DefaultNodeEndpointResolverTest {
 
             val endpoints = resolver.resolve("routing-a").getOrThrow()
 
-            assertEquals("wss://b.example/relay", endpoints.first().websocketUrl)
+            assertEquals("wss://b.example/v1/gateway", endpoints.first().websocketUrl)
             assertEquals(1, endpoints.first().activeConnections)
         }
 
@@ -362,13 +362,13 @@ class DefaultNodeEndpointResolverTest {
                             ?: listOf(
                                 descriptor(
                                     "node-a",
-                                    "wss://a.example/relay",
+                                    "wss://a.example/v1/gateway",
                                     seed = 2,
                                     validUntil = descriptorValidUntil
                                 ),
                                 descriptor(
                                     "node-b",
-                                    "wss://b.example/relay",
+                                    "wss://b.example/v1/gateway",
                                     seed = 3,
                                     validUntil = descriptorValidUntil
                                 )

@@ -62,7 +62,7 @@ class NodeRegistryApplicationRateLimitTest {
         ProtocolSignatures.signDescriptor(
             SecureChatNodeDescriptor(
                 nodeId = identity.nodeId,
-                clientEndpoint = "wss://${identity.nodeId}/relay",
+                clientEndpoint = "wss://${identity.nodeId}/v1/gateway",
                 federationEndpoint = "https://${identity.nodeId}/federation",
                 mailboxEndpoint = "https://${identity.nodeId}/mailbox",
                 identityPublicKey = identity.encodedPublicKey,

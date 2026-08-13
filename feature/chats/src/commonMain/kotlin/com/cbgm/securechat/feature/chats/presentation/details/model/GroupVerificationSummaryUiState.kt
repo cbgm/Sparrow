@@ -38,7 +38,6 @@ data class GroupVerificationSummaryUiState(
     val totalMemberCount: Int = 0,
     val members: List<GroupMemberVerificationUiState> = emptyList(),
     val canLeaveGroup: Boolean = false,
-    val isOrphaned: Boolean = false,
     val adminCount: Int = 0,
     val currentMemberContactIds: Set<String> = emptySet(),
     val requiresAdminPromotionBeforeLeave: Boolean = false,

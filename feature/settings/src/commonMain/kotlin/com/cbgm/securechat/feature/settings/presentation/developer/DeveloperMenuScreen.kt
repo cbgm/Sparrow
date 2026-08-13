@@ -279,19 +279,19 @@ fun DeveloperScreenPreview() {
                         TransportDiagnostics(
                             connectionState = TransportDiagnosticConnectionState.CONNECTED,
                             currentNodeId = "1dc6103605070c67",
-                            currentWebSocketUrl = "ws://192.168.178.60:8490/relay",
+                            currentWebSocketUrl = "ws://192.168.178.60:8490/v1/gateway",
                             registryUrl = "http://10.0.2.2:8390",
                             registryAuthorityVerified = true,
                             availableNodes =
                                 listOf(
                                     TransportNodeDiagnostic(
                                         nodeId = "1dc6103605070c67",
-                                        websocketUrl = "ws://192.168.178.60:8490/relay",
+                                        websocketUrl = "ws://192.168.178.60:8490/v1/gateway",
                                         state = TransportNodeDiagnosticState.CURRENT
                                     ),
                                     TransportNodeDiagnostic(
                                         nodeId = "901d125ea367d974",
-                                        websocketUrl = "ws://192.168.178.21:8490/relay",
+                                        websocketUrl = "ws://192.168.178.21:8490/v1/gateway",
                                         state = TransportNodeDiagnosticState.AVAILABLE
                                     )
                                 )

@@ -6,12 +6,12 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 
-class GatewayCompatibilityTest {
+class GatewaySerializationTest {
     @Test
     fun legacyRegisterFrameStillDecodes() {
         val message =
             serverJson.decodeFromString<GatewayClientMessage>(
-                """{"type":"register","relayId":"routing-id"}"""
+                """{"type":"register","routingId":"routing-id"}"""
             )
 
         assertEquals(GatewayClientMessage.Register("routing-id"), message)
@@ -39,7 +39,7 @@ class GatewayCompatibilityTest {
     @Test
     fun signedRegisterFrameDecodesAllRouteProofFields() {
         val encoded =
-            "{\"type\":\"register\",\"relayId\":\"scrouting1_test\"," +
+            "{\"type\":\"register\",\"routingId\":\"scrouting1_test\"," +
                 "\"connectionId\":\"connection-a\",\"generation\":123," +
                 "\"expiresAtEpochMilliseconds\":456,\"clientSigningPublicKey\":[1,2,3]," +
                 "\"clientSignature\":[4,5,6]}"
@@ -58,7 +58,7 @@ class GatewayCompatibilityTest {
     fun incompleteSignedRegisterFrameIsRejected() {
         assertFailsWith<IllegalArgumentException> {
             serverJson.decodeFromString<GatewayClientMessage>(
-                """{"type":"register","relayId":"scrouting1_test","connectionId":"connection-a","generation":123}"""
+                """{"type":"register","routingId":"scrouting1_test","connectionId":"connection-a","generation":123}"""
             )
         }
     }

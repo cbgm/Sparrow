@@ -18,9 +18,9 @@ interface MailboxRouteDao {
         """
         SELECT remote_mailbox_routes.*
         FROM remote_mailbox_routes
-        INNER JOIN contact_relay_ids
-            ON contact_relay_ids.contactId = remote_mailbox_routes.contactId
-        WHERE contact_relay_ids.relayId = :routingId
+        INNER JOIN contact_routing_ids
+            ON contact_routing_ids.contactId = remote_mailbox_routes.contactId
+        WHERE contact_routing_ids.routingId = :routingId
         LIMIT 1
         """
     )

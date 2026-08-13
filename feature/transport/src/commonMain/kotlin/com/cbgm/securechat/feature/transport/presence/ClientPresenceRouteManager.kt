@@ -153,7 +153,7 @@ internal fun gatewayInformationUrl(serverUrl: String): String {
             .takeIf(String::isNotBlank)
             ?: error("Gateway WebSocket URL must include a host")
 
-    return "$httpScheme$authority/v1/gateway"
+    return "$httpScheme$authority/v1/gateway/info"
 }
 
 internal fun routeExpirationEpochMilliseconds(

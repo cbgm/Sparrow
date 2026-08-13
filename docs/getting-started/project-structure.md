@@ -137,7 +137,7 @@ It moves opaque payloads. See [Transport](../features/transport.md).
 
 ## Server applications
 
-The independently deployable server applications live under `server/`. Client-facing WebSocket routing belongs to `:server:gateway`; cross-node routing belongs to `:server:federation`; offline ciphertext belongs to `:server:mailbox`; push wake-ups and the compatibility pending inbox belong to `:server:push`.
+The independently deployable server applications live under `server/`. Client-facing WebSocket routing belongs to `:server:gateway`; cross-node routing belongs to `:server:federation`; offline ciphertext belongs to `:server:mailbox`; push wake-ups and the pending inbox belong to `:server:push`.
 
 ## Standard feature layout
 

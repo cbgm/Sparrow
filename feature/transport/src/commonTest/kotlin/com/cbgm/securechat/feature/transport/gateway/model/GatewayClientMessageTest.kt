@@ -13,7 +13,7 @@ class GatewayClientMessageTest {
             )
 
         assertEquals(
-            """{"type":"register","relayId":"scrouting1_test"}""",
+            """{"type":"register","routingId":"scrouting1_test"}""",
             encoded
         )
     }

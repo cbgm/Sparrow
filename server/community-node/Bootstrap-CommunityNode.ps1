@@ -1203,7 +1203,7 @@ try {
     $mailboxPassword = (Get-Content -LiteralPath $mailboxPasswordPath -Raw).Trim()
     $federationPassword = (Get-Content -LiteralPath $federationPasswordPath -Raw).Trim()
 
-    $clientEndpoint = if ($mode -eq "public") { "wss://$publicDomain/relay" } else { "ws://$hostAddress`:$publicPort/relay" }
+    $clientEndpoint = if ($mode -eq "public") { "wss://$publicDomain/v1/gateway" } else { "ws://$hostAddress`:$publicPort/v1/gateway" }
     $httpEndpoint = if ($mode -eq "public") { "https://$publicDomain" } else { "http://$hostAddress`:$publicPort" }
     $siteAddress = if ($mode -eq "public") { $publicDomain } else { ":80" }
 

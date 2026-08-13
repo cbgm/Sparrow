@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class PushDeviceRegistrationRequest(
-    @SerialName("relayId")
+    @SerialName("routingId")
     val routingId: String,
     val token: String,
     val platform: String

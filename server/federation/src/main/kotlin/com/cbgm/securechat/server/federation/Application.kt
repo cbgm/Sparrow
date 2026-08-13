@@ -111,7 +111,7 @@ data class FederationConfig(
                             DEFAULT_MAXIMUM_DEDUPLICATION_ENTRIES
                         ),
                     registerNode = boolean("REGISTER_NODE", true),
-                    clientEndpoint = string("CLIENT_ENDPOINT", "ws://localhost:8094/relay"),
+                    clientEndpoint = string("CLIENT_ENDPOINT", "ws://localhost:8094/v1/gateway"),
                     federationEndpoint = string("FEDERATION_ENDPOINT", "http://localhost:8093"),
                     mailboxEndpoint = string("MAILBOX_ENDPOINT", "http://localhost:8092"),
                     outboundRetryPollIntervalMilliseconds =

@@ -48,7 +48,7 @@ class PostgresNodeRegistryStoreIntegrationTest {
         ProtocolSignatures.signDescriptor(
             SecureChatNodeDescriptor(
                 nodeId = identity.nodeId,
-                clientEndpoint = "ws://node-${UUID.randomUUID()}/relay",
+                clientEndpoint = "ws://node-${UUID.randomUUID()}/v1/gateway",
                 federationEndpoint = "http://node/federation",
                 mailboxEndpoint = "http://node/mailbox",
                 identityPublicKey = identity.encodedPublicKey,

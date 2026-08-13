@@ -58,10 +58,10 @@ sender gateway
   -> mailbox acknowledgement
 ```
 
-### Compatibility pending inbox
+### Pending inbox
 
-For peers that have not yet exchanged a mailbox route, the push service still exposes the
-compatibility pending-envelope inbox:
+For peers that have not yet exchanged a mailbox route, the push service exposes the
+pending-envelope inbox:
 
 ```text
 GET  /push/wake/{wakeUpId}/inbox
@@ -79,8 +79,7 @@ control-plane/push endpoints through:
 POST /push/devices
 ```
 
-The Kotlin property is `routingId`; the serialized request still uses the legacy JSON field
-`relayId` for compatibility with deployed server versions.
+The push registration request serializes the client routing identifier as `routingId`.
 
 ## Manual test
 
@@ -123,9 +122,7 @@ docker compose -f server/docker-compose.yml logs --since=5m push mailbox federat
 
 ## Persistence
 
-`:server:push` persists device tokens, wake-up mappings and compatibility pending envelopes in its
-PostgreSQL database. Normal Docker/service restarts therefore do not depend on the removed
-standalone relay process.
+`:server:push` persists device tokens, wake-up mappings and pending envelopes in its PostgreSQL database.
 
 Mailbox-based offline ciphertext belongs to `:server:mailbox`; cross-node routing belongs to
 `:server:federation`; the client WebSocket edge belongs to `:server:gateway`.

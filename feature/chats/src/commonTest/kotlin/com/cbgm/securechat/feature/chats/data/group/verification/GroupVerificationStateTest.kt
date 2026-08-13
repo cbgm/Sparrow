@@ -23,7 +23,7 @@ import kotlin.test.assertEquals
 
 class GroupVerificationStateTest {
     @Test
-    fun ownerInitializationKeepsPendingInvitationsBeforeSecurityEpochExists() =
+    fun inviteSentIsNotExposedAsPendingVerificationMember() =
         runTest {
             val invitationDao = FakeGroupInvitationDao()
             val verificationDao = FakeGroupVerificationDao()
@@ -38,9 +38,7 @@ class GroupVerificationStateTest {
 
             state.refreshOwnedState(GROUP_ID)
 
-            val row = verificationDao.rows.single()
-            assertEquals(CONTACT_ID, row.contactId)
-            assertEquals(GroupVerificationPairEntity.PENDING_STATUS, row.membershipStatus)
+            assertEquals(emptyList(), verificationDao.rows)
         }
 
     @Test

@@ -17,7 +17,7 @@ services:
   # resolve on the shared Docker network.
   federation:
     environment:
-      CLIENT_ENDPOINT: ws://10.0.2.2:8094/relay
+      CLIENT_ENDPOINT: ws://10.0.2.2:8094/v1/gateway
       FEDERATION_ENDPOINT: http://federation:8093
       MAILBOX_ENDPOINT: http://mailbox:8092
 
@@ -95,7 +95,7 @@ services:
       NODE_REGISTRY_URL: http://node-registry:8090
       PRESENCE_DIRECTORY_URL: http://presence-directory:8091
       GATEWAY_INTERNAL_URL: http://gateway-b:8094
-      CLIENT_ENDPOINT: ws://10.0.2.2:8294/relay
+      CLIENT_ENDPOINT: ws://10.0.2.2:8294/v1/gateway
       FEDERATION_ENDPOINT: http://federation-b:8093
       MAILBOX_ENDPOINT: http://mailbox-b:8092
       FEDERATION_INTERNAL_API_TOKEN: ${FEDERATION_B_INTERNAL_API_TOKEN:-local-federation-b-development-token}

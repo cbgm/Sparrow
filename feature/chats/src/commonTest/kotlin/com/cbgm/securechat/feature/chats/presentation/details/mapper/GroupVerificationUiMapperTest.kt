@@ -152,13 +152,12 @@ class GroupVerificationUiMapperTest {
                         )
                     ),
                 currentMemberContactIds = emptySet(),
-                remoteAdminContactIds = emptySet(),
-                isOrphaned = true
+                remoteAdminContactIds = emptySet()
             )
 
         assertEquals(listOf("Participant"), summary.members.map { it.displayName })
         assertEquals(1, summary.totalMemberCount)
-        assertTrue(summary.isOrphaned)
+        assertEquals(0, summary.adminCount)
     }
 
     @Test

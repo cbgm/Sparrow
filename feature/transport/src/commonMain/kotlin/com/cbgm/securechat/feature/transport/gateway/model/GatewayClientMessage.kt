@@ -11,7 +11,7 @@ sealed interface GatewayClientMessage {
     @Serializable
     @SerialName("register")
     data class Register(
-        @SerialName("relayId")
+        @SerialName("routingId")
         val routingId: String,
         val connectionId: String? = null,
         val generation: Long? = null,

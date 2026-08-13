@@ -236,7 +236,7 @@
     <string name="feature_identity_signing_public_key">Signing public key</string>
     <string name="feature_identity_signing_public_key_description">Used to verify identity information.</string>
     <string name="feature_identity_something_went_wrong">Something went wrong</string>
-    <string name="feature_identity_stable_relay_address_description">This number becomes your stable SecureChat relay address.</string>
+    <string name="feature_identity_stable_routing_address_description">This number becomes your stable SecureChat routing address.</string>
     <string name="feature_identity_your_phone_number">Your phone number</string>
     <string name="feature_identity_your_securechat_identity">Your SecureChat identity</string>
 
@@ -285,7 +285,7 @@
     <string name="feature_settings_danger_zone">Danger zone</string>
     <string name="feature_settings_danger_zone_description">These actions are destructive and only intended for local debugging.</string>
     <string name="feature_settings_data_disclaimer">Data disclaimer</string>
-    <string name="feature_settings_data_disclaimer_subtitle">What SecureChat stores locally and on the relay</string>
+    <string name="feature_settings_data_disclaimer_subtitle">What SecureChat stores locally and in the server infrastructure</string>
     <string name="feature_settings_developer_menu">Developer menu</string>
     <string name="feature_settings_developer_menu_subtitle">Build info, feature flags, diagnostics</string>
     <string name="feature_settings_network_diagnostics">Network diagnostics</string>
@@ -451,7 +451,5 @@
     <string name="feature_chats_group_promote_admin_description">Promote %1$s to group admin? Admins can add and remove members and promote other admins.</string>
     <string name="feature_chats_group_promote_before_leave">Choose a new admin</string>
     <string name="feature_chats_group_promote_before_leave_description">You are the only admin. Promote another active member before leaving this group.</string>
-    <string name="feature_chats_group_orphaned_title">Group administrator unavailable</string>
-    <string name="feature_chats_group_orphaned_description">No current admin identity is available. Messages can continue between active members, but membership changes are disabled.</string>
     <string name="feature_chats_group_member_unavailable">Unavailable — re-invite required</string>
 </resources>

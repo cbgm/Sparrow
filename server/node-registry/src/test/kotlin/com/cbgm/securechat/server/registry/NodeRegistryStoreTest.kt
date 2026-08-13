@@ -22,7 +22,7 @@ class NodeRegistryStoreTest {
                 ProtocolSignatures.signDescriptor(
                     SecureChatNodeDescriptor(
                         nodeId = identity.nodeId,
-                        clientEndpoint = "ws://node/relay",
+                        clientEndpoint = "ws://node/v1/gateway",
                         federationEndpoint = "http://node/federation",
                         mailboxEndpoint = "http://node/mailbox",
                         identityPublicKey = identity.encodedPublicKey,
@@ -94,7 +94,7 @@ class NodeRegistryStoreTest {
         ProtocolSignatures.signDescriptor(
             SecureChatNodeDescriptor(
                 nodeId = identity.nodeId,
-                clientEndpoint = "ws://node/relay",
+                clientEndpoint = "ws://node/v1/gateway",
                 federationEndpoint = "http://node/federation",
                 mailboxEndpoint = "http://node/mailbox",
                 identityPublicKey = identity.encodedPublicKey,

@@ -8,8 +8,8 @@ class FailedNodeTrackerTest {
     fun failedNodeIsSkippedUntilItsCooldownExpires() {
         var now = 1_000L
         val tracker = FailedNodeTracker(cooldownMilliseconds = 30_000L, now = { now })
-        val nodeA = NodeEndpoint("node-a", "wss://a.example/relay")
-        val nodeB = NodeEndpoint("node-b", "wss://b.example/relay")
+        val nodeA = NodeEndpoint("node-a", "wss://a.example/v1/gateway")
+        val nodeB = NodeEndpoint("node-b", "wss://b.example/v1/gateway")
 
         tracker.recordFailure(nodeA.nodeId)
 
@@ -34,8 +34,8 @@ class FailedNodeTrackerTest {
     fun oldestFailureIsUsedAsProbeWhenEveryNodeIsCoolingDown() {
         var now = 1_000L
         val tracker = FailedNodeTracker(cooldownMilliseconds = 30_000L, now = { now })
-        val nodeA = NodeEndpoint("node-a", "wss://a.example/relay")
-        val nodeB = NodeEndpoint("node-b", "wss://b.example/relay")
+        val nodeA = NodeEndpoint("node-a", "wss://a.example/v1/gateway")
+        val nodeB = NodeEndpoint("node-b", "wss://b.example/v1/gateway")
 
         tracker.recordFailure(nodeA.nodeId)
         now += 1_000L
@@ -48,7 +48,7 @@ class FailedNodeTrackerTest {
     @Test
     fun successfulConnectionRemovesPreviousFailure() {
         val tracker = FailedNodeTracker(cooldownMilliseconds = 30_000L, now = { 1_000L })
-        val node = NodeEndpoint("node-a", "wss://a.example/relay")
+        val node = NodeEndpoint("node-a", "wss://a.example/v1/gateway")
 
         tracker.recordFailure(node.nodeId)
         tracker.recordSuccess(node.nodeId)

@@ -203,7 +203,7 @@ page. Never edit generated files manually.
 # Federated Server Implementation
 
 The independently deployable registry, presence, gateway, federation, mailbox, and push services are
-available under [`server/`](server/README.md). The obsolete standalone relay module has been removed.
+available under [`server/`](server/README.md). The old standalone WebSocket server module has been removed.
 A complete local network can be started with:
 
 ```bash

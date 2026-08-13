@@ -77,8 +77,6 @@ import com.cbgm.securechat.resources.feature_chats_group_member_mutually_verifie
 import com.cbgm.securechat.resources.feature_chats_group_member_participant_verified_admin
 import com.cbgm.securechat.resources.feature_chats_group_member_unavailable
 import com.cbgm.securechat.resources.feature_chats_group_member_unverified
-import com.cbgm.securechat.resources.feature_chats_group_orphaned_description
-import com.cbgm.securechat.resources.feature_chats_group_orphaned_title
 import com.cbgm.securechat.resources.feature_chats_group_promote_admin
 import com.cbgm.securechat.resources.feature_chats_group_remove_member_name
 import com.cbgm.securechat.resources.feature_chats_group_verification_pending_note
@@ -281,21 +279,6 @@ private fun Summary(summary: GroupVerificationSummaryUiState) {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        if (summary.isOrphaned) {
-            Text(
-                text = stringResource(Res.string.feature_chats_group_orphaned_title),
-                modifier = Modifier.padding(top = MaterialTheme.spacing.small),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.error
-            )
-            Text(
-                text = stringResource(Res.string.feature_chats_group_orphaned_description),
-                modifier = Modifier.padding(top = MaterialTheme.spacing.base.div(2)),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
         Row(
             modifier =
                 Modifier
@@ -379,7 +362,7 @@ private fun MemberList(
             Summary(summary = summary)
         }
 
-        if (summary.isLocalAdmin && !summary.isOrphaned) {
+        if (summary.isLocalAdmin) {
             item(key = "member-management") {
                 MemberManagementActions(onAddMembers = onAddMembers)
             }

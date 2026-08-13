@@ -75,14 +75,14 @@ internal class PostgresPushDatabase(
                 """
                 CREATE TABLE IF NOT EXISTS push_devices (
                     token TEXT PRIMARY KEY,
-                    relay_id TEXT NOT NULL,
+                    routing_id TEXT NOT NULL,
                     platform TEXT NOT NULL,
                     updated_at_epoch_milliseconds BIGINT NOT NULL
                 )
                 """.trimIndent(),
                 """
-                CREATE INDEX IF NOT EXISTS push_devices_relay_id_idx
-                ON push_devices (relay_id)
+                CREATE INDEX IF NOT EXISTS push_devices_routing_id_idx
+                ON push_devices (routing_id)
                 """.trimIndent(),
                 """
                 CREATE TABLE IF NOT EXISTS pending_envelopes (

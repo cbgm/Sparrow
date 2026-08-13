@@ -8,7 +8,7 @@ sealed interface GatewayServerMessage {
     @Serializable
     @SerialName("registered")
     data class Registered(
-        @SerialName("relayId")
+        @SerialName("routingId")
         val routingId: String
     ) : GatewayServerMessage
 

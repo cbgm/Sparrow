@@ -160,8 +160,8 @@
     "group": "data",
     "directory": "data/database",
     "buildFile": "data/database/build.gradle.kts",
-    "kotlinSourceFileCount": 42,
-    "productionKotlinFileCount": 42,
+    "kotlinSourceFileCount": 41,
+    "productionKotlinFileCount": 41,
     "testKotlinFileCount": 0,
     "resourceFileCount": 1,
     "sourceSets": [

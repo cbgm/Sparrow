@@ -1,34 +1,30 @@
 # WebSocket API
 
 The client and `:server:gateway` exchange serialized sealed messages over text WebSocket frames.
-Client models live in `:feature:transport/gateway`; matching compatibility models live in
-`:server:protocol`.
+Client models live in `:feature:transport/gateway`; matching wire models live in `:server:protocol`.
 
 ## Connection
 
 Gateway endpoints come from the verified node directory. Clients do not configure a static
 WebSocket endpoint as their primary routing mechanism.
 
-The external WebSocket path remains:
+The external WebSocket path is:
 
 ```text
-/relay
+/v1/gateway
 ```
 
-This legacy path is intentionally preserved. The Kotlin/package refactor does not change the wire
-endpoint.
-
 Immediately after the Ktor WebSocket opens, the client sends `GatewayClientMessage.Register`.
-The Kotlin property is `routingId`, while the JSON field remains `relayId` for compatibility:
+The routing identifier is serialized as `routingId`:
 
 ```json
 {
   "type": "register",
-  "relayId": "scrouting1_..."
+  "routingId": "scrouting1_..."
 }
 ```
 
-`GatewayServerMessage.Registered` uses the same compatibility field name. Until registration
+`GatewayServerMessage.Registered` uses the same `routingId` field name. Until registration
 succeeds, envelope, typing, and acknowledgement frames are rejected as not registered.
 
 ## Client-to-gateway messages
@@ -52,8 +48,7 @@ succeeds, envelope, typing, and acknowledgement frames are rejected as not regis
 | `envelope_accepted` | `GatewayServerMessage.EnvelopeAccepted` | Confirm gateway acceptance of an outgoing envelope |
 | `error` | `GatewayServerMessage.Error` | Report a frame/registration/routing error |
 
-The `@SerialName` discriminator values are protocol compatibility values. Renaming Kotlin classes
-must not change them.
+The `@SerialName` discriminator values are the gateway wire protocol names. They are kept explicit so Kotlin class names can evolve independently.
 
 ## TransportEnvelope
 
@@ -78,14 +73,13 @@ transport envelope. Recipient delivery is confirmed by SecureChat's delivery-rec
 read state by the read-receipt packet.
 
 For an incoming envelope, the client acknowledges only after local processing succeeds. That
-acknowledgement allows pending compatibility storage to remove its copy.
+acknowledgement allows pending storage to remove its copy.
 
-## Compatibility rules
+## Wire-protocol rules
 
 When changing these models:
 
 1. update both `:feature:transport` and `:server:protocol`;
-2. preserve existing `@SerialName` discriminators unless performing an explicit protocol migration;
-3. preserve the serialized registration field `relayId` until a separate wire migration is designed;
-4. preserve `WS /relay` until a separate endpoint migration is designed;
-5. add compatibility tests before changing any serialized field or discriminator.
+2. change explicit `@SerialName` values only when the wire protocol itself is intentionally changed;
+3. keep client and server serialization tests aligned;
+4. treat `WS /v1/gateway` and `routingId` as the canonical protocol names.

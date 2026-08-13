@@ -1,7 +1,7 @@
 # Federated SecureChat server
 
 The `server/` directory contains the first runnable implementation of the federated node architecture.
-The obsolete standalone relay application has been removed; client WebSockets are served by `:server:gateway`.
+The old standalone WebSocket server application has been removed; client WebSockets are served by `:server:gateway`.
 
 ## Modules
 
@@ -49,16 +49,10 @@ Start the network from the repository root:
 docker compose -f server/docker-compose.yml up --build
 ```
 
-Configure the Android emulator to use:
-
-```text
-securechat.registry.baseUrl=http://10.0.2.2:8090
-securechat.relay.httpBaseUrl=http://10.0.2.2:8095
-```
-
-The registry URL is used for signed WebSocket node discovery. The push URL remains separate. Leave
-`securechat.registry.authorityNodeId` empty for local trust on first use, or pin the registry ID
-returned by `/v1/nodes`. The push health response must contain `fcmEnabled=true`.
+Android clients bootstrap through the configured control-plane directory and obtain signed node
+descriptors from `/v1/nodes`; they do not require a static gateway or registry URL. For local testing,
+verify that the control plane is reachable from the emulator and that push health reports
+`fcmEnabled=true` when background delivery is enabled.
 
 ## Run the two-node federation test
 
@@ -226,7 +220,7 @@ The trusted registry ID is deliberately retained across app restarts. If local t
 `registry-identity` Docker volume, clear the app data once before trusting the newly generated local
 authority. Production clients must never reset that trust automatically.
 
-The gateway accepts the existing gateway WebSocket frames. Current clients fetch `/v1/gateway`, create
+The gateway accepts the existing gateway WebSocket frames. Current clients fetch `/v1/gateway/info`, create
 a connection ID, and attach a signed, expiring presence route to the initial `register` frame. They
 refresh that route every 30 seconds while the WebSocket remains connected. Older clients still work
 locally through the compatibility registration, but they do not publish a cross-node presence route.
@@ -602,23 +596,16 @@ the merged production configuration. Public traffic is restricted to these proto
 
 | Public route | Service |
 |---|---|
-| `/relay` | Gateway WebSocket |
-| `/v1/gateway` | Gateway node information used for signed client routes |
+| `/v1/gateway` | Gateway WebSocket |
+| `/v1/gateway/info` | Gateway node information used for signed client routes |
 | `/push/*` | Push registration and opaque wake-up retrieval |
 | `/v1/federation/*` | Signed node-to-node envelope delivery |
 | `/v1/mailboxes/*` | Capability-protected mailbox operations |
 | `/v1/nodes/*` | Signed node registry |
 
-Configure clients with:
-
-```text
-securechat.registry.baseUrl=https://chat.example.com
-securechat.registry.authorityNodeId=<authorityNodeId from /v1/nodes>
-securechat.relay.httpBaseUrl=https://chat.example.com
-```
-
-Production builds must pin `authorityNodeId`. Trust on first use is intended only to make local
-development with a newly generated registry identity convenient.
+Clients discover gateway endpoints from the configured control-plane directory and signed node
+descriptors. Production trust is anchored by the control-plane/node signing chain; no static gateway
+HTTP base URL is required in the client.
 
 Verify the public registry and TLS certificate:
 

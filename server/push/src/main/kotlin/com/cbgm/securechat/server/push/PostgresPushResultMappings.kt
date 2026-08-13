@@ -8,7 +8,7 @@ internal fun ResultSet.readPushDevices(): List<PushDevice> =
         while (next()) {
             add(
                 PushDevice(
-                    routingId = getString("relay_id"),
+                    routingId = getString("routing_id"),
                     token = getString("token"),
                     platform = getString("platform")
                 )

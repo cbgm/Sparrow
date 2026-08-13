@@ -81,8 +81,6 @@ import com.cbgm.securechat.resources.feature_chats_group_member_key_sent
 import com.cbgm.securechat.resources.feature_chats_group_member_left_message
 import com.cbgm.securechat.resources.feature_chats_group_member_removed_message
 import com.cbgm.securechat.resources.feature_chats_group_message_queued
-import com.cbgm.securechat.resources.feature_chats_group_orphaned_description
-import com.cbgm.securechat.resources.feature_chats_group_orphaned_title
 import com.cbgm.securechat.resources.feature_chats_group_removed_hint_description
 import com.cbgm.securechat.resources.feature_chats_group_removed_hint_title
 import com.cbgm.securechat.resources.feature_chats_group_status_declined
@@ -324,37 +322,8 @@ private fun StatusHint(
             (uiState.state == GroupConversationState.DECLINED && uiState.messages.isNotEmpty()) ->
             MembershipRemovedHint()
         uiState.state == GroupConversationState.LEAVING -> MembershipLeavingHint()
-        uiState.state == GroupConversationState.ORPHANED -> OrphanedHint()
         uiState.state != GroupConversationState.READY && uiState.isMessageInputEnabled ->
             PendingMessageHint(uiState = uiState)
-    }
-}
-
-@Composable
-private fun OrphanedHint() {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-    ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = MaterialTheme.spacing.medium,
-                        vertical = MaterialTheme.spacing.small
-                    )
-        ) {
-            Text(
-                text = stringResource(Res.string.feature_chats_group_orphaned_title),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.error
-            )
-            Text(
-                text = stringResource(Res.string.feature_chats_group_orphaned_description),
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
     }
 }
 
@@ -392,7 +361,6 @@ private fun subtitle(uiState: GroupUiState): String =
     when (uiState.state) {
         GroupConversationState.READY ->
             stringResource(Res.string.feature_chats_group_member_count, uiState.memberCount)
-        GroupConversationState.ORPHANED -> stringResource(Res.string.feature_chats_group_orphaned_title)
         GroupConversationState.INVITED -> stringResource(Res.string.feature_chats_group_status_invited)
         GroupConversationState.JOINING -> stringResource(Res.string.feature_chats_group_status_joining)
         GroupConversationState.WAITING_FOR_MEMBERS ->

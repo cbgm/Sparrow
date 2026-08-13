@@ -48,7 +48,7 @@ private fun Route.installInformationRoute(
     identity: NodeIdentity,
     config: GatewayConfig
 ) {
-    get("/v1/gateway") {
+    get("/v1/gateway/info") {
         call.response.headers.append(
             SERVER_TIME_HEADER,
             System.currentTimeMillis().toString()
@@ -74,7 +74,7 @@ private fun Route.installControlPlaneDiscoveryRoute(config: GatewayConfig) {
 }
 
 private fun Route.installGatewayWebSocketRoute(runtime: GatewayRuntime) {
-    webSocket("/relay") {
+    webSocket("/v1/gateway") {
         runtime.handler.handle(this)
     }
 }

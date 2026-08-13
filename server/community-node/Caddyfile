@@ -8,14 +8,14 @@
         -Server
     }
 
-    @relay path /relay
-    handle @relay {
+    @gateway_ws path /v1/gateway
+    handle @gateway_ws {
         reverse_proxy gateway:8094 {
             stream_close_delay 5m
         }
     }
 
-    @gateway_info path /v1/gateway /v1/control-planes
+    @gateway_info path /v1/gateway/info /v1/control-planes
     handle @gateway_info {
         reverse_proxy gateway:8094
     }

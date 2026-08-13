@@ -283,7 +283,7 @@ class NodeDirectoryVerifierTest {
         val node =
             SecureChatNodeDescriptor(
                 nodeId = nodeId(nodeKey),
-                clientEndpoint = "wss://node.example/relay",
+                clientEndpoint = "wss://node.example/v1/gateway",
                 federationEndpoint = "https://node.example/federation",
                 mailboxEndpoint = "https://node.example/mailbox",
                 identityPublicKey = nodeKey,

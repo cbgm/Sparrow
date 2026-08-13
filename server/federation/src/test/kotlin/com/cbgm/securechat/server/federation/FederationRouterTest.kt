@@ -35,6 +35,7 @@ class FederationRouterTest {
                             EnvelopeAcceptanceState.STORED_AT_DESTINATION
                         )
                     },
+                    queue = OutboundEnvelopeQueue(now = { currentTime }),
                     retryBaseDelayMilliseconds = 500L,
                     now = { currentTime }
                 )
@@ -302,7 +303,7 @@ class FederationRouterTest {
     private fun testNodeDescriptor(): SecureChatNodeDescriptor =
         SecureChatNodeDescriptor(
             nodeId = "node-b",
-            clientEndpoint = "ws://gateway-b/relay",
+            clientEndpoint = "ws://gateway-b/v1/gateway",
             federationEndpoint = "http://federation-b",
             mailboxEndpoint = "http://mailbox-b",
             identityPublicKey = byteArrayOf(1),

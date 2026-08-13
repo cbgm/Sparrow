@@ -62,7 +62,7 @@ import com.cbgm.securechat.resources.feature_identity_share_my_identity
 import com.cbgm.securechat.resources.feature_identity_signing_public_key
 import com.cbgm.securechat.resources.feature_identity_signing_public_key_description
 import com.cbgm.securechat.resources.feature_identity_something_went_wrong
-import com.cbgm.securechat.resources.feature_identity_stable_relay_address_description
+import com.cbgm.securechat.resources.feature_identity_stable_routing_address_description
 import com.cbgm.securechat.resources.feature_identity_your_phone_number
 import org.jetbrains.compose.resources.stringResource
 
@@ -205,7 +205,7 @@ private fun NoIdentityContent(
                         Text(
                             text =
                                 phoneNumberError
-                                    ?: stringResource(Res.string.feature_identity_stable_relay_address_description),
+                                    ?: stringResource(Res.string.feature_identity_stable_routing_address_description),
                             style = MaterialTheme.typography.labelLarge
                         )
                     },

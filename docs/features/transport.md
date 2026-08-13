@@ -60,19 +60,13 @@ feature/transport/.../feature/transport/
 └── di/
 ```
 
-There is no client-side `gateway` package.
-
 ## Routing IDs
 
-`RoutingIdGenerator` derives canonical routing IDs from signing identities. The code uses
-`routingId` terminology consistently. Some compatibility boundaries intentionally retain legacy
-external names:
+`RoutingIdGenerator` derives canonical routing IDs from signing identities. Routing terminology is
+consistent across the Kotlin API, gateway wire model, local Room schema, and server-side storage.
 
-- registration JSON still serializes the property as `relayId`;
-- the Room schema still uses `contact_relay_ids.relayId`;
-- the public WebSocket endpoint remains `/relay`.
-
-Those are compatibility details, not client architecture concepts.
+The canonical client WebSocket endpoint is `WS /v1/gateway`. Gateway timing information is available
+through `GET /v1/gateway/info`.
 
 ## Connection lifecycle
 
@@ -132,9 +126,9 @@ hierarchies have separate compatibility boundaries.
 ## Extension rules
 
 - Add gateway wire frames to `GatewayClientMessage`/`GatewayServerMessage` and update the matching
-  server compatibility models.
-- Preserve existing wire `@SerialName` values unless doing a deliberate protocol migration.
-- Preserve `/relay` as an external endpoint until a separate endpoint migration exists.
+  server wire models.
+- Keep explicit wire `@SerialName` values aligned between client and server.
+- Use `/v1/gateway` as the canonical WebSocket endpoint.
 - Keep contact/group routing resolution in `:feature:messaging`, not in transport.
 - Keep packet meaning and encryption policy outside transport.
 - Never interpret gateway acceptance as recipient delivery.

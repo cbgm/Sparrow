@@ -111,7 +111,7 @@ feature/messaging/.../feature/messaging/
 └── di/
 ```
 
-There is no messaging `domain/relay` or `data/relay` package. Routing contracts live with the
+Routing contracts live with the
 application boundary they support; implementations live under `data/routing`.
 
 ## Placement rules

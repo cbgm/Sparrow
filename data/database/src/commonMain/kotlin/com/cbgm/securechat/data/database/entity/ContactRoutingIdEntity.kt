@@ -1,12 +1,11 @@
 package com.cbgm.securechat.data.database.entity
 
-import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 
 @Entity(
-    tableName = "contact_relay_ids",
+    tableName = "contact_routing_ids",
     primaryKeys = ["contactId"],
     foreignKeys = [
         ForeignKey(
@@ -18,11 +17,10 @@ import androidx.room.Index
     ],
     indices = [
         Index(value = ["contactId"], unique = true),
-        Index(value = ["relayId"], unique = true)
+        Index(value = ["routingId"], unique = true)
     ]
 )
 data class ContactRoutingIdEntity(
     val contactId: String,
-    @ColumnInfo(name = "relayId")
     val routingId: String
 )

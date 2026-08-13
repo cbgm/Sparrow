@@ -53,7 +53,7 @@ At startup the node reads that document and selects a reachable control plane fr
 The launcher automatically advertises the machine's LAN address on port `8490`:
 
 ```text
-ws://<lan-ip>:8490/relay
+ws://<lan-ip>:8490/v1/gateway
 http://<lan-ip>:8490
 ```
 
@@ -62,7 +62,7 @@ http://<lan-ip>:8490
 Public mode advertises:
 
 ```text
-wss://<PUBLIC_DOMAIN>/relay
+wss://<PUBLIC_DOMAIN>/v1/gateway
 https://<PUBLIC_DOMAIN>
 ```
 

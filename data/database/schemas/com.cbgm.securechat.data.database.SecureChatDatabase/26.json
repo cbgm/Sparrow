@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 23,
-    "identityHash": "ef792ad599dba91415b726296603d03d",
+    "version": 26,
+    "identityHash": "d8489aa5c3b0ac9fe00cb44e9f8145de",
     "entities": [
       {
         "tableName": "contacts",
@@ -261,8 +261,8 @@
         ]
       },
       {
-        "tableName": "contact_relay_ids",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`contactId` TEXT NOT NULL, `relayId` TEXT NOT NULL, PRIMARY KEY(`contactId`), FOREIGN KEY(`contactId`) REFERENCES `contacts`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "tableName": "contact_routing_ids",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`contactId` TEXT NOT NULL, `routingId` TEXT NOT NULL, PRIMARY KEY(`contactId`), FOREIGN KEY(`contactId`) REFERENCES `contacts`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "contactId",
@@ -271,8 +271,8 @@
             "notNull": true
           },
           {
-            "fieldPath": "relayId",
-            "columnName": "relayId",
+            "fieldPath": "routingId",
+            "columnName": "routingId",
             "affinity": "TEXT",
             "notNull": true
           }
@@ -285,22 +285,22 @@
         },
         "indices": [
           {
-            "name": "index_contact_relay_ids_contactId",
+            "name": "index_contact_routing_ids_contactId",
             "unique": true,
             "columnNames": [
               "contactId"
             ],
             "orders": [],
-            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_contact_relay_ids_contactId` ON `${TABLE_NAME}` (`contactId`)"
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_contact_routing_ids_contactId` ON `${TABLE_NAME}` (`contactId`)"
           },
           {
-            "name": "index_contact_relay_ids_relayId",
+            "name": "index_contact_routing_ids_routingId",
             "unique": true,
             "columnNames": [
-              "relayId"
+              "routingId"
             ],
             "orders": [],
-            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_contact_relay_ids_relayId` ON `${TABLE_NAME}` (`relayId`)"
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_contact_routing_ids_routingId` ON `${TABLE_NAME}` (`routingId`)"
           }
         ],
         "foreignKeys": [
@@ -488,7 +488,7 @@
       },
       {
         "tableName": "group_security_states",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`groupId` TEXT NOT NULL, `currentEpoch` INTEGER NOT NULL, `welcomePacketId` TEXT, `ownerContactId` TEXT, `ownerSigningPublicKey` BLOB NOT NULL, `localSigningPublicKey` BLOB NOT NULL, `updatedAtEpochMilliseconds` INTEGER NOT NULL, PRIMARY KEY(`groupId`), FOREIGN KEY(`groupId`) REFERENCES `conversations`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`groupId` TEXT NOT NULL, `currentEpoch` INTEGER NOT NULL, `welcomePacketId` TEXT, `ownerContactId` TEXT, `ownerSigningPublicKey` BLOB NOT NULL, `localSigningPublicKey` BLOB NOT NULL, `localRole` TEXT NOT NULL DEFAULT 'MEMBER', `updatedAtEpochMilliseconds` INTEGER NOT NULL, PRIMARY KEY(`groupId`), FOREIGN KEY(`groupId`) REFERENCES `conversations`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "groupId",
@@ -523,6 +523,13 @@
             "columnName": "localSigningPublicKey",
             "affinity": "BLOB",
             "notNull": true
+          },
+          {
+            "fieldPath": "localRole",
+            "columnName": "localRole",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'MEMBER'"
           },
           {
             "fieldPath": "updatedAtEpochMilliseconds",
@@ -881,7 +888,7 @@
       },
       {
         "tableName": "identity_invitations",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`invitationId` TEXT NOT NULL, `contactId` TEXT NOT NULL, `direction` TEXT NOT NULL, `state` TEXT NOT NULL, `remoteDisplayName` TEXT, `inviteChallenge` BLOB NOT NULL, `responseChallenge` BLOB, `remoteEncryptionPublicKey` BLOB NOT NULL, `remoteSigningPublicKey` BLOB NOT NULL, `createdAtEpochMilliseconds` INTEGER NOT NULL, `expiresAtEpochMilliseconds` INTEGER NOT NULL, `updatedAtEpochMilliseconds` INTEGER NOT NULL, `lastError` TEXT, PRIMARY KEY(`invitationId`), FOREIGN KEY(`contactId`) REFERENCES `contacts`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`invitationId` TEXT NOT NULL, `contactId` TEXT NOT NULL, `direction` TEXT NOT NULL, `state` TEXT NOT NULL, `remoteDisplayName` TEXT, `inviteChallenge` BLOB NOT NULL, `responseChallenge` BLOB, `remoteEncryptionPublicKey` BLOB NOT NULL, `remoteSigningPublicKey` BLOB NOT NULL, `createdAtEpochMilliseconds` INTEGER NOT NULL, `expiresAtEpochMilliseconds` INTEGER NOT NULL, `updatedAtEpochMilliseconds` INTEGER NOT NULL, `lastError` TEXT, `localEncryptionPublicKey` BLOB, `localSigningPublicKey` BLOB, PRIMARY KEY(`invitationId`), FOREIGN KEY(`contactId`) REFERENCES `contacts`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "invitationId",
@@ -957,6 +964,16 @@
             "fieldPath": "lastError",
             "columnName": "lastError",
             "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "localEncryptionPublicKey",
+            "columnName": "localEncryptionPublicKey",
+            "affinity": "BLOB"
+          },
+          {
+            "fieldPath": "localSigningPublicKey",
+            "columnName": "localSigningPublicKey",
+            "affinity": "BLOB"
           }
         ],
         "primaryKey": {
@@ -1541,7 +1558,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ef792ad599dba91415b726296603d03d')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd8489aa5c3b0ac9fe00cb44e9f8145de')"
     ]
   }
 }

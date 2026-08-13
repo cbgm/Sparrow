@@ -97,7 +97,7 @@ class NodeRequestAuthorizerTest {
             ProtocolSignatures.signDescriptor(
                 SecureChatNodeDescriptor(
                     nodeId = identity.nodeId,
-                    clientEndpoint = "wss://node.example/relay",
+                    clientEndpoint = "wss://node.example/v1/gateway",
                     federationEndpoint = "https://node.example",
                     mailboxEndpoint = "https://node.example",
                     identityPublicKey = identity.encodedPublicKey,

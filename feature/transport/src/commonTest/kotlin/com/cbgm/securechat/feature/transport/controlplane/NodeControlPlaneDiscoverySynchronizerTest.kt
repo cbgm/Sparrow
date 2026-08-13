@@ -37,7 +37,7 @@ class NodeControlPlaneDiscoverySynchronizerTest {
                     configuration = configuration
                 )
 
-            val count = synchronizer.refreshFromNode("wss://node.example/relay").getOrThrow()
+            val count = synchronizer.refreshFromNode("wss://node.example/v1/gateway").getOrThrow()
 
             assertEquals(2, count)
             assertEquals(
@@ -68,7 +68,7 @@ class NodeControlPlaneDiscoverySynchronizerTest {
                     configuration = configuration
                 )
 
-            val result = synchronizer.refreshFromNode("ws://node.example/relay")
+            val result = synchronizer.refreshFromNode("ws://node.example/v1/gateway")
 
             assertTrue(result.isFailure)
             assertTrue(configuration.directoryBaseUrls.value.isEmpty())

@@ -44,7 +44,6 @@ class GroupMembershipRepositoryImpl(
             emit(
                 GroupAdministrationState(
                     isLocalAdmin = localIsAdmin,
-                    isOrphaned = !localIsAdmin && currentAdmins.isEmpty(),
                     adminContactIds = currentAdmins,
                     currentMemberContactIds = currentMembers,
                     promotableContactIds =
