@@ -20,7 +20,6 @@ Generated automatically by `./gradlew architectureReport`.
 ## Source sets
 
 - `androidDeviceTest`
-- `androidHostTest`
 - `androidMain`
 - `commonMain`
 - `iosMain`

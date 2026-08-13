@@ -1,6 +1,6 @@
 package com.cbgm.securechat.server.push
 
-import com.cbgm.securechat.server.protocol.RelayEnvelope
+import com.cbgm.securechat.server.protocol.TransportEnvelope
 import java.sql.ResultSet
 
 internal fun ResultSet.readPushDevices(): List<PushDevice> =
@@ -8,7 +8,7 @@ internal fun ResultSet.readPushDevices(): List<PushDevice> =
         while (next()) {
             add(
                 PushDevice(
-                    relayId = getString("relay_id"),
+                    routingId = getString("relay_id"),
                     token = getString("token"),
                     platform = getString("platform")
                 )
@@ -16,11 +16,11 @@ internal fun ResultSet.readPushDevices(): List<PushDevice> =
         }
     }
 
-internal fun ResultSet.readRelayEnvelopes(): List<RelayEnvelope> =
+internal fun ResultSet.readTransportEnvelopes(): List<TransportEnvelope> =
     buildList {
         while (next()) {
             add(
-                RelayEnvelope(
+                TransportEnvelope(
                     version = getInt("version"),
                     envelopeId = getString("envelope_id"),
                     senderId = getString("sender_id"),

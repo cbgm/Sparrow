@@ -54,7 +54,7 @@ data class SharedIdentityPayload(
  * Stable contact information attached to every shared identity.
  *
  * The phone number is mandatory because it anchors contact matching,
- * chat history, and relay routing. The display name is optional.
+ * chat history, and routing. The display name is optional.
  */
 data class SharedContactDetails(
     val displayName: String?,

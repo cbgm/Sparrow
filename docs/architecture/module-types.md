@@ -276,11 +276,11 @@ A Core module should have a single responsibility.
 
 ---
 
-# Relay
+# Gateway
 
 ## Purpose
 
-The relay is an independent server application.
+The gateway is an independent server application.
 
 Responsibilities
 
@@ -289,7 +289,7 @@ Responsibilities
 - message forwarding
 - transport infrastructure
 
-The relay should not contain Android-specific code.
+The gateway should not contain Android-specific code.
 
 Shared protocol definitions belong inside reusable Core modules.
 
@@ -380,7 +380,7 @@ The following table can be used as a guideline.
 | Starts the application | Startup |
 | Boots Android | Android App |
 | Extends the build | Build Logic |
-| Implements relay infrastructure | Relay |
+| Implements gateway infrastructure | Gateway |
 | Adds static analysis | Quality |
 
 ---

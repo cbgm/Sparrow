@@ -48,7 +48,7 @@ Cryptographic Library
 
 ↓
 
-Relay
+Gateway
 
 ✗ Untrusted
 
@@ -118,18 +118,18 @@ The attacker cannot read encrypted message contents.
 
 ---
 
-## Compromised Relay
+## Compromised Gateway
 
-The relay server is assumed to be untrusted.
+The gateway service is assumed to be untrusted.
 
-A malicious relay may
+A malicious gateway may
 
 - observe connections
 - delay messages
 - refuse delivery
 - replay packets
 
-The relay cannot
+The gateway cannot
 
 - decrypt messages
 - generate valid signatures
@@ -168,7 +168,7 @@ Protection
 
 Group invitation bootstrap proves that the same endpoint controls the private keys corresponding
 to the public identity in `GroupInvitePacket` or `GroupJoinRequestPacket`. It does not prove the
-real-world identity of a first-time contact when the relay address itself is the only trusted
+real-world identity of a first-time contact when the routing address itself is the only trusted
 addressing information.
 
 Users should verify important contacts before trusting them. Automatically discovered group
@@ -224,7 +224,7 @@ Every current member knows the shared group epoch key, so group AEAD by itself c
 message to one member. SecureChat additionally requires an Ed25519 signature and verifies it
 against the sender's `GroupMemberKeyEntity` for the exact epoch.
 
-A network attacker, relay, removed non-member, or different contact therefore cannot forge a
+A network attacker, gateway, removed non-member, or different contact therefore cannot forge a
 current member's group message without that member's signing private key.
 
 ---
@@ -402,7 +402,7 @@ introduce additional attack surfaces and should be accompanied by corresponding 
 
 # Summary
 
-SecureChat assumes that the network and relay infrastructure are untrusted.
+SecureChat assumes that the network and gateway infrastructure are untrusted.
 
 Security is achieved by ensuring that only the communicating devices possess the cryptographic material required to authenticate identities and decrypt messages.
 

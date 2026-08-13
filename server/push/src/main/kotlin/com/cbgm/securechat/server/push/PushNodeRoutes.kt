@@ -1,8 +1,8 @@
 package com.cbgm.securechat.server.push
 
 import com.cbgm.securechat.server.protocol.NodeCapability
-import com.cbgm.securechat.server.protocol.PendingRelayEnvelopesResponse
-import com.cbgm.securechat.server.protocol.RelayEnvelope
+import com.cbgm.securechat.server.protocol.PendingTransportEnvelopesResponse
+import com.cbgm.securechat.server.protocol.TransportEnvelope
 import com.cbgm.securechat.server.protocol.serverJson
 import com.cbgm.securechat.server.security.NodeRequestAuthorizationRequirements
 import com.cbgm.securechat.server.security.nodeRequestAuthentication
@@ -25,7 +25,7 @@ internal fun Route.installNodePushRoutes(runtime: PushRuntime) {
 private fun Route.installNodeEnvelopeRoute(runtime: PushRuntime) {
     post(NODE_ENVELOPE_PATH) {
         val body = call.receiveText()
-        val envelope = runCatching { serverJson.decodeFromString<RelayEnvelope>(body) }.getOrNull()
+        val envelope = runCatching { serverJson.decodeFromString<TransportEnvelope>(body) }.getOrNull()
         when {
             envelope == null ->
                 call.respond(HttpStatusCode.BadRequest)
@@ -56,7 +56,7 @@ private fun Route.installNodeEnvelopeRoute(runtime: PushRuntime) {
 private fun Route.installNodeEnvelopeReplicaRoute(runtime: PushRuntime) {
     post(NODE_ENVELOPE_REPLICA_PATH) {
         val body = call.receiveText()
-        val envelope = runCatching { serverJson.decodeFromString<RelayEnvelope>(body) }.getOrNull()
+        val envelope = runCatching { serverJson.decodeFromString<TransportEnvelope>(body) }.getOrNull()
         when {
             envelope == null ->
                 call.respond(HttpStatusCode.BadRequest)
@@ -121,7 +121,7 @@ private fun Route.installNodePendingRoute(runtime: PushRuntime) {
 
             else ->
                 call.respond(
-                    PendingRelayEnvelopesResponse(
+                    PendingTransportEnvelopesResponse(
                         runtime.pendingEnvelopes.pending(recipientId)
                     )
                 )

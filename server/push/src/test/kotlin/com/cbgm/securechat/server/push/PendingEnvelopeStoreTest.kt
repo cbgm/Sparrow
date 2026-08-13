@@ -1,6 +1,6 @@
 package com.cbgm.securechat.server.push
 
-import com.cbgm.securechat.server.protocol.RelayEnvelope
+import com.cbgm.securechat.server.protocol.TransportEnvelope
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -13,7 +13,7 @@ class PendingEnvelopeStoreTest {
         runTest {
             val store = InMemoryPendingEnvelopeStore()
             val envelope =
-                RelayEnvelope(
+                TransportEnvelope(
                     envelopeId = "envelope-1",
                     senderId = "sender",
                     recipientId = "recipient",

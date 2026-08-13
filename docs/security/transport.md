@@ -8,7 +8,7 @@ Transport is responsible only for delivering encrypted payloads between clients.
 
 Message confidentiality is provided by end-to-end encryption and therefore does not depend on the transport layer.
 
-This separation ensures that compromising the relay does not reveal message contents.
+This separation ensures that compromising the gateway does not reveal message contents.
 
 ---
 
@@ -17,7 +17,7 @@ This separation ensures that compromising the relay does not reveal message cont
 The transport layer has the following objectives.
 
 - Reliable message delivery
-- Stateless relay forwarding
+- Stateless gateway forwarding
 - No access to plaintext
 - Platform-independent implementation
 - Minimal protocol complexity
@@ -40,7 +40,7 @@ Transport Packet
 
 ↓
 
-Relay
+Gateway
 
 ↓
 
@@ -55,7 +55,7 @@ Decrypt Message
 Receiver
 ```
 
-The relay forwards packets exactly as received.
+The gateway forwards packets exactly as received.
 
 It never decrypts or interprets encrypted message contents.
 
@@ -83,7 +83,7 @@ The transport layer is **not** responsible for
 
 # WebSocket Connection
 
-SecureChat uses a persistent WebSocket connection between the client and the relay.
+SecureChat uses a persistent WebSocket connection between the client and the gateway.
 
 A persistent connection reduces latency and enables immediate delivery of incoming messages.
 
@@ -91,9 +91,9 @@ The connection manager automatically handles reconnection when necessary.
 
 ---
 
-# Relay
+# Gateway
 
-The relay acts only as a forwarding service.
+The gateway acts only as a forwarding service.
 
 Responsibilities include
 
@@ -102,7 +102,7 @@ Responsibilities include
 - routing encrypted packets
 - forwarding packets to recipients
 
-The relay should not
+The gateway should not
 
 - decrypt messages
 - modify encrypted payloads
@@ -122,7 +122,7 @@ Typical transport metadata includes
 - message identifier
 - protocol version
 
-The encrypted payload is treated as opaque binary data by the relay.
+The encrypted payload is treated as opaque binary data by the gateway.
 
 ---
 
@@ -147,7 +147,7 @@ Transport
 
 ↓
 
-Relay
+Gateway
 ```
 
 The transport layer never processes plaintext messages.
@@ -171,7 +171,7 @@ Send Packet
 
 ↓
 
-Relay
+Gateway
 
 ↓
 
@@ -221,7 +221,7 @@ If the connection is interrupted, SecureChat attempts to reconnect automatically
 Typical causes include
 
 - network changes
-- temporary relay outage
+- temporary gateway outage
 - device sleep
 - application restart
 
@@ -303,7 +303,7 @@ Typical categories include
 
 - connection failure
 - timeout
-- relay unavailable
+- gateway unavailable
 - malformed packet
 - unsupported protocol version
 
@@ -317,7 +317,7 @@ Transport identifies connected clients using their public identity.
 
 Authentication occurs independently of message encryption.
 
-The relay routes packets using identity information but cannot derive encryption keys from it.
+The gateway routes packets using identity information but cannot derive encryption keys from it.
 
 ---
 

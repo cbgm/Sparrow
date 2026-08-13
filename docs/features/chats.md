@@ -3,7 +3,7 @@
 `:feature:chats` owns conversations, message behavior, delivery/read receipts, group behavior, chat
 presentation, and the typed protocol handlers whose packets affect chats.
 
-It does not own WebSocket lifecycle or relay routing.
+It does not own WebSocket lifecycle or gateway routing.
 
 See [Conversation, Messaging, and Delivery Flow](message-transport-flow.md) for the exact outgoing,
 incoming, group-membership, and conversation-deletion call chains.
@@ -135,14 +135,14 @@ the failure.
 |---|---|
 | `QUEUED` | Locally queued |
 | `SENDING` | Current outbox attempt is running |
-| `SENT` | Relay accepted the envelope |
+| `SENT` | Gateway accepted the envelope |
 | `DELIVERED` | Recipient stored the message |
 | `READ` | Recipient returned a read receipt |
 | `FAILED` | Current local attempt failed |
 | `NOT_APPLICABLE` | Incoming message |
 
 Read [Conversation, Messaging, and Delivery Flow](message-transport-flow.md) for state machines,
-retry, relay ACKs, encryption selection, and class-by-class direct and group flow.
+retry, gateway ACKs, encryption selection, and class-by-class direct and group flow.
 
 ## Secure group architecture
 
@@ -227,7 +227,7 @@ the current group epoch even when it has no earlier local group state, while a s
 an earlier invitation cannot activate the new invitation.
 
 This handshake proves possession and establishes encryption keys, but a previously unknown identity
-is still unverified. Safety-number verification remains the defense against a malicious relay
+is still unverified. Safety-number verification remains the defense against a malicious gateway
 performing first-contact key substitution.
 
 ### Owner membership management
@@ -304,4 +304,4 @@ implementations, or `WebSocketTransportClient`.
 - Persist outgoing UI state before enqueueing.
 - Treat incoming packets and receipts as duplicate/reorder tolerant.
 - Add group recipient behavior to per-recipient state before changing aggregation.
-- Keep relay and WebSocket classes out of this module; use protocol and typing ports.
+- Keep gateway and WebSocket classes out of this module; use protocol and typing ports.

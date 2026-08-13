@@ -145,8 +145,6 @@ jedis = { module = "redis.clients:jedis", version.ref = "jedis" }
 compose-rules-detekt = { module = "io.nlopez.compose.rules:detekt", version.ref = "compose-rules" }
 compose-rules-ktlint = { module = "io.nlopez.compose.rules:ktlint", version.ref = "compose-rules" }
 detekt-api = { module = "dev.detekt:detekt-api", version.ref = "detekt" }
-detekt-test = { module = "dev.detekt:detekt-test", version.ref = "detekt" }
-detekt-test-assertj = { module = "dev.detekt:detekt-test-assertj", version.ref = "detekt" }
 
 [bundles]
 compose = [

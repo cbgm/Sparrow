@@ -10,19 +10,19 @@ import com.cbgm.securechat.core.protocol.packet.MailboxRoutePacket
 import com.cbgm.securechat.core.security.ContactBlocklistRepository
 import com.cbgm.securechat.core.time.SystemClock
 import com.cbgm.securechat.data.database.dao.ContactDao
-import com.cbgm.securechat.data.database.dao.ContactRelayIdDao
+import com.cbgm.securechat.data.database.dao.ContactRoutingIdDao
 import com.cbgm.securechat.feature.messaging.application.incoming.IncomingEnvelopeProcessingResult
 import com.cbgm.securechat.feature.messaging.application.incoming.IncomingEnvelopeProcessor
 import com.cbgm.securechat.feature.transport.discovery.NodeEndpointResolver
 import com.cbgm.securechat.feature.transport.mailbox.MailboxGateway
-import com.cbgm.securechat.feature.transport.relay.identity.LocalRelayIdProvider
+import com.cbgm.securechat.feature.transport.routing.LocalRoutingIdProvider
 import kotlinx.coroutines.flow.first
 
 @Suppress("LongParameterList")
 class DefaultMailboxCoordinator(
     private val contactDao: ContactDao,
-    private val contactRelayIdDao: ContactRelayIdDao,
-    private val localRelayIdProvider: LocalRelayIdProvider,
+    private val contactRoutingIdDao: ContactRoutingIdDao,
+    private val localRoutingIdProvider: LocalRoutingIdProvider,
     private val nodeEndpointResolver: NodeEndpointResolver,
     private val mailboxGateway: MailboxGateway,
     private val mailboxRouteRepository: MailboxRouteRepository,
@@ -37,10 +37,10 @@ class DefaultMailboxCoordinator(
     override suspend fun provisionRoutes(): Result<Int> =
         runCatching {
             val now = SystemClock.nowEpochMilliseconds()
-            val localRelayId = localRelayIdProvider.getLocalRelayId().getOrThrow()
+            val localRoutingId = localRoutingIdProvider.getLocalRoutingId().getOrThrow()
             val node =
                 nodeEndpointResolver
-                    .resolve(localRelayId)
+                    .resolve(localRoutingId)
                     .getOrThrow()
                     .firstOrNull { it.mailboxRouteEndpoint != null && it.mailboxAccessEndpoint != null }
                     ?: error("No mailbox-capable node is available")
@@ -56,7 +56,7 @@ class DefaultMailboxCoordinator(
                 }
                 val identity = contact.publicIdentity ?: return@forEach
                 if (identity.keyExchangeStatus != "MUTUAL") return@forEach
-                if (contactRelayIdDao.findRelayIdByContactId(contactId).isNullOrBlank()) return@forEach
+                if (contactRoutingIdDao.findRoutingIdByContactId(contactId).isNullOrBlank()) return@forEach
 
                 val current = mailboxRouteRepository.localForContact(contactId).getOrThrow()
                 if (current?.revocationPending == true) return@forEach
@@ -121,7 +121,7 @@ class DefaultMailboxCoordinator(
                             incomingEnvelopeProcessor
                                 .process(
                                     envelopeId = envelope.envelopeId,
-                                    senderRelayId = envelope.senderRoutingId,
+                                    senderRoutingId = envelope.senderRoutingId,
                                     encodedTransportPayload = envelope.encryptedPayload
                                 ).getOrThrow()
                         ) {

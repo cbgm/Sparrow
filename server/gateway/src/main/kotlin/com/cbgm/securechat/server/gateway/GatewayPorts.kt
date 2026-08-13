@@ -4,7 +4,7 @@ import com.cbgm.securechat.server.protocol.ClientRouteRegistration
 import com.cbgm.securechat.server.protocol.FederatedEnvelope
 import com.cbgm.securechat.server.protocol.FederatedTypingEvent
 import com.cbgm.securechat.server.protocol.FederationAcknowledgement
-import com.cbgm.securechat.server.protocol.RelayEnvelope
+import com.cbgm.securechat.server.protocol.TransportEnvelope
 
 interface FederationClient {
     suspend fun route(envelope: FederatedEnvelope): FederationAcknowledgement
@@ -24,9 +24,9 @@ interface PresenceClient {
 }
 
 interface LegacyPushClient {
-    suspend fun store(envelope: RelayEnvelope): Boolean
+    suspend fun store(envelope: TransportEnvelope): Boolean
 
-    suspend fun pending(recipientId: String): List<RelayEnvelope>
+    suspend fun pending(recipientId: String): List<TransportEnvelope>
 
     suspend fun acknowledge(
         recipientId: String,

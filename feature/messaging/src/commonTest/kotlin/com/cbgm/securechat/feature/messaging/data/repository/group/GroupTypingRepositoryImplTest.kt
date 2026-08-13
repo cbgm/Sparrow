@@ -1,9 +1,9 @@
 package com.cbgm.securechat.feature.messaging.data.repository.group
 
-import com.cbgm.securechat.feature.messaging.application.relay.GroupRelayIdResolver
+import com.cbgm.securechat.feature.messaging.application.routing.GroupRoutingIdResolver
 import com.cbgm.securechat.feature.transport.connection.TransportConnectionState
-import com.cbgm.securechat.feature.transport.relay.model.RelayEnvelope
-import com.cbgm.securechat.feature.transport.relay.model.RelayTypingEvent
+import com.cbgm.securechat.feature.transport.gateway.model.GatewayTypingEvent
+import com.cbgm.securechat.feature.transport.gateway.model.TransportEnvelope
 import com.cbgm.securechat.feature.transport.websocket.WebSocketTransportClient
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
@@ -21,11 +21,11 @@ class GroupTypingRepositoryImplTest {
     @Test
     fun setTypingAttemptsEveryCurrentMemberWhenOneSendFails() =
         runTest {
-            val client = FakeWebSocketTransportClient(failingRecipientId = "group-1-contact-1-relay")
+            val client = FakeWebSocketTransportClient(failingRecipientId = "group-1-contact-1-routing")
             val repository =
                 GroupTypingRepositoryImpl(
                     webSocketTransportClient = client,
-                    groupRelayIdResolver = GroupIdResolver()
+                    groupRoutingIdResolver = GroupIdResolver()
                 )
 
             val result =
@@ -38,28 +38,28 @@ class GroupTypingRepositoryImplTest {
             assertEquals(
                 expected =
                     listOf(
-                        "group-1-contact-1-relay" to true,
-                        "group-1-contact-2-relay" to true
+                        "group-1-contact-1-routing" to true,
+                        "group-1-contact-2-routing" to true
                     ),
                 actual = client.sentTypingStates
             )
         }
 
     @Test
-    fun observeMemberMatchesCanonicalGroupRelayId() =
+    fun observeMemberMatchesCanonicalGroupRoutingId() =
         runTest {
             val client = FakeWebSocketTransportClient()
             val repository =
                 GroupTypingRepositoryImpl(
                     webSocketTransportClient = client,
-                    groupRelayIdResolver = GroupIdResolver()
+                    groupRoutingIdResolver = GroupIdResolver()
                 )
             val observed = async { repository.observeMember("group-1", "contact-2").first() }
             runCurrent()
 
             client.typingEvents.emit(
-                RelayTypingEvent(
-                    senderId = "group-1-contact-2-relay",
+                GatewayTypingEvent(
+                    senderId = "group-1-contact-2-routing",
                     isTyping = true
                 )
             )
@@ -67,29 +67,29 @@ class GroupTypingRepositoryImplTest {
             assertTrue(observed.await())
         }
 
-    private class GroupIdResolver : GroupRelayIdResolver {
+    private class GroupIdResolver : GroupRoutingIdResolver {
         override suspend fun resolve(
             groupId: String,
             contactId: String
-        ): Result<String> = Result.success("$groupId-$contactId-relay")
+        ): Result<String> = Result.success("$groupId-$contactId-routing")
 
         override suspend fun resolveMembers(groupId: String): Result<Map<String, String>> =
             Result.success(
                 linkedMapOf(
-                    "contact-1" to "$groupId-contact-1-relay",
-                    "contact-2" to "$groupId-contact-2-relay"
+                    "contact-1" to "$groupId-contact-1-routing",
+                    "contact-2" to "$groupId-contact-2-routing"
                 )
             )
 
         override fun resolveRemovedMember(signingPublicKey: ByteArray): Result<String> =
-            Result.success("removed-member-relay")
+            Result.success("removed-member-routing")
 
         override suspend fun resolveForMessage(
             messageId: String,
             contactId: String
         ): Result<String?> = Result.success(null)
 
-        override suspend fun resolveContactId(relayId: String): Result<String?> =
+        override suspend fun resolveContactId(routingId: String): Result<String?> =
             Result.success(null)
     }
 
@@ -97,20 +97,20 @@ class GroupTypingRepositoryImplTest {
         private val failingRecipientId: String? = null
     ) : WebSocketTransportClient {
         val sentTypingStates = mutableListOf<Pair<String, Boolean>>()
-        val typingEvents = MutableSharedFlow<RelayTypingEvent>()
+        val typingEvents = MutableSharedFlow<GatewayTypingEvent>()
 
         override val connectionState: StateFlow<TransportConnectionState> =
             MutableStateFlow(TransportConnectionState.Disconnected)
-        override val incomingEnvelopes: Flow<RelayEnvelope> = MutableSharedFlow()
-        override val incomingTypingEvents: Flow<RelayTypingEvent> = typingEvents
+        override val incomingEnvelopes: Flow<TransportEnvelope> = MutableSharedFlow()
+        override val incomingTypingEvents: Flow<GatewayTypingEvent> = typingEvents
 
         override fun connect(
             serverUrl: String,
-            localRelayId: String
+            localRoutingId: String
         ) = Unit
 
         override suspend fun sendEnvelopeAndAwaitAcceptance(
-            envelope: RelayEnvelope,
+            envelope: TransportEnvelope,
             timeoutMilliseconds: Long
         ): Result<Unit> = Result.success(Unit)
 

@@ -271,7 +271,7 @@
             "notNull": true
           },
           {
-            "fieldPath": "relayId",
+            "fieldPath": "routingId",
             "columnName": "relayId",
             "affinity": "TEXT",
             "notNull": true

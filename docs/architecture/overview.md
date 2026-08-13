@@ -20,8 +20,8 @@ flowchart TD
     Android --> Features["Feature modules"]
     Features --> Data[":data:database"]
     Features --> Core["Core modules"]
-    Android --> RelayClient[":feature:transport"]
-    RelayClient -. WebSocket .-> Relay[":relay server"]
+    Android --> GatewayClient[":feature:transport"]
+    GatewayClient -. WebSocket .-> Gateway[":gateway service"]
 ```
 
 The arrows show compile-time dependencies, except for the dashed network connection. Feature
@@ -45,11 +45,11 @@ features.
 | `:feature:contacts` | Contact domain, import/merge behavior, remote identity exchange, and contacts UI |
 | `:feature:chats` | Conversations, messages, receipts, delivery state, packet handlers, and chat UI |
 | `:feature:messaging` | Application-level send/receive orchestration connecting chats, contacts, crypto, and transport |
-| `:feature:transport` | Relay IDs, connection lifecycle, WebSocket frames, and `OutgoingWireSender` |
+| `:feature:transport` | Routing IDs, connection lifecycle, WebSocket frames, and `OutgoingWireSender` |
 | `:feature:contactimport` | Platform device-contact integration |
 | `:feature:onboarding` | Onboarding flow |
 | `:feature:settings` | Settings domain and UI |
-| `:relay` | Standalone Ktor WebSocket relay; it routes opaque payloads and logs through SLF4J/Logback |
+| `:server:gateway` | Standalone Ktor WebSocket gateway; it routes opaque payloads and logs through SLF4J/Logback |
 | `:quality:detekt-rules` | Project-specific static-analysis rules |
 
 Empty grouping projects such as `:feature` and `:data` appear in the generated report but do not own
@@ -89,13 +89,13 @@ data implementations that use them. Domain models do not contain Room annotation
 `ProtocolPacketHandler`, and `OutgoingWireSender`. It does not know about Ktor, Room, contacts, or
 Compose.
 
-`:feature:messaging` turns queued protocol packets into transport payloads and turns incoming relay
-envelopes back into protocol-handler calls. `:feature:transport` only moves relay messages.
+`:feature:messaging` turns queued protocol packets into transport payloads and turns incoming gateway
+envelopes back into protocol-handler calls. `:feature:transport` only moves gateway messages.
 See [Messaging Boundary](messaging-boundary.md).
 
-### Client to relay
+### Client to gateway
 
-The client sends a `RelayEnvelope` whose `payload` is opaque to `:relay`. The relay may read the
+The client sends a `TransportEnvelope` whose `payload` is opaque to `:server:gateway`. The gateway may read the
 routing fields (`envelopeId`, `senderId`, `recipientId`, and timestamp), but it does not decode the
 SecureChat transport payload or protocol packet.
 
@@ -104,8 +104,8 @@ SecureChat transport payload or protocol packet.
 Koin modules are assembled in `SecureChatApplication`. Runtime services start only after a local
 identity and phone number exist:
 
-1. `IncomingRelayRunner.start()` begins collecting incoming envelopes.
-2. `RelayConnectionManager.start()` starts the reconnect loop.
+1. `IncomingEnvelopeRunner.start()` begins collecting incoming envelopes.
+2. `TransportConnectionManager.start()` starts the reconnect loop.
 3. `SecureChatApplication` observes `TransportConnectionState`.
 4. On `Connected`, it calls `OutboxRunner.start()` to recover and drain the persistent outbox.
 
@@ -116,7 +116,7 @@ runtime service remains in its owning feature.
 
 Shared and application code logs through `SecureChatLogger` in `:core`. Its Kermit-backed
 implementation selects the platform output without exposing Kermit to feature code. The standalone
-relay keeps its JVM-native SLF4J/Logback pipeline.
+gateway keeps its JVM-native SLF4J/Logback pipeline.
 
 See [Logging](../development/logging.md) for levels, privacy rules, and the extension policy.
 

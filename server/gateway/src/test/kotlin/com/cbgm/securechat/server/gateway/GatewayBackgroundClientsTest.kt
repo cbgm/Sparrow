@@ -2,7 +2,7 @@ package com.cbgm.securechat.server.gateway
 
 import com.cbgm.securechat.server.protocol.ClientRoute
 import com.cbgm.securechat.server.protocol.ClientRouteRegistration
-import com.cbgm.securechat.server.protocol.RelayEnvelope
+import com.cbgm.securechat.server.protocol.TransportEnvelope
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
@@ -60,9 +60,9 @@ class GatewayBackgroundClientsTest {
             val requestedRoutingIds = mutableListOf<String>()
             val client =
                 object : LegacyPushClient {
-                    override suspend fun store(envelope: RelayEnvelope): Boolean = true
+                    override suspend fun store(envelope: TransportEnvelope): Boolean = true
 
-                    override suspend fun pending(recipientId: String): List<RelayEnvelope> {
+                    override suspend fun pending(recipientId: String): List<TransportEnvelope> {
                         requestedRoutingIds += recipientId
                         return when (recipientId) {
                             "canonical" ->
@@ -102,9 +102,9 @@ class GatewayBackgroundClientsTest {
             val acknowledgements = mutableListOf<Pair<String, String>>()
             val client =
                 object : LegacyPushClient {
-                    override suspend fun store(envelope: RelayEnvelope): Boolean = true
+                    override suspend fun store(envelope: TransportEnvelope): Boolean = true
 
-                    override suspend fun pending(recipientId: String): List<RelayEnvelope> = emptyList()
+                    override suspend fun pending(recipientId: String): List<TransportEnvelope> = emptyList()
 
                     override suspend fun acknowledge(
                         recipientId: String,
@@ -138,13 +138,13 @@ class GatewayBackgroundClientsTest {
                 GatewayPushDispatcher(
                     pushClient =
                         object : LegacyPushClient {
-                            override suspend fun store(envelope: RelayEnvelope): Boolean {
+                            override suspend fun store(envelope: TransportEnvelope): Boolean {
                                 storeStarted.complete(Unit)
                                 releaseStore.await()
                                 return true
                             }
 
-                            override suspend fun pending(recipientId: String): List<RelayEnvelope> =
+                            override suspend fun pending(recipientId: String): List<TransportEnvelope> =
                                 emptyList()
 
                             override suspend fun acknowledge(
@@ -190,8 +190,8 @@ class GatewayBackgroundClientsTest {
             clientSigningPublicKey = byteArrayOf(1)
         )
 
-    private fun testEnvelope(): RelayEnvelope =
-        RelayEnvelope(
+    private fun testEnvelope(): TransportEnvelope =
+        TransportEnvelope(
             envelopeId = "envelope-1",
             senderId = "sender",
             recipientId = "recipient",

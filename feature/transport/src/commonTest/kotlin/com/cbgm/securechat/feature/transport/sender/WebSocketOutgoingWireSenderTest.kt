@@ -3,13 +3,13 @@ package com.cbgm.securechat.feature.transport.sender
 import com.cbgm.securechat.core.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.securechat.core.protocol.mailbox.MailboxDeliveryRoute
 import com.cbgm.securechat.core.protocol.mailbox.MailboxRouteRepository
+import com.cbgm.securechat.feature.transport.config.TransportConfig
 import com.cbgm.securechat.feature.transport.connection.TransportConnectionState
-import com.cbgm.securechat.feature.transport.relay.config.RelayTransportConfig
-import com.cbgm.securechat.feature.transport.relay.identity.LocalBootstrapRelayIdProvider
-import com.cbgm.securechat.feature.transport.relay.identity.LocalRelayIdProvider
-import com.cbgm.securechat.feature.transport.relay.model.FederatedEnvelope
-import com.cbgm.securechat.feature.transport.relay.model.RelayEnvelope
-import com.cbgm.securechat.feature.transport.relay.model.RelayTypingEvent
+import com.cbgm.securechat.feature.transport.gateway.model.FederatedEnvelope
+import com.cbgm.securechat.feature.transport.gateway.model.GatewayTypingEvent
+import com.cbgm.securechat.feature.transport.gateway.model.TransportEnvelope
+import com.cbgm.securechat.feature.transport.routing.LocalBootstrapRoutingIdProvider
+import com.cbgm.securechat.feature.transport.routing.LocalRoutingIdProvider
 import com.cbgm.securechat.feature.transport.websocket.WebSocketTransportClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -40,49 +40,49 @@ class WebSocketOutgoingWireSenderTest {
             val sender =
                 WebSocketOutgoingWireSender(
                     webSocketTransportClient = client,
-                    localRelayIdProvider = SuccessfulLocalRelayIdProvider(),
-                    localBootstrapRelayIdProvider = SuccessfulLocalBootstrapRelayIdProvider(),
-                    relayTransportConfig =
-                        RelayTransportConfig(),
+                    localRoutingIdProvider = SuccessfulLocalRoutingIdProvider(),
+                    localBootstrapRoutingIdProvider = SuccessfulLocalBootstrapRoutingIdProvider(),
+                    transportConfig =
+                        TransportConfig(),
                     mailboxRouteRepository = FakeMailboxRouteRepository(route)
                 )
 
-            assertTrue(sender.send("recipient-relay-id", "encoded-payload").isSuccess)
+            assertTrue(sender.send("recipient-routing-id", "encoded-payload").isSuccess)
 
             val envelope = requireNotNull(client.federatedEnvelope)
             assertEquals(route, envelope.mailboxRoute)
-            assertEquals("local-relay-id", envelope.senderRoutingId)
-            assertEquals("recipient-relay-id", envelope.recipientDeviceRoutingId)
+            assertEquals("local-routing-id", envelope.senderRoutingId)
+            assertEquals("recipient-routing-id", envelope.recipientDeviceRoutingId)
             assertEquals("encoded-payload", envelope.encryptedPayload)
             assertEquals(null, client.envelope)
         }
 
     @Test
-    fun sendBuildsEnvelopeAndWaitsForRelayAcceptance() =
+    fun sendBuildsEnvelopeAndWaitsForGatewayAcceptance() =
         runTest {
             val client = RecordingWebSocketTransportClient()
             val sender =
                 WebSocketOutgoingWireSender(
                     webSocketTransportClient = client,
-                    localRelayIdProvider = SuccessfulLocalRelayIdProvider(),
-                    localBootstrapRelayIdProvider = SuccessfulLocalBootstrapRelayIdProvider(),
-                    relayTransportConfig =
-                        RelayTransportConfig(
+                    localRoutingIdProvider = SuccessfulLocalRoutingIdProvider(),
+                    localBootstrapRoutingIdProvider = SuccessfulLocalBootstrapRoutingIdProvider(),
+                    transportConfig =
+                        TransportConfig(
                             acknowledgementTimeoutMilliseconds = 2_500L
                         )
                 )
 
             val result =
                 sender.send(
-                    recipientAddress = "recipient-relay-id",
+                    recipientAddress = "recipient-routing-id",
                     encodedTransportPayload = "encoded-payload"
                 )
 
             assertTrue(result.isSuccess)
             val envelope = requireNotNull(client.envelope)
             assertTrue(envelope.envelopeId.isNotBlank())
-            assertEquals("local-relay-id", envelope.senderId)
-            assertEquals("recipient-relay-id", envelope.recipientId)
+            assertEquals("local-routing-id", envelope.senderId)
+            assertEquals("recipient-routing-id", envelope.recipientId)
             assertEquals("encoded-payload", envelope.payload)
             assertTrue(envelope.createdAtEpochMilliseconds > 0L)
             assertEquals(2_500L, client.timeoutMilliseconds)
@@ -95,10 +95,10 @@ class WebSocketOutgoingWireSenderTest {
             val sender =
                 WebSocketOutgoingWireSender(
                     webSocketTransportClient = client,
-                    localRelayIdProvider = SuccessfulLocalRelayIdProvider(),
-                    localBootstrapRelayIdProvider = SuccessfulLocalBootstrapRelayIdProvider(),
-                    relayTransportConfig =
-                        RelayTransportConfig(
+                    localRoutingIdProvider = SuccessfulLocalRoutingIdProvider(),
+                    localBootstrapRoutingIdProvider = SuccessfulLocalBootstrapRoutingIdProvider(),
+                    transportConfig =
+                        TransportConfig(
                             acknowledgementTimeoutMilliseconds = 2_500L
                         )
                 )
@@ -110,17 +110,17 @@ class WebSocketOutgoingWireSenderTest {
                 )
 
             assertTrue(result.isSuccess)
-            assertEquals("local-bootstrap-relay-id", client.awaitedRoutingAlias)
+            assertEquals("local-bootstrap-routing-id", client.awaitedRoutingAlias)
             assertEquals(2_500L, client.aliasTimeoutMilliseconds)
             val envelope = requireNotNull(client.envelope)
-            assertEquals("local-bootstrap-relay-id", envelope.senderId)
+            assertEquals("local-bootstrap-routing-id", envelope.senderId)
             assertEquals("scphone1_recipient", envelope.recipientId)
         }
 
     @Test
-    fun relayAcceptanceFailureIsPropagated() =
+    fun gatewayAcceptanceFailureIsPropagated() =
         runTest {
-            val expectedError = IllegalStateException("relay rejected envelope")
+            val expectedError = IllegalStateException("gateway rejected envelope")
             val client =
                 RecordingWebSocketTransportClient(
                     sendResult = Result.failure(expectedError)
@@ -128,15 +128,15 @@ class WebSocketOutgoingWireSenderTest {
             val sender =
                 WebSocketOutgoingWireSender(
                     webSocketTransportClient = client,
-                    localRelayIdProvider = SuccessfulLocalRelayIdProvider(),
-                    localBootstrapRelayIdProvider = SuccessfulLocalBootstrapRelayIdProvider(),
-                    relayTransportConfig =
-                        RelayTransportConfig()
+                    localRoutingIdProvider = SuccessfulLocalRoutingIdProvider(),
+                    localBootstrapRoutingIdProvider = SuccessfulLocalBootstrapRoutingIdProvider(),
+                    transportConfig =
+                        TransportConfig()
                 )
 
             val result =
                 sender.send(
-                    recipientAddress = "recipient-relay-id",
+                    recipientAddress = "recipient-routing-id",
                     encodedTransportPayload = "encoded-payload"
                 )
 
@@ -145,25 +145,25 @@ class WebSocketOutgoingWireSenderTest {
         }
 
     @Test
-    fun localRelayIdFailurePreventsTransportCall() =
+    fun localRoutingIdFailurePreventsTransportCall() =
         runTest {
-            val expectedError = IllegalStateException("local relay ID unavailable")
+            val expectedError = IllegalStateException("local routing ID unavailable")
             val client = RecordingWebSocketTransportClient()
             val sender =
                 WebSocketOutgoingWireSender(
                     webSocketTransportClient = client,
-                    localRelayIdProvider =
-                        object : LocalRelayIdProvider {
-                            override suspend fun getLocalRelayId(): Result<String> = Result.failure(expectedError)
+                    localRoutingIdProvider =
+                        object : LocalRoutingIdProvider {
+                            override suspend fun getLocalRoutingId(): Result<String> = Result.failure(expectedError)
                         },
-                    localBootstrapRelayIdProvider = SuccessfulLocalBootstrapRelayIdProvider(),
-                    relayTransportConfig =
-                        RelayTransportConfig()
+                    localBootstrapRoutingIdProvider = SuccessfulLocalBootstrapRoutingIdProvider(),
+                    transportConfig =
+                        TransportConfig()
                 )
 
             val result =
                 sender.send(
-                    recipientAddress = "recipient-relay-id",
+                    recipientAddress = "recipient-routing-id",
                     encodedTransportPayload = "encoded-payload"
                 )
 
@@ -172,32 +172,32 @@ class WebSocketOutgoingWireSenderTest {
             assertEquals(null, client.envelope)
         }
 
-    private class SuccessfulLocalRelayIdProvider : LocalRelayIdProvider {
-        override suspend fun getLocalRelayId(): Result<String> = Result.success("local-relay-id")
+    private class SuccessfulLocalRoutingIdProvider : LocalRoutingIdProvider {
+        override suspend fun getLocalRoutingId(): Result<String> = Result.success("local-routing-id")
     }
 
-    private class SuccessfulLocalBootstrapRelayIdProvider : LocalBootstrapRelayIdProvider {
-        override suspend fun getLocalBootstrapRelayId(): Result<String> =
-            Result.success("local-bootstrap-relay-id")
+    private class SuccessfulLocalBootstrapRoutingIdProvider : LocalBootstrapRoutingIdProvider {
+        override suspend fun getLocalBootstrapRoutingId(): Result<String> =
+            Result.success("local-bootstrap-routing-id")
     }
 
     private class RecordingWebSocketTransportClient(
         private val sendResult: Result<Unit> = Result.success(Unit)
     ) : WebSocketTransportClient {
-        var envelope: RelayEnvelope? = null
+        var envelope: TransportEnvelope? = null
         var federatedEnvelope: FederatedEnvelope? = null
         var timeoutMilliseconds: Long? = null
         var awaitedRoutingAlias: String? = null
         var aliasTimeoutMilliseconds: Long? = null
 
         override val connectionState: StateFlow<TransportConnectionState> =
-            MutableStateFlow(TransportConnectionState.Connected("local-relay-id"))
-        override val incomingEnvelopes: Flow<RelayEnvelope> = MutableSharedFlow()
-        override val incomingTypingEvents: Flow<RelayTypingEvent> = MutableSharedFlow()
+            MutableStateFlow(TransportConnectionState.Connected("local-routing-id"))
+        override val incomingEnvelopes: Flow<TransportEnvelope> = MutableSharedFlow()
+        override val incomingTypingEvents: Flow<GatewayTypingEvent> = MutableSharedFlow()
 
         override fun connect(
             serverUrl: String,
-            localRelayId: String
+            localRoutingId: String
         ) = Unit
 
         override suspend fun awaitRoutingAlias(
@@ -210,7 +210,7 @@ class WebSocketOutgoingWireSenderTest {
         }
 
         override suspend fun sendEnvelopeAndAwaitAcceptance(
-            envelope: RelayEnvelope,
+            envelope: TransportEnvelope,
             timeoutMilliseconds: Long
         ): Result<Unit> {
             this.envelope = envelope

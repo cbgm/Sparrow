@@ -1,6 +1,6 @@
 package com.cbgm.securechat.server.push
 
-import com.cbgm.securechat.server.protocol.RelayEnvelope
+import com.cbgm.securechat.server.protocol.TransportEnvelope
 import java.sql.Connection
 
 internal class PostgresPendingEnvelopeStore(
@@ -18,7 +18,7 @@ internal class PostgresPendingEnvelopeStore(
         }
     }
 
-    override suspend fun enqueue(envelope: RelayEnvelope): Boolean =
+    override suspend fun enqueue(envelope: TransportEnvelope): Boolean =
         database.withConnection { connection ->
             connection.inTransaction {
                 connection
@@ -66,7 +66,7 @@ internal class PostgresPendingEnvelopeStore(
             }
         }
 
-    override suspend fun pending(recipientId: String): List<RelayEnvelope> =
+    override suspend fun pending(recipientId: String): List<TransportEnvelope> =
         database.withConnection { connection ->
             purgeExpired(connection)
 
@@ -87,7 +87,7 @@ internal class PostgresPendingEnvelopeStore(
                 ).use { statement ->
                     statement.setString(1, recipientId)
                     statement.executeQuery().use { results ->
-                        results.readRelayEnvelopes()
+                        results.readTransportEnvelopes()
                     }
                 }
         }

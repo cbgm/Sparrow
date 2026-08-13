@@ -6,12 +6,12 @@ Generated automatically by `./gradlew architectureReport`.
 
 | Metric | Count |
 |---|---:|
-| Modules | 35 |
-| Module groups | 12 |
+| Modules | 34 |
+| Module groups | 11 |
 | Project dependencies | 101 |
-| Kotlin files | 934 |
-| Test Kotlin files | 83 |
-| Resource files | 60 |
+| Kotlin files | 962 |
+| Test Kotlin files | 88 |
+| Resource files | 58 |
 
 ## Module groups
 
@@ -55,10 +55,6 @@ Generated automatically by `./gradlew architectureReport`.
 
 - [**quality** (`:quality`)](modules/quality.md)
 - [**detekt-rules** (`:quality:detekt-rules`)](modules/quality-detekt-rules.md)
-
-### relay
-
-- [**relay** (`:relay`)](modules/relay.md)
 
 ### resources
 
@@ -130,10 +126,6 @@ graph TD
     subgraph group_quality["quality"]
         module_quality[":quality"]
         module_quality_detekt_rules[":quality:detekt-rules"]
-    end
-
-    subgraph group_relay["relay"]
-        module_relay[":relay"]
     end
 
     subgraph group_resources["resources"]

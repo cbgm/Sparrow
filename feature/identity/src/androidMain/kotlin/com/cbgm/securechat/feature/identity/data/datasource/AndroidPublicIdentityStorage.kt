@@ -2,7 +2,6 @@ package com.cbgm.securechat.feature.identity.data.datasource
 
 import android.content.Context
 import android.util.Base64
-import com.cbgm.securechat.feature.identity.data.datasource.PublicIdentityStorage
 import com.cbgm.securechat.feature.identity.domain.model.PublicIdentity
 
 /**

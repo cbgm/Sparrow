@@ -176,7 +176,7 @@ internal class GatewaySessionHandler(
         connections.register(connection)
         connection.send(
             GatewayServerMessage.Registered(
-                relayId = connection.routingId
+                routingId = connection.routingId
             )
         )
         pushActions.deliverPending(connection)
@@ -268,7 +268,7 @@ private fun GatewayClientMessage.Register.toConnection(
     session: DefaultWebSocketServerSession
 ): GatewayConnection =
     GatewayConnection(
-        routingId = relayId,
+        routingId = routingId,
         connectionId = connectionId ?: UUID.randomUUID().toString(),
         routingAliases = aliases?.takeIf { generation != null }.orEmpty().toSet(),
         session = session
@@ -292,7 +292,7 @@ private fun GatewayClientMessage.Register.toRouteRegistration(
             ClientRouteRegistration(
                 route =
                     ClientRoute(
-                        routingId = relayId,
+                        routingId = routingId,
                         nodeId = nodeId,
                         connectionId = connection.connectionId,
                         generation = routeGeneration,

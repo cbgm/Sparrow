@@ -25,10 +25,10 @@ import com.cbgm.securechat.core.security.DirectIdentitySetupMode
 import com.cbgm.securechat.core.security.DirectIdentitySetupModeRepository
 import com.cbgm.securechat.core.time.SystemClock
 import com.cbgm.securechat.data.database.dao.ContactDao
-import com.cbgm.securechat.data.database.dao.ContactRelayIdDao
+import com.cbgm.securechat.data.database.dao.ContactRoutingIdDao
 import com.cbgm.securechat.data.database.dao.IdentityInvitationDao
 import com.cbgm.securechat.data.database.entity.ContactPhoneNumberEntity
-import com.cbgm.securechat.data.database.entity.ContactRelayIdEntity
+import com.cbgm.securechat.data.database.entity.ContactRoutingIdEntity
 import com.cbgm.securechat.data.database.entity.IdentityInvitationEntity
 import com.cbgm.securechat.feature.contacts.data.invitation.IdentityInvitationPayloadEncoder
 import com.cbgm.securechat.feature.contacts.domain.model.ContactPhoneNumberType
@@ -53,7 +53,7 @@ import kotlinx.coroutines.sync.withLock
 class IdentityInvitationRepositoryImpl(
     private val invitationDao: IdentityInvitationDao,
     private val contactDao: ContactDao,
-    private val contactRelayIdDao: ContactRelayIdDao,
+    private val contactRoutingIdDao: ContactRoutingIdDao,
     private val contactKeyExchangeRepository: ContactKeyExchangeRepository,
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
@@ -1326,19 +1326,19 @@ class IdentityInvitationRepositoryImpl(
         fromContactId: String,
         toContactId: String
     ) {
-        val relayId = contactRelayIdDao.findRelayIdByContactId(fromContactId) ?: return
-        if (!relayId.startsWith(BOOTSTRAP_ROUTING_ID_PREFIX)) {
+        val routingId = contactRoutingIdDao.findRoutingIdByContactId(fromContactId) ?: return
+        if (!routingId.startsWith(BOOTSTRAP_ROUTING_ID_PREFIX)) {
             return
         }
 
-        contactRelayIdDao.deleteOtherContactMapping(
-            relayId = relayId,
+        contactRoutingIdDao.deleteOtherContactMapping(
+            routingId = routingId,
             contactId = toContactId
         )
-        contactRelayIdDao.upsert(
-            ContactRelayIdEntity(
+        contactRoutingIdDao.upsert(
+            ContactRoutingIdEntity(
                 contactId = toContactId,
-                relayId = relayId
+                routingId = routingId
             )
         )
     }

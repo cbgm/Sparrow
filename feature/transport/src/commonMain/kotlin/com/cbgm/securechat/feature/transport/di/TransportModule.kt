@@ -11,8 +11,9 @@ import com.cbgm.securechat.core.transport.ControlPlaneDirectorySynchronizer
 import com.cbgm.securechat.core.transport.ControlPlaneHealthMonitor
 import com.cbgm.securechat.core.transport.ControlPlaneStatusStore
 import com.cbgm.securechat.core.transport.TransportDiagnosticsProvider
-import com.cbgm.securechat.feature.transport.connection.DefaultRelayConnectionManager
-import com.cbgm.securechat.feature.transport.connection.RelayConnectionManager
+import com.cbgm.securechat.feature.transport.config.TransportConfig
+import com.cbgm.securechat.feature.transport.connection.DefaultTransportConnectionManager
+import com.cbgm.securechat.feature.transport.connection.TransportConnectionManager
 import com.cbgm.securechat.feature.transport.controlplane.ControlPlaneCandidateVerifier
 import com.cbgm.securechat.feature.transport.controlplane.ControlPlaneRequestRouter
 import com.cbgm.securechat.feature.transport.controlplane.HttpControlPlaneDirectorySynchronizer
@@ -27,22 +28,21 @@ import com.cbgm.securechat.feature.transport.discovery.NodeDirectorySource
 import com.cbgm.securechat.feature.transport.discovery.NodeDirectoryVerifier
 import com.cbgm.securechat.feature.transport.discovery.NodeEndpointResolver
 import com.cbgm.securechat.feature.transport.discovery.registerPlatformNodeDirectoryCache
+import com.cbgm.securechat.feature.transport.gateway.codec.createGatewayJson
 import com.cbgm.securechat.feature.transport.mailbox.HttpMailboxGateway
 import com.cbgm.securechat.feature.transport.mailbox.MailboxGateway
+import com.cbgm.securechat.feature.transport.presence.ClientPresenceRouteManager
+import com.cbgm.securechat.feature.transport.presence.ClientRouteRegistrationFactory
 import com.cbgm.securechat.feature.transport.push.HttpPushTokenRegistrationGateway
 import com.cbgm.securechat.feature.transport.push.PushTokenRegistrationGateway
-import com.cbgm.securechat.feature.transport.relay.codec.createRelayJson
-import com.cbgm.securechat.feature.transport.relay.config.RelayTransportConfig
-import com.cbgm.securechat.feature.transport.relay.identity.DefaultLocalBootstrapRelayIdProvider
-import com.cbgm.securechat.feature.transport.relay.identity.DefaultLocalRelayIdProvider
-import com.cbgm.securechat.feature.transport.relay.identity.LocalBootstrapRelayIdProvider
-import com.cbgm.securechat.feature.transport.relay.identity.LocalRelayIdProvider
-import com.cbgm.securechat.feature.transport.relay.identity.RelayIdGenerator
-import com.cbgm.securechat.feature.transport.relay.identity.Sha256RelayIdGenerator
-import com.cbgm.securechat.feature.transport.relay.inbox.HttpPendingRelayEnvelopeGateway
-import com.cbgm.securechat.feature.transport.relay.inbox.PendingRelayEnvelopeGateway
-import com.cbgm.securechat.feature.transport.relay.presence.ClientPresenceRouteManager
-import com.cbgm.securechat.feature.transport.relay.presence.ClientRouteRegistrationFactory
+import com.cbgm.securechat.feature.transport.push.inbox.HttpPendingEnvelopeGateway
+import com.cbgm.securechat.feature.transport.push.inbox.PendingEnvelopeGateway
+import com.cbgm.securechat.feature.transport.routing.DefaultLocalBootstrapRoutingIdProvider
+import com.cbgm.securechat.feature.transport.routing.DefaultLocalRoutingIdProvider
+import com.cbgm.securechat.feature.transport.routing.LocalBootstrapRoutingIdProvider
+import com.cbgm.securechat.feature.transport.routing.LocalRoutingIdProvider
+import com.cbgm.securechat.feature.transport.routing.RoutingIdGenerator
+import com.cbgm.securechat.feature.transport.routing.Sha256RoutingIdGenerator
 import com.cbgm.securechat.feature.transport.sender.WebSocketOutgoingWireSender
 import com.cbgm.securechat.feature.transport.websocket.DefaultWebSocketTransportClient
 import com.cbgm.securechat.feature.transport.websocket.WebSocketTransportClient
@@ -55,7 +55,7 @@ import org.koin.dsl.module
 val transportModule =
     module {
         single {
-            RelayTransportConfig(
+            TransportConfig(
                 trustedRegistryRootNodeId = RegistryTrustRoot.NODE_ID
             )
         }
@@ -64,36 +64,36 @@ val transportModule =
 
         single<HttpClient> {
             createPlatformHttpClient(
-                json = get(qualifier = named(RELAY_JSON_QUALIFIER))
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
             )
         }
 
-        single<Json>(qualifier = named(RELAY_JSON_QUALIFIER)) {
-            createRelayJson()
+        single<Json>(qualifier = named(GATEWAY_JSON_QUALIFIER)) {
+            createGatewayJson()
         }
 
-        single<RelayIdGenerator> {
-            Sha256RelayIdGenerator(phoneNumberNormalizer = get<PhoneNumberNormalizer>())
+        single<RoutingIdGenerator> {
+            Sha256RoutingIdGenerator(phoneNumberNormalizer = get<PhoneNumberNormalizer>())
         }
 
-        single<LocalRelayIdProvider> {
-            DefaultLocalRelayIdProvider(
+        single<LocalRoutingIdProvider> {
+            DefaultLocalRoutingIdProvider(
                 localSigningPublicKeyProvider = get<LocalSigningPublicKeyProvider>(),
-                relayIdGenerator = get<RelayIdGenerator>()
+                routingIdGenerator = get<RoutingIdGenerator>()
             )
         }
 
-        single<LocalBootstrapRelayIdProvider> {
-            DefaultLocalBootstrapRelayIdProvider(
+        single<LocalBootstrapRoutingIdProvider> {
+            DefaultLocalBootstrapRoutingIdProvider(
                 localPhoneNumberProvider = get(),
-                relayIdGenerator = get<RelayIdGenerator>()
+                routingIdGenerator = get<RoutingIdGenerator>()
             )
         }
 
         single<WebSocketTransportClient> {
             DefaultWebSocketTransportClient(
                 httpClient = get<HttpClient>(),
-                json = get(qualifier = named(RELAY_JSON_QUALIFIER)),
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
                 presenceRouteManager = get<ClientPresenceRouteManager>()
             )
         }
@@ -102,7 +102,7 @@ val transportModule =
             ClientRouteRegistrationFactory(
                 signingKeyPairProvider = get<LocalSigningKeyPairProvider>(),
                 signatureCrypto = get<DetachedSignatureCrypto>(),
-                json = get(qualifier = named(RELAY_JSON_QUALIFIER))
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
             )
         }
 
@@ -110,44 +110,44 @@ val transportModule =
             ClientPresenceRouteManager(
                 httpClient = get<HttpClient>(),
                 registrationFactory = get<ClientRouteRegistrationFactory>(),
-                localBootstrapRelayIdProvider = get<LocalBootstrapRelayIdProvider>()
+                localBootstrapRoutingIdProvider = get<LocalBootstrapRoutingIdProvider>()
             )
         }
 
         single {
-            DefaultRelayConnectionManager(
+            DefaultTransportConnectionManager(
                 webSocketTransportClient = get<WebSocketTransportClient>(),
-                localRelayIdProvider = get<LocalRelayIdProvider>(),
-                relayTransportConfig = get<RelayTransportConfig>(),
+                localRoutingIdProvider = get<LocalRoutingIdProvider>(),
+                transportConfig = get<TransportConfig>(),
                 nodeEndpointResolver = get<NodeEndpointResolver>(),
                 controlPlaneConfiguration = get<ControlPlaneConfiguration>(),
                 controlPlaneDiscoverySynchronizer = get<NodeControlPlaneDiscoverySynchronizer>()
             )
         }
 
-        single<RelayConnectionManager> {
-            get<DefaultRelayConnectionManager>()
+        single<TransportConnectionManager> {
+            get<DefaultTransportConnectionManager>()
         }
 
         single<TransportDiagnosticsProvider> {
-            get<DefaultRelayConnectionManager>()
+            get<DefaultTransportConnectionManager>()
         }
 
         single {
             NodeDirectoryVerifier(
                 signatureCrypto = get<DetachedSignatureCrypto>(),
                 cryptoHash = get(),
-                json = get(qualifier = named(RELAY_JSON_QUALIFIER))
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
             )
         }
 
         single<NodeEndpointResolver> {
             DefaultNodeEndpointResolver(
                 source = get<NodeDirectorySource>(),
-                json = get(qualifier = named(RELAY_JSON_QUALIFIER)),
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
                 cache = get(),
                 verifier = get(),
-                config = get<RelayTransportConfig>(),
+                config = get<TransportConfig>(),
                 controlPlaneConfiguration = get<ControlPlaneConfiguration>(),
                 controlPlaneStatusStore = get<ControlPlaneStatusStore>()
             )
@@ -188,9 +188,9 @@ val transportModule =
         single<ControlPlaneCandidateVerifier> {
             SignedDirectoryControlPlaneCandidateVerifier(
                 nodeDirectorySource = get<NodeDirectorySource>(),
-                json = get(qualifier = named(RELAY_JSON_QUALIFIER)),
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
                 verifier = get<NodeDirectoryVerifier>(),
-                relayTransportConfig = get<RelayTransportConfig>()
+                transportConfig = get<TransportConfig>()
             )
         }
 
@@ -202,8 +202,8 @@ val transportModule =
             )
         }
 
-        single<PendingRelayEnvelopeGateway> {
-            HttpPendingRelayEnvelopeGateway(
+        single<PendingEnvelopeGateway> {
+            HttpPendingEnvelopeGateway(
                 httpClient = get<HttpClient>(),
                 controlPlaneRequestRouter = get<ControlPlaneRequestRouter>()
             )
@@ -216,7 +216,7 @@ val transportModule =
         single<PushTokenRegistrationGateway> {
             HttpPushTokenRegistrationGateway(
                 httpClient = get<HttpClient>(),
-                localRelayIdProvider = get<LocalRelayIdProvider>(),
+                localRoutingIdProvider = get<LocalRoutingIdProvider>(),
                 controlPlaneRequestRouter = get<ControlPlaneRequestRouter>()
             )
         }
@@ -224,12 +224,12 @@ val transportModule =
         single<OutgoingWireSender> {
             WebSocketOutgoingWireSender(
                 webSocketTransportClient = get<WebSocketTransportClient>(),
-                localRelayIdProvider = get<LocalRelayIdProvider>(),
-                localBootstrapRelayIdProvider = get<LocalBootstrapRelayIdProvider>(),
-                relayTransportConfig = get<RelayTransportConfig>(),
+                localRoutingIdProvider = get<LocalRoutingIdProvider>(),
+                localBootstrapRoutingIdProvider = get<LocalBootstrapRoutingIdProvider>(),
+                transportConfig = get<TransportConfig>(),
                 mailboxRouteRepository = get()
             )
         }
     }
 
-internal const val RELAY_JSON_QUALIFIER = "RelayJson"
+internal const val GATEWAY_JSON_QUALIFIER = "GatewayJson"

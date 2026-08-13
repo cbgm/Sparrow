@@ -141,13 +141,13 @@ class AppViewModel(
 
     private suspend fun runForegroundSession() {
         waitUntilLocalIdentityIsReady()
-        foreground.incomingRelayRunner.start()
-        foreground.relayConnectionManager.start()
+        foreground.incomingEnvelopeRunner.start()
+        foreground.transportConnectionManager.start()
 
         coroutineScope {
             val connectionObserver =
                 launch {
-                    foreground.relayConnectionManager.connectionState.collect(::handleConnectionState)
+                    foreground.transportConnectionManager.connectionState.collect(::handleConnectionState)
                 }
 
             try {
@@ -155,8 +155,8 @@ class AppViewModel(
             } finally {
                 connectionObserver.cancelAndJoin()
                 foreground.outboxRunner.stop()
-                foreground.incomingRelayRunner.stop()
-                foreground.relayConnectionManager.stop()
+                foreground.incomingEnvelopeRunner.stop()
+                foreground.transportConnectionManager.stop()
             }
         }
     }
@@ -164,14 +164,14 @@ class AppViewModel(
     private suspend fun handleConnectionState(state: TransportConnectionState) {
         when (state) {
             is TransportConnectionState.Connected -> handleConnected(state)
-            is TransportConnectionState.Connecting -> logger.debug { "Relay connecting" }
-            is TransportConnectionState.Disconnected -> logger.info { "Relay disconnected" }
-            is TransportConnectionState.Failed -> logger.error { "Relay failed: ${state.message}" }
+            is TransportConnectionState.Connecting -> logger.debug { "Transport connecting" }
+            is TransportConnectionState.Disconnected -> logger.info { "Transport disconnected" }
+            is TransportConnectionState.Failed -> logger.error { "Transport failed: ${state.message}" }
         }
     }
 
     private suspend fun handleConnected(state: TransportConnectionState.Connected) {
-        logger.info { "Relay connected: ${state.relayId}" }
+        logger.info { "Transport connected: ${state.routingId}" }
         foreground.mailboxCoordinator
             .provisionRoutes()
             .onSuccess { provisioned ->

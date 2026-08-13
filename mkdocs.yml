@@ -88,7 +88,7 @@ nav:
       - Troubleshooting: build/troubleshooting.md
       - Extending the Build: build/extending.md
   - API:
-      - Relay: api/relay.md
+      - Gateway: api/gateway.md
       - WebSocket: api/websocket.md
       - Protocol: api/protocol.md
   - Generated Reference:

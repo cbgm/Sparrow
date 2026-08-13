@@ -4,14 +4,14 @@ import com.cbgm.securechat.core.id.IdGenerator
 import com.cbgm.securechat.core.logging.SecureChatLog
 import com.cbgm.securechat.core.time.SystemClock
 import com.cbgm.securechat.feature.transport.connection.TransportConnectionState
-import com.cbgm.securechat.feature.transport.relay.model.ClientRouteRegistration
-import com.cbgm.securechat.feature.transport.relay.model.FederatedEnvelope
-import com.cbgm.securechat.feature.transport.relay.model.RelayClientMessage
-import com.cbgm.securechat.feature.transport.relay.model.RelayEnvelope
-import com.cbgm.securechat.feature.transport.relay.model.RelayServerMessage
-import com.cbgm.securechat.feature.transport.relay.model.RelayTypingEvent
-import com.cbgm.securechat.feature.transport.relay.presence.ClientPresenceRouteManager
-import com.cbgm.securechat.feature.transport.relay.presence.PresenceRouteConnection
+import com.cbgm.securechat.feature.transport.gateway.model.ClientRouteRegistration
+import com.cbgm.securechat.feature.transport.gateway.model.FederatedEnvelope
+import com.cbgm.securechat.feature.transport.gateway.model.GatewayClientMessage
+import com.cbgm.securechat.feature.transport.gateway.model.GatewayServerMessage
+import com.cbgm.securechat.feature.transport.gateway.model.GatewayTypingEvent
+import com.cbgm.securechat.feature.transport.gateway.model.TransportEnvelope
+import com.cbgm.securechat.feature.transport.presence.ClientPresenceRouteManager
+import com.cbgm.securechat.feature.transport.presence.PresenceRouteConnection
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
 import io.ktor.client.plugins.websocket.webSocket
@@ -59,14 +59,14 @@ class DefaultWebSocketTransportClient internal constructor(
     private val mutableRegisteredRoutingAliases = MutableStateFlow<Set<String>>(emptySet())
 
     private val mutableIncomingEnvelopes =
-        MutableSharedFlow<RelayEnvelope>(extraBufferCapacity = INCOMING_BUFFER_CAPACITY)
+        MutableSharedFlow<TransportEnvelope>(extraBufferCapacity = INCOMING_BUFFER_CAPACITY)
 
-    override val incomingEnvelopes: Flow<RelayEnvelope> = mutableIncomingEnvelopes.asSharedFlow()
+    override val incomingEnvelopes: Flow<TransportEnvelope> = mutableIncomingEnvelopes.asSharedFlow()
 
     private val mutableIncomingTypingEvents =
-        MutableSharedFlow<RelayTypingEvent>(extraBufferCapacity = INCOMING_BUFFER_CAPACITY)
+        MutableSharedFlow<GatewayTypingEvent>(extraBufferCapacity = INCOMING_BUFFER_CAPACITY)
 
-    override val incomingTypingEvents: Flow<RelayTypingEvent> =
+    override val incomingTypingEvents: Flow<GatewayTypingEvent> =
         mutableIncomingTypingEvents.asSharedFlow()
 
     private val sessionMutex = Mutex()
@@ -83,14 +83,14 @@ class DefaultWebSocketTransportClient internal constructor(
 
     override fun connect(
         serverUrl: String,
-        localRelayId: String
+        localRoutingId: String
     ) {
         require(serverUrl.isNotBlank()) {
-            "Relay server URL must not be blank"
+            "Gateway WebSocket URL must not be blank"
         }
 
-        require(localRelayId.isNotBlank()) {
-            "Local relay ID must not be blank"
+        require(localRoutingId.isNotBlank()) {
+            "Local routing ID must not be blank"
         }
 
         if (connectionJob?.isActive == true) return
@@ -99,13 +99,13 @@ class DefaultWebSocketTransportClient internal constructor(
             clientScope.launch {
                 runConnection(
                     serverUrl = serverUrl,
-                    localRelayId = localRelayId
+                    localRoutingId = localRoutingId
                 )
             }
     }
 
     override suspend fun sendEnvelopeAndAwaitAcceptance(
-        envelope: RelayEnvelope,
+        envelope: TransportEnvelope,
         timeoutMilliseconds: Long
     ): Result<Unit> =
         runCatching {
@@ -114,7 +114,7 @@ class DefaultWebSocketTransportClient internal constructor(
             }
 
             check(connectionState.value is TransportConnectionState.Connected) {
-                "WebSocket relay is not connected"
+                "WebSocket transport is not connected"
             }
 
             val acknowledgement = CompletableDeferred<Unit>()
@@ -175,12 +175,12 @@ class DefaultWebSocketTransportClient internal constructor(
                     )
 
                 val clientMessage =
-                    RelayClientMessage.AcknowledgeEnvelope(
+                    GatewayClientMessage.AcknowledgeEnvelope(
                         envelopeId = envelopeId
                     )
 
                 val encodedMessage =
-                    json.encodeToString<RelayClientMessage>(
+                    json.encodeToString<GatewayClientMessage>(
                         clientMessage
                     )
 
@@ -196,11 +196,11 @@ class DefaultWebSocketTransportClient internal constructor(
     ): Result<Unit> =
         runCatching {
             require(recipientId.isNotBlank()) {
-                "Recipient relay ID must not be blank"
+                "Recipient routing ID must not be blank"
             }
 
             check(connectionState.value is TransportConnectionState.Connected) {
-                "WebSocket relay is not connected"
+                "WebSocket transport is not connected"
             }
 
             sendMutex.withLock {
@@ -212,14 +212,14 @@ class DefaultWebSocketTransportClient internal constructor(
                     )
 
                 val clientMessage =
-                    RelayClientMessage.TypingState(
+                    GatewayClientMessage.TypingState(
                         recipientId = recipientId,
                         isTyping = isTyping
                     )
 
                 activeSession.send(
                     Frame.Text(
-                        json.encodeToString<RelayClientMessage>(
+                        json.encodeToString<GatewayClientMessage>(
                             clientMessage
                         )
                     )
@@ -261,7 +261,7 @@ class DefaultWebSocketTransportClient internal constructor(
     @Suppress("CyclomaticComplexMethod", "LongMethod", "NestedBlockDepth")
     private suspend fun runConnection(
         serverUrl: String,
-        localRelayId: String
+        localRoutingId: String
     ) {
         mutableConnectionState.value = TransportConnectionState.Connecting
 
@@ -289,7 +289,7 @@ class DefaultWebSocketTransportClient internal constructor(
                 val presenceConnection =
                     PresenceRouteConnection(
                         serverUrl = serverUrl,
-                        routingId = localRelayId,
+                        routingId = localRoutingId,
                         connectionId = connectionId,
                         generation = generation,
                         initialGatewayInformation = gatewayInformation,
@@ -313,7 +313,7 @@ class DefaultWebSocketTransportClient internal constructor(
                 val signedRegistrationSent =
                     sendRegistration(
                         activeSession = this,
-                        localRelayId = localRelayId,
+                        localRoutingId = localRoutingId,
                         connectionId = connectionId,
                         connectionIdRegistered = gatewayInformation != null,
                         routeRegistration = routeRegistration
@@ -331,8 +331,8 @@ class DefaultWebSocketTransportClient internal constructor(
                                     sendMutex.withLock {
                                         this@webSocket.send(
                                             Frame.Text(
-                                                json.encodeToString<RelayClientMessage>(
-                                                    RelayClientMessage.RefreshRoute(registration)
+                                                json.encodeToString<GatewayClientMessage>(
+                                                    GatewayClientMessage.RefreshRoute(registration)
                                                 )
                                             )
                                         )
@@ -370,7 +370,7 @@ class DefaultWebSocketTransportClient internal constructor(
                             is Frame.Text -> {
                                 handleTextFrame(
                                     encodedMessage = frame.readText(),
-                                    expectedRelayId = localRelayId,
+                                    expectedRoutingId = localRoutingId,
                                     registeredAliases =
                                         routeRegistration
                                             ?.route
@@ -452,14 +452,14 @@ class DefaultWebSocketTransportClient internal constructor(
 
     private suspend fun sendRegistration(
         activeSession: DefaultClientWebSocketSession,
-        localRelayId: String,
+        localRoutingId: String,
         connectionId: String,
         connectionIdRegistered: Boolean,
         routeRegistration: ClientRouteRegistration?
     ): Boolean {
         val registration =
-            RelayClientMessage.Register(
-                relayId = localRelayId,
+            GatewayClientMessage.Register(
+                routingId = localRoutingId,
                 connectionId = connectionId.takeIf { connectionIdRegistered },
                 generation = routeRegistration?.route?.generation,
                 expiresAtEpochMilliseconds = routeRegistration?.route?.expiresAtEpochMilliseconds,
@@ -468,20 +468,20 @@ class DefaultWebSocketTransportClient internal constructor(
                 clientSignature = routeRegistration?.route?.clientSignature
             )
 
-        val encodedRegistration = json.encodeToString<RelayClientMessage>(registration)
+        val encodedRegistration = json.encodeToString<GatewayClientMessage>(registration)
 
         sendMutex.withLock {
             activeSession.send(Frame.Text(encodedRegistration))
         }
 
         logger.debug {
-            "Relay registration sent for $localRelayId; signed=${routeRegistration != null}"
+            "Gateway registration sent for $localRoutingId; signed=${routeRegistration != null}"
         }
 
         return routeRegistration != null
     }
 
-    private suspend fun sendEnvelopeFrame(envelope: RelayEnvelope) {
+    private suspend fun sendEnvelopeFrame(envelope: TransportEnvelope) {
         sendMutex.withLock {
             val activeSession =
                 sessionMutex.withLock {
@@ -490,9 +490,9 @@ class DefaultWebSocketTransportClient internal constructor(
                     "WebSocket session is not available"
                 )
 
-            val clientMessage = RelayClientMessage.SendEnvelope(envelope = envelope)
+            val clientMessage = GatewayClientMessage.SendEnvelope(envelope = envelope)
 
-            val encodedMessage = json.encodeToString<RelayClientMessage>(clientMessage)
+            val encodedMessage = json.encodeToString<GatewayClientMessage>(clientMessage)
 
             activeSession.send(Frame.Text(encodedMessage))
         }
@@ -505,8 +505,8 @@ class DefaultWebSocketTransportClient internal constructor(
                     ?: error("WebSocket session is not available")
             activeSession.send(
                 Frame.Text(
-                    json.encodeToString<RelayClientMessage>(
-                        RelayClientMessage.SendFederatedEnvelope(envelope)
+                    json.encodeToString<GatewayClientMessage>(
+                        GatewayClientMessage.SendFederatedEnvelope(envelope)
                     )
                 )
             )
@@ -521,7 +521,7 @@ class DefaultWebSocketTransportClient internal constructor(
         runCatching {
             require(timeoutMilliseconds > 0L) { "Acknowledgement timeout must be positive" }
             check(connectionState.value is TransportConnectionState.Connected) {
-                "WebSocket relay is not connected"
+                "WebSocket transport is not connected"
             }
             val acknowledgement = CompletableDeferred<Unit>()
             acknowledgementsMutex.withLock {
@@ -540,53 +540,53 @@ class DefaultWebSocketTransportClient internal constructor(
 
     private suspend fun handleTextFrame(
         encodedMessage: String,
-        expectedRelayId: String,
+        expectedRoutingId: String,
         registeredAliases: Set<String>
     ) {
         val message =
             runCatching {
-                json.decodeFromString<RelayServerMessage>(encodedMessage)
+                json.decodeFromString<GatewayServerMessage>(encodedMessage)
             }.getOrElse { error ->
-                logger.error(error) { "Invalid relay response" }
+                logger.error(error) { "Invalid gateway response" }
 
                 mutableConnectionState.value =
                     TransportConnectionState.Failed(
-                        message = error.message ?: "Invalid relay response"
+                        message = error.message ?: "Invalid gateway response"
                     )
 
                 return
             }
 
         when (message) {
-            is RelayServerMessage.Registered -> {
-                if (message.relayId != expectedRelayId) {
+            is GatewayServerMessage.Registered -> {
+                if (message.routingId != expectedRoutingId) {
                     mutableConnectionState.value =
-                        TransportConnectionState.Failed(message = "Relay registered an unexpected identity")
+                        TransportConnectionState.Failed(message = "Gateway registered an unexpected routing identity")
 
                     return
                 }
 
-                logger.info { "Relay registration accepted for ${message.relayId}" }
+                logger.info { "Gateway registration accepted for ${message.routingId}" }
 
                 mutableRegisteredRoutingAliases.value = registeredAliases
                 mutableConnectionState.value =
-                    TransportConnectionState.Connected(relayId = message.relayId)
+                    TransportConnectionState.Connected(routingId = message.routingId)
             }
 
-            is RelayServerMessage.IncomingEnvelope -> {
+            is GatewayServerMessage.IncomingEnvelope -> {
                 mutableIncomingEnvelopes.emit(message.envelope)
             }
 
-            is RelayServerMessage.TypingState -> {
+            is GatewayServerMessage.TypingState -> {
                 mutableIncomingTypingEvents.emit(
-                    RelayTypingEvent(
+                    GatewayTypingEvent(
                         senderId = message.senderId,
                         isTyping = message.isTyping
                     )
                 )
             }
 
-            is RelayServerMessage.EnvelopeAccepted -> {
+            is GatewayServerMessage.EnvelopeAccepted -> {
                 val acknowledgement =
                     acknowledgementsMutex.withLock {
                         pendingAcknowledgements[message.envelopeId]
@@ -595,17 +595,17 @@ class DefaultWebSocketTransportClient internal constructor(
                 acknowledgement?.complete(Unit)
             }
 
-            is RelayServerMessage.Error -> {
-                logger.warn { "Relay error ${message.code}: ${message.message}" }
+            is GatewayServerMessage.Error -> {
+                logger.warn { "Gateway error ${message.code}: ${message.message}" }
 
                 if (message.code in FATAL_ROUTE_ERROR_CODES) {
                     throw IllegalStateException(
-                        "Presence route rejected by relay: ${message.code}"
+                        "Presence route rejected by gateway: ${message.code}"
                     )
                 }
 
                 /*
-                 * A relay error does not always mean the underlying
+                 * A gateway error does not always mean the underlying
                  * WebSocket connection is broken.
                  *
                  * Keep the connection state unchanged here. The

@@ -17,7 +17,7 @@ enum class MessageDeliveryStatus {
     SENDING,
 
     /**
-     * The relay accepted the outgoing envelope.
+     * The gateway accepted the outgoing envelope.
      *
      * This does not yet prove recipient storage.
      */

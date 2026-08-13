@@ -8,7 +8,7 @@ Every architectural decision is evaluated from a security perspective before con
 
 Unlike traditional messaging applications, SecureChat assumes that transport infrastructure cannot be trusted.
 
-The relay forwards encrypted data but must never be able to read message contents.
+The gateway forwards encrypted data but must never be able to read message contents.
 
 ---
 
@@ -32,7 +32,7 @@ SecureChat protects against
 
 - passive network observers
 - malicious Wi-Fi networks
-- compromised relay servers
+- compromised gateway services
 - message interception
 - message modification
 - identity spoofing
@@ -63,7 +63,7 @@ Encrypted Message
 
 ↓
 
-Relay
+Gateway
 
 ↓
 
@@ -82,7 +82,7 @@ Identity Keys
 User B
 ```
 
-The relay only transports encrypted payloads.
+The gateway only transports encrypted payloads.
 
 It never receives plaintext.
 
@@ -148,7 +148,7 @@ Messages are encrypted before leaving the device.
 
 Encryption occurs entirely on the client.
 
-The relay never performs encryption or decryption.
+The gateway never performs encryption or decryption.
 
 Only the communicating devices possess the keys required to decrypt message contents.
 
@@ -173,9 +173,9 @@ Even if the transport layer is intercepted, encrypted payloads remain unreadable
 
 ---
 
-# Relay
+# Gateway
 
-The relay server has a deliberately limited role.
+The gateway service has a deliberately limited role.
 
 Responsibilities include
 
@@ -183,7 +183,7 @@ Responsibilities include
 - message forwarding
 - connection management
 
-The relay
+The gateway
 
 - cannot decrypt messages
 - cannot generate identities

@@ -3,10 +3,10 @@ package com.cbgm.securechat.feature.messaging.application.incoming
 import com.cbgm.securechat.core.logging.SecureChatLog
 import com.cbgm.securechat.core.protocol.handler.IncomingMessageHandler
 import com.cbgm.securechat.core.protocol.identity.LocalEncryptionKeyPairProvider
-import com.cbgm.securechat.feature.messaging.application.relay.ContactByRelayIdResolver
+import com.cbgm.securechat.feature.messaging.application.routing.ContactByRoutingIdResolver
 
 class DefaultIncomingEnvelopeProcessor(
-    private val contactByRelayIdResolver: ContactByRelayIdResolver,
+    private val contactByRoutingIdResolver: ContactByRoutingIdResolver,
     private val localEncryptionKeyPairProvider: LocalEncryptionKeyPairProvider,
     private val incomingMessageHandler: IncomingMessageHandler
 ) : IncomingEnvelopeProcessor {
@@ -14,18 +14,18 @@ class DefaultIncomingEnvelopeProcessor(
 
     override suspend fun process(
         envelopeId: String,
-        senderRelayId: String,
+        senderRoutingId: String,
         encodedTransportPayload: String
     ): Result<IncomingEnvelopeProcessingResult> =
         runCatching {
             val contactId =
-                contactByRelayIdResolver
+                contactByRoutingIdResolver
                     .resolveContactId(
-                        relayId = senderRelayId
+                        routingId = senderRoutingId
                     ).getOrThrow()
                     ?: run {
                         logger.warn {
-                            "Incoming envelope ignored: unknown sender $senderRelayId"
+                            "Incoming envelope ignored: unknown sender $senderRoutingId"
                         }
 
                         return@runCatching IncomingEnvelopeProcessingResult.UnknownSender
@@ -43,11 +43,11 @@ class DefaultIncomingEnvelopeProcessor(
                 localEncryptionPrivateKey = keyPair.privateKey
             )
 
-            contactByRelayIdResolver
+            contactByRoutingIdResolver
                 .reconcileKnownContacts()
                 .onFailure { error ->
                     logger.warn {
-                        "Contact relay reconciliation failed after envelope $envelopeId: ${error.message}"
+                        "Contact routing reconciliation failed after envelope $envelopeId: ${error.message}"
                     }
                 }
 

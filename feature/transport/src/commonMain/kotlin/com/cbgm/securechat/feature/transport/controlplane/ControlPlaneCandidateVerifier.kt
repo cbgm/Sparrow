@@ -1,10 +1,10 @@
 package com.cbgm.securechat.feature.transport.controlplane
 
 import com.cbgm.securechat.core.time.SystemClock
+import com.cbgm.securechat.feature.transport.config.TransportConfig
 import com.cbgm.securechat.feature.transport.discovery.NodeDirectorySource
 import com.cbgm.securechat.feature.transport.discovery.NodeDirectoryVerifier
 import com.cbgm.securechat.feature.transport.discovery.SignedNodeDirectory
-import com.cbgm.securechat.feature.transport.relay.config.RelayTransportConfig
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 
@@ -16,7 +16,7 @@ class SignedDirectoryControlPlaneCandidateVerifier(
     private val nodeDirectorySource: NodeDirectorySource,
     private val json: Json,
     private val verifier: NodeDirectoryVerifier,
-    private val relayTransportConfig: RelayTransportConfig
+    private val transportConfig: TransportConfig
 ) : ControlPlaneCandidateVerifier {
     override suspend fun verify(baseUrl: String): Result<Unit> =
         runCatching {
@@ -27,7 +27,7 @@ class SignedDirectoryControlPlaneCandidateVerifier(
 
     private suspend fun verifySignedDirectory(baseUrl: String) {
         val trustedRootNodeId =
-            requireNotNull(relayTransportConfig.trustedRegistryRootNodeId) {
+            requireNotNull(transportConfig.trustedRegistryRootNodeId) {
                 "Control-plane discovery requires a pinned registry root"
             }
         val encodedDirectory = nodeDirectorySource.fetch(baseUrl).getOrThrow()
@@ -36,7 +36,7 @@ class SignedDirectoryControlPlaneCandidateVerifier(
             .verify(
                 signedDirectory = signedDirectory,
                 trustedRootNodeId = trustedRootNodeId,
-                supportedProtocolVersion = relayTransportConfig.supportedProtocolVersion,
+                supportedProtocolVersion = transportConfig.supportedProtocolVersion,
                 nowEpochMilliseconds = SystemClock.nowEpochMilliseconds()
             ).getOrThrow()
     }

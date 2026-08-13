@@ -51,7 +51,7 @@ val androidDatabaseModule =
         }
 
         single {
-            get<SecureChatDatabase>().contactRelayIdDao()
+            get<SecureChatDatabase>().contactRoutingIdDao()
         }
 
         single {

@@ -41,8 +41,7 @@ feature/chats/       Conversations, messages, receipts, and chat UI
 feature/contacts/    Contacts and remote identity exchange
 feature/identity/    Local identity and identity-sharing UI
 feature/messaging/   Send/receive application orchestration
-feature/transport/   Relay addressing, WebSocket, and wire transport
-relay/               Standalone Ktor relay server
+feature/transport/   Routing IDs, gateway WebSocket, discovery, and wire transport
 build-logic/         Convention and architecture plugins
 quality/             Custom Detekt rules
 docs/                MkDocs engineering handbook
@@ -203,9 +202,9 @@ page. Never edit generated files manually.
 
 # Federated Server Implementation
 
-The independently deployable registry, presence, gateway, federation, mailbox, and push services are now
-available under [`server/`](server/README.md). The original `relay/` remains available as the migration
-compatibility server. A complete local network can be started with:
+The independently deployable registry, presence, gateway, federation, mailbox, and push services are
+available under [`server/`](server/README.md). The obsolete standalone relay module has been removed.
+A complete local network can be started with:
 
 ```bash
 docker compose -f server/docker-compose.yml up --build

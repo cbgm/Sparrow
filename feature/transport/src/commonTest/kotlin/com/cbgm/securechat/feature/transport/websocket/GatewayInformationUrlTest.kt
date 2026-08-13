@@ -1,13 +1,13 @@
 package com.cbgm.securechat.feature.transport.websocket
 
-import com.cbgm.securechat.feature.transport.relay.presence.gatewayInformationUrl
+import com.cbgm.securechat.feature.transport.presence.gatewayInformationUrl
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class GatewayInformationUrlTest {
     @Test
-    fun convertsWebSocketRelayUrlToGatewayInformationUrl() {
+    fun convertsWebSocketGatewayUrlToGatewayInformationUrl() {
         assertEquals(
             "http://10.0.2.2:8094/v1/gateway",
             gatewayInformationUrl("ws://10.0.2.2:8094/relay")

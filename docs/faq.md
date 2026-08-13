@@ -73,11 +73,11 @@ Only the intended recipient can decrypt them.
 
 ---
 
-### Can the relay read messages?
+### Can the gateway read messages?
 
 No.
 
-The relay only forwards encrypted packets.
+The gateway only forwards encrypted packets.
 
 It never receives plaintext.
 
@@ -117,7 +117,7 @@ Yes.
 
 Messages are stored locally after successful decryption.
 
-The relay is not intended to become permanent message storage.
+The gateway is not intended to become permanent message storage.
 
 ---
 

@@ -11,8 +11,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cbgm.securechat.feature.contacts.presentation.blocklist.BlockedContactsScreen
-import com.cbgm.securechat.feature.contacts.presentation.blocklist.BlockedContactsViewModel
 import com.cbgm.securechat.feature.contacts.presentation.blocklist.model.BlockedContactsEffect
 import org.koin.compose.viewmodel.koinViewModel
 

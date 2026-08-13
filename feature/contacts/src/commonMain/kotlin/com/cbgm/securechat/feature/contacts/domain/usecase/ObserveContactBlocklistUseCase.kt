@@ -1,7 +1,6 @@
 package com.cbgm.securechat.feature.contacts.domain.usecase
 
 import com.cbgm.securechat.core.security.ContactBlocklistRepository
-import com.cbgm.securechat.feature.contacts.domain.model.Contact
 import com.cbgm.securechat.feature.contacts.domain.model.ContactBlocklist
 import kotlinx.coroutines.flow.combine
 

@@ -27,7 +27,6 @@ SecureChat/
 │   ├── onboarding/
 │   ├── settings/
 │   └── transport/
-├── relay/                   # standalone Ktor relay server
 ├── build-logic/             # included Gradle build and convention plugins
 ├── quality/
 │   └── detekt-rules/        # custom static-analysis rules
@@ -46,7 +45,7 @@ default.
 ### `:androidApp`
 
 Contains Android-specific entry points: `SecureChatApplication`, the Activity, manifest, and Koin
-assembly. It starts relay runtime services after local identity setup. Business logic remains in
+assembly. It starts transport runtime services after local identity setup. Business logic remains in
 feature or core modules.
 
 ### `:shared`
@@ -115,9 +114,8 @@ See [Identity](../features/identity.md).
 UI-less application orchestration:
 
 ```text
-application/   incoming relay and outgoing outbox workflows
-domain/        contact/relay resolution ports
-data/          resolver and typing adapters
+application/   incoming, mailbox, outbox, and routing workflows
+data/          repository and routing adapters
 di/            Koin wiring
 ```
 
@@ -126,7 +124,7 @@ It connects chats, contacts, crypto, protocol, database, and transport. See
 
 ### `:feature:transport`
 
-Relay IDs, connection lifecycle, WebSocket frames, outgoing wire adapter, and platform HTTP clients.
+Routing IDs, node discovery, connection lifecycle, gateway WebSocket frames, outgoing wire adapter, and platform HTTP clients.
 It moves opaque payloads. See [Transport](../features/transport.md).
 
 ### Other features
@@ -137,10 +135,9 @@ It moves opaque payloads. See [Transport](../features/transport.md).
 | `:feature:onboarding` | Onboarding flow |
 | `:feature:settings` | Settings behavior and presentation |
 
-## Relay server
+## Server applications
 
-`:relay` is a JVM/Ktor application, not a client feature. It owns registration, active connection
-tracking, pending-envelope storage, and opaque routing. The current pending store is in-memory.
+The independently deployable server applications live under `server/`. Client-facing WebSocket routing belongs to `:server:gateway`; cross-node routing belongs to `:server:federation`; offline ciphertext belongs to `:server:mailbox`; push wake-ups and the compatibility pending inbox belong to `:server:push`.
 
 ## Standard feature layout
 

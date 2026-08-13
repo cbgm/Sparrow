@@ -2,7 +2,7 @@ package com.cbgm.securechat.feature.transport.discovery
 
 import com.cbgm.securechat.core.crypto.hash.DefaultCryptoHash
 import com.cbgm.securechat.core.crypto.signature.DetachedSignatureCrypto
-import com.cbgm.securechat.feature.transport.relay.codec.createRelayJson
+import com.cbgm.securechat.feature.transport.gateway.codec.createGatewayJson
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -13,7 +13,7 @@ class NodeDirectoryVerifierTest {
         NodeDirectoryVerifier(
             signatureCrypto = AcceptingSignatureCrypto,
             cryptoHash = cryptoHash,
-            json = createRelayJson()
+            json = createGatewayJson()
         )
 
     @Test
@@ -176,7 +176,7 @@ class NodeDirectoryVerifierTest {
                 NodeDirectoryVerifier(
                     signatureCrypto = RejectingSignatureCrypto,
                     cryptoHash = cryptoHash,
-                    json = createRelayJson()
+                    json = createGatewayJson()
                 )
 
             val result =

@@ -3,8 +3,8 @@ package com.cbgm.securechat.feature.messaging.application.mailbox
 import com.cbgm.securechat.core.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.securechat.core.protocol.mailbox.MailboxDeliveryRoute
 import com.cbgm.securechat.core.protocol.mailbox.MailboxRouteRepository
+import com.cbgm.securechat.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.securechat.feature.transport.mailbox.MailboxGateway
-import com.cbgm.securechat.feature.transport.relay.model.FederatedEnvelope
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals

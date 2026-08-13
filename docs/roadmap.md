@@ -37,7 +37,7 @@ Completed areas include
 - Contact management
 - Secure messaging
 - End-to-end encryption
-- Relay server
+- Gateway service
 - Documentation generation
 - Architecture validation
 - Quality automation

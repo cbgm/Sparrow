@@ -4,7 +4,7 @@ import com.cbgm.securechat.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.securechat.server.protocol.FederatedEnvelope
 import com.cbgm.securechat.server.protocol.FederatedTypingEvent
 import com.cbgm.securechat.server.protocol.FederationAcknowledgement
-import com.cbgm.securechat.server.protocol.RelayEnvelope
+import com.cbgm.securechat.server.protocol.TransportEnvelope
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -64,7 +64,7 @@ class GatewayEnvelopeRoutingTest {
             var markedStoredEnvelopeId: String? = null
             val accepted =
                 storeAndRouteLegacyEnvelope(
-                    envelope = testRelayEnvelope(),
+                    envelope = testTransportEnvelope(),
                     pushStorage = {
                         pushCalls += 1
                         true
@@ -87,7 +87,7 @@ class GatewayEnvelopeRoutingTest {
     @Test
     fun onlineFederatedEnvelopeSkipsPushStorage() =
         runTest {
-            var pushedEnvelope: RelayEnvelope? = null
+            var pushedEnvelope: TransportEnvelope? = null
             var routedEnvelope: FederatedEnvelope? = null
             var markedStoredEnvelopeId: String? = null
             val envelope = testEnvelope()
@@ -138,7 +138,7 @@ class GatewayEnvelopeRoutingTest {
             var markedStoredEnvelopeId: String? = null
             val accepted =
                 storeAndRouteLegacyEnvelope(
-                    envelope = testRelayEnvelope(),
+                    envelope = testTransportEnvelope(),
                     pushStorage = { true },
                     networkDelivery = { null },
                     markFederationStored = {
@@ -154,7 +154,7 @@ class GatewayEnvelopeRoutingTest {
     fun queuedEnvelopeIsAcceptedBeforePushFallbackCompletes() =
         runTest {
             var pushCalls = 0
-            var scheduledEnvelope: RelayEnvelope? = null
+            var scheduledEnvelope: TransportEnvelope? = null
             var scheduledEnvelopeId: String? = null
             val accepted =
                 storeAndRouteFederatedEnvelope(
@@ -236,8 +236,8 @@ class GatewayEnvelopeRoutingTest {
             expiresAtEpochMilliseconds = 2_000L
         )
 
-    private fun testRelayEnvelope(): RelayEnvelope =
-        RelayEnvelope(
+    private fun testTransportEnvelope(): TransportEnvelope =
+        TransportEnvelope(
             envelopeId = "envelope-1",
             senderId = "sender",
             recipientId = "recipient",

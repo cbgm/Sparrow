@@ -1,12 +1,12 @@
 package com.cbgm.securechat.server.push
 
-import com.cbgm.securechat.server.protocol.RelayEnvelope
+import com.cbgm.securechat.server.protocol.TransportEnvelope
 import java.security.SecureRandom
 import java.util.Base64
 import java.util.concurrent.ConcurrentHashMap
 
 data class PushDevice(
-    val relayId: String,
+    val routingId: String,
     val token: String,
     val platform: String
 )
@@ -14,7 +14,7 @@ data class PushDevice(
 interface PushDeviceStore {
     suspend fun register(device: PushDevice)
 
-    suspend fun find(relayId: String): List<PushDevice>
+    suspend fun find(routingId: String): List<PushDevice>
 
     suspend fun removeToken(token: String)
 
@@ -22,9 +22,9 @@ interface PushDeviceStore {
 }
 
 interface PendingEnvelopeStore {
-    suspend fun enqueue(envelope: RelayEnvelope): Boolean
+    suspend fun enqueue(envelope: TransportEnvelope): Boolean
 
-    suspend fun pending(recipientId: String): List<RelayEnvelope>
+    suspend fun pending(recipientId: String): List<TransportEnvelope>
 
     suspend fun remove(
         recipientId: String,
@@ -49,10 +49,10 @@ class InMemoryPushDeviceStore : PushDeviceStore {
 
     override suspend fun register(device: PushDevice) {
         devices.values.forEach { it.remove(device.token) }
-        devices.computeIfAbsent(device.relayId) { ConcurrentHashMap() }[device.token] = device
+        devices.computeIfAbsent(device.routingId) { ConcurrentHashMap() }[device.token] = device
     }
 
-    override suspend fun find(relayId: String): List<PushDevice> = devices[relayId]?.values?.toList().orEmpty()
+    override suspend fun find(routingId: String): List<PushDevice> = devices[routingId]?.values?.toList().orEmpty()
 
     override suspend fun removeToken(token: String) {
         devices.values.forEach { it.remove(token) }
@@ -64,7 +64,7 @@ class InMemoryPushDeviceStore : PushDeviceStore {
 class InMemoryPendingEnvelopeStore(
     private val maximumEnvelopes: Int = DEFAULT_MAXIMUM_ENVELOPES
 ) : PendingEnvelopeStore {
-    private val envelopes = ConcurrentHashMap<String, ConcurrentHashMap<String, RelayEnvelope>>()
+    private val envelopes = ConcurrentHashMap<String, ConcurrentHashMap<String, TransportEnvelope>>()
 
     init {
         require(maximumEnvelopes > 0) {
@@ -72,7 +72,7 @@ class InMemoryPendingEnvelopeStore(
         }
     }
 
-    override suspend fun enqueue(envelope: RelayEnvelope): Boolean {
+    override suspend fun enqueue(envelope: TransportEnvelope): Boolean {
         if (count() >= maximumEnvelopes && !contains(envelope.envelopeId)) {
             return false
         }
@@ -85,10 +85,10 @@ class InMemoryPendingEnvelopeStore(
         return recipientEnvelopes.putIfAbsent(envelope.envelopeId, envelope) == null
     }
 
-    override suspend fun pending(recipientId: String): List<RelayEnvelope> =
+    override suspend fun pending(recipientId: String): List<TransportEnvelope> =
         envelopes[recipientId]
             ?.values
-            ?.sortedBy(RelayEnvelope::createdAtEpochMilliseconds)
+            ?.sortedBy(TransportEnvelope::createdAtEpochMilliseconds)
             .orEmpty()
 
     override suspend fun remove(

@@ -84,7 +84,7 @@ Business decisions should never originate from the data layer.
 
 The optional application layer coordinates domain ports for background workflows that do not belong to a screen.
 
-In `:feature:messaging`, it owns the incoming-relay and outbox runners. It may depend on domain abstractions, but transport and persistence implementations remain in data or infrastructure modules.
+In `:feature:messaging`, it owns the incoming-gateway and outbox runners. It may depend on domain abstractions, but transport and persistence implementations remain in data or infrastructure modules.
 
 ---
 

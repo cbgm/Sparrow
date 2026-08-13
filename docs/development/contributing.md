@@ -101,7 +101,7 @@ Refactor identity repository
 
 Generate architecture statistics
 
-Fix relay reconnect logic
+Fix gateway reconnect logic
 ```
 
 Avoid

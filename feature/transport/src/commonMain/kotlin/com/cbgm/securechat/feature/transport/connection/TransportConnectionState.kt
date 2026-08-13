@@ -6,7 +6,7 @@ sealed interface TransportConnectionState {
     data object Connecting : TransportConnectionState
 
     data class Connected(
-        val relayId: String
+        val routingId: String
     ) : TransportConnectionState
 
     data class Failed(

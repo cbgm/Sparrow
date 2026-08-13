@@ -91,7 +91,7 @@ Decoding:
 3. deserializes through the sealed `SecureChatPacket` serializer;
 4. rejects an unsupported version.
 
-Packet bytes are not a relay frame. The outgoing messaging pipeline next wraps them in
+Packet bytes are not a gateway frame. The outgoing messaging pipeline next wraps them in
 `EncryptedTransportPayload` and encodes that value with `TransportPayloadCodec`.
 
 ## Direct authorization packet rules
@@ -112,7 +112,7 @@ accepted again.
 ## Secure group packet rules
 
 `GroupInvitePacket` bootstraps an identity when the group owner only knows a normal contact and its
-phone-derived relay address. `GroupProtocolPayloadEncoder.encodeInvite()` binds the invitation ID,
+phone-derived routing address. `GroupProtocolPayloadEncoder.encodeInvite()` binds the invitation ID,
 group metadata, expiry, random challenge, and owner's encryption and signing public keys to the
 owner signature. It contains no group key.
 

@@ -7,17 +7,17 @@ import kotlin.test.assertNull
 
 class InMemoryPushStoresTest {
     @Test
-    fun registeringExistingTokenMovesItToLatestRelayId() =
+    fun registeringExistingTokenMovesItToLatestRoutingId() =
         runTest {
             val store = InMemoryPushDeviceStore()
 
-            store.register(PushDevice("relay-1", "token", "ANDROID"))
-            store.register(PushDevice("relay-2", "token", "ANDROID"))
+            store.register(PushDevice("routing-1", "token", "ANDROID"))
+            store.register(PushDevice("routing-2", "token", "ANDROID"))
 
-            assertEquals(emptyList(), store.find("relay-1"))
+            assertEquals(emptyList(), store.find("routing-1"))
             assertEquals(
-                listOf(PushDevice("relay-2", "token", "ANDROID")),
-                store.find("relay-2")
+                listOf(PushDevice("routing-2", "token", "ANDROID")),
+                store.find("routing-2")
             )
         }
 

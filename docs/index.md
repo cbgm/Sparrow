@@ -33,7 +33,7 @@ For read-only verification used by Git hooks and CI:
 - [Development](development/local-development.md)
 - [Logging](development/logging.md)
 - [Build infrastructure](build/index.md)
-- [Protocol and relay APIs](api/protocol.md)
+- [Protocol API](api/protocol.md) and [Gateway API](api/gateway.md)
 
 ## Generated architecture reference
 
@@ -63,9 +63,9 @@ Use the messaging pages in this order:
 
 1. [Messaging boundary](architecture/messaging-boundary.md) explains which module owns each responsibility.
 2. [Conversation, messaging, and delivery flow](features/message-transport-flow.md) traces direct
-   messages, group messages, receipts, typing, retries, relay acknowledgements, and extension
+   messages, group messages, receipts, typing, retries, gateway acknowledgements, and extension
    points using the production class names.
-3. [Transport](features/transport.md) documents WebSocket and relay mechanics.
+3. [Transport](features/transport.md) documents WebSocket, routing, and gateway mechanics.
 4. [Protocol](api/protocol.md) documents packet types and serialization.
 
 ## Documentation workflow

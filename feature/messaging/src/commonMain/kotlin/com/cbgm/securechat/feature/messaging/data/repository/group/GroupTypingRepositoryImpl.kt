@@ -1,14 +1,14 @@
 package com.cbgm.securechat.feature.messaging.data.repository.group
 
 import com.cbgm.securechat.feature.chats.domain.repository.group.GroupTypingRepository
-import com.cbgm.securechat.feature.messaging.application.relay.GroupRelayIdResolver
+import com.cbgm.securechat.feature.messaging.application.routing.GroupRoutingIdResolver
 import com.cbgm.securechat.feature.transport.websocket.WebSocketTransportClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.transform
 
 class GroupTypingRepositoryImpl(
     private val webSocketTransportClient: WebSocketTransportClient,
-    private val groupRelayIdResolver: GroupRelayIdResolver
+    private val groupRoutingIdResolver: GroupRoutingIdResolver
 ) : GroupTypingRepository {
     override fun observeMember(
         groupId: String,
@@ -16,12 +16,12 @@ class GroupTypingRepositoryImpl(
     ): Flow<Boolean> =
         webSocketTransportClient.incomingTypingEvents
             .transform { event ->
-                val relayId =
-                    groupRelayIdResolver
+                val routingId =
+                    groupRoutingIdResolver
                         .resolve(groupId, contactId)
                         .getOrNull()
                         ?: return@transform
-                if (event.senderId == relayId) {
+                if (event.senderId == routingId) {
                     emit(event.isTyping)
                 }
             }
@@ -31,17 +31,17 @@ class GroupTypingRepositoryImpl(
         isTyping: Boolean
     ): Result<Unit> =
         runCatching {
-            val recipientRelayIds =
-                groupRelayIdResolver
+            val recipientRoutingIds =
+                groupRoutingIdResolver
                     .resolveMembers(groupId)
                     .getOrThrow()
                     .values
 
             var firstFailure: Throwable? = null
-            recipientRelayIds.forEach { relayId ->
+            recipientRoutingIds.forEach { routingId ->
                 webSocketTransportClient
                     .sendTypingState(
-                        recipientId = relayId,
+                        recipientId = routingId,
                         isTyping = isTyping
                     ).exceptionOrNull()
                     ?.let { error ->

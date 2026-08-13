@@ -39,7 +39,7 @@ generation and the storage ports:
 - `PrivateKeyStorage`;
 - `PublicIdentityStorage`.
 
-`LocalPhoneNameStorage` stores the local phone/name data used by identity setup and relay-address
+`LocalPhoneNameStorage` stores the local phone/name data used by identity setup and gateway-address
 derivation.
 
 Main use cases:
@@ -80,14 +80,14 @@ Platform actions are abstracted under `presentation/platform`, including
 `rememberIdentityShareLauncher()`, `PhoneNumberHintLauncher()`, and QR-code support.
 
 `DefaultIdentityShareCodec` handles the share representation. Sharing public identity data is
-separate from the relay-based identity exchange.
+separate from the gateway-based identity exchange.
 
 ## Messaging integration
 
-Once identity and phone number are ready, `SecureChatApplication` starts the relay runtime.
+Once identity and phone number are ready, `SecureChatApplication` starts the gateway runtime.
 
-- `DefaultLocalRelayIdProvider` reads the phone through `LocalPhoneNumberProvider`.
-- `DefaultIncomingRelayRunner` obtains decryption keys through
+- `DefaultLocalRoutingIdProvider` reads the phone through `LocalPhoneNumberProvider`.
+- `DefaultIncomingEnvelopeRunner` obtains decryption keys through
   `LocalEncryptionKeyPairProvider`.
 - `DefaultIdentityExchangeStarter` obtains public keys through `LocalPublicIdentityProvider`.
 - Identity packet handlers obtain signing material through `LocalSigningKeyPairProvider`.

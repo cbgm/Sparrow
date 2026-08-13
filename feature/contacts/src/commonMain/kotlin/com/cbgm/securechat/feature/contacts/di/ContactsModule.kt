@@ -107,7 +107,7 @@ val contactsModule =
             IdentityInvitationRepositoryImpl(
                 invitationDao = get(),
                 contactDao = get(),
-                contactRelayIdDao = get(),
+                contactRoutingIdDao = get(),
                 contactKeyExchangeRepository = get(),
                 localPublicIdentityProvider = get(),
                 localSigningKeyPairProvider = get(),

@@ -30,8 +30,8 @@ import com.cbgm.securechat.core.protocol.packet.ReadReceiptPacket
 import com.cbgm.securechat.core.protocol.packet.SecureChatPacket
 import com.cbgm.securechat.core.protocol.transport.OutgoingWireSender
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactUseCase
-import com.cbgm.securechat.feature.messaging.application.relay.ContactRelayIdResolver
-import com.cbgm.securechat.feature.messaging.application.relay.GroupRelayIdResolver
+import com.cbgm.securechat.feature.messaging.application.routing.ContactRoutingIdResolver
+import com.cbgm.securechat.feature.messaging.application.routing.GroupRoutingIdResolver
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -44,8 +44,8 @@ class DefaultOutboxProcessor(
     private val transportPayloadFactory: OutgoingTransportPayloadFactory,
     private val transportPayloadCodec: TransportPayloadCodec,
     private val packetCodec: PacketCodec,
-    private val contactRelayIdResolver: ContactRelayIdResolver,
-    private val groupRelayIdResolver: GroupRelayIdResolver,
+    private val contactRoutingIdResolver: ContactRoutingIdResolver,
+    private val groupRoutingIdResolver: GroupRoutingIdResolver,
     private val outgoingWireSender: OutgoingWireSender,
     private val deliveryStateListener: OutboxDeliveryStateListener
 ) : OutboxProcessor {
@@ -157,22 +157,22 @@ class DefaultOutboxProcessor(
                 transportMode = transportPayload.mode.name
             ).getOrThrow()
 
-        val recipientRelayId =
-            resolveRecipientRelayId(
+        val recipientRoutingId =
+            resolveRecipientRoutingId(
                 contactId = item.contactId,
                 packet = packet
             )
 
         outgoingWireSender
             .send(
-                recipientAddress = recipientRelayId,
+                recipientAddress = recipientRoutingId,
                 encodedTransportPayload = encodedTransportPayload
             ).getOrThrow()
 
         protocolOutbox.markSent(itemId = item.id).getOrThrow()
     }
 
-    private suspend fun resolveRecipientRelayId(
+    private suspend fun resolveRecipientRoutingId(
         contactId: String,
         packet: SecureChatPacket
     ): String =
@@ -184,7 +184,7 @@ class DefaultOutboxProcessor(
             is GroupInviteReceivedPacket,
             is GroupJoinRequestPacket,
             is GroupInviteDeclinedPacket ->
-                contactRelayIdResolver.resolveBootstrap(contactId).getOrThrow()
+                contactRoutingIdResolver.resolveBootstrap(contactId).getOrThrow()
 
             is GroupConversationDeletedPacket ->
                 resolveGroupOrBootstrap(
@@ -195,9 +195,9 @@ class DefaultOutboxProcessor(
 
             is GroupMemberRemovedPacket ->
                 if (packet.epoch == GroupMemberRemovedPacket.PENDING_INVITATION_EPOCH) {
-                    contactRelayIdResolver.resolveBootstrap(contactId).getOrThrow()
+                    contactRoutingIdResolver.resolveBootstrap(contactId).getOrThrow()
                 } else {
-                    groupRelayIdResolver
+                    groupRoutingIdResolver
                         .resolveRemovedMember(packet.removedMemberSigningPublicKey)
                         .getOrThrow()
                 }
@@ -216,8 +216,8 @@ class DefaultOutboxProcessor(
 
             else ->
                 packet.groupIdForRouting()
-                    ?.let { groupId -> groupRelayIdResolver.resolve(groupId, contactId).getOrThrow() }
-                    ?: contactRelayIdResolver.resolve(contactId).getOrThrow()
+                    ?.let { groupId -> groupRoutingIdResolver.resolve(groupId, contactId).getOrThrow() }
+                    ?: contactRoutingIdResolver.resolve(contactId).getOrThrow()
         }
 
     private suspend fun resolveGroupOrBootstrap(
@@ -226,19 +226,19 @@ class DefaultOutboxProcessor(
         useBootstrap: Boolean
     ): String =
         if (useBootstrap) {
-            contactRelayIdResolver.resolveBootstrap(contactId).getOrThrow()
+            contactRoutingIdResolver.resolveBootstrap(contactId).getOrThrow()
         } else {
-            groupRelayIdResolver.resolve(groupId, contactId).getOrThrow()
+            groupRoutingIdResolver.resolve(groupId, contactId).getOrThrow()
         }
 
     private suspend fun resolveReceiptRecipient(
         messageId: String,
         contactId: String
     ): String =
-        groupRelayIdResolver
+        groupRoutingIdResolver
             .resolveForMessage(messageId, contactId)
             .getOrThrow()
-            ?: contactRelayIdResolver.resolve(contactId).getOrThrow()
+            ?: contactRoutingIdResolver.resolve(contactId).getOrThrow()
 
     private fun SecureChatPacket.groupIdForRouting(): String? =
         when (this) {

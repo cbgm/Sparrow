@@ -44,7 +44,7 @@ Private keys remain on the device.
 
 Messages are encrypted before transmission.
 
-The relay is treated as untrusted.
+Gateway and node infrastructure are treated as untrusted.
 
 ---
 
@@ -194,7 +194,7 @@ navigation/
 
 shared/
 
-relay/
+server/
 
 quality/
 

@@ -10,7 +10,7 @@ For direct packets, only the intended recipient possesses the private X25519 key
 sealed transport payload. For group messages, every member of the current epoch possesses the same
 group key.
 
-The relay never has access to plaintext.
+The gateway never has access to plaintext.
 
 ---
 
@@ -52,7 +52,7 @@ Transport Packet
 
 ↓
 
-Relay
+Gateway
 
 ↓
 
@@ -67,7 +67,7 @@ Decrypt
 Plaintext
 ```
 
-The relay only processes encrypted packets.
+The gateway only processes encrypted packets.
 
 ---
 
@@ -176,7 +176,7 @@ encryption and signing keys.
 group, challenge, and expiry.
 
 Discovered keys are stored as mutual but unverified. Users must still compare safety numbers to
-protect the first contact from relay-assisted identity substitution.
+protect the first contact from gateway-assisted identity substitution.
 
 The first accepted contact causes `GroupSecurityManager.createOwnedGroup()` to generate epoch 1,
 store the local key through `GroupKeyStorage`, and create its signed `GroupCreatedPacket`. Each
@@ -268,7 +268,7 @@ It should never be
 
 - written to logs
 - transmitted directly
-- exposed to the relay
+- exposed to the gateway
 - persisted without protection
 
 After encryption only ciphertext leaves the device.
@@ -281,7 +281,7 @@ Ciphertext is the encrypted representation of a message.
 
 Ciphertext may safely travel through
 
-- the relay
+- the gateway
 - the Internet
 - intermediate networks
 
@@ -344,7 +344,7 @@ Transport
 
 ↓
 
-Relay
+Gateway
 ```
 
 This separation simplifies reasoning about security.
@@ -438,7 +438,7 @@ Every supported platform should produce identical cryptographic behaviour.
 The encryption implementation follows several principles.
 
 - Private keys never leave the device.
-- Plaintext never reaches the relay.
+- Plaintext never reaches the gateway.
 - Every encrypted message is authenticated.
 - Cryptographic code is centralized.
 - Transport and encryption remain independent.
@@ -451,6 +451,6 @@ These principles reduce implementation complexity while improving auditability.
 
 Encryption is performed entirely on the communicating devices.
 
-The relay forwards only authenticated ciphertext and never gains access to plaintext.
+The gateway forwards only authenticated ciphertext and never gains access to plaintext.
 
 By separating identity, key agreement, encryption and transport into independent layers, SecureChat provides a security model that is easier to understand, test and maintain.

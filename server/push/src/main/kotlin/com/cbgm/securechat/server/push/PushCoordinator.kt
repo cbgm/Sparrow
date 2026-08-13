@@ -1,6 +1,6 @@
 package com.cbgm.securechat.server.push
 
-import com.cbgm.securechat.server.protocol.RelayEnvelope
+import com.cbgm.securechat.server.protocol.TransportEnvelope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -25,7 +25,7 @@ class PushCoordinator(
         }
     }
 
-    suspend fun accept(envelope: RelayEnvelope): Boolean {
+    suspend fun accept(envelope: TransportEnvelope): Boolean {
         val accepted = pendingEnvelopes.enqueue(envelope)
         if (!accepted) {
             return pendingEnvelopes.contains(envelope.envelopeId)
@@ -40,7 +40,7 @@ class PushCoordinator(
         return true
     }
 
-    suspend fun replicate(envelope: RelayEnvelope): Boolean {
+    suspend fun replicate(envelope: TransportEnvelope): Boolean {
         val accepted = pendingEnvelopes.enqueue(envelope)
         return accepted || pendingEnvelopes.contains(envelope.envelopeId)
     }

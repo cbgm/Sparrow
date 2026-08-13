@@ -216,13 +216,13 @@ It should contain almost no business logic.
 
 ---
 
-# Relay
+# Gateway
 
-The relay server is an independent application.
+The gateway service is an independent application.
 
 It should remain isolated from Android-specific implementation details.
 
-Shared protocol definitions belong inside reusable modules rather than inside the relay.
+Shared protocol definitions belong inside reusable modules rather than inside the gateway.
 
 ---
 

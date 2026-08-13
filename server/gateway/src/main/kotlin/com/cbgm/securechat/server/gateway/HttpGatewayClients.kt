@@ -5,8 +5,8 @@ import com.cbgm.securechat.server.protocol.ClientRouteRegistration
 import com.cbgm.securechat.server.protocol.FederatedEnvelope
 import com.cbgm.securechat.server.protocol.FederatedTypingEvent
 import com.cbgm.securechat.server.protocol.FederationAcknowledgement
-import com.cbgm.securechat.server.protocol.PendingRelayEnvelopesResponse
-import com.cbgm.securechat.server.protocol.RelayEnvelope
+import com.cbgm.securechat.server.protocol.PendingTransportEnvelopesResponse
+import com.cbgm.securechat.server.protocol.TransportEnvelope
 import com.cbgm.securechat.server.protocol.serverJson
 import com.cbgm.securechat.server.security.InternalApiAuthentication
 import com.cbgm.securechat.server.security.NodeRequestAuthentication
@@ -140,7 +140,7 @@ class HttpLegacyPushClient(
     private val baseUrl: String,
     private val internalToken: String?
 ) : LegacyPushClient {
-    override suspend fun store(envelope: RelayEnvelope): Boolean =
+    override suspend fun store(envelope: TransportEnvelope): Boolean =
         httpClient
             .post("${baseUrl.trimEnd('/')}/internal/v1/envelopes") {
                 internalToken?.let { header(InternalApiAuthentication.TOKEN_HEADER, it) }
@@ -149,11 +149,11 @@ class HttpLegacyPushClient(
             }.status
             .isSuccess()
 
-    override suspend fun pending(recipientId: String): List<RelayEnvelope> =
+    override suspend fun pending(recipientId: String): List<TransportEnvelope> =
         httpClient
             .get("${baseUrl.trimEnd('/')}/internal/v1/recipients/$recipientId/envelopes") {
                 internalToken?.let { header(InternalApiAuthentication.TOKEN_HEADER, it) }
-            }.body<PendingRelayEnvelopesResponse>()
+            }.body<PendingTransportEnvelopesResponse>()
             .envelopes
 
     override suspend fun acknowledge(
@@ -173,7 +173,7 @@ class HttpNodePushClient(
     private val endpointPool: ControlPlaneEndpointPool,
     private val signer: NodeRequestSigner
 ) : LegacyPushClient {
-    override suspend fun store(envelope: RelayEnvelope): Boolean {
+    override suspend fun store(envelope: TransportEnvelope): Boolean {
         val body = serverJson.encodeToString(envelope)
         val primary = storePrimary(body) ?: return false
         replicateToAvailableControlPlanes(
@@ -183,9 +183,9 @@ class HttpNodePushClient(
         return true
     }
 
-    override suspend fun pending(recipientId: String): List<RelayEnvelope> {
+    override suspend fun pending(recipientId: String): List<TransportEnvelope> {
         val path = "/v1/node-push/recipients/$recipientId/envelopes"
-        val snapshots = mutableMapOf<String, List<RelayEnvelope>>()
+        val snapshots = mutableMapOf<String, List<TransportEnvelope>>()
         var lastError: Throwable? = null
 
         val candidates = endpointPool.availableEndpoints().ifEmpty { endpointPool.ordered() }
@@ -197,7 +197,7 @@ class HttpNodePushClient(
                     }
                 if (response.status.isSuccess()) {
                     endpointPool.markReachable(baseUrl)
-                    snapshots[baseUrl] = response.body<PendingRelayEnvelopesResponse>().envelopes
+                    snapshots[baseUrl] = response.body<PendingTransportEnvelopesResponse>().envelopes
                 } else {
                     handlePushFailure(baseUrl, response.status.value)
                     lastError =
@@ -278,11 +278,11 @@ class HttpNodePushClient(
     }
 
     private suspend fun healPendingReplicas(
-        merged: List<RelayEnvelope>,
-        snapshots: Map<String, List<RelayEnvelope>>
+        merged: List<TransportEnvelope>,
+        snapshots: Map<String, List<TransportEnvelope>>
     ) {
         snapshots.forEach { (baseUrl, localEnvelopes) ->
-            val localIds = localEnvelopes.mapTo(mutableSetOf(), RelayEnvelope::envelopeId)
+            val localIds = localEnvelopes.mapTo(mutableSetOf(), TransportEnvelope::envelopeId)
             merged
                 .filterNot { envelope -> envelope.envelopeId in localIds }
                 .forEach { envelope ->
@@ -329,13 +329,13 @@ class HttpNodePushClient(
         }
     }
 
-    private fun mergePendingEnvelopes(envelopes: List<RelayEnvelope>): List<RelayEnvelope> =
+    private fun mergePendingEnvelopes(envelopes: List<TransportEnvelope>): List<TransportEnvelope> =
         envelopes
-            .associateBy(RelayEnvelope::envelopeId)
+            .associateBy(TransportEnvelope::envelopeId)
             .values
             .sortedWith(
-                compareBy(RelayEnvelope::createdAtEpochMilliseconds)
-                    .thenBy(RelayEnvelope::envelopeId)
+                compareBy(TransportEnvelope::createdAtEpochMilliseconds)
+                    .thenBy(TransportEnvelope::envelopeId)
             )
 
     private companion object {

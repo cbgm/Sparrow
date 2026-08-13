@@ -2,7 +2,7 @@ package com.cbgm.securechat.feature.transport.mailbox
 
 import com.cbgm.securechat.core.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.securechat.core.protocol.mailbox.MailboxDeliveryRoute
-import com.cbgm.securechat.feature.transport.relay.model.FederatedEnvelope
+import com.cbgm.securechat.feature.transport.gateway.model.FederatedEnvelope
 import kotlinx.serialization.Serializable
 
 interface MailboxGateway {

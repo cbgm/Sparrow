@@ -1,8 +1,8 @@
 package com.cbgm.securechat.server.push
 
-import com.cbgm.securechat.server.protocol.PendingRelayEnvelopesResponse
+import com.cbgm.securechat.server.protocol.PendingTransportEnvelopesResponse
 import com.cbgm.securechat.server.protocol.PushDeviceRegistrationRequest
-import com.cbgm.securechat.server.protocol.RelayEnvelope
+import com.cbgm.securechat.server.protocol.TransportEnvelope
 import com.cbgm.securechat.server.security.InternalApiAuthentication
 import com.cbgm.securechat.server.security.enforceRateLimit
 import io.ktor.http.HttpStatusCode
@@ -51,7 +51,7 @@ private fun Route.installDeviceRegistrationRoute(runtime: PushRuntime) {
             if (request.isValid()) {
                 runtime.devices.register(
                     PushDevice(
-                        relayId = request.relayId,
+                        routingId = request.routingId,
                         token = request.token,
                         platform = request.platform
                     )
@@ -71,7 +71,7 @@ private fun Route.installWakeUpInboxRoute(runtime: PushRuntime) {
             call.respond(HttpStatusCode.NotFound)
         } else {
             call.respond(
-                PendingRelayEnvelopesResponse(
+                PendingTransportEnvelopesResponse(
                     runtime.pendingEnvelopes.pending(recipientId)
                 )
             )
@@ -98,7 +98,7 @@ private fun Route.installInternalEnvelopeRoute(
 ) {
     post("/internal/v1/envelopes") {
         if (call.hasInternalAccess(config.pushInternalApiToken)) {
-            val accepted = runtime.coordinator.accept(call.receive<RelayEnvelope>())
+            val accepted = runtime.coordinator.accept(call.receive<TransportEnvelope>())
             call.respond(
                 if (accepted) {
                     HttpStatusCode.Accepted
@@ -142,7 +142,7 @@ private fun Route.installInternalPendingRoute(
                 call.respond(HttpStatusCode.BadRequest)
             } else {
                 call.respond(
-                    PendingRelayEnvelopesResponse(
+                    PendingTransportEnvelopesResponse(
                         runtime.pendingEnvelopes.pending(recipientId)
                     )
                 )
@@ -174,7 +174,7 @@ private fun Route.installInternalAcknowledgementRoute(
 }
 
 private fun PushDeviceRegistrationRequest.isValid(): Boolean =
-    listOf(relayId, token, platform).all(String::isNotBlank)
+    listOf(routingId, token, platform).all(String::isNotBlank)
 
 private fun ApplicationCall.hasInternalAccess(expectedToken: String?): Boolean =
     InternalApiAuthentication.isAuthorized(

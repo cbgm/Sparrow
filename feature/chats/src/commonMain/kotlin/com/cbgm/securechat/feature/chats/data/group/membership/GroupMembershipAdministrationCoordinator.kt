@@ -15,7 +15,6 @@ import com.cbgm.securechat.data.database.entity.GroupInvitationEntity
 import com.cbgm.securechat.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.securechat.feature.chats.data.group.invitation.GroupInvitationDirection
 import com.cbgm.securechat.feature.chats.data.group.invitation.GroupInvitationStatus
-import com.cbgm.securechat.feature.chats.data.group.invitation.resolveInvitationUpdatedAt
 import com.cbgm.securechat.feature.chats.data.group.mapper.GroupMembershipMessageFactory
 import com.cbgm.securechat.feature.chats.data.group.outgoing.GroupPacketBroadcaster
 import com.cbgm.securechat.feature.chats.data.group.protocol.GroupMembershipPacketProtocol

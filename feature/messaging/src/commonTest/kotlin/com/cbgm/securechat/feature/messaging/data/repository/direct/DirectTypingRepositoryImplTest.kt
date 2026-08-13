@@ -1,9 +1,9 @@
 package com.cbgm.securechat.feature.messaging.data.repository.direct
 
-import com.cbgm.securechat.feature.messaging.application.relay.ContactRelayIdResolver
+import com.cbgm.securechat.feature.messaging.application.routing.ContactRoutingIdResolver
 import com.cbgm.securechat.feature.transport.connection.TransportConnectionState
-import com.cbgm.securechat.feature.transport.relay.model.RelayEnvelope
-import com.cbgm.securechat.feature.transport.relay.model.RelayTypingEvent
+import com.cbgm.securechat.feature.transport.gateway.model.GatewayTypingEvent
+import com.cbgm.securechat.feature.transport.gateway.model.TransportEnvelope
 import com.cbgm.securechat.feature.transport.websocket.WebSocketTransportClient
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
@@ -30,7 +30,7 @@ class DirectTypingRepositoryImplTest {
             val gateway =
                 DirectTypingRepositoryImpl(
                     webSocketTransportClient = client,
-                    contactRelayIdResolver = SuccessfulResolver()
+                    contactRoutingIdResolver = SuccessfulResolver()
                 )
 
             val result =
@@ -41,7 +41,7 @@ class DirectTypingRepositoryImplTest {
 
             assertTrue(result.isSuccess)
             assertEquals(
-                expected = listOf("contact-relay-id" to true),
+                expected = listOf("contact-routing-id" to true),
                 actual = client.sentTypingStates
             )
         }
@@ -49,13 +49,13 @@ class DirectTypingRepositoryImplTest {
     @Test
     fun resolverFailureIsReturnedWithoutCallingTransport() =
         runTest {
-            val expectedError = IllegalStateException("relay ID missing")
+            val expectedError = IllegalStateException("routing ID missing")
             val client = FakeWebSocketTransportClient()
             val gateway =
                 DirectTypingRepositoryImpl(
                     webSocketTransportClient = client,
-                    contactRelayIdResolver =
-                        object : ContactRelayIdResolver {
+                    contactRoutingIdResolver =
+                        object : ContactRoutingIdResolver {
                             override suspend fun resolve(contactId: String): Result<String> =
                                 Result.failure(expectedError)
                         }
@@ -79,7 +79,7 @@ class DirectTypingRepositoryImplTest {
             val gateway =
                 DirectTypingRepositoryImpl(
                     webSocketTransportClient = client,
-                    contactRelayIdResolver = SuccessfulResolver()
+                    contactRoutingIdResolver = SuccessfulResolver()
                 )
             val observedValues =
                 async(start = CoroutineStart.UNDISPATCHED) {
@@ -91,26 +91,26 @@ class DirectTypingRepositoryImplTest {
 
             client.incomingEvents.subscriptionCount.first { count -> count > 0 }
             client.incomingEvents.emit(
-                RelayTypingEvent(
-                    senderId = "different-relay-id",
+                GatewayTypingEvent(
+                    senderId = "different-routing-id",
                     isTyping = true
                 )
             )
             client.incomingEvents.emit(
-                RelayTypingEvent(
-                    senderId = "contact-relay-id",
+                GatewayTypingEvent(
+                    senderId = "contact-routing-id",
                     isTyping = true
                 )
             )
             client.incomingEvents.emit(
-                RelayTypingEvent(
-                    senderId = "contact-relay-id",
+                GatewayTypingEvent(
+                    senderId = "contact-routing-id",
                     isTyping = true
                 )
             )
             client.incomingEvents.emit(
-                RelayTypingEvent(
-                    senderId = "contact-relay-id",
+                GatewayTypingEvent(
+                    senderId = "contact-routing-id",
                     isTyping = false
                 )
             )
@@ -125,14 +125,14 @@ class DirectTypingRepositoryImplTest {
         }
 
     @Test
-    fun observationStaysActiveUntilContactRelayIdBecomesAvailable() =
+    fun observationStaysActiveUntilContactRoutingIdBecomesAvailable() =
         runTest {
             val client = FakeWebSocketTransportClient()
             val resolver = MutableResolver()
             val gateway =
                 DirectTypingRepositoryImpl(
                     webSocketTransportClient = client,
-                    contactRelayIdResolver = resolver
+                    contactRoutingIdResolver = resolver
                 )
             val observedValue =
                 async(start = CoroutineStart.UNDISPATCHED) {
@@ -144,17 +144,17 @@ class DirectTypingRepositoryImplTest {
             client.incomingEvents.subscriptionCount.first { count -> count > 0 }
 
             client.incomingEvents.emit(
-                RelayTypingEvent(
-                    senderId = "contact-relay-id",
+                GatewayTypingEvent(
+                    senderId = "contact-routing-id",
                     isTyping = true
                 )
             )
 
-            resolver.relayId = "contact-relay-id"
+            resolver.routingId = "contact-routing-id"
 
             client.incomingEvents.emit(
-                RelayTypingEvent(
-                    senderId = "contact-relay-id",
+                GatewayTypingEvent(
+                    senderId = "contact-routing-id",
                     isTyping = true
                 )
             )
@@ -166,36 +166,36 @@ class DirectTypingRepositoryImplTest {
             )
         }
 
-    private class SuccessfulResolver : ContactRelayIdResolver {
+    private class SuccessfulResolver : ContactRoutingIdResolver {
         override suspend fun resolve(contactId: String): Result<String> =
-            Result.success("contact-relay-id")
+            Result.success("contact-routing-id")
     }
 
-    private class MutableResolver : ContactRelayIdResolver {
-        var relayId: String? = null
+    private class MutableResolver : ContactRoutingIdResolver {
+        var routingId: String? = null
 
         override suspend fun resolve(contactId: String): Result<String> =
-            relayId
+            routingId
                 ?.let { Result.success(it) }
-                ?: Result.failure(IllegalStateException("relay ID missing"))
+                ?: Result.failure(IllegalStateException("routing ID missing"))
     }
 
     private class FakeWebSocketTransportClient : WebSocketTransportClient {
-        val incomingEvents = MutableSharedFlow<RelayTypingEvent>()
+        val incomingEvents = MutableSharedFlow<GatewayTypingEvent>()
         val sentTypingStates = mutableListOf<Pair<String, Boolean>>()
 
         override val connectionState: StateFlow<TransportConnectionState> =
             MutableStateFlow(TransportConnectionState.Disconnected)
-        override val incomingEnvelopes: Flow<RelayEnvelope> = MutableSharedFlow()
-        override val incomingTypingEvents: Flow<RelayTypingEvent> = incomingEvents
+        override val incomingEnvelopes: Flow<TransportEnvelope> = MutableSharedFlow()
+        override val incomingTypingEvents: Flow<GatewayTypingEvent> = incomingEvents
 
         override fun connect(
             serverUrl: String,
-            localRelayId: String
+            localRoutingId: String
         ) = Unit
 
         override suspend fun sendEnvelopeAndAwaitAcceptance(
-            envelope: RelayEnvelope,
+            envelope: TransportEnvelope,
             timeoutMilliseconds: Long
         ): Result<Unit> = Result.success(Unit)
 

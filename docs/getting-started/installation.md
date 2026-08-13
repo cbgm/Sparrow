@@ -258,7 +258,6 @@ The project root contains several important directories.
 | feature | Feature modules |
 | navigation | Navigation |
 | quality | Custom Detekt rules |
-| relay | Relay server |
 | shared | Shared application modules |
 | startup | Startup module |
 

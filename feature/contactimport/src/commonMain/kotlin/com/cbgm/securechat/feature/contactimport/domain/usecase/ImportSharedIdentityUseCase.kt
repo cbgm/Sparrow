@@ -10,7 +10,7 @@ import com.cbgm.securechat.feature.identity.domain.repository.IdentityShareRepos
  * Decodes and imports a shared SecureChat identity.
  *
  * A phone number is mandatory because it is the stable contact,
- * conversation, and relay-routing anchor. The contact repository then
+ * conversation, and routing anchor. The contact repository then
  * merges by normalized phone number before considering public keys.
  */
 class ImportSharedIdentityUseCase(

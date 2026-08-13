@@ -5,7 +5,7 @@ import com.cbgm.securechat.core.time.SystemClock
 import com.cbgm.securechat.core.transport.ControlPlaneConfiguration
 import com.cbgm.securechat.core.transport.ControlPlaneEndpoint
 import com.cbgm.securechat.core.transport.ControlPlaneStatusStore
-import com.cbgm.securechat.feature.transport.relay.config.RelayTransportConfig
+import com.cbgm.securechat.feature.transport.config.TransportConfig
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
@@ -15,7 +15,7 @@ class DefaultNodeEndpointResolver(
     private val json: Json,
     private val cache: NodeDirectoryCache,
     private val verifier: NodeDirectoryVerifier,
-    private val config: RelayTransportConfig,
+    private val config: TransportConfig,
     private val controlPlaneConfiguration: ControlPlaneConfiguration,
     private val controlPlaneStatusStore: ControlPlaneStatusStore,
     private val now: () -> Long = SystemClock::nowEpochMilliseconds
@@ -25,24 +25,24 @@ class DefaultNodeEndpointResolver(
     private var fetchedRemoteDirectory = false
 
     override suspend fun resolve(
-        localRelayId: String,
+        localRoutingId: String,
         forceRefresh: Boolean
     ): Result<List<NodeEndpoint>> =
         runCatching {
-            require(localRelayId.isNotBlank()) {
-                "Local relay ID must not be blank"
+            require(localRoutingId.isNotBlank()) {
+                "Local routing ID must not be blank"
             }
 
             resolutionMutex.withLock {
                 resolveRegistry(
-                    localRelayId = localRelayId,
+                    localRoutingId = localRoutingId,
                     forceRefresh = forceRefresh
                 )
             }
         }
 
     private suspend fun resolveRegistry(
-        localRelayId: String,
+        localRoutingId: String,
         forceRefresh: Boolean
     ): List<NodeEndpoint> {
         val cached = cache.read()
@@ -56,7 +56,7 @@ class DefaultNodeEndpointResolver(
             fetchedRemoteDirectory &&
             isReusable(cachedDirectory, trustedRootNodeId, currentTime)
         ) {
-            return checkNotNull(cachedDirectory).endpointsFor(localRelayId)
+            return checkNotNull(cachedDirectory).endpointsFor(localRoutingId)
         }
 
         val selectedDirectory =
@@ -71,7 +71,7 @@ class DefaultNodeEndpointResolver(
                     remoteError = remoteError
                 )
             }
-        return selectedDirectory.endpointsFor(localRelayId)
+        return selectedDirectory.endpointsFor(localRoutingId)
     }
 
     private suspend fun fetchConfiguredDirectory(
@@ -204,18 +204,18 @@ class DefaultNodeEndpointResolver(
         }.getOrNull()
 
     private fun stableSelectionScore(
-        localRelayId: String,
+        localRoutingId: String,
         nodeId: String
     ): ULong {
         var hash = FNV_OFFSET_BASIS
-        "$localRelayId:$nodeId".forEach { character ->
+        "$localRoutingId:$nodeId".forEach { character ->
             hash = hash xor character.code.toULong()
             hash *= FNV_PRIME
         }
         return hash
     }
 
-    private fun SignedNodeDirectory.endpointsFor(localRelayId: String): List<NodeEndpoint> {
+    private fun SignedNodeDirectory.endpointsFor(localRoutingId: String): List<NodeEndpoint> {
         val endpoints =
             directory.nodes
                 .filter { descriptor ->
@@ -235,7 +235,7 @@ class DefaultNodeEndpointResolver(
                     compareBy<NodeEndpoint>(NodeEndpoint::activeConnections)
                         .thenByDescending { endpoint ->
                             stableSelectionScore(
-                                localRelayId = localRelayId,
+                                localRoutingId = localRoutingId,
                                 nodeId = endpoint.nodeId
                             )
                         }

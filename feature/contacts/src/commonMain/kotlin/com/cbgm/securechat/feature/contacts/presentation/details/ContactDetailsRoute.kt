@@ -16,8 +16,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.securechat.core.ui.component.IdentityVerificationScreen
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
 import com.cbgm.securechat.feature.contacts.domain.model.ContactVerificationStatus
-import com.cbgm.securechat.feature.contacts.presentation.details.ContactDetailsScreen
-import com.cbgm.securechat.feature.contacts.presentation.details.ContactDetailsViewModel
 import com.cbgm.securechat.feature.contacts.presentation.details.model.ContactDetailsUiEvent
 import com.cbgm.securechat.feature.contacts.presentation.details.model.ContactDetailsUiState
 import com.cbgm.securechat.resources.Res

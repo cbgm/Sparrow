@@ -190,7 +190,7 @@ Transport infrastructure must never have access to plaintext.
 
 ### Consequences
 
-The relay becomes an untrusted forwarding service.
+The gateway becomes an untrusted forwarding service.
 
 ---
 
@@ -262,11 +262,11 @@ Users can verify important contacts through independent channels.
 
 # ADR-012
 
-## Stateless Relay
+## Stateless Gateway
 
 ### Decision
 
-Keep the relay intentionally simple.
+Keep the gateway intentionally simple.
 
 ### Responsibilities
 
@@ -280,7 +280,7 @@ Business logic should remain on the clients.
 
 ### Consequences
 
-The relay cannot decrypt messages.
+The gateway cannot decrypt messages.
 
 ---
 
@@ -451,7 +451,7 @@ Every generated artifact derives from the same architecture model.
 ### Decision
 
 Expose `SecureChatLogger` from `:core` and back it with Kermit for shared and application code.
-Keep the standalone relay on SLF4J with Logback.
+Keep JVM server services on SLF4J with Logback.
 
 ### Rationale
 
@@ -459,14 +459,14 @@ Kermit provides platform-specific output for Kotlin Multiplatform targets. A pro
 keeps feature modules independent of the logging vendor and provides one place for future crash
 reporting or telemetry integration.
 
-The relay already runs in a JVM server environment where SLF4J is the standard boundary and
+The server applications run in a JVM environment where SLF4J is the standard boundary and
 Logback is configured.
 
 ### Consequences
 
 - feature modules use `SecureChatLog.withTag(...)`;
 - Kermit remains an implementation dependency of `:core`;
-- relay logs participate in the existing server logging pipeline;
+- server logs participate in the existing server logging pipeline;
 - Detekt rejects raw console and stack-trace printing;
 - log messages must follow the project's privacy policy.
 

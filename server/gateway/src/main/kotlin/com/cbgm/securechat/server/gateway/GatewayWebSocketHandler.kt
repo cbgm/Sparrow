@@ -4,7 +4,7 @@ import com.cbgm.securechat.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.securechat.server.protocol.FederatedEnvelope
 import com.cbgm.securechat.server.protocol.FederatedTypingEvent
 import com.cbgm.securechat.server.protocol.GatewayServerMessage
-import com.cbgm.securechat.server.protocol.RelayEnvelope
+import com.cbgm.securechat.server.protocol.TransportEnvelope
 import io.ktor.server.websocket.DefaultWebSocketServerSession
 
 class GatewayWebSocketHandler(
@@ -68,7 +68,7 @@ class GatewayWebSocketHandler(
 
     private suspend fun sendEnvelope(
         sender: GatewayConnection,
-        envelope: RelayEnvelope
+        envelope: TransportEnvelope
     ) {
         if (!sender.acceptsSenderRoutingId(envelope.senderId)) {
             sender.send(
@@ -216,11 +216,11 @@ class GatewayWebSocketHandler(
         envelope: FederatedEnvelope,
         recipients: List<GatewayConnection>
     ): Boolean {
-        val relayEnvelope = envelope.toRelayEnvelope()
+        val transportEnvelope = envelope.toTransportEnvelope()
 
         val stored =
             runCatching {
-                legacyPush.store(relayEnvelope)
+                legacyPush.store(transportEnvelope)
             }.getOrDefault(false)
 
         val delivered =
@@ -228,7 +228,7 @@ class GatewayWebSocketHandler(
                 runCatching {
                     recipient.send(
                         GatewayServerMessage.IncomingEnvelope(
-                            envelope = relayEnvelope
+                            envelope = transportEnvelope
                         )
                     )
                 }.isSuccess
@@ -251,11 +251,11 @@ internal suspend fun routeFederatedEnvelope(
 }
 
 internal suspend fun storeAndRouteLegacyEnvelope(
-    envelope: RelayEnvelope,
-    pushStorage: suspend (RelayEnvelope) -> Boolean,
+    envelope: TransportEnvelope,
+    pushStorage: suspend (TransportEnvelope) -> Boolean,
     networkDelivery: suspend (FederatedEnvelope) -> EnvelopeAcceptanceState?,
     markFederationStored: suspend (String) -> Unit,
-    queuedPushFallback: (RelayEnvelope, String) -> Unit = { _, _ -> }
+    queuedPushFallback: (TransportEnvelope, String) -> Unit = { _, _ -> }
 ): Boolean =
     storeAndRouteEnvelope(
         pushEnvelope = envelope,
@@ -271,13 +271,13 @@ internal suspend fun storeAndRouteLegacyEnvelope(
 
 internal suspend fun storeAndRouteFederatedEnvelope(
     envelope: FederatedEnvelope,
-    pushStorage: suspend (RelayEnvelope) -> Boolean,
+    pushStorage: suspend (TransportEnvelope) -> Boolean,
     networkDelivery: suspend (FederatedEnvelope) -> EnvelopeAcceptanceState?,
     markFederationStored: suspend (String) -> Unit,
-    queuedPushFallback: (RelayEnvelope, String) -> Unit = { _, _ -> }
+    queuedPushFallback: (TransportEnvelope, String) -> Unit = { _, _ -> }
 ): Boolean =
     storeAndRouteEnvelope(
-        pushEnvelope = envelope.toRelayEnvelope(),
+        pushEnvelope = envelope.toTransportEnvelope(),
         networkEnvelope = envelope,
         networkDelivery = networkDelivery,
         fallbackActions =
@@ -289,13 +289,13 @@ internal suspend fun storeAndRouteFederatedEnvelope(
     )
 
 private data class EnvelopeFallbackActions(
-    val pushStorage: suspend (RelayEnvelope) -> Boolean,
+    val pushStorage: suspend (TransportEnvelope) -> Boolean,
     val markFederationStored: suspend (String) -> Unit,
-    val queuedPushFallback: (RelayEnvelope, String) -> Unit
+    val queuedPushFallback: (TransportEnvelope, String) -> Unit
 )
 
 private suspend fun storeAndRouteEnvelope(
-    pushEnvelope: RelayEnvelope,
+    pushEnvelope: TransportEnvelope,
     networkEnvelope: FederatedEnvelope,
     networkDelivery: suspend (FederatedEnvelope) -> EnvelopeAcceptanceState?,
     fallbackActions: EnvelopeFallbackActions
@@ -342,7 +342,7 @@ internal suspend fun routeFederatedTypingEvent(
     }.getOrDefault(false)
 }
 
-internal fun RelayEnvelope.toFederatedEnvelope(): FederatedEnvelope =
+internal fun TransportEnvelope.toFederatedEnvelope(): FederatedEnvelope =
     FederatedEnvelope(
         envelopeId = envelopeId,
         senderRoutingId = senderId,
@@ -359,8 +359,8 @@ internal fun RelayEnvelope.toFederatedEnvelope(): FederatedEnvelope =
                 }
     )
 
-private fun FederatedEnvelope.toRelayEnvelope(): RelayEnvelope =
-    RelayEnvelope(
+private fun FederatedEnvelope.toTransportEnvelope(): TransportEnvelope =
+    TransportEnvelope(
         envelopeId = envelopeId,
         senderId = senderRoutingId,
         recipientId = recipientDeviceRoutingId,

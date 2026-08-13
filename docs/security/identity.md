@@ -247,11 +247,11 @@ Private identity
 The identity system is designed so that
 
 - servers cannot generate identities
-- relays cannot impersonate users
+- gateways cannot impersonate users
 - public identities can be distributed safely
 - private keys remain confidential
 
-Compromise of the relay does not reveal private identity material.
+Compromise of the gateway does not reveal private identity material.
 
 ---
 

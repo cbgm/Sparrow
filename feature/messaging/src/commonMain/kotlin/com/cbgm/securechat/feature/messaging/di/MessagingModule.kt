@@ -12,9 +12,9 @@ import com.cbgm.securechat.feature.chats.domain.repository.group.GroupTypingRepo
 import com.cbgm.securechat.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactUseCase
 import com.cbgm.securechat.feature.messaging.application.incoming.DefaultIncomingEnvelopeProcessor
-import com.cbgm.securechat.feature.messaging.application.incoming.DefaultIncomingRelayRunner
+import com.cbgm.securechat.feature.messaging.application.incoming.DefaultIncomingEnvelopeRunner
 import com.cbgm.securechat.feature.messaging.application.incoming.IncomingEnvelopeProcessor
-import com.cbgm.securechat.feature.messaging.application.incoming.IncomingRelayRunner
+import com.cbgm.securechat.feature.messaging.application.incoming.IncomingEnvelopeRunner
 import com.cbgm.securechat.feature.messaging.application.mailbox.DefaultMailboxCapabilityLifecycle
 import com.cbgm.securechat.feature.messaging.application.mailbox.DefaultMailboxCoordinator
 import com.cbgm.securechat.feature.messaging.application.mailbox.MailboxCoordinator
@@ -26,19 +26,19 @@ import com.cbgm.securechat.feature.messaging.application.outbox.DefaultOutgoingP
 import com.cbgm.securechat.feature.messaging.application.outbox.DefaultOutgoingTransportPayloadFactory
 import com.cbgm.securechat.feature.messaging.application.outbox.OutgoingPacketTransportPolicy
 import com.cbgm.securechat.feature.messaging.application.outbox.OutgoingTransportPayloadFactory
-import com.cbgm.securechat.feature.messaging.application.relay.ContactByRelayIdResolver
-import com.cbgm.securechat.feature.messaging.application.relay.ContactRelayIdResolver
-import com.cbgm.securechat.feature.messaging.application.relay.GroupRelayIdResolver
-import com.cbgm.securechat.feature.messaging.application.relay.GroupTransportKeyResolver
-import com.cbgm.securechat.feature.messaging.application.relay.IncomingRelayGateway
-import com.cbgm.securechat.feature.messaging.data.relay.DefaultContactByRelayIdResolver
-import com.cbgm.securechat.feature.messaging.data.relay.DefaultContactRelayIdResolver
-import com.cbgm.securechat.feature.messaging.data.relay.DefaultGroupRelayIdResolver
-import com.cbgm.securechat.feature.messaging.data.relay.DefaultGroupTransportKeyResolver
-import com.cbgm.securechat.feature.messaging.data.relay.WebSocketIncomingRelayGateway
+import com.cbgm.securechat.feature.messaging.application.routing.ContactByRoutingIdResolver
+import com.cbgm.securechat.feature.messaging.application.routing.ContactRoutingIdResolver
+import com.cbgm.securechat.feature.messaging.application.routing.GroupRoutingIdResolver
+import com.cbgm.securechat.feature.messaging.application.routing.GroupTransportKeyResolver
+import com.cbgm.securechat.feature.messaging.application.routing.IncomingEnvelopeGateway
 import com.cbgm.securechat.feature.messaging.data.repository.direct.DirectTypingRepositoryImpl
 import com.cbgm.securechat.feature.messaging.data.repository.group.GroupTypingRepositoryImpl
-import com.cbgm.securechat.feature.transport.relay.identity.RelayIdGenerator
+import com.cbgm.securechat.feature.messaging.data.routing.DefaultContactByRoutingIdResolver
+import com.cbgm.securechat.feature.messaging.data.routing.DefaultContactRoutingIdResolver
+import com.cbgm.securechat.feature.messaging.data.routing.DefaultGroupRoutingIdResolver
+import com.cbgm.securechat.feature.messaging.data.routing.DefaultGroupTransportKeyResolver
+import com.cbgm.securechat.feature.messaging.data.routing.WebSocketIncomingEnvelopeGateway
+import com.cbgm.securechat.feature.transport.routing.RoutingIdGenerator
 import com.cbgm.securechat.feature.transport.websocket.WebSocketTransportClient
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
@@ -46,29 +46,29 @@ import org.koin.dsl.module
 
 val messagingModule =
     module {
-        single<ContactRelayIdResolver> {
-            DefaultContactRelayIdResolver(
+        single<ContactRoutingIdResolver> {
+            DefaultContactRoutingIdResolver(
                 getContact = get<GetContactUseCase>(),
-                contactRelayIdDao = get(),
-                relayIdGenerator = get<RelayIdGenerator>()
+                contactRoutingIdDao = get(),
+                routingIdGenerator = get<RoutingIdGenerator>()
             )
         }
 
-        single<ContactByRelayIdResolver> {
-            DefaultContactByRelayIdResolver(
+        single<ContactByRoutingIdResolver> {
+            DefaultContactByRoutingIdResolver(
                 contactRepository = get<ContactRepository>(),
                 contactDao = get<ContactDao>(),
-                contactRelayIdDao = get(),
-                relayIdGenerator = get<RelayIdGenerator>(),
-                groupRelayIdResolver = get<GroupRelayIdResolver>()
+                contactRoutingIdDao = get(),
+                routingIdGenerator = get<RoutingIdGenerator>(),
+                groupRoutingIdResolver = get<GroupRoutingIdResolver>()
             )
         }
 
-        single<GroupRelayIdResolver> {
-            DefaultGroupRelayIdResolver(
+        single<GroupRoutingIdResolver> {
+            DefaultGroupRoutingIdResolver(
                 chatDao = get(),
                 groupSecurityDao = get(),
-                relayIdGenerator = get<RelayIdGenerator>()
+                routingIdGenerator = get<RoutingIdGenerator>()
             )
         }
 
@@ -82,19 +82,19 @@ val messagingModule =
         single<DirectTypingRepository> {
             DirectTypingRepositoryImpl(
                 webSocketTransportClient = get<WebSocketTransportClient>(),
-                contactRelayIdResolver = get<ContactRelayIdResolver>()
+                contactRoutingIdResolver = get<ContactRoutingIdResolver>()
             )
         }
 
         single<GroupTypingRepository> {
             GroupTypingRepositoryImpl(
                 webSocketTransportClient = get<WebSocketTransportClient>(),
-                groupRelayIdResolver = get<GroupRelayIdResolver>()
+                groupRoutingIdResolver = get<GroupRoutingIdResolver>()
             )
         }
 
-        single<IncomingRelayGateway> {
-            WebSocketIncomingRelayGateway(
+        single<IncomingEnvelopeGateway> {
+            WebSocketIncomingEnvelopeGateway(
                 webSocketTransportClient = get<WebSocketTransportClient>()
             )
         }
@@ -118,8 +118,8 @@ val messagingModule =
                 transportPayloadFactory = get<OutgoingTransportPayloadFactory>(),
                 transportPayloadCodec = get(),
                 packetCodec = get(),
-                contactRelayIdResolver = get<ContactRelayIdResolver>(),
-                groupRelayIdResolver = get<GroupRelayIdResolver>(),
+                contactRoutingIdResolver = get<ContactRoutingIdResolver>(),
+                groupRoutingIdResolver = get<GroupRoutingIdResolver>(),
                 outgoingWireSender = get<OutgoingWireSender>(),
                 deliveryStateListener = get()
             )
@@ -134,15 +134,15 @@ val messagingModule =
 
         single<IncomingEnvelopeProcessor> {
             DefaultIncomingEnvelopeProcessor(
-                contactByRelayIdResolver = get<ContactByRelayIdResolver>(),
+                contactByRoutingIdResolver = get<ContactByRoutingIdResolver>(),
                 localEncryptionKeyPairProvider = get(),
                 incomingMessageHandler = get()
             )
         }
 
-        single<IncomingRelayRunner> {
-            DefaultIncomingRelayRunner(
-                incomingRelayGateway = get<IncomingRelayGateway>(),
+        single<IncomingEnvelopeRunner> {
+            DefaultIncomingEnvelopeRunner(
+                incomingEnvelopeGateway = get<IncomingEnvelopeGateway>(),
                 incomingEnvelopeProcessor = get<IncomingEnvelopeProcessor>()
             )
         }
@@ -163,8 +163,8 @@ val messagingModule =
         single<MailboxCoordinator> {
             DefaultMailboxCoordinator(
                 contactDao = get(),
-                contactRelayIdDao = get(),
-                localRelayIdProvider = get(),
+                contactRoutingIdDao = get(),
+                localRoutingIdProvider = get(),
                 nodeEndpointResolver = get(),
                 mailboxGateway = get(),
                 mailboxRouteRepository = get(),

@@ -109,7 +109,7 @@ Contains
 
 A security model where only communicating devices can decrypt message contents.
 
-The relay cannot read encrypted messages.
+The gateway cannot read encrypted messages.
 
 ---
 
@@ -267,11 +267,11 @@ It combines
 
 # R
 
-## Relay
+## Gateway
 
 The SecureChat server responsible for forwarding encrypted packets.
 
-The relay cannot decrypt messages.
+The gateway cannot decrypt messages.
 
 ---
 
@@ -369,7 +369,7 @@ ViewModels communicate with the Domain layer rather than infrastructure directly
 
 ## WebSocket
 
-The transport protocol currently used for communication between SecureChat clients and the relay.
+The transport protocol currently used for communication between SecureChat clients and the gateway.
 
 It carries encrypted packets but does not provide end-to-end encryption itself.
 

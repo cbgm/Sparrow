@@ -30,7 +30,7 @@ internal fun Application.installGatewayRoutes(
         installHealthRoute(runtime)
         installInformationRoute(identity, config)
         installControlPlaneDiscoveryRoute(config)
-        installRelayRoute(runtime)
+        installGatewayWebSocketRoute(runtime)
         installIncomingEnvelopeRoute(runtime, config)
         installIncomingTypingRoute(runtime, config)
         installInternalLoadRoute(runtime, config)
@@ -73,7 +73,7 @@ private fun Route.installControlPlaneDiscoveryRoute(config: GatewayConfig) {
     }
 }
 
-private fun Route.installRelayRoute(runtime: GatewayRuntime) {
+private fun Route.installGatewayWebSocketRoute(runtime: GatewayRuntime) {
     webSocket("/relay") {
         runtime.handler.handle(this)
     }

@@ -23,7 +23,7 @@ internal class PostgresPushDeviceStore(
                 ).use { statement ->
                     var parameterIndex = 1
                     statement.setString(parameterIndex++, device.token)
-                    statement.setString(parameterIndex++, device.relayId)
+                    statement.setString(parameterIndex++, device.routingId)
                     statement.setString(parameterIndex++, device.platform)
                     statement.setLong(parameterIndex, now())
                     statement.executeUpdate()
@@ -31,7 +31,7 @@ internal class PostgresPushDeviceStore(
         }
     }
 
-    override suspend fun find(relayId: String): List<PushDevice> =
+    override suspend fun find(routingId: String): List<PushDevice> =
         database.withConnection { connection ->
             connection
                 .prepareStatement(
@@ -42,7 +42,7 @@ internal class PostgresPushDeviceStore(
                     ORDER BY token
                     """.trimIndent()
                 ).use { statement ->
-                    statement.setString(1, relayId)
+                    statement.setString(1, routingId)
                     statement.executeQuery().use { results ->
                         results.readPushDevices()
                     }

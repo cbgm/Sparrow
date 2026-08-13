@@ -13,9 +13,9 @@ For module ownership, read [Messaging Boundary](../architecture/messaging-bounda
 | Persistent chat data | `ConversationEntity`, `MessageEntity`, `MessageRecipientStateEntity` | `:data:database` |
 | Protocol work | `SecureChatPacket`, `ProtocolOutboxItem` | `:core:protocol` |
 | Transport payload | `EncryptedTransportPayload`, `TransportEncryptionMode` | `:core:crypto` |
-| Relay frame | `RelayEnvelope`, `RelayClientMessage`, `RelayServerMessage` | `:feature:transport` |
+| Gateway frame | `TransportEnvelope`, `GatewayClientMessage`, `GatewayServerMessage` | `:feature:transport` |
 
-A protocol packet describes meaning. A transport payload describes pairwise protection. A relay
+A protocol packet describes meaning. A transport payload describes pairwise protection. A gateway
 envelope describes routing. Group message content also has its own authenticated group encryption
 inside the protocol packet.
 
@@ -162,25 +162,25 @@ processPending(limit)
           -> TransportMessageCipher.encryptForRecipient(...) when encryption is available
       -> TransportPayloadCodec.encode(...)
       -> OutboxDeliveryStateListener.onPrepared(...)
-      -> ContactRelayIdResolver.resolve(item.contactId)
+      -> ContactRoutingIdResolver.resolve(item.contactId)
       -> OutgoingWireSender.send(...)
       -> ProtocolOutbox.markSent(item.id)
   -> OutboxDeliveryStateListener.onSent(item.packetId)
 ```
 
 The production `OutgoingWireSender` is `WebSocketOutgoingWireSender`. Its `send()` creates a
-`RelayEnvelope` and calls `WebSocketTransportClient.sendEnvelopeAndAwaitAcceptance()`.
+`TransportEnvelope` and calls `WebSocketTransportClient.sendEnvelopeAndAwaitAcceptance()`.
 
-`RelayServerMessage.EnvelopeAccepted` means the relay accepted the envelope. It does not mean that
+`GatewayServerMessage.EnvelopeAccepted` means the gateway accepted the envelope. It does not mean that
 the recipient stored the message.
 
 ## Direct incoming message
 
 ```text
 DefaultWebSocketTransportClient.incomingEnvelopes
-  -> WebSocketIncomingRelayGateway.incomingEnvelopes
-  -> DefaultIncomingRelayRunner.processEnvelope()
-  -> ContactByRelayIdResolver.resolveContactId()
+  -> WebSocketIncomingEnvelopeGateway.incomingEnvelopes
+  -> DefaultIncomingEnvelopeRunner.processEnvelope()
+  -> ContactByRoutingIdResolver.resolveContactId()
   -> IncomingMessageHandler.handle()
   -> IncomingMessageProcessor.handle()
   -> IncomingTransportMessageDecoder.decode()
@@ -200,9 +200,9 @@ DefaultWebSocketTransportClient.incomingEnvelopes
 7. calls `ProtocolOutbox.enqueue(context.contactId, receipt)`.
 
 Only after the complete incoming handler returns does
-`DefaultIncomingRelayRunner.processEnvelope()` call
+`DefaultIncomingEnvelopeRunner.processEnvelope()` call
 `WebSocketTransportClient.acknowledgeIncomingEnvelope(envelopeId)`. That acknowledgement allows
-the relay to delete its pending copy.
+the gateway to delete its pending copy.
 
 ## Delivery and read receipts
 
@@ -210,9 +210,9 @@ There are three separate acknowledgements:
 
 | Signal | Meaning |
 |---|---|
-| `RelayServerMessage.EnvelopeAccepted` | The relay accepted the outgoing envelope |
+| `GatewayServerMessage.EnvelopeAccepted` | The gateway accepted the outgoing envelope |
 | `DeliveryReceiptPacket` | The recipient decoded and persisted the message |
-| `RelayClientMessage.AcknowledgeEnvelope` | The recipient finished local envelope processing |
+| `GatewayClientMessage.AcknowledgeEnvelope` | The recipient finished local envelope processing |
 
 `DeliveryReceiptPacketHandler.handle()` applies `MessageDeliveryEvent.DELIVERY_CONFIRMED` through
 `MessageDeliveryStateCoordinator`.
@@ -776,7 +776,7 @@ decision and creates the encrypted or plaintext transport payload:
 authenticated group ciphertext. Its stored message mode remains `GROUP_E2EE`.
 
 Keeping this policy outside `DefaultOutboxProcessor` means adding a protected packet does not
-change outbox state transitions, relay addressing, or wire sending.
+change outbox state transitions, routing addressing, or wire sending.
 
 ## Direct identity verification
 
@@ -879,7 +879,7 @@ Use this checklist when extending the wire protocol:
 6. If the packet requires encrypted outer transport or binds a recipient identity snapshot, add
    that rule to `DefaultOutgoingPacketTransportPolicy` and test it. Do not add the rule to
    `DefaultOutboxProcessor`.
-7. Make the incoming handler idempotent because relay delivery may repeat.
+7. Make the incoming handler idempotent because gateway delivery may repeat.
 8. Update the packet catalog in [Protocol](../api/protocol.md) and the relevant flow on this page.
 
 ## How to add another wire transport
@@ -887,11 +887,11 @@ Use this checklist when extending the wire protocol:
 The application workflow is transport-neutral at its extension points:
 
 1. Implement `OutgoingWireSender` for outgoing opaque payloads.
-2. Implement `IncomingRelayGateway` for incoming opaque envelopes and acknowledgements.
+2. Implement `IncomingEnvelopeGateway` for incoming opaque envelopes and acknowledgements.
 3. Bind both implementations in DI.
 4. Supply a `TypingIndicatorGateway` implementation if the transport supports transient typing.
 
-`DefaultOutboxProcessor` and `DefaultIncomingRelayRunner` do not need to change.
+`DefaultOutboxProcessor` and `DefaultIncomingEnvelopeRunner` do not need to change.
 
 ## Invariants
 

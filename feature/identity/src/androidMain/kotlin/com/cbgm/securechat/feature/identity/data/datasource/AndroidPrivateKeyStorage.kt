@@ -4,7 +4,6 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
-import com.cbgm.securechat.feature.identity.data.datasource.PrivateKeyStorage
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator

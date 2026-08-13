@@ -7,14 +7,14 @@ import com.cbgm.securechat.feature.chats.domain.usecase.overview.ObserveConversa
 import com.cbgm.securechat.feature.messaging.application.incoming.IncomingEnvelopeProcessingResult
 import com.cbgm.securechat.feature.messaging.application.incoming.IncomingEnvelopeProcessor
 import com.cbgm.securechat.feature.messaging.application.mailbox.MailboxCoordinator
-import com.cbgm.securechat.feature.transport.relay.inbox.PendingRelayEnvelopeGateway
+import com.cbgm.securechat.feature.transport.push.inbox.PendingEnvelopeGateway
 import com.cbgm.securechat.notification.model.ConversationNotification
 import com.cbgm.securechat.notification.model.PendingMessageSyncResult
 import kotlinx.coroutines.flow.first
 
 class SynchronizePendingMessages(
     private val initializeCryptoRuntime: InitializeCryptoRuntime,
-    private val pendingRelayEnvelopeGateway: PendingRelayEnvelopeGateway,
+    private val pendingEnvelopeGateway: PendingEnvelopeGateway,
     private val incomingEnvelopeProcessor: IncomingEnvelopeProcessor,
     private val observeConversations: ObserveConversationOverviewsUseCase,
     private val mailboxCoordinator: MailboxCoordinator
@@ -55,7 +55,7 @@ class SynchronizePendingMessages(
 
     private suspend fun processPushEnvelopes(wakeUpId: String): Int {
         val envelopes =
-            pendingRelayEnvelopeGateway
+            pendingEnvelopeGateway
                 .getPendingEnvelopes(wakeUpId = wakeUpId)
                 .getOrThrow()
         var processedEnvelopeCount = 0
@@ -65,12 +65,12 @@ class SynchronizePendingMessages(
                 incomingEnvelopeProcessor
                     .process(
                         envelopeId = envelope.envelopeId,
-                        senderRelayId = envelope.senderId,
+                        senderRoutingId = envelope.senderId,
                         encodedTransportPayload = envelope.payload
                     ).getOrThrow()
 
             if (result == IncomingEnvelopeProcessingResult.Processed) {
-                pendingRelayEnvelopeGateway
+                pendingEnvelopeGateway
                     .acknowledge(
                         wakeUpId = wakeUpId,
                         envelopeId = envelope.envelopeId

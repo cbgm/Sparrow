@@ -24,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.cbgm.securechat.feature.contacts.presentation.overview.components.SearchField
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.feature_chats_group_name
 import org.jetbrains.compose.resources.stringResource

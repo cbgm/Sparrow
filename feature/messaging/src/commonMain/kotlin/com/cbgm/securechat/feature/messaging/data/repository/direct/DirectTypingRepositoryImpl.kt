@@ -1,20 +1,20 @@
 package com.cbgm.securechat.feature.messaging.data.repository.direct
 
 import com.cbgm.securechat.feature.chats.domain.repository.direct.DirectTypingRepository
-import com.cbgm.securechat.feature.messaging.application.relay.ContactRelayIdResolver
+import com.cbgm.securechat.feature.messaging.application.routing.ContactRoutingIdResolver
 import com.cbgm.securechat.feature.transport.websocket.WebSocketTransportClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.transform
 
 class DirectTypingRepositoryImpl(
     private val webSocketTransportClient: WebSocketTransportClient,
-    private val contactRelayIdResolver: ContactRelayIdResolver
+    private val contactRoutingIdResolver: ContactRoutingIdResolver
 ) : DirectTypingRepository {
     override fun observe(contactId: String): Flow<Boolean> =
         webSocketTransportClient.incomingTypingEvents
             .transform { event ->
-                val relayId = contactRelayIdResolver.resolve(contactId).getOrNull() ?: return@transform
-                if (event.senderId == relayId) {
+                val routingId = contactRoutingIdResolver.resolve(contactId).getOrNull() ?: return@transform
+                if (event.senderId == routingId) {
                     emit(event.isTyping)
                 }
             }
@@ -23,12 +23,12 @@ class DirectTypingRepositoryImpl(
         contactId: String,
         isTyping: Boolean
     ): Result<Unit> =
-        contactRelayIdResolver
+        contactRoutingIdResolver
             .resolve(contactId)
             .fold(
-                onSuccess = { relayId ->
+                onSuccess = { routingId ->
                     webSocketTransportClient.sendTypingState(
-                        recipientId = relayId,
+                        recipientId = routingId,
                         isTyping = isTyping
                     )
                 },

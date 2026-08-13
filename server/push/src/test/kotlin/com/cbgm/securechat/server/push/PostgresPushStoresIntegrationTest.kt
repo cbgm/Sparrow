@@ -1,6 +1,6 @@
 package com.cbgm.securechat.server.push
 
-import com.cbgm.securechat.server.protocol.RelayEnvelope
+import com.cbgm.securechat.server.protocol.TransportEnvelope
 import kotlinx.coroutines.test.runTest
 import java.util.UUID
 import kotlin.test.Test
@@ -17,35 +17,35 @@ class PostgresPushStoresIntegrationTest {
                     ?.takeIf(String::isNotBlank)
                     ?: return@runTest
             val suffix = UUID.randomUUID().toString()
-            val relayId = "relay-$suffix"
+            val routingId = "routing-$suffix"
             val token = "token-$suffix"
             val envelope =
-                RelayEnvelope(
+                TransportEnvelope(
                     envelopeId = "envelope-$suffix",
                     senderId = "sender-$suffix",
-                    recipientId = relayId,
+                    recipientId = routingId,
                     payload = "ciphertext",
                     createdAtEpochMilliseconds = System.currentTimeMillis()
                 )
             val config = databaseConfig(databaseUrl)
             val wakeUpId =
                 createPostgresPushStores(config).use { stores ->
-                    stores.devices.register(PushDevice(relayId, token, "ANDROID"))
+                    stores.devices.register(PushDevice(routingId, token, "ANDROID"))
                     assertTrue(stores.pendingEnvelopes.enqueue(envelope))
-                    stores.wakeUps.create(relayId)
+                    stores.wakeUps.create(routingId)
                 }
 
             createPostgresPushStores(config).use { stores ->
                 assertEquals(
-                    listOf(PushDevice(relayId, token, "ANDROID")),
-                    stores.devices.find(relayId)
+                    listOf(PushDevice(routingId, token, "ANDROID")),
+                    stores.devices.find(routingId)
                 )
-                assertEquals(listOf(envelope), stores.pendingEnvelopes.pending(relayId))
-                assertEquals(setOf(relayId), stores.pendingEnvelopes.pendingRecipientIds())
-                assertEquals(relayId, stores.wakeUps.resolve(wakeUpId))
+                assertEquals(listOf(envelope), stores.pendingEnvelopes.pending(routingId))
+                assertEquals(setOf(routingId), stores.pendingEnvelopes.pendingRecipientIds())
+                assertEquals(routingId, stores.wakeUps.resolve(wakeUpId))
 
                 stores.devices.removeToken(token)
-                stores.pendingEnvelopes.remove(relayId, envelope.envelopeId)
+                stores.pendingEnvelopes.remove(routingId, envelope.envelopeId)
             }
         }
 

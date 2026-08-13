@@ -1,7 +1,7 @@
 # Federated SecureChat server
 
 The `server/` directory contains the first runnable implementation of the federated node architecture.
-The existing `:relay` service remains available during migration.
+The obsolete standalone relay application has been removed; client WebSockets are served by `:server:gateway`.
 
 ## Modules
 
@@ -102,7 +102,7 @@ $adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
     ".\androidApp\build\outputs\apk\debug\androidApp-debug.apk"
 ```
 
-Install the same APK on the second emulator. Each installation has a different relay ID and chooses
+Install the same APK on the second emulator. Each installation has a different routing ID and chooses
 a stable starting node from the verified directory:
 
 ```powershell
@@ -119,7 +119,7 @@ curl.exe http://localhost:8094/health
 curl.exe http://localhost:8294/health
 ```
 
-Node selection is derived from each installation's random relay ID, so the two gateway counts may
+Node selection is derived from each installation's random routing ID, so the two gateway counts may
 be `1 + 1` or `2 + 0`. With three emulators, a split is normally visible immediately. Send a message
 between clients connected to different gateways. The compatibility `send_envelope` frame enters
 federation whenever the recipient is not connected to the sender's gateway. Confirm the
@@ -226,7 +226,7 @@ The trusted registry ID is deliberately retained across app restarts. If local t
 `registry-identity` Docker volume, clear the app data once before trusting the newly generated local
 authority. Production clients must never reset that trust automatically.
 
-The gateway accepts the existing relay WebSocket frames. Current clients fetch `/v1/gateway`, create
+The gateway accepts the existing gateway WebSocket frames. Current clients fetch `/v1/gateway`, create
 a connection ID, and attach a signed, expiring presence route to the initial `register` frame. They
 refresh that route every 30 seconds while the WebSocket remains connected. Older clients still work
 locally through the compatibility registration, but they do not publish a cross-node presence route.
@@ -643,7 +643,7 @@ data in the `push-database-data` volume.
 The following data survives a push-service or complete Compose restart:
 
 - FCM device-token registrations;
-- pending encrypted relay envelopes;
+- pending encrypted transport envelopes;
 - short-lived opaque wake-up mappings.
 
 Pending envelopes expire after seven days by default. Wake-up mappings expire after fifteen

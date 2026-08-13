@@ -146,7 +146,7 @@ AppDestination.VerifyIdentityQr(groupId = null)
 Contacts do not use WebSockets directly.
 
 - `DefaultOutboxProcessor` loads contacts through `GetContact` to select encryption.
-- `DefaultContactRelayIdResolver` and `DefaultContactByRelayIdResolver` live in
+- `DefaultContactRoutingIdResolver` and `DefaultContactByRoutingIdResolver` live in
   `:feature:messaging`.
 - Identity packet handlers use `ProtocolOutbox`.
 - `ChatMessagePacketHandler` may use

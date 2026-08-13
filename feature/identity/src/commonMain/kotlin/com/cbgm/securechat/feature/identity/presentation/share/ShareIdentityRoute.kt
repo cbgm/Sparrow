@@ -5,8 +5,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.securechat.feature.identity.presentation.platform.rememberIdentityShareLauncher
-import com.cbgm.securechat.feature.identity.presentation.share.ShareIdentityScreen
-import com.cbgm.securechat.feature.identity.presentation.share.ShareIdentityViewModel
 import com.cbgm.securechat.feature.identity.presentation.share.model.ShareIdentityUiEvent
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.feature_identity_share_identity_text

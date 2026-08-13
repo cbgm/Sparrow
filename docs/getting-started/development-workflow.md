@@ -225,7 +225,7 @@ Good examples
 ```
 Add message reactions
 
-Fix relay reconnect
+Fix gateway reconnect
 
 Refactor contact repository
 ```

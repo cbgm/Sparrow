@@ -1,202 +1,122 @@
 # Local Development and Manual Testing
 
-This guide describes the local two-device test setup for SecureChat on Windows.
-
-The setup uses:
-
-- the local relay server
-- two Android emulators
-- one SecureChat installation per emulator
-- unique emulator phone numbers
+This guide describes a local Android/emulator setup against the current federated server stack.
+The deleted standalone `:server:gateway` application is no longer used.
 
 ## Prerequisites
 
-- Windows
-- Android Studio and the Android SDK
-- two Android Virtual Devices named `first` and `second`
-- Java and Gradle requirements described in [Installation](../getting-started/installation.md)
+- Windows or another Docker-supported development host
+- Docker Desktop / Docker Engine
+- Android Studio and Android SDK
+- one or more Android emulators
+- the Java/Gradle requirements in [Installation](../getting-started/installation.md)
 
-Both emulators should use a compatible Android image and should be configured before running the helper script.
+## 1. Start the server network
 
-## 1. Start the relay server
-
-Start the local relay from the repository root:
-
-```powershell
-.\gradlew :relay:run
-```
-
-The relay listens on port `8080`.
-
-The Android emulator reaches the host machine through `10.0.2.2`, so the client WebSocket endpoint is:
-
-```text
-ws://10.0.2.2:8080/relay
-```
-
-## 2. Check relay health
-
-Before investigating client-side connection or message-delivery problems, verify that the relay is running.
-
-Open this URL on the Windows host:
-
-```text
-http://localhost:8080/health
-```
-
-PowerShell can also check it directly:
+From the repository root:
 
 ```powershell
-Invoke-RestMethod http://localhost:8080/health
+docker compose -f server/docker-compose.yml up -d --build
 ```
 
-The current relay returns a plain-text response in this format:
+The default local services include node registry, presence, mailbox, federation, gateway and push.
+Useful health endpoints are:
 
 ```text
-ok connectedClients=0 pendingEnvelopes=0
+http://localhost:8090/health   node registry
+http://localhost:8091/health   presence
+http://localhost:8092/health   mailbox
+http://localhost:8093/health   federation
+http://localhost:8094/health   gateway
+http://localhost:8095/health   push
 ```
 
-The values change while clients connect and envelopes wait for offline recipients.
+For a second independent node, also apply `server/docker-compose.multinode.yml`; see
+[`server/README.md`](../../server/README.md).
 
-- `connectedClients` is the number of currently connected relay clients.
-- `pendingEnvelopes` is the number of envelopes currently waiting in the relay's pending store.
+## 2. Verify gateway discovery
 
-If the endpoint is unavailable:
+The gateway still exposes the compatibility WebSocket endpoint `/relay`, but clients obtain gateway
+endpoints from verified node/control-plane discovery instead of relying on a hard-coded gateway service.
 
-1. Verify that `:relay:run` is still running.
-2. Check the relay console for startup errors.
-3. Verify that port `8080` is not already occupied.
-4. Confirm that local firewall rules are not blocking the process.
-
-## 3. Start both Android emulators
-
-The repository contains this Windows helper script:
-
-```text
-scripts/start-local-test-emulators.bat
-```
-
-The script starts two AVDs with fixed emulator ports and unique phone numbers:
-
-| AVD | Emulator serial | Phone number |
-|---|---|---|
-| `first` | `emulator-5554` | `15550000001` |
-| `second` | `emulator-5556` | `15550000002` |
-
-The emulator executable path inside the script must be adapted to the local Android SDK installation.
-
-Run it from the repository root:
+Check at minimum:
 
 ```powershell
-.\scripts\start-local-test-emulators.bat
+curl.exe http://localhost:8090/health
+curl.exe http://localhost:8094/health
 ```
 
-The script disables snapshot loading so each test session starts without restoring an older emulator snapshot.
+If push/background delivery is part of the test:
 
-## 4. Run SecureChat on both devices
+```powershell
+curl.exe http://localhost:8095/health
+```
 
-After both emulators have started:
+## 3. Run the Android clients
 
-1. Select `emulator-5554` in Android Studio and run SecureChat.
-2. Select `emulator-5556` and run SecureChat again.
-3. Complete onboarding independently on both devices.
-4. Confirm that each emulator exposes its assigned phone number where the platform allows it.
+Build/install normally through Android Studio or:
 
-## 5. Typical manual test flow
+```powershell
+.\gradlew.bat :androidApp:assembleDebug
+```
 
-1. Start the relay server.
-2. Verify `http://localhost:8080/health`.
-3. Start both emulators with the helper script.
-4. Launch SecureChat on both devices.
-5. Complete onboarding and create one identity per device.
-6. Exchange or scan identities.
-7. Verify the safety number on both devices.
-8. Send messages in both directions.
-9. Verify sent, delivered, and read state changes.
-10. Disconnect one device and send another message.
-11. Reconnect the device and verify queued-message delivery.
+For multiple emulators, give each installation its own application data/identity. Complete onboarding
+independently and verify that each client connects to a discovered gateway.
 
-For the implementation details behind this flow, see [Transport Feature](../features/transport.md).
+## 4. Typical manual test flow
 
-## Contacts during local testing
-
-SecureChat synchronizes device contacts when the Contacts screen is opened.
-
-After changing a contact in the Android Contacts application:
-
-1. Return to SecureChat.
-2. Open the Contacts screen again.
-3. Verify that the imported contact data has been refreshed.
+1. Start the server network.
+2. Verify registry and gateway health.
+3. Start two or three emulators.
+4. Launch SecureChat on each device and complete onboarding.
+5. Exchange/accept identities or invitations as required by the scenario.
+6. Send direct and group messages in both directions.
+7. Verify sent, delivered and read states.
+8. Verify typing while both clients are online.
+9. Disconnect one client and send another message.
+10. Reconnect it and verify queued/offline delivery.
+11. For multi-node tests, stop one gateway and verify failover to another verified node.
 
 ## Troubleshooting
 
-### A client cannot connect
-
-Verify all of the following:
-
-- `http://localhost:8080/health` responds on the host.
-- the app uses `ws://10.0.2.2:8080/relay`
-- the relay process is still running
-- the emulator has network access
-
-Do not configure the Android emulator client with `localhost`. Inside the emulator, `localhost` refers to the emulator itself.
-
-### A message remains queued
+### Client cannot connect
 
 Check:
 
-- the relay health endpoint is reachable
-- the sender is connected
-- the recipient identity and keys are available
-- the recipient reconnects to the same relay
-- the relay console does not show protocol or WebSocket errors
+- registry/control-plane discovery is reachable;
+- at least one advertised gateway health endpoint is healthy;
+- the advertised endpoint is reachable from the emulator/device;
+- the gateway WebSocket process is running;
+- firewall/network rules permit the connection.
 
-The health response can also reveal whether envelopes are waiting:
+The `/relay` path is an external compatibility endpoint and should not be renamed as part of the
+client package cleanup.
 
-```text
-ok connectedClients=1 pendingEnvelopes=1
-```
+### Message remains queued
 
-### The emulator script cannot find the executable
+Check:
 
-Open Android Studio and check:
-
-```text
-Settings > Languages & Frameworks > Android SDK
-```
-
-Then update `EMU` in `scripts/start-local-test-emulators.bat` to point to that SDK's `emulator.exe`.
-
-### List connected emulators
-
-```powershell
-adb devices
-```
-
-Expected serials:
-
-```text
-emulator-5554
-emulator-5556
-```
+- the sender has an active gateway connection;
+- the recipient routing ID and transport key can be resolved;
+- federation/mailbox/push health is good when the recipient is on another node or offline;
+- gateway/federation logs do not show routing/authentication failures.
 
 ### Inspect logs
 
-First emulator:
-
 ```powershell
 adb -s emulator-5554 logcat
+adb -s emulator-5556 logcat
 ```
 
-Second emulator:
+Server logs:
 
 ```powershell
-adb -s emulator-5556 logcat
+docker compose -f server/docker-compose.yml logs --since=5m gateway federation mailbox push
 ```
 
 ## Related documentation
 
-- [Development Workflow](../getting-started/development-workflow.md)
+- [Gateway API](../api/gateway.md)
+- [WebSocket API](../api/websocket.md)
+- [Transport](../features/transport.md)
 - [Testing](testing.md)
-- [Transport Feature](../features/transport.md)
-- [Relay API](../api/relay.md)

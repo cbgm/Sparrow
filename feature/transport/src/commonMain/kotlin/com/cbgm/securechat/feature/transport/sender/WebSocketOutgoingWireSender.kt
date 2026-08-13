@@ -4,18 +4,18 @@ import com.cbgm.securechat.core.id.IdGenerator
 import com.cbgm.securechat.core.protocol.mailbox.MailboxRouteRepository
 import com.cbgm.securechat.core.protocol.transport.OutgoingWireSender
 import com.cbgm.securechat.core.time.SystemClock
-import com.cbgm.securechat.feature.transport.relay.config.RelayTransportConfig
-import com.cbgm.securechat.feature.transport.relay.identity.LocalBootstrapRelayIdProvider
-import com.cbgm.securechat.feature.transport.relay.identity.LocalRelayIdProvider
-import com.cbgm.securechat.feature.transport.relay.model.FederatedEnvelope
-import com.cbgm.securechat.feature.transport.relay.model.RelayEnvelope
+import com.cbgm.securechat.feature.transport.config.TransportConfig
+import com.cbgm.securechat.feature.transport.gateway.model.FederatedEnvelope
+import com.cbgm.securechat.feature.transport.gateway.model.TransportEnvelope
+import com.cbgm.securechat.feature.transport.routing.LocalBootstrapRoutingIdProvider
+import com.cbgm.securechat.feature.transport.routing.LocalRoutingIdProvider
 import com.cbgm.securechat.feature.transport.websocket.WebSocketTransportClient
 
 class WebSocketOutgoingWireSender(
     private val webSocketTransportClient: WebSocketTransportClient,
-    private val localRelayIdProvider: LocalRelayIdProvider,
-    private val localBootstrapRelayIdProvider: LocalBootstrapRelayIdProvider,
-    private val relayTransportConfig: RelayTransportConfig,
+    private val localRoutingIdProvider: LocalRoutingIdProvider,
+    private val localBootstrapRoutingIdProvider: LocalBootstrapRoutingIdProvider,
+    private val transportConfig: TransportConfig,
     private val mailboxRouteRepository: MailboxRouteRepository? = null
 ) : OutgoingWireSender {
     override suspend fun send(
@@ -27,17 +27,17 @@ class WebSocketOutgoingWireSender(
             require(encodedTransportPayload.isNotBlank()) { "Transport payload must not be blank" }
 
             val usesBootstrapRouting = recipientAddress.startsWith(BOOTSTRAP_ROUTING_ID_PREFIX)
-            val senderRelayId =
+            val senderRoutingId =
                 if (usesBootstrapRouting) {
-                    localBootstrapRelayIdProvider.getLocalBootstrapRelayId().getOrThrow().also { alias ->
+                    localBootstrapRoutingIdProvider.getLocalBootstrapRoutingId().getOrThrow().also { alias ->
                         webSocketTransportClient
                             .awaitRoutingAlias(
                                 routingAlias = alias,
-                                timeoutMilliseconds = relayTransportConfig.acknowledgementTimeoutMilliseconds
+                                timeoutMilliseconds = transportConfig.acknowledgementTimeoutMilliseconds
                             ).getOrThrow()
                     }
                 } else {
-                    localRelayIdProvider.getLocalRelayId().getOrThrow()
+                    localRoutingIdProvider.getLocalRoutingId().getOrThrow()
                 }
 
             val envelopeId = IdGenerator.generate()
@@ -52,14 +52,14 @@ class WebSocketOutgoingWireSender(
                 webSocketTransportClient
                     .sendEnvelopeAndAwaitAcceptance(
                         envelope =
-                            RelayEnvelope(
+                            TransportEnvelope(
                                 envelopeId = envelopeId,
-                                senderId = senderRelayId,
+                                senderId = senderRoutingId,
                                 recipientId = recipientAddress,
                                 payload = encodedTransportPayload,
                                 createdAtEpochMilliseconds = createdAt
                             ),
-                        timeoutMilliseconds = relayTransportConfig.acknowledgementTimeoutMilliseconds
+                        timeoutMilliseconds = transportConfig.acknowledgementTimeoutMilliseconds
                     ).getOrThrow()
             } else {
                 webSocketTransportClient
@@ -67,7 +67,7 @@ class WebSocketOutgoingWireSender(
                         envelope =
                             FederatedEnvelope(
                                 envelopeId = envelopeId,
-                                senderRoutingId = senderRelayId,
+                                senderRoutingId = senderRoutingId,
                                 recipientDeviceRoutingId = recipientAddress,
                                 mailboxRoute = route,
                                 encryptedPayload = encodedTransportPayload,
@@ -78,7 +78,7 @@ class WebSocketOutgoingWireSender(
                                         route.expiresAtEpochMilliseconds
                                     )
                             ),
-                        timeoutMilliseconds = relayTransportConfig.acknowledgementTimeoutMilliseconds
+                        timeoutMilliseconds = transportConfig.acknowledgementTimeoutMilliseconds
                     ).getOrThrow()
             }
         }

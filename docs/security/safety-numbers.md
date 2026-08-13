@@ -57,7 +57,7 @@ A Safety Number is
 - deterministic
 - reproducible
 - independent of transport
-- independent of the relay
+- independent of the gateway
 - derived only from public information
 
 Private keys are never used directly.
@@ -158,9 +158,9 @@ The application should avoid technical cryptographic terminology whenever possib
 
 ---
 
-# Relay Independence
+# Gateway Independence
 
-The relay plays no role in Safety Number verification.
+The gateway plays no role in Safety Number verification.
 
 It
 

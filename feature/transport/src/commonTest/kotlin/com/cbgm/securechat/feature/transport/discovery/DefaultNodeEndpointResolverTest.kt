@@ -7,8 +7,8 @@ import com.cbgm.securechat.core.transport.ControlPlaneEndpoint
 import com.cbgm.securechat.core.transport.ControlPlaneEndpointStatus
 import com.cbgm.securechat.core.transport.ControlPlaneReachability
 import com.cbgm.securechat.core.transport.ControlPlaneStatusStore
-import com.cbgm.securechat.feature.transport.relay.codec.createRelayJson
-import com.cbgm.securechat.feature.transport.relay.config.RelayTransportConfig
+import com.cbgm.securechat.feature.transport.config.TransportConfig
+import com.cbgm.securechat.feature.transport.gateway.codec.createGatewayJson
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.runTest
@@ -17,7 +17,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class DefaultNodeEndpointResolverTest {
-    private val json = createRelayJson()
+    private val json = createGatewayJson()
     private val cryptoHash = DefaultCryptoHash()
 
     @Test
@@ -28,8 +28,8 @@ class DefaultNodeEndpointResolverTest {
             val cache = RecordingNodeDirectoryCache()
             val resolver = resolver(source = source, cache = cache, now = { NOW })
 
-            val first = resolver.resolve("relay-a").getOrThrow()
-            val second = resolver.resolve("relay-a").getOrThrow()
+            val first = resolver.resolve("routing-a").getOrThrow()
+            val second = resolver.resolve("routing-a").getOrThrow()
 
             assertEquals(
                 setOf("wss://a.example/relay", "wss://b.example/relay"),
@@ -92,7 +92,7 @@ class DefaultNodeEndpointResolverTest {
                 )
             val resolver = resolver(source = source, cache = cache, now = { NOW })
 
-            val endpoints = resolver.resolve("relay-a").getOrThrow()
+            val endpoints = resolver.resolve("routing-a").getOrThrow()
 
             assertEquals("wss://b.example/relay", endpoints.first().websocketUrl)
             assertEquals(1, source.fetchCount)
@@ -136,12 +136,12 @@ class DefaultNodeEndpointResolverTest {
                     now = { NOW }
                 )
 
-            val initial = resolver.resolve("relay-a").getOrThrow()
+            val initial = resolver.resolve("routing-a").getOrThrow()
             source.result = Result.success(json.encodeToString(refreshedDirectory))
             val refreshed =
                 resolver
                     .resolve(
-                        localRelayId = "relay-a",
+                        localRoutingId = "routing-a",
                         forceRefresh = true
                     ).getOrThrow()
 
@@ -181,7 +181,7 @@ class DefaultNodeEndpointResolverTest {
                     now = { NOW }
                 )
 
-            val endpoints = resolver.resolve("relay-a").getOrThrow()
+            val endpoints = resolver.resolve("routing-a").getOrThrow()
 
             assertEquals("wss://b.example/relay", endpoints.first().websocketUrl)
             assertEquals(1, endpoints.first().activeConnections)
@@ -206,7 +206,7 @@ class DefaultNodeEndpointResolverTest {
             val resolver = resolver(source = source, cache = cache, now = { now })
 
             now = NOW + 2_000L
-            val result = resolver.resolve("relay-a")
+            val result = resolver.resolve("routing-a")
 
             assertTrue(result.isSuccess)
             assertEquals(2, result.getOrThrow().size)
@@ -243,7 +243,7 @@ class DefaultNodeEndpointResolverTest {
                     now = { NOW + 2_000L }
                 )
 
-            val result = resolver.resolve("relay-a")
+            val result = resolver.resolve("routing-a")
 
             assertTrue(result.isSuccess)
             assertEquals(2, result.getOrThrow().size)
@@ -270,7 +270,7 @@ class DefaultNodeEndpointResolverTest {
                     now = { NOW + CACHE_GRACE_MILLISECONDS + 2_000L }
                 )
 
-            assertTrue(resolver.resolve("relay-a").isFailure)
+            assertTrue(resolver.resolve("routing-a").isFailure)
         }
 
     @Test
@@ -302,7 +302,7 @@ class DefaultNodeEndpointResolverTest {
                             json = json
                         ),
                     config =
-                        RelayTransportConfig(
+                        TransportConfig(
                             trustedRegistryRootNodeId = trustedDirectory.authorityNodeId
                         ),
                     controlPlaneConfiguration = configuration,
@@ -310,7 +310,7 @@ class DefaultNodeEndpointResolverTest {
                     now = { NOW }
                 )
 
-            val result = resolver.resolve("relay-a")
+            val result = resolver.resolve("routing-a")
 
             assertTrue(result.isSuccess)
             assertEquals("https://cp-b.example", configuration.activeEndpoint.value?.baseUrl)
@@ -335,7 +335,7 @@ class DefaultNodeEndpointResolverTest {
                     json = json
                 ),
             config =
-                RelayTransportConfig(
+                TransportConfig(
                     trustedRegistryRootNodeId = trustedDirectory.authorityNodeId,
                     directoryRefreshIntervalMilliseconds = 60_000L,
                     cachedDirectoryGraceMilliseconds = CACHE_GRACE_MILLISECONDS

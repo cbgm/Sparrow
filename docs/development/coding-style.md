@@ -227,7 +227,7 @@ Launch work from appropriate lifecycle-aware scopes.
 # Logging
 
 Use the project-owned `SecureChatLogger` from `:core` for application and shared Kotlin code.
-The standalone relay uses SLF4J with Logback.
+The JVM server services use SLF4J with Logback.
 
 Do not use `print`, `println`, `System.out`, `System.err`, or `printStackTrace`.
 

@@ -12,8 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.securechat.feature.identity.presentation.platform.PhoneNumberHintLauncher
 import com.cbgm.securechat.feature.identity.presentation.platform.PhoneNumberHintResult
-import com.cbgm.securechat.feature.identity.presentation.setup.IdentityScreen
-import com.cbgm.securechat.feature.identity.presentation.setup.IdentityViewModel
 import com.cbgm.securechat.feature.identity.presentation.setup.model.IdentityUiEvent
 import com.cbgm.securechat.feature.identity.presentation.setup.model.IdentityUiState
 import org.koin.compose.viewmodel.koinViewModel

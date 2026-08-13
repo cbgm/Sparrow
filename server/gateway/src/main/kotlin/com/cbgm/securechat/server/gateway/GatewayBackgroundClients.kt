@@ -1,7 +1,7 @@
 package com.cbgm.securechat.server.gateway
 
 import com.cbgm.securechat.server.protocol.GatewayServerMessage
-import com.cbgm.securechat.server.protocol.RelayEnvelope
+import com.cbgm.securechat.server.protocol.TransportEnvelope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -17,7 +17,7 @@ internal class GatewayPushDispatcher(
     private val slots = Semaphore(MAX_CONCURRENT_PUSH_OPERATIONS)
 
     fun scheduleFallback(
-        envelope: RelayEnvelope,
+        envelope: TransportEnvelope,
         federationEnvelopeId: String
     ) {
         launchPushOperation {
@@ -75,10 +75,10 @@ internal class GatewayPushDispatcher(
 
 internal suspend fun LegacyPushClient.pendingForRoutingIds(
     routingIds: Set<String>
-): List<RelayEnvelope> =
+): List<TransportEnvelope> =
     routingIds
         .flatMap { routingId -> pending(recipientId = routingId) }
-        .distinctBy(RelayEnvelope::envelopeId)
+        .distinctBy(TransportEnvelope::envelopeId)
 
 internal suspend fun LegacyPushClient.acknowledgeForRoutingIds(
     routingIds: Set<String>,

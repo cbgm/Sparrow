@@ -23,7 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
-import com.cbgm.securechat.feature.contacts.presentation.overview.components.SearchField
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

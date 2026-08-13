@@ -14,11 +14,11 @@ object DisclaimerContent {
 
         SecureChat is designed around end-to-end encryption. Message
         content is encrypted on your device and cannot be read by us,
-        the relay servers, or any third party in transit.
+        the SecureChat server infrastructure, or any third party in transit.
 
         ## Information we do collect
 
-        - **Phone number**: used as your relay address so contacts can
+        - **Phone number**: used as your routing address so contacts can
           reach you. This is stored on our servers in a form necessary
           to route messages to your device.
         - **Public keys**: your encryption and signing public keys are
@@ -31,12 +31,12 @@ object DisclaimerContent {
         ## How we use this information
 
         Collected information is used solely to operate the messaging
-        relay, deliver encrypted messages, and maintain and improve the
+        gateway, deliver encrypted messages, and maintain and improve the
         app. We do not sell personal data to third parties.
 
         ## Data retention
 
-        Undelivered messages are retained on relay servers only until
+        Undelivered messages are retained by SecureChat server infrastructure only until
         successful delivery, after which they are deleted. You can
         delete your local message history and identity at any time from
         Settings.
@@ -66,7 +66,7 @@ object DisclaimerContent {
         - Your contact list and their public keys
         - App preferences (language, notification settings)
 
-        ## Stored on the relay server
+        ## Stored on the gateway service
 
         - Your phone number, used as a routing address
         - Your public keys, shared only with contacts you approve
@@ -76,7 +76,7 @@ object DisclaimerContent {
         ## What we cannot see
 
         Because messages are end-to-end encrypted before they leave your
-        device, message content is never visible to the relay server or
+        device, message content is never visible to the gateway service or
         to SecureChat as an organization.
 
         ## Backups

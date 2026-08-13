@@ -10,8 +10,8 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `core` |
 | Directory | `core/protocol` |
 | Build file | `core/protocol/build.gradle.kts` |
-| Kotlin files | 62 |
-| Production Kotlin files | 53 |
+| Kotlin files | 63 |
+| Production Kotlin files | 54 |
 | Test Kotlin files | 9 |
 | Resource files | 1 |
 | Direct dependencies | 1 |
@@ -19,12 +19,9 @@ Generated automatically by `./gradlew architectureReport`.
 
 ## Source sets
 
-- `androidDeviceTest`
-- `androidHostTest`
 - `androidMain`
 - `commonMain`
 - `commonTest`
-- `iosMain`
 
 ## Dependencies
 
