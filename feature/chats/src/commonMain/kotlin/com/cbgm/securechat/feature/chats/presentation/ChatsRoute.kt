@@ -6,8 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cbgm.securechat.feature.chats.presentation.screen.ChatsScreen
-import com.cbgm.securechat.feature.chats.presentation.screen.ChatsViewModel
+import com.cbgm.securechat.feature.chats.presentation.screen.overview.ChatsScreen
+import com.cbgm.securechat.feature.chats.presentation.screen.overview.ChatsViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable

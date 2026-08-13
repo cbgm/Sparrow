@@ -16,10 +16,10 @@ import com.cbgm.securechat.feature.contacts.domain.model.ContactVerificationStat
 import com.cbgm.securechat.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.securechat.feature.contacts.domain.model.KeyExchangeStatus
 import com.cbgm.securechat.feature.contacts.domain.model.SecureChatIdentity
-import com.cbgm.securechat.feature.contacts.presentation.component.contactdetails.ContactDetailsBody
 import com.cbgm.securechat.feature.contacts.presentation.component.contactdetails.ContactDetailsTopBar
 import com.cbgm.securechat.feature.contacts.presentation.model.ContactDetailsUiEvent
 import com.cbgm.securechat.feature.contacts.presentation.model.ContactDetailsUiState
+import com.cbgm.securechat.feature.contacts.presentation.screen.details.component.ContactDetailsBody
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.base_contact
 import com.cbgm.securechat.resources.feature_contacts_contact_details

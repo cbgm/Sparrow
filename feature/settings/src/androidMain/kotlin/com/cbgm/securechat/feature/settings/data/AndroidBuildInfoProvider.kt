@@ -3,11 +3,11 @@ package com.cbgm.securechat.feature.settings.data
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import com.cbgm.securechat.feature.settings.domain.model.BuildInfo
-import com.cbgm.securechat.feature.settings.domain.repository.BuildInfoProvider
+import com.cbgm.securechat.feature.settings.domain.repository.BuildInfoProviderRepository
 
 class AndroidBuildInfoProvider(
     private val context: Context
-) : BuildInfoProvider {
+) : BuildInfoProviderRepository {
     override val build: BuildInfo
         get() {
             val packageInfo =

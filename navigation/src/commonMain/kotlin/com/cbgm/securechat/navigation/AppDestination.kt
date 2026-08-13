@@ -1,6 +1,6 @@
 package com.cbgm.securechat.navigation
 
-import com.cbgm.securechat.feature.settings.presentation.model.DisclaimerType
+import com.cbgm.securechat.feature.settings.presentation.disclaimer.model.DisclaimerType
 import kotlinx.serialization.Serializable
 
 sealed interface AppDestination {

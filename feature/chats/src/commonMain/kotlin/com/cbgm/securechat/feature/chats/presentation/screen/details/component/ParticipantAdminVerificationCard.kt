@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.chats.presentation.component.groupdetails
+package com.cbgm.securechat.feature.chats.presentation.screen.details.component
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +14,8 @@ import com.cbgm.securechat.core.ui.component.SecureChatApprovalButton
 import com.cbgm.securechat.core.ui.component.SecureChatCardNoAnimation
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.core.ui.theme.spacing
+import com.cbgm.securechat.feature.chats.presentation.component.groupdetails.GroupDetailsPreviewData
+import com.cbgm.securechat.feature.chats.presentation.component.groupdetails.verificationStatusText
 import com.cbgm.securechat.feature.chats.presentation.model.GroupMemberVerificationUiState
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.base_verify_contact

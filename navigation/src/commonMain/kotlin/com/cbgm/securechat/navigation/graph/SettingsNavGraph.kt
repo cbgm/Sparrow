@@ -3,11 +3,11 @@ package com.cbgm.securechat.navigation.graph
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.cbgm.securechat.core.ui.navigation.AppRoute
-import com.cbgm.securechat.feature.settings.presentation.ControlPlaneSettingsRoute
-import com.cbgm.securechat.feature.settings.presentation.DeveloperMenuRoute
-import com.cbgm.securechat.feature.settings.presentation.DisclaimerRoute
-import com.cbgm.securechat.feature.settings.presentation.LicensesRoute
-import com.cbgm.securechat.feature.settings.presentation.model.DisclaimerType
+import com.cbgm.securechat.feature.settings.presentation.developer.DeveloperMenuRoute
+import com.cbgm.securechat.feature.settings.presentation.disclaimer.DisclaimerRoute
+import com.cbgm.securechat.feature.settings.presentation.disclaimer.model.DisclaimerType
+import com.cbgm.securechat.feature.settings.presentation.licenses.LicensesRoute
+import com.cbgm.securechat.feature.settings.presentation.network.ControlPlaneSettingsRoute
 import com.cbgm.securechat.navigation.slideInFromRight
 import com.cbgm.securechat.navigation.slideOutToRight
 

@@ -1,6 +1,6 @@
 package com.cbgm.securechat.di
 
-import com.cbgm.securechat.presentation.AppViewModel
+import com.cbgm.securechat.AppViewModel
 import com.cbgm.securechat.presentation.runtime.AppInitializationDependencies
 import com.cbgm.securechat.presentation.runtime.ForegroundRuntimeDependencies
 import org.koin.core.module.dsl.viewModel

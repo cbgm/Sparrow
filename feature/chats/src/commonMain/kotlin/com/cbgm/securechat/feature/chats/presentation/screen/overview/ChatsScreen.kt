@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.chats.presentation.screen
+package com.cbgm.securechat.feature.chats.presentation.screen.overview
 
 /** Public conversations screen contract. */
 import androidx.compose.foundation.background

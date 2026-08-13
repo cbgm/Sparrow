@@ -61,12 +61,12 @@ import com.cbgm.securechat.feature.chats.domain.usecase.SetTypingIndicator
 import com.cbgm.securechat.feature.chats.domain.usecase.SynchronizeGroupVerification
 import com.cbgm.securechat.feature.chats.domain.usecase.TransferGroupAdminAndLeave
 import com.cbgm.securechat.feature.chats.domain.usecase.VerifyGroupMember
-import com.cbgm.securechat.feature.chats.presentation.screen.ChatsViewModel
 import com.cbgm.securechat.feature.chats.presentation.screen.chat.ChatViewModel
 import com.cbgm.securechat.feature.chats.presentation.screen.chat.GroupChatViewModel
 import com.cbgm.securechat.feature.chats.presentation.screen.create.CreateGroupViewModel
 import com.cbgm.securechat.feature.chats.presentation.screen.details.GroupMemberQrVerificationViewModel
 import com.cbgm.securechat.feature.chats.presentation.screen.details.GroupVerificationViewModel
+import com.cbgm.securechat.feature.chats.presentation.screen.overview.ChatsViewModel
 import com.cbgm.securechat.feature.contacts.domain.usecase.EnsureIdentityExchangeStarted
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactSafetyNumber
 import com.cbgm.securechat.feature.contacts.domain.usecase.ObserveContact

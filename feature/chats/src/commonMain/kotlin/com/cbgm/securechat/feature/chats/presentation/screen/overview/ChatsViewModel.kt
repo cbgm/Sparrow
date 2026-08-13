@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.chats.presentation.screen
+package com.cbgm.securechat.feature.chats.presentation.screen.overview
 
 import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.logging.SecureChatLog

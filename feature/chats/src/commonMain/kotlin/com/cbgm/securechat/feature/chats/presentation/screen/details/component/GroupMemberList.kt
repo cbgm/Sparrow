@@ -14,6 +14,7 @@ import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.core.ui.theme.spacing
 import com.cbgm.securechat.feature.chats.presentation.model.GroupMemberVerificationUiState
 import com.cbgm.securechat.feature.chats.presentation.model.GroupVerificationSummaryUiState
+import com.cbgm.securechat.feature.chats.presentation.screen.details.component.ParticipantAdminVerificationCard
 
 @Composable
 internal fun GroupMemberList(

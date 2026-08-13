@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.settings.data.storage
+package com.cbgm.securechat.feature.settings.data.datasource
 
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.Module

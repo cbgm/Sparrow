@@ -1,4 +1,4 @@
-package com.cbgm.securechat.presentation
+package com.cbgm.securechat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

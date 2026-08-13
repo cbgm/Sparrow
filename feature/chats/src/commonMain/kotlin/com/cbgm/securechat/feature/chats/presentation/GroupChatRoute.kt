@@ -6,7 +6,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cbgm.securechat.feature.chats.presentation.screen.ChatScreen
+import com.cbgm.securechat.feature.chats.presentation.screen.chat.ChatScreen
 import com.cbgm.securechat.feature.chats.presentation.screen.chat.GroupChatViewModel
 import com.cbgm.securechat.feature.chats.presentation.screen.details.GroupVerificationViewModel
 import org.koin.compose.viewmodel.koinViewModel

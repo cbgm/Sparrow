@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.contacts.presentation.component.contactdetails
+package com.cbgm.securechat.feature.contacts.presentation.screen.details.component
 
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.PaddingValues
@@ -12,6 +12,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.core.ui.theme.spacing
+import com.cbgm.securechat.feature.contacts.presentation.component.contactdetails.ContactDetailsContent
+import com.cbgm.securechat.feature.contacts.presentation.component.contactdetails.ContactDetailsErrorContent
+import com.cbgm.securechat.feature.contacts.presentation.component.contactdetails.ContactDetailsLoadingContent
+import com.cbgm.securechat.feature.contacts.presentation.component.contactdetails.ContactDetailsNotFoundContent
+import com.cbgm.securechat.feature.contacts.presentation.component.contactdetails.ContactDetailsPreviewData
 import com.cbgm.securechat.feature.contacts.presentation.model.ContactDetailsUiState
 
 @Composable
