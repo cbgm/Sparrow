@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -74,16 +75,33 @@ class ContactInvitationViewModel(
         viewModelScope.launch {
             _processingInvitationId.value = invitationId
 
-            operation()
-                .onFailure { error ->
-                    _effects.send(
-                        ContactInvitationEffect.ShowError(
-                            message = error.message ?: "Contact invitation could not be updated"
-                        )
+            val result = operation()
+
+            result.onFailure { error ->
+                _effects.send(
+                    ContactInvitationEffect.ShowError(
+                        message = error.message ?: "Contact invitation could not be updated"
                     )
-                }
+                )
+            }
+
+            val shouldClose =
+                result.isSuccess && wasLastInvitationHandled(invitationId)
 
             _processingInvitationId.value = null
+
+            if (shouldClose) {
+                navigator.popBackStack()
+            }
         }
+    }
+
+    private suspend fun wasLastInvitationHandled(invitationId: String): Boolean {
+        val remainingInvitations =
+            pendingInvitations.first { invitations ->
+                invitations.none { invitation -> invitation.invitationId == invitationId }
+            }
+
+        return remainingInvitations.isEmpty()
     }
 }
