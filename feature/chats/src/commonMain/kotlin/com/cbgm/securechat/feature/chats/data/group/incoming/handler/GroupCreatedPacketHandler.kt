@@ -20,7 +20,6 @@ import com.cbgm.securechat.data.database.dao.GroupInvitationDao
 import com.cbgm.securechat.data.database.dao.GroupSecurityDao
 import com.cbgm.securechat.data.database.entity.ContactEntity
 import com.cbgm.securechat.data.database.entity.ContactPhoneNumberEntity
-import com.cbgm.securechat.data.database.entity.ContactPublicIdentityEntity
 import com.cbgm.securechat.data.database.entity.ConversationEntity
 import com.cbgm.securechat.data.database.entity.ConversationParticipantEntity
 import com.cbgm.securechat.data.database.entity.GroupInvitationEntity
@@ -67,15 +66,24 @@ class GroupCreatedPacketHandler(
     ): Result<Unit> =
         runCatching {
             val groupPacket = packet.requireGroupCreatedPacket()
+            if (groupSecurityManager.isLocalMembershipRetired(groupPacket.groupId).getOrThrow()) {
+                return@runCatching
+            }
             val invitation = findInvitation(groupPacket, context.contactId)
             val isFirstWelcome = groupSecurityDao.findState(groupPacket.groupId) == null
 
             validateInvitation(groupPacket, invitation, isFirstWelcome)
-            val welcome = openAndTrustWelcome(groupPacket, context.contactId)
+            val welcome =
+                openAndTrustWelcome(
+                    packet = groupPacket,
+                    senderContactId = context.contactId,
+                    isFirstWelcome = isFirstWelcome
+                )
             val previousMembership = loadPreviousMembership(groupPacket.groupId)
             val persistedAt = persistedAt(groupPacket, context)
 
             persistConversation(groupPacket, persistedAt)
+            recordMembershipRestartIfNeeded(groupPacket, invitation, isFirstWelcome, persistedAt)
             val membership = resolveMembership(groupPacket, context.contactId, welcome)
             val referenceAdmin = validateAuthorityAndResolveReferenceAdmin(groupPacket, context.contactId, welcome, membership)
 
@@ -120,11 +128,15 @@ class GroupCreatedPacketHandler(
 
     private suspend fun openAndTrustWelcome(
         packet: GroupCreatedPacket,
-        senderContactId: String
+        senderContactId: String,
+        isFirstWelcome: Boolean
     ): WelcomeContext {
         val authorityIdentity =
-            contactDao.findPublicIdentityByContactId(senderContactId)
-                ?: error("Group admin has no SecureChat identity")
+            resolveAuthorityIdentity(
+                groupId = packet.groupId,
+                senderContactId = senderContactId,
+                isFirstWelcome = isFirstWelcome
+            )
         val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
         val localEncryptionKeyPair = localEncryptionKeyPairProvider.getEncryptionKeyPair().getOrThrow()
         val openedWelcome =
@@ -138,17 +150,52 @@ class GroupCreatedPacketHandler(
                     localSigningPublicKey = localIdentity.signingPublicKey
                 ).getOrThrow()
 
-        contactKeyExchangeStore
-            .markMutual(
-                contactId = senderContactId,
-                expectedRemoteEncryptionPublicKey = authorityIdentity.encryptionPublicKey,
-                expectedRemoteSigningPublicKey = authorityIdentity.signingPublicKey
-            ).getOrThrow()
+        if (isFirstWelcome) {
+            contactKeyExchangeStore
+                .markMutual(
+                    contactId = senderContactId,
+                    expectedRemoteEncryptionPublicKey = authorityIdentity.encryptionPublicKey,
+                    expectedRemoteSigningPublicKey = authorityIdentity.signingPublicKey
+                ).getOrThrow()
+        }
 
         return WelcomeContext(
             authorityIdentity = authorityIdentity,
             localIdentity = localIdentity,
             openedWelcome = openedWelcome
+        )
+    }
+
+    private suspend fun resolveAuthorityIdentity(
+        groupId: String,
+        senderContactId: String,
+        isFirstWelcome: Boolean
+    ): AuthorityIdentity {
+        if (isFirstWelcome) {
+            val contactIdentity =
+                contactDao.findPublicIdentityByContactId(senderContactId)
+                    ?: error("Inviting group admin has no accepted SecureChat identity")
+            return AuthorityIdentity(
+                encryptionPublicKey = contactIdentity.encryptionPublicKey.copyOf(),
+                signingPublicKey = contactIdentity.signingPublicKey.copyOf()
+            )
+        }
+
+        val state =
+            groupSecurityDao.findState(groupId)
+                ?: error("Group security state was not found")
+        val memberKey =
+            groupSecurityDao.findMemberKey(
+                groupId = groupId,
+                epoch = state.currentEpoch,
+                contactId = senderContactId
+            ) ?: error("Group update sender is not part of the current epoch")
+        check(memberKey.role.isGroupAdminRole()) {
+            "Group update sender is not an admin"
+        }
+        return AuthorityIdentity(
+            encryptionPublicKey = memberKey.encryptionPublicKey.copyOf(),
+            signingPublicKey = memberKey.signingPublicKey.copyOf()
         )
     }
 
@@ -190,6 +237,41 @@ class GroupCreatedPacketHandler(
                 title = packet.title,
                 createdAtEpochMilliseconds = packet.createdAtEpochMilliseconds,
                 updatedAtEpochMilliseconds = persistedAt
+            )
+        )
+    }
+
+    private suspend fun recordMembershipRestartIfNeeded(
+        packet: GroupCreatedPacket,
+        invitation: GroupInvitationEntity?,
+        isFirstWelcome: Boolean,
+        persistedAt: Long
+    ) {
+        if (!isFirstWelcome) return
+        val latestEndAt =
+            listOfNotNull(
+                chatDao.findMessageTimestampByTransportMode(
+                    conversationId = packet.groupId,
+                    transportMode = GroupMembershipMessageFactory.LOCAL_MEMBERSHIP_LEFT_TRANSPORT_MODE
+                ),
+                chatDao.findMessageTimestampByTransportMode(
+                    conversationId = packet.groupId,
+                    transportMode = GroupMembershipMessageFactory.LOCAL_MEMBERSHIP_REMOVED_TRANSPORT_MODE
+                )
+            ).maxOrNull() ?: return
+        val latestStartAt =
+            chatDao.findMessageTimestampByTransportMode(
+                conversationId = packet.groupId,
+                transportMode = GroupMembershipMessageFactory.LOCAL_MEMBERSHIP_STARTED_TRANSPORT_MODE
+            )
+        if (latestStartAt != null && latestStartAt > latestEndAt) return
+
+        chatDao.upsertMessage(
+            GroupMembershipMessageFactory.localMembershipStarted(
+                conversationId = packet.groupId,
+                referenceId = invitation?.invitationId ?: packet.packetId,
+                epoch = packet.epoch,
+                createdAtEpochMilliseconds = persistedAt
             )
         )
     }
@@ -560,9 +642,14 @@ class GroupCreatedPacketHandler(
             this == GroupInvitationStatus.LEAVE_SENT.name
 
     private data class WelcomeContext(
-        val authorityIdentity: ContactPublicIdentityEntity,
+        val authorityIdentity: AuthorityIdentity,
         val localIdentity: LocalPublicIdentity,
         val openedWelcome: OpenedGroupWelcome
+    )
+
+    private data class AuthorityIdentity(
+        val encryptionPublicKey: ByteArray,
+        val signingPublicKey: ByteArray
     )
 
     private data class PreviousMembership(

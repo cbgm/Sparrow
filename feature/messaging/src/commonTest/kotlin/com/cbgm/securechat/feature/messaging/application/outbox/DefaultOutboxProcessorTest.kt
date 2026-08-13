@@ -31,6 +31,8 @@ import com.cbgm.securechat.feature.contacts.domain.model.SecureChatIdentity
 import com.cbgm.securechat.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
 import com.cbgm.securechat.feature.messaging.domain.relay.ContactRelayIdResolver
+import com.cbgm.securechat.feature.messaging.domain.relay.GroupRelayIdResolver
+import com.cbgm.securechat.feature.messaging.domain.relay.GroupTransportKeyResolver
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -164,13 +166,15 @@ class DefaultOutboxProcessorTest {
                 )
             val cipher = RecordingTransportMessageCipher()
             val payloadCodec = RecordingTransportPayloadCodec()
+            val sender = RecordingOutgoingWireSender()
             val processor =
                 createProcessor(
                     outbox = outbox,
                     contact = createContact(keyExchangeStatus = KeyExchangeStatus.ONE_WAY),
                     cipher = cipher,
                     payloadCodec = payloadCodec,
-                    packetCodec = TestPacketCodec()
+                    packetCodec = TestPacketCodec(),
+                    sender = sender
                 )
 
             val result = processor.processPending().getOrThrow()
@@ -179,6 +183,10 @@ class DefaultOutboxProcessorTest {
             assertEquals(0, cipher.callCount)
             assertEquals(TransportEncryptionMode.PLAINTEXT, payloadCodec.payloads.single().mode)
             assertContentEquals(GROUP_MESSAGE_PACKET_BYTES, payloadCodec.payloads.single().payload)
+            assertEquals(
+                listOf("group-recipient-relay-id" to "encoded-transport-payload"),
+                sender.sent
+            )
         }
 
     @Test
@@ -421,7 +429,8 @@ class DefaultOutboxProcessorTest {
         packetCodec: PacketCodec = TestPacketCodec(),
         sender: RecordingOutgoingWireSender = RecordingOutgoingWireSender(),
         listener: RecordingDeliveryStateListener = RecordingDeliveryStateListener(),
-        contactRelayIdResolver: ContactRelayIdResolver = RecordingContactRelayIdResolver()
+        contactRelayIdResolver: ContactRelayIdResolver = RecordingContactRelayIdResolver(),
+        groupRelayIdResolver: GroupRelayIdResolver = RecordingGroupRelayIdResolver()
     ): DefaultOutboxProcessor =
         DefaultOutboxProcessor(
             protocolOutbox = outbox,
@@ -429,11 +438,13 @@ class DefaultOutboxProcessorTest {
             transportPayloadFactory =
                 DefaultOutgoingTransportPayloadFactory(
                     transportMessageCipher = cipher,
-                    packetTransportPolicy = DefaultOutgoingPacketTransportPolicy()
+                    packetTransportPolicy = DefaultOutgoingPacketTransportPolicy(),
+                    groupTransportKeyResolver = NoGroupTransportKeyResolver
                 ),
             transportPayloadCodec = payloadCodec,
             packetCodec = packetCodec,
             contactRelayIdResolver = contactRelayIdResolver,
+            groupRelayIdResolver = groupRelayIdResolver,
             outgoingWireSender = sender,
             deliveryStateListener = listener
         )
@@ -689,6 +700,34 @@ class DefaultOutboxProcessorTest {
                     )
                 )
             }
+    }
+
+    private data object NoGroupTransportKeyResolver : GroupTransportKeyResolver {
+        override suspend fun resolveEncryptionPublicKey(
+            packet: SecureChatPacket,
+            contactId: String
+        ): Result<ByteArray?> = Result.success(null)
+    }
+
+    private class RecordingGroupRelayIdResolver : GroupRelayIdResolver {
+        override suspend fun resolve(
+            groupId: String,
+            contactId: String
+        ): Result<String> = Result.success("group-recipient-relay-id")
+
+        override suspend fun resolveMembers(groupId: String): Result<Map<String, String>> =
+            Result.success(emptyMap())
+
+        override fun resolveRemovedMember(signingPublicKey: ByteArray): Result<String> =
+            Result.success("removed-member-relay-id")
+
+        override suspend fun resolveForMessage(
+            messageId: String,
+            contactId: String
+        ): Result<String?> = Result.success(null)
+
+        override suspend fun resolveContactId(relayId: String): Result<String?> =
+            Result.success(null)
     }
 
     private class RecordingContactRelayIdResolver : ContactRelayIdResolver {

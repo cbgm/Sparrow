@@ -18,6 +18,7 @@ data class GroupVerificationPair(
 
 data class GroupVerificationContext(
     val hasSecurityState: Boolean,
+    val isLocalMemberActive: Boolean,
     val isLocalAdmin: Boolean,
     val ownerContactId: String?,
     val ownInvitationId: String?,

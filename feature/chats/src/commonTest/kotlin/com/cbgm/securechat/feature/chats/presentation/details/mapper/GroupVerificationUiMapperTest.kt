@@ -133,12 +133,12 @@ class GroupVerificationUiMapperTest {
     }
 
     @Test
-    fun missingCurrentAdminIsShownAsUnavailableAndGroupIsOrphaned() {
+    fun formerReferenceAdminIsNotKeptAsGhostMember() {
         val summary =
             buildGroupVerificationSummary(
                 isLocalAdmin = false,
-                ownerContactId = "admin-contact",
-                ownerDisplayName = "Admin",
+                ownerContactId = "former-admin",
+                ownerDisplayName = "Former admin",
                 ownInvitationId = "self",
                 rows =
                     listOf(
@@ -151,14 +151,46 @@ class GroupVerificationUiMapperTest {
                             participantVerified = true
                         )
                     ),
+                currentMemberContactIds = emptySet(),
+                remoteAdminContactIds = emptySet(),
                 isOrphaned = true
             )
 
-        val admin = summary.members.first()
-        assertFalse(admin.isGroupAdmin)
-        assertFalse(admin.isActive)
-        assertEquals(GroupMemberVerificationState.UNAVAILABLE, admin.state)
+        assertEquals(listOf("Participant"), summary.members.map { it.displayName })
+        assertEquals(1, summary.totalMemberCount)
         assertTrue(summary.isOrphaned)
+    }
+
+    @Test
+    fun activeNormalMemberCanLeaveWithoutOwnVerificationRowLookup() {
+        val summary =
+            buildGroupVerificationSummary(
+                isLocalAdmin = false,
+                isLocalMemberActive = true,
+                ownerContactId = "admin-contact",
+                ownerDisplayName = "Admin",
+                ownInvitationId = null,
+                rows = emptyList(),
+                remoteAdminContactIds = setOf("admin-contact"),
+                currentMemberContactIds = setOf("admin-contact")
+            )
+
+        assertTrue(summary.canLeaveGroup)
+    }
+
+    @Test
+    fun retiredMemberCannotLeaveAgain() {
+        val summary =
+            buildGroupVerificationSummary(
+                isLocalAdmin = false,
+                isLocalMemberActive = false,
+                ownerContactId = null,
+                ownerDisplayName = "",
+                ownInvitationId = null,
+                rows = emptyList()
+            )
+
+        assertFalse(summary.canLeaveGroup)
     }
 
     @Test
@@ -174,6 +206,40 @@ class GroupVerificationUiMapperTest {
 
         assertTrue(summary.hasAuthoritativeState)
         assertEquals(1, summary.totalMemberCount)
+    }
+
+    @Test
+    fun staleActiveVerificationRowIsRemovedWhenMemberLeavesCurrentEpoch() {
+        val summary =
+            buildGroupVerificationSummary(
+                isLocalAdmin = true,
+                ownerContactId = null,
+                ownerDisplayName = "Admin",
+                ownInvitationId = null,
+                rows =
+                    listOf(
+                        pair(
+                            invitationId = "active",
+                            contactId = "contact-active",
+                            displayName = "Active",
+                            active = true,
+                            adminVerified = false,
+                            participantVerified = false
+                        ),
+                        pair(
+                            invitationId = "left",
+                            contactId = "contact-left",
+                            displayName = "Left",
+                            active = true,
+                            adminVerified = true,
+                            participantVerified = true
+                        )
+                    ),
+                currentMemberContactIds = setOf("contact-active")
+            )
+
+        assertEquals(2, summary.totalMemberCount)
+        assertEquals(listOf("Admin", "Active"), summary.members.map { it.displayName })
     }
 
     @Test

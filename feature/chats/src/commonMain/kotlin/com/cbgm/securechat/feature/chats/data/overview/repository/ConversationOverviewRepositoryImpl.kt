@@ -15,6 +15,7 @@ class ConversationOverviewRepositoryImpl(
     override fun observeAll(): Flow<List<ConversationOverview>> =
         chatDao.observeConversationSummaries(
             localDeletionTransportMode = GroupMembershipMessageFactory.LOCAL_CONVERSATION_DELETED_TRANSPORT_MODE,
+            localMembershipStartedTransportMode = GroupMembershipMessageFactory.LOCAL_MEMBERSHIP_STARTED_TRANSPORT_MODE,
             directChatAuthorizedState = IdentityHandshakeState.MUTUAL_UNVERIFIED.name,
             directChatDeletedState = IdentityHandshakeState.CONVERSATION_DELETED.name
         ).map { summaries -> summaries.map { it.toConversationOverview() } }

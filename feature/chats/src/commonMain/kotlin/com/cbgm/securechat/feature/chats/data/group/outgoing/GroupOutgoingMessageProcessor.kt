@@ -8,10 +8,10 @@ import com.cbgm.securechat.core.protocol.packet.GroupChatMessagePacket
 import com.cbgm.securechat.core.protocol.packet.ReadReceiptPacket
 import com.cbgm.securechat.core.time.SystemClock
 import com.cbgm.securechat.data.database.dao.ChatDao
-import com.cbgm.securechat.data.database.dao.ContactDao
+import com.cbgm.securechat.data.database.dao.GroupSecurityDao
 import com.cbgm.securechat.data.database.dao.MessageRecipientStateDao
-import com.cbgm.securechat.data.database.entity.ConversationParticipantEntity
 import com.cbgm.securechat.data.database.entity.GroupInvitationEntity
+import com.cbgm.securechat.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.securechat.data.database.entity.MessageEntity
 import com.cbgm.securechat.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.securechat.feature.chats.data.group.delivery.GroupMessageDeliveryCoordinator
@@ -36,7 +36,7 @@ import kotlinx.coroutines.sync.withLock
  */
 class GroupOutgoingMessageProcessor(
     private val chatDao: ChatDao,
-    private val contactDao: ContactDao,
+    private val groupSecurityDao: GroupSecurityDao,
     private val messageRecipientStateDao: MessageRecipientStateDao,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val protocolOutbox: ProtocolOutbox,
@@ -58,10 +58,10 @@ class GroupOutgoingMessageProcessor(
 
                 requireActiveMembership(groupId, invitations)
                 val message = createQueuedMessage(groupId, normalizedText)
-                val participants = findCurrentEpochParticipants(groupId)
+                val recipients = findCurrentEpochRecipients(groupId)
 
-                if (canSendToActiveGroupMembers(participants.size)) {
-                    encryptAndEnqueue(message, participants)
+                if (canSendToActiveGroupMembers(recipients.size)) {
+                    encryptAndEnqueue(message, recipients)
                 } else {
                     storeFailedLocalMessage(message)
                 }
@@ -82,13 +82,19 @@ class GroupOutgoingMessageProcessor(
                     .filter { state -> state.deliveryStatus == MessageDeliveryStatus.FAILED.name }
             check(failedRecipients.isNotEmpty()) { "Only failed group messages can be retried" }
 
+            val failures = mutableListOf<String>()
             failedRecipients.forEach { state ->
-                retryRecipient(
-                    messageId = messageId,
-                    contactId = state.contactId,
-                    packetId = requireNotNull(state.packetId) { "Recipient state has no packet ID" }
-                )
+                runCatching {
+                    retryRecipient(
+                        messageId = messageId,
+                        contactId = state.contactId,
+                        packetId = requireNotNull(state.packetId) { "Recipient state has no packet ID" }
+                    )
+                }.onFailure { error ->
+                    failures += state.contactId.toFailureDescription(error)
+                }
             }
+            failures.throwIfNotEmpty("Group message retry")
         }
 
     suspend fun sendReadReceipts(groupId: String): Result<Unit> =
@@ -96,15 +102,28 @@ class GroupOutgoingMessageProcessor(
             require(groupId.isNotBlank()) { "Group ID must not be blank" }
             requireGroupConversation(groupId)
 
+            val failures = mutableListOf<String>()
             chatDao.findMessagesAwaitingReadReceipt(groupId).forEach { message ->
-                enqueueReadReceipt(message.messageId, message.contactId)
-                check(chatDao.markReadReceiptSent(message.messageId) == 1) {
-                    "Incoming group message could not be marked as read"
+                val enqueueError =
+                    enqueueReadReceipt(message.messageId, message.contactId).exceptionOrNull()
+                if (enqueueError != null) {
+                    failures += message.contactId.toFailureDescription(enqueueError)
+                    return@forEach
                 }
-                logger.debug {
-                    "Group read receipt queued: messageId=${message.messageId}, contactId=${message.contactId}"
+
+                val markedRead = runCatching { chatDao.markReadReceiptSent(message.messageId) }
+                val markError = markedRead.exceptionOrNull()
+                when {
+                    markError != null -> failures += message.contactId.toFailureDescription(markError)
+                    markedRead.getOrNull() != 1 ->
+                        failures += "${message.contactId}: incoming group message could not be marked as read"
+                    else ->
+                        logger.debug {
+                            "Group read receipt queued: messageId=${message.messageId}, contactId=${message.contactId}"
+                        }
                 }
             }
+            failures.throwIfNotEmpty("Group read receipt")
         }
 
     private suspend fun requireActiveMembership(
@@ -174,29 +193,16 @@ class GroupOutgoingMessageProcessor(
             createdAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
         )
 
-    private suspend fun findCurrentEpochParticipants(
+    private suspend fun findCurrentEpochRecipients(
         groupId: String
-    ): List<ConversationParticipantEntity> =
-        chatDao
-            .findConversationParticipants(groupId)
-            .filter { participant -> isCurrentMember(groupId, participant) }
-
-    private suspend fun isCurrentMember(
-        groupId: String,
-        participant: ConversationParticipantEntity
-    ): Boolean {
-        val signingPublicKey =
-            contactDao
-                .findPublicIdentityByContactId(participant.contactId)
-                ?.signingPublicKey
-                ?: return false
-
-        return groupSecurityManager
-            .isRemoteMemberIdentityCurrent(
-                groupId = groupId,
-                contactId = participant.contactId,
-                signingPublicKey = signingPublicKey
-            ).getOrDefault(false)
+    ): List<GroupMemberKeyEntity> {
+        val state =
+            groupSecurityDao.findState(groupId)
+                ?: error("Group security state was not found")
+        return groupSecurityDao.findMemberKeys(
+            groupId = groupId,
+            epoch = state.currentEpoch
+        )
     }
 
     private suspend fun storeFailedLocalMessage(message: MessageEntity) {
@@ -209,25 +215,43 @@ class GroupOutgoingMessageProcessor(
 
     private suspend fun encryptAndEnqueue(
         message: MessageEntity,
-        participants: List<ConversationParticipantEntity>
+        recipients: List<GroupMemberKeyEntity>
     ) {
-        check(participants.isNotEmpty()) { "Group has no active participants" }
+        check(recipients.isNotEmpty()) { "Group has no active recipients" }
 
-        val packets = createPackets(message, participants)
-        val recipientStates = packets.map { (participant, packet) -> packet.toRecipientState(participant) }
+        val packets = createPackets(message, recipients)
+        val recipientStates = packets.map { (recipient, packet) -> packet.toRecipientState(recipient) }
 
         chatDao.upsertOutgoingGroupMessage(
             message = message,
             recipientStates = recipientStates,
             timestamp = message.createdAtEpochMilliseconds
         )
-        packets.forEach { (participant, packet) -> enqueue(participant.contactId, packet) }
+        val failures = mutableListOf<String>()
+        packets.forEach { (recipient, packet) ->
+            val error = protocolOutbox.enqueue(recipient.contactId, packet).exceptionOrNull()
+            if (error != null) {
+                runCatching {
+                    deliveryCoordinator.applyPacketEvent(
+                        packetId = packet.packetId,
+                        event = MessageDeliveryEvent.SEND_FAILED,
+                        errorMessage = error.message
+                    )
+                }.onFailure { stateError ->
+                    logger.warn(stateError) {
+                        "Could not persist failed group recipient state: packetId=${packet.packetId}"
+                    }
+                }
+                failures += recipient.contactId.toFailureDescription(error)
+            }
+        }
+        failures.throwIfNotEmpty("Group message enqueue")
     }
 
     private suspend fun createPackets(
         message: MessageEntity,
-        participants: List<ConversationParticipantEntity>
-    ): Map<ConversationParticipantEntity, GroupChatMessagePacket> {
+        recipients: List<GroupMemberKeyEntity>
+    ): Map<GroupMemberKeyEntity, GroupChatMessagePacket> {
         val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
         val securedMessage =
             groupSecurityManager
@@ -239,9 +263,9 @@ class GroupOutgoingMessageProcessor(
                     localSigningKeyPair = localSigningKeyPair
                 ).getOrThrow()
 
-        return participants.associateWith { participant ->
+        return recipients.associateWith { recipient ->
             GroupChatMessagePacket(
-                packetId = packetId(message.id, participant.contactId),
+                packetId = packetId(message.id, recipient.contactId),
                 groupId = message.conversationId,
                 epoch = securedMessage.epoch,
                 messageId = message.id,
@@ -254,30 +278,16 @@ class GroupOutgoingMessageProcessor(
     }
 
     private fun GroupChatMessagePacket.toRecipientState(
-        participant: ConversationParticipantEntity
+        recipient: GroupMemberKeyEntity
     ): MessageRecipientStateEntity =
         MessageRecipientStateEntity(
             messageId = messageId,
-            contactId = participant.contactId,
+            contactId = recipient.contactId,
             packetId = packetId,
             deliveryStatus = MessageDeliveryStatus.QUEUED.name,
             lastError = null,
             updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
         )
-
-    private suspend fun enqueue(
-        contactId: String,
-        packet: GroupChatMessagePacket
-    ) {
-        protocolOutbox.enqueue(contactId, packet).getOrElse { error ->
-            deliveryCoordinator.applyPacketEvent(
-                packetId = packet.packetId,
-                event = MessageDeliveryEvent.SEND_FAILED,
-                errorMessage = error.message
-            )
-            throw error
-        }
-    }
 
     private suspend fun retryRecipient(
         messageId: String,
@@ -306,16 +316,25 @@ class GroupOutgoingMessageProcessor(
     private suspend fun enqueueReadReceipt(
         messageId: String,
         contactId: String
-    ) {
-        protocolOutbox.enqueue(
-            contactId = contactId,
-            packet =
-                ReadReceiptPacket(
-                    packetId = "read-receipt-$messageId",
-                    messageId = messageId,
-                    readAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
-                )
-        ).getOrThrow()
+    ): Result<Unit> =
+        protocolOutbox
+            .enqueue(
+                contactId = contactId,
+                packet =
+                    ReadReceiptPacket(
+                        packetId = "read-receipt-$messageId",
+                        messageId = messageId,
+                        readAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+                    )
+            ).map { Unit }
+
+    private fun String.toFailureDescription(error: Throwable): String =
+        "$this: ${error.message ?: error::class.simpleName.orEmpty()}"
+
+    private fun List<String>.throwIfNotEmpty(operation: String) {
+        check(isEmpty()) {
+            "$operation failed for ${joinToString()}"
+        }
     }
 
     private fun String.isIncomingPendingStatus(): Boolean =

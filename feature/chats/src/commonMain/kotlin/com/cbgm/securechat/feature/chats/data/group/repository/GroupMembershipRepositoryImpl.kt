@@ -1,60 +1,46 @@
 package com.cbgm.securechat.feature.chats.data.group.repository
 
-import com.cbgm.securechat.data.database.dao.ChatDao
 import com.cbgm.securechat.data.database.dao.GroupSecurityDao
 import com.cbgm.securechat.feature.chats.data.group.membership.GroupMembershipCoordinator
+import com.cbgm.securechat.feature.chats.data.group.membership.GroupMembershipStateMachine
+import com.cbgm.securechat.feature.chats.data.group.security.GROUP_LEFT_ROLE
 import com.cbgm.securechat.feature.chats.data.group.security.isGroupAdminRole
 import com.cbgm.securechat.feature.chats.domain.model.group.GroupAdministrationState
 import com.cbgm.securechat.feature.chats.domain.model.group.GroupLeaveRequirement
 import com.cbgm.securechat.feature.chats.domain.repository.group.GroupMembershipRepository
-import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.transformLatest
 
 class GroupMembershipRepositoryImpl(
-    private val chatDao: ChatDao,
     private val groupSecurityDao: GroupSecurityDao,
-    private val membershipCoordinator: GroupMembershipCoordinator,
-    private val getContact: GetContact
+    private val membershipCoordinator: GroupMembershipCoordinator
 ) : GroupMembershipRepository {
     override fun observeAdministration(groupId: String): Flow<GroupAdministrationState> =
         combine(
-            chatDao.observeConversationParticipants(groupId),
             groupSecurityDao.observeState(groupId),
             groupSecurityDao.observeCurrentMemberKeys(groupId)
-        ) { participants, securityState, memberKeys ->
-            Triple(participants, securityState, memberKeys)
-        }.transformLatest { (participants, securityState, memberKeys) ->
-            if (securityState == null) {
+        ) { securityState, memberKeys ->
+            securityState to memberKeys
+        }.transformLatest { (securityState, memberKeys) ->
+            if (securityState == null || securityState.localRole == GROUP_LEFT_ROLE) {
                 emit(GroupAdministrationState())
                 return@transformLatest
             }
 
-            val memberKeysByContactId = memberKeys.associateBy { it.contactId }
-            val currentMembers = mutableSetOf<String>()
-            val currentAdmins = mutableSetOf<String>()
-
-            participants.forEach { participant ->
-                val pinnedKey =
-                    memberKeysByContactId[participant.contactId]
-                        ?: return@forEach
-                val identity =
-                    getContact(participant.contactId)
-                        .getOrNull()
-                        ?.secureChatIdentity
-                        ?: return@forEach
-                if (!pinnedKey.signingPublicKey.contentEquals(identity.signingPublicKey)) {
-                    return@forEach
-                }
-
-                currentMembers += participant.contactId
-                if (pinnedKey.role.isGroupAdminRole()) {
-                    currentAdmins += participant.contactId
-                }
-            }
+            val currentMembers = memberKeys.mapTo(mutableSetOf()) { memberKey -> memberKey.contactId }
+            val currentAdmins =
+                memberKeys
+                    .filter { memberKey -> memberKey.role.isGroupAdminRole() }
+                    .mapTo(mutableSetOf()) { memberKey -> memberKey.contactId }
 
             val localIsAdmin = securityState.localRole.isGroupAdminRole()
+            val leaveRequirement =
+                GroupMembershipStateMachine.leaveRequirement(
+                    isLocalAdmin = localIsAdmin,
+                    currentMemberContactIds = currentMembers,
+                    currentAdminContactIds = currentAdmins
+                )
             emit(
                 GroupAdministrationState(
                     isLocalAdmin = localIsAdmin,
@@ -66,7 +52,7 @@ class GroupMembershipRepositoryImpl(
                             contactId !in currentAdmins
                         },
                     requiresPromotionBeforeLeave =
-                        localIsAdmin && currentMembers.isNotEmpty() && currentAdmins.isEmpty(),
+                        leaveRequirement is GroupLeaveRequirement.PromoteAdminFirst,
                     activeMemberCount = currentMembers.size + 1
                 )
             )

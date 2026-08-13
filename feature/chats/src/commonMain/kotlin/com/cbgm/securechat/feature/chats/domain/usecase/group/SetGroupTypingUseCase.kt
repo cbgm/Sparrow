@@ -6,8 +6,11 @@ class SetGroupTypingUseCase(
     private val repository: GroupTypingRepository
 ) {
     suspend operator fun invoke(
-        contactIds: Set<String>,
+        groupId: String,
         isTyping: Boolean
     ): Result<Unit> =
-        repository.sendToMembers(contactIds, isTyping)
+        repository.setTyping(
+            groupId = groupId,
+            isTyping = isTyping
+        )
 }

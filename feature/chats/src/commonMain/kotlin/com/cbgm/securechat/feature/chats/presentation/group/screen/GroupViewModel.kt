@@ -7,21 +7,17 @@ import com.cbgm.securechat.core.ui.presentation.BaseViewModel
 import com.cbgm.securechat.feature.chats.domain.model.group.GroupAdministrationState
 import com.cbgm.securechat.feature.chats.domain.model.group.GroupConversation
 import com.cbgm.securechat.feature.chats.domain.model.group.GroupConversationState
-import com.cbgm.securechat.feature.chats.domain.model.group.GroupMemberInvitationStatus
-import com.cbgm.securechat.feature.chats.domain.model.group.GroupVerificationState
 import com.cbgm.securechat.feature.chats.domain.usecase.group.AcceptGroupInvitationUseCase
 import com.cbgm.securechat.feature.chats.domain.usecase.group.DeclineGroupInvitationUseCase
 import com.cbgm.securechat.feature.chats.domain.usecase.group.MarkGroupConversationReadUseCase
 import com.cbgm.securechat.feature.chats.domain.usecase.group.ObserveGroupAdministrationUseCase
 import com.cbgm.securechat.feature.chats.domain.usecase.group.ObserveGroupConversationUseCase
 import com.cbgm.securechat.feature.chats.domain.usecase.group.ObserveGroupMemberTypingUseCase
-import com.cbgm.securechat.feature.chats.domain.usecase.group.ObserveGroupVerificationUseCase
 import com.cbgm.securechat.feature.chats.domain.usecase.group.RefreshGroupDeliveryStateUseCase
 import com.cbgm.securechat.feature.chats.domain.usecase.group.RetryGroupMessageUseCase
 import com.cbgm.securechat.feature.chats.domain.usecase.group.SendGroupMessageUseCase
 import com.cbgm.securechat.feature.chats.domain.usecase.group.SetGroupTypingUseCase
 import com.cbgm.securechat.feature.chats.presentation.group.mapper.displayNameForChat
-import com.cbgm.securechat.feature.chats.presentation.group.mapper.toMemberCounts
 import com.cbgm.securechat.feature.chats.presentation.group.mapper.toUiModel
 import com.cbgm.securechat.feature.chats.presentation.group.model.GroupMemberProgressUi
 import com.cbgm.securechat.feature.chats.presentation.group.model.GroupUiEvent
@@ -49,7 +45,6 @@ class GroupViewModel(
     private val groupId: String,
     observeConversation: ObserveGroupConversationUseCase,
     observeAdministration: ObserveGroupAdministrationUseCase,
-    observeVerification: ObserveGroupVerificationUseCase,
     private val sendMessage: SendGroupMessageUseCase,
     private val markConversationRead: MarkGroupConversationReadUseCase,
     private val retryMessage: RetryGroupMessageUseCase,
@@ -64,7 +59,6 @@ class GroupViewModel(
     private val messageText = MutableStateFlow("")
     private val errorMessage = MutableStateFlow<String?>(null)
     private val typingContactIds = MutableStateFlow<Set<String>>(emptySet())
-    private val participantContactIds = MutableStateFlow<Set<String>>(emptySet())
     private val typingObserverJobs = mutableMapOf<String, Job>()
     private val typingTimeoutJobs = mutableMapOf<String, Job>()
     private var localTypingStopJob: Job? = null
@@ -86,13 +80,9 @@ class GroupViewModel(
     private val contextFlow =
         combine(
             conversationFlow,
-            observeAdministration(groupId).onStart { emit(GroupAdministrationState()) },
-            observeVerification(groupId)
-                .map<GroupVerificationState, GroupVerificationState?> { it }
-                .onStart { emit(null) }
-                .catch { emit(null) }
-        ) { observation, administration, verification ->
-            GroupContext(observation, administration, verification)
+            observeAdministration(groupId).onStart { emit(GroupAdministrationState()) }
+        ) { observation, administration ->
+            GroupContext(observation, administration)
         }
 
     val uiState: StateFlow<GroupUiState> =
@@ -152,7 +142,6 @@ class GroupViewModel(
         val conversation = observation.conversation
         val contactsById = contacts.associateBy(Contact::id)
         val groupState = resolveGroupState(conversation, administration)
-        val memberCounts = verification.toMemberCounts(administration.currentMemberContactIds)
 
         return GroupUiState(
             title = conversation?.title.orEmpty(),
@@ -164,8 +153,8 @@ class GroupViewModel(
             isLoading = observation is GroupConversationObservation.Loading,
             isMessageInputEnabled = isMessageInputEnabled(conversation, groupState, administration),
             state = groupState,
-            memberCount = memberCounts?.total ?: conversation.defaultMemberCount(),
-            readyMemberCount = memberCounts?.active ?: conversation.activeMemberCount(),
+            memberCount = administration.activeMemberCount + (conversation?.pendingParticipantCount ?: 0),
+            readyMemberCount = administration.activeMemberCount,
             pendingMemberCount = conversation?.pendingParticipantCount ?: 0,
             showInvitationActions = groupState == GroupConversationState.INVITED,
             memberProgress = conversation.toMemberProgress(contactsById)
@@ -233,19 +222,6 @@ class GroupViewModel(
         this == GroupConversationState.WAITING_FOR_MEMBERS ||
             this == GroupConversationState.DISTRIBUTING_KEYS
 
-    private fun GroupConversation?.defaultMemberCount(): Int =
-        this?.let { conversation ->
-            (conversation.participantContactIds + conversation.memberInvitationStates.map { it.contactId })
-                .distinct()
-                .size + 1
-        } ?: 0
-
-    private fun GroupConversation?.activeMemberCount(): Int =
-        this
-            ?.memberInvitationStates
-            .orEmpty()
-            .count { it.status == GroupMemberInvitationStatus.ACTIVE }
-
     private fun typingDisplayName(
         contactIds: Set<String>,
         contactsById: Map<String, Contact>
@@ -260,13 +236,10 @@ class GroupViewModel(
 
     private fun observeParticipants() {
         viewModelScope.launch {
-            conversationFlow
-                .map { it.conversation?.participantContactIds.orEmpty().toSet() }
+            contextFlow
+                .map { context -> context.administration.currentMemberContactIds }
                 .distinctUntilChanged()
-                .collect { contactIds ->
-                    participantContactIds.value = contactIds
-                    updateTypingObservers(contactIds)
-                }
+                .collect(::updateTypingObservers)
         }
     }
 
@@ -286,7 +259,7 @@ class GroupViewModel(
     private fun observeTypingForMember(contactId: String) {
         typingObserverJobs[contactId] =
             viewModelScope.launch {
-                observeMemberTyping(contactId).collect { isTyping ->
+                observeMemberTyping(groupId, contactId).collect { isTyping ->
                     updateRemoteTyping(contactId, isTyping)
                 }
             }
@@ -377,7 +350,7 @@ class GroupViewModel(
     }
 
     private suspend fun sendTypingStateNow(isTyping: Boolean) {
-        setGroupTyping(participantContactIds.value, isTyping)
+        setGroupTyping(groupId, isTyping)
             .onFailure { error -> logger.warn(error) { "Could not send group typing state" } }
     }
 
@@ -412,8 +385,7 @@ class GroupViewModel(
 
     private data class GroupContext(
         val observation: GroupConversationObservation,
-        val administration: GroupAdministrationState,
-        val verification: GroupVerificationState?
+        val administration: GroupAdministrationState
     )
 
     private companion object {

@@ -3,12 +3,14 @@ package com.cbgm.securechat.feature.chats.data.group.membership
 import com.cbgm.securechat.data.database.entity.GroupInvitationEntity
 import com.cbgm.securechat.feature.chats.data.group.invitation.GroupInvitationStatus
 import com.cbgm.securechat.feature.chats.domain.model.group.GroupConversationState
+import com.cbgm.securechat.feature.chats.domain.model.group.GroupLeaveRequirement
 import com.cbgm.securechat.feature.chats.domain.model.group.GroupMemberInvitationState
 import com.cbgm.securechat.feature.chats.domain.model.group.GroupMemberInvitationStatus
 
 internal enum class GroupMembershipEvent {
     ACCEPT,
     EXPIRE,
+    INVITE_SEND_FAILED,
     JOIN_SEND_FAILED,
     IDENTITY_CONFIRMED,
     WELCOME_SENT,
@@ -42,14 +44,14 @@ internal object GroupMembershipStateMachine {
 
     fun conversationState(
         invitations: List<GroupInvitationEntity>,
-        hasLocalMembershipRemoval: Boolean = false
+        isLocallyInactive: Boolean = false
     ): GroupConversationState {
         if (invitations.hasStatus(GroupInvitationStatus.GROUP_DELETED)) {
             return GroupConversationState.DELETED
         }
 
         val currentInvitations = invitations.filterActiveHistory()
-        if (hasLocalMembershipRemoval && currentInvitations.isEmpty() && invitations.hasStatus(GroupInvitationStatus.REMOVED)) {
+        if (isLocallyInactive && currentInvitations.isEmpty()) {
             return GroupConversationState.REMOVED
         }
         if (currentInvitations.isEmpty() || currentInvitations.allHaveStatus(GroupInvitationStatus.ACTIVE)) {
@@ -61,6 +63,21 @@ internal object GroupMembershipStateMachine {
 
     fun isIncoming(invitations: List<GroupInvitationEntity>): Boolean =
         invitations.any { invitation -> invitation.status.isIncomingMembershipStatus() }
+
+    fun leaveRequirement(
+        isLocalAdmin: Boolean,
+        currentMemberContactIds: Set<String>,
+        currentAdminContactIds: Set<String>
+    ): GroupLeaveRequirement =
+        if (
+            !isLocalAdmin ||
+            currentMemberContactIds.isEmpty() ||
+            currentAdminContactIds.isNotEmpty()
+        ) {
+            GroupLeaveRequirement.CanLeave
+        } else {
+            GroupLeaveRequirement.PromoteAdminFirst(currentMemberContactIds)
+        }
 
     fun memberStates(invitations: List<GroupInvitationEntity>): List<GroupMemberInvitationState> =
         invitations
@@ -85,6 +102,11 @@ internal object GroupMembershipStateMachine {
             GroupMembershipEvent.EXPIRE ->
                 GroupInvitationStatus.EXPIRED.takeIf {
                     current == GroupInvitationStatus.AWAITING_ACCEPTANCE
+                }
+
+            GroupMembershipEvent.INVITE_SEND_FAILED ->
+                GroupInvitationStatus.FAILED.takeIf {
+                    current == GroupInvitationStatus.INVITE_SENT
                 }
 
             GroupMembershipEvent.JOIN_SEND_FAILED ->

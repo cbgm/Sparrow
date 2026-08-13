@@ -35,6 +35,7 @@ internal class GroupInvitationCoordinator(
     private val groupVerificationCoordinator: GroupVerificationCoordinator,
     private val membershipLock: GroupMembershipLock,
     private val identity: GroupMembershipIdentity,
+    private val epochCoordinator: GroupEpochCoordinator,
     private val activation: GroupMembershipActivationCoordinator,
     private val administration: GroupMembershipAdministrationCoordinator
 ) {
@@ -136,18 +137,10 @@ internal class GroupInvitationCoordinator(
     }
 
     private suspend fun currentOrPendingContactIds(groupId: String): Set<String> {
-        val result = mutableSetOf<String>()
-        chatDao.findConversationParticipants(groupId).forEach { participant ->
-            val identity = identity.requireContact(participant.contactId).secureChatIdentity ?: return@forEach
-            val isCurrent =
-                groupSecurityManager
-                    .isRemoteMemberIdentityCurrent(
-                        groupId = groupId,
-                        contactId = participant.contactId,
-                        signingPublicKey = identity.signingPublicKey
-                    ).getOrDefault(false)
-            if (isCurrent) result += participant.contactId
-        }
+        val result =
+            epochCoordinator
+                .findCurrentParticipants(groupId)
+                .mapTo(mutableSetOf()) { participant -> participant.contactId }
         groupInvitationDao
             .findByGroupId(groupId)
             .filter { invitation ->
@@ -202,8 +195,24 @@ internal class GroupInvitationCoordinator(
 
     private suspend fun sendInvitations(invitations: List<OutgoingInvitation>) {
         invitations.forEach { invitation ->
-            protocolOutbox.enqueue(invitation.entity.contactId, invitation.packet).getOrThrow()
+            protocolOutbox
+                .enqueue(invitation.entity.contactId, invitation.packet)
+                .onFailure { markInvitationSendFailed(invitation.entity) }
         }
+    }
+
+    private suspend fun markInvitationSendFailed(invitation: GroupInvitationEntity) {
+        groupInvitationDao.updateStatus(
+            invitationId = invitation.invitationId,
+            expectedStatus = GroupInvitationStatus.INVITE_SENT.name,
+            newStatus =
+                GroupMembershipStateMachine
+                    .transition(
+                        GroupInvitationStatus.INVITE_SENT.name,
+                        GroupMembershipEvent.INVITE_SEND_FAILED
+                    ).name,
+            updatedAt = maxOf(invitation.createdAtEpochMilliseconds, SystemClock.nowEpochMilliseconds())
+        )
     }
 
     suspend fun receiveInvite(
@@ -216,6 +225,7 @@ internal class GroupInvitationCoordinator(
             if (shouldIgnoreIncomingInvite(packet)) return@runCatching
             if (isExistingIncomingInvite(ownerContactId, packet)) return@runCatching
 
+            groupSecurityManager.clearRetiredMembershipBeforeRejoin(packet.groupId).getOrThrow()
             val replacedInvitation = findReplaceableInvitation(ownerContactId, packet)
             val persistedAt =
                 resolveInvitationUpdatedAt(
@@ -565,7 +575,8 @@ internal class GroupInvitationCoordinator(
     private fun String.isTerminalStatus(): Boolean =
         this == GroupInvitationStatus.DECLINED.name ||
             this == GroupInvitationStatus.REMOVED.name ||
-            this == GroupInvitationStatus.EXPIRED.name
+            this == GroupInvitationStatus.EXPIRED.name ||
+            this == GroupInvitationStatus.FAILED.name
 
     private data class OutgoingInvitation(
         val entity: GroupInvitationEntity,

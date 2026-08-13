@@ -9,6 +9,7 @@ internal object GroupMembershipMessageFactory {
     const val MEMBER_ADDED_TRANSPORT_MODE = "SYSTEM_GROUP_MEMBER_ADDED"
     const val MEMBER_REMOVED_TRANSPORT_MODE = "SYSTEM_GROUP_MEMBER_REMOVED"
     const val LOCAL_MEMBERSHIP_REMOVED_TRANSPORT_MODE = "SYSTEM_LOCAL_GROUP_MEMBERSHIP_REMOVED"
+    const val LOCAL_MEMBERSHIP_STARTED_TRANSPORT_MODE = "SYSTEM_LOCAL_GROUP_MEMBERSHIP_STARTED"
     const val MEMBER_LEFT_TRANSPORT_MODE = "SYSTEM_GROUP_MEMBER_LEFT"
     const val LOCAL_MEMBERSHIP_LEFT_TRANSPORT_MODE = "SYSTEM_LOCAL_GROUP_MEMBERSHIP_LEFT"
     const val LOCAL_CONVERSATION_DELETED_TRANSPORT_MODE = "SYSTEM_LOCAL_CONVERSATION_DELETED"
@@ -62,6 +63,21 @@ internal object GroupMembershipMessageFactory {
             createdAtEpochMilliseconds = createdAtEpochMilliseconds
         )
 
+    fun localMembershipStarted(
+        conversationId: String,
+        referenceId: String,
+        epoch: Int,
+        createdAtEpochMilliseconds: Long
+    ): MessageEntity =
+        systemMessage(
+            id = "group-local-membership-started-$referenceId-$epoch",
+            conversationId = conversationId,
+            text = "",
+            transportMode = LOCAL_MEMBERSHIP_STARTED_TRANSPORT_MODE,
+            senderContactId = null,
+            createdAtEpochMilliseconds = createdAtEpochMilliseconds
+        )
+
     fun memberLeft(
         conversationId: String,
         epoch: Int,
@@ -106,6 +122,17 @@ internal object GroupMembershipMessageFactory {
             senderContactId = null,
             createdAtEpochMilliseconds = createdAtEpochMilliseconds
         )
+
+    fun isLocalMembershipStart(transportMode: String): Boolean =
+        transportMode == LOCAL_MEMBERSHIP_STARTED_TRANSPORT_MODE
+
+    fun isLocalMembershipEnd(transportMode: String): Boolean =
+        transportMode == LOCAL_MEMBERSHIP_REMOVED_TRANSPORT_MODE ||
+            transportMode == LOCAL_MEMBERSHIP_LEFT_TRANSPORT_MODE
+
+    fun isHiddenControlMessage(transportMode: String): Boolean =
+        transportMode == LOCAL_MEMBERSHIP_STARTED_TRANSPORT_MODE ||
+            transportMode == LOCAL_CONVERSATION_DELETED_TRANSPORT_MODE
 
     fun typeOf(transportMode: String): ChatMessageType =
         when (transportMode) {

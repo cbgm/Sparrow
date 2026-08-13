@@ -40,6 +40,7 @@ import com.cbgm.securechat.core.ui.theme.spacing
 import com.cbgm.securechat.feature.chats.presentation.details.model.AddGroupMembersUiEvent
 import com.cbgm.securechat.feature.chats.presentation.details.model.GroupDetailsUiEvent
 import com.cbgm.securechat.feature.chats.presentation.details.model.GroupDetailsUiState
+import com.cbgm.securechat.feature.chats.presentation.details.model.GroupLeavePrompt
 import com.cbgm.securechat.feature.chats.presentation.details.model.GroupMemberVerificationUiState
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.base_cancel
@@ -79,19 +80,12 @@ fun GroupDetailsFlow(
         mutableIntStateOf(uiState.memberManagement.completedRevision)
     }
 
-    var showLeaveDialog by remember { mutableStateOf(false) }
-    var showPromoteBeforeLeaveDialog by remember { mutableStateOf(false) }
-
     var initialLeaveRequestHandled by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(requestLeave, uiState.summary.hasAuthoritativeState) {
         if (requestLeave && uiState.summary.hasAuthoritativeState && !initialLeaveRequestHandled) {
             initialLeaveRequestHandled = true
-            if (uiState.summary.requiresAdminPromotionBeforeLeave) {
-                showPromoteBeforeLeaveDialog = true
-            } else {
-                showLeaveDialog = true
-            }
+            verificationViewModel.onUiEvent(GroupDetailsUiEvent.LeaveGroupClicked)
         }
     }
 
@@ -145,11 +139,7 @@ fun GroupDetailsFlow(
                             viewModel = verificationViewModel,
                             onContentChanged = { content = it },
                             onLeaveRequested = {
-                                if (uiState.summary.requiresAdminPromotionBeforeLeave) {
-                                    showPromoteBeforeLeaveDialog = true
-                                } else {
-                                    showLeaveDialog = true
-                                }
+                                verificationViewModel.onUiEvent(GroupDetailsUiEvent.LeaveGroupClicked)
                             }
                         )
                     }
@@ -216,7 +206,7 @@ fun GroupDetailsFlow(
         )
     }
 
-    if (showPromoteBeforeLeaveDialog) {
+    if (uiState.leave.prompt == GroupLeavePrompt.PROMOTE_ADMIN) {
         val promotableMembers =
             uiState.summary.members.filter { member ->
                 member.contactId in uiState.summary.promotableContactIds
@@ -230,18 +220,17 @@ fun GroupDetailsFlow(
                     GroupDetailsUiEvent.PromoteMemberAndLeaveClicked(contactId)
                 )
             },
-            onDismiss = { showPromoteBeforeLeaveDialog = false }
+            onDismiss = { verificationViewModel.onUiEvent(GroupDetailsUiEvent.LeaveGroupDismissed) }
         )
     }
 
-    if (showLeaveDialog) {
+    if (uiState.leave.prompt == GroupLeavePrompt.CONFIRM) {
         LeaveDialog(
-            isRemoving = uiState.memberManagement.isUpdating,
-            errorMessage = uiState.memberManagement.errorMessage,
+            isRemoving = uiState.leave.isLeaving,
+            errorMessage = uiState.leave.errorMessage,
             onApprove = { verificationViewModel.onUiEvent(GroupDetailsUiEvent.LeaveGroupConfirmed) },
             onDismiss = {
                 verificationViewModel.onUiEvent(GroupDetailsUiEvent.LeaveGroupDismissed)
-                showLeaveDialog = false
             }
         )
     }

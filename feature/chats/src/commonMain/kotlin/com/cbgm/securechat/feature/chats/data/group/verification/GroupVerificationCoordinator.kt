@@ -17,7 +17,6 @@ import com.cbgm.securechat.data.database.dao.GroupVerificationDao
 import com.cbgm.securechat.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.securechat.feature.chats.data.group.invitation.GroupInvitationStatus
 import com.cbgm.securechat.feature.chats.data.group.security.isGroupAdminRole
-import com.cbgm.securechat.feature.contacts.domain.model.KeyExchangeStatus
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -149,27 +148,20 @@ class GroupVerificationCoordinator internal constructor(
                     "Only a group admin may receive participant verification receipts"
                 }
 
-                verificationState.requireCurrentParticipant(
-                    groupId = packet.groupId,
-                    contactId = context.contactId
-                )
-
-                val participant = verificationState.requireContact(context.contactId)
-                val participantIdentity =
-                    participant.secureChatIdentity
-                        ?: error("Participant has no SecureChat identity")
-                check(participantIdentity.keyExchangeStatus == KeyExchangeStatus.MUTUAL) {
-                    "Group verification requires mutual contact keys"
-                }
+                val participantMemberKey =
+                    verificationState.requireCurrentParticipant(
+                        groupId = packet.groupId,
+                        contactId = context.contactId
+                    )
                 check(
-                    participantIdentity.encryptionPublicKey.contentEquals(
+                    participantMemberKey.encryptionPublicKey.contentEquals(
                         packet.participantEncryptionPublicKey
                     )
                 ) {
                     "Participant encryption key changed before group verification"
                 }
                 check(
-                    participantIdentity.signingPublicKey.contentEquals(
+                    participantMemberKey.signingPublicKey.contentEquals(
                         packet.participantSigningPublicKey
                     )
                 ) {
@@ -188,7 +180,7 @@ class GroupVerificationCoordinator internal constructor(
                 detachedSignatureCrypto
                     .verify(
                         payload = payloadEncoder.encodeReceipt(packet),
-                        signingPublicKey = participantIdentity.signingPublicKey,
+                        signingPublicKey = participantMemberKey.signingPublicKey,
                         signature = packet.signature
                     ).getOrThrow()
 
@@ -238,16 +230,13 @@ class GroupVerificationCoordinator internal constructor(
                     "Only a group admin may answer verification snapshot requests"
                 }
 
-                verificationState.requireCurrentParticipant(
-                    groupId = packet.groupId,
-                    contactId = context.contactId
-                )
-
-                val participantIdentity =
-                    verificationState.requireContact(context.contactId).secureChatIdentity
-                        ?: error("Participant has no SecureChat identity")
+                val participantMemberKey =
+                    verificationState.requireCurrentParticipant(
+                        groupId = packet.groupId,
+                        contactId = context.contactId
+                    )
                 check(
-                    participantIdentity.signingPublicKey.contentEquals(
+                    participantMemberKey.signingPublicKey.contentEquals(
                         packet.requesterSigningPublicKey
                     )
                 ) {
@@ -256,7 +245,7 @@ class GroupVerificationCoordinator internal constructor(
                 detachedSignatureCrypto
                     .verify(
                         payload = payloadEncoder.encodeSnapshotRequest(packet),
-                        signingPublicKey = participantIdentity.signingPublicKey,
+                        signingPublicKey = participantMemberKey.signingPublicKey,
                         signature = packet.signature
                     ).getOrThrow()
 
@@ -293,24 +282,22 @@ class GroupVerificationCoordinator internal constructor(
                 check(!securityState.localRole.isGroupAdminRole()) {
                     "A group admin must not consume another admin's verification snapshot"
                 }
-                verificationState.requireCurrentRemoteAdmin(
-                    groupId = packet.groupId,
-                    contactId = context.contactId
-                )
+                val ownerMemberKey =
+                    verificationState.requireCurrentRemoteAdmin(
+                        groupId = packet.groupId,
+                        contactId = context.contactId
+                    )
                 val ownerContactId = context.contactId
-                val ownerIdentity =
-                    verificationState.requireContact(ownerContactId).secureChatIdentity
-                        ?: error("Group admin has no SecureChat identity")
-                check(ownerIdentity.encryptionPublicKey.contentEquals(packet.ownerEncryptionPublicKey)) {
+                check(ownerMemberKey.encryptionPublicKey.contentEquals(packet.ownerEncryptionPublicKey)) {
                     "Group verification snapshot admin encryption key changed"
                 }
-                check(ownerIdentity.signingPublicKey.contentEquals(packet.ownerSigningPublicKey)) {
+                check(ownerMemberKey.signingPublicKey.contentEquals(packet.ownerSigningPublicKey)) {
                     "Group verification snapshot admin signing key changed"
                 }
                 detachedSignatureCrypto
                     .verify(
                         payload = payloadEncoder.encodeSnapshot(packet),
-                        signingPublicKey = ownerIdentity.signingPublicKey,
+                        signingPublicKey = ownerMemberKey.signingPublicKey,
                         signature = packet.signature
                     ).getOrThrow()
 
@@ -351,17 +338,11 @@ class GroupVerificationCoordinator internal constructor(
     ) {
         verificationState.refreshOwnedState(groupId)
 
-        verificationState.requireCurrentParticipant(
-            groupId = groupId,
-            contactId = participantContactId
-        )
-
-        val participantIdentity =
-            verificationState.requireContact(participantContactId).secureChatIdentity
-                ?: error("Participant has no SecureChat identity")
-        check(participantIdentity.keyExchangeStatus == KeyExchangeStatus.MUTUAL) {
-            "The participant identity is not ready for verification"
-        }
+        val participantMemberKey =
+            verificationState.requireCurrentParticipant(
+                groupId = groupId,
+                contactId = participantContactId
+            )
 
         val row =
             groupVerificationDao
@@ -370,10 +351,10 @@ class GroupVerificationCoordinator internal constructor(
                 ?: error("Participant verification state was not found")
         check(
             row.participantEncryptionPublicKey?.contentEquals(
-                participantIdentity.encryptionPublicKey
+                participantMemberKey.encryptionPublicKey
             ) == true &&
                 row.participantSigningPublicKey?.contentEquals(
-                    participantIdentity.signingPublicKey
+                    participantMemberKey.signingPublicKey
                 ) == true
         ) {
             "Participant identity changed before group verification"
@@ -414,12 +395,11 @@ class GroupVerificationCoordinator internal constructor(
             "The group invitation must be active before verification"
         }
 
-        val ownerIdentity =
-            verificationState.requireContact(ownerContactId).secureChatIdentity
-                ?: error("Group admin has no SecureChat identity")
-        check(ownerIdentity.keyExchangeStatus == KeyExchangeStatus.MUTUAL) {
-            "The group admin identity is not ready for verification"
-        }
+        val ownerMemberKey =
+            verificationState.requireCurrentRemoteAdmin(
+                groupId = groupId,
+                contactId = ownerContactId
+            )
 
         val localIdentity =
             localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
@@ -440,8 +420,8 @@ class GroupVerificationCoordinator internal constructor(
                 verifiedAtEpochMilliseconds = verifiedAt,
                 participantEncryptionPublicKey = localIdentity.encryptionPublicKey.copyOf(),
                 participantSigningPublicKey = localIdentity.signingPublicKey.copyOf(),
-                ownerEncryptionPublicKey = ownerIdentity.encryptionPublicKey.copyOf(),
-                ownerSigningPublicKey = ownerIdentity.signingPublicKey.copyOf(),
+                ownerEncryptionPublicKey = ownerMemberKey.encryptionPublicKey.copyOf(),
+                ownerSigningPublicKey = ownerMemberKey.signingPublicKey.copyOf(),
                 signature = EMPTY_SIGNATURE
             )
         val signature =

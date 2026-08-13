@@ -28,11 +28,15 @@ import com.cbgm.securechat.feature.messaging.application.outbox.OutgoingPacketTr
 import com.cbgm.securechat.feature.messaging.application.outbox.OutgoingTransportPayloadFactory
 import com.cbgm.securechat.feature.messaging.data.relay.DefaultContactByRelayIdResolver
 import com.cbgm.securechat.feature.messaging.data.relay.DefaultContactRelayIdResolver
+import com.cbgm.securechat.feature.messaging.data.relay.DefaultGroupRelayIdResolver
+import com.cbgm.securechat.feature.messaging.data.relay.DefaultGroupTransportKeyResolver
 import com.cbgm.securechat.feature.messaging.data.relay.WebSocketIncomingRelayGateway
 import com.cbgm.securechat.feature.messaging.data.repository.direct.DirectTypingRepositoryImpl
 import com.cbgm.securechat.feature.messaging.data.repository.group.GroupTypingRepositoryImpl
 import com.cbgm.securechat.feature.messaging.domain.relay.ContactByRelayIdResolver
 import com.cbgm.securechat.feature.messaging.domain.relay.ContactRelayIdResolver
+import com.cbgm.securechat.feature.messaging.domain.relay.GroupRelayIdResolver
+import com.cbgm.securechat.feature.messaging.domain.relay.GroupTransportKeyResolver
 import com.cbgm.securechat.feature.messaging.domain.relay.IncomingRelayGateway
 import com.cbgm.securechat.feature.transport.relay.identity.RelayIdGenerator
 import com.cbgm.securechat.feature.transport.websocket.WebSocketTransportClient
@@ -55,7 +59,23 @@ val messagingModule =
                 contactRepository = get<ContactRepository>(),
                 contactDao = get<ContactDao>(),
                 contactRelayIdDao = get(),
+                relayIdGenerator = get<RelayIdGenerator>(),
+                groupRelayIdResolver = get<GroupRelayIdResolver>()
+            )
+        }
+
+        single<GroupRelayIdResolver> {
+            DefaultGroupRelayIdResolver(
+                chatDao = get(),
+                groupSecurityDao = get(),
                 relayIdGenerator = get<RelayIdGenerator>()
+            )
+        }
+
+        single<GroupTransportKeyResolver> {
+            DefaultGroupTransportKeyResolver(
+                chatDao = get(),
+                groupSecurityDao = get()
             )
         }
 
@@ -69,7 +89,7 @@ val messagingModule =
         single<GroupTypingRepository> {
             GroupTypingRepositoryImpl(
                 webSocketTransportClient = get<WebSocketTransportClient>(),
-                contactRelayIdResolver = get<ContactRelayIdResolver>()
+                groupRelayIdResolver = get<GroupRelayIdResolver>()
             )
         }
 
@@ -86,7 +106,8 @@ val messagingModule =
         single<OutgoingTransportPayloadFactory> {
             DefaultOutgoingTransportPayloadFactory(
                 transportMessageCipher = get(),
-                packetTransportPolicy = get<OutgoingPacketTransportPolicy>()
+                packetTransportPolicy = get<OutgoingPacketTransportPolicy>(),
+                groupTransportKeyResolver = get<GroupTransportKeyResolver>()
             )
         }
 
@@ -98,6 +119,7 @@ val messagingModule =
                 transportPayloadCodec = get(),
                 packetCodec = get(),
                 contactRelayIdResolver = get<ContactRelayIdResolver>(),
+                groupRelayIdResolver = get<GroupRelayIdResolver>(),
                 outgoingWireSender = get<OutgoingWireSender>(),
                 deliveryStateListener = get()
             )

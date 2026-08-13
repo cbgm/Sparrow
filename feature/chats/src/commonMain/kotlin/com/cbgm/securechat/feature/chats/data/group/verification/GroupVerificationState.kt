@@ -1,10 +1,10 @@
 package com.cbgm.securechat.feature.chats.data.group.verification
 
 import com.cbgm.securechat.core.time.SystemClock
-import com.cbgm.securechat.data.database.dao.ChatDao
 import com.cbgm.securechat.data.database.dao.GroupInvitationDao
 import com.cbgm.securechat.data.database.dao.GroupSecurityDao
 import com.cbgm.securechat.data.database.dao.GroupVerificationDao
+import com.cbgm.securechat.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.securechat.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.securechat.feature.chats.data.group.invitation.GroupInvitationDirection
 import com.cbgm.securechat.feature.chats.data.group.invitation.GroupInvitationStatus
@@ -14,7 +14,6 @@ import com.cbgm.securechat.feature.contacts.domain.model.SecureChatIdentity
 import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
 
 internal class GroupVerificationState(
-    private val chatDao: ChatDao,
     private val groupVerificationDao: GroupVerificationDao,
     private val groupInvitationDao: GroupInvitationDao,
     private val groupSecurityDao: GroupSecurityDao,
@@ -33,44 +32,24 @@ internal class GroupVerificationState(
     suspend fun requireCurrentParticipant(
         groupId: String,
         contactId: String
-    ) {
+    ): GroupMemberKeyEntity {
         val state =
             groupSecurityDao.findState(groupId)
                 ?: error("Group security state was not found")
-        check(
-            chatDao.findConversationParticipants(groupId)
-                .any { participant -> participant.contactId == contactId }
-        ) { "Contact is not an active group participant" }
-
-        val identity =
-            requireContact(contactId).secureChatIdentity
-                ?: error("Group participant has no SecureChat identity")
-        val memberKey =
-            groupSecurityDao.findMemberKey(
-                groupId = groupId,
-                epoch = state.currentEpoch,
-                contactId = contactId
-            ) ?: error("Group participant is not part of the current epoch")
-        check(memberKey.signingPublicKey.contentEquals(identity.signingPublicKey)) {
-            "Group participant identity no longer matches the current epoch"
-        }
+        return groupSecurityDao.findMemberKey(
+            groupId = groupId,
+            epoch = state.currentEpoch,
+            contactId = contactId
+        ) ?: error("Group participant is not part of the current epoch")
     }
 
     suspend fun requireCurrentRemoteAdmin(
         groupId: String,
         contactId: String
-    ) {
-        requireCurrentParticipant(groupId, contactId)
-        val state =
-            groupSecurityDao.findState(groupId)
-                ?: error("Group security state was not found")
-        val memberKey =
-            groupSecurityDao.findMemberKey(
-                groupId = groupId,
-                epoch = state.currentEpoch,
-                contactId = contactId
-            ) ?: error("Group admin is not part of the current epoch")
+    ): GroupMemberKeyEntity {
+        val memberKey = requireCurrentParticipant(groupId, contactId)
         check(memberKey.role.isGroupAdminRole()) { "Group participant is not an admin" }
+        return memberKey
     }
 
     suspend fun refreshOwnedState(groupId: String) {
@@ -79,27 +58,34 @@ internal class GroupVerificationState(
             existingRows.mapNotNull { row -> row.contactId?.let { it to row } }.toMap()
         val invitations = groupInvitationDao.findByGroupId(groupId)
         val invitationByContactId = invitations.associateBy { invitation -> invitation.contactId }
-        val participants = chatDao.findConversationParticipants(groupId)
+        val securityState = groupSecurityDao.findState(groupId)
+        val currentMemberKeys =
+            securityState
+                ?.let { state ->
+                    groupSecurityDao.findMemberKeys(
+                        groupId = groupId,
+                        epoch = state.currentEpoch
+                    )
+                }.orEmpty()
         val now = SystemClock.nowEpochMilliseconds()
 
         val activeRows =
-            participants.map { participant ->
-                val contact = requireContact(participant.contactId)
-                val identity = contact.secureChatIdentity
-                val invitation = invitationByContactId[participant.contactId]
-                val previous = existingByContactId[participant.contactId]
-                val sameIdentity = previous.matches(identity)
+            currentMemberKeys.map { memberKey ->
+                val contact = requireContact(memberKey.contactId)
+                val invitation = invitationByContactId[memberKey.contactId]
+                val previous = existingByContactId[memberKey.contactId]
+                val sameIdentity = previous.matches(memberKey)
                 GroupVerificationPairEntity(
                     groupId = groupId,
                     invitationId =
                         invitation?.invitationId
                             ?: previous?.invitationId
-                            ?: "member-${participant.contactId}",
-                    contactId = participant.contactId,
+                            ?: "member-${memberKey.contactId}",
+                    contactId = memberKey.contactId,
                     displayName = contact.verificationDisplayName(),
                     membershipStatus = GroupVerificationPairEntity.ACTIVE_STATUS,
-                    participantEncryptionPublicKey = identity?.encryptionPublicKey?.copyOf(),
-                    participantSigningPublicKey = identity?.signingPublicKey?.copyOf(),
+                    participantEncryptionPublicKey = memberKey.encryptionPublicKey.copyOf(),
+                    participantSigningPublicKey = memberKey.signingPublicKey.copyOf(),
                     adminVerifiedParticipant = sameIdentity && previous?.adminVerifiedParticipant == true,
                     participantVerifiedAdmin = sameIdentity && previous?.participantVerifiedAdmin == true,
                     updatedAtEpochMilliseconds =
@@ -108,12 +94,13 @@ internal class GroupVerificationState(
             }
 
         val activeContactIds =
-            participants.mapTo(mutableSetOf()) { participant -> participant.contactId }
+            currentMemberKeys.mapTo(mutableSetOf()) { memberKey -> memberKey.contactId }
         val pendingRows =
             invitations
-                .filterNot { invitation ->
-                    invitation.status.isTerminalStatus() ||
-                        invitation.contactId in activeContactIds
+                .filter { invitation ->
+                    invitation.direction == GroupInvitationDirection.OUTGOING.name &&
+                        !invitation.status.isTerminalStatus() &&
+                        invitation.contactId !in activeContactIds
                 }.map { invitation ->
                     val contact = requireContact(invitation.contactId)
                     val identity = contact.secureChatIdentity
@@ -142,6 +129,16 @@ internal class GroupVerificationState(
     suspend fun requireContact(contactId: String): Contact =
         getContact(contactId).getOrThrow()
             ?: error("Contact not found: $contactId")
+
+    private fun GroupVerificationPairEntity?.matches(
+        memberKey: GroupMemberKeyEntity
+    ): Boolean {
+        val previous = this ?: return false
+        val encryptionPublicKey = previous.participantEncryptionPublicKey ?: return false
+        val signingPublicKey = previous.participantSigningPublicKey ?: return false
+        return encryptionPublicKey.contentEquals(memberKey.encryptionPublicKey) &&
+            signingPublicKey.contentEquals(memberKey.signingPublicKey)
+    }
 
     private fun GroupVerificationPairEntity?.matches(
         identity: SecureChatIdentity?

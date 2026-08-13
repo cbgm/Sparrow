@@ -23,10 +23,6 @@ interface GroupSecurityDao {
     ) {
         upsertState(state)
         upsertMemberKeys(memberKeys)
-        deleteEpochsBefore(
-            groupId = state.groupId,
-            epoch = state.currentEpoch
-        )
     }
 
     @Query("SELECT * FROM group_security_states WHERE groupId = :groupId LIMIT 1")
@@ -65,15 +61,18 @@ interface GroupSecurityDao {
 
     @Query(
         """
-        DELETE FROM group_member_keys
+        SELECT *
+        FROM group_member_keys
         WHERE groupId = :groupId
-          AND epoch < :epoch
+          AND contactId = :contactId
+        ORDER BY epoch DESC
+        LIMIT 1
         """
     )
-    suspend fun deleteEpochsBefore(
+    suspend fun findLatestMemberKey(
         groupId: String,
-        epoch: Int
-    )
+        contactId: String
+    ): GroupMemberKeyEntity?
 
     @Query(
         """
@@ -101,6 +100,18 @@ interface GroupSecurityDao {
         """
     )
     fun observeCurrentMemberKeys(groupId: String): Flow<List<GroupMemberKeyEntity>>
+
+    @Query(
+        """
+        SELECT member.*
+        FROM group_member_keys AS member
+        INNER JOIN group_security_states AS state
+            ON state.groupId = member.groupId
+           AND state.currentEpoch = member.epoch
+        ORDER BY member.groupId, member.contactId
+        """
+    )
+    suspend fun findAllCurrentMemberKeys(): List<GroupMemberKeyEntity>
 
     @Query(
         """

@@ -4,6 +4,7 @@ import com.cbgm.securechat.core.protocol.identity.LocalPublicIdentity
 import com.cbgm.securechat.core.protocol.packet.GroupMemberPayload
 import com.cbgm.securechat.data.database.dao.ChatDao
 import com.cbgm.securechat.data.database.dao.GroupInvitationDao
+import com.cbgm.securechat.data.database.dao.GroupSecurityDao
 import com.cbgm.securechat.data.database.entity.ConversationParticipantEntity
 import com.cbgm.securechat.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.securechat.feature.chats.data.group.security.GROUP_MEMBER_ROLE
@@ -15,26 +16,27 @@ import com.cbgm.securechat.feature.contacts.domain.model.Contact
 internal class GroupEpochCoordinator(
     private val chatDao: ChatDao,
     private val groupInvitationDao: GroupInvitationDao,
+    private val groupSecurityDao: GroupSecurityDao,
     private val groupSecurityManager: GroupSecurityManager,
     private val identity: GroupMembershipIdentity
 ) {
-    suspend fun findCurrentParticipants(groupId: String): List<ConversationParticipantEntity> =
-        chatDao.findConversationParticipants(groupId).mapNotNull { participant ->
-            val contactIdentity =
-                identity.requireContact(participant.contactId).secureChatIdentity
-                    ?: return@mapNotNull null
-            val memberKey =
-                groupSecurityManager
-                    .findRemoteMemberKey(
-                        groupId = groupId,
-                        contactId = participant.contactId
-                    ).getOrNull()
-                    ?: return@mapNotNull null
-            if (!memberKey.signingPublicKey.contentEquals(contactIdentity.signingPublicKey)) {
-                return@mapNotNull null
+    suspend fun findCurrentParticipants(groupId: String): List<ConversationParticipantEntity> {
+        val state = groupSecurityDao.findState(groupId) ?: return emptyList()
+        val existingByContactId =
+            chatDao.findConversationParticipants(groupId).associateBy(ConversationParticipantEntity::contactId)
+        return groupSecurityDao
+            .findMemberKeys(groupId, state.currentEpoch)
+            .map { memberKey ->
+                existingByContactId[memberKey.contactId]
+                    ?.copy(role = memberKey.role)
+                    ?: ConversationParticipantEntity(
+                        conversationId = groupId,
+                        contactId = memberKey.contactId,
+                        role = memberKey.role,
+                        joinedAtEpochMilliseconds = state.updatedAtEpochMilliseconds
+                    )
             }
-            participant.copy(role = memberKey.role)
-        }
+    }
 
     suspend fun loadCurrentParticipantContacts(groupId: String): List<Contact> =
         findCurrentParticipants(groupId)
@@ -50,7 +52,6 @@ internal class GroupEpochCoordinator(
         val localRole =
             groupSecurityManager.findLocalRole(groupId).getOrThrow()
                 ?: GROUP_OWNER_ROLE
-        val rolesByContactId = currentEpochRoles(groupId, contacts)
 
         return buildList {
             add(
@@ -63,16 +64,13 @@ internal class GroupEpochCoordinator(
                 )
             )
             contacts.forEach { contact ->
-                val contactIdentity = requireNotNull(contact.secureChatIdentity)
+                val member = resolveMemberIdentity(groupId, contact)
                 add(
                     GroupMemberPayload(
                         displayName = null,
-                        encryptionPublicKey = contactIdentity.encryptionPublicKey.copyOf(),
-                        signingPublicKey = contactIdentity.signingPublicKey.copyOf(),
-                        role =
-                            roleOverrides[contact.id]
-                                ?: rolesByContactId[contact.id]
-                                ?: GROUP_MEMBER_ROLE,
+                        encryptionPublicKey = member.encryptionPublicKey.copyOf(),
+                        signingPublicKey = member.signingPublicKey.copyOf(),
+                        role = roleOverrides[contact.id] ?: member.role,
                         phoneNumber = contact.requireGroupPhoneNumber()
                     )
                 )
@@ -85,24 +83,18 @@ internal class GroupEpochCoordinator(
         epoch: Int,
         contacts: List<Contact>,
         roleOverrides: Map<String, String> = emptyMap()
-    ): List<GroupMemberKeyEntity> {
-        val rolesByContactId = currentEpochRoles(groupId, contacts)
-
-        return contacts.map { contact ->
-            val contactIdentity = requireNotNull(contact.secureChatIdentity)
+    ): List<GroupMemberKeyEntity> =
+        contacts.map { contact ->
+            val member = resolveMemberIdentity(groupId, contact)
             GroupMemberKeyEntity(
                 groupId = groupId,
                 epoch = epoch,
                 contactId = contact.id,
-                encryptionPublicKey = contactIdentity.encryptionPublicKey.copyOf(),
-                signingPublicKey = contactIdentity.signingPublicKey.copyOf(),
-                role =
-                    roleOverrides[contact.id]
-                        ?: rolesByContactId[contact.id]
-                        ?: GROUP_MEMBER_ROLE
+                encryptionPublicKey = member.encryptionPublicKey.copyOf(),
+                signingPublicKey = member.signingPublicKey.copyOf(),
+                role = roleOverrides[contact.id] ?: member.role
             )
         }
-    }
 
     suspend fun createRecipients(
         groupId: String,
@@ -110,24 +102,51 @@ internal class GroupEpochCoordinator(
     ): List<GroupWelcomeRecipient> =
         contacts.map { contact ->
             val invitation = groupInvitationDao.findByGroupAndContact(groupId, contact.id)
+            val member = resolveMemberIdentity(groupId, contact)
             GroupWelcomeRecipient(
                 contactId = contact.id,
                 invitationId = invitation?.invitationId ?: "member-${contact.id}",
-                encryptionPublicKey =
-                    requireNotNull(contact.secureChatIdentity)
-                        .encryptionPublicKey
-                        .copyOf()
+                encryptionPublicKey = member.encryptionPublicKey.copyOf()
             )
         }
 
-    private suspend fun currentEpochRoles(
+    private suspend fun resolveMemberIdentity(
         groupId: String,
-        contacts: List<Contact>
-    ): Map<String, String> =
-        contacts.mapNotNull { contact ->
-            groupSecurityManager
-                .findRemoteMemberKey(groupId, contact.id)
-                .getOrNull()
-                ?.let { memberKey -> contact.id to memberKey.role }
-        }.toMap()
+        contact: Contact
+    ): MemberIdentity {
+        val currentMemberKey = currentMemberKey(groupId, contact.id)
+        if (currentMemberKey != null) {
+            return MemberIdentity(
+                encryptionPublicKey = currentMemberKey.encryptionPublicKey,
+                signingPublicKey = currentMemberKey.signingPublicKey,
+                role = currentMemberKey.role
+            )
+        }
+
+        val contactIdentity =
+            requireNotNull(contact.secureChatIdentity) {
+                "New group member has no accepted SecureChat identity"
+            }
+        return MemberIdentity(
+            encryptionPublicKey = contactIdentity.encryptionPublicKey,
+            signingPublicKey = contactIdentity.signingPublicKey,
+            role = GROUP_MEMBER_ROLE
+        )
+    }
+
+    private suspend fun currentMemberKey(
+        groupId: String,
+        contactId: String
+    ): GroupMemberKeyEntity? =
+        groupSecurityManager
+            .findRemoteMemberKey(
+                groupId = groupId,
+                contactId = contactId
+            ).getOrNull()
+
+    private data class MemberIdentity(
+        val encryptionPublicKey: ByteArray,
+        val signingPublicKey: ByteArray,
+        val role: String
+    )
 }

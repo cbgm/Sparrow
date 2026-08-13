@@ -6,6 +6,7 @@ import com.cbgm.securechat.data.database.dao.GroupVerificationDao
 import com.cbgm.securechat.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.securechat.feature.chats.data.group.invitation.GroupInvitationDirection
 import com.cbgm.securechat.feature.chats.data.group.invitation.GroupInvitationStatus
+import com.cbgm.securechat.feature.chats.data.group.security.GROUP_LEFT_ROLE
 import com.cbgm.securechat.feature.chats.data.group.security.isGroupAdminRole
 import com.cbgm.securechat.feature.chats.domain.model.group.GroupVerificationContext
 import com.cbgm.securechat.feature.chats.domain.model.group.GroupVerificationMembershipStatus
@@ -53,6 +54,9 @@ class GroupVerificationRepositoryImpl(
 
             GroupVerificationContext(
                 hasSecurityState = securityState != null,
+                isLocalMemberActive =
+                    isLocalAdmin ||
+                        (securityState != null && securityState.localRole != GROUP_LEFT_ROLE),
                 isLocalAdmin = isLocalAdmin,
                 ownerContactId =
                     if (isLocalAdmin) {

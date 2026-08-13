@@ -3,7 +3,6 @@ package com.cbgm.securechat.feature.chats.data.group.membership
 import com.cbgm.securechat.core.protocol.identity.LocalPublicIdentityProvider
 import com.cbgm.securechat.core.protocol.identity.LocalSigningKeyPair
 import com.cbgm.securechat.core.protocol.identity.LocalSigningKeyPairProvider
-import com.cbgm.securechat.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.securechat.core.protocol.packet.GroupMemberActivatedPacket
 import com.cbgm.securechat.core.protocol.packet.GroupMemberActivationAcknowledgementPacket
 import com.cbgm.securechat.core.protocol.packet.GroupMemberPayload
@@ -15,8 +14,10 @@ import com.cbgm.securechat.data.database.dao.GroupInvitationDao
 import com.cbgm.securechat.data.database.entity.ConversationEntity
 import com.cbgm.securechat.data.database.entity.ConversationParticipantEntity
 import com.cbgm.securechat.data.database.entity.GroupInvitationEntity
+import com.cbgm.securechat.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.securechat.feature.chats.data.group.invitation.GroupInvitationStatus
 import com.cbgm.securechat.feature.chats.data.group.mapper.GroupMembershipMessageFactory
+import com.cbgm.securechat.feature.chats.data.group.outgoing.GroupPacketBroadcaster
 import com.cbgm.securechat.feature.chats.data.group.protocol.GroupMembershipPacketProtocol
 import com.cbgm.securechat.feature.chats.data.group.security.CreatedGroupSecurity
 import com.cbgm.securechat.feature.chats.data.group.security.GROUP_MEMBER_ROLE
@@ -31,13 +32,13 @@ internal class GroupMembershipActivationCoordinator(
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
-    private val protocolOutbox: ProtocolOutbox,
     private val membershipPacketProtocol: GroupMembershipPacketProtocol,
     private val groupSecurityManager: GroupSecurityManager,
     private val groupVerificationCoordinator: GroupVerificationCoordinator,
     private val membershipLock: GroupMembershipLock,
     private val identity: GroupMembershipIdentity,
-    private val epochCoordinator: GroupEpochCoordinator
+    private val epochCoordinator: GroupEpochCoordinator,
+    private val packetBroadcaster: GroupPacketBroadcaster
 ) {
     suspend fun receiveReadyAcknowledgement(
         memberContactId: String,
@@ -66,9 +67,11 @@ internal class GroupMembershipActivationCoordinator(
         invitation: GroupInvitationEntity?
     ) {
         val referenceId = invitation?.invitationId ?: "member-$memberContactId"
-        val expectedIdentity =
-            identity.requireContact(memberContactId).secureChatIdentity
-                ?: error("Group member identity was not found")
+        val expectedSigningPublicKey =
+            currentMemberKey(packet.groupId, memberContactId)
+                ?.signingPublicKey
+                ?: identity.requireContact(memberContactId).secureChatIdentity?.signingPublicKey
+                ?: error("Group member signing identity was not found")
         val expectedWelcomePacketId =
             groupSecurityManager.welcomePacketId(
                 groupId = packet.groupId,
@@ -79,7 +82,7 @@ internal class GroupMembershipActivationCoordinator(
             "Ready acknowledgement references the wrong welcome"
         }
         membershipPacketProtocol
-            .verifyReadyAcknowledgement(packet, expectedIdentity.signingPublicKey)
+            .verifyReadyAcknowledgement(packet, expectedSigningPublicKey)
             .getOrThrow()
         groupSecurityManager
             .verifyKeyConfirmation(
@@ -95,10 +98,9 @@ internal class GroupMembershipActivationCoordinator(
         invitation: GroupInvitationEntity?
     ): Boolean {
         if (invitation == null) {
-            check(
-                chatDao.findConversationParticipants(groupId)
-                    .any { participant -> participant.contactId == memberContactId }
-            ) { "Ready acknowledgement came from a non-member" }
+            check(currentMemberKey(groupId, memberContactId) != null) {
+                "Ready acknowledgement came from a non-member"
+            }
             return false
         }
         if (invitation.status == GroupInvitationStatus.ACTIVE.name) return false
@@ -135,30 +137,38 @@ internal class GroupMembershipActivationCoordinator(
         activationTimestamp: Long
     ) {
         val adminSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
-        epochCoordinator.loadCurrentParticipantContacts(packet.groupId)
+        val packetsByContactId = linkedMapOf<String, GroupMemberActivatedPacket>()
+
+        epochCoordinator
+            .loadCurrentParticipantContacts(packet.groupId)
             .filterNot { contact -> contact.id == memberContactId }
             .forEach { activeContact ->
-                enqueueMemberActivation(
-                    groupId = packet.groupId,
-                    epoch = packet.epoch,
-                    activationId = packet.packetId,
-                    activatedAtEpochMilliseconds = activationTimestamp,
-                    activationRound = GroupMemberActivatedPacket.DISCOVERY_ROUND,
-                    memberContact = activatedContact,
-                    recipientContactId = activeContact.id,
-                    ownerSigningKeyPair = adminSigningKeyPair
-                )
+                packetsByContactId[activeContact.id] =
+                    createMemberActivation(
+                        groupId = packet.groupId,
+                        epoch = packet.epoch,
+                        activationId = packet.packetId,
+                        activatedAtEpochMilliseconds = activationTimestamp,
+                        activationRound = GroupMemberActivatedPacket.DISCOVERY_ROUND,
+                        memberContact = activatedContact,
+                        recipientContactId = activeContact.id,
+                        ownerSigningKeyPair = adminSigningKeyPair
+                    )
             }
-        enqueueMemberActivation(
-            groupId = packet.groupId,
-            epoch = packet.epoch,
-            activationId = packet.packetId,
-            activatedAtEpochMilliseconds = activationTimestamp,
-            activationRound = GroupMemberActivatedPacket.FINAL_ROUND,
-            memberContact = activatedContact,
-            recipientContactId = memberContactId,
-            ownerSigningKeyPair = adminSigningKeyPair
-        )
+
+        packetsByContactId[memberContactId] =
+            createMemberActivation(
+                groupId = packet.groupId,
+                epoch = packet.epoch,
+                activationId = packet.packetId,
+                activatedAtEpochMilliseconds = activationTimestamp,
+                activationRound = GroupMemberActivatedPacket.FINAL_ROUND,
+                memberContact = activatedContact,
+                recipientContactId = memberContactId,
+                ownerSigningKeyPair = adminSigningKeyPair
+            )
+
+        packetBroadcaster.enqueueAll(packetsByContactId).getOrThrow()
     }
 
     private suspend fun markMemberActive(
@@ -223,8 +233,16 @@ internal class GroupMembershipActivationCoordinator(
                         .filter { invitation -> invitation.status == GroupInvitationStatus.IDENTITY_READY.name }
                         .sortedBy(GroupInvitationEntity::invitationId)
 
+                val failures = mutableListOf<String>()
                 readyInvitations.forEach { invitation ->
-                    distributeGroupKeyToMember(groupId, invitation)
+                    runCatching { distributeGroupKeyToMember(groupId, invitation) }
+                        .onFailure { error ->
+                            failures +=
+                                "${invitation.contactId}: ${error.message ?: error::class.simpleName.orEmpty()}"
+                        }
+                }
+                check(failures.isEmpty()) {
+                    "Group key distribution failed for ${failures.joinToString()}"
                 }
             }
         }
@@ -235,18 +253,17 @@ internal class GroupMembershipActivationCoordinator(
     ): Result<Unit> =
         runCatching {
             membershipLock.withLock {
-                val participants = chatDao.findConversationParticipants(packet.groupId)
+                val participants = epochCoordinator.findCurrentParticipants(packet.groupId)
                 val acknowledgingParticipant =
                     participants.firstOrNull { participant -> participant.contactId == acknowledgingContactId }
                         ?: error("Acknowledging group member was not found")
-                val activatedContact =
-                    participants
-                        .map { participant -> identity.requireContact(participant.contactId) }
-                        .singleOrNull { contact ->
-                            contact.secureChatIdentity
-                                ?.signingPublicKey
-                                ?.contentEquals(packet.activatedMemberSigningPublicKey) == true
-                        } ?: error("Activated group member was not found")
+                val activatedParticipant =
+                    participants.singleOrNull { participant ->
+                        currentMemberKey(packet.groupId, participant.contactId)
+                            ?.signingPublicKey
+                            ?.contentEquals(packet.activatedMemberSigningPublicKey) == true
+                    } ?: error("Activated group member was not found")
+                val activatedContact = identity.requireContact(activatedParticipant.contactId)
                 check(activatedContact.id != acknowledgingContactId) {
                     "A group member cannot acknowledge its own activation"
                 }
@@ -257,38 +274,50 @@ internal class GroupMembershipActivationCoordinator(
 
                 when (packet.activationRound) {
                     GroupMemberActivatedPacket.DISCOVERY_ROUND ->
-                        enqueueMemberActivation(
-                            groupId = packet.groupId,
-                            epoch = packet.epoch,
-                            activationId = packet.activationId,
-                            activatedAtEpochMilliseconds = acknowledgedAt,
-                            activationRound = GroupMemberActivatedPacket.RECIPROCAL_ROUND,
-                            memberContact = acknowledgingContact,
-                            recipientContactId = activatedContact.id,
-                            ownerSigningKeyPair = adminSigningKeyPair
-                        )
+                        packetBroadcaster
+                            .enqueueAll(
+                                mapOf(
+                                    activatedContact.id to
+                                        createMemberActivation(
+                                            groupId = packet.groupId,
+                                            epoch = packet.epoch,
+                                            activationId = packet.activationId,
+                                            activatedAtEpochMilliseconds = acknowledgedAt,
+                                            activationRound = GroupMemberActivatedPacket.RECIPROCAL_ROUND,
+                                            memberContact = acknowledgingContact,
+                                            recipientContactId = activatedContact.id,
+                                            ownerSigningKeyPair = adminSigningKeyPair
+                                        )
+                                )
+                            ).getOrThrow()
 
                     GroupMemberActivatedPacket.RECIPROCAL_ROUND -> {
-                        enqueueMemberActivation(
-                            groupId = packet.groupId,
-                            epoch = packet.epoch,
-                            activationId = packet.activationId,
-                            activatedAtEpochMilliseconds = acknowledgedAt,
-                            activationRound = GroupMemberActivatedPacket.FINAL_ROUND,
-                            memberContact = activatedContact,
-                            recipientContactId = acknowledgingContactId,
-                            ownerSigningKeyPair = adminSigningKeyPair
-                        )
-                        enqueueMemberActivation(
-                            groupId = packet.groupId,
-                            epoch = packet.epoch,
-                            activationId = packet.activationId,
-                            activatedAtEpochMilliseconds = acknowledgedAt,
-                            activationRound = GroupMemberActivatedPacket.FINAL_ROUND,
-                            memberContact = acknowledgingContact,
-                            recipientContactId = activatedContact.id,
-                            ownerSigningKeyPair = adminSigningKeyPair
-                        )
+                        val packetsByContactId =
+                            linkedMapOf(
+                                acknowledgingContactId to
+                                    createMemberActivation(
+                                        groupId = packet.groupId,
+                                        epoch = packet.epoch,
+                                        activationId = packet.activationId,
+                                        activatedAtEpochMilliseconds = acknowledgedAt,
+                                        activationRound = GroupMemberActivatedPacket.FINAL_ROUND,
+                                        memberContact = activatedContact,
+                                        recipientContactId = acknowledgingContactId,
+                                        ownerSigningKeyPair = adminSigningKeyPair
+                                    ),
+                                activatedContact.id to
+                                    createMemberActivation(
+                                        groupId = packet.groupId,
+                                        epoch = packet.epoch,
+                                        activationId = packet.activationId,
+                                        activatedAtEpochMilliseconds = acknowledgedAt,
+                                        activationRound = GroupMemberActivatedPacket.FINAL_ROUND,
+                                        memberContact = acknowledgingContact,
+                                        recipientContactId = activatedContact.id,
+                                        ownerSigningKeyPair = adminSigningKeyPair
+                                    )
+                            )
+                        packetBroadcaster.enqueueAll(packetsByContactId).getOrThrow()
                     }
 
                     else -> error("Unsupported member activation acknowledgement round")
@@ -337,9 +366,7 @@ internal class GroupMembershipActivationCoordinator(
         groupId: String,
         contactId: String
     ): Map<String, String> {
-        val isExistingParticipant =
-            chatDao.findConversationParticipants(groupId)
-                .any { participant -> participant.contactId == contactId }
+        val isExistingParticipant = currentMemberKey(groupId, contactId) != null
         return if (isExistingParticipant) {
             mapOf(contactId to GROUP_MEMBER_ROLE)
         } else {
@@ -397,9 +424,7 @@ internal class GroupMembershipActivationCoordinator(
     }
 
     private suspend fun enqueueWelcomePackets(securedGroup: CreatedGroupSecurity) {
-        securedGroup.welcomePacketsByContactId.forEach { (contactId, packet) ->
-            protocolOutbox.enqueue(contactId, packet).getOrThrow()
-        }
+        packetBroadcaster.enqueueAll(securedGroup.welcomePacketsByContactId).getOrThrow()
     }
 
     private suspend fun markWelcomeSent(invitation: GroupInvitationEntity) {
@@ -422,7 +447,7 @@ internal class GroupMembershipActivationCoordinator(
         }
     }
 
-    private suspend fun enqueueMemberActivation(
+    private suspend fun createMemberActivation(
         groupId: String,
         epoch: Int,
         activationId: String,
@@ -431,39 +456,40 @@ internal class GroupMembershipActivationCoordinator(
         memberContact: Contact,
         recipientContactId: String,
         ownerSigningKeyPair: LocalSigningKeyPair
-    ) {
-        val identity =
-            memberContact.secureChatIdentity
-                ?: error("Activated group member has no SecureChat identity")
-        val memberRole =
-            groupSecurityManager
-                .findRemoteMemberKey(groupId, memberContact.id)
-                .getOrThrow()
-                ?.role
-                ?: GROUP_MEMBER_ROLE
-        val packet =
-            membershipPacketProtocol
-                .createMemberActivated(
-                    groupId = groupId,
-                    epoch = epoch,
-                    member =
-                        GroupMemberPayload(
-                            displayName = memberContact.displayName,
-                            encryptionPublicKey = identity.encryptionPublicKey.copyOf(),
-                            signingPublicKey = identity.signingPublicKey.copyOf(),
-                            role = memberRole,
-                            phoneNumber = memberContact.requireGroupPhoneNumber()
-                        ),
-                    activatedAtEpochMilliseconds = activatedAtEpochMilliseconds,
-                    activationRound = activationRound,
-                    activationId = activationId,
-                    memberReferenceId = memberContact.id,
-                    recipientContactId = recipientContactId,
-                    ownerSigningKeyPair = ownerSigningKeyPair
-                ).getOrThrow()
-
-        protocolOutbox.enqueue(recipientContactId, packet).getOrThrow()
+    ): GroupMemberActivatedPacket {
+        val memberKey =
+            currentMemberKey(groupId, memberContact.id)
+                ?: error("Activated group member is not part of the current group epoch")
+        return membershipPacketProtocol
+            .createMemberActivated(
+                groupId = groupId,
+                epoch = epoch,
+                member =
+                    GroupMemberPayload(
+                        displayName = memberContact.displayName,
+                        encryptionPublicKey = memberKey.encryptionPublicKey.copyOf(),
+                        signingPublicKey = memberKey.signingPublicKey.copyOf(),
+                        role = memberKey.role,
+                        phoneNumber = memberContact.requireGroupPhoneNumber()
+                    ),
+                activatedAtEpochMilliseconds = activatedAtEpochMilliseconds,
+                activationRound = activationRound,
+                activationId = activationId,
+                memberReferenceId = memberContact.id,
+                recipientContactId = recipientContactId,
+                ownerSigningKeyPair = ownerSigningKeyPair
+            ).getOrThrow()
     }
+
+    private suspend fun currentMemberKey(
+        groupId: String,
+        contactId: String
+    ): GroupMemberKeyEntity? =
+        groupSecurityManager
+            .findRemoteMemberKey(
+                groupId = groupId,
+                contactId = contactId
+            ).getOrThrow()
 
     private companion object {
         const val INITIAL_GROUP_EPOCH = 1

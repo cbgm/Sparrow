@@ -47,6 +47,11 @@ class GroupSecurityManager internal constructor(
     suspend fun findLocalRole(groupId: String): Result<String?> =
         runCatching { groupSecurityDao.findState(groupId)?.localRole }
 
+    suspend fun isLocalMembershipRetired(groupId: String): Result<Boolean> =
+        runCatching {
+            groupSecurityDao.findState(groupId)?.localRole == GROUP_LEFT_ROLE
+        }
+
     suspend fun isRemoteMemberIdentityCurrent(
         groupId: String,
         contactId: String,
@@ -103,6 +108,33 @@ class GroupSecurityManager internal constructor(
     suspend fun deleteLocalGroup(groupId: String): Result<Unit> =
         runCatching {
             require(groupId.isNotBlank()) { "Group ID must not be blank" }
+            groupKeyRepository.deleteGroup(groupId).getOrThrow()
+            groupSecurityDao.deleteGroup(groupId)
+        }
+
+    suspend fun retireLocalMembership(
+        groupId: String,
+        retiredAtEpochMilliseconds: Long
+    ): Result<Unit> =
+        runCatching {
+            require(groupId.isNotBlank()) { "Group ID must not be blank" }
+            require(retiredAtEpochMilliseconds >= 0L) { "Retirement timestamp must not be negative" }
+            groupKeyRepository.deleteGroup(groupId).getOrThrow()
+            val state = groupSecurityDao.findState(groupId) ?: return@runCatching
+            check(
+                groupSecurityDao.updateLocalRole(
+                    groupId = groupId,
+                    role = GROUP_LEFT_ROLE,
+                    updatedAtEpochMilliseconds = maxOf(state.updatedAtEpochMilliseconds, retiredAtEpochMilliseconds)
+                ) == 1
+            ) { "Group security state disappeared while local membership was retired" }
+        }
+
+    suspend fun clearRetiredMembershipBeforeRejoin(groupId: String): Result<Unit> =
+        runCatching {
+            require(groupId.isNotBlank()) { "Group ID must not be blank" }
+            val state = groupSecurityDao.findState(groupId) ?: return@runCatching
+            if (state.localRole != GROUP_LEFT_ROLE) return@runCatching
             groupKeyRepository.deleteGroup(groupId).getOrThrow()
             groupSecurityDao.deleteGroup(groupId)
         }

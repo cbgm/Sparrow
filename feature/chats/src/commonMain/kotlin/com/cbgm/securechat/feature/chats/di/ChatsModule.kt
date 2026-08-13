@@ -40,6 +40,7 @@ import com.cbgm.securechat.feature.chats.data.group.membership.GroupMembershipDe
 import com.cbgm.securechat.feature.chats.data.group.membership.GroupMembershipIdentity
 import com.cbgm.securechat.feature.chats.data.group.membership.GroupMembershipLock
 import com.cbgm.securechat.feature.chats.data.group.outgoing.GroupOutgoingMessageProcessor
+import com.cbgm.securechat.feature.chats.data.group.outgoing.GroupPacketBroadcaster
 import com.cbgm.securechat.feature.chats.data.group.protocol.GroupMembershipPacketProtocol
 import com.cbgm.securechat.feature.chats.data.group.protocol.GroupProtocolPayloadEncoder
 import com.cbgm.securechat.feature.chats.data.group.repository.GroupConversationRepositoryImpl
@@ -149,6 +150,7 @@ private fun org.koin.core.module.Module.registerGroupData() {
     singleOf(::GroupVerificationSnapshotSender)
     singleOf(::GroupVerificationCoordinator)
     singleOf(::GroupOutgoingMessageProcessor)
+    singleOf(::GroupPacketBroadcaster)
     singleOf(::GroupMembershipLock)
     singleOf(::GroupLocalDataCleaner)
     singleOf(::GroupMembershipIdentity)
@@ -283,7 +285,6 @@ private fun org.koin.core.module.Module.registerViewModels() {
             groupId = parameters.get(),
             observeConversation = get(),
             observeAdministration = get(),
-            observeVerification = get(),
             sendMessage = get(),
             markConversationRead = get(),
             retryMessage = get(),
@@ -309,6 +310,7 @@ private fun org.koin.core.module.Module.registerViewModels() {
             promoteGroupMember = get(),
             transferGroupAdminAndLeave = get(),
             observeGroupAdministration = get(),
+            getGroupLeaveRequirement = get(),
             leaveGroup = get()
         )
     }

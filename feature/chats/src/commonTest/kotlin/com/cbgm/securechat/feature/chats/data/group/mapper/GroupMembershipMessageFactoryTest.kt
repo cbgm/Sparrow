@@ -97,6 +97,23 @@ class GroupMembershipMessageFactoryTest {
     }
 
     @Test
+    fun membershipRestartMarkerIsHiddenControlState() {
+        val marker =
+            GroupMembershipMessageFactory.localMembershipStarted(
+                conversationId = "group-1",
+                referenceId = "invitation-2",
+                epoch = 5,
+                createdAtEpochMilliseconds = 500L
+            )
+
+        assertEquals("", marker.text)
+        assertEquals(
+            GroupMembershipMessageFactory.LOCAL_MEMBERSHIP_STARTED_TRANSPORT_MODE,
+            marker.transportMode
+        )
+    }
+
+    @Test
     fun localConversationDeletionMarkerIsHiddenControlState() {
         val marker =
             GroupMembershipMessageFactory.localConversationDeletedMarker(

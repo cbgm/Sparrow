@@ -6,5 +6,8 @@ import kotlinx.coroutines.flow.Flow
 class ObserveGroupMemberTypingUseCase(
     private val repository: GroupTypingRepository
 ) {
-    operator fun invoke(contactId: String): Flow<Boolean> = repository.observeMember(contactId)
+    operator fun invoke(
+        groupId: String,
+        contactId: String
+    ): Flow<Boolean> = repository.observeMember(groupId, contactId)
 }

@@ -17,7 +17,8 @@ fun GroupRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(conversationId) {
+    val newestMessageId = uiState.messages.firstOrNull()?.id
+    LaunchedEffect(conversationId, newestMessageId) {
         viewModel.markConversationRead()
     }
 

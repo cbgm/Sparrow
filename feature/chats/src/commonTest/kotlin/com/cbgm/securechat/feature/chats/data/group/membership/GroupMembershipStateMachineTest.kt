@@ -4,6 +4,7 @@ import com.cbgm.securechat.data.database.entity.GroupInvitationEntity
 import com.cbgm.securechat.feature.chats.data.group.invitation.GroupInvitationDirection
 import com.cbgm.securechat.feature.chats.data.group.invitation.GroupInvitationStatus
 import com.cbgm.securechat.feature.chats.domain.model.group.GroupConversationState
+import com.cbgm.securechat.feature.chats.domain.model.group.GroupLeaveRequirement
 import com.cbgm.securechat.feature.chats.domain.model.group.GroupMemberInvitationStatus
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -98,14 +99,49 @@ class GroupMembershipStateMachineTest {
             GroupConversationState.REMOVED,
             GroupMembershipStateMachine.conversationState(
                 invitations = removed,
-                hasLocalMembershipRemoval = true
+                isLocallyInactive = true
             )
         )
         assertEquals(
             GroupConversationState.READY,
             GroupMembershipStateMachine.conversationState(
                 invitations = removed,
-                hasLocalMembershipRemoval = false
+                isLocallyInactive = false
+            )
+        )
+    }
+
+    @Test
+    fun soleAdminMustPromoteWhenOtherMembersRemain() {
+        val requirement =
+            GroupMembershipStateMachine.leaveRequirement(
+                isLocalAdmin = true,
+                currentMemberContactIds = setOf("member-1", "member-2"),
+                currentAdminContactIds = emptySet()
+            )
+
+        assertEquals(
+            GroupLeaveRequirement.PromoteAdminFirst(setOf("member-1", "member-2")),
+            requirement
+        )
+    }
+
+    @Test
+    fun adminCanLeaveWhenAnotherAdminRemainsOrGroupIsEmpty() {
+        assertEquals(
+            GroupLeaveRequirement.CanLeave,
+            GroupMembershipStateMachine.leaveRequirement(
+                isLocalAdmin = true,
+                currentMemberContactIds = setOf("admin-2"),
+                currentAdminContactIds = setOf("admin-2")
+            )
+        )
+        assertEquals(
+            GroupLeaveRequirement.CanLeave,
+            GroupMembershipStateMachine.leaveRequirement(
+                isLocalAdmin = true,
+                currentMemberContactIds = emptySet(),
+                currentAdminContactIds = emptySet()
             )
         )
     }
@@ -177,6 +213,17 @@ class GroupMembershipStateMachineTest {
         assertEquals(GroupInvitationStatus.IDENTITY_READY, identityReady)
         assertEquals(GroupInvitationStatus.WELCOME_SENT, welcomeSent)
         assertEquals(GroupInvitationStatus.ACTIVE, active)
+    }
+
+    @Test
+    fun failedInvitationSendBecomesRetryableTerminalState() {
+        val failed =
+            GroupMembershipStateMachine.transition(
+                GroupInvitationStatus.INVITE_SENT.name,
+                GroupMembershipEvent.INVITE_SEND_FAILED
+            )
+
+        assertEquals(GroupInvitationStatus.FAILED, failed)
     }
 
     @Test

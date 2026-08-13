@@ -22,6 +22,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -70,6 +71,49 @@ class GroupSecurityManagerTest {
 
             assertNull(manager.isOwnedGroup(GROUP_ID).getOrThrow())
             assertNull(keyStorage.load(GROUP_ID, EPOCH).getOrThrow())
+        }
+
+    @Test
+    fun retiringMembershipDeletesContentKeyButKeepsRoutingKeysUntilRejoin() =
+        runTest {
+            val memberKey =
+                GroupMemberKeyEntity(
+                    groupId = GROUP_ID,
+                    epoch = EPOCH,
+                    contactId = REMOTE_CONTACT_ID,
+                    encryptionPublicKey = byteArrayOf(5),
+                    signingPublicKey = REMOTE_SIGNING_KEY,
+                    role = GROUP_ADMIN_ROLE
+                )
+            manager
+                .createOwnedGroup(
+                    groupId = GROUP_ID,
+                    title = "Group",
+                    createdAtEpochMilliseconds = 100L,
+                    memberPayloads = emptyList(),
+                    memberKeys = listOf(memberKey),
+                    recipients = emptyList(),
+                    localSigningKeyPair =
+                        LocalSigningKeyPair(
+                            publicKey = LOCAL_SIGNING_KEY,
+                            privateKey = LOCAL_SIGNING_KEY
+                        )
+                ).getOrThrow()
+
+            manager.retireLocalMembership(GROUP_ID, 200L).getOrThrow()
+
+            assertFalse(manager.isOwnedGroup(GROUP_ID).getOrThrow() ?: true)
+            assertNull(keyStorage.load(GROUP_ID, EPOCH).getOrThrow())
+            assertEquals(GROUP_LEFT_ROLE, dao.findState(GROUP_ID)?.localRole)
+            assertContentEquals(
+                REMOTE_SIGNING_KEY,
+                dao.findMemberKey(GROUP_ID, EPOCH, REMOTE_CONTACT_ID)?.signingPublicKey
+            )
+
+            manager.clearRetiredMembershipBeforeRejoin(GROUP_ID).getOrThrow()
+
+            assertNull(dao.findState(GROUP_ID))
+            assertNull(dao.findMemberKey(GROUP_ID, EPOCH, REMOTE_CONTACT_ID))
         }
 
     @Test
@@ -665,12 +709,13 @@ class GroupSecurityManagerTest {
                     member.contactId == contactId
             }
 
-        override suspend fun deleteEpochsBefore(
+        override suspend fun findLatestMemberKey(
             groupId: String,
-            epoch: Int
-        ) {
-            memberKeys.removeAll { member -> member.groupId == groupId && member.epoch < epoch }
-        }
+            contactId: String
+        ): GroupMemberKeyEntity? =
+            memberKeys
+                .filter { member -> member.groupId == groupId && member.contactId == contactId }
+                .maxByOrNull(GroupMemberKeyEntity::epoch)
 
         override suspend fun findMemberKeys(
             groupId: String,
@@ -687,6 +732,14 @@ class GroupSecurityManagerTest {
                     memberKeys.filter { member -> member.groupId == groupId && member.epoch == epoch }
                 }
             }
+
+        override suspend fun findAllCurrentMemberKeys(): List<GroupMemberKeyEntity> {
+            val currentState = state.value ?: return emptyList()
+            return memberKeys.filter { member ->
+                member.groupId == currentState.groupId &&
+                    member.epoch == currentState.currentEpoch
+            }
+        }
 
         override suspend fun updateLocalRole(
             groupId: String,

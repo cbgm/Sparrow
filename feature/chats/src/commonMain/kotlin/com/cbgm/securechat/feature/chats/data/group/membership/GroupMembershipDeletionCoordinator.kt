@@ -8,7 +8,9 @@ import com.cbgm.securechat.data.database.dao.GroupInvitationDao
 import com.cbgm.securechat.data.database.entity.GroupInvitationEntity
 import com.cbgm.securechat.feature.chats.data.group.invitation.GroupInvitationDirection
 import com.cbgm.securechat.feature.chats.data.group.invitation.GroupInvitationStatus
+import com.cbgm.securechat.feature.chats.data.group.outgoing.GroupPacketBroadcaster
 import com.cbgm.securechat.feature.chats.data.group.protocol.GroupMembershipPacketProtocol
+import com.cbgm.securechat.feature.chats.data.group.security.GROUP_LEFT_ROLE
 import com.cbgm.securechat.feature.chats.data.group.security.GroupSecurityManager
 import com.cbgm.securechat.feature.chats.data.group.storage.GroupLocalDataCleaner
 
@@ -19,6 +21,7 @@ internal class GroupMembershipDeletionCoordinator(
     private val protocolOutbox: ProtocolOutbox,
     private val membershipPacketProtocol: GroupMembershipPacketProtocol,
     private val groupSecurityManager: GroupSecurityManager,
+    private val packetBroadcaster: GroupPacketBroadcaster,
     private val administration: GroupMembershipAdministrationCoordinator,
     private val membershipLock: GroupMembershipLock,
     private val localDataCleaner: GroupLocalDataCleaner
@@ -26,9 +29,15 @@ internal class GroupMembershipDeletionCoordinator(
     suspend fun deleteGroupConversation(groupId: String): Result<Unit> =
         runCatching {
             require(groupId.isNotBlank()) { "Group ID must not be blank" }
-            val hasInstalledGroup = groupSecurityManager.findCurrentEpoch(groupId).getOrThrow() != null
-            if (hasInstalledGroup) {
-                administration.leaveGroup(groupId).getOrThrow()
+            val localRole = groupSecurityManager.findLocalRole(groupId).getOrThrow()
+            if (localRole != null) {
+                if (localRole != GROUP_LEFT_ROLE) {
+                    administration.leaveGroup(groupId).getOrThrow()
+                }
+                localDataCleaner.deleteConversationHistory(
+                    groupId = groupId,
+                    deletedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+                )
                 return@runCatching
             }
 
@@ -59,21 +68,22 @@ internal class GroupMembershipDeletionCoordinator(
                     ?: GroupConversationDeletedPacket.PENDING_GROUP_EPOCH
             val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
 
-            invitations
-                .filterNot { invitation -> invitation.status.isTerminalStatus() }
-                .forEach { invitation ->
-                    val packet =
-                        membershipPacketProtocol
-                            .createConversationDeleted(
-                                invitationId = invitation.invitationId,
-                                groupId = groupId,
-                                epoch = epoch,
-                                challenge = invitation.challenge,
-                                deletedAtEpochMilliseconds = now,
-                                ownerSigningKeyPair = signingKeyPair
-                            ).getOrThrow()
-                    protocolOutbox.enqueue(invitation.contactId, packet).getOrThrow()
-                }
+            val packetsByContactId =
+                invitations
+                    .filterNot { invitation -> invitation.status.isTerminalStatus() }
+                    .associate { invitation ->
+                        invitation.contactId to
+                            membershipPacketProtocol
+                                .createConversationDeleted(
+                                    invitationId = invitation.invitationId,
+                                    groupId = groupId,
+                                    epoch = epoch,
+                                    challenge = invitation.challenge,
+                                    deletedAtEpochMilliseconds = now,
+                                    ownerSigningKeyPair = signingKeyPair
+                                ).getOrThrow()
+                    }
+            packetBroadcaster.enqueueAll(packetsByContactId).getOrThrow()
 
             localDataCleaner.delete(groupId, now)
         }

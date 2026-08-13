@@ -56,25 +56,34 @@ class GroupMemberRemovedPacketHandler(
         packet: GroupMemberRemovedPacket,
         invitation: GroupInvitationEntity?
     ) {
-        val authorityIdentity =
-            contactDao.findPublicIdentityByContactId(context.contactId)
-                ?: error("Group admin identity was not found")
-        membershipPacketProtocol
-            .verifyMemberRemoved(
-                packet = packet,
-                expectedOwnerSigningPublicKey = authorityIdentity.signingPublicKey
-            ).getOrThrow()
-
         if (packet.epoch == GroupMemberRemovedPacket.PENDING_INVITATION_EPOCH) {
+            val authorityIdentity =
+                contactDao.findPublicIdentityByContactId(context.contactId)
+                    ?: error("Pending group invitation owner identity was not found")
+            membershipPacketProtocol
+                .verifyMemberRemoved(
+                    packet = packet,
+                    expectedOwnerSigningPublicKey = authorityIdentity.signingPublicKey
+                ).getOrThrow()
             validatePendingInvitationRemoval(context, packet, invitation)
             return
         }
 
+        val authorityMemberKey =
+            groupSecurityManager
+                .findRemoteMemberKey(packet.groupId, context.contactId)
+                .getOrThrow()
+                ?: error("Group removal sender is not part of the current epoch")
         groupSecurityManager
             .requireRemoteAdmin(
                 groupId = packet.groupId,
                 contactId = context.contactId,
-                signingPublicKey = authorityIdentity.signingPublicKey
+                signingPublicKey = authorityMemberKey.signingPublicKey
+            ).getOrThrow()
+        membershipPacketProtocol
+            .verifyMemberRemoved(
+                packet = packet,
+                expectedOwnerSigningPublicKey = authorityMemberKey.signingPublicKey
             ).getOrThrow()
     }
 

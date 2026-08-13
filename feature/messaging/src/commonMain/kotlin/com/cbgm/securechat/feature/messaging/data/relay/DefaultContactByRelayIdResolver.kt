@@ -10,6 +10,7 @@ import com.cbgm.securechat.feature.contacts.domain.model.Contact
 import com.cbgm.securechat.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.securechat.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.securechat.feature.messaging.domain.relay.ContactByRelayIdResolver
+import com.cbgm.securechat.feature.messaging.domain.relay.GroupRelayIdResolver
 import com.cbgm.securechat.feature.transport.relay.identity.RelayIdGenerator
 import kotlinx.coroutines.flow.first
 
@@ -17,7 +18,8 @@ class DefaultContactByRelayIdResolver(
     private val contactRepository: ContactRepository,
     private val contactDao: ContactDao,
     private val contactRelayIdDao: ContactRelayIdDao,
-    private val relayIdGenerator: RelayIdGenerator
+    private val relayIdGenerator: RelayIdGenerator,
+    private val groupRelayIdResolver: GroupRelayIdResolver
 ) : ContactByRelayIdResolver {
     override suspend fun resolveContactId(relayId: String): Result<String?> =
         runCatching {
@@ -57,7 +59,9 @@ class DefaultContactByRelayIdResolver(
             }
 
             if (!relayId.startsWith(BOOTSTRAP_ROUTING_ID_PREFIX)) {
-                return@runCatching null
+                return@runCatching groupRelayIdResolver
+                    .resolveContactId(relayId)
+                    .getOrThrow()
             }
 
             val now = SystemClock.nowEpochMilliseconds()

@@ -22,37 +22,35 @@ internal fun ConversationWithMessages.toGroupConversation(
     recipientStates: List<MessageRecipientStateEntity>,
     invitations: List<GroupInvitationEntity>
 ): GroupConversation {
+    val timeline = buildGroupLocalMembershipTimeline(messages, invitations)
+    val visibleMessages = timeline.visibleMessages
     val statesByMessageId = recipientStates.groupBy(MessageRecipientStateEntity::messageId)
     val groupState =
         GroupMembershipStateMachine.conversationState(
-            invitations = invitations,
-            hasLocalMembershipRemoval =
-                messages.any { message ->
-                    GroupMembershipMessageFactory.typeOf(message.transportMode).isLocalMembershipEnd()
-                }
+            invitations = timeline.currentInvitations,
+            isLocallyInactive = timeline.isLocallyInactive
         )
 
     return GroupConversation(
         id = conversation.id,
         title = conversation.title.orEmpty(),
         messages =
-            messages
-                .sortedBy(MessageEntity::createdAtEpochMilliseconds)
+            visibleMessages
                 .map { message ->
                     message.toGroupMessage(statesByMessageId[message.id].orEmpty())
                 },
         unreadCount =
-            messages.count { message ->
+            visibleMessages.count { message ->
                 !message.isMine &&
                     !message.readReceiptSent &&
                     message.contentStatus == MessageContentStatus.READABLE.name
             },
         participantContactIds = participantContactIds,
-        pendingParticipantCount = invitations.count { it.status.isPendingMembershipStatus() },
+        pendingParticipantCount = timeline.currentInvitations.count { it.status.isPendingMembershipStatus() },
         isReady = groupState == GroupConversationState.READY,
         state = groupState,
-        isIncomingInvitation = GroupMembershipStateMachine.isIncoming(invitations),
-        memberInvitationStates = GroupMembershipStateMachine.memberStates(invitations)
+        isIncomingInvitation = GroupMembershipStateMachine.isIncoming(timeline.currentInvitations),
+        memberInvitationStates = GroupMembershipStateMachine.memberStates(timeline.currentInvitations)
     )
 }
 
@@ -112,7 +110,3 @@ private fun String.isPendingMembershipStatus(): Boolean =
         this != GroupInvitationStatus.FAILED.name &&
         this != GroupInvitationStatus.REMOVED.name &&
         this != GroupInvitationStatus.GROUP_DELETED.name
-
-private fun com.cbgm.securechat.feature.chats.domain.model.group.ChatMessageType.isLocalMembershipEnd(): Boolean =
-    this == com.cbgm.securechat.feature.chats.domain.model.group.ChatMessageType.LOCAL_GROUP_MEMBERSHIP_REMOVED ||
-        this == com.cbgm.securechat.feature.chats.domain.model.group.ChatMessageType.LOCAL_GROUP_MEMBERSHIP_LEFT

@@ -3,7 +3,9 @@ package com.cbgm.securechat.feature.chats.presentation.details
 import androidx.lifecycle.viewModelScope
 import com.cbgm.securechat.core.ui.navigation.AppRoute
 import com.cbgm.securechat.core.ui.presentation.BaseViewModel
+import com.cbgm.securechat.feature.chats.domain.model.group.GroupLeaveRequirement
 import com.cbgm.securechat.feature.chats.domain.usecase.group.AddGroupMembersUseCase
+import com.cbgm.securechat.feature.chats.domain.usecase.group.GetGroupLeaveRequirementUseCase
 import com.cbgm.securechat.feature.chats.domain.usecase.group.LeaveGroupUseCase
 import com.cbgm.securechat.feature.chats.domain.usecase.group.ObserveGroupAdministrationUseCase
 import com.cbgm.securechat.feature.chats.domain.usecase.group.ObserveGroupVerificationUseCase
@@ -15,6 +17,7 @@ import com.cbgm.securechat.feature.chats.domain.usecase.group.VerifyGroupMemberU
 import com.cbgm.securechat.feature.chats.presentation.details.mapper.buildGroupVerificationSummary
 import com.cbgm.securechat.feature.chats.presentation.details.model.AddGroupMembersUiEvent
 import com.cbgm.securechat.feature.chats.presentation.details.model.GroupDetailsUiEvent
+import com.cbgm.securechat.feature.chats.presentation.details.model.GroupLeavePrompt
 import com.cbgm.securechat.feature.chats.presentation.details.model.GroupLeaveUiState
 import com.cbgm.securechat.feature.chats.presentation.details.model.GroupMemberManagementUiState
 import com.cbgm.securechat.feature.chats.presentation.details.model.GroupMemberVerificationState
@@ -44,6 +47,7 @@ class GroupVerificationViewModel(
     private val promoteGroupMember: PromoteGroupMemberUseCase,
     private val transferGroupAdminAndLeave: TransferGroupAdminAndLeaveUseCase,
     observeGroupAdministration: ObserveGroupAdministrationUseCase,
+    private val getGroupLeaveRequirement: GetGroupLeaveRequirementUseCase,
     private val leaveGroup: LeaveGroupUseCase
 ) : BaseViewModel() {
     private val verificationState = MutableStateFlow(GroupVerificationSelectionState())
@@ -57,6 +61,7 @@ class GroupVerificationViewModel(
         ) { groupState, administration ->
             buildGroupVerificationSummary(
                 isLocalAdmin = administration.isLocalAdmin || groupState.context.isLocalAdmin,
+                isLocalMemberActive = groupState.context.isLocalMemberActive,
                 ownerContactId = groupState.context.ownerContactId,
                 ownerDisplayName = groupState.ownerDisplayName,
                 ownInvitationId = groupState.context.ownInvitationId,
@@ -158,9 +163,9 @@ class GroupVerificationViewModel(
             GroupDetailsUiEvent.MemberPromotionConfirmed -> confirmMemberPromotion()
             GroupDetailsUiEvent.MemberPromotionDismissed -> dismissMemberPromotion()
             GroupDetailsUiEvent.LeaveGroupConfirmed -> leaveGroup()
-            GroupDetailsUiEvent.LeaveGroupDismissed -> dismissLeaveError()
-            GroupDetailsUiEvent.AddMembersClicked,
-            GroupDetailsUiEvent.LeaveGroupClicked -> Unit
+            GroupDetailsUiEvent.LeaveGroupDismissed -> dismissLeavePrompt()
+            GroupDetailsUiEvent.LeaveGroupClicked -> requestLeave()
+            GroupDetailsUiEvent.AddMembersClicked -> Unit
         }
     }
 
@@ -440,7 +445,7 @@ class GroupVerificationViewModel(
     private fun promoteMemberAndLeave(contactId: String) {
         if (memberManagementState.value.isUpdating || leaveState.value.isLeaving) return
         memberManagementState.update { state -> state.copy(isUpdating = true, errorMessage = null) }
-        leaveState.value = GroupLeaveUiState(isLeaving = true)
+        leaveState.update { state -> state.copy(isLeaving = true, errorMessage = null) }
         viewModelScope.launch {
             transferGroupAdminAndLeave(conversationId, contactId)
                 .onSuccess {
@@ -448,10 +453,36 @@ class GroupVerificationViewModel(
                     leaveState.value = GroupLeaveUiState(isLeaveRequested = true)
                     navigator.popBackStackTo(AppRoute.Main)
                 }.onFailure { error ->
-                    leaveState.value = GroupLeaveUiState()
+                    leaveState.update { state ->
+                        state.copy(
+                            prompt = GroupLeavePrompt.PROMOTE_ADMIN,
+                            isLeaving = false
+                        )
+                    }
                     memberManagementState.update { state ->
                         state.copy(isUpdating = false, errorMessage = error.message ?: "Group member could not be promoted")
                     }
+                }
+        }
+    }
+
+    private fun requestLeave() {
+        if (leaveState.value.isLeaving || leaveState.value.isLeaveRequested) return
+
+        viewModelScope.launch {
+            getGroupLeaveRequirement(conversationId)
+                .onSuccess { requirement ->
+                    val prompt =
+                        when (requirement) {
+                            GroupLeaveRequirement.CanLeave -> GroupLeavePrompt.CONFIRM
+                            is GroupLeaveRequirement.PromoteAdminFirst -> GroupLeavePrompt.PROMOTE_ADMIN
+                        }
+                    leaveState.value = GroupLeaveUiState(prompt = prompt)
+                }.onFailure { error ->
+                    leaveState.value =
+                        GroupLeaveUiState(
+                            errorMessage = error.message ?: "The group leave state could not be loaded"
+                        )
                 }
         }
     }
@@ -464,7 +495,13 @@ class GroupVerificationViewModel(
             return
         }
 
-        leaveState.value = GroupLeaveUiState(isLeaving = true)
+        leaveState.update { state ->
+            state.copy(
+                prompt = GroupLeavePrompt.CONFIRM,
+                isLeaving = true,
+                errorMessage = null
+            )
+        }
         viewModelScope.launch {
             leaveGroup(conversationId)
                 .onSuccess {
@@ -473,15 +510,16 @@ class GroupVerificationViewModel(
                 }.onFailure { error ->
                     leaveState.value =
                         GroupLeaveUiState(
+                            prompt = GroupLeavePrompt.CONFIRM,
                             errorMessage = error.message ?: "The group could not be left"
                         )
                 }
         }
     }
 
-    private fun dismissLeaveError() {
+    private fun dismissLeavePrompt() {
         if (!leaveState.value.isLeaving) {
-            leaveState.update { state -> state.copy(errorMessage = null) }
+            leaveState.value = GroupLeaveUiState()
         }
     }
 

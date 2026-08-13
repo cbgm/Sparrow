@@ -143,6 +143,7 @@ interface ChatDao {
         FROM messages
         WHERE conversationId = :conversationId
           AND transportMode = :transportMode
+        ORDER BY createdAtEpochMilliseconds DESC, id DESC
         LIMIT 1
         """
     )
@@ -247,6 +248,7 @@ interface ChatDao {
             SELECT messages.text
             FROM messages
             WHERE messages.conversationId = conversations.id
+              AND messages.transportMode != :localMembershipStartedTransportMode
             ORDER BY messages.createdAtEpochMilliseconds DESC, messages.id DESC
             LIMIT 1
         ) AS lastMessageText,
@@ -254,6 +256,7 @@ interface ChatDao {
             SELECT messages.createdAtEpochMilliseconds
             FROM messages
             WHERE messages.conversationId = conversations.id
+              AND messages.transportMode != :localMembershipStartedTransportMode
             ORDER BY messages.createdAtEpochMilliseconds DESC, messages.id DESC
             LIMIT 1
         ) AS lastMessageTimestamp,
@@ -304,6 +307,7 @@ interface ChatDao {
     )
     fun observeConversationSummaries(
         localDeletionTransportMode: String,
+        localMembershipStartedTransportMode: String,
         directChatAuthorizedState: String,
         directChatDeletedState: String
     ): Flow<List<ConversationSummary>>
