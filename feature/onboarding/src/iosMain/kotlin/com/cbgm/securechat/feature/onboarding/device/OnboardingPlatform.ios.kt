@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.onboarding.platform
+package com.cbgm.securechat.feature.onboarding.device
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect

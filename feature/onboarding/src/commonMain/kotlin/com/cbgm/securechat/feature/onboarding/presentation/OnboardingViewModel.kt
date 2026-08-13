@@ -1,7 +1,7 @@
-package com.cbgm.securechat.feature.onboarding.presentation.screen
+package com.cbgm.securechat.feature.onboarding.presentation
 
 import com.cbgm.securechat.core.ui.presentation.BaseViewModel
-import com.cbgm.securechat.feature.onboarding.platform.PermissionRequestResult
+import com.cbgm.securechat.feature.onboarding.device.PermissionRequestResult
 import com.cbgm.securechat.feature.onboarding.presentation.model.OnboardingPage
 import com.cbgm.securechat.feature.onboarding.presentation.model.OnboardingUiEvent
 import com.cbgm.securechat.feature.onboarding.presentation.model.OnboardingUiState

@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.onboarding.presentation.screen.pages
+package com.cbgm.securechat.feature.onboarding.presentation.pages
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -14,7 +14,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.securechat.core.ui.component.SecureChatApprovalButton
 import com.cbgm.securechat.core.ui.theme.SecureChatTheme
 import com.cbgm.securechat.core.ui.theme.spacing
-import com.cbgm.securechat.feature.onboarding.presentation.screen.pages.component.ListingRow
+import com.cbgm.securechat.feature.onboarding.presentation.pages.component.ListingRow
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.base_continue_action
 import com.cbgm.securechat.resources.feature_onboarding_contacts_stay_local

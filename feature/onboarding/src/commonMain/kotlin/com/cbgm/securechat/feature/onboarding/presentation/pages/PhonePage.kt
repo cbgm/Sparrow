@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.onboarding.presentation.screen.pages
+package com.cbgm.securechat.feature.onboarding.presentation.pages
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer

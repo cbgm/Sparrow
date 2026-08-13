@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.onboarding.platform
+package com.cbgm.securechat.feature.onboarding.device
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -64,10 +64,10 @@ actual fun OnboardingPermissionRequester(
 
             onResult(
                 PermissionRequestResult(
-                /*
-                 * Treat contacts as granted only when the app can
-                 * both check for duplicates and insert contacts.
-                 */
+                    /*
+                     * Treat contacts as granted only when the app can
+                     * both check for duplicates and insert contacts.
+                     */
                     contactsGranted =
                         contactsReadGranted &&
                             contactsWriteGranted,

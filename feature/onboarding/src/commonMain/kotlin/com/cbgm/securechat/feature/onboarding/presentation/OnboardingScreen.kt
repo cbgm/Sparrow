@@ -33,10 +33,10 @@ import com.cbgm.securechat.feature.identity.presentation.model.IdentityUiState
 import com.cbgm.securechat.feature.onboarding.presentation.model.OnboardingPage
 import com.cbgm.securechat.feature.onboarding.presentation.model.OnboardingUiEvent
 import com.cbgm.securechat.feature.onboarding.presentation.model.OnboardingUiState
-import com.cbgm.securechat.feature.onboarding.presentation.screen.pages.PermissionsPage
-import com.cbgm.securechat.feature.onboarding.presentation.screen.pages.PhonePage
-import com.cbgm.securechat.feature.onboarding.presentation.screen.pages.PrivacyPage
-import com.cbgm.securechat.feature.onboarding.presentation.screen.pages.WelcomePage
+import com.cbgm.securechat.feature.onboarding.presentation.pages.PermissionsPage
+import com.cbgm.securechat.feature.onboarding.presentation.pages.PhonePage
+import com.cbgm.securechat.feature.onboarding.presentation.pages.PrivacyPage
+import com.cbgm.securechat.feature.onboarding.presentation.pages.WelcomePage
 import com.cbgm.securechat.resources.Res
 import com.cbgm.securechat.resources.base_app_name
 import com.cbgm.securechat.resources.base_tagline
