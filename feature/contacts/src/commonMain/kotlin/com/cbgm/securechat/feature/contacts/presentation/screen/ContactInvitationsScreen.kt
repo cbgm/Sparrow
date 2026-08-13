@@ -75,7 +75,6 @@ fun ContactInvitationsScreen(
     invitations: List<PendingContactInvitation>,
     processingInvitationId: String?,
     snackbarHostState: SnackbarHostState,
-    onClose: () -> Unit,
     onUiEvent: (ContactInvitationUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -93,7 +92,7 @@ fun ContactInvitationsScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onClose) {
+                    IconButton(onClick = { onUiEvent(ContactInvitationUiEvent.CloseClicked) }) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = stringResource(Res.string.feature_contacts_close_invitations)
