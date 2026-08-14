@@ -13,6 +13,7 @@ $outputPath = [System.IO.Path]::GetFullPath((Join-Path $repositoryRoot $OutputDi
 $stagingRoot = Join-Path ([System.IO.Path]::GetTempPath()) "securechat-community-node-bundle"
 $bundleRoot = Join-Path $stagingRoot "securechat-community-node"
 $communityNodeRoot = Join-Path $repositoryRoot "server/community-node"
+$communityNodeDocumentation = Join-Path $repositoryRoot "docs/server/community-node.md"
 
 if ($ImagePrefix -notmatch '^[a-z0-9.-]+(?:/[a-z0-9._-]+)+$') {
     throw "ImagePrefix is not a valid lowercase container-image prefix."
@@ -31,8 +32,7 @@ $bundleFiles = @(
     "Start-SecureChatNode.cmd",
     "bootstrap-community-node.sh",
     "start-securechat-node.sh",
-    "Start-SecureChatNode.command",
-    "README.md"
+    "Start-SecureChatNode.command"
 )
 
 Remove-Item -LiteralPath $stagingRoot -Recurse -Force -ErrorAction SilentlyContinue
@@ -48,6 +48,15 @@ foreach ($relativePath in $bundleFiles) {
 
     Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $bundleRoot $relativePath) -Force
 }
+
+if (-not (Test-Path -LiteralPath $communityNodeDocumentation -PathType Leaf)) {
+    throw "Missing central community-node documentation: $communityNodeDocumentation"
+}
+
+Copy-Item `
+    -LiteralPath $communityNodeDocumentation `
+    -Destination (Join-Path $bundleRoot "README.md") `
+    -Force
 
 [System.IO.File]::WriteAllLines(
     (Join-Path $bundleRoot "securechat.conf"),

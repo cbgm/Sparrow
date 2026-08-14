@@ -49,7 +49,7 @@ Those pages use relative links and therefore work in LAN and public deployments.
 
 ## Documentation location
 
-`README.md` at repository root is the only project Markdown documentation kept outside `docs/`. Architecture, server, feature, security, API and development documentation is centralized here so there is one source of truth.
+`README.md` at repository root is the only project Markdown documentation kept outside `docs/`. `server/secrets/placeholder.md` is not documentation; it only keeps the otherwise-empty secrets directory tracked by Git. Architecture, server, feature, security, API and development documentation is centralized here so there is one source of truth.
 
 ## Architecture source of truth
 

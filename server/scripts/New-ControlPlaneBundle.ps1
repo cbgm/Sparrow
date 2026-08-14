@@ -17,6 +17,7 @@ $outputPath = [System.IO.Path]::GetFullPath((Join-Path $repositoryRoot $OutputDi
 $stagingRoot = Join-Path ([System.IO.Path]::GetTempPath()) "securechat-control-plane-bundle"
 $bundleRoot = Join-Path $stagingRoot "securechat-control-plane"
 $controlPlaneRoot = Join-Path $repositoryRoot "server/control-plane"
+$controlPlaneDocumentation = Join-Path $repositoryRoot "docs/server/control-plane.md"
 $bootstrapSource = Join-Path $PSScriptRoot "Bootstrap-ControlPlane.Bundle.ps1"
 
 if ($ImagePrefix -notmatch '^[a-z0-9.-]+(?:/[a-z0-9._-]+)+$') {
@@ -37,8 +38,7 @@ foreach ($relativePath in @(
     "docker-compose.release.yml",
     "docker-compose.production.yml",
     "Caddyfile",
-    "index.html",
-    "README.md"
+    "index.html"
 )) {
     $sourcePath = Join-Path $controlPlaneRoot $relativePath
 
@@ -48,6 +48,15 @@ foreach ($relativePath in @(
 
     Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $bundleRoot $relativePath) -Force
 }
+
+if (-not (Test-Path -LiteralPath $controlPlaneDocumentation -PathType Leaf)) {
+    throw "Missing central control-plane documentation: $controlPlaneDocumentation"
+}
+
+Copy-Item `
+    -LiteralPath $controlPlaneDocumentation `
+    -Destination (Join-Path $bundleRoot "README.md") `
+    -Force
 
 if (-not (Test-Path -LiteralPath $bootstrapSource -PathType Leaf)) {
     throw "Missing control-plane bootstrap source: $bootstrapSource"

@@ -48,6 +48,7 @@ Update the closest handwritten document when behavior/configuration changes. Kee
 Keep project documentation centralized:
 
 - `README.md` at the repository root is the only project Markdown documentation outside `docs/`;
+- `server/secrets/placeholder.md` is a non-documentation placeholder whose only purpose is to keep the empty secrets directory tracked by Git;
 - all architecture, feature, server, operations, security, API and development documentation belongs under `docs/`;
 - do not add module-local `README.md` or `ARCHITECTURE.md` files;
 - update `mkdocs.yml` when adding a user-facing documentation page;
