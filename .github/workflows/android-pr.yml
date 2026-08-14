@@ -2,7 +2,7 @@ name: Android PR Check
 
 on:
   pull_request:
-    branches: [ "develop" ]
+    branches: [ "develop", "master" ]
   workflow_dispatch:
 
 permissions:
