@@ -1,13 +1,5 @@
 import com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING
 
-val isMacOs =
-    System
-        .getProperty("os.name")
-        .startsWith(
-            prefix = "Mac",
-            ignoreCase = true
-        )
-
 plugins {
     alias(libs.plugins.sparrow.kmp.compose.feature)
     alias(libs.plugins.sparrow.kmp.serialization)
@@ -23,7 +15,7 @@ buildkonfig {
             STRING,
             "CONTROL_PLANE_DIRECTORY_URL",
             localProperties.get(
-                key = "controlPlaneDirectoryUrl",
+                key = "CONTROL_PLANE_DIRECTORY_URL",
                 defaultValue = ""
             ),
             const = true
@@ -32,17 +24,6 @@ buildkonfig {
 }
 
 kotlin {
-    if (isMacOs) {
-        listOf(
-            iosArm64(),
-            iosSimulatorArm64()
-        ).forEach { target ->
-            target.binaries.framework {
-                baseName = "Sparrow"
-                isStatic = true
-            }
-        }
-    }
 
     android {
         namespace = "com.cbgm.sparrow.shared"

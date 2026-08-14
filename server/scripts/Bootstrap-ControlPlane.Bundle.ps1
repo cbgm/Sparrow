@@ -525,127 +525,6 @@ function Ensure-Docker {
     throw "Docker Desktop did not become ready."
 }
 
-function Get-NodeRegistryImageReference {
-    param([hashtable]$Config)
-
-    return "$($Config['SPARROW_IMAGE_PREFIX'])-node-registry:$($Config['SPARROW_IMAGE_TAG'])"
-}
-
-function Find-LegacyRegistryIdentityVolume {
-    $volumeNames = @(& $script:Docker volume ls --format "{{.Name}}" 2>$null)
-    $knownVolumes = @(
-        "sparrow-control-plane_registry-identity",
-        "control-plane_registry-identity"
-    )
-
-    foreach ($volume in $knownVolumes) {
-        if ($volumeNames -contains $volume) {
-            return $volume
-        }
-    }
-
-    return $null
-}
-
-function Export-LegacyRegistryRoot {
-    param(
-        [Parameter(Mandatory = $true)][string]$Image,
-        [Parameter(Mandatory = $true)][string]$Destination
-    )
-
-    $volume = Find-LegacyRegistryIdentityVolume
-    if ([string]::IsNullOrWhiteSpace($volume)) {
-        return $false
-    }
-
-    Write-Detail "Migrating the existing registry trust root from Docker volume $volume."
-    $output = @(
-        & $script:Docker run `
-            --rm `
-            --entrypoint /bin/cat `
-            -v "${volume}:/legacy:ro" `
-            $Image `
-            /legacy/registry.identity 2>&1
-    )
-
-    if ($LASTEXITCODE -ne 0 -or $output.Count -eq 0) {
-        Write-Log "Existing registry root could not be exported from $volume."
-        return $false
-    }
-
-    [System.IO.File]::WriteAllLines(
-        $Destination,
-        $output,
-        [System.Text.UTF8Encoding]::new($false)
-    )
-    return $true
-}
-
-function Ensure-RegistryAuthority {
-    param([hashtable]$Config)
-
-    $authorityIdentityPath = Join-Path $secretsDirectory "registry-authority.identity"
-    $authorityCertificatePath = Join-Path $secretsDirectory "registry-authority-certificate.json"
-    $rootIdentityPath = Join-Path $secretsDirectory "registry-root.identity"
-    $hasAuthorityIdentity = Test-Path -LiteralPath $authorityIdentityPath -PathType Leaf
-    $hasAuthorityCertificate = Test-Path -LiteralPath $authorityCertificatePath -PathType Leaf
-
-    if ($hasAuthorityIdentity -and $hasAuthorityCertificate) {
-        return
-    }
-    if ($hasAuthorityIdentity -or $hasAuthorityCertificate) {
-        throw "Registry authority identity and certificate must either both exist or both be absent."
-    }
-
-    $image = Get-NodeRegistryImageReference -Config $Config
-    Set-LiveStatus "Preparing registry signing authority..."
-    Write-Detail "Pulling registry image required for one-time authority provisioning."
-    & $script:Docker pull $image 2>&1 | ForEach-Object { Write-Detail $_.ToString() }
-    if ($LASTEXITCODE -ne 0) {
-        throw "Could not pull the node-registry image required for authority provisioning."
-    }
-
-    $rootWasMigrated = $false
-    if (-not (Test-Path -LiteralPath $rootIdentityPath -PathType Leaf)) {
-        $rootWasMigrated = Export-LegacyRegistryRoot -Image $image -Destination $rootIdentityPath
-    }
-    if (-not (Test-Path -LiteralPath $rootIdentityPath -PathType Leaf)) {
-        throw (
-            "Registry authority is not provisioned. Copy the existing Sparrow registry-root.identity " +
-            "into the secrets folder once, or copy registry-authority.identity and " +
-            "registry-authority-certificate.json from another trusted control plane."
-        )
-    }
-
-    $dockerSecretsPath = $secretsDirectory.Replace('\', '/')
-    try {
-        & $script:Docker run `
-            --rm `
-            --entrypoint java `
-            -v "${dockerSecretsPath}:/secrets" `
-            $image `
-            -cp "/app/lib/*" `
-            com.cbgm.sparrow.server.registry.RegistryAuthorityProvisioningCli `
-            /secrets/registry-root.identity `
-            /secrets/registry-authority.identity `
-            /secrets/registry-authority-certificate.json 2>&1 |
-            ForEach-Object { Write-Detail $_.ToString() }
-        if ($LASTEXITCODE -ne 0) {
-            throw "Registry authority provisioning failed."
-        }
-    } finally {
-        if ($rootWasMigrated -and (Test-Path -LiteralPath $rootIdentityPath -PathType Leaf)) {
-            Remove-Item -LiteralPath $rootIdentityPath -Force
-            Write-Detail "Removed the temporary migrated root identity after authority provisioning."
-        }
-    }
-
-    if (-not (Test-Path -LiteralPath $authorityIdentityPath -PathType Leaf) -or
-        -not (Test-Path -LiteralPath $authorityCertificatePath -PathType Leaf)) {
-        throw "Registry authority provisioning did not create the required files."
-    }
-}
-
 function Find-FirebaseCredentials {
     $candidate = Join-Path $secretsDirectory "firebase-admin.json"
 
@@ -1077,7 +956,6 @@ try {
     $pushToken = (Get-Content $pushTokenPath -Raw).Trim()
 
     $firebaseCredentials = Find-FirebaseCredentials
-    Ensure-RegistryAuthority -Config $config
 
     $siteAddress = if ($mode -eq "public") { $publicDomain } else { ":80" }
     $runtime = @(
@@ -1088,8 +966,6 @@ try {
         "CONTROL_PLANE_SITE_ADDRESS=$siteAddress",
         "CONTROL_PLANE_DOMAIN=$publicDomain",
         "FIREBASE_ADMIN_CREDENTIALS=$($firebaseCredentials.Replace('\','/'))",
-        "REGISTRY_AUTHORITY_IDENTITY_FILE=./secrets/registry-authority.identity",
-        "REGISTRY_AUTHORITY_CERTIFICATE_FILE=./secrets/registry-authority-certificate.json",
         "NODE_REGISTRY_DATABASE_PASSWORD=$registryPassword",
         "PRESENCE_REDIS_PASSWORD=$presencePassword",
         "PUSH_DATABASE_PASSWORD=$pushPassword",
@@ -1159,15 +1035,6 @@ try {
             -Password $pushPassword
 
         Reset-ObsoletePushSchemaIfNeeded
-
-        Set-ProgressValue -Value 80
-        Set-Status "Preparing registry signing storage..."
-        Invoke-Compose -Arguments @(
-            "run",
-            "--rm",
-            "--no-deps",
-            "registry-signing-init"
-        )
 
         Set-ProgressValue -Value 84
         Set-Status "Starting Sparrow services..."

@@ -26,12 +26,11 @@ class SignedDirectoryControlPlaneCandidateVerifier(
         }
 
     private suspend fun verifySignedDirectory(baseUrl: String) {
-        val trustedRootNodeId =
-            requireNotNull(transportConfig.trustedRegistryRootNodeId) {
-                "Control-plane discovery requires a pinned registry root"
-            }
         val encodedDirectory = nodeDirectorySource.fetch(baseUrl).getOrThrow()
         val signedDirectory = json.decodeFromString<SignedNodeDirectory>(encodedDirectory)
+        val trustedRootNodeId =
+            transportConfig.trustedRegistryRootNodeId
+                ?: verifier.rootNodeId(signedDirectory).getOrThrow()
         verifier
             .verify(
                 signedDirectory = signedDirectory,

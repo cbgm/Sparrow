@@ -5,7 +5,6 @@ import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningPublicKeyProvider
 import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
 import com.cbgm.sparrow.core.protocol.transport.OutgoingWireSender
-import com.cbgm.sparrow.core.security.RegistryTrustRoot
 import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
 import com.cbgm.sparrow.core.transport.ControlPlaneDirectorySynchronizer
 import com.cbgm.sparrow.core.transport.ControlPlaneHealthMonitor
@@ -55,9 +54,7 @@ import org.koin.dsl.module
 val transportModule =
     module {
         single {
-            TransportConfig(
-                trustedRegistryRootNodeId = RegistryTrustRoot.NODE_ID
-            )
+            TransportConfig()
         }
 
         registerPlatformNodeDirectoryCache()

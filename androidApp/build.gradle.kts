@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
@@ -9,6 +11,13 @@ if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
 }
 
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use { load(it) }
+    }
+}
+
 val appVersionCode =
     providers
         .gradleProperty("appVersionCode")
@@ -18,17 +27,6 @@ val appVersionName =
     providers
         .gradleProperty("appVersionName")
         .getOrElse("1.0")
-val releaseStoreFile = providers.gradleProperty("releaseStoreFile").orNull
-val releaseStorePassword = providers.gradleProperty("releaseStorePassword").orNull
-val releaseKeyAlias = providers.gradleProperty("releaseKeyAlias").orNull
-val releaseKeyPassword = providers.gradleProperty("releaseKeyPassword").orNull
-val hasReleaseSigningConfiguration =
-    listOf(
-        releaseStoreFile,
-        releaseStorePassword,
-        releaseKeyAlias,
-        releaseKeyPassword
-    ).all { value -> !value.isNullOrBlank() }
 
 android {
     namespace = "com.cbgm.sparrow"
@@ -63,13 +61,19 @@ android {
     }
 
     signingConfigs {
-        if (hasReleaseSigningConfiguration) {
-            create("release") {
-                storeFile = file(requireNotNull(releaseStoreFile))
-                storePassword = requireNotNull(releaseStorePassword)
-                keyAlias = requireNotNull(releaseKeyAlias)
-                keyPassword = requireNotNull(releaseKeyPassword)
+        create("release") {
+            val keystorePath = localProperties.getProperty("KEY_STORE_FILE") ?: ""
+
+            storeFile = when {
+                keystorePath.isEmpty() -> null
+                // If it is a full local Windows/Mac path, use it directly
+                File(keystorePath).isAbsolute -> File(keystorePath)
+                // If it's a simple filename (like on GitHub Actions), look in the root folder
+                else -> rootProject.file(keystorePath)
             }
+            storePassword = localProperties.getProperty("KEY_STORE_PASSWORD") ?: ""
+            keyAlias = localProperties.getProperty("KEY_ALIAS") ?: ""
+            keyPassword = localProperties.getProperty("KEY_PASSWORD") ?: ""
         }
     }
 
@@ -81,7 +85,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.findByName("release")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
