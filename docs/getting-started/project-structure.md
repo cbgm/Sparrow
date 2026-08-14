@@ -1,211 +1,94 @@
-# Project Structure
+# Project structure
 
-SecureChat uses Gradle modules as architecture boundaries and packages as internal layers. The
-generated [module catalog](../generated/modules.md) is the source of truth for the current module
-list and dependencies.
+Sparrow is modular. The easiest way to understand a change is to first find which module owns the behavior.
 
-## Repository layout
-
-```text
-SecureChat/
-├── androidApp/              # Android entry point and runtime service startup
-├── shared/                  # shared Compose application shell
-├── startup/                 # startup initialization and UI
-├── navigation/              # cross-feature routes and graph
-├── core/
-│   ├── crypto/              # transport/identity crypto and codecs
-│   ├── protocol/            # packets and transport-independent ports
-│   └── ui/                  # reusable Compose UI
-├── data/
-│   └── database/            # Room entities, DAOs, and persistent outbox
-├── feature/
-│   ├── chats/
-│   ├── contactimport/
-│   ├── contacts/
-│   ├── identity/
-│   ├── messaging/
-│   ├── onboarding/
-│   ├── settings/
-│   └── transport/
-├── relay/                   # standalone Ktor relay server
-├── build-logic/             # included Gradle build and convention plugins
-├── quality/
-│   └── detekt-rules/        # custom static-analysis rules
-├── config/                  # tool configuration
-├── docs/                    # MkDocs handbook and generated reference
-├── gradle/                  # wrapper and version catalog
-└── .github/                 # CI and documentation publishing
-```
-
-The grouping projects `:core`, `:data`, and `:feature` may appear in generated architecture output.
-Behavior belongs in their child modules or appropriate root sources, not in a grouping module by
-default.
-
-## Application composition modules
-
-### `:androidApp`
-
-Contains Android-specific entry points: `SecureChatApplication`, the Activity, manifest, and Koin
-assembly. It starts relay runtime services after local identity setup. Business logic remains in
-feature or core modules.
-
-### `:shared`
-
-Contains the shared Compose application shell and common app-level UI composition.
-
-### `:startup`
-
-Contains `AppInitializer`, startup result/state, `StartupViewModel`, `StartupRoute`,
-`StartupScreen`, and screen components. It is a standalone module, not a package inside identity.
-
-### `:navigation`
-
-Contains routes and the navigation graph. It coordinates feature entry points without implementing
-feature business rules.
-
-## Core modules
-
-### `:core`
-
-Small reusable primitives such as ID generation and time.
-
-### `:core:crypto`
-
-Key operations, identity acknowledgement crypto, safety numbers, transport encryption/decryption,
-`EncryptedTransportPayload`, and `TransportPayloadCodec`.
-
-### `:core:protocol`
-
-`SecureChatPacket` types, `PacketCodec`, typed incoming-handler contracts, persistent-outbox
-contracts/state machine, identity provider ports, phone-number ports, and `OutgoingWireSender`.
-
-It must remain independent of Ktor, Room, Compose, and feature repositories.
-
-### `:core:ui`
-
-Reusable Compose components, theming, and design-system utilities.
-
-## Data
-
-### `:data:database`
-
-Owns Room entities, DAOs, database initialization, and `DefaultProtocolOutbox`. Domain interfaces
-usually live in the feature that owns the behavior; this module supplies shared persistence
-infrastructure.
-
-## Feature modules
-
-### `:feature:chats`
-
-Conversations, direct/group messages, visible delivery state, receipts, typed chat packet handlers,
-and chat UI. See [Chats](../features/chats.md).
-
-### `:feature:contacts`
-
-Contacts, phone numbers, contact merge, remote identity exchange, verification, and reusable
-contacts UI. See [Contacts](../features/contacts.md).
-
-### `:feature:identity`
-
-Local identity lifecycle, identity storage ports/adapters, identity sharing, and setup/share UI.
-See [Identity](../features/identity.md).
-
-### `:feature:messaging`
-
-UI-less application orchestration:
-
-```text
-application/   incoming relay and outgoing outbox workflows
-domain/        contact/relay resolution ports
-data/          resolver and typing adapters
-di/            Koin wiring
-```
-
-It connects chats, contacts, crypto, protocol, database, and transport. See
-[Messaging Boundary](../architecture/messaging-boundary.md).
-
-### `:feature:transport`
-
-Relay IDs, connection lifecycle, WebSocket frames, outgoing wire adapter, and platform HTTP clients.
-It moves opaque payloads. See [Transport](../features/transport.md).
-
-### Other features
+## Client modules
 
 | Module | Responsibility |
 |---|---|
-| `:feature:contactimport` | Platform address-book implementations |
-| `:feature:onboarding` | Onboarding flow |
-| `:feature:settings` | Settings behavior and presentation |
+| `:androidApp` | Thin Android application host, manifest, release signing/minification |
+| `:shared` | Shared Compose root, `AppViewModel`, common DI, BuildKonfig |
+| `:startup` | Startup state/UI |
+| `:navigation` | App routes and navigation graphs |
+| `:core` | IDs, time, logging, small common contracts |
+| `:core:crypto` | Libsodium implementations and crypto abstractions |
+| `:core:protocol` | Packets, codecs, outbox/handler/transport contracts |
+| `:core:ui` | Reusable Compose design/navigation utilities |
+| `:data:database` | Room database, entities, DAOs, durable outbox |
+| `:feature:identity` | Local identity creation/storage/sharing |
+| `:feature:contacts` | Contacts, invitations, identity exchange, verification/blocking |
+| `:feature:contactimport` | Platform contact/QR import integration |
+| `:feature:chats` | Direct + Group conversation domain/data/UI |
+| `:feature:messaging` | Cross-feature incoming/outgoing/mailbox orchestration |
+| `:feature:transport` | Control Plane discovery, node selection, WebSocket, presence, mailbox/push gateways |
+| `:feature:onboarding` | Onboarding |
+| `:feature:settings` | Settings and Control Plane management UI |
+| `:notification` | App visibility, Android notification/push workers |
+| `:resources` | Shared resources |
 
-## Relay server
+## Server modules
 
-`:relay` is a JVM/Ktor application, not a client feature. It owns registration, active connection
-tracking, pending-envelope storage, and opaque routing. The current pending store is in-memory.
+| Module | Responsibility |
+|---|---|
+| `:server:node-registry` | Signed healthy-node directory |
+| `:server:presence-directory` | Temporary routing ID -> node/connection routes |
+| `:server:push` | Android device registrations and wake-up/pending fallback storage |
+| `:server:gateway` | Client WebSockets and local node ingress/egress |
+| `:server:federation` | Cross-node routing, retry and durable outbound queue |
+| `:server:mailbox` | Recipient-selected durable offline encrypted envelopes |
+| `:server:protocol` | Server wire models |
+| `:server:security` | Node signatures, replay protection, routing IDs, rate limits |
+| `:server:persistence` | Shared persistence helpers |
+| `:server:observability` | Health/readiness/metrics/request IDs |
 
-## Standard feature layout
+## Feature-internal Clean Architecture
 
-A user-visible feature commonly uses:
+Typical feature packages:
 
 ```text
-feature/<name>/.../feature/<name>/
-├── domain/
-│   ├── model/
-│   ├── repository/
-│   └── usecase/
-├── data/
-│   ├── mapper/
-│   └── repository/
-├── presentation/
-│   ├── model/
-│   ├── screen/
-│   └── component/
-└── di/
+presentation/     Screens, routes, ViewModels, UI models/mappers/components
+domain/model/     Domain models and state machines
+domain/repository Repository contracts
+domain/usecase/   One-purpose use cases
+data/repository/  Repository implementations
+data/...          Mappers, storage, packet processing, protocol/security helpers
+di/               Koin wiring
 ```
 
-Use only packages needed by the feature. Long-running, UI-less orchestration may add
-`application/`. Infrastructure features such as transport need not invent presentation or use-case
-packages.
+ViewModels call use cases, not DAOs or transport implementations.
 
-Screen-specific components should live under their screen package. Components shared by multiple
-screens belong under `presentation/component`.
+## Direct vs Group
 
-## Source sets
-
-Kotlin Multiplatform modules commonly contain:
+`feature/chats` deliberately contains separate trees:
 
 ```text
-src/
-├── commonMain/
-├── commonTest/
-├── androidMain/
-├── androidDeviceTest/
-├── iosMain/
-└── platform-specific tests
+data/direct/...
+data/group/...
+domain/model/direct/...
+domain/model/group/...
+domain/repository/direct/...
+domain/repository/group/...
+domain/usecase/direct/...
+domain/usecase/group/...
+presentation/direct/...
+presentation/group/...
 ```
 
-Not every module contains every source set. Platform APIs belong in platform source sets behind
-common interfaces.
+Shared code is limited to real shared boundaries such as packet decoding/routing, overview aggregation and common
+wire infrastructure.
 
-## Build and documentation infrastructure
+## Platform source sets
 
-`build-logic` supplies convention plugins and architecture-report tasks. `quality/detekt-rules`
-contains project-specific Detekt checks. `docs/generated/` is produced from Gradle and must not be
-edited manually.
+KMP modules can contain:
 
-After module or dependency changes:
+- `commonMain`: shared implementation;
+- `androidMain`: Android-only implementations;
+- `iosMain`: iOS-only implementations;
+- matching test source sets.
 
-```bash
-./gradlew architectureReport
-./gradlew verifyArchitectureReport
-```
+The project currently has several iOS implementations, but there are not enough to make the iOS app usable.
 
-## Placement checklist
+## Generated module reference
 
-Before adding a class:
-
-1. Which module owns the business decision?
-2. Is the class a domain rule, application workflow, data adapter, or presentation element?
-3. Can the dependency point toward a stable port instead of another implementation?
-4. Is the code platform-independent enough for `commonMain`?
-5. Does an existing shared component or core contract already cover it?
-6. Will the new dependency appear correctly in the generated architecture report?
+For exact current Gradle dependencies, use [Generated architecture](../generated/architecture.md). Regenerate it
+after dependency/module changes rather than editing generated Markdown manually.

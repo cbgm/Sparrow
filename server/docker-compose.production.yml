@@ -1,0 +1,228 @@
+name: sparrow-network
+
+x-hardened-service: &hardened-service
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      SPARROW_DOMAIN: ${SPARROW_DOMAIN:?Set SPARROW_DOMAIN in server/.env.production}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - edge
+    depends_on:
+      node-registry:
+        condition: service_healthy
+      mailbox:
+        condition: service_healthy
+      federation:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+      push:
+        condition: service_healthy
+      presence-directory:
+        condition: service_healthy
+
+  node-registry-database:
+    ports: !reset []
+    environment:
+      POSTGRES_PASSWORD: !reset null
+      POSTGRES_PASSWORD_FILE: /run/secrets/node-registry-database-password
+    secrets:
+      - node-registry-database-password
+    networks:
+      - backend
+
+  node-registry:
+    <<: *hardened-service
+    ports: !reset []
+    environment:
+      TRUST_PROXY_HEADERS: "true"
+      NODE_REGISTRY_DATABASE_PASSWORD: !reset null
+      NODE_REGISTRY_DATABASE_PASSWORD_FILE: /run/secrets/node-registry-database-password
+    secrets:
+      - node-registry-database-password
+    networks:
+      - edge
+      - backend
+
+  presence-redis:
+    ports: !reset []
+    command:
+      - /bin/sh
+      - -ec
+      - >-
+        exec redis-server --appendonly yes --appendfsync everysec
+        --requirepass "$$(cat /run/secrets/presence-redis-password)"
+    environment:
+      REDISCLI_AUTH: !reset null
+    secrets:
+      - presence-redis-password
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - REDISCLI_AUTH="$$(cat /run/secrets/presence-redis-password)" redis-cli ping
+    networks:
+      - backend
+
+  presence-directory:
+    <<: *hardened-service
+    ports: !reset []
+    environment:
+      PRESENCE_REDIS_PASSWORD: !reset null
+      PRESENCE_REDIS_PASSWORD_FILE: /run/secrets/presence-redis-password
+    secrets:
+      - presence-redis-password
+    networks:
+      - edge
+      - backend
+
+  mailbox-database:
+    ports: !reset []
+    environment:
+      POSTGRES_PASSWORD: !reset null
+      POSTGRES_PASSWORD_FILE: /run/secrets/mailbox-database-password
+    secrets:
+      - mailbox-database-password
+    networks:
+      - backend
+
+  mailbox:
+    <<: *hardened-service
+    ports: !reset []
+    environment:
+      TRUST_PROXY_HEADERS: "true"
+      MAILBOX_DATABASE_PASSWORD: !reset null
+      MAILBOX_DATABASE_PASSWORD_FILE: /run/secrets/mailbox-database-password
+      PUSH_INTERNAL_API_TOKEN: !reset null
+      PUSH_INTERNAL_API_TOKEN_FILE: /run/secrets/push-internal-api-token
+    secrets:
+      - mailbox-database-password
+      - push-internal-api-token
+    networks:
+      - edge
+      - backend
+
+  push-database:
+    ports: !reset []
+    environment:
+      POSTGRES_PASSWORD: !reset null
+      POSTGRES_PASSWORD_FILE: /run/secrets/push-database-password
+    secrets:
+      - push-database-password
+    networks:
+      - backend
+
+  push:
+    <<: *hardened-service
+    ports: !reset []
+    volumes: !reset []
+    environment:
+      TRUST_PROXY_HEADERS: "true"
+      PUSH_DATABASE_PASSWORD: !reset null
+      PUSH_DATABASE_PASSWORD_FILE: /run/secrets/push-database-password
+      PUSH_INTERNAL_API_TOKEN: !reset null
+      PUSH_INTERNAL_API_TOKEN_FILE: /run/secrets/push-internal-api-token
+    secrets:
+      - push-database-password
+      - push-internal-api-token
+      - source: firebase-admin
+        target: firebase-admin.json
+    networks:
+      - edge
+      - backend
+
+  federation-database:
+    ports: !reset []
+    environment:
+      POSTGRES_PASSWORD: !reset null
+      POSTGRES_PASSWORD_FILE: /run/secrets/federation-database-password
+    secrets:
+      - federation-database-password
+    networks:
+      - backend
+
+  federation:
+    <<: *hardened-service
+    ports: !reset []
+    environment:
+      TRUST_PROXY_HEADERS: "true"
+      CLIENT_ENDPOINT: wss://${SPARROW_DOMAIN:?Set SPARROW_DOMAIN}/v1/gateway
+      FEDERATION_ENDPOINT: https://${SPARROW_DOMAIN:?Set SPARROW_DOMAIN}
+      MAILBOX_ENDPOINT: https://${SPARROW_DOMAIN:?Set SPARROW_DOMAIN}
+      FEDERATION_DATABASE_PASSWORD: !reset null
+      FEDERATION_DATABASE_PASSWORD_FILE: /run/secrets/federation-database-password
+      FEDERATION_INTERNAL_API_TOKEN: !reset null
+      FEDERATION_INTERNAL_API_TOKEN_FILE: /run/secrets/federation-internal-api-token
+      GATEWAY_INTERNAL_API_TOKEN: !reset null
+      GATEWAY_INTERNAL_API_TOKEN_FILE: /run/secrets/gateway-internal-api-token
+    secrets:
+      - federation-database-password
+      - federation-internal-api-token
+      - gateway-internal-api-token
+    networks:
+      - edge
+      - backend
+
+  gateway:
+    <<: *hardened-service
+    ports: !reset []
+    environment:
+      FEDERATION_INTERNAL_API_TOKEN: !reset null
+      FEDERATION_INTERNAL_API_TOKEN_FILE: /run/secrets/federation-internal-api-token
+      GATEWAY_INTERNAL_API_TOKEN: !reset null
+      GATEWAY_INTERNAL_API_TOKEN_FILE: /run/secrets/gateway-internal-api-token
+      PUSH_INTERNAL_API_TOKEN: !reset null
+      PUSH_INTERNAL_API_TOKEN_FILE: /run/secrets/push-internal-api-token
+    secrets:
+      - federation-internal-api-token
+      - gateway-internal-api-token
+      - push-internal-api-token
+    networks:
+      - edge
+      - backend
+
+networks:
+  edge:
+  backend:
+    internal: true
+
+secrets:
+  node-registry-database-password:
+    file: ${NODE_REGISTRY_DATABASE_PASSWORD_FILE:?Set node registry password file}
+  presence-redis-password:
+    file: ${PRESENCE_REDIS_PASSWORD_FILE:?Set presence Redis password file}
+  mailbox-database-password:
+    file: ${MAILBOX_DATABASE_PASSWORD_FILE:?Set mailbox password file}
+  push-database-password:
+    file: ${PUSH_DATABASE_PASSWORD_FILE:?Set push password file}
+  federation-database-password:
+    file: ${FEDERATION_DATABASE_PASSWORD_FILE:?Set federation password file}
+  federation-internal-api-token:
+    file: ${FEDERATION_INTERNAL_API_TOKEN_FILE:?Set federation token file}
+  gateway-internal-api-token:
+    file: ${GATEWAY_INTERNAL_API_TOKEN_FILE:?Set gateway token file}
+  push-internal-api-token:
+    file: ${PUSH_INTERNAL_API_TOKEN_FILE:?Set push token file}
+  firebase-admin:
+    file: ${FIREBASE_ADMIN_CREDENTIALS:?Set Firebase Admin credential file}
+
+volumes:
+  caddy-data:
+  caddy-config:

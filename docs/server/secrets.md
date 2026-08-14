@@ -1,0 +1,28 @@
+# Server secrets and signing material
+
+Never commit production secret values.
+
+## What belongs here
+
+Release/production server deployments may require material such as:
+
+- Firebase Admin service-account JSON;
+- registry authority identity/certificate;
+- generated registry signing state;
+- database passwords/internal API tokens depending on deployment mode.
+
+The Control Plane release bundle contains a visible `secrets/` directory so operators know where required files belong.
+
+## Repository helper
+
+For the repository production stack, `server/scripts/New-ProductionSecrets.ps1` can generate ignored secret files/environment configuration used by the Compose setup.
+
+```powershell
+.\server\scripts\New-ProductionSecrets.ps1
+```
+
+Generated secret files are deliberately ignored by Git.
+
+## Release signing is separate
+
+Android release signing secrets are **not server secrets** and are stored in GitHub Actions Secrets (`ANDROID_RELEASE_*`). Do not put the Android `.jks` into this directory or commit it.

@@ -1,10 +1,10 @@
 plugins {
-    alias(libs.plugins.securechat.kmp.compose.feature)
+    alias(libs.plugins.sparrow.kmp.compose.feature)
 }
 
 kotlin {
     android {
-        namespace = "com.cbgm.securechat.feature.contacts"
+        namespace = "com.cbgm.sparrow.feature.contacts"
 
         androidResources {
             enable = true
@@ -29,6 +29,7 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.core.ktx)
+            implementation(libs.koin.android)
         }
 
         commonTest.dependencies {

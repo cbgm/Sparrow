@@ -10,17 +10,15 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/transport` |
 | Build file | `feature/transport/build.gradle.kts` |
-| Kotlin files | 28 |
-| Production Kotlin files | 26 |
-| Test Kotlin files | 2 |
+| Kotlin files | 71 |
+| Production Kotlin files | 57 |
+| Test Kotlin files | 14 |
 | Resource files | 1 |
-| Direct dependencies | 2 |
+| Direct dependencies | 3 |
 | Direct dependents | 3 |
 
 ## Source sets
 
-- `androidDeviceTest`
-- `androidHostTest`
 - `androidMain`
 - `commonMain`
 - `commonTest`
@@ -29,10 +27,11 @@ Generated automatically by `./gradlew architectureReport`.
 ## Dependencies
 
 - [`:core`](../modules/core.md)
+- [`:core:crypto`](../modules/core-crypto.md)
 - [`:core:protocol`](../modules/core-protocol.md)
 
 ## Dependents
 
-- [`:androidApp`](../modules/androidApp.md)
 - [`:feature:messaging`](../modules/feature-messaging.md)
 - [`:notification`](../modules/notification.md)
+- [`:shared`](../modules/shared.md)

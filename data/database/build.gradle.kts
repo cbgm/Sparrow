@@ -1,11 +1,11 @@
 plugins {
-    alias(libs.plugins.securechat.kmp.room)
-    alias(libs.plugins.securechat.kmp.testing)
+    alias(libs.plugins.sparrow.kmp.room)
+    alias(libs.plugins.sparrow.kmp.testing)
 }
 
 kotlin {
     android {
-        namespace = "com.cbgm.securechat.data.database"
+        namespace = "com.cbgm.sparrow.data.database"
     }
 
     sourceSets {

@@ -10,8 +10,8 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/identity` |
 | Build file | `feature/identity/build.gradle.kts` |
-| Kotlin files | 48 |
-| Production Kotlin files | 44 |
+| Kotlin files | 53 |
+| Production Kotlin files | 49 |
 | Test Kotlin files | 4 |
 | Resource files | 1 |
 | Direct dependencies | 4 |
@@ -20,7 +20,6 @@ Generated automatically by `./gradlew architectureReport`.
 ## Source sets
 
 - `androidDeviceTest`
-- `androidHostTest`
 - `androidMain`
 - `commonMain`
 - `iosMain`
@@ -34,9 +33,9 @@ Generated automatically by `./gradlew architectureReport`.
 
 ## Dependents
 
-- [`:androidApp`](../modules/androidApp.md)
 - [`:feature:chats`](../modules/feature-chats.md)
 - [`:feature:contactimport`](../modules/feature-contactimport.md)
 - [`:feature:onboarding`](../modules/feature-onboarding.md)
 - [`:navigation`](../modules/navigation.md)
+- [`:shared`](../modules/shared.md)
 - [`:startup`](../modules/startup.md)

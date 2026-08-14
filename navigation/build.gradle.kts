@@ -1,11 +1,11 @@
 plugins {
-    alias(libs.plugins.securechat.kmp.compose.feature)
-    alias(libs.plugins.securechat.kmp.serialization)
+    alias(libs.plugins.sparrow.kmp.compose.feature)
+    alias(libs.plugins.sparrow.kmp.serialization)
 }
 
 kotlin {
     android {
-        namespace = "com.cbgm.securechat.navigation"
+        namespace = "com.cbgm.sparrow.navigation"
 
         androidResources {
             enable = true

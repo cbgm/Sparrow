@@ -7,18 +7,19 @@ val isMacOs =
         )
 
 plugins {
-    alias(libs.plugins.securechat.kmp.serialization)
-    alias(libs.plugins.securechat.kmp.testing)
+    alias(libs.plugins.sparrow.kmp.serialization)
+    alias(libs.plugins.sparrow.kmp.testing)
 }
 
 kotlin {
     android {
-        namespace = "com.cbgm.securechat.feature.transport"
+        namespace = "com.cbgm.sparrow.feature.transport"
     }
 
     sourceSets {
         commonMain.dependencies {
             implementation(projects.core)
+            implementation(projects.core.crypto)
             implementation(projects.core.protocol)
 
             implementation(libs.bundles.coroutines)
@@ -30,6 +31,7 @@ kotlin {
 
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.koin.android)
         }
 
         if (isMacOs) {

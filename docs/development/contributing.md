@@ -1,324 +1,57 @@
 # Contributing
 
-## Overview
+## Branch flow
 
-This document describes the development standards expected when contributing to SecureChat.
-
-Whether contributing a new feature, fixing a bug or improving documentation, every contribution should follow the same engineering principles.
-
-The objective is to maintain a clean, secure and consistent codebase.
-
----
-
-# Development Philosophy
-
-SecureChat values
-
-- simplicity
-- readability
-- maintainability
-- security
-- automation
-- explicit architecture
-
-When multiple solutions are possible, choose the one that is easiest to understand and maintain.
-
----
-
-# Before You Start
-
-Before implementing a change
-
-- update your branch
-- build the project
-- ensure `quality` succeeds
-- review the existing architecture
-
-Avoid implementing features without understanding the surrounding module structure.
-
----
-
-# Branches
-
-Create a dedicated branch for every logical change.
-
-Examples
-
-```
-feature/groups
-
-feature/attachments
-
-fix/message-order
-
-refactor/contact-repository
-
-docs/security
+```text
+feature/*
+   -> pull request into develop
+   -> develop integration/testing
+   -> master when stable
+   -> release/x.y created from master
+   -> vX.Y.Z[-prerelease] tag for a full GitHub release
 ```
 
-Avoid unrelated changes within the same branch.
+Do not build distributable releases from arbitrary feature branches.
 
----
+## Before opening a PR
 
-# Small Commits
+At minimum run the checks relevant to your change:
 
-Prefer multiple focused commits instead of one large commit.
-
-Example
-
-```
-Commit 1
-
-Repository refactor
-
-Commit 2
-
-UseCase update
-
-Commit 3
-
-UI changes
-
-Commit 4
-
-Tests
+```bash
+./gradlew qualityCheck
+./gradlew allTests
 ```
 
-Small commits simplify reviews and future debugging.
+For Android/platform changes, run Android device tests where applicable. For server changes, run the relevant Docker smoke test.
 
----
+## Architecture changes
 
-# Commit Messages
-
-Write concise commit messages.
-
-Good examples
-
-```
-Add message retry support
-
-Refactor identity repository
-
-Generate architecture statistics
-
-Fix relay reconnect logic
-```
-
-Avoid
-
-```
-fix
-
-update
-
-changes
-
-misc
-```
-
-The commit message should describe **what** changed.
-
----
-
-# Pull Requests
-
-Every Pull Request should represent one logical change.
-
-Before opening a Pull Request verify
-
-- project builds
-- tests pass
-- quality passes
-- architecture documentation is current
-
-Large mixed Pull Requests are difficult to review.
-
----
-
-# Code Reviews
-
-Reviewers should focus on
-
-- correctness
-- architecture
-- maintainability
-- security
-- readability
-
-Formatting should already be handled automatically.
-
----
-
-# Coding Standards
-
-All code should follow the project coding style.
-
-In particular
-
-- meaningful names
-- explicit dependencies
-- immutable state where practical
-- small functions
-- small classes
-
-Project formatting is enforced automatically.
-
----
-
-# Architecture
-
-Do not bypass architectural boundaries.
-
-Presentation must not access
-
-- DAO
-- Room
-- repository implementations
-
-Domain should remain independent of infrastructure.
-
-If a change requires breaking an architectural rule, reconsider the design before introducing exceptions.
-
----
-
-# Dependencies
-
-Before adding a dependency ask
-
-- Is it really necessary?
-- Can existing code solve the problem?
-- Is it multiplatform?
-- Is it actively maintained?
-- Does it increase project complexity?
-
-Every dependency becomes a long-term maintenance responsibility.
-
----
-
-# Security
-
-Security-sensitive changes deserve additional attention.
-
-Examples include
-
-- cryptography
-- protocol changes
-- identity management
-- transport
-- secure storage
-
-Keep security-related Pull Requests as small as possible.
-
----
-
-# Testing
-
-New functionality should include appropriate tests.
-
-Typical additions include
-
-- unit tests
-- integration tests
-- regression tests
-
-Bug fixes should generally include a regression test.
-
----
-
-# Documentation
-
-Update documentation whenever
-
-- architecture changes
-- module structure changes
-- protocol changes
-- public APIs change
-
-Regenerate generated documentation with
+If module dependencies change:
 
 ```bash
 ./gradlew architectureReport
+./gradlew verifyArchitectureReport
 ```
 
-Generated documentation should never be edited manually.
+Commit regenerated `docs/generated/` output; do not hand-edit it.
 
----
+## Chat changes
 
-# Quality Pipeline
+Read [Chats architecture](../architecture/chats.md) first. Keep Direct and Group responsibilities separate, and use existing state machines/coordinators instead of adding cross-cutting handlers that blur the red line.
 
-Before committing execute
+## Documentation changes
 
-```bash
-./gradlew quality
-```
+Update the closest handwritten document when behavior/configuration changes. Keep links relative so MkDocs and GitHub rendering both work.
 
-This performs
+## Documentation location
 
-- formatting
-- static analysis
-- architecture validation
-- documentation verification
+Keep project documentation centralized:
 
-A Pull Request should already satisfy these checks before CI executes.
+- `README.md` at the repository root is the only project Markdown documentation outside `docs/`;
+- `server/secrets/placeholder.md` is a non-documentation placeholder whose only purpose is to keep the empty secrets directory tracked by Git;
+- all architecture, feature, server, operations, security, API and development documentation belongs under `docs/`;
+- do not add module-local `README.md` or `ARCHITECTURE.md` files;
+- update `mkdocs.yml` when adding a user-facing documentation page;
+- keep generated architecture reference under `docs/generated/` and regenerate it with the architecture-report tasks.
 
----
-
-# Generated Code
-
-Never manually modify generated files.
-
-Examples include
-
-```
-docs/generated/
-
-build/generated/
-```
-
-Instead regenerate them using the appropriate Gradle task.
-
----
-
-# Backwards Compatibility
-
-When changing public APIs
-
-- minimize breaking changes
-- document migrations
-- preserve compatibility where practical
-
-Large API changes should be discussed before implementation.
-
----
-
-# Performance
-
-Performance improvements should
-
-- be measurable
-- preserve readability
-- avoid unnecessary complexity
-
-Avoid premature optimization.
-
----
-
-# Issue Reporting
-
-When reporting a bug include
-
-- reproduction steps
-- expected behaviour
-- actual behaviour
-- logs (if relevant)
-- screenshots (if applicable)
-
-A reproducible issue is significantly easier to resolve.
-
----
-
-# Summary
-
-SecureChat contributions should improve the project without compromising architecture, security or maintainability.
-
-Following these guidelines keeps reviews efficient and ensures the project remains consistent as it grows.
+This prevents duplicated feature/server documentation from drifting away from the central source of truth.

@@ -1,31 +1,32 @@
-val isMacOs =
-    System
-        .getProperty("os.name")
-        .startsWith(
-            prefix = "Mac",
-            ignoreCase = true
-        )
+import com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING
 
 plugins {
-    alias(libs.plugins.securechat.kmp.compose.feature)
-    alias(libs.plugins.securechat.kmp.serialization)
+    alias(libs.plugins.sparrow.kmp.compose.feature)
+    alias(libs.plugins.sparrow.kmp.serialization)
+    alias(libs.plugins.buildkonfig)
+    alias(libs.plugins.sparrow.properties)
+}
+
+buildkonfig {
+    packageName = "com.cbgm.sparrow"
+
+    defaultConfigs {
+        buildConfigField(
+            STRING,
+            "CONTROL_PLANE_DIRECTORY_URL",
+            localProperties.get(
+                key = "CONTROL_PLANE_DIRECTORY_URL",
+                defaultValue = ""
+            ),
+            const = true
+        )
+    }
 }
 
 kotlin {
-    if (isMacOs) {
-        listOf(
-            iosArm64(),
-            iosSimulatorArm64()
-        ).forEach { target ->
-            target.binaries.framework {
-                baseName = "SecureChat"
-                isStatic = true
-            }
-        }
-    }
 
     android {
-        namespace = "com.cbgm.securechat.shared"
+        namespace = "com.cbgm.sparrow.shared"
 
         androidResources {
             enable = true
@@ -35,9 +36,20 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(projects.core)
+            implementation(projects.core.crypto)
+            implementation(projects.core.protocol)
             implementation(projects.core.ui)
             implementation(projects.navigation)
+            implementation(projects.feature.chats)
+            implementation(projects.feature.contactimport)
+            implementation(projects.feature.contacts)
+            implementation(projects.feature.identity)
+            implementation(projects.feature.messaging)
+            implementation(projects.feature.onboarding)
             implementation(projects.feature.settings)
+            implementation(projects.feature.transport)
+            implementation(projects.notification)
+            implementation(projects.startup)
 
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)
@@ -46,6 +58,13 @@ kotlin {
 
             implementation(libs.jetbrains.navigation.compose)
             implementation(compose.materialIconsExtended)
+        }
+
+        androidMain.dependencies {
+            implementation(projects.data.database)
+
+            implementation(libs.koin.android)
+            implementation(libs.koin.androidx.workmanager)
         }
 
         commonTest.dependencies {

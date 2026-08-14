@@ -1,0 +1,396 @@
+name: Server Images
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - master
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+    paths:
+      - "server/**"
+      - "build-logic/**"
+      - "gradle/**"
+      - "gradle.properties"
+      - "settings.gradle.kts"
+      - ".github/workflows/server-images.yml"
+
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Optional additional Docker image tag
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: server-images-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish-images:
+    name: Publish PR server images
+
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout exact feature-branch commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+
+      - name: Validate deployment scripts
+        shell: pwsh
+        run: |
+          $files = @(
+              "server/community-node/Bootstrap-CommunityNode.ps1",
+              "server/scripts/Bootstrap-ControlPlane.Bundle.ps1",
+              "server/scripts/New-CommunityNodeBundle.ps1",
+              "server/scripts/New-ControlPlaneBundle.ps1"
+          )
+
+          foreach ($file in $files) {
+              $tokens = $null
+              $errors = $null
+              [System.Management.Automation.Language.Parser]::ParseFile(
+                  (Resolve-Path $file),
+                  [ref]$tokens,
+                  [ref]$errors
+              ) | Out-Null
+
+              if ($errors.Count -gt 0) {
+                  $details = ($errors | ForEach-Object { $_.Message }) -join "`n"
+                  throw "$file contains PowerShell syntax errors:`n$details"
+              }
+          }
+
+      - name: Validate Unix community-node launcher
+        shell: bash
+        run: bash -n server/community-node/bootstrap-community-node.sh
+
+      - name: Validate Compose production merges
+        shell: bash
+        run: |
+          set -euo pipefail
+          secret="${RUNNER_TEMP}/sparrow-compose-validation-secret"
+          printf 'validation' > "${secret}"
+
+          cat > "${RUNNER_TEMP}/community.env" <<EOF_COMMUNITY
+          CONTROL_PLANE_URL=https://control.example.test
+          CLIENT_ENDPOINT=wss://node.example.test/relay
+          FEDERATION_ENDPOINT=https://node.example.test
+          MAILBOX_ENDPOINT=https://node.example.test
+          COMMUNITY_NODE_DOMAIN=node.example.test
+          SPARROW_IMAGE_PREFIX=ghcr.io/example/sparrow
+          SPARROW_IMAGE_TAG=validation
+          MAILBOX_DATABASE_PASSWORD_FILE=${secret}
+          FEDERATION_DATABASE_PASSWORD_FILE=${secret}
+          FEDERATION_INTERNAL_API_TOKEN_FILE=${secret}
+          GATEWAY_INTERNAL_API_TOKEN_FILE=${secret}
+          EOF_COMMUNITY
+
+          docker compose \
+            --env-file "${RUNNER_TEMP}/community.env" \
+            -f server/community-node/docker-compose.yml \
+            -f server/community-node/docker-compose.release.yml \
+            -f server/community-node/docker-compose.production.yml \
+            config --quiet
+
+          cat > "${RUNNER_TEMP}/control.env" <<EOF_CONTROL
+          CONTROL_PLANE_DOMAIN=control.example.test
+          FIREBASE_ADMIN_CREDENTIALS=${secret}
+          SPARROW_IMAGE_PREFIX=ghcr.io/example/sparrow
+          SPARROW_IMAGE_TAG=validation
+          NODE_REGISTRY_DATABASE_PASSWORD_FILE=${secret}
+          PRESENCE_REDIS_PASSWORD_FILE=${secret}
+          PUSH_DATABASE_PASSWORD_FILE=${secret}
+          PUSH_INTERNAL_API_TOKEN_FILE=${secret}
+          EOF_CONTROL
+
+          docker compose \
+            --env-file "${RUNNER_TEMP}/control.env" \
+            -f server/control-plane/docker-compose.yml \
+            -f server/control-plane/docker-compose.release.yml \
+            -f server/control-plane/docker-compose.production.yml \
+            config --quiet
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Build server distributions once
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ./gradlew \
+            :server:node-registry:installDist \
+            :server:presence-directory:installDist \
+            :server:push:installDist \
+            :server:mailbox:installDist \
+            :server:federation:installDist \
+            :server:gateway:installDist \
+            --no-daemon \
+            --no-configuration-cache \
+            --max-workers=2 \
+            --console=plain
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish runtime images
+        env:
+          REQUESTED_IMAGE_TAG: ${{ inputs.image_tag }}
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          image_prefix="ghcr.io/${owner}/sparrow"
+
+          image_tags=("sha-${SOURCE_SHA}")
+
+          if [[ -n "${PR_NUMBER}" ]]; then
+            image_tags+=("pr-${PR_NUMBER}")
+          fi
+
+          if [[ -n "${REQUESTED_IMAGE_TAG}" ]]; then
+            if [[ ! "${REQUESTED_IMAGE_TAG}" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
+              echo "Invalid Docker image tag: ${REQUESTED_IMAGE_TAG}" >&2
+              exit 1
+            fi
+            image_tags+=("${REQUESTED_IMAGE_TAG}")
+          fi
+
+          services=(
+            node-registry
+            presence-directory
+            push
+            mailbox
+            federation
+            gateway
+          )
+
+          created_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          context_root="${RUNNER_TEMP}/sparrow-server-images"
+
+          rm -rf "${context_root}"
+          mkdir -p "${context_root}"
+
+          for service in "${services[@]}"; do
+            distribution="server/${service}/build/install/${service}"
+
+            if [[ ! -f "${distribution}/bin/${service}" ]]; then
+              echo "Missing server distribution: ${distribution}" >&2
+              exit 1
+            fi
+
+            context="${context_root}/${service}"
+            mkdir -p "${context}/app" "${context}/data"
+
+            cp -a "${distribution}/." "${context}/app/"
+            touch "${context}/data/.keep"
+            cp server/Dockerfile.runtime "${context}/Dockerfile"
+
+            image="${image_prefix}-${service}"
+            tag_arguments=()
+
+            for tag in "${image_tags[@]}"; do
+              tag_arguments+=(--tag "${image}:${tag}")
+            done
+
+            echo "Publishing ${image}"
+
+            docker buildx build \
+              --file "${context}/Dockerfile" \
+              --platform linux/amd64,linux/arm64 \
+              --build-arg "SERVICE=${service}" \
+              --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+              --label "org.opencontainers.image.revision=${SOURCE_SHA}" \
+              --label "org.opencontainers.image.created=${created_at}" \
+              --provenance=false \
+              --push \
+              "${tag_arguments[@]}" \
+              "${context}"
+          done
+
+  control-plane-bundle:
+    name: Create control-plane bundle
+    needs:
+      - publish-images
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout exact feature-branch commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+
+      - name: Create control-plane bundle
+        shell: pwsh
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          $owner = "${{ github.repository_owner }}".ToLowerInvariant()
+          $imagePrefix = "ghcr.io/$owner/sparrow"
+
+          if (-not [string]::IsNullOrWhiteSpace($env:PR_NUMBER)) {
+              $imageTag = "pr-$($env:PR_NUMBER)"
+          } else {
+              $imageTag = "sha-$($env:SOURCE_SHA)"
+          }
+
+          ./server/scripts/New-ControlPlaneBundle.ps1 `
+              -OutputDirectory dist-control-plane `
+              -ImagePrefix $imagePrefix `
+              -ImageTag $imageTag
+
+      - name: Prepare control-plane artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist-control-plane/artifact -Force | Out-Null
+          Expand-Archive `
+              -LiteralPath dist-control-plane/sparrow-control-plane.zip `
+              -DestinationPath dist-control-plane/artifact `
+              -Force
+
+          foreach ($required in @(
+              "Start-SparrowControlPlane.cmd",
+              "Bootstrap-ControlPlane.ps1",
+              "sparrow.conf",
+              "docker-compose.production.yml",
+              "index.html",
+              "secrets/README.txt"
+          )) {
+              if (-not (Test-Path -LiteralPath "dist-control-plane/artifact/$required" -PathType Leaf)) {
+                  throw "Control-plane artifact is missing $required."
+              }
+          }
+
+          $controlConfig = Get-Content -LiteralPath dist-control-plane/artifact/sparrow.conf -Raw
+          if ($controlConfig -notmatch '(?m)^CONFIGURED=false$') {
+              throw "Control-plane sparrow.conf must start with CONFIGURED=false in the distributable template."
+          }
+          if ($controlConfig -notmatch '(?m)^CONTROL_PLANE_ID=$') {
+              throw "Control-plane sparrow.conf is missing the instance-ID field."
+          }
+
+      - name: Upload control-plane bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: sparrow-control-plane-${{ github.event.pull_request.number || 'manual' }}
+          path: dist-control-plane/artifact
+          if-no-files-found: error
+          retention-days: 14
+
+  community-node-bundle:
+    name: Create community-node bundle
+    needs:
+      - publish-images
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout exact feature-branch commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+
+      - name: Create community-node bundle
+        shell: pwsh
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          $owner = "${{ github.repository_owner }}".ToLowerInvariant()
+          $imagePrefix = "ghcr.io/$owner/sparrow"
+
+          if (-not [string]::IsNullOrWhiteSpace($env:PR_NUMBER)) {
+              $imageTag = "pr-$($env:PR_NUMBER)"
+          } else {
+              $imageTag = "sha-$($env:SOURCE_SHA)"
+          }
+
+          ./server/scripts/New-CommunityNodeBundle.ps1 `
+              -OutputDirectory dist-community `
+              -ImagePrefix $imagePrefix `
+              -ImageTag $imageTag
+
+      - name: Prepare community-node artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist-community/artifact -Force | Out-Null
+          Expand-Archive `
+              -LiteralPath dist-community/sparrow-community-node.zip `
+              -DestinationPath dist-community/artifact `
+              -Force
+
+
+          foreach ($required in @(
+              "Start-SparrowNode.cmd",
+              "Bootstrap-CommunityNode.ps1",
+              "sparrow.conf",
+              "docker-compose.production.yml",
+              "index.html"
+          )) {
+              if (-not (Test-Path -LiteralPath "dist-community/artifact/$required" -PathType Leaf)) {
+                  throw "Community-node artifact is missing $required."
+              }
+          }
+
+          $nodeConfig = Get-Content -LiteralPath dist-community/artifact/sparrow.conf -Raw
+          if ($nodeConfig -notmatch '(?m)^CONFIGURED=false$') {
+              throw "Community-node sparrow.conf must start with CONFIGURED=false in the distributable template."
+          }
+          if ($nodeConfig -match '(?m)^CONTROL_PLANE_URLS=') {
+              throw "Community-node sparrow.conf must not require a manual CONTROL_PLANE_URLS list."
+          }
+          if ($nodeConfig -notmatch '(?m)^CONTROL_PLANE_DIRECTORY_URL=$') {
+              throw "Community-node sparrow.conf is missing CONTROL_PLANE_DIRECTORY_URL."
+          }
+          if ($nodeConfig -match '(?m)^CONTROL_PLANE_BOOTSTRAP_URL=') {
+              throw "Community-node sparrow.conf must not contain a bootstrap fallback URL."
+          }
+
+      - name: Upload community-node bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: sparrow-community-node-${{ github.event.pull_request.number || 'manual' }}
+          path: dist-community/artifact
+          if-no-files-found: error
+          retention-days: 14

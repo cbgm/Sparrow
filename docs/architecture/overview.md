@@ -1,137 +1,140 @@
-# Architecture Overview
+# Architecture overview
 
-SecureChat is a modular Kotlin Multiplatform application. Gradle modules define the coarse
-boundaries; packages inside a feature separate presentation, domain rules, data adapters, and
-application orchestration.
+Sparrow is a Kotlin Multiplatform client plus a federated Kotlin server system. The code is intentionally split by responsibility rather than by deployment convenience.
 
-This page explains the intended responsibilities. The generated
-[module architecture](../generated/architecture.md) is the source of truth for actual Gradle
-dependencies.
+## High-level view
 
-For the production call chain from conversation UI through protocol, persistent outbox, transport,
-receipts, and group activation, read
-[Conversation, Messaging, and Delivery Flow](../features/message-transport-flow.md).
+```mermaid
+flowchart LR
+    subgraph Client[Client application]
+        UI[Compose UI]
+        VM[ViewModels]
+        UC[Use cases]
+        REPO[Repository contracts]
+        DATA[Repository implementations]
+        MSG[feature:messaging]
+        TR[feature:transport]
+        DB[(Room / SQLite)]
+        CRYPTO[core:crypto]
+        PROTO[core:protocol]
+    end
 
-## Architectural shape
+    DIR[Control Plane directory JSON]
+
+    subgraph CP[Control Plane]
+        CPC[Caddy]
+        REG[node-registry]
+        PRES[presence-directory]
+        PUSH[push]
+    end
+
+    subgraph NODE[Community Node]
+        NC[Caddy]
+        GW[gateway]
+        FED[federation]
+        MB[mailbox]
+    end
+
+    UI --> VM --> UC --> REPO
+    DATA --> REPO
+    DATA --> DB
+    MSG --> DATA
+    MSG --> CRYPTO
+    MSG --> PROTO
+    MSG --> TR
+    TR --> DIR
+    TR --> CPC
+    TR --> NC
+    CPC --> REG
+    CPC --> PRES
+    CPC --> PUSH
+    NC --> GW
+    NC --> FED
+    NC --> MB
+    GW <--> FED
+    FED --> MB
+    FED <--> CP
+```
+
+## Application startup
+
+The Android application entry point is deliberately thin. `SparrowApplication` initializes dependency injection; the shared application shell and startup orchestration live in `:shared`.
+
+`AppViewModel` owns application startup and foreground runtime orchestration. Its startup path includes:
+
+1. initialize the crypto runtime;
+2. initialize language/settings;
+3. initialize notification runtime/coordinators;
+4. load and synchronize the configured Control Plane directory;
+5. refresh Control Plane health and start periodic maintenance;
+6. observe the local identity/routing registration target;
+7. synchronize device contacts;
+8. mark the application runtime ready.
+
+Foreground runtime dependencies then coordinate `IncomingEnvelopeRunner`, `TransportConnectionManager`, `OutboxRunner`, mailbox synchronization and application visibility.
+
+The build-time directory URL comes from `local.properties` as `controlPlaneDirectoryUrl` and is exposed to common KMP code through `BuildKonfig.CONTROL_PLANE_DIRECTORY_URL`.
+
+## Layering inside a feature
+
+Feature modules normally use these layers:
 
 ```mermaid
 flowchart TD
-    Android[":androidApp"] --> Shell[":shared / :navigation / :startup"]
-    Android --> Features["Feature modules"]
-    Features --> Data[":data:database"]
-    Features --> Core["Core modules"]
-    Android --> RelayClient[":feature:transport"]
-    RelayClient -. WebSocket .-> Relay[":relay server"]
+    P[Presentation<br/>Compose, ViewModel, UI models] --> D[Domain<br/>use cases, models, repository contracts]
+    I[Data / infrastructure<br/>repository implementations, protocol/database/network adapters] --> D
+    DI[DI composition] --> P
+    DI --> I
 ```
 
-The arrows show compile-time dependencies, except for the dashed network connection. Feature
-modules may depend on lower-level contracts and infrastructure, but core modules do not depend on
-features.
+Important rules:
 
-## Module ownership
+- ViewModels call use cases, not repository implementations.
+- Domain code does not depend on Compose, Room, Ktor or Android APIs.
+- Repository packages contain repository contracts/implementations, not unrelated coordinators.
+- Platform-specific code belongs in the corresponding source set (`androidMain`, `iosMain`) of the owning module.
+- `androidApp` stays small.
 
-| Module | Primary responsibility |
-|---|---|
-| `:androidApp` | Android entry point, Koin assembly, and process-lifetime runtime startup |
-| `:shared` | Shared Compose application shell |
-| `:navigation` | App destinations, navigation graph, app shell, and `MainRoute` |
-| `:startup` | Startup initialization result and startup UI |
-| `:core` | Small cross-cutting utilities such as IDs, time, and the project-owned logging facade |
-| `:core:crypto` | Transport encryption, decryption, key operations, and payload codec |
-| `:core:protocol` | Transport-independent packet model, packet codec, handler and outbox contracts |
-| `:core:ui` | Reusable Compose design components |
-| `:data:database` | Room entities, DAOs, database wiring, and `DefaultProtocolOutbox` |
-| `:feature:identity` | Local identity lifecycle, persistence ports, sharing, and setup UI |
-| `:feature:contacts` | Contact domain, import/merge behavior, remote identity exchange, and contacts UI |
-| `:feature:chats` | Conversations, messages, receipts, delivery state, packet handlers, and chat UI |
-| `:feature:messaging` | Application-level send/receive orchestration connecting chats, contacts, crypto, and transport |
-| `:feature:transport` | Relay IDs, connection lifecycle, WebSocket frames, and `OutgoingWireSender` |
-| `:feature:contactimport` | Platform device-contact integration |
-| `:feature:onboarding` | Onboarding flow |
-| `:feature:settings` | Settings domain and UI |
-| `:relay` | Standalone Ktor WebSocket relay; it routes opaque payloads and logs through SLF4J/Logback |
-| `:quality:detekt-rules` | Project-specific static-analysis rules |
+## Messaging boundary
 
-Empty grouping projects such as `:feature` and `:data` appear in the generated report but do not own
-application behavior.
+Messaging spans several modules but ownership is explicit:
 
-## Feature-internal layers
+- `:core:protocol` owns packet contracts and transport-independent outbox interfaces.
+- `:feature:chats` owns direct/group conversation semantics.
+- `:feature:contacts` owns contact invitation and identity-exchange semantics.
+- `:feature:messaging` orchestrates persistent outgoing/incoming processing.
+- `:feature:transport` owns Control Plane/node discovery, WebSocket mechanics, routing registration, mailbox/push HTTP gateways and diagnostics.
+- server modules route and persist opaque envelopes; they do not own client conversation semantics.
 
-Features use only the layers they need:
+See [Messaging boundary](messaging-boundary.md) and [Message transport flow](../features/message-transport-flow.md).
 
-| Package | Contains | May know about |
-|---|---|---|
-| `presentation` | Routes, screens, ViewModels, UI state, mappers, components | Domain use cases and UI models |
-| `domain` | Models, repository/port interfaces, use cases, state machines | Kotlin and stable lower-level contracts |
-| `data` | Repository implementations, mappers, protocol handlers, infrastructure adapters | Domain interfaces, database and core infrastructure |
-| `application` | Long-running or multi-feature orchestration without UI | Ports from participating modules |
-| `di` | Koin composition for that module | Concrete implementations and contracts being wired |
+## Direct and Group are separate paths
 
-Not every feature needs every package. For example, `:feature:messaging` has no presentation layer,
-while `:feature:transport` is an infrastructure feature and does not expose use cases or screens.
+A deliberate architectural constraint is that Direct and Group chat behavior is not hidden behind a generic “chat” implementation.
 
-## Key runtime boundaries
+```mermaid
+flowchart LR
+    ROUTER[IncomingPacketRouter]
+    ROUTER --> DIRECT[DirectIncomingPacketProcessor]
+    ROUTER --> GROUP[GroupIncomingPacketProcessor]
 
-### UI to domain
-
-Screens send events to ViewModels. ViewModels call use cases such as `SendMessage`,
-`CreateGroupConversation`, or `VerifyContact`. UI components do not call DAOs, WebSocket clients,
-or crypto implementations.
-
-### Domain to persistence
-
-Feature repositories expose domain operations. Room types remain under `:data:database` and in the
-data implementations that use them. Domain models do not contain Room annotations.
-
-### Protocol to transport
-
-`:core:protocol` defines `SecureChatPacket`, `PacketCodec`, `ProtocolOutbox`,
-`ProtocolPacketHandler`, and `OutgoingWireSender`. It does not know about Ktor, Room, contacts, or
-Compose.
-
-`:feature:messaging` turns queued protocol packets into transport payloads and turns incoming relay
-envelopes back into protocol-handler calls. `:feature:transport` only moves relay messages.
-See [Messaging Boundary](messaging-boundary.md).
-
-### Client to relay
-
-The client sends a `RelayEnvelope` whose `payload` is opaque to `:relay`. The relay may read the
-routing fields (`envelopeId`, `senderId`, `recipientId`, and timestamp), but it does not decode the
-SecureChat transport payload or protocol packet.
-
-## Runtime composition
-
-Koin modules are assembled in `SecureChatApplication`. Runtime services start only after a local
-identity and phone number exist:
-
-1. `IncomingRelayRunner.start()` begins collecting incoming envelopes.
-2. `RelayConnectionManager.start()` starts the reconnect loop.
-3. `SecureChatApplication` observes `TransportConnectionState`.
-4. On `Connected`, it calls `OutboxRunner.start()` to recover and drain the persistent outbox.
-
-This process-lifetime coordination is an Android application concern. The implementation of each
-runtime service remains in its owning feature.
-
-## Logging boundary
-
-Shared and application code logs through `SecureChatLogger` in `:core`. Its Kermit-backed
-implementation selects the platform output without exposing Kermit to feature code. The standalone
-relay keeps its JVM-native SLF4J/Logback pipeline.
-
-See [Logging](../development/logging.md) for levels, privacy rules, and the extension policy.
-
-## Source-of-truth rule
-
-The repository contains two kinds of architecture documentation:
-
-- `docs/generated/` is produced by `./gradlew architectureReport` from the current Gradle project.
-- Hand-written pages explain responsibility, rationale, and runtime behavior.
-
-After changing modules or dependencies, run:
-
-```bash
-./gradlew architectureReport
-./gradlew verifyArchitectureReport
+    DIRECT --> DD[Direct repositories / delivery / typing]
+    GROUP --> GD[Group repositories / membership / security / delivery / typing]
 ```
 
-Do not manually edit files under `docs/generated/`.
+Shared code is allowed only when semantics are genuinely shared, such as packet decoding or the conversation-overview projection. See [Chats architecture](chats.md).
+
+## Server architecture
+
+The server is not one monolith. It has two deployable shapes:
+
+- **Control Plane:** node registry, presence directory and push service behind Caddy.
+- **Community Node:** gateway, federation and mailbox services behind Caddy.
+
+Each JVM service is an independent Gradle module and communicates across HTTP/protocol contracts instead of importing another service application's implementation package.
+
+See [Server overview](../server/overview.md).
+
+## Platform status
+
+Android is the usable client target. The project has KMP iOS source sets and an Xcode host, but major platform/runtime integrations are still incomplete. iOS should therefore be treated as architectural scaffolding, **not** a supported client with Android feature parity.

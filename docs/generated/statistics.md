@@ -6,18 +6,18 @@ Generated automatically by `./gradlew architectureReport`.
 
 | Metric | Count |
 |---|---:|
-| Modules | 24 |
+| Modules | 34 |
 | Module groups | 11 |
-| Dependency edges | 75 |
-| Modules without project dependencies | 8 |
-| Modules without dependents | 6 |
+| Dependency edges | 101 |
+| Modules without project dependencies | 10 |
+| Modules without dependents | 12 |
 | Maximum direct dependencies | 16 |
-| Maximum direct dependents | 13 |
+| Maximum direct dependents | 12 |
 | Distinct source sets | 9 |
-| Kotlin files | 684 |
-| Production Kotlin files | 641 |
-| Test Kotlin files | 43 |
-| Resource files | 57 |
+| Kotlin files | 963 |
+| Production Kotlin files | 873 |
+| Test Kotlin files | 90 |
+| Resource files | 48 |
 
 ## Modules by group
 
@@ -30,8 +30,8 @@ Generated automatically by `./gradlew architectureReport`.
 | navigation | 1 |
 | notification | 1 |
 | quality | 2 |
-| relay | 1 |
 | resources | 1 |
+| server | 11 |
 | shared | 1 |
 | startup | 1 |
 
@@ -39,12 +39,12 @@ Generated automatically by `./gradlew architectureReport`.
 
 | Source set | Modules |
 |---|---:|
-| `androidDeviceTest` | 16 |
-| `androidHostTest` | 16 |
-| `androidMain` | 19 |
-| `commonMain` | 19 |
+| `androidDeviceTest` | 5 |
+| `androidHostTest` | 1 |
+| `androidMain` | 18 |
+| `commonMain` | 18 |
 | `commonTest` | 8 |
-| `iosMain` | 16 |
+| `iosMain` | 7 |
 | `iosTest` | 1 |
-| `main` | 3 |
-| `test` | 1 |
+| `main` | 12 |
+| `test` | 10 |

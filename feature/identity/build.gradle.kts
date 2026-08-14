@@ -1,10 +1,10 @@
 plugins {
-    alias(libs.plugins.securechat.kmp.compose.feature)
+    alias(libs.plugins.sparrow.kmp.compose.feature)
 }
 
 kotlin {
     android {
-        namespace = "com.cbgm.securechat.feature.identity"
+        namespace = "com.cbgm.sparrow.feature.identity"
 
         androidResources {
             enable = true
