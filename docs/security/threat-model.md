@@ -1,409 +1,49 @@
-# Threat Model
+# Threat model
 
-## Overview
+This is a concise engineering threat model for the current code, not a formal audit.
 
-A threat model defines what SecureChat is designed to protect against and, equally importantly, what it does **not** attempt to protect against.
+## Intended protections
 
-Understanding these assumptions is essential when evaluating the security of the application.
+The design aims to protect against:
 
-No messaging application can defend against every possible attack.
+- a server reading encrypted Direct/Group message plaintext in the normal encrypted path;
+- an unauthenticated party forging registered Community Node requests;
+- trivial replay of signed server requests;
+- silent substitution of a contact identity without surfacing security state;
+- offline-message storage that requires server plaintext;
+- accidental persistence of client private keys in plaintext Android preferences.
 
-Instead, SecureChat focuses on realistic threats that can be mitigated through cryptography and sound software architecture.
+## Infrastructure can still observe metadata
 
----
+Depending on deployment, infrastructure can observe some metadata such as:
 
-# Security Objectives
+- source network addresses/connections;
+- node/Control Plane access timing;
+- routing IDs and delivery timing within the protocol's needs;
+- node connection counts/load;
+- encrypted envelope sizes.
 
-SecureChat is designed to provide
+SecureChat is not documented as an anonymity network.
 
-- Confidentiality
-- Integrity
-- Authenticity
-- Identity verification
-- Secure key management
-- End-to-end encrypted communication
+## Device compromise
 
----
+An unlocked/compromised device can undermine end-to-end security. Android Keystore wrapping protects key-at-rest handling but cannot make a fully compromised runtime trustworthy.
 
-# Trust Model
+## Server compromise
 
-SecureChat intentionally trusts very few components.
+Application-layer message encryption limits what a compromised routing server should learn about message content, but a compromised server can still disrupt availability, delay/drop traffic, serve stale data where signatures/expiry checks allow, or observe metadata. Trust/signature validation must therefore fail closed where required.
 
-```
-User Device
+## Build/release compromise
 
-✓ Trusted
+The Android signing keystore and GitHub release secrets are high-value assets. Loss of the signing key prevents normal update continuity; compromise can allow malicious signed releases. Keep the `.jks` backed up offline and restrict GitHub secret/release permissions.
 
-↓
+## Out of scope / unfinished
 
-Application
+- iOS production security/runtime parity;
+- a completed third-party security audit;
+- protection from a malicious/compromised operating system on the client;
+- metadata anonymity against all server operators.
 
-✓ Trusted
+## Comparison context
 
-↓
-
-Cryptographic Library
-
-✓ Trusted
-
-↓
-
-Gateway
-
-✗ Untrusted
-
-↓
-
-Internet
-
-✗ Untrusted
-```
-
-Only the communicating devices are considered trusted.
-
-Everything between them is treated as hostile.
-
----
-
-# Protected Assets
-
-SecureChat protects
-
-- private identity keys
-- message contents
-- contact identities
-- session keys
-- encrypted attachments
-- verification state
-
-Loss of any of these assets may compromise user privacy.
-
----
-
-# Threats Addressed
-
-## Passive Network Monitoring
-
-An attacker observes network traffic.
-
-```
-Attacker
-
-↓
-
-Network
-
-↓
-
-Encrypted Traffic
-```
-
-Result
-
-Message contents remain confidential.
-
----
-
-## Malicious Wi-Fi Networks
-
-An attacker controls the local network.
-
-The attacker may
-
-- inspect packets
-- delay packets
-- drop packets
-
-The attacker cannot read encrypted message contents.
-
----
-
-## Compromised Gateway
-
-The gateway service is assumed to be untrusted.
-
-A malicious gateway may
-
-- observe connections
-- delay messages
-- refuse delivery
-- replay packets
-
-The gateway cannot
-
-- decrypt messages
-- generate valid signatures
-- recover private keys
-
----
-
-## Message Modification
-
-An attacker modifies encrypted packets during transport.
-
-```
-Ciphertext
-
-↓
-
-Modified
-
-↓
-
-Authentication Failure
-```
-
-Modified packets are rejected.
-
----
-
-## Identity Substitution
-
-An attacker attempts to replace another user's public identity.
-
-Protection
-
-- Safety Numbers
-- Identity Verification
-
-Group invitation bootstrap proves that the same endpoint controls the private keys corresponding
-to the public identity in `GroupInvitePacket` or `GroupJoinRequestPacket`. It does not prove the
-real-world identity of a first-time contact when the routing address itself is the only trusted
-addressing information.
-
-Users should verify important contacts before trusting them. Automatically discovered group
-identities are stored as mutual but unverified until safety numbers are compared.
-
----
-
-## Replay Attacks
-
-An attacker resends previously transmitted packets.
-
-Protection
-
-- Message identifiers
-- Duplicate detection
-- Persisted invitation IDs and challenges
-- Invitation expiry checked by the group owner
-
----
-
-## Premature Group-Key Distribution
-
-An attacker or incomplete invitation flow attempts to make a group usable before all intended
-members have authenticated keys.
-
-Protection
-
-- `GroupInvitationEntity` persists readiness for each selected contact
-- the invitee must explicitly accept before sending `GroupJoinRequestPacket`
-- `GroupInvitationCoordinator` distributes a key only to contacts that explicitly accepted
-- the creator treats a member as active only after a signed `GroupReadyAcknowledgementPacket`
-- epoch 1 is not generated before activation
-- creator messages remain local queued rows until at least one member confirms key installation
-- adding or removing an active member rotates to a fresh epoch and complete member-key snapshot
-- removed members receive no wrapped next-epoch key
-- `GroupMemberRemovedPacket` is owner-signed and bound to the original invitation challenge
-
-Previously processed messages should not be accepted again.
-
----
-
-## Unauthorized Message Reading
-
-An attacker obtains encrypted packets.
-
-Without the appropriate private keys the attacker cannot recover plaintext.
-
----
-
-## Group Packet Forgery
-
-Every current member knows the shared group epoch key, so group AEAD by itself cannot attribute a
-message to one member. SecureChat additionally requires an Ed25519 signature and verifies it
-against the sender's `GroupMemberKeyEntity` for the exact epoch.
-
-A network attacker, gateway, removed non-member, or different contact therefore cannot forge a
-current member's group message without that member's signing private key.
-
----
-
-# Threats Not Addressed
-
-SecureChat does **not** protect against every possible threat.
-
----
-
-## Compromised Device
-
-If malware gains full control of a user's device
-
-- plaintext may be accessible
-- private keys may be exposed
-- screenshots may be captured
-
-Application-level encryption cannot defend against a fully compromised endpoint.
-
-For a group, compromise of any current member exposes that epoch's shared key and therefore the
-content encrypted under that key. It does not provide the other members' Ed25519 private keys, so
-the attacker still cannot impersonate a different member without also compromising that key.
-
----
-
-## Shared-Key Limits
-
-The current group design does not provide Signal-style pairwise or sender-key ratcheting, automatic
-post-compromise security, or cryptographic deniability. Epoch rotation infrastructure exists, but
-membership-change/rekey protocol support is the next required feature. Until that is implemented,
-groups are static after creation.
-
-When rekey support is added, removal prevents a removed member from reading new epochs only after
-the new key has been distributed and activated. No protocol can make a member forget plaintext or
-keys it already received.
-
----
-
-## Malicious Operating System
-
-If the operating system itself is compromised, SecureChat cannot guarantee confidentiality.
-
-The application depends on the integrity of the host operating system.
-
----
-
-## Physical Device Access
-
-An attacker with prolonged physical access to an unlocked device may be able to access
-
-- decrypted messages
-- active sessions
-- cached information
-
-Device security remains the user's responsibility.
-
----
-
-## Social Engineering
-
-SecureChat cannot prevent users from voluntarily sharing
-
-- Safety Numbers
-- Screenshots
-- Plaintext
-- Verification codes
-
-Users remain responsible for verifying identities through trusted channels.
-
----
-
-## Traffic Analysis
-
-Even though message contents are encrypted, some metadata remains observable.
-
-Examples include
-
-- connection timing
-- online status
-- packet frequency
-- approximate communication patterns
-
-SecureChat minimizes metadata but does not eliminate traffic analysis completely.
-
----
-
-# Assumptions
-
-SecureChat assumes
-
-- cryptographic primitives remain secure
-- operating-system secure storage functions correctly
-- random-number generation is secure
-- users verify important contacts
-- private keys remain private
-
-If these assumptions fail, security guarantees may no longer hold.
-
----
-
-# Defense in Depth
-
-SecureChat uses multiple independent security layers.
-
-```
-Identity
-
-↓
-
-Authentication
-
-↓
-
-Encryption
-
-↓
-
-Transport
-
-↓
-
-Secure Storage
-```
-
-Breaking one layer should not automatically compromise the others.
-
----
-
-# Failure Strategy
-
-Whenever SecureChat cannot determine that an operation is secure, it should fail safely.
-
-Examples
-
-- Reject invalid ciphertext
-- Reject invalid signatures
-- Reject malformed packets
-- Reject unsupported protocol versions
-
-Failing safely is preferable to accepting uncertain data.
-
----
-
-# Security Reviews
-
-Changes involving
-
-- cryptography
-- identity management
-- protocol serialization
-- key storage
-- transport security
-
-should receive additional review before merging.
-
-Small, focused security changes are easier to audit than large mixed commits.
-
----
-
-# Future Threats
-
-The threat model should evolve alongside the application.
-
-New features such as
-
-- multi-device support
-- encrypted backups
-- voice/video calls
-- desktop clients
-
-introduce additional attack surfaces and should be accompanied by corresponding threat-model updates.
-
----
-
-# Summary
-
-SecureChat assumes that the network and gateway infrastructure are untrusted.
-
-Security is achieved by ensuring that only the communicating devices possess the cryptographic material required to authenticate identities and decrypt messages.
-
-The application cannot protect against fully compromised endpoint devices, but it is designed to remain secure even when the transport infrastructure is completely hostile.
+For a careful explanation of where federation can reduce central-infrastructure risk—and where SecureChat is **not** stronger than mature systems such as Signal—see [What makes SecureChat different?](../why-securechat.md).

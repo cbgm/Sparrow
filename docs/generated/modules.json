@@ -402,9 +402,9 @@
     "group": "feature",
     "directory": "feature/transport",
     "buildFile": "feature/transport/build.gradle.kts",
-    "kotlinSourceFileCount": 69,
+    "kotlinSourceFileCount": 71,
     "productionKotlinFileCount": 57,
-    "testKotlinFileCount": 12,
+    "testKotlinFileCount": 14,
     "resourceFileCount": 1,
     "sourceSets": [
       "androidMain",

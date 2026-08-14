@@ -1,130 +1,83 @@
-# Messaging Boundary
+# Messaging boundary
 
-Messaging spans multiple modules, but each concern has one owner:
+Messaging crosses modules, but each module has a narrow job.
 
-> `:feature:messaging` coordinates packet transport; `:feature:transport` moves opaque data; the
-> feature that owns a packet decides what that packet means.
-
-For the detailed direct/group runtime trace, see
-[Conversation, Messaging, and Delivery Flow](../features/message-transport-flow.md).
-
-## Ownership map
-
-| Concern | Owner | Examples |
+| Concern | Owner | Representative classes |
 |---|---|---|
-| Direct/group conversation behavior | `:feature:chats` | conversation repositories, group state machines, packet handlers |
-| Contact/identity exchange behavior | `:feature:contacts` | invitation, verification, merge and incoming handlers |
-| Packet contracts and persistent-outbox port | `:core:protocol` | `SecureChatPacket`, `PacketCodec`, `ProtocolOutbox`, `OutgoingWireSender` |
-| Persistent outbox storage | `:data:database` | `DefaultProtocolOutbox`, Room DAOs |
-| Send/receive orchestration | `:feature:messaging` | `DefaultOutboxRunner`, `DefaultOutboxProcessor`, `DefaultIncomingEnvelopeRunner` |
-| Contact/group routing resolution | `:feature:messaging` | `ContactRoutingIdResolver`, `ContactByRoutingIdResolver`, `GroupRoutingIdResolver` |
-| Gateway connection and wire frames | `:feature:transport` | `DefaultTransportConnectionManager`, `DefaultWebSocketTransportClient` |
-| Wire sender | `:feature:transport` | `WebSocketOutgoingWireSender` |
-| Server-side client edge/routing | `:server:gateway` | gateway WebSocket handler and connection registry |
-| Cross-node forwarding | `:server:federation` | signed node-to-node envelope/typing routing |
-| Offline ciphertext | `:server:mailbox` | capability-protected mailbox storage |
-| Wake-ups/compatibility inbox | `:server:push` | push token and pending-envelope services |
-
-## Dependency direction
-
-```mermaid
-flowchart TD
-    App[":androidApp / :shared"] --> Messaging[":feature:messaging"]
-    App --> Chats[":feature:chats"]
-    Messaging --> Chats
-    Messaging --> Contacts[":feature:contacts"]
-    Messaging --> Transport[":feature:transport"]
-    Messaging --> Protocol[":core:protocol"]
-    Chats --> Protocol
-    Contacts --> Protocol
-    Transport --> Protocol
-```
-
-Key rules:
-
-- `:core:protocol` contains transport-independent contracts.
-- `:feature:chats` and `:feature:contacts` own packet meaning.
-- `:feature:transport` never loads conversations or decides packet policy.
-- `:feature:messaging` may coordinate chats, contacts, crypto, protocol, database and transport.
-- server application modules communicate through protocol/HTTP boundaries rather than importing one
-  another's implementation packages.
+| Packet contracts | `:core:protocol` | `SecureChatPacket`, `PacketCodec`, packet data classes |
+| Persistent outbox contract | `:core:protocol` | `ProtocolOutbox`, `OutboxProcessor`, `OutgoingWireSender` |
+| Persistent outbox storage | `:data:database` | `DefaultProtocolOutbox` + Room DAOs |
+| Conversation meaning | `:feature:chats` | Direct/Group repositories, handlers, state machines |
+| Contact/identity packet meaning | `:feature:contacts` | invitation/identity handlers and use cases |
+| Send/receive orchestration | `:feature:messaging` | `DefaultOutboxRunner`, `DefaultOutboxProcessor`, `DefaultIncomingEnvelopeRunner`, `DefaultIncomingEnvelopeProcessor` |
+| Wire connection/discovery | `:feature:transport` | `DefaultTransportConnectionManager`, `DefaultWebSocketTransportClient`, discovery clients |
+| Client edge | `:server:gateway` | `GatewayWebSocketHandler`, `GatewaySessionHandler`, `ConnectionRegistry` |
+| Cross-node forwarding | `:server:federation` | `FederationRouter`, `FederationPeerRouter`, `OutboundEnvelopeRetryAgent` |
+| Offline store | `:server:mailbox` | `configureMailboxRoutes()`, `MailboxStorage`, `PostgresMailboxStore` |
+| Android wake-up | `:server:push` + `:notification` | `PushCoordinator`, `FirebasePushSender`, `SynchronizePendingMessages` |
 
 ## Outgoing boundary
 
-```text
-packet-owning feature
-    ↓
-ProtocolOutbox
-    ↓
-DefaultOutboxRunner
-    ↓
-DefaultOutboxProcessor
-    ↓
-routing + transport-payload policy
-    ↓
-OutgoingWireSender
-    ↓
-WebSocketOutgoingWireSender
-    ↓
-TransportEnvelope
-    ↓
-WebSocketTransportClient
+```mermaid
+sequenceDiagram
+    participant VM as Direct/Group ViewModel
+    participant UC as Send*MessageUseCase
+    participant Repo as MessageRepository
+    participant Proc as *OutgoingMessageProcessor
+    participant Outbox as ProtocolOutbox
+    participant Runner as DefaultOutboxRunner
+    participant OP as DefaultOutboxProcessor
+    participant Sender as OutgoingWireSender
+    participant WS as DefaultWebSocketTransportClient
+
+    VM->>UC: send(text)
+    UC->>Repo: send(...)
+    Repo->>Proc: create/store/enqueue
+    Proc->>Outbox: enqueue(packet)
+    Runner->>OP: processPending()
+    OP->>OP: encode + transport policy + resolve routing ID
+    OP->>Sender: send(routingId, encrypted/encoded payload)
+    Sender->>WS: send envelope
 ```
 
-Features do not send directly to the WebSocket.
+`DefaultOutboxProcessor` deliberately does not know whether a message bubble is Direct or Group. It decodes the already-created packet, asks `OutgoingTransportPayloadFactory` how it must be protected, resolves a routing ID with `ContactRoutingIdResolver` or `GroupRoutingIdResolver`, and hands opaque bytes to the wire sender.
+
+It processes recipient groups concurrently with a maximum of eight recipient groups at once, while preserving ordering within one recipient group.
 
 ## Incoming boundary
 
-```text
-WebSocketTransportClient.incomingEnvelopes
-    ↓
-WebSocketIncomingEnvelopeGateway
-    ↓
-DefaultIncomingEnvelopeRunner
-    ↓
-DefaultIncomingEnvelopeProcessor
-    ↓
-contact/group routing resolution + transport decoding
-    ↓
-packet dispatch
-    ↓
-feature-owned packet handler/state machine
+```mermaid
+sequenceDiagram
+    participant WS as DefaultWebSocketTransportClient
+    participant G as WebSocketIncomingEnvelopeGateway
+    participant R as DefaultIncomingEnvelopeRunner
+    participant P as DefaultIncomingEnvelopeProcessor
+    participant C as core IncomingMessageHandler
+    participant IP as chats IncomingPacketProcessor
+    participant Router as IncomingPacketRouter
+    participant D as DirectIncomingPacketProcessor
+    participant GR as GroupIncomingPacketProcessor
+
+    WS-->>G: TransportEnvelope
+    G-->>R: queued incoming envelope
+    R->>P: process(envelope)
+    P->>P: resolve sender contact / local keys
+    P->>C: decode secure transport message
+    C->>IP: decoded payload
+    IP->>IP: PacketCodec.decode()
+    IP->>Router: route packet
+    Router->>D: Direct packet
+    Router->>GR: Group packet
+    R-->>WS: acknowledge after successful processing
 ```
 
-The transport envelope is acknowledged only after application processing succeeds. That is a
-reliability boundary, not recipient message-delivery state.
+The transport layer treats packet bytes as opaque. Packet semantics are decided only after the client has decoded/decrypted them.
 
-## `:feature:messaging` package layout
+## Direct and Group callbacks
 
-```text
-feature/messaging/.../feature/messaging/
-├── application/
-│   ├── incoming/
-│   ├── mailbox/
-│   ├── outbox/
-│   └── routing/
-├── data/
-│   ├── repository/
-│   │   ├── direct/
-│   │   └── group/
-│   └── routing/
-└── di/
-```
+Shared receipts/outbox callbacks are dispatched by narrow routers:
 
-Routing contracts live with the
-application boundary they support; implementations live under `data/routing`.
+- `ReceiptIncomingPacketRouter` → Direct or Group receipt handlers.
+- `ChatOutboxDeliveryStateRouter` → Direct or Group delivery coordinator.
 
-## Placement rules
-
-- Chat/group business rules → `:feature:chats`.
-- Contact/identity-exchange business rules → `:feature:contacts`.
-- Packet/outbox orchestration and routing resolution → `:feature:messaging`.
-- Node discovery, routing-ID generation, WebSocket/gateway frames and network adapters →
-  `:feature:transport`.
-- Transport-independent packet/port contracts → `:core:protocol`.
-- Room persistence → `:data:database`.
-- Client-facing WebSocket routing on a node → `:server:gateway`.
-- Cross-node delivery → `:server:federation`.
-
-Do not put WebSocket clients in ViewModels, packet meaning in transport, or feature business rules in
-server/gateway code.
+Those routers dispatch only. They do not contain Direct/Group lifecycle rules.

@@ -21,7 +21,7 @@ Select a module to open its generated detail page with source sets, file counts,
 | [`:feature:messaging`](modules/feature-messaging.md) | `feature` | 33 | 7 | 1 | 7 | 2 |
 | [`:feature:onboarding`](modules/feature-onboarding.md) | `feature` | 14 | 0 | 1 | 2 | 3 |
 | [`:feature:settings`](modules/feature-settings.md) | `feature` | 60 | 0 | 2 | 2 | 2 |
-| [`:feature:transport`](modules/feature-transport.md) | `feature` | 69 | 12 | 1 | 3 | 3 |
+| [`:feature:transport`](modules/feature-transport.md) | `feature` | 71 | 14 | 1 | 3 | 3 |
 | [`:navigation`](modules/navigation.md) | `navigation` | 14 | 0 | 1 | 10 | 1 |
 | [`:notification`](modules/notification.md) | `notification` | 27 | 1 | 1 | 6 | 2 |
 | [`:quality`](modules/quality.md) | `quality` | 0 | 0 | 0 | 0 | 0 |
