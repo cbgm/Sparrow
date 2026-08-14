@@ -9,6 +9,27 @@ if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
 }
 
+val appVersionCode =
+    providers
+        .gradleProperty("appVersionCode")
+        .map(String::toInt)
+        .getOrElse(1)
+val appVersionName =
+    providers
+        .gradleProperty("appVersionName")
+        .getOrElse("1.0")
+val releaseStoreFile = providers.gradleProperty("releaseStoreFile").orNull
+val releaseStorePassword = providers.gradleProperty("releaseStorePassword").orNull
+val releaseKeyAlias = providers.gradleProperty("releaseKeyAlias").orNull
+val releaseKeyPassword = providers.gradleProperty("releaseKeyPassword").orNull
+val hasReleaseSigningConfiguration =
+    listOf(
+        releaseStoreFile,
+        releaseStorePassword,
+        releaseKeyAlias,
+        releaseKeyPassword
+    ).all { value -> !value.isNullOrBlank() }
+
 android {
     namespace = "com.cbgm.securechat"
     compileSdk =
@@ -26,8 +47,8 @@ android {
             libs.versions.android.targetSdk
                 .get()
                 .toInt()
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
     }
 
     compileOptions {
@@ -41,9 +62,26 @@ android {
         }
     }
 
+    signingConfigs {
+        if (hasReleaseSigningConfiguration) {
+            create("release") {
+                storeFile = file(requireNotNull(releaseStoreFile))
+                storePassword = requireNotNull(releaseStorePassword)
+                keyAlias = requireNotNull(releaseKeyAlias)
+                keyPassword = requireNotNull(releaseKeyPassword)
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 }
