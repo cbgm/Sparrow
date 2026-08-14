@@ -1,4 +1,4 @@
-(securechat_control_routes) {
+(sparrow_control_routes) {
     encode zstd gzip
 
     header {
@@ -62,9 +62,9 @@
 }
 
 {$CONTROL_PLANE_SITE_ADDRESS} {
-    import securechat_control_routes
+    import sparrow_control_routes
 }
 
 :8080 {
-    import securechat_control_routes
+    import sparrow_control_routes
 }

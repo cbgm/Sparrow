@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Base / shared -->
-    <string name="base_app_name">SecureChat</string>
+    <string name="base_app_name">Sparrow</string>
     <string name="base_back">Back</string>
     <string name="base_build_type">Build-Typ</string>
     <string name="base_cancel">Abbrechen</string>
@@ -17,10 +17,10 @@
     <string name="base_generating_secure_identity">Sichere Identität wird erstellt…</string>
     <string name="base_git_sha">Git-SHA</string>
     <string name="base_home">Startseite</string>
-    <string name="base_identity_ready_opening">Identität bereit. SecureChat wird geöffnet…</string>
+    <string name="base_identity_ready_opening">Identität bereit. Sparrow wird geöffnet…</string>
     <string name="base_import_action">Importieren</string>
     <string name="base_import_contact">Kontakt importieren</string>
-    <string name="base_import_securechat_contact">SecureChat-Kontakt importieren</string>
+    <string name="base_import_sparrow_contact">Sparrow-Kontakt importieren</string>
     <string name="base_language">Sprache</string>
     <string name="base_linked">Verknüpft</string>
     <string name="base_main">Allgemein</string>
@@ -35,7 +35,7 @@
     <string name="base_preferred">Bevorzugt</string>
     <string name="base_retry">Erneut versuchen</string>
     <string name="base_secure">Sicher</string>
-    <string name="base_securechat">SecureChat</string>
+    <string name="base_sparrow">Sparrow</string>
     <string name="base_share_contact">Kontakt teilen</string>
     <string name="base_tagline">Privat. Verschlüsselt. Gehört dir.</string>
     <string name="base_unknown">Unbekannt</string>
@@ -57,10 +57,10 @@
     <string name="feature_chats_contact_invitation_sent_title">Kontakteinladung gesendet</string>
     <string name="feature_chats_chat_key_exchange_incomplete_description">Beide Seiten haben den Identitätsaustausch noch nicht abgeschlossen.</string>
     <string name="feature_chats_chat_key_exchange_incomplete_title">Schlüsselaustausch unvollständig</string>
-    <string name="feature_chats_chat_no_keys_description">Dieser Kontakt besitzt keine öffentlichen SecureChat-Schlüssel. Nachrichten werden unverschlüsselt übertragen.</string>
+    <string name="feature_chats_chat_no_keys_description">Dieser Kontakt besitzt keine öffentlichen Sparrow-Schlüssel. Nachrichten werden unverschlüsselt übertragen.</string>
     <string name="feature_chats_chat_one_way_keys_description">Du besitzt die öffentlichen Schlüssel dieses Kontakts, aber der Kontakt besitzt deine noch nicht. Nachrichten bleiben unverschlüsselt.</string>
     <string name="feature_chats_chat_typing">%1$s schreibt…</string>
-    <string name="feature_chats_chat_unencrypted_description">Du besitzt keine öffentlichen SecureChat-Schlüssel dieses Kontakts.</string>
+    <string name="feature_chats_chat_unencrypted_description">Du besitzt keine öffentlichen Sparrow-Schlüssel dieses Kontakts.</string>
     <string name="feature_chats_chat_unencrypted_title">Nachrichten sind nicht Ende-zu-Ende verschlüsselt</string>
     <string name="feature_chats_chat_unverified_description">Vergleiche die Sicherheitsnummer über einen anderen vertrauenswürdigen Kanal.</string>
     <string name="feature_chats_chat_unverified_keys_description">Nachrichten sind verschlüsselt. Vergleiche die Sicherheitsnummer über einen vertrauenswürdigen Kanal.</string>
@@ -72,7 +72,7 @@
     <string name="feature_chats_chat_verified_by_me_keys_description">Nachrichten sind verschlüsselt. Du hast den Kontakt verifiziert; seine Bestätigung steht noch aus.</string>
     <string name="feature_chats_chat_verified_by_contact_keys_description">Nachrichten sind verschlüsselt. Der Kontakt hat dich verifiziert; verifiziere ihn für die gegenseitige Verifizierung.</string>
     <string name="feature_chats_chat_verified_e2ee">Gegenseitig verifiziert und Ende-zu-Ende verschlüsselt</string>
-    <string name="feature_chats_chat_verified_keys_description">Nachrichten verwenden die verifizierte SecureChat-Identität.</string>
+    <string name="feature_chats_chat_verified_keys_description">Nachrichten verwenden die verifizierte Sparrow-Identität.</string>
     <string name="feature_chats_group_accept">Annehmen</string>
     <string name="feature_chats_group_decline">Ablehnen</string>
     <string name="feature_chats_group_invitation_description">Der Gruppenschlüssel wird erst erstellt, nachdem alle eingeladenen Mitglieder angenommen haben.</string>
@@ -129,12 +129,12 @@
     <string name="feature_contactimport_imported_verified_name">%1$s wurde über den persönlichen QR-Code importiert und verifiziert.</string>
     <string name="feature_contactimport_imported_unverified_name">%1$s wurde als nicht verifiziert importiert. Öffne den Chat, um die sichere Einladung abzuschließen.</string>
     <string name="feature_contactimport_import_unverified_identity">Nicht verifizierte Identität importieren</string>
-    <string name="feature_contactimport_normal_invitation_description">Normalerweise fügst du die Person aus deinen Gerätekontakten hinzu und öffnest den Chat. SecureChat tauscht die Identitäten dann automatisch über eine Einladung aus.</string>
+    <string name="feature_contactimport_normal_invitation_description">Normalerweise fügst du die Person aus deinen Gerätekontakten hinzu und öffnest den Chat. Sparrow tauscht die Identitäten dann automatisch über eine Einladung aus.</string>
     <string name="feature_contactimport_in_person_qr_title">Persönlich verifizieren</string>
     <string name="feature_contactimport_in_person_qr_description">Scanne den QR-Code, während er direkt auf dem Gerät der anderen Person angezeigt wird. Die gescannten Schlüssel werden als verifiziert markiert.</string>
     <string name="feature_contactimport_paste_identity_title">Identitätstext einfügen</string>
     <string name="feature_contactimport_qr_trust_warning">Fahre nur fort, wenn dieser QR-Code direkt auf dem Gerät der erwarteten Person angezeigt wird.</string>
-    <string name="feature_contactimport_invalid_identity_qr">Der gescannte QR-Code enthält keine gültige SecureChat-Identität.</string>
+    <string name="feature_contactimport_invalid_identity_qr">Der gescannte QR-Code enthält keine gültige Sparrow-Identität.</string>
     <string name="feature_contactimport_trust_and_verify">Vertrauen und verifizieren</string>
     <string name="feature_contactimport_trust_and_import">Vertrauen und importieren</string>
     <string name="feature_contactimport_verifying_identity_qr">Identitäts-QR wird verifiziert</string>
@@ -142,12 +142,12 @@
     <string name="feature_contactimport_or_paste_manually">ODER DIE NICHT VERIFIZIERTE ALTERNATIVE VERWENDEN</string>
     <string name="feature_contactimport_paste_shared_identity_description">Eingefügter oder aus der Ferne geteilter Identitätstext speichert die öffentlichen Schlüssel, beweist aber nicht, wem sie gehören.</string>
     <string name="feature_contactimport_scan_identity">Identitäts-QR scannen</string>
-    <string name="feature_contactimport_scan_identity_instruction">Scanne den QR-Code direkt vom SecureChat-Bildschirm der anderen Person.</string>
+    <string name="feature_contactimport_scan_identity_instruction">Scanne den QR-Code direkt vom Sparrow-Bildschirm der anderen Person.</string>
     <string name="feature_contactimport_scan_qr_code">Persönlichen QR-Code scannen</string>
-    <string name="feature_contactimport_securechat_identity_found">SecureChat-Identität gefunden</string>
+    <string name="feature_contactimport_sparrow_identity_found">Sparrow-Identität gefunden</string>
     <string name="feature_contactimport_shared_identity">Geteilte Identität</string>
     <string name="feature_contactimport_signing_key">Signaturschlüssel</string>
-    <string name="feature_contactimport_unnamed_securechat_contact">Unbenannter SecureChat-Kontakt</string>
+    <string name="feature_contactimport_unnamed_sparrow_contact">Unbenannter Sparrow-Kontakt</string>
 
     <!-- Feature: contacts -->
     <string name="feature_contacts_add_contact">Kontakt hinzufügen</string>
@@ -164,8 +164,8 @@
     <string name="feature_contacts_device_contact">Gerätekontakt</string>
     <string name="feature_contacts_device_contact_linked_description">Dieser Kontakt ist mit deinem Adressbuch verknüpft.</string>
     <string name="feature_contacts_device_contact_missing">Gerätekontakt fehlt</string>
-    <string name="feature_contacts_device_contact_missing_description">Der verknüpfte Gerätekontakt existiert nicht mehr. SecureChat hat die Schlüssel und den Chatverlauf beibehalten.</string>
-    <string name="feature_contacts_device_contact_not_linked_description">Dieser SecureChat-Kontakt ist nicht mit deinem Adressbuch verknüpft.</string>
+    <string name="feature_contacts_device_contact_missing_description">Der verknüpfte Gerätekontakt existiert nicht mehr. Sparrow hat die Schlüssel und den Chatverlauf beibehalten.</string>
+    <string name="feature_contacts_device_contact_not_linked_description">Dieser Sparrow-Kontakt ist nicht mit deinem Adressbuch verknüpft.</string>
     <string name="feature_contacts_encryption_fingerprint">Fingerabdruck des Verschlüsselungsschlüssels</string>
     <string name="feature_contacts_identity_verified_description">Beide Geräte haben die aktuellen Identitäten unabhängig verifiziert.</string>
     <string name="feature_contacts_verified_by_you">Von dir verifiziert</string>
@@ -175,31 +175,31 @@
     <string name="feature_contacts_mutually_verified">Gegenseitig verifiziert</string>
     <string name="feature_contacts_import_from_device">Vom Gerät importieren</string>
     <string name="feature_contacts_import_from_device_description">Füge Personen per Telefonnummer hinzu. Beim Öffnen eines Chats wird automatisch eine sichere Einladung gesendet.</string>
-    <string name="feature_contacts_import_securechat_contact_description">Persönlichen QR-Code zur Verifizierung scannen oder Identitätstext als nicht verifizierte Alternative einfügen</string>
+    <string name="feature_contacts_import_sparrow_contact_description">Persönlichen QR-Code zur Verifizierung scannen oder Identitätstext als nicht verifizierte Alternative einfügen</string>
     <string name="feature_contacts_verify_or_import_identity">Identität verifizieren oder importieren</string>
     <string name="feature_contacts_no_contacts_hint">Tippe auf +, um Personen von deinem Gerät hinzuzufügen. Beim Öffnen eines Chats wird automatisch eine sichere Einladung gesendet.</string>
     <string name="feature_contacts_no_contacts_yet">Noch keine Kontakte</string>
     <string name="feature_contacts_no_phone_number">Keine Telefonnummer</string>
     <string name="feature_contacts_no_phone_numbers_stored">Keine Telefonnummern gespeichert.</string>
-    <string name="feature_contacts_no_securechat_identity">Keine SecureChat-Identität</string>
+    <string name="feature_contacts_no_sparrow_identity">Keine Sparrow-Identität</string>
     <string name="feature_contacts_not_linked">Nicht verknüpft</string>
     <string name="feature_contacts_return_to_contacts">Zurück zu den Kontakten</string>
     <string name="feature_contacts_safety_number">Sicherheitsnummer</string>
-    <string name="feature_contacts_securechat_contact">SecureChat-Kontakt</string>
-    <string name="feature_contacts_securechat_contact_not_verified">SecureChat-Kontakt · nicht verifiziert</string>
-    <string name="feature_contacts_securechat_identity">SecureChat-Identität</string>
-    <string name="feature_contacts_securechat_keys_attach_later">Öffentliche Verschlüsselungs- und Signaturschlüssel können später durch den Import der SecureChat-Identität dieses Kontakts hinzugefügt werden.</string>
-    <string name="feature_contacts_securechat_not_enabled">SecureChat ist für diesen Kontakt noch nicht aktiviert.</string>
-    <string name="feature_contacts_share_contact_missing_keys">Zum Teilen dieses Kontakts werden SecureChat-Schlüssel benötigt.</string>
+    <string name="feature_contacts_sparrow_contact">Sparrow-Kontakt</string>
+    <string name="feature_contacts_sparrow_contact_not_verified">Sparrow-Kontakt · nicht verifiziert</string>
+    <string name="feature_contacts_sparrow_identity">Sparrow-Identität</string>
+    <string name="feature_contacts_sparrow_keys_attach_later">Öffentliche Verschlüsselungs- und Signaturschlüssel können später durch den Import der Sparrow-Identität dieses Kontakts hinzugefügt werden.</string>
+    <string name="feature_contacts_sparrow_not_enabled">Sparrow ist für diesen Kontakt noch nicht aktiviert.</string>
+    <string name="feature_contacts_share_contact_missing_keys">Zum Teilen dieses Kontakts werden Sparrow-Schlüssel benötigt.</string>
     <string name="feature_contacts_signing_fingerprint">Fingerabdruck des Signaturschlüssels</string>
     <string name="feature_contacts_unnamed_contact">Unbenannter Kontakt</string>
     <string name="feature_contacts_verification_confirmation">Wir haben die vollständige Sicherheitsnummer über einen vertrauenswürdigen Kanal verglichen und sie stimmt überein.</string>
-    <string name="feature_contacts_verified_securechat_contact">Gegenseitig verifizierter SecureChat-Kontakt</string>
+    <string name="feature_contacts_verified_sparrow_contact">Gegenseitig verifizierter Sparrow-Kontakt</string>
     <string name="feature_contacts_verify_safety_number">Sicherheitsnummer verifizieren</string>
     <string name="feature_contacts_search_placholder">Name, Nummer</string>
 
     <string name="feature_contacts_contact_invitation_title">Kontaktanfrage</string>
-    <string name="feature_contacts_contact_invitation_description">%1$s möchte SecureChat-Identitäten austauschen.</string>
+    <string name="feature_contacts_contact_invitation_description">%1$s möchte Sparrow-Identitäten austauschen.</string>
     <string name="feature_contacts_invitation_unverified_warning">Das Annehmen aktiviert verschlüsselte Nachrichten, beweist aber nicht, dass diese Identität zur erwarteten Person gehört. Vergleiche die Sicherheitsnummer separat.</string>
     <string name="feature_contacts_accept_invitation">Annehmen</string>
     <string name="feature_contacts_decline_invitation">Ablehnen</string>
@@ -236,9 +236,9 @@
     <string name="feature_identity_signing_public_key">Öffentlicher Signaturschlüssel</string>
     <string name="feature_identity_signing_public_key_description">Wird zur Überprüfung der Identitätsinformationen verwendet.</string>
     <string name="feature_identity_something_went_wrong">Etwas ist schiefgelaufen</string>
-    <string name="feature_identity_stable_routing_address_description">Diese Nummer wird deine dauerhafte SecureChat-Routing-Adresse.</string>
+    <string name="feature_identity_stable_routing_address_description">Diese Nummer wird deine dauerhafte Sparrow-Routing-Adresse.</string>
     <string name="feature_identity_your_phone_number">Deine Telefonnummer</string>
-    <string name="feature_identity_your_securechat_identity">Deine SecureChat-Identität</string>
+    <string name="feature_identity_your_sparrow_identity">Deine Sparrow-Identität</string>
 
     <!-- Feature: main (navigation) -->
     <string name="main_title_and_nav_chats">Chats</string>
@@ -251,7 +251,7 @@
     <string name="feature_onboarding_approve_create_identity">Bestätigen und Identität erstellen</string>
     <string name="feature_onboarding_approve_phone_number">Telefonnummer bestätigen</string>
     <string name="feature_onboarding_camera">Kamera</string>
-    <string name="feature_onboarding_camera_description">Scanne SecureChat-QR-Codes zur Identitätsfreigabe.</string>
+    <string name="feature_onboarding_camera_description">Scanne Sparrow-QR-Codes zur Identitätsfreigabe.</string>
     <string name="feature_onboarding_contacts_permission_description">Vorhandene Kontakte aus deinem Adressbuch finden.</string>
     <string name="feature_onboarding_contacts_stay_local">Deine Kontakte bleiben lokal</string>
     <string name="feature_onboarding_contacts_stay_local_description">Kontakte werden ausschließlich auf deinem Gerät verwendet, um Personen anhand ihrer Telefonnummer zu finden.</string>
@@ -261,10 +261,10 @@
     <string name="feature_onboarding_identity_belongs_to_you">Deine Identität gehört dir</string>
     <string name="feature_onboarding_identity_belongs_to_you_description">Deine privaten Identitätsschlüssel bleiben sicher auf diesem Gerät gespeichert.</string>
     <string name="feature_onboarding_input_your_name">Gib deinen Namen ein</string>
-    <string name="feature_onboarding_local_identity_incomplete">Die lokale Identität ist unvollständig. SecureChat ersetzt vorhandene Schlüssel nicht automatisch.</string>
+    <string name="feature_onboarding_local_identity_incomplete">Die lokale Identität ist unvollständig. Sparrow ersetzt vorhandene Schlüssel nicht automatisch.</string>
     <string name="feature_onboarding_no_automatic_number">Es konnte keine Telefonnummer automatisch erkannt werden. Gib sie manuell ein oder wähle eine aus.</string>
     <string name="feature_onboarding_notifications_description">Erhalte Benachrichtigungen über neue Nachrichten.</string>
-    <string name="feature_onboarding_permissions_description">SecureChat fordert nur Berechtigungen für Funktionen an, die du verwenden möchtest.</string>
+    <string name="feature_onboarding_permissions_description">Sparrow fordert nur Berechtigungen für Funktionen an, die du verwenden möchtest.</string>
     <string name="feature_onboarding_permissions_settings_hint">Abgelehnte Berechtigungen können später in den Systemeinstellungen aktiviert werden.</string>
     <string name="feature_onboarding_phone_number_permission_description">Versucht, deine SIM-Telefonnummer automatisch zu erkennen, ohne eine Auswahl anzuzeigen.</string>
     <string name="feature_onboarding_phone_routing_description">Sie dient als deine dauerhafte Kontakt- und Routing-Adresse. Du kannst sie vor dem Fortfahren noch ändern.</string>
@@ -272,7 +272,7 @@
     <string name="feature_onboarding_privacy_first">Deine Privatsphäre steht an erster Stelle</string>
     <string name="feature_onboarding_try_sim_number_again">SIM-Telefonnummer erneut erkennen</string>
     <string name="feature_onboarding_welcome_description">Ein privater Messenger mit Ende-zu-Ende-Verschlüsselung und einer Identität, die dein Gerät niemals verlässt.</string>
-    <string name="feature_onboarding_welcome_to_securechat">Willkommen bei SecureChat</string>
+    <string name="feature_onboarding_welcome_to_sparrow">Willkommen bei Sparrow</string>
     <string name="feature_onboarding_your_name">Dein Name</string>
 
     <string name="feature_chats_create_group">Gruppe erstellen</string>
@@ -286,7 +286,7 @@
     <string name="feature_settings_danger_zone">Gefahrenbereich</string>
     <string name="feature_settings_danger_zone_description">Diese Aktionen sind destruktiv und nur für lokale Debugging-Zwecke vorgesehen.</string>
     <string name="feature_settings_data_disclaimer">Datenschutzhinweis</string>
-    <string name="feature_settings_data_disclaimer_subtitle">Welche Daten SecureChat lokal und in der Server-Infrastruktur speichert</string>
+    <string name="feature_settings_data_disclaimer_subtitle">Welche Daten Sparrow lokal und in der Server-Infrastruktur speichert</string>
     <string name="feature_settings_developer_menu">Entwicklermenü</string>
     <string name="feature_settings_developer_menu_subtitle">Build-Informationen, Feature-Flags und Diagnose</string>
     <string name="feature_settings_network_diagnostics">Netzwerkdiagnose</string>
@@ -323,13 +323,13 @@
 
     <!-- Feature: startup -->
     <string name="feature_startup_choose_number_or_enter">Wähle eine Telefonnummer von deinem Gerät oder gib sie manuell ein.</string>
-    <string name="feature_startup_contacts_find_by_phone">Deine Kontakte verwenden deine Telefonnummer, um dich sicher über SecureChat zu finden.</string>
+    <string name="feature_startup_contacts_find_by_phone">Deine Kontakte verwenden deine Telefonnummer, um dich sicher über Sparrow zu finden.</string>
     <string name="feature_startup_detected_edit_or_choose">Automatisch erkannt. Du kannst die Nummer bearbeiten oder eine andere auswählen.</string>
     <string name="feature_startup_keys_generated_after_approval">Deine Verschlüsselungsschlüssel werden erst erzeugt, nachdem du deine Telefonnummer bestätigt hast.</string>
-    <string name="feature_startup_opening_securechat">SecureChat wird geöffnet…</string>
-    <string name="feature_startup_partial_identity_no_replacement">Es ist nur ein Teil deiner lokalen Identität verfügbar. SecureChat erzeugt keine Ersatzschlüssel automatisch.</string>
-    <string name="feature_startup_preparing_securechat">SecureChat wird vorbereitet…</string>
-    <string name="feature_startup_setup_failed">Die Einrichtung von SecureChat konnte nicht abgeschlossen werden.</string>
+    <string name="feature_startup_opening_sparrow">Sparrow wird geöffnet…</string>
+    <string name="feature_startup_partial_identity_no_replacement">Es ist nur ein Teil deiner lokalen Identität verfügbar. Sparrow erzeugt keine Ersatzschlüssel automatisch.</string>
+    <string name="feature_startup_preparing_sparrow">Sparrow wird vorbereitet…</string>
+    <string name="feature_startup_setup_failed">Die Einrichtung von Sparrow konnte nicht abgeschlossen werden.</string>
     <string name="feature_startup_verify_phone_number">Bestätige deine Telefonnummer</string>
     <string name="feature_chats_sender_not_in_contacts">%1$s (nicht in Kontakten)</string>
     <string name="feature_settings_security">Sicherheit</string>
@@ -418,7 +418,7 @@
     <string name="feature_contacts_decline_and_block">Ablehnen &amp; blockieren</string>
     <string name="feature_settings_network">Netzwerk</string>
     <string name="feature_settings_control_planes">Control Planes</string>
-    <string name="feature_settings_control_planes_description">SecureChat prüft diese Adressen in der festgelegten Reihenfolge. Nicht erreichbare Adressen bleiben sichtbar und werden automatisch erneut geprüft.</string>
+    <string name="feature_settings_control_planes_description">Sparrow prüft diese Adressen in der festgelegten Reihenfolge. Nicht erreichbare Adressen bleiben sichtbar und werden automatisch erneut geprüft.</string>
     <string name="feature_settings_control_plane_add">Control Plane hinzufügen</string>
     <string name="feature_settings_control_plane_address">Control-Plane- oder Verzeichnis-Adresse</string>
     <string name="feature_settings_control_planes_refresh">Control Planes prüfen</string>
@@ -435,7 +435,7 @@
     <string name="feature_settings_control_plane_error_save_failed">Die Control-Plane-Liste konnte nicht gespeichert werden.</string>
     <string name="feature_settings_control_planes_settings_subtitle">Adressen, Verzeichnis und Erreichbarkeit verwalten</string>
     <string name="feature_settings_control_plane_directory_title">Control-Plane-Verzeichnis</string>
-    <string name="feature_settings_control_plane_directory_description">Optionale URL, die die aktuelle Control-Plane-Liste bereitstellt. SecureChat synchronisiert sie automatisch und behält bei einem Ausfall die letzte erfolgreiche Liste.</string>
+    <string name="feature_settings_control_plane_directory_description">Optionale URL, die die aktuelle Control-Plane-Liste bereitstellt. Sparrow synchronisiert sie automatisch und behält bei einem Ausfall die letzte erfolgreiche Liste.</string>
     <string name="feature_settings_control_plane_directory_url">Verzeichnis-URL</string>
     <string name="feature_settings_control_plane_directory_apply">Speichern und synchronisieren</string>
     <string name="feature_settings_control_plane_directory_disabled">Kein Verzeichnis konfiguriert</string>

@@ -58,7 +58,7 @@ if (Test-Path -LiteralPath $environmentFile) {
     Write-Host "Keeping existing environment file: $environmentFile"
 } else {
     $content = @"
-SECURECHAT_DOMAIN=$Domain
+SPARROW_DOMAIN=$Domain
 FIREBASE_ADMIN_CREDENTIALS=$FirebaseAdminCredentials
 COMPOSE_PARALLEL_LIMIT=1
 NODE_REGISTRY_DATABASE_PASSWORD_FILE=./secrets/node-registry-database-password.txt

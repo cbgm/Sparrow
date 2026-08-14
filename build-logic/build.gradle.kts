@@ -3,7 +3,7 @@ plugins {
     `java-gradle-plugin`
 }
 
-group = "com.cbgm.securechat.buildlogic"
+group = "com.cbgm.sparrow.buildlogic"
 version = "1.0.0"
 
 repositories {
@@ -62,54 +62,54 @@ dependencies {
 
 gradlePlugin {
     plugins {
-        register("secureChatKmpLibrary") {
-            id = "securechat.kmp.library"
-            implementationClass = "com.cbgm.securechat.buildlogic.SecureChatKmpLibraryPlugin"
+        register("sparrowKmpLibrary") {
+            id = "sparrow.kmp.library"
+            implementationClass = "com.cbgm.sparrow.buildlogic.SparrowKmpLibraryPlugin"
         }
 
-        register("secureChatKmpCompose") {
-            id = "securechat.kmp.compose"
-            implementationClass = "com.cbgm.securechat.buildlogic.SecureChatKmpComposePlugin"
+        register("sparrowKmpCompose") {
+            id = "sparrow.kmp.compose"
+            implementationClass = "com.cbgm.sparrow.buildlogic.SparrowKmpComposePlugin"
         }
 
-        register("secureChatKmpTesting") {
-            id = "securechat.kmp.testing"
-            implementationClass = "com.cbgm.securechat.buildlogic.SecureChatKmpTestingPlugin"
+        register("sparrowKmpTesting") {
+            id = "sparrow.kmp.testing"
+            implementationClass = "com.cbgm.sparrow.buildlogic.SparrowKmpTestingPlugin"
         }
 
-        register("secureChatKmpComposeFeature") {
-            id = "securechat.kmp.compose.feature"
-            implementationClass = "com.cbgm.securechat.buildlogic.SecureChatKmpComposeFeaturePlugin"
+        register("sparrowKmpComposeFeature") {
+            id = "sparrow.kmp.compose.feature"
+            implementationClass = "com.cbgm.sparrow.buildlogic.SparrowKmpComposeFeaturePlugin"
         }
 
-        register("secureChatKmpSerialization") {
-            id = "securechat.kmp.serialization"
-            implementationClass = "com.cbgm.securechat.buildlogic.SecureChatKmpSerializationPlugin"
+        register("sparrowKmpSerialization") {
+            id = "sparrow.kmp.serialization"
+            implementationClass = "com.cbgm.sparrow.buildlogic.SparrowKmpSerializationPlugin"
         }
 
-        register("secureChatKmpRoom") {
-            id = "securechat.kmp.room"
-            implementationClass = "com.cbgm.securechat.buildlogic.SecureChatKmpRoomPlugin"
+        register("sparrowKmpRoom") {
+            id = "sparrow.kmp.room"
+            implementationClass = "com.cbgm.sparrow.buildlogic.SparrowKmpRoomPlugin"
         }
 
-        register("secureChatLint") {
-            id = "securechat.lint"
-            implementationClass = "com.cbgm.securechat.buildlogic.SecureChatLintPlugin"
+        register("sparrowLint") {
+            id = "sparrow.lint"
+            implementationClass = "com.cbgm.sparrow.buildlogic.SparrowLintPlugin"
         }
 
-        register("secureChatArchitecture") {
-            id = "securechat.architecture"
-            implementationClass = "com.cbgm.securechat.buildlogic.SecureChatArchitecturePlugin"
+        register("sparrowArchitecture") {
+            id = "sparrow.architecture"
+            implementationClass = "com.cbgm.sparrow.buildlogic.SparrowArchitecturePlugin"
         }
 
-        register("secureChatQuality") {
-            id = "securechat.quality"
-            implementationClass = "com.cbgm.securechat.buildlogic.SecureChatQualityPlugin"
+        register("sparrowQuality") {
+            id = "sparrow.quality"
+            implementationClass = "com.cbgm.sparrow.buildlogic.SparrowQualityPlugin"
         }
 
         register("localProperties") {
-            id = "securechat.local-properties"
-            implementationClass = "com.cbgm.securechat.buildlogic.LocalPropertiesPlugin"
+            id = "sparrow.local-properties"
+            implementationClass = "com.cbgm.sparrow.buildlogic.LocalPropertiesPlugin"
         }
     }
 }

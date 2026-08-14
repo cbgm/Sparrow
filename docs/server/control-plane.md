@@ -1,6 +1,6 @@
 # Control Plane
 
-A Control Plane is the discovery/presence/push side of SecureChat. It does not carry normal client WebSocket
+A Control Plane is the discovery/presence/push side of Sparrow. It does not carry normal client WebSocket
 message traffic.
 
 ## Package contents
@@ -18,7 +18,7 @@ secrets/configuration
 In the release/generated bundle, double-click:
 
 ```text
-Start-SecureChatControlPlane.cmd
+Start-SparrowControlPlane.cmd
 ```
 
 The PowerShell launcher:
@@ -26,7 +26,7 @@ The PowerShell launcher:
 - prevents concurrent launcher runs against the same deployment folder;
 - starts Docker Desktop if required;
 - shows LAN/Public configuration;
-- persists `securechat.conf`;
+- persists `sparrow.conf`;
 - prepares generated secrets;
 - starts stateful stores before services;
 - handles the known pre-release push schema migration/reset case;

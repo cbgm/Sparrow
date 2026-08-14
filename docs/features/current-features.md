@@ -114,7 +114,7 @@ There is no orphaned-group mode in the current architecture.
 - matching launcher-bundle rebuilds when image/config changes require them;
 - full `v*` tag build of every image/package;
 - public checksums/release metadata;
-- one combined `securechat-<version>-full.zip`;
+- one combined `sparrow-<version>-full.zip`;
 - private R8 `mapping.txt` retention in Actions.
 
 ## Not currently advertised as working

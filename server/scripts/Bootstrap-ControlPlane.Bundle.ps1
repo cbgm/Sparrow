@@ -9,7 +9,7 @@ Add-Type -AssemblyName System.Drawing
 
 $deploymentDirectory = $PSScriptRoot
 $runtimeEnvironmentPath = Join-Path $deploymentDirectory ".env.runtime"
-$networkConfigPath = Join-Path $deploymentDirectory "securechat.conf"
+$networkConfigPath = Join-Path $deploymentDirectory "sparrow.conf"
 $secretsDirectory = Join-Path $deploymentDirectory "secrets"
 $composePath = Join-Path $deploymentDirectory "docker-compose.yml"
 $releaseComposePath = Join-Path $deploymentDirectory "docker-compose.release.yml"
@@ -26,7 +26,7 @@ try {
 } finally {
     $sha256.Dispose()
 }
-$mutexName = "Local\SecureChatControlPlane-$($deploymentHash.Substring(0, 24))"
+$mutexName = "Local\SparrowControlPlane-$($deploymentHash.Substring(0, 24))"
 $script:DeploymentMutex = [System.Threading.Mutex]::new($false, $mutexName)
 $hasDeploymentLock = $false
 try {
@@ -37,7 +37,7 @@ try {
 if (-not $hasDeploymentLock) {
     [System.Windows.Forms.MessageBox]::Show(
         "This Control Plane launcher is already running for this deployment folder.",
-        "SecureChat Control Plane",
+        "Sparrow Control Plane",
         [System.Windows.Forms.MessageBoxButtons]::OK,
         [System.Windows.Forms.MessageBoxIcon]::Information
     ) | Out-Null
@@ -48,7 +48,7 @@ $script:Docker = $null
 $script:ComposeFileArguments = @()
 
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "SecureChat Control Plane"
+$form.Text = "Sparrow Control Plane"
 $form.Size = New-Object System.Drawing.Size(760, 430)
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
@@ -59,7 +59,7 @@ $title = New-Object System.Windows.Forms.Label
 $title.Location = New-Object System.Drawing.Point(24, 22)
 $title.Size = New-Object System.Drawing.Size(705, 28)
 $title.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
-$title.Text = "Starting SecureChat control plane"
+$title.Text = "Starting Sparrow control plane"
 $form.Controls.Add($title)
 
 $status = New-Object System.Windows.Forms.Label
@@ -171,7 +171,7 @@ function Fail {
 
     [System.Windows.Forms.MessageBox]::Show(
         "$Message`n`nDiagnostic log:`n$logPath",
-        "SecureChat Control Plane",
+        "Sparrow Control Plane",
         [System.Windows.Forms.MessageBoxButtons]::OK,
         [System.Windows.Forms.MessageBoxIcon]::Error
     ) | Out-Null
@@ -214,14 +214,14 @@ function Write-NetworkConfiguration {
     [System.IO.File]::WriteAllLines(
         $networkConfigPath,
         @(
-            "# SecureChat control-plane configuration",
+            "# Sparrow control-plane configuration",
             "# Generated and updated by the launcher. You may also edit this file by hand while the stack is stopped.",
             "CONFIGURED=true",
             "MODE=$Mode",
             "PUBLIC_DOMAIN=$PublicDomain",
             "CONTROL_PLANE_ID=$ControlPlaneId",
-            "SECURECHAT_IMAGE_PREFIX=$($Config['SECURECHAT_IMAGE_PREFIX'])",
-            "SECURECHAT_IMAGE_TAG=$($Config['SECURECHAT_IMAGE_TAG'])"
+            "SPARROW_IMAGE_PREFIX=$($Config['SPARROW_IMAGE_PREFIX'])",
+            "SPARROW_IMAGE_TAG=$($Config['SPARROW_IMAGE_TAG'])"
         ),
         [System.Text.UTF8Encoding]::new($false)
     )
@@ -349,7 +349,7 @@ function Read-LauncherConfiguration {
         $state.Done = $true
     })
 
-    $title.Text = "Configure SecureChat control plane"
+    $title.Text = "Configure Sparrow control plane"
     $status.Visible = $false
     $progress.Visible = $false
     $details.Visible = $false
@@ -370,7 +370,7 @@ function Read-LauncherConfiguration {
     $status.Visible = $true
     $progress.Visible = $true
     $details.Visible = $true
-    $title.Text = "Starting SecureChat control plane"
+    $title.Text = "Starting Sparrow control plane"
     [System.Windows.Forms.Application]::DoEvents()
 
     if ($state.Cancelled -or $form.IsDisposed) {
@@ -414,7 +414,7 @@ function Get-NetworkMode {
     $mode = if ($Config.ContainsKey("MODE")) { $Config["MODE"].Trim().ToLowerInvariant() } else { "lan" }
 
     if ($mode -notin @("lan", "public")) {
-        throw "securechat.conf MODE must be lan or public."
+        throw "sparrow.conf MODE must be lan or public."
     }
 
     return $mode
@@ -437,7 +437,7 @@ function Get-PublicIpv4Address {
         }
     }
 
-    throw "Could not detect the public IPv4 address. Set PUBLIC_DOMAIN in securechat.conf."
+    throw "Could not detect the public IPv4 address. Set PUBLIC_DOMAIN in sparrow.conf."
 }
 
 function Resolve-PublicDomain {
@@ -528,13 +528,13 @@ function Ensure-Docker {
 function Get-NodeRegistryImageReference {
     param([hashtable]$Config)
 
-    return "$($Config['SECURECHAT_IMAGE_PREFIX'])-node-registry:$($Config['SECURECHAT_IMAGE_TAG'])"
+    return "$($Config['SPARROW_IMAGE_PREFIX'])-node-registry:$($Config['SPARROW_IMAGE_TAG'])"
 }
 
 function Find-LegacyRegistryIdentityVolume {
     $volumeNames = @(& $script:Docker volume ls --format "{{.Name}}" 2>$null)
     $knownVolumes = @(
-        "securechat-control-plane_registry-identity",
+        "sparrow-control-plane_registry-identity",
         "control-plane_registry-identity"
     )
 
@@ -611,7 +611,7 @@ function Ensure-RegistryAuthority {
     }
     if (-not (Test-Path -LiteralPath $rootIdentityPath -PathType Leaf)) {
         throw (
-            "Registry authority is not provisioned. Copy the existing SecureChat registry-root.identity " +
+            "Registry authority is not provisioned. Copy the existing Sparrow registry-root.identity " +
             "into the secrets folder once, or copy registry-authority.identity and " +
             "registry-authority-certificate.json from another trusted control plane."
         )
@@ -625,7 +625,7 @@ function Ensure-RegistryAuthority {
             -v "${dockerSecretsPath}:/secrets" `
             $image `
             -cp "/app/lib/*" `
-            com.cbgm.securechat.server.registry.RegistryAuthorityProvisioningCli `
+            com.cbgm.sparrow.server.registry.RegistryAuthorityProvisioningCli `
             /secrets/registry-root.identity `
             /secrets/registry-authority.identity `
             /secrets/registry-authority-certificate.json 2>&1 |
@@ -916,8 +916,8 @@ END;
         psql `
         -v ON_ERROR_STOP=1 `
         -At `
-        -U securechat_push `
-        -d securechat_push `
+        -U sparrow_push `
+        -d sparrow_push `
         -c $schemaCheckSql 2>&1
 
     if ($LASTEXITCODE -ne 0) {
@@ -947,8 +947,8 @@ DROP TABLE IF EXISTS push_devices CASCADE;
         push-database `
         psql `
         -v ON_ERROR_STOP=1 `
-        -U securechat_push `
-        -d securechat_push `
+        -U sparrow_push `
+        -d sparrow_push `
         -c $resetSql 2>&1
 
     foreach ($line in $resetOutput) {
@@ -1031,9 +1031,9 @@ try {
     $config = Read-EnvironmentFile -Path $networkConfigPath
     $config = Initialize-NetworkConfiguration -Config $config
 
-    foreach ($requiredValue in @("SECURECHAT_IMAGE_PREFIX", "SECURECHAT_IMAGE_TAG", "CONTROL_PLANE_ID")) {
+    foreach ($requiredValue in @("SPARROW_IMAGE_PREFIX", "SPARROW_IMAGE_TAG", "CONTROL_PLANE_ID")) {
         if (-not $config.ContainsKey($requiredValue) -or [string]::IsNullOrWhiteSpace($config[$requiredValue])) {
-            throw "securechat.conf is missing $requiredValue."
+            throw "sparrow.conf is missing $requiredValue."
         }
     }
 
@@ -1050,7 +1050,7 @@ try {
     $script:Docker = Ensure-Docker
 
     Write-Detail "Mode: $mode"
-    Write-Detail "Image: $($config['SECURECHAT_IMAGE_PREFIX']):$($config['SECURECHAT_IMAGE_TAG'])"
+    Write-Detail "Image: $($config['SPARROW_IMAGE_PREFIX']):$($config['SPARROW_IMAGE_TAG'])"
     if ($mode -eq "public") {
         Write-Detail "Public control plane: https://$publicDomain"
     } else {
@@ -1058,7 +1058,7 @@ try {
     }
 
     Set-ProgressValue -Value 15
-    Set-Status "Preparing SecureChat secrets..."
+    Set-Status "Preparing Sparrow secrets..."
     New-Item -ItemType Directory -Path $secretsDirectory -Force | Out-Null
 
     $registryPasswordPath = Join-Path $secretsDirectory "node-registry-database-password.txt"
@@ -1081,7 +1081,7 @@ try {
 
     $siteAddress = if ($mode -eq "public") { $publicDomain } else { ":80" }
     $runtime = @(
-        "CONTROL_PLANE_PROJECT_NAME=securechat-control-plane",
+        "CONTROL_PLANE_PROJECT_NAME=sparrow-control-plane",
         "CONTROL_PLANE_ID=$($config['CONTROL_PLANE_ID'])",
         "CONTROL_PLANE_BIND_ADDRESS=0.0.0.0",
         "CONTROL_PLANE_HTTP_PORT=$controlPlanePort",
@@ -1098,8 +1098,8 @@ try {
         "PRESENCE_REDIS_PASSWORD_FILE=./secrets/presence-redis-password.txt",
         "PUSH_DATABASE_PASSWORD_FILE=./secrets/push-database-password.txt",
         "PUSH_INTERNAL_API_TOKEN_FILE=./secrets/push-internal-api-token.txt",
-        "SECURECHAT_IMAGE_PREFIX=$($config['SECURECHAT_IMAGE_PREFIX'])",
-        "SECURECHAT_IMAGE_TAG=$($config['SECURECHAT_IMAGE_TAG'])"
+        "SPARROW_IMAGE_PREFIX=$($config['SPARROW_IMAGE_PREFIX'])",
+        "SPARROW_IMAGE_TAG=$($config['SPARROW_IMAGE_TAG'])"
     )
 
     [System.IO.File]::WriteAllLines(
@@ -1111,10 +1111,10 @@ try {
     Push-Location $deploymentDirectory
 
     try {
-        Set-Status "Pulling SecureChat images..."
+        Set-Status "Pulling Sparrow images..."
         Invoke-ComposeStreaming `
             -Arguments @("pull") `
-            -Activity "Pulling SecureChat control-plane images"
+            -Activity "Pulling Sparrow control-plane images"
         Set-ProgressValue -Value 55
 
         # Start stateful dependencies first. PostgreSQL keeps its original
@@ -1123,7 +1123,7 @@ try {
         # therefore recreate only that container so it always consumes the
         # current presence-redis-password secret while preserving its volume.
         Set-ProgressValue -Value 65
-        Set-Status "Starting SecureChat databases..."
+        Set-Status "Starting Sparrow databases..."
         Invoke-Compose -Arguments @(
             "up",
             "-d",
@@ -1148,14 +1148,14 @@ try {
 
         Synchronize-PostgresPassword `
             -Service "node-registry-database" `
-            -DatabaseUser "securechat_registry" `
-            -DatabaseName "securechat_registry" `
+            -DatabaseUser "sparrow_registry" `
+            -DatabaseName "sparrow_registry" `
             -Password $registryPassword
 
         Synchronize-PostgresPassword `
             -Service "push-database" `
-            -DatabaseUser "securechat_push" `
-            -DatabaseName "securechat_push" `
+            -DatabaseUser "sparrow_push" `
+            -DatabaseName "sparrow_push" `
             -Password $pushPassword
 
         Reset-ObsoletePushSchemaIfNeeded
@@ -1170,7 +1170,7 @@ try {
         )
 
         Set-ProgressValue -Value 84
-        Set-Status "Starting SecureChat services..."
+        Set-Status "Starting Sparrow services..."
         Invoke-Compose -Arguments @(
             "up",
             "-d",
@@ -1217,7 +1217,7 @@ try {
     $url = if ($mode -eq "public") { "https://$publicDomain" } else { "http://$address`:$controlPlanePort" }
 
     Set-ProgressValue -Value 100
-    $title.Text = "SecureChat control plane is running"
+    $title.Text = "Sparrow control plane is running"
     $status.Text = $url
     Write-Log "SUCCESS: $url"
 

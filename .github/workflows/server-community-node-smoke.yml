@@ -65,17 +65,17 @@ jobs:
           }
 
           collect_project \
-            securechat-control-plane-smoke \
+            sparrow-control-plane-smoke \
             server/.standalone-smoke/control-plane.env \
             server/control-plane/docker-compose.yml \
             control-plane
           collect_project \
-            securechat-community-node-a-smoke \
+            sparrow-community-node-a-smoke \
             server/.standalone-smoke/node-a.env \
             server/community-node/docker-compose.yml \
             node-a
           collect_project \
-            securechat-community-node-b-smoke \
+            sparrow-community-node-b-smoke \
             server/.standalone-smoke/node-b.env \
             server/community-node/docker-compose.yml \
             node-b
@@ -112,14 +112,14 @@ jobs:
           }
 
           remove_project \
-            securechat-community-node-b-smoke \
+            sparrow-community-node-b-smoke \
             server/.standalone-smoke/node-b.env \
             server/community-node/docker-compose.yml
           remove_project \
-            securechat-community-node-a-smoke \
+            sparrow-community-node-a-smoke \
             server/.standalone-smoke/node-a.env \
             server/community-node/docker-compose.yml
           remove_project \
-            securechat-control-plane-smoke \
+            sparrow-control-plane-smoke \
             server/.standalone-smoke/control-plane.env \
             server/control-plane/docker-compose.yml

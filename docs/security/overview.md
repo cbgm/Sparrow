@@ -1,6 +1,6 @@
 # Security overview
 
-SecureChat separates client cryptography, identity verification and server infrastructure authentication. This page describes the current implementation; it is not a formal security proof or external audit.
+Sparrow separates client cryptography, identity verification and server infrastructure authentication. This page describes the current implementation; it is not a formal security proof or external audit.
 
 ## Client cryptographic building blocks
 
@@ -48,7 +48,7 @@ Membership/security epochs are managed client-side by the Group security/members
 
 ## Safety numbers
 
-`SafetyNumberGenerator` deterministically orders the two parties' public identity key sets, prefixes lengths, includes the domain separator `SecureChat Safety Number v1`, hashes with SHA-256, and renders five-digit groups. Both peers should derive the same number for the same current identities.
+`SafetyNumberGenerator` deterministically orders the two parties' public identity key sets, prefixes lengths, includes the domain separator `Sparrow Safety Number v1`, hashes with SHA-256, and renders five-digit groups. Both peers should derive the same number for the same current identities.
 
 ## Server authentication
 

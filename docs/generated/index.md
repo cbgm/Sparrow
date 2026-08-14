@@ -23,4 +23,4 @@ Generated automatically by `./gradlew architectureReport`.
 - Project dependency edges: **101**
 - Kotlin files: **963**
 - Test Kotlin files: **90**
-- Resource files: **58**
+- Resource files: **48**

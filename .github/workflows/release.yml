@@ -259,13 +259,13 @@ jobs:
             exit 1
           fi
           mkdir -p dist/android-debug
-          cp "${debug_apk}" "dist/android-debug/securechat-${version}-debug.apk"
-          (cd dist/android-debug && sha256sum securechat-*.apk > SHA256SUMS.txt)
+          cp "${debug_apk}" "dist/android-debug/sparrow-${version}-debug.apk"
+          (cd dist/android-debug && sha256sum sparrow-*.apk > SHA256SUMS.txt)
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: securechat-android-debug-${{ needs.metadata.outputs.artifact_version }}
+          name: sparrow-android-debug-${{ needs.metadata.outputs.artifact_version }}
           path: dist/android-debug
           if-no-files-found: error
           retention-days: 30
@@ -331,7 +331,7 @@ jobs:
             fi
           done
 
-          keystore="${RUNNER_TEMP}/securechat-release.jks"
+          keystore="${RUNNER_TEMP}/sparrow-release.jks"
           printf '%s' "${ANDROID_RELEASE_KEYSTORE_BASE64}" | base64 --decode > "${keystore}"
           chmod 600 "${keystore}"
 
@@ -377,8 +377,8 @@ jobs:
           "${apksigner}" verify --verbose --print-certs "${release_apk}"
 
           mkdir -p dist/android-release
-          cp "${release_apk}" "dist/android-release/securechat-${version}-release.apk"
-          (cd dist/android-release && sha256sum securechat-*.apk > SHA256SUMS.txt)
+          cp "${release_apk}" "dist/android-release/sparrow-${version}-release.apk"
+          (cd dist/android-release && sha256sum sparrow-*.apk > SHA256SUMS.txt)
 
           mapping_file="androidApp/build/outputs/mapping/release/mapping.txt"
           if [[ ! -s "${mapping_file}" ]]; then
@@ -391,7 +391,7 @@ jobs:
       - name: Upload R8 mapping
         uses: actions/upload-artifact@v4
         with:
-          name: securechat-android-mapping-${{ needs.metadata.outputs.artifact_version }}
+          name: sparrow-android-mapping-${{ needs.metadata.outputs.artifact_version }}
           path: dist/android-mapping
           if-no-files-found: error
           retention-days: 90
@@ -399,7 +399,7 @@ jobs:
       - name: Upload signed release APK
         uses: actions/upload-artifact@v4
         with:
-          name: securechat-android-release-${{ needs.metadata.outputs.artifact_version }}
+          name: sparrow-android-release-${{ needs.metadata.outputs.artifact_version }}
           path: dist/android-release
           if-no-files-found: error
           retention-days: 30
@@ -462,7 +462,7 @@ jobs:
           set -euo pipefail
 
           owner="${GITHUB_REPOSITORY_OWNER,,}"
-          image_prefix="ghcr.io/${owner}/securechat"
+          image_prefix="ghcr.io/${owner}/sparrow"
           required=()
 
           if [[ "${CONTROL_PLANE_PACKAGE}" == "true" ]]; then
@@ -538,9 +538,9 @@ jobs:
           set -euo pipefail
 
           owner="${GITHUB_REPOSITORY_OWNER,,}"
-          image_prefix="ghcr.io/${owner}/securechat"
+          image_prefix="ghcr.io/${owner}/sparrow"
           created_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-          context_root="${RUNNER_TEMP}/securechat-release-images"
+          context_root="${RUNNER_TEMP}/sparrow-release-images"
           rm -rf "${context_root}"
           mkdir -p "${context_root}"
 
@@ -585,7 +585,7 @@ jobs:
         run: |
           set -euo pipefail
           owner="${GITHUB_REPOSITORY_OWNER,,}"
-          image_prefix="ghcr.io/${owner}/securechat"
+          image_prefix="ghcr.io/${owner}/sparrow"
 
           for service in ${ALIAS_SERVICES}; do
             image="${image_prefix}-${service}"
@@ -604,7 +604,7 @@ jobs:
           BUILD_COMMUNITY_NODE: ${{ needs.changes.outputs.community_node_package }}
         run: |
           $owner = "${{ github.repository_owner }}".ToLowerInvariant()
-          $imagePrefix = "ghcr.io/$owner/securechat"
+          $imagePrefix = "ghcr.io/$owner/sparrow"
 
           if ($env:BUILD_CONTROL_PLANE -eq "true") {
               ./server/scripts/New-ControlPlaneBundle.ps1 `
@@ -614,11 +614,11 @@ jobs:
 
               New-Item -ItemType Directory -Path dist/server/control-plane -Force | Out-Null
               Copy-Item `
-                  -LiteralPath dist-control-plane/securechat-control-plane.zip `
-                  -Destination "dist/server/control-plane/securechat-control-plane-$($env:ARTIFACT_VERSION)-windows.zip"
+                  -LiteralPath dist-control-plane/sparrow-control-plane.zip `
+                  -Destination "dist/server/control-plane/sparrow-control-plane-$($env:ARTIFACT_VERSION)-windows.zip"
 
               Push-Location dist/server/control-plane
-              Get-ChildItem -File -Filter "securechat-*" | ForEach-Object {
+              Get-ChildItem -File -Filter "sparrow-*" | ForEach-Object {
                   $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
                   "$hash  $($_.Name)"
               } | Set-Content -LiteralPath SHA256SUMS.txt -Encoding utf8
@@ -633,14 +633,14 @@ jobs:
 
               New-Item -ItemType Directory -Path dist/server/community-node -Force | Out-Null
               Copy-Item `
-                  -LiteralPath dist-community-node/securechat-community-node.zip `
-                  -Destination "dist/server/community-node/securechat-community-node-$($env:ARTIFACT_VERSION)-windows.zip"
+                  -LiteralPath dist-community-node/sparrow-community-node.zip `
+                  -Destination "dist/server/community-node/sparrow-community-node-$($env:ARTIFACT_VERSION)-windows.zip"
               Copy-Item `
-                  -LiteralPath dist-community-node/securechat-community-node.tar.gz `
-                  -Destination "dist/server/community-node/securechat-community-node-$($env:ARTIFACT_VERSION)-macos-linux.tar.gz"
+                  -LiteralPath dist-community-node/sparrow-community-node.tar.gz `
+                  -Destination "dist/server/community-node/sparrow-community-node-$($env:ARTIFACT_VERSION)-macos-linux.tar.gz"
 
               Push-Location dist/server/community-node
-              Get-ChildItem -File -Filter "securechat-*" | ForEach-Object {
+              Get-ChildItem -File -Filter "sparrow-*" | ForEach-Object {
                   $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
                   "$hash  $($_.Name)"
               } | Set-Content -LiteralPath SHA256SUMS.txt -Encoding utf8
@@ -651,7 +651,7 @@ jobs:
         if: needs.changes.outputs.control_plane_package == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: securechat-control-plane-${{ needs.metadata.outputs.artifact_version }}
+          name: sparrow-control-plane-${{ needs.metadata.outputs.artifact_version }}
           path: dist/server/control-plane
           if-no-files-found: error
           retention-days: 30
@@ -660,7 +660,7 @@ jobs:
         if: needs.changes.outputs.community_node_package == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: securechat-community-node-${{ needs.metadata.outputs.artifact_version }}
+          name: sparrow-community-node-${{ needs.metadata.outputs.artifact_version }}
           path: dist/server/community-node
           if-no-files-found: error
           retention-days: 30
@@ -716,25 +716,25 @@ jobs:
       - name: Download debug APK
         uses: actions/download-artifact@v4
         with:
-          name: securechat-android-debug-${{ needs.metadata.outputs.artifact_version }}
+          name: sparrow-android-debug-${{ needs.metadata.outputs.artifact_version }}
           path: downloads/debug
 
       - name: Download signed release APK
         uses: actions/download-artifact@v4
         with:
-          name: securechat-android-release-${{ needs.metadata.outputs.artifact_version }}
+          name: sparrow-android-release-${{ needs.metadata.outputs.artifact_version }}
           path: downloads/release
 
       - name: Download Control Plane package
         uses: actions/download-artifact@v4
         with:
-          name: securechat-control-plane-${{ needs.metadata.outputs.artifact_version }}
+          name: sparrow-control-plane-${{ needs.metadata.outputs.artifact_version }}
           path: downloads/control-plane
 
       - name: Download Community Node package
         uses: actions/download-artifact@v4
         with:
-          name: securechat-community-node-${{ needs.metadata.outputs.artifact_version }}
+          name: sparrow-community-node-${{ needs.metadata.outputs.artifact_version }}
           path: downloads/community-node
 
       - name: Assemble individual release assets
@@ -742,9 +742,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          find downloads -type f -name 'securechat-*' -exec cp '{}' dist/ ';'
+          find downloads -type f -name 'sparrow-*' -exec cp '{}' dist/ ';'
 
-          package_count="$(find dist -maxdepth 1 -type f -name 'securechat-*' | wc -l)"
+          package_count="$(find dist -maxdepth 1 -type f -name 'sparrow-*' | wc -l)"
           if [[ "${package_count}" -ne 5 ]]; then
             echo "::error::Expected 5 full-release packages, found ${package_count}."
             find downloads -maxdepth 3 -type f -print
@@ -752,7 +752,7 @@ jobs:
           fi
 
           cat > dist/RELEASE.txt <<EOF_RELEASE
-          SecureChat ${{ needs.metadata.outputs.version_name }}
+          Sparrow ${{ needs.metadata.outputs.version_name }}
           Commit: ${GITHUB_SHA}
           Server image tag: ${{ needs.metadata.outputs.image_tag }}
 
@@ -770,17 +770,17 @@ jobs:
           set -euo pipefail
 
           version="${{ needs.metadata.outputs.artifact_version }}"
-          package_root="dist/full/SecureChat-${version}"
+          package_root="dist/full/Sparrow-${version}"
           mkdir -p \
             "${package_root}/app" \
             "${package_root}/control-plane" \
             "${package_root}/community-node"
 
-          debug_apk="$(find dist -maxdepth 1 -type f -name 'securechat-*-debug.apk' | head -n 1)"
-          release_apk="$(find dist -maxdepth 1 -type f -name 'securechat-*-release.apk' | head -n 1)"
-          control_plane="$(find dist -maxdepth 1 -type f -name 'securechat-control-plane-*-windows.zip' | head -n 1)"
-          node_windows="$(find dist -maxdepth 1 -type f -name 'securechat-community-node-*-windows.zip' | head -n 1)"
-          node_macos_linux="$(find dist -maxdepth 1 -type f -name 'securechat-community-node-*-macos-linux.tar.gz' | head -n 1)"
+          debug_apk="$(find dist -maxdepth 1 -type f -name 'sparrow-*-debug.apk' | head -n 1)"
+          release_apk="$(find dist -maxdepth 1 -type f -name 'sparrow-*-release.apk' | head -n 1)"
+          control_plane="$(find dist -maxdepth 1 -type f -name 'sparrow-control-plane-*-windows.zip' | head -n 1)"
+          node_windows="$(find dist -maxdepth 1 -type f -name 'sparrow-community-node-*-windows.zip' | head -n 1)"
+          node_macos_linux="$(find dist -maxdepth 1 -type f -name 'sparrow-community-node-*-macos-linux.tar.gz' | head -n 1)"
 
           for required_file in \
             "${debug_apk}" \
@@ -803,7 +803,7 @@ jobs:
           cp dist/RELEASE.txt "${package_root}/RELEASE.txt"
 
           cat > "${package_root}/MANIFEST.txt" <<EOF_MANIFEST
-          SecureChat full release package
+          Sparrow full release package
           Version: ${{ needs.metadata.outputs.version_name }}
           Commit: ${GITHUB_SHA}
           Server image tag: ${{ needs.metadata.outputs.image_tag }}
@@ -827,10 +827,10 @@ jobs:
               | xargs -0 sha256sum > SHA256SUMS.txt
           )
 
-          full_zip="dist/securechat-${version}-full.zip"
+          full_zip="dist/sparrow-${version}-full.zip"
           (
             cd dist/full
-            zip -qr "../$(basename "${full_zip}")" "SecureChat-${version}"
+            zip -qr "../$(basename "${full_zip}")" "Sparrow-${version}"
           )
 
           if [[ ! -s "${full_zip}" ]]; then
@@ -845,14 +845,14 @@ jobs:
         run: |
           set -euo pipefail
           cd dist
-          sha256sum securechat-* > SHA256SUMS.txt
+          sha256sum sparrow-* > SHA256SUMS.txt
 
       - name: Upload complete release package
         uses: actions/upload-artifact@v4
         with:
-          name: securechat-release-${{ needs.metadata.outputs.artifact_version }}
+          name: sparrow-release-${{ needs.metadata.outputs.artifact_version }}
           path: |
-            dist/securechat-*
+            dist/sparrow-*
             dist/RELEASE.txt
             dist/SHA256SUMS.txt
           if-no-files-found: error
@@ -873,6 +873,6 @@ jobs:
 
           gh release create "${GITHUB_REF_NAME}" \
             dist/* \
-            --title "SecureChat ${{ needs.metadata.outputs.version_name }}" \
+            --title "Sparrow ${{ needs.metadata.outputs.version_name }}" \
             --generate-notes \
             "${prerelease_argument[@]}"

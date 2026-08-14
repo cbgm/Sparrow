@@ -1,4 +1,4 @@
-name: securechat-network
+name: sparrow-network
 
 x-hardened-service: &hardened-service
   read_only: true
@@ -14,7 +14,7 @@ services:
     image: caddy:2-alpine
     restart: unless-stopped
     environment:
-      SECURECHAT_DOMAIN: ${SECURECHAT_DOMAIN:?Set SECURECHAT_DOMAIN in server/.env.production}
+      SPARROW_DOMAIN: ${SPARROW_DOMAIN:?Set SPARROW_DOMAIN in server/.env.production}
     ports:
       - "80:80"
       - "443:443"
@@ -163,9 +163,9 @@ services:
     ports: !reset []
     environment:
       TRUST_PROXY_HEADERS: "true"
-      CLIENT_ENDPOINT: wss://${SECURECHAT_DOMAIN:?Set SECURECHAT_DOMAIN}/v1/gateway
-      FEDERATION_ENDPOINT: https://${SECURECHAT_DOMAIN:?Set SECURECHAT_DOMAIN}
-      MAILBOX_ENDPOINT: https://${SECURECHAT_DOMAIN:?Set SECURECHAT_DOMAIN}
+      CLIENT_ENDPOINT: wss://${SPARROW_DOMAIN:?Set SPARROW_DOMAIN}/v1/gateway
+      FEDERATION_ENDPOINT: https://${SPARROW_DOMAIN:?Set SPARROW_DOMAIN}
+      MAILBOX_ENDPOINT: https://${SPARROW_DOMAIN:?Set SPARROW_DOMAIN}
       FEDERATION_DATABASE_PASSWORD: !reset null
       FEDERATION_DATABASE_PASSWORD_FILE: /run/secrets/federation-database-password
       FEDERATION_INTERNAL_API_TOKEN: !reset null

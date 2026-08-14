@@ -1,11 +1,11 @@
 # Contacts and invitations
 
-`:feature:contacts` owns SecureChat contacts, invitation state, identity exchange, verification and blocklist behavior. `:feature:contactimport` owns manual/QR import presentation and scanning.
+`:feature:contacts` owns Sparrow contacts, invitation state, identity exchange, verification and blocklist behavior. `:feature:contactimport` owns manual/QR import presentation and scanning.
 
 ## Current Android features
 
 - import/link device contacts;
-- normalize phone numbers and merge them with existing SecureChat contacts;
+- normalize phone numbers and merge them with existing Sparrow contacts;
 - manually import/share identities;
 - send/receive contact invitations;
 - accept, decline, decline+block;
@@ -45,7 +45,7 @@ Use cases include:
 
 ## Contact import/merge
 
-`ContactMergeService` centralizes merge decisions so importing a device contact does not intentionally create duplicates for an already-known SecureChat identity/phone number.
+`ContactMergeService` centralizes merge decisions so importing a device contact does not intentionally create duplicates for an already-known Sparrow identity/phone number.
 
 ## Invitation and identity exchange
 

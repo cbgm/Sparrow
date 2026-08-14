@@ -3,7 +3,7 @@
 set -e
 
 echo ""
-echo "Running SecureChat quality checks before push..."
+echo "Running Sparrow quality checks before push..."
 echo ""
 
 if [ -f "./gradlew" ]; then
@@ -21,5 +21,5 @@ fi
     --no-configuration-cache
 
 echo ""
-echo "SecureChat quality checks passed."
+echo "Sparrow quality checks passed."
 echo ""

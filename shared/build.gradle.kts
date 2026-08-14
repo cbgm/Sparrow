@@ -9,14 +9,14 @@ val isMacOs =
         )
 
 plugins {
-    alias(libs.plugins.securechat.kmp.compose.feature)
-    alias(libs.plugins.securechat.kmp.serialization)
+    alias(libs.plugins.sparrow.kmp.compose.feature)
+    alias(libs.plugins.sparrow.kmp.serialization)
     alias(libs.plugins.buildkonfig)
-    alias(libs.plugins.securechat.properties)
+    alias(libs.plugins.sparrow.properties)
 }
 
 buildkonfig {
-    packageName = "com.cbgm.securechat"
+    packageName = "com.cbgm.sparrow"
 
     defaultConfigs {
         buildConfigField(
@@ -38,14 +38,14 @@ kotlin {
             iosSimulatorArm64()
         ).forEach { target ->
             target.binaries.framework {
-                baseName = "SecureChat"
+                baseName = "Sparrow"
                 isStatic = true
             }
         }
     }
 
     android {
-        namespace = "com.cbgm.securechat.shared"
+        namespace = "com.cbgm.sparrow.shared"
 
         androidResources {
             enable = true

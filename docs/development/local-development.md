@@ -29,14 +29,14 @@ The preferred operator experience is the generated bundle. If you have a CI/rele
 
 ```powershell
 .\server\scripts\New-ControlPlaneBundle.ps1 `
-    -ImagePrefix ghcr.io/cbgm/securechat `
+    -ImagePrefix ghcr.io/cbgm/sparrow `
     -ImageTag <image-tag>
 ```
 
 Extract the generated ZIP and run:
 
 ```text
-Start-SecureChatControlPlane.cmd
+Start-SparrowControlPlane.cmd
 ```
 
 The launcher shows saved values as prefilled configuration, starts Docker Desktop if needed, prepares secrets/state and waits for readiness.
@@ -53,14 +53,14 @@ Generate:
 
 ```powershell
 .\server\scripts\New-CommunityNodeBundle.ps1 `
-    -ImagePrefix ghcr.io/cbgm/securechat `
+    -ImagePrefix ghcr.io/cbgm/sparrow `
     -ImageTag <image-tag>
 ```
 
 Extract and run:
 
 ```text
-Start-SecureChatNode.cmd
+Start-SparrowNode.cmd
 ```
 
 Enter the same Control Plane **directory URL**, not a hardcoded list of planes. Then open:
@@ -118,15 +118,15 @@ If Android devices/emulators or another machine need the Control Plane, use the 
 A release candidate/full release can provide a macOS/Linux Community Node package containing:
 
 ```text
-Start-SecureChatNode.command
-start-securechat-node.sh
+Start-SparrowNode.command
+start-sparrow-node.sh
 ```
 
 After extracting:
 
 ```bash
-chmod +x start-securechat-node.sh bootstrap-community-node.sh
-./start-securechat-node.sh
+chmod +x start-sparrow-node.sh bootstrap-community-node.sh
+./start-sparrow-node.sh
 ```
 
 The script configures the deployment and Control Plane directory. Open the resulting node `/index` page.
@@ -213,4 +213,4 @@ This is the fastest way to verify registration, two independent identities, fede
 
 ## Emulator networking
 
-`localhost` inside an Android emulator is the emulator itself. `10.0.2.2` reaches the development host from the standard Android emulator, but SecureChat's normal flow should still use the configured Control Plane directory and signed node descriptors rather than a hardcoded gateway URL.
+`localhost` inside an Android emulator is the emulator itself. `10.0.2.2` reaches the development host from the standard Android emulator, but Sparrow's normal flow should still use the configured Control Plane directory and signed node descriptors rather than a hardcoded gateway URL.

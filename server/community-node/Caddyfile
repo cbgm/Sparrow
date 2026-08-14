@@ -1,4 +1,4 @@
-(securechat_community_routes) {
+(sparrow_community_routes) {
     encode zstd gzip
 
     header {
@@ -64,9 +64,9 @@
 }
 
 {$COMMUNITY_NODE_SITE_ADDRESS} {
-    import securechat_community_routes
+    import sparrow_community_routes
 }
 
 :8080 {
-    import securechat_community_routes
+    import sparrow_community_routes
 }

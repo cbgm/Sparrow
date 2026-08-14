@@ -1,4 +1,4 @@
-rootProject.name = "SecureChat"
+rootProject.name = "Sparrow"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {

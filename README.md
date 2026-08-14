@@ -1,6 +1,6 @@
 <div align="center">
 
-# SecureChat
+# Sparrow
 
 **End-to-end encrypted messaging built with Kotlin Multiplatform and a federated Kotlin server stack.**
 
@@ -15,30 +15,30 @@
 
 ## Project status
 
-SecureChat is under active development. **Android is the usable client target.** The repository contains
+Sparrow is under active development. **Android is the usable client target.** The repository contains
 iOS/Kotlin Multiplatform source sets and an Xcode host, but iOS is **not a supported or usable app target yet**:
 important platform/runtime integrations are still missing, so feature parity with Android must not be assumed.
 
 A complete release workflow now exists, but **there is currently no official tagged GitHub release with the
 full downloadable package yet**. Until the first `v*` tag is published, build from source or use CI artifacts.
 
-## What makes SecureChat different?
+## What makes Sparrow different?
 
-SecureChat combines client-side end-to-end encryption with a **federated, independently hostable transport
+Sparrow combines client-side end-to-end encryption with a **federated, independently hostable transport
 network**. Multiple Control Planes can advertise authorized Community Nodes, and clients can fail over between
 nodes instead of depending permanently on one mandatory messaging server.
 
-That is somewhat similar to Tor's community-relay philosophy, but SecureChat is **not an onion-routing anonymity
+That is somewhat similar to Tor's community-relay philosophy, but Sparrow is **not an onion-routing anonymity
 network**: a client uses one Community Node at a time and encrypted messages may federate to another recipient
 node. The goal is infrastructure independence/resilience, not Tor-style source anonymity.
 
-This also does **not** justify a blanket claim that SecureChat is cryptographically safer than Signal. Signal is a
-much more mature and heavily scrutinized secure messenger. SecureChat's potential advantage is narrower: it can
+This also does **not** justify a blanket claim that Sparrow is cryptographically safer than Signal. Signal is a
+much more mature and heavily scrutinized secure messenger. Sparrow's potential advantage is narrower: it can
 reduce risks around **centralized routing infrastructure, single-operator outages, blocking, and mandatory trust in
 one transport provider** while keeping normal message content encrypted end to end. WhatsApp also uses strong
-end-to-end encryption; SecureChat's differentiator is the independently hostable/federated infrastructure model.
+end-to-end encryption; Sparrow's differentiator is the independently hostable/federated infrastructure model.
 
-Read [What makes SecureChat different?](docs/why-securechat.md) for the Tor/Signal/WhatsApp comparison, threat
+Read [What makes Sparrow different?](docs/why-sparrow.md) for the Tor/Signal/WhatsApp comparison, threat
 boundaries, and the exact classes implementing discovery, failover, federation and encryption.
 
 ## What currently works on Android
@@ -116,7 +116,7 @@ Create or edit the repository-root `local.properties`:
 controlPlaneDirectoryUrl=https://gist.githubusercontent.com/cbgm/26bb9651e7d2d3fd464df02e8808387f/raw/522436a432e48b9f53f3210b76278e2217f126f8/gistfile1.txt
 ```
 
-The response may be served as `text/plain` or `application/json`; SecureChat reads the body as text and parses
+The response may be served as `text/plain` or `application/json`; Sparrow reads the body as text and parses
 its JSON content. The document format is:
 
 ```json
@@ -152,7 +152,7 @@ Or open the project in Android Studio and run `androidApp`.
 **Windows bundle:** generate or download the Control Plane bundle, extract it, then double-click:
 
 ```text
-Start-SecureChatControlPlane.cmd
+Start-SparrowControlPlane.cmd
 ```
 
 The launcher starts Docker Desktop when necessary, creates runtime secrets, starts PostgreSQL/Redis/services,
@@ -173,19 +173,19 @@ from source with Docker Compose; see [Local development](docs/development/local-
 Windows bundle:
 
 ```text
-Start-SecureChatNode.cmd
+Start-SparrowNode.cmd
 ```
 
 macOS bundle:
 
 ```text
-Start-SecureChatNode.command
+Start-SparrowNode.command
 ```
 
 or:
 
 ```bash
-./start-securechat-node.sh
+./start-sparrow-node.sh
 ```
 
 The node asks for LAN/Public mode and the Control Plane directory URL. It can start with cached Control Plane
@@ -290,7 +290,7 @@ Every push to `release/**` runs change detection:
 - the first commit of a release line and `v*` tags -> full build.
 
 A tag such as `v0.1.0-alpha.1` on a commit belonging to a `release/**` branch creates the GitHub release. A full
-tagged build contains individual assets plus one combined `securechat-<version>-full.zip`.
+tagged build contains individual assets plus one combined `sparrow-<version>-full.zip`.
 
 There is **no official tagged release yet**, so this is the configured process rather than a currently published
 download.

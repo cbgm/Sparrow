@@ -1,4 +1,4 @@
-name: ${COMMUNITY_NODE_PROJECT_NAME:-securechat-community-node}
+name: ${COMMUNITY_NODE_PROJECT_NAME:-sparrow-community-node}
 
 x-community-service: &community-service
   restart: unless-stopped
@@ -8,7 +8,7 @@ x-community-service: &community-service
   extra_hosts:
     - "host.docker.internal:host-gateway"
   healthcheck:
-    test: ["CMD-SHELL", "java -cp '/app/lib/*' com.cbgm.securechat.server.observability.ReadinessProbe http://127.0.0.1:$${PORT}/health/ready"]
+    test: ["CMD-SHELL", "java -cp '/app/lib/*' com.cbgm.sparrow.server.observability.ReadinessProbe http://127.0.0.1:$${PORT}/health/ready"]
     interval: 10s
     timeout: 5s
     retries: 6
@@ -39,8 +39,8 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: securechat_mailbox
-      POSTGRES_USER: securechat_mailbox
+      POSTGRES_DB: sparrow_mailbox
+      POSTGRES_USER: sparrow_mailbox
       POSTGRES_PASSWORD: ${MAILBOX_DATABASE_PASSWORD:-local-development-password}
     ports:
       - "127.0.0.1:${MAILBOX_DATABASE_PORT:-5636}:5432"
@@ -54,7 +54,7 @@ services:
 
   mailbox:
     <<: *community-service
-    image: securechat-mailbox:local
+    image: sparrow-mailbox:local
     build:
       context: ../..
       dockerfile: server/Dockerfile
@@ -63,8 +63,8 @@ services:
     environment:
       PORT: 8092
       NODE_IDENTITY_PATH: /data/node.identity
-      MAILBOX_DATABASE_URL: jdbc:postgresql://mailbox-database:5432/securechat_mailbox
-      MAILBOX_DATABASE_USER: securechat_mailbox
+      MAILBOX_DATABASE_URL: jdbc:postgresql://mailbox-database:5432/sparrow_mailbox
+      MAILBOX_DATABASE_USER: sparrow_mailbox
       MAILBOX_DATABASE_PASSWORD: ${MAILBOX_DATABASE_PASSWORD:-local-development-password}
       CONTROL_PLANE_URLS: ${CONTROL_PLANE_URLS:-}
       PUSH_NODE_API_URL: ${CONTROL_PLANE_URL:?Set CONTROL_PLANE_URL}
@@ -85,8 +85,8 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: securechat_federation
-      POSTGRES_USER: securechat_federation
+      POSTGRES_DB: sparrow_federation
+      POSTGRES_USER: sparrow_federation
       POSTGRES_PASSWORD: ${FEDERATION_DATABASE_PASSWORD:-local-development-password}
     ports:
       - "127.0.0.1:${FEDERATION_DATABASE_PORT:-5638}:5432"
@@ -100,7 +100,7 @@ services:
 
   federation:
     <<: *community-service
-    image: securechat-federation:local
+    image: sparrow-federation:local
     build:
       context: ../..
       dockerfile: server/Dockerfile
@@ -118,8 +118,8 @@ services:
       MAILBOX_ENDPOINT: ${MAILBOX_ENDPOINT:?Set MAILBOX_ENDPOINT}
       FEDERATION_INTERNAL_API_TOKEN: ${FEDERATION_INTERNAL_API_TOKEN:-local-federation-development-token}
       GATEWAY_INTERNAL_API_TOKEN: ${GATEWAY_INTERNAL_API_TOKEN:-local-gateway-development-token}
-      FEDERATION_DATABASE_URL: jdbc:postgresql://federation-database:5432/securechat_federation
-      FEDERATION_DATABASE_USER: securechat_federation
+      FEDERATION_DATABASE_URL: jdbc:postgresql://federation-database:5432/sparrow_federation
+      FEDERATION_DATABASE_USER: sparrow_federation
       FEDERATION_DATABASE_PASSWORD: ${FEDERATION_DATABASE_PASSWORD:-local-development-password}
       FEDERATION_INCOMING_RATE_LIMIT_REQUESTS: ${FEDERATION_INCOMING_RATE_LIMIT_REQUESTS:-1200}
       FEDERATION_INCOMING_RATE_LIMIT_WINDOW_MILLISECONDS: ${FEDERATION_INCOMING_RATE_LIMIT_WINDOW_MILLISECONDS:-60000}
@@ -136,7 +136,7 @@ services:
 
   gateway:
     <<: *community-service
-    image: securechat-gateway:local
+    image: sparrow-gateway:local
     build:
       context: ../..
       dockerfile: server/Dockerfile

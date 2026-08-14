@@ -1,6 +1,6 @@
 # Server overview
 
-SecureChat's production-shaped server is split into two independently deployable packages.
+Sparrow's production-shaped server is split into two independently deployable packages.
 
 ```mermaid
 flowchart TB
@@ -52,7 +52,7 @@ nodes. The registry uses PostgreSQL and signing authority material.
 
 Key classes:
 
-- `com.cbgm.securechat.server.registry.ApplicationKt`
+- `com.cbgm.sparrow.server.registry.ApplicationKt`
 - `NodeRegistryStore`
 - `PostgresNodeRegistryStore`
 - `RegistrySigningRuntime`

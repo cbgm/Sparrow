@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
-    alias(libs.plugins.securechat.lint)
+    alias(libs.plugins.sparrow.lint)
 }
 
 if (file("google-services.json").exists()) {
@@ -31,14 +31,14 @@ val hasReleaseSigningConfiguration =
     ).all { value -> !value.isNullOrBlank() }
 
 android {
-    namespace = "com.cbgm.securechat"
+    namespace = "com.cbgm.sparrow"
     compileSdk =
         libs.versions.android.compileSdk
             .get()
             .toInt()
 
     defaultConfig {
-        applicationId = "com.cbgm.securechat"
+        applicationId = "com.cbgm.sparrow"
         minSdk =
             libs.versions.android.minSdk
                 .get()

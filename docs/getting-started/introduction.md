@@ -1,6 +1,6 @@
 # Introduction
 
-SecureChat is a secure-messaging project with two major parts:
+Sparrow is a secure-messaging project with two major parts:
 
 1. an Android-first Kotlin Multiplatform client;
 2. a federated Kotlin server system split into Control Planes and Community Nodes.

@@ -2,7 +2,7 @@
 cd /d "%~dp0"
 
 echo =====================================
-echo SecureChat Setup
+echo Sparrow Setup
 echo =====================================
 
 call gradlew.bat setup

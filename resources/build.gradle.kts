@@ -1,10 +1,10 @@
 plugins {
-    alias(libs.plugins.securechat.kmp.compose)
+    alias(libs.plugins.sparrow.kmp.compose)
 }
 
 kotlin {
     android {
-        namespace = "com.cbgm.securechat.resources"
+        namespace = "com.cbgm.sparrow.resources"
 
         androidResources {
             enable = true
@@ -22,5 +22,5 @@ kotlin {
 compose.resources {
     publicResClass = true
     generateResClass = always
-    packageOfResClass = "com.cbgm.securechat.resources"
+    packageOfResClass = "com.cbgm.sparrow.resources"
 }

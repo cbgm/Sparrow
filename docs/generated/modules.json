@@ -8,15 +8,14 @@
     "kotlinSourceFileCount": 2,
     "productionKotlinFileCount": 2,
     "testKotlinFileCount": 0,
-    "resourceFileCount": 21,
+    "resourceFileCount": 11,
     "sourceSets": [
       "main"
     ],
     "dependencies": [
       ":shared"
     ],
-    "dependents": [
-    ]
+    "dependents": []
   },
   {
     "name": "core",
@@ -33,8 +32,7 @@
       "commonMain",
       "iosMain"
     ],
-    "dependencies": [
-    ],
+    "dependencies": [],
     "dependents": [
       ":core:protocol",
       ":data:database",
@@ -66,8 +64,7 @@
       "commonMain",
       "commonTest"
     ],
-    "dependencies": [
-    ],
+    "dependencies": [],
     "dependents": [
       ":feature:chats",
       ":feature:contacts",
@@ -147,12 +144,9 @@
     "productionKotlinFileCount": 0,
     "testKotlinFileCount": 0,
     "resourceFileCount": 0,
-    "sourceSets": [
-    ],
-    "dependencies": [
-    ],
-    "dependents": [
-    ]
+    "sourceSets": [],
+    "dependencies": [],
+    "dependents": []
   },
   {
     "name": "database",
@@ -189,12 +183,9 @@
     "productionKotlinFileCount": 0,
     "testKotlinFileCount": 0,
     "resourceFileCount": 0,
-    "sourceSets": [
-    ],
-    "dependencies": [
-    ],
-    "dependents": [
-    ]
+    "sourceSets": [],
+    "dependencies": [],
+    "dependents": []
   },
   {
     "name": "chats",
@@ -491,12 +482,9 @@
     "productionKotlinFileCount": 0,
     "testKotlinFileCount": 0,
     "resourceFileCount": 0,
-    "sourceSets": [
-    ],
-    "dependencies": [
-    ],
-    "dependents": [
-    ]
+    "sourceSets": [],
+    "dependencies": [],
+    "dependents": []
   },
   {
     "name": "detekt-rules",
@@ -511,10 +499,8 @@
     "sourceSets": [
       "main"
     ],
-    "dependencies": [
-    ],
-    "dependents": [
-    ]
+    "dependencies": [],
+    "dependents": []
   },
   {
     "name": "resources",
@@ -530,8 +516,7 @@
       "androidMain",
       "commonMain"
     ],
-    "dependencies": [
-    ],
+    "dependencies": [],
     "dependents": [
       ":core:ui",
       ":notification"
@@ -547,12 +532,9 @@
     "productionKotlinFileCount": 0,
     "testKotlinFileCount": 0,
     "resourceFileCount": 0,
-    "sourceSets": [
-    ],
-    "dependencies": [
-    ],
-    "dependents": [
-    ]
+    "sourceSets": [],
+    "dependencies": [],
+    "dependents": []
   },
   {
     "name": "federation",
@@ -574,8 +556,7 @@
       ":server:protocol",
       ":server:security"
     ],
-    "dependents": [
-    ]
+    "dependents": []
   },
   {
     "name": "gateway",
@@ -597,8 +578,7 @@
       ":server:protocol",
       ":server:security"
     ],
-    "dependents": [
-    ]
+    "dependents": []
   },
   {
     "name": "mailbox",
@@ -620,8 +600,7 @@
       ":server:protocol",
       ":server:security"
     ],
-    "dependents": [
-    ]
+    "dependents": []
   },
   {
     "name": "node-registry",
@@ -643,8 +622,7 @@
       ":server:protocol",
       ":server:security"
     ],
-    "dependents": [
-    ]
+    "dependents": []
   },
   {
     "name": "observability",
@@ -660,8 +638,7 @@
       "main",
       "test"
     ],
-    "dependencies": [
-    ],
+    "dependencies": [],
     "dependents": [
       ":server:federation",
       ":server:gateway",
@@ -717,8 +694,7 @@
       ":server:protocol",
       ":server:security"
     ],
-    "dependents": [
-    ]
+    "dependents": []
   },
   {
     "name": "protocol",
@@ -734,8 +710,7 @@
       "main",
       "test"
     ],
-    "dependencies": [
-    ],
+    "dependencies": [],
     "dependents": [
       ":server:federation",
       ":server:gateway",
@@ -767,8 +742,7 @@
       ":server:protocol",
       ":server:security"
     ],
-    "dependents": [
-    ]
+    "dependents": []
   },
   {
     "name": "security",

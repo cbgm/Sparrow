@@ -5,7 +5,7 @@
 xcuserdata
 !src/**/build/
 local.properties
-/.securechat-server/
+/.sparrow-server/
 .idea
 .DS_Store
 captures
@@ -18,7 +18,6 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
-**/release
 
 **/firebase-service-account*.json
 **/*service-account-key*.json

@@ -1,7 +1,7 @@
 plugins {
     kotlin("jvm")
     alias(libs.plugins.kotlin.serialization.classpath)
-    alias(libs.plugins.securechat.lint)
+    alias(libs.plugins.sparrow.lint)
 }
 
 kotlin {

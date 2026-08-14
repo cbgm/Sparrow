@@ -7,13 +7,13 @@ val isMacOs =
         )
 
 plugins {
-    alias(libs.plugins.securechat.kmp.serialization)
-    alias(libs.plugins.securechat.kmp.testing)
+    alias(libs.plugins.sparrow.kmp.serialization)
+    alias(libs.plugins.sparrow.kmp.testing)
 }
 
 kotlin {
     android {
-        namespace = "com.cbgm.securechat.feature.transport"
+        namespace = "com.cbgm.sparrow.feature.transport"
     }
 
     sourceSets {

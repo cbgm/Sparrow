@@ -51,7 +51,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: securechat-debug-apk
+          name: sparrow-debug-apk
           path: androidApp/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 

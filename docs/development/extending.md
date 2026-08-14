@@ -1,4 +1,4 @@
-# Extending SecureChat
+# Extending Sparrow
 
 Use this page as a practical checklist when adding functionality.
 

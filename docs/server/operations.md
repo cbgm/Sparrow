@@ -47,7 +47,7 @@ readiness.
 Repository scripts:
 
 ```powershell
-.\server\scripts\Test-SecureChatNetwork.ps1 -Start -BuildImages
+.\server\scripts\Test-SparrowNetwork.ps1 -Start -BuildImages
 ```
 
 Standalone Control Plane + two independent Community Nodes:
@@ -80,8 +80,8 @@ Ephemeral/rebuildable:
 Use repository backup/restore scripts rather than copying live database files:
 
 ```text
-server/scripts/Backup-SecureChat.ps1
-server/scripts/Restore-SecureChatBackup.ps1
+server/scripts/Backup-Sparrow.ps1
+server/scripts/Restore-SparrowBackup.ps1
 ```
 
 ## Troubleshooting sequence

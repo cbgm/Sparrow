@@ -1,6 +1,6 @@
 plugins {
     kotlin("jvm")
-    alias(libs.plugins.securechat.lint)
+    alias(libs.plugins.sparrow.lint)
 }
 
 kotlin {

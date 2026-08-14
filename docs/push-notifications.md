@@ -13,11 +13,11 @@ Client/common notification orchestration:
 
 Android implementation:
 
-- `SecureChatFirebaseMessagingService`
+- `SparrowFirebaseMessagingService`
 - `PushTokenRegistrationWorker`
 - `PendingMessageSyncWorker`
 - `AndroidNotificationRuntime`
-- `SecureChatNotificationManager`
+- `SparrowNotificationManager`
 
 Transport gateways:
 
@@ -62,6 +62,10 @@ Legacy/compatibility pending-envelope behavior can exist for clients that do not
 The Control Plane push service needs Firebase Admin credentials for real FCM delivery. Without them, local server health may still run depending on configuration, but real Android background wake-ups will not work.
 
 Do not commit `firebase-admin.json` or other production credentials.
+
+### Android Firebase app after the Sparrow rebrand
+
+The Android application ID is now `com.cbgm.sparrow`. Register that Android app in the existing Firebase project and replace `androidApp/google-services.json` with the configuration downloaded for **that exact package name** before validating real FCM delivery. The server-side Firebase Admin service account can stay in the same Firebase project.
 
 ## Force stop caveat
 

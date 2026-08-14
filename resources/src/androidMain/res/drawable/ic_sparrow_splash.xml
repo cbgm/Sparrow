@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="320dp"
+    android:viewportWidth="320"
+    android:viewportHeight="320">
+
+    <!--
+        IMPORTANT:
+        The Sparrow artwork below is unchanged.
+        Only this group scales/repositions the original logo so Android's
+        splash-screen mask does not crop it.
+    -->
+    <group
+        android:pivotX="160"
+        android:pivotY="176.5"
+        android:scaleX="0.78"
+        android:scaleY="0.78"
+        android:translateY="-16.5">
+
+        <!-- Small front-facing Sparrow head behind the shield. -->
+        <path
+            android:fillColor="#35E6FF"
+            android:pathData="
+                M160,52
+                C128,52 102,76 102,108
+                C102,140 128,160 160,160
+                C192,160 218,140 218,108
+                C218,76 192,52 160,52
+                Z" />
+
+        <!-- Eyes. -->
+        <path
+            android:fillColor="#071A2E"
+            android:pathData="
+                M129,103
+                a6,6 0,1 0,12,0
+                a6,6 0,1 0,-12,0" />
+
+        <path
+            android:fillColor="#071A2E"
+            android:pathData="
+                M179,103
+                a6,6 0,1 0,12,0
+                a6,6 0,1 0,-12,0" />
+
+        <!-- Beak. -->
+        <path
+            android:fillColor="#071A2E"
+            android:pathData="
+                M160,113
+                L173,122
+                L160,132
+                L147,122
+                Z" />
+
+        <!-- Shield fill. -->
+        <path
+            android:fillColor="#102A46"
+            android:pathData="
+                M160,130
+                C125,146 93,150 64,155
+                C66,221 99,269 160,301
+                C221,269 254,221 256,155
+                C227,150 195,146 160,130
+                Z" />
+
+        <!-- Shield outer line. -->
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#35E6FF"
+            android:strokeWidth="7"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="
+                M160,130
+                C125,146 93,150 64,155
+                C66,221 99,269 160,301
+                C221,269 254,221 256,155
+                C227,150 195,146 160,130
+                Z" />
+
+        <!-- Inner shield line: same detail as the Compose SparrowMark. -->
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#8035E6FF"
+            android:strokeWidth="3"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="
+                M160,142
+                C130,155 104,160 78,165
+                C82,216 112,256 160,283
+                C208,256 238,216 242,165
+                C216,160 190,155 160,142
+                Z" />
+    </group>
+
+</vector>

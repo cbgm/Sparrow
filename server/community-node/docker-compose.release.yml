@@ -31,7 +31,7 @@ services:
 
   mailbox:
     <<: *hardened-service
-    image: ${SECURECHAT_IMAGE_PREFIX:?Missing SECURECHAT_IMAGE_PREFIX}-mailbox:${SECURECHAT_IMAGE_TAG:?Missing SECURECHAT_IMAGE_TAG}
+    image: ${SPARROW_IMAGE_PREFIX:?Missing SPARROW_IMAGE_PREFIX}-mailbox:${SPARROW_IMAGE_TAG:?Missing SPARROW_IMAGE_TAG}
     build: !reset null
     pull_policy: always
     ports: !reset []
@@ -61,7 +61,7 @@ services:
 
   federation:
     <<: *hardened-service
-    image: ${SECURECHAT_IMAGE_PREFIX:?Missing SECURECHAT_IMAGE_PREFIX}-federation:${SECURECHAT_IMAGE_TAG:?Missing SECURECHAT_IMAGE_TAG}
+    image: ${SPARROW_IMAGE_PREFIX:?Missing SPARROW_IMAGE_PREFIX}-federation:${SPARROW_IMAGE_TAG:?Missing SPARROW_IMAGE_TAG}
     build: !reset null
     pull_policy: always
     ports: !reset []
@@ -89,7 +89,7 @@ services:
 
   gateway:
     <<: *hardened-service
-    image: ${SECURECHAT_IMAGE_PREFIX:?Missing SECURECHAT_IMAGE_PREFIX}-gateway:${SECURECHAT_IMAGE_TAG:?Missing SECURECHAT_IMAGE_TAG}
+    image: ${SPARROW_IMAGE_PREFIX:?Missing SPARROW_IMAGE_PREFIX}-gateway:${SPARROW_IMAGE_TAG:?Missing SPARROW_IMAGE_TAG}
     build: !reset null
     pull_policy: always
     ports: !reset []

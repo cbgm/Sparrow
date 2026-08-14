@@ -645,13 +645,13 @@ style:
     active: true
     methods:
       - value: 'kotlin.io.print'
-        reason: 'Use the SecureChat logger instead of print.'
+        reason: 'Use the Sparrow logger instead of print.'
       - value: 'kotlin.io.println'
-        reason: 'Use the SecureChat logger instead of println.'
+        reason: 'Use the Sparrow logger instead of println.'
       - value: 'java.io.PrintStream.print'
-        reason: 'Use the SecureChat logger instead of print.'
+        reason: 'Use the Sparrow logger instead of print.'
       - value: 'java.io.PrintStream.println'
-        reason: 'Use the SecureChat logger instead of println.'
+        reason: 'Use the Sparrow logger instead of println.'
   ForbiddenNamedParam:
     active: false
     methods: [ ]
@@ -943,7 +943,7 @@ Compose:
     active: true
   ViewModelInjection:
     active: true
-SecureChat:
+Sparrow:
   ViewModelDirectDataDependencyRule:
     active: true
 

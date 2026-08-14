@@ -1,12 +1,12 @@
-name: ${CONTROL_PLANE_PROJECT_NAME:-securechat-control-plane}
+name: ${CONTROL_PLANE_PROJECT_NAME:-sparrow-control-plane}
 
-x-securechat-service: &securechat-service
+x-sparrow-service: &sparrow-service
   restart: unless-stopped
   build:
     context: ../..
     dockerfile: server/Dockerfile
   healthcheck:
-    test: ["CMD-SHELL", "java -cp '/app/lib/*' com.cbgm.securechat.server.observability.ReadinessProbe http://127.0.0.1:$${PORT}/health/ready"]
+    test: ["CMD-SHELL", "java -cp '/app/lib/*' com.cbgm.sparrow.server.observability.ReadinessProbe http://127.0.0.1:$${PORT}/health/ready"]
     interval: 10s
     timeout: 5s
     retries: 6
@@ -37,8 +37,8 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: securechat_registry
-      POSTGRES_USER: securechat_registry
+      POSTGRES_DB: sparrow_registry
+      POSTGRES_USER: sparrow_registry
       POSTGRES_PASSWORD: ${NODE_REGISTRY_DATABASE_PASSWORD:-local-development-password}
     ports:
       - "127.0.0.1:${NODE_REGISTRY_DATABASE_PORT:-5537}:5432"
@@ -51,8 +51,8 @@ services:
       retries: 12
 
   node-registry:
-    <<: *securechat-service
-    image: securechat-node-registry:local
+    <<: *sparrow-service
+    image: sparrow-node-registry:local
     build:
       context: ../..
       dockerfile: server/Dockerfile
@@ -61,8 +61,8 @@ services:
     environment:
       PORT: 8090
       REGISTRY_IDENTITY_PATH: /data/registry.identity
-      NODE_REGISTRY_DATABASE_URL: jdbc:postgresql://node-registry-database:5432/securechat_registry
-      NODE_REGISTRY_DATABASE_USER: securechat_registry
+      NODE_REGISTRY_DATABASE_URL: jdbc:postgresql://node-registry-database:5432/sparrow_registry
+      NODE_REGISTRY_DATABASE_USER: sparrow_registry
       NODE_REGISTRY_DATABASE_PASSWORD: ${NODE_REGISTRY_DATABASE_PASSWORD:-local-development-password}
       NODE_REGISTRY_REGISTRATION_RATE_LIMIT_REQUESTS: ${NODE_REGISTRY_REGISTRATION_RATE_LIMIT_REQUESTS:-30}
       NODE_REGISTRY_REGISTRATION_RATE_LIMIT_WINDOW_MILLISECONDS: ${NODE_REGISTRY_REGISTRATION_RATE_LIMIT_WINDOW_MILLISECONDS:-3600000}
@@ -103,8 +103,8 @@ services:
       retries: 12
 
   presence-directory:
-    <<: *securechat-service
-    image: securechat-presence-directory:local
+    <<: *sparrow-service
+    image: sparrow-presence-directory:local
     build:
       context: ../..
       dockerfile: server/Dockerfile
@@ -128,8 +128,8 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: securechat_push
-      POSTGRES_USER: securechat_push
+      POSTGRES_DB: sparrow_push
+      POSTGRES_USER: sparrow_push
       POSTGRES_PASSWORD: ${PUSH_DATABASE_PASSWORD:-local-development-password}
     ports:
       - "127.0.0.1:${PUSH_DATABASE_PORT:-5535}:5432"
@@ -142,8 +142,8 @@ services:
       retries: 12
 
   push:
-    <<: *securechat-service
-    image: securechat-push:local
+    <<: *sparrow-service
+    image: sparrow-push:local
     build:
       context: ../..
       dockerfile: server/Dockerfile
@@ -155,8 +155,8 @@ services:
       PRESENCE_DIRECTORY_URL: http://presence-directory:8091
       PUSH_INTERNAL_API_TOKEN: ${PUSH_INTERNAL_API_TOKEN:-local-push-development-token}
       GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-admin.json
-      PUSH_DATABASE_URL: jdbc:postgresql://push-database:5432/securechat_push
-      PUSH_DATABASE_USER: securechat_push
+      PUSH_DATABASE_URL: jdbc:postgresql://push-database:5432/sparrow_push
+      PUSH_DATABASE_USER: sparrow_push
       PUSH_DATABASE_PASSWORD: ${PUSH_DATABASE_PASSWORD:-local-development-password}
       PUSH_DEVICE_REGISTRATION_RATE_LIMIT_REQUESTS: ${PUSH_DEVICE_REGISTRATION_RATE_LIMIT_REQUESTS:-60}
       PUSH_DEVICE_REGISTRATION_RATE_LIMIT_WINDOW_MILLISECONDS: ${PUSH_DEVICE_REGISTRATION_RATE_LIMIT_WINDOW_MILLISECONDS:-60000}

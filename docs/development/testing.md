@@ -28,7 +28,7 @@ Architecture report validation:
 PowerShell scripts under `server/scripts/` exercise the actual Compose/server topology.
 
 ```powershell
-.\server\scripts\Test-SecureChatNetwork.ps1 -Start -BuildImages
+.\server\scripts\Test-SparrowNetwork.ps1 -Start -BuildImages
 ```
 
 Two standalone Community Nodes plus Control Plane:

@@ -1,7 +1,7 @@
 plugins {
     kotlin("jvm")
     alias(libs.plugins.kotlin.serialization.classpath)
-    alias(libs.plugins.securechat.lint)
+    alias(libs.plugins.sparrow.lint)
     application
 }
 
@@ -10,7 +10,7 @@ kotlin {
 }
 
 application {
-    mainClass.set("com.cbgm.securechat.server.federation.ApplicationKt")
+    mainClass.set("com.cbgm.sparrow.server.federation.ApplicationKt")
 }
 
 dependencies {

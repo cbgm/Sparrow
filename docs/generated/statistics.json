@@ -10,7 +10,7 @@
   "kotlinSourceFileCount": 963,
   "productionKotlinFileCount": 873,
   "testKotlinFileCount": 90,
-  "resourceFileCount": 58,
+  "resourceFileCount": 48,
   "modulesByGroup": {
     "androidApp": 1,
     "core": 4,

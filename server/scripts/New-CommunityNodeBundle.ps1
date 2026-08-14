@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$OutputDirectory = "dist",
-    [string]$ImagePrefix = "ghcr.io/cbgm/securechat",
+    [string]$ImagePrefix = "ghcr.io/cbgm/sparrow",
     [string]$ImageTag = "latest"
 )
 
@@ -10,8 +10,8 @@ $ErrorActionPreference = "Stop"
 
 $repositoryRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $outputPath = [System.IO.Path]::GetFullPath((Join-Path $repositoryRoot $OutputDirectory))
-$stagingRoot = Join-Path ([System.IO.Path]::GetTempPath()) "securechat-community-node-bundle"
-$bundleRoot = Join-Path $stagingRoot "securechat-community-node"
+$stagingRoot = Join-Path ([System.IO.Path]::GetTempPath()) "sparrow-community-node-bundle"
+$bundleRoot = Join-Path $stagingRoot "sparrow-community-node"
 $communityNodeRoot = Join-Path $repositoryRoot "server/community-node"
 $communityNodeDocumentation = Join-Path $repositoryRoot "docs/server/community-node.md"
 
@@ -29,10 +29,10 @@ $bundleFiles = @(
     "Caddyfile",
     "index.html",
     "Bootstrap-CommunityNode.ps1",
-    "Start-SecureChatNode.cmd",
+    "Start-SparrowNode.cmd",
     "bootstrap-community-node.sh",
-    "start-securechat-node.sh",
-    "Start-SecureChatNode.command"
+    "start-sparrow-node.sh",
+    "Start-SparrowNode.command"
 )
 
 Remove-Item -LiteralPath $stagingRoot -Recurse -Force -ErrorAction SilentlyContinue
@@ -59,30 +59,30 @@ Copy-Item `
     -Force
 
 [System.IO.File]::WriteAllLines(
-    (Join-Path $bundleRoot "securechat.conf"),
+    (Join-Path $bundleRoot "sparrow.conf"),
     @(
-        "# SecureChat community-node configuration",
+        "# Sparrow community-node configuration",
         "# The launcher opens configuration on every start, prefilled from this file, and writes any changes back here.",
         "CONFIGURED=false",
         "MODE=",
         "PUBLIC_DOMAIN=",
         "CONTROL_PLANE_DIRECTORY_URL=",
-        "SECURECHAT_IMAGE_PREFIX=$ImagePrefix",
-        "SECURECHAT_IMAGE_TAG=$ImageTag"
+        "SPARROW_IMAGE_PREFIX=$ImagePrefix",
+        "SPARROW_IMAGE_TAG=$ImageTag"
     ),
     [System.Text.UTF8Encoding]::new($false)
 )
 
 New-Item -ItemType Directory -Path (Join-Path $bundleRoot "secrets") -Force | Out-Null
 
-foreach ($required in @("Start-SecureChatNode.cmd", "securechat.conf", "index.html")) {
+foreach ($required in @("Start-SparrowNode.cmd", "sparrow.conf", "index.html")) {
     if (-not (Test-Path -LiteralPath (Join-Path $bundleRoot $required) -PathType Leaf)) {
         throw "Community-node bundle is missing $required."
     }
 }
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-$archivePath = Join-Path $outputPath "securechat-community-node.zip"
+$archivePath = Join-Path $outputPath "sparrow-community-node.zip"
 Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue
 [System.IO.Compression.ZipFile]::CreateFromDirectory(
     $bundleRoot,
@@ -91,7 +91,7 @@ Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue
     $false
 )
 
-$tarArchivePath = Join-Path $outputPath "securechat-community-node.tar.gz"
+$tarArchivePath = Join-Path $outputPath "sparrow-community-node.tar.gz"
 Remove-Item -LiteralPath $tarArchivePath -Force -ErrorAction SilentlyContinue
 & tar -czf $tarArchivePath -C $bundleRoot .
 if ($LASTEXITCODE -ne 0) {
@@ -103,8 +103,8 @@ $tarChecksum = (Get-FileHash -LiteralPath $tarArchivePath -Algorithm SHA256).Has
 [System.IO.File]::WriteAllLines(
     (Join-Path $outputPath "SHA256SUMS.txt"),
     @(
-        "$zipChecksum  securechat-community-node.zip",
-        "$tarChecksum  securechat-community-node.tar.gz"
+        "$zipChecksum  sparrow-community-node.zip",
+        "$tarChecksum  sparrow-community-node.tar.gz"
     ),
     [System.Text.UTF8Encoding]::new($false)
 )

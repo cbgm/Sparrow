@@ -1,6 +1,6 @@
 # Clean architecture
 
-SecureChat uses Clean Architecture as a practical dependency rule, not as a requirement to create interfaces for everything.
+Sparrow uses Clean Architecture as a practical dependency rule, not as a requirement to create interfaces for everything.
 
 ## Core rule
 
