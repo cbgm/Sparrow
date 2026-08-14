@@ -420,7 +420,7 @@
     <string name="feature_settings_control_planes">Control Planes</string>
     <string name="feature_settings_control_planes_description">SecureChat prüft diese Adressen in der festgelegten Reihenfolge. Nicht erreichbare Adressen bleiben sichtbar und werden automatisch erneut geprüft.</string>
     <string name="feature_settings_control_plane_add">Control Plane hinzufügen</string>
-    <string name="feature_settings_control_plane_address">Control-Plane-Adresse</string>
+    <string name="feature_settings_control_plane_address">Control-Plane- oder Verzeichnis-Adresse</string>
     <string name="feature_settings_control_planes_refresh">Control Planes prüfen</string>
     <string name="feature_settings_control_plane_status_active">Aktiv</string>
     <string name="feature_settings_control_plane_status_available">Verfügbar</string>

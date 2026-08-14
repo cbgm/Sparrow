@@ -292,6 +292,7 @@ jobs:
               "Bootstrap-ControlPlane.ps1",
               "securechat.conf",
               "docker-compose.production.yml",
+              "index.html",
               "secrets/README.txt"
           )) {
               if (-not (Test-Path -LiteralPath "dist-control-plane/artifact/$required" -PathType Leaf)) {
@@ -364,7 +365,8 @@ jobs:
               "Start-SecureChatNode.cmd",
               "Bootstrap-CommunityNode.ps1",
               "securechat.conf",
-              "docker-compose.production.yml"
+              "docker-compose.production.yml",
+              "index.html"
           )) {
               if (-not (Test-Path -LiteralPath "dist-community/artifact/$required" -PathType Leaf)) {
                   throw "Community-node artifact is missing $required."

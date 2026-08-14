@@ -13,7 +13,7 @@ On Windows, the launcher always shows one configuration window. Existing values 
 - the own public domain/host field when `Own address` is selected,
 - one required control-plane directory URL field.
 
-The directory URL is the node's single configured source of control-plane addresses. There is no bootstrap URL and no cached fallback. The directory must be reachable when the node starts and must return at least one usable control-plane address.
+The directory URL is the node's single configured source of control-plane addresses. There is no bootstrap URL. The launcher keeps the last successful addresses in its runtime configuration so an already configured node can start while the directory or every Control Plane is temporarily unavailable. A fresh node without cached addresses keeps retrying the directory instead of exiting.
 
 The answers are persisted in `securechat.conf`. Later starts reuse that file and do not ask again. The URL can be changed manually there later.
 
@@ -46,7 +46,7 @@ The directory document uses the same simple format as the app:
 }
 ```
 
-At startup the node reads that document and selects a reachable control plane from the returned addresses. If the directory cannot be loaded, returns no usable addresses, or none of the returned control planes is reachable, startup fails instead of silently falling back to another source.
+The directory body is parsed as JSON regardless of whether the server labels it `application/json` or `text/plain`. The node keeps retrying unavailable directory and Control Plane endpoints while it runs, so temporary Control Plane outages do not terminate the node.
 
 ## LAN mode
 
@@ -67,4 +67,7 @@ https://<PUBLIC_DOMAIN>
 ```
 
 If `PUBLIC_DOMAIN` is blank, the launcher detects the public IPv4 address and derives an `sslip.io` hostname.
+## Operator index
+
+Open `/index` on the Community Node to get relative links to gateway health and connection count, gateway information, advertised Control Planes, federation health/capabilities, and mailbox health. The page contains no deployment-specific host names.
 

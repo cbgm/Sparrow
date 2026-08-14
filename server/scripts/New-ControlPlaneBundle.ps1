@@ -37,6 +37,7 @@ foreach ($relativePath in @(
     "docker-compose.release.yml",
     "docker-compose.production.yml",
     "Caddyfile",
+    "index.html",
     "README.md"
 )) {
     $sourcePath = Join-Path $controlPlaneRoot $relativePath
@@ -90,7 +91,12 @@ Copy-Item `
     [System.Text.UTF8Encoding]::new($false)
 )
 
-foreach ($required in @("Start-SecureChatControlPlane.cmd", "securechat.conf", "secrets/README.txt")) {
+foreach ($required in @(
+    "Start-SecureChatControlPlane.cmd",
+    "securechat.conf",
+    "index.html",
+    "secrets/README.txt"
+)) {
     if (-not (Test-Path -LiteralPath (Join-Path $bundleRoot $required) -PathType Leaf)) {
         throw "Control-plane bundle is missing $required."
     }

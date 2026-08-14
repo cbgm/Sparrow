@@ -70,6 +70,21 @@ class ControlPlaneSettingsViewModel(
             return
         }
         viewModelScope.launch {
+            val directoryResult = directorySynchronizer.synchronizeFrom(candidate)
+            if (directoryResult.isSuccess) {
+                _uiState.update { current ->
+                    current.copy(
+                        showAddDialog = false,
+                        newUrl = "",
+                        addError = null,
+                        directoryError = null,
+                        lastDirectoryCount = directoryResult.getOrThrow()
+                    )
+                }
+                healthMonitor.refresh()
+                return@launch
+            }
+
             configuration
                 .addManual(candidate)
                 .onSuccess {

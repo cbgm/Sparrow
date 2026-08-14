@@ -12,14 +12,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-internal object AndroidControlPlaneBootstrap {
-    val baseUrls =
-        listOf(
-            "https://87-171-172-170.sslip.io",
-            "http://10.0.2.2:8390"
-        )
-}
-
 class AndroidControlPlaneConfiguration(
     context: Context
 ) : ControlPlaneConfiguration,
@@ -151,18 +143,14 @@ private class AndroidControlPlaneStorage(
     private val preferences: SharedPreferences =
         context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
 
-    fun loadManualUrls(): Set<String> {
-        val saved =
-            preferences.getString(KEY_MANUAL_CONTROL_PLANES, null)
-                ?: preferences.getString(KEY_LEGACY_CONTROL_PLANES, null)
-        return saved
+    fun loadManualUrls(): Set<String> =
+        preferences
+            .getString(KEY_MANUAL_CONTROL_PLANES, null)
             ?.lineSequence()
             ?.toList()
             ?.normalizeUrls()
             ?.toSet()
-            ?.takeIf { it.isNotEmpty() }
-            ?: AndroidControlPlaneBootstrap.baseUrls.normalizeUrls().toSet()
-    }
+            ?: emptySet()
 
     fun loadDirectoryUrls(): Set<String> =
         preferences
@@ -205,7 +193,6 @@ private class AndroidControlPlaneStorage(
         const val KEY_MANUAL_CONTROL_PLANES = "manual_base_urls"
         const val KEY_DIRECTORY_CONTROL_PLANES = "directory_base_urls"
         const val KEY_DIRECTORY_URL = "directory_url"
-        const val KEY_LEGACY_CONTROL_PLANES = "base_urls"
     }
 }
 

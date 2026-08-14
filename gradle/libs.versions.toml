@@ -36,6 +36,7 @@ play-services-auth = "21.1.1"
 about-libs-compose = "15.0.4"
 about-libs-render = "0.43.0"
 about-libs-plugin = "15.0.4"
+buildkonfig = "0.22.0"
 detekt = "2.0.0-alpha.5"
 ktlint-gradle = "14.2.0"
 ktlint-engine = "1.7.1"
@@ -244,6 +245,7 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 kotlin-serialization-classpath = { id = "org.jetbrains.kotlin.plugin.serialization" }
 about-libs = { id = "com.mikepenz.aboutlibraries.plugin", version.ref = "about-libs-plugin" }
 google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }
+buildkonfig = { id = "com.codingfeline.buildkonfig", version.ref = "buildkonfig" }
 detekt = { id = "dev.detekt", version.ref = "detekt" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint-gradle" }
 

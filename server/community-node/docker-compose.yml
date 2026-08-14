@@ -24,6 +24,7 @@ services:
       - "${COMMUNITY_NODE_BIND_ADDRESS:-0.0.0.0}:${COMMUNITY_NODE_HTTP_PORT:-8490}:80"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./index.html:/srv/index.html:ro
       - caddy-data:/data
       - caddy-config:/config
     depends_on:

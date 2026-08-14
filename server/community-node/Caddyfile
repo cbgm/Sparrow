@@ -8,6 +8,18 @@
         -Server
     }
 
+    @root path /
+    handle @root {
+        redir /index 308
+    }
+
+    @index path /index
+    handle @index {
+        root * /srv
+        rewrite * /index.html
+        file_server
+    }
+
     @gateway_ws path /v1/gateway
     handle @gateway_ws {
         reverse_proxy gateway:8094 {

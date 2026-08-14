@@ -1,3 +1,5 @@
+import com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING
+
 val isMacOs =
     System
         .getProperty("os.name")
@@ -9,6 +11,24 @@ val isMacOs =
 plugins {
     alias(libs.plugins.securechat.kmp.compose.feature)
     alias(libs.plugins.securechat.kmp.serialization)
+    alias(libs.plugins.buildkonfig)
+    alias(libs.plugins.securechat.properties)
+}
+
+buildkonfig {
+    packageName = "com.cbgm.securechat"
+
+    defaultConfigs {
+        buildConfigField(
+            STRING,
+            "CONTROL_PLANE_DIRECTORY_URL",
+            localProperties.get(
+                key = "controlPlaneDirectoryUrl",
+                defaultValue = ""
+            ),
+            const = true
+        )
+    }
 }
 
 kotlin {

@@ -49,4 +49,7 @@ LAN mode exposes the control-plane edge on port `8390`.
 Public mode uses HTTPS on the configured domain. If `PUBLIC_DOMAIN` is blank, the launcher detects the public IPv4 address and derives an `sslip.io` hostname.
 
 A control plane intentionally does not contain a list of other control planes. Community nodes and apps obtain the multi-control-plane set from discovery sources instead.
+## Operator index
+
+Open `/index` on the Control Plane to get relative links to registry health, presence health, push health, and the signed connected-node directory. The page contains no deployment-specific host names.
 

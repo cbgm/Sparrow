@@ -367,13 +367,19 @@ function Get-DirectoryControlPlaneUrls {
         [Parameter(Mandatory = $true)][string]$Mode
     )
 
-    $response = Invoke-RestMethod -Uri $DirectoryUrl -Method Get -TimeoutSec 8
-    if ($null -eq $response.controlPlanes) {
+    $response = Invoke-WebRequest -Uri $DirectoryUrl -Method Get -TimeoutSec 8 -UseBasicParsing
+    try {
+        $document = $response.Content | ConvertFrom-Json -ErrorAction Stop
+    } catch {
+        throw "Control-plane directory response is not valid JSON: $($_.Exception.Message)"
+    }
+
+    if ($null -eq $document.controlPlanes) {
         throw "Control-plane directory response does not contain controlPlanes."
     }
 
     $urls = @(
-        $response.controlPlanes |
+        $document.controlPlanes |
             ForEach-Object { Normalize-ControlPlaneUrl -Value $_.ToString() -Mode $Mode } |
             Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
             Select-Object -Unique

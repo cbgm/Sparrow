@@ -8,6 +8,18 @@
         -Server
     }
 
+    @root path /
+    handle @root {
+        redir /index 308
+    }
+
+    @index path /index
+    handle @index {
+        root * /srv
+        rewrite * /index.html
+        file_server
+    }
+
     @nodes path /v1/nodes /v1/nodes/*
     handle @nodes {
         reverse_proxy node-registry:8090

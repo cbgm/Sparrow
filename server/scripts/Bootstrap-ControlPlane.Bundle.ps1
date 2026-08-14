@@ -17,6 +17,33 @@ $productionComposePath = Join-Path $deploymentDirectory "docker-compose.producti
 $logPath = Join-Path $deploymentDirectory "bootstrap-control-plane.log"
 $controlPlanePort = 8390
 
+$deploymentPath = [System.IO.Path]::GetFullPath($deploymentDirectory).ToLowerInvariant()
+$deploymentBytes = [System.Text.Encoding]::UTF8.GetBytes($deploymentPath)
+$sha256 = [System.Security.Cryptography.SHA256]::Create()
+try {
+    $deploymentHash =
+        [System.BitConverter]::ToString($sha256.ComputeHash($deploymentBytes)).Replace("-", "")
+} finally {
+    $sha256.Dispose()
+}
+$mutexName = "Local\SecureChatControlPlane-$($deploymentHash.Substring(0, 24))"
+$script:DeploymentMutex = [System.Threading.Mutex]::new($false, $mutexName)
+$hasDeploymentLock = $false
+try {
+    $hasDeploymentLock = $script:DeploymentMutex.WaitOne(0)
+} catch [System.Threading.AbandonedMutexException] {
+    $hasDeploymentLock = $true
+}
+if (-not $hasDeploymentLock) {
+    [System.Windows.Forms.MessageBox]::Show(
+        "This Control Plane launcher is already running for this deployment folder.",
+        "SecureChat Control Plane",
+        [System.Windows.Forms.MessageBoxButtons]::OK,
+        [System.Windows.Forms.MessageBoxIcon]::Information
+    ) | Out-Null
+    exit 0
+}
+
 $script:Docker = $null
 $script:ComposeFileArguments = @()
 

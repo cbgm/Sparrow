@@ -26,6 +26,7 @@ $bundleFiles = @(
     "docker-compose.release.yml",
     "docker-compose.production.yml",
     "Caddyfile",
+    "index.html",
     "Bootstrap-CommunityNode.ps1",
     "Start-SecureChatNode.cmd",
     "bootstrap-community-node.sh",
@@ -65,7 +66,7 @@ foreach ($relativePath in $bundleFiles) {
 
 New-Item -ItemType Directory -Path (Join-Path $bundleRoot "secrets") -Force | Out-Null
 
-foreach ($required in @("Start-SecureChatNode.cmd", "securechat.conf")) {
+foreach ($required in @("Start-SecureChatNode.cmd", "securechat.conf", "index.html")) {
     if (-not (Test-Path -LiteralPath (Join-Path $bundleRoot $required) -PathType Leaf)) {
         throw "Community-node bundle is missing $required."
     }

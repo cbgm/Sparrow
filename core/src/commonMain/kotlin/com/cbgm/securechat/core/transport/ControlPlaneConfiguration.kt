@@ -66,4 +66,6 @@ interface ControlPlaneHealthMonitor {
 
 interface ControlPlaneDirectorySynchronizer {
     suspend fun refresh(): Result<Int>
+
+    suspend fun synchronizeFrom(url: String): Result<Int>
 }

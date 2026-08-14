@@ -175,7 +175,8 @@ val transportModule =
         single<ControlPlaneDirectorySynchronizer> {
             HttpControlPlaneDirectorySynchronizer(
                 httpClient = get<HttpClient>(),
-                configuration = get<ControlPlaneConfiguration>()
+                configuration = get<ControlPlaneConfiguration>(),
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
             )
         }
 

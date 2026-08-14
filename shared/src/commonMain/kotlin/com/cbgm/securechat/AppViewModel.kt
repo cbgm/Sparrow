@@ -60,17 +60,53 @@ class AppViewModel(
         initAppLanguageUseCase()
         initialization.platformNotificationRuntime.initialize()
         initialization.conversationNotificationCoordinator.start()
+        initializeControlPlaneDirectory()
         startControlPlaneMaintenance()
         observeControlPlaneRegistrationTargets()
         synchronizeDeviceContacts()
         isRuntimeReady.value = true
     }
 
+    private suspend fun initializeControlPlaneDirectory() {
+        val configuredDirectoryUrl =
+            BuildKonfig.CONTROL_PLANE_DIRECTORY_URL
+                .trim()
+                .takeIf(String::isNotBlank)
+        if (initialization.controlPlaneConfiguration.directoryUrl.value == null &&
+            configuredDirectoryUrl != null
+        ) {
+            initialization.controlPlaneConfiguration
+                .setDirectoryUrl(configuredDirectoryUrl)
+                .onFailure { error ->
+                    logger.warn {
+                        "Control-plane directory configuration could not be stored: ${error.message}"
+                    }
+                }
+        }
+
+        initialization.controlPlaneDirectorySynchronizer
+            .refresh()
+            .onSuccess { count ->
+                logger.info { "Control-plane directory synchronized; addresses=$count" }
+            }.onFailure { error ->
+                logger.warn {
+                    "Control-plane directory unavailable during startup: ${error.message}"
+                }
+            }
+        initialization.controlPlaneHealthMonitor.refresh()
+    }
+
     private fun startControlPlaneMaintenance() {
         viewModelScope.launch {
             while (isActive) {
-                initialization.controlPlaneDirectorySynchronizer.refresh()
-                delay(CONTROL_PLANE_DIRECTORY_REFRESH_MILLISECONDS)
+                val result = initialization.controlPlaneDirectorySynchronizer.refresh()
+                delay(
+                    if (result.isSuccess) {
+                        CONTROL_PLANE_DIRECTORY_REFRESH_MILLISECONDS
+                    } else {
+                        CONTROL_PLANE_DIRECTORY_RETRY_MILLISECONDS
+                    }
+                )
             }
         }
         viewModelScope.launch {
@@ -191,6 +227,7 @@ class AppViewModel(
 
     private companion object {
         const val CONTROL_PLANE_DIRECTORY_REFRESH_MILLISECONDS = 300_000L
+        const val CONTROL_PLANE_DIRECTORY_RETRY_MILLISECONDS = 5_000L
         const val CONTROL_PLANE_HEALTH_REFRESH_MILLISECONDS = 60_000L
     }
 }

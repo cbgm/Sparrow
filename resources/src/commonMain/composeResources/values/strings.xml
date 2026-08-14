@@ -419,7 +419,7 @@
     <string name="feature_settings_control_planes">Control planes</string>
     <string name="feature_settings_control_planes_description">SecureChat tries these addresses in priority order. Unreachable addresses stay visible and are retried automatically.</string>
     <string name="feature_settings_control_plane_add">Add control plane</string>
-    <string name="feature_settings_control_plane_address">Control-plane address</string>
+    <string name="feature_settings_control_plane_address">Control-plane or directory address</string>
     <string name="feature_settings_control_planes_refresh">Check control planes</string>
     <string name="feature_settings_control_plane_status_active">Active</string>
     <string name="feature_settings_control_plane_status_available">Available</string>
