@@ -1,6 +1,6 @@
 # Release process
 
-SecureChat has release automation configured, but **no official tagged full release has been published yet**.
+Sparrow has release automation configured, but **no official tagged full release has been published yet**.
 This page describes the workflow that will create the first and later releases.
 
 ## Branches
@@ -196,28 +196,28 @@ feature/develop/master commit and expect it to publish.
 
 After the workflow succeeds, open the repository's **Releases** page. GitHub shows the individual assets plus the
 combined full ZIP. GitHub also adds its normal source-code ZIP/tarball automatically; those source archives are not the
-same thing as SecureChat's packaged `securechat-<version>-full.zip`.
+same thing as Sparrow's packaged `sparrow-<version>-full.zip`.
 
 ## Full ZIP
 
 The GitHub release includes individual assets and:
 
 ```text
-securechat-<version>-full.zip
+sparrow-<version>-full.zip
 ```
 
 Conceptually:
 
 ```text
-SecureChat-<version>/
+Sparrow-<version>/
 ├── app/
-│   ├── securechat-<version>-debug.apk
-│   └── securechat-<version>-release.apk
+│   ├── sparrow-<version>-debug.apk
+│   └── sparrow-<version>-release.apk
 ├── control-plane/
-│   └── securechat-control-plane-<version>-windows.zip
+│   └── sparrow-control-plane-<version>-windows.zip
 ├── community-node/
-│   ├── securechat-community-node-<version>-windows.zip
-│   └── securechat-community-node-<version>-macos-linux.tar.gz
+│   ├── sparrow-community-node-<version>-windows.zip
+│   └── sparrow-community-node-<version>-macos-linux.tar.gz
 ├── RELEASE.txt
 ├── MANIFEST.txt
 └── SHA256SUMS.txt

@@ -1,12 +1,12 @@
-name: securechat-network
+name: sparrow-network
 
-x-service: &securechat-service
+x-service: &sparrow-service
   restart: unless-stopped
   build:
     context: ..
     dockerfile: server/Dockerfile
   healthcheck:
-    test: ["CMD-SHELL", "java -cp '/app/lib/*' com.cbgm.securechat.server.observability.ReadinessProbe http://127.0.0.1:$${PORT}/health/ready"]
+    test: ["CMD-SHELL", "java -cp '/app/lib/*' com.cbgm.sparrow.server.observability.ReadinessProbe http://127.0.0.1:$${PORT}/health/ready"]
     interval: 10s
     timeout: 5s
     retries: 6
@@ -17,8 +17,8 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: securechat_registry
-      POSTGRES_USER: securechat_registry
+      POSTGRES_DB: sparrow_registry
+      POSTGRES_USER: sparrow_registry
       POSTGRES_PASSWORD: ${NODE_REGISTRY_DATABASE_PASSWORD:-local-development-password}
     ports:
       - "127.0.0.1:${NODE_REGISTRY_DATABASE_PORT:-5437}:5432"
@@ -31,7 +31,7 @@ services:
       retries: 12
 
   node-registry:
-    <<: *securechat-service
+    <<: *sparrow-service
     build:
       context: ..
       dockerfile: server/Dockerfile
@@ -40,8 +40,8 @@ services:
     environment:
       PORT: 8090
       REGISTRY_IDENTITY_PATH: /data/registry.identity
-      NODE_REGISTRY_DATABASE_URL: jdbc:postgresql://node-registry-database:5432/securechat_registry
-      NODE_REGISTRY_DATABASE_USER: securechat_registry
+      NODE_REGISTRY_DATABASE_URL: jdbc:postgresql://node-registry-database:5432/sparrow_registry
+      NODE_REGISTRY_DATABASE_USER: sparrow_registry
       NODE_REGISTRY_DATABASE_PASSWORD: ${NODE_REGISTRY_DATABASE_PASSWORD:-local-development-password}
       NODE_REGISTRY_REGISTRATION_RATE_LIMIT_REQUESTS: ${NODE_REGISTRY_REGISTRATION_RATE_LIMIT_REQUESTS:-30}
       NODE_REGISTRY_REGISTRATION_RATE_LIMIT_WINDOW_MILLISECONDS: ${NODE_REGISTRY_REGISTRATION_RATE_LIMIT_WINDOW_MILLISECONDS:-3600000}
@@ -82,7 +82,7 @@ services:
       retries: 12
 
   presence-directory:
-    <<: *securechat-service
+    <<: *sparrow-service
     build:
       context: ..
       dockerfile: server/Dockerfile
@@ -106,8 +106,8 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: securechat_mailbox
-      POSTGRES_USER: securechat_mailbox
+      POSTGRES_DB: sparrow_mailbox
+      POSTGRES_USER: sparrow_mailbox
       POSTGRES_PASSWORD: ${MAILBOX_DATABASE_PASSWORD:-local-development-password}
     ports:
       - "127.0.0.1:${MAILBOX_DATABASE_PORT:-5436}:5432"
@@ -120,7 +120,7 @@ services:
       retries: 12
 
   mailbox:
-    <<: *securechat-service
+    <<: *sparrow-service
     build:
       context: ..
       dockerfile: server/Dockerfile
@@ -128,8 +128,8 @@ services:
         SERVICE: mailbox
     environment:
       PORT: 8092
-      MAILBOX_DATABASE_URL: jdbc:postgresql://mailbox-database:5432/securechat_mailbox
-      MAILBOX_DATABASE_USER: securechat_mailbox
+      MAILBOX_DATABASE_URL: jdbc:postgresql://mailbox-database:5432/sparrow_mailbox
+      MAILBOX_DATABASE_USER: sparrow_mailbox
       MAILBOX_DATABASE_PASSWORD: ${MAILBOX_DATABASE_PASSWORD:-local-development-password}
       PUSH_INTERNAL_URL: http://push:8095
       PUSH_INTERNAL_API_TOKEN: ${PUSH_INTERNAL_API_TOKEN:-local-push-development-token}
@@ -150,8 +150,8 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: securechat_push
-      POSTGRES_USER: securechat_push
+      POSTGRES_DB: sparrow_push
+      POSTGRES_USER: sparrow_push
       POSTGRES_PASSWORD: ${PUSH_DATABASE_PASSWORD:-local-development-password}
     ports:
       - "127.0.0.1:${PUSH_DATABASE_PORT:-5435}:5432"
@@ -164,7 +164,7 @@ services:
       retries: 12
 
   push:
-    <<: *securechat-service
+    <<: *sparrow-service
     build:
       context: ..
       dockerfile: server/Dockerfile
@@ -176,8 +176,8 @@ services:
       PRESENCE_DIRECTORY_URL: http://presence-directory:8091
       PUSH_INTERNAL_API_TOKEN: ${PUSH_INTERNAL_API_TOKEN:-local-push-development-token}
       GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-admin.json
-      PUSH_DATABASE_URL: jdbc:postgresql://push-database:5432/securechat_push
-      PUSH_DATABASE_USER: securechat_push
+      PUSH_DATABASE_URL: jdbc:postgresql://push-database:5432/sparrow_push
+      PUSH_DATABASE_USER: sparrow_push
       PUSH_DATABASE_PASSWORD: ${PUSH_DATABASE_PASSWORD:-local-development-password}
       PUSH_DEVICE_REGISTRATION_RATE_LIMIT_REQUESTS: ${PUSH_DEVICE_REGISTRATION_RATE_LIMIT_REQUESTS:-60}
       PUSH_DEVICE_REGISTRATION_RATE_LIMIT_WINDOW_MILLISECONDS: ${PUSH_DEVICE_REGISTRATION_RATE_LIMIT_WINDOW_MILLISECONDS:-60000}
@@ -201,8 +201,8 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: securechat_federation
-      POSTGRES_USER: securechat_federation
+      POSTGRES_DB: sparrow_federation
+      POSTGRES_USER: sparrow_federation
       POSTGRES_PASSWORD: ${FEDERATION_DATABASE_PASSWORD:-local-development-password}
     ports:
       - "127.0.0.1:${FEDERATION_DATABASE_PORT:-5438}:5432"
@@ -215,7 +215,7 @@ services:
       retries: 12
 
   federation:
-    <<: *securechat-service
+    <<: *sparrow-service
     build:
       context: ..
       dockerfile: server/Dockerfile
@@ -232,8 +232,8 @@ services:
       MAILBOX_ENDPOINT: http://localhost:8092
       FEDERATION_INTERNAL_API_TOKEN: ${FEDERATION_INTERNAL_API_TOKEN:-local-federation-development-token}
       GATEWAY_INTERNAL_API_TOKEN: ${GATEWAY_INTERNAL_API_TOKEN:-local-gateway-development-token}
-      FEDERATION_DATABASE_URL: jdbc:postgresql://federation-database:5432/securechat_federation
-      FEDERATION_DATABASE_USER: securechat_federation
+      FEDERATION_DATABASE_URL: jdbc:postgresql://federation-database:5432/sparrow_federation
+      FEDERATION_DATABASE_USER: sparrow_federation
       FEDERATION_DATABASE_PASSWORD: ${FEDERATION_DATABASE_PASSWORD:-local-development-password}
       FEDERATION_INCOMING_RATE_LIMIT_REQUESTS: ${FEDERATION_INCOMING_RATE_LIMIT_REQUESTS:-1200}
       FEDERATION_INCOMING_RATE_LIMIT_WINDOW_MILLISECONDS: ${FEDERATION_INCOMING_RATE_LIMIT_WINDOW_MILLISECONDS:-60000}
@@ -253,7 +253,7 @@ services:
         condition: service_healthy
 
   gateway:
-    <<: *securechat-service
+    <<: *sparrow-service
     build:
       context: ..
       dockerfile: server/Dockerfile

@@ -1,4 +1,4 @@
-{$SECURECHAT_DOMAIN} {
+{$SPARROW_DOMAIN} {
     encode zstd gzip
 
     header {

@@ -1,6 +1,6 @@
 # Project structure
 
-SecureChat is modular. The easiest way to understand a change is to first find which module owns the behavior.
+Sparrow is modular. The easiest way to understand a change is to first find which module owns the behavior.
 
 ## Client modules
 

@@ -8,7 +8,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 $deploymentDirectory = $PSScriptRoot
-$networkConfigPath = Join-Path $deploymentDirectory "securechat.conf"
+$networkConfigPath = Join-Path $deploymentDirectory "sparrow.conf"
 $runtimeEnvironmentPath = Join-Path $deploymentDirectory ".env.runtime"
 $secretsDirectory = Join-Path $deploymentDirectory "secrets"
 $composePath = Join-Path $deploymentDirectory "docker-compose.yml"
@@ -21,7 +21,7 @@ $script:Docker = $null
 $script:ComposeFileArguments = @()
 
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "SecureChat Community Node"
+$form.Text = "Sparrow Community Node"
 $form.Size = New-Object System.Drawing.Size(760, 430)
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
@@ -32,7 +32,7 @@ $title = New-Object System.Windows.Forms.Label
 $title.Location = New-Object System.Drawing.Point(24, 22)
 $title.Size = New-Object System.Drawing.Size(705, 28)
 $title.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
-$title.Text = "Starting SecureChat community node"
+$title.Text = "Starting Sparrow community node"
 $form.Controls.Add($title)
 
 $status = New-Object System.Windows.Forms.Label
@@ -148,14 +148,14 @@ function Write-NetworkConfiguration {
     )
 
     $lines = @(
-        "# SecureChat community-node configuration",
+        "# Sparrow community-node configuration",
         "# Generated and updated by the launcher. You may also edit this file by hand while the stack is stopped.",
         "CONFIGURED=true",
         "MODE=$Mode",
         "PUBLIC_DOMAIN=$PublicDomain",
         "CONTROL_PLANE_DIRECTORY_URL=$DirectoryUrl",
-        "SECURECHAT_IMAGE_PREFIX=$($Config['SECURECHAT_IMAGE_PREFIX'])",
-        "SECURECHAT_IMAGE_TAG=$($Config['SECURECHAT_IMAGE_TAG'])"
+        "SPARROW_IMAGE_PREFIX=$($Config['SPARROW_IMAGE_PREFIX'])",
+        "SPARROW_IMAGE_TAG=$($Config['SPARROW_IMAGE_TAG'])"
     )
 
     [System.IO.File]::WriteAllLines(
@@ -312,7 +312,7 @@ function Read-LauncherConfiguration {
         $state.Done = $true
     })
 
-    $title.Text = "Configure SecureChat community node"
+    $title.Text = "Configure Sparrow community node"
     $status.Visible = $false
     $progress.Visible = $false
     $details.Visible = $false
@@ -333,7 +333,7 @@ function Read-LauncherConfiguration {
     $status.Visible = $true
     $progress.Visible = $true
     $details.Visible = $true
-    $title.Text = "Starting SecureChat community node"
+    $title.Text = "Starting Sparrow community node"
     [System.Windows.Forms.Application]::DoEvents()
 
     if ($state.Cancelled -or $form.IsDisposed) {
@@ -454,7 +454,7 @@ function Resolve-ConfiguredControlPlaneUrls {
     }
 
     if ([string]::IsNullOrWhiteSpace($directoryUrl)) {
-        throw "securechat.conf is missing CONTROL_PLANE_DIRECTORY_URL."
+        throw "sparrow.conf is missing CONTROL_PLANE_DIRECTORY_URL."
     }
 
     while ($true) {
@@ -646,7 +646,7 @@ function Get-NetworkMode {
     $mode = if ($Config.ContainsKey("MODE")) { $Config["MODE"].Trim().ToLowerInvariant() } else { "lan" }
 
     if ($mode -notin @("lan", "public")) {
-        throw "securechat.conf MODE must be lan or public."
+        throw "sparrow.conf MODE must be lan or public."
     }
 
     return $mode
@@ -669,7 +669,7 @@ function Get-PublicIpv4Address {
         }
     }
 
-    throw "Could not detect the public IPv4 address. Set PUBLIC_DOMAIN in securechat.conf."
+    throw "Could not detect the public IPv4 address. Set PUBLIC_DOMAIN in sparrow.conf."
 }
 
 function Resolve-PublicDomain {
@@ -702,7 +702,7 @@ function Normalize-ControlPlaneUrl {
 
     $uri = $null
     if (-not [Uri]::TryCreate($candidate, [UriKind]::Absolute, [ref]$uri)) {
-        throw "Invalid control-plane address in securechat.conf: $Value"
+        throw "Invalid control-plane address in sparrow.conf: $Value"
     }
 
     if ($uri.Scheme -notin @("http", "https")) {
@@ -726,7 +726,7 @@ function Resolve-ControlPlaneUrl {
         $hostProbeUrl = $ConfiguredUrl.TrimEnd("/")
 
         if (-not (Test-ControlPlane -Url $hostProbeUrl)) {
-            throw "The local SecureChat control plane is not reachable at $hostProbeUrl."
+            throw "The local Sparrow control plane is not reachable at $hostProbeUrl."
         }
 
         $containerUrl = if ($uri.Scheme -eq "http") { "http://host.docker.internal`:$port" } else { $ConfiguredUrl }
@@ -738,7 +738,7 @@ function Resolve-ControlPlaneUrl {
     }
 
     if (-not (Test-ControlPlane -Url $ConfiguredUrl)) {
-        throw "The SecureChat control plane is not reachable at $ConfiguredUrl."
+        throw "The Sparrow control plane is not reachable at $ConfiguredUrl."
     }
 
     return [PSCustomObject]@{
@@ -1200,7 +1200,7 @@ function Fail {
 
     [System.Windows.Forms.MessageBox]::Show(
         "$Message`n`nDiagnostic log:`n$logPath",
-        "SecureChat Community Node",
+        "Sparrow Community Node",
         [System.Windows.Forms.MessageBoxButtons]::OK,
         [System.Windows.Forms.MessageBoxIcon]::Error
     ) | Out-Null
@@ -1231,9 +1231,9 @@ try {
     $config = Read-EnvironmentFile -Path $networkConfigPath
     $config = Initialize-NetworkConfiguration -Config $config
 
-    foreach ($requiredValue in @("SECURECHAT_IMAGE_PREFIX", "SECURECHAT_IMAGE_TAG")) {
+    foreach ($requiredValue in @("SPARROW_IMAGE_PREFIX", "SPARROW_IMAGE_TAG")) {
         if (-not $config.ContainsKey($requiredValue) -or [string]::IsNullOrWhiteSpace($config[$requiredValue])) {
-            throw "securechat.conf is missing $requiredValue."
+            throw "sparrow.conf is missing $requiredValue."
         }
     }
 
@@ -1244,14 +1244,14 @@ try {
         $script:ComposeFileArguments += @("-f", $productionComposePath)
     }
 
-    Set-Status "Checking SecureChat control plane..."
+    Set-Status "Checking Sparrow control plane..."
     $controlPlane = Resolve-ControlPlaneCandidates -Config $config -Mode $mode
     $hostAddress = Get-PrimaryIpv4Address
     $publicDomain = if ($mode -eq "public") { Resolve-PublicDomain -Config $config } else { $null }
 
     Write-Detail "Mode: $mode"
     Write-Detail "Control plane: $($controlPlane.HostProbeUrl)"
-    Write-Detail "Image: $($config['SECURECHAT_IMAGE_PREFIX']):$($config['SECURECHAT_IMAGE_TAG'])"
+    Write-Detail "Image: $($config['SPARROW_IMAGE_PREFIX']):$($config['SPARROW_IMAGE_TAG'])"
     if ($mode -eq "public") {
         Write-Detail "Public domain: $publicDomain"
     } else {
@@ -1259,7 +1259,7 @@ try {
     }
 
     Set-ProgressValue -Value 15
-    Set-Status "Preparing SecureChat node secrets..."
+    Set-Status "Preparing Sparrow node secrets..."
     New-Item -ItemType Directory -Path $secretsDirectory -Force | Out-Null
 
     $mailboxPasswordPath = Join-Path $secretsDirectory "mailbox-database-password.txt"
@@ -1287,7 +1287,7 @@ try {
     Write-Detail "Federation/mailbox endpoint: $httpEndpoint"
 
     $runtimeEnvironment = @(
-        "COMMUNITY_NODE_PROJECT_NAME=securechat-community-node",
+        "COMMUNITY_NODE_PROJECT_NAME=sparrow-community-node",
         "COMMUNITY_NODE_BIND_ADDRESS=0.0.0.0",
         "COMMUNITY_NODE_HTTP_PORT=$publicPort",
         "COMMUNITY_NODE_SITE_ADDRESS=$siteAddress",
@@ -1298,9 +1298,9 @@ try {
         "CLIENT_ENDPOINT=$clientEndpoint",
         "FEDERATION_ENDPOINT=$httpEndpoint",
         "MAILBOX_ENDPOINT=$httpEndpoint",
-        "SECURECHAT_IMAGE_PREFIX=$($config['SECURECHAT_IMAGE_PREFIX'])",
-        "SECURECHAT_IMAGE_TAG=$($config['SECURECHAT_IMAGE_TAG'])",
-        "SECURECHAT_UPDATE_INTERVAL_SECONDS=300",
+        "SPARROW_IMAGE_PREFIX=$($config['SPARROW_IMAGE_PREFIX'])",
+        "SPARROW_IMAGE_TAG=$($config['SPARROW_IMAGE_TAG'])",
+        "SPARROW_UPDATE_INTERVAL_SECONDS=300",
         "MAILBOX_DATABASE_PASSWORD_FILE=./secrets/mailbox-database-password.txt",
         "FEDERATION_DATABASE_PASSWORD_FILE=./secrets/federation-database-password.txt",
         "FEDERATION_INTERNAL_API_TOKEN_FILE=./secrets/federation-internal-api-token.txt",
@@ -1319,10 +1319,10 @@ try {
         Set-Status "Validating node configuration..."
         Invoke-Compose -Arguments @("config", "--quiet")
 
-        Set-Status "Pulling SecureChat node images..."
+        Set-Status "Pulling Sparrow node images..."
         Invoke-ComposeStreaming `
             -Arguments @("pull") `
-            -Activity "Pulling SecureChat node images"
+            -Activity "Pulling Sparrow node images"
         Set-ProgressValue -Value 55
 
         Set-ProgressValue -Value 65
@@ -1341,18 +1341,18 @@ try {
 
         Synchronize-PostgresPassword `
             -Service "mailbox-database" `
-            -DatabaseUser "securechat_mailbox" `
-            -DatabaseName "securechat_mailbox" `
+            -DatabaseUser "sparrow_mailbox" `
+            -DatabaseName "sparrow_mailbox" `
             -Password $mailboxPassword
 
         Synchronize-PostgresPassword `
             -Service "federation-database" `
-            -DatabaseUser "securechat_federation" `
-            -DatabaseName "securechat_federation" `
+            -DatabaseUser "sparrow_federation" `
+            -DatabaseName "sparrow_federation" `
             -Password $federationPassword
 
         Set-ProgressValue -Value 82
-        Set-Status "Starting SecureChat node services..."
+        Set-Status "Starting Sparrow node services..."
         Invoke-Compose -Arguments @(
             "up",
             "-d",
@@ -1392,7 +1392,7 @@ try {
     }
 
     Set-ProgressValue -Value 100
-    $title.Text = "SecureChat community node is running"
+    $title.Text = "Sparrow community node is running"
     $displayUrl = if ($mode -eq "public") { "https://$publicDomain" } else { "http://$hostAddress`:$publicPort" }
     $status.Text = $displayUrl
     Write-Log "SUCCESS: $displayUrl"

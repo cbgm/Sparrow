@@ -14,8 +14,8 @@ $ErrorActionPreference = "Stop"
 
 $repositoryRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $outputPath = [System.IO.Path]::GetFullPath((Join-Path $repositoryRoot $OutputDirectory))
-$stagingRoot = Join-Path ([System.IO.Path]::GetTempPath()) "securechat-control-plane-bundle"
-$bundleRoot = Join-Path $stagingRoot "securechat-control-plane"
+$stagingRoot = Join-Path ([System.IO.Path]::GetTempPath()) "sparrow-control-plane-bundle"
+$bundleRoot = Join-Path $stagingRoot "sparrow-control-plane"
 $controlPlaneRoot = Join-Path $repositoryRoot "server/control-plane"
 $controlPlaneDocumentation = Join-Path $repositoryRoot "docs/server/control-plane.md"
 $bootstrapSource = Join-Path $PSScriptRoot "Bootstrap-ControlPlane.Bundle.ps1"
@@ -68,22 +68,22 @@ Copy-Item `
     -Force
 
 [System.IO.File]::WriteAllLines(
-    (Join-Path $bundleRoot "securechat.conf"),
+    (Join-Path $bundleRoot "sparrow.conf"),
     @(
-        "# SecureChat control-plane configuration",
+        "# Sparrow control-plane configuration",
         "# The launcher opens configuration on every start, prefilled from this file, and writes any changes back here.",
         "CONFIGURED=false",
         "MODE=",
         "PUBLIC_DOMAIN=",
         "CONTROL_PLANE_ID=",
-        "SECURECHAT_IMAGE_PREFIX=$ImagePrefix",
-        "SECURECHAT_IMAGE_TAG=$ImageTag"
+        "SPARROW_IMAGE_PREFIX=$ImagePrefix",
+        "SPARROW_IMAGE_TAG=$ImageTag"
     ),
     [System.Text.UTF8Encoding]::new($false)
 )
 
 [System.IO.File]::WriteAllText(
-    (Join-Path $bundleRoot "Start-SecureChatControlPlane.cmd"),
+    (Join-Path $bundleRoot "Start-SparrowControlPlane.cmd"),
     "@echo off`r`nsetlocal`r`ncd /d `"%~dp0`"`r`nstart `"`" powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"%~dp0Bootstrap-ControlPlane.ps1`"`r`nexit /b 0`r`n",
     [System.Text.UTF8Encoding]::new($false)
 )
@@ -101,8 +101,8 @@ Copy-Item `
 )
 
 foreach ($required in @(
-    "Start-SecureChatControlPlane.cmd",
-    "securechat.conf",
+    "Start-SparrowControlPlane.cmd",
+    "sparrow.conf",
     "index.html",
     "secrets/README.txt"
 )) {
@@ -112,7 +112,7 @@ foreach ($required in @(
 }
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-$archivePath = Join-Path $outputPath "securechat-control-plane.zip"
+$archivePath = Join-Path $outputPath "sparrow-control-plane.zip"
 Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue
 [System.IO.Compression.ZipFile]::CreateFromDirectory(
     $bundleRoot,
@@ -124,7 +124,7 @@ Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue
 $hash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
 [System.IO.File]::WriteAllText(
     (Join-Path $outputPath "SHA256SUMS.txt"),
-    "$hash  securechat-control-plane.zip`n",
+    "$hash  sparrow-control-plane.zip`n",
     [System.Text.UTF8Encoding]::new($false)
 )
 

@@ -23,7 +23,7 @@ Depending on deployment, infrastructure can observe some metadata such as:
 - node connection counts/load;
 - encrypted envelope sizes.
 
-SecureChat is not documented as an anonymity network.
+Sparrow is not documented as an anonymity network.
 
 ## Device compromise
 
@@ -46,4 +46,4 @@ The Android signing keystore and GitHub release secrets are high-value assets. L
 
 ## Comparison context
 
-For a careful explanation of where federation can reduce central-infrastructure risk—and where SecureChat is **not** stronger than mature systems such as Signal—see [What makes SecureChat different?](../why-securechat.md).
+For a careful explanation of where federation can reduce central-infrastructure risk—and where Sparrow is **not** stronger than mature systems such as Signal—see [What makes Sparrow different?](../why-sparrow.md).

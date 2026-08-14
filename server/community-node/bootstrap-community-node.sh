@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_FILE="$SCRIPT_DIR/securechat.conf"
+CONFIG_FILE="$SCRIPT_DIR/sparrow.conf"
 RUNTIME_ENV="$SCRIPT_DIR/.env.runtime"
 SECRETS_DIR="$SCRIPT_DIR/secrets"
 BASE_COMPOSE="$SCRIPT_DIR/docker-compose.yml"
@@ -53,12 +53,12 @@ if [[ -z "$CONTROL_PLANE_URLS" && -f "$RUNTIME_ENV" ]]; then
 fi
 
 if [[ "$MODE" != "lan" && "$MODE" != "public" ]]; then
-  echo "securechat.conf MODE must be lan or public." >&2
+  echo "sparrow.conf MODE must be lan or public." >&2
   exit 1
 fi
 
-: "${SECURECHAT_IMAGE_PREFIX:?securechat.conf is missing SECURECHAT_IMAGE_PREFIX}"
-: "${SECURECHAT_IMAGE_TAG:?securechat.conf is missing SECURECHAT_IMAGE_TAG}"
+: "${SPARROW_IMAGE_PREFIX:?sparrow.conf is missing SPARROW_IMAGE_PREFIX}"
+: "${SPARROW_IMAGE_TAG:?sparrow.conf is missing SPARROW_IMAGE_TAG}"
 
 http_ready() {
   local url="$1"
@@ -104,7 +104,7 @@ resolve_configured_control_planes() {
   fi
 
   if [[ -z "${CONTROL_PLANE_DIRECTORY_URL:-}" ]]; then
-    echo "securechat.conf is missing CONTROL_PLANE_DIRECTORY_URL." >&2
+    echo "sparrow.conf is missing CONTROL_PLANE_DIRECTORY_URL." >&2
     exit 1
   fi
 
@@ -159,7 +159,7 @@ for raw_candidate in "${CONTROL_PLANE_CANDIDATES[@]}"; do
 done
 
 if [[ ${#NORMALIZED_CONTROL_PLANE_URLS[@]} -eq 0 ]]; then
-  echo "securechat.conf CONTROL_PLANE_URLS contains no usable addresses." >&2
+  echo "sparrow.conf CONTROL_PLANE_URLS contains no usable addresses." >&2
   exit 1
 fi
 
@@ -250,7 +250,7 @@ if [[ "$MODE" == "public" ]]; then
   if [[ -z "$PUBLIC_DOMAIN" ]]; then
     PUBLIC_IP="$(public_ipv4 || true)"
     if [[ -z "$PUBLIC_IP" ]]; then
-      echo "Could not detect the public IPv4 address. Set PUBLIC_DOMAIN in securechat.conf." >&2
+      echo "Could not detect the public IPv4 address. Set PUBLIC_DOMAIN in sparrow.conf." >&2
       exit 1
     fi
     PUBLIC_DOMAIN="${PUBLIC_IP//./-}.sslip.io"
@@ -279,7 +279,7 @@ ensure_secret "$SECRETS_DIR/federation-internal-api-token.txt"
 ensure_secret "$SECRETS_DIR/gateway-internal-api-token.txt"
 
 cat > "$RUNTIME_ENV" <<EOF_RUNTIME
-COMMUNITY_NODE_PROJECT_NAME=securechat-community-node
+COMMUNITY_NODE_PROJECT_NAME=sparrow-community-node
 COMMUNITY_NODE_BIND_ADDRESS=0.0.0.0
 COMMUNITY_NODE_HTTP_PORT=8490
 COMMUNITY_NODE_SITE_ADDRESS=$SITE_ADDRESS
@@ -290,9 +290,9 @@ ADVERTISED_CONTROL_PLANE_URLS=$(IFS=,; printf '%s' "${NORMALIZED_CONTROL_PLANE_U
 CLIENT_ENDPOINT=$CLIENT_ENDPOINT
 FEDERATION_ENDPOINT=$HTTP_ENDPOINT
 MAILBOX_ENDPOINT=$HTTP_ENDPOINT
-SECURECHAT_IMAGE_PREFIX=$SECURECHAT_IMAGE_PREFIX
-SECURECHAT_IMAGE_TAG=$SECURECHAT_IMAGE_TAG
-SECURECHAT_UPDATE_INTERVAL_SECONDS=300
+SPARROW_IMAGE_PREFIX=$SPARROW_IMAGE_PREFIX
+SPARROW_IMAGE_TAG=$SPARROW_IMAGE_TAG
+SPARROW_UPDATE_INTERVAL_SECONDS=300
 MAILBOX_DATABASE_PASSWORD_FILE=./secrets/mailbox-database-password.txt
 FEDERATION_DATABASE_PASSWORD_FILE=./secrets/federation-database-password.txt
 FEDERATION_INTERNAL_API_TOKEN_FILE=./secrets/federation-internal-api-token.txt

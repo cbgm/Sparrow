@@ -1,6 +1,6 @@
-site_name: SecureChat Documentation
-site_description: Engineering documentation for SecureChat
-site_author: SecureChat
+site_name: Sparrow Documentation
+site_description: Engineering documentation for Sparrow
+site_author: Sparrow
 docs_dir: docs
 site_dir: site
 
@@ -38,7 +38,7 @@ theme:
 
 nav:
   - Home: index.md
-  - Why SecureChat?: why-securechat.md
+  - Why Sparrow?: why-sparrow.md
   - Technology Stack: technology-stack.md
   - Getting Started:
       - Introduction: getting-started/introduction.md

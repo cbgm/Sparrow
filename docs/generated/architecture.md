@@ -1,4 +1,4 @@
-# SecureChat Architecture
+# Sparrow Architecture
 
 Generated automatically by `./gradlew architectureReport`.
 
@@ -11,7 +11,7 @@ Generated automatically by `./gradlew architectureReport`.
 | Project dependencies | 101 |
 | Kotlin files | 963 |
 | Test Kotlin files | 90 |
-| Resource files | 58 |
+| Resource files | 48 |
 
 ## Module groups
 

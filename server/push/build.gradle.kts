@@ -1,14 +1,14 @@
 plugins {
     kotlin("jvm")
     alias(libs.plugins.kotlin.serialization.classpath)
-    alias(libs.plugins.securechat.lint)
-    alias(libs.plugins.securechat.properties)
+    alias(libs.plugins.sparrow.lint)
+    alias(libs.plugins.sparrow.properties)
     application
 }
 
 val firebaseAdminCredentialsPath =
     localProperties.getOrNull(
-        "securechat.firebase.adminCredentials"
+        "sparrow.firebase.adminCredentials"
     )
 
 kotlin {
@@ -16,7 +16,7 @@ kotlin {
 }
 
 application {
-    mainClass.set("com.cbgm.securechat.server.push.ApplicationKt")
+    mainClass.set("com.cbgm.sparrow.server.push.ApplicationKt")
 }
 
 dependencies {

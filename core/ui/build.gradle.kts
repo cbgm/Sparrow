@@ -1,11 +1,11 @@
 plugins {
-    alias(libs.plugins.securechat.kmp.compose)
-    alias(libs.plugins.securechat.kmp.serialization)
+    alias(libs.plugins.sparrow.kmp.compose)
+    alias(libs.plugins.sparrow.kmp.serialization)
 }
 
 kotlin {
     android {
-        namespace = "com.cbgm.securechat.core.ui"
+        namespace = "com.cbgm.sparrow.core.ui"
     }
 
     sourceSets {

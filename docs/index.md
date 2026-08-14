@@ -1,6 +1,6 @@
-# SecureChat documentation
+# Sparrow documentation
 
-SecureChat is an actively developed Kotlin Multiplatform secure-messaging project with an Android client and a
+Sparrow is an actively developed Kotlin Multiplatform secure-messaging project with an Android client and a
 federated Kotlin/Docker server stack.
 
 !!! warning "Platform status"
@@ -15,7 +15,7 @@ federated Kotlin/Docker server stack.
 ## New here? Read these in order
 
 1. [Introduction](getting-started/introduction.md)
-2. [What makes SecureChat different?](why-securechat.md)
+2. [What makes Sparrow different?](why-sparrow.md)
 3. [Installation](getting-started/installation.md)
 4. [First build](getting-started/first-build.md)
 5. [Using the Android app](getting-started/using-app.md)
@@ -37,7 +37,7 @@ Those pages use relative links and therefore work in LAN and public deployments.
 
 ## Documentation sections
 
-- **Why SecureChat?** — the federated design, Tor comparison, and where the security model differs from Signal/WhatsApp.
+- **Why Sparrow?** — the federated design, Tor comparison, and where the security model differs from Signal/WhatsApp.
 - **Getting Started** — prerequisites, first build, project structure, development flow.
 - **Architecture** — Clean Architecture rules, module boundaries, Direct/Group separation.
 - **Features** — current Android functionality and exact implementation classes.

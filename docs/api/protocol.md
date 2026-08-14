@@ -39,7 +39,7 @@ Group:
 
 ## Codec boundary
 
-`PacketCodec` encodes/decodes `SecureChatPacket`. Transport encryption is a separate layer. This separation allows the outbox to persist protocol packets before the final recipient routing/encryption/wire step.
+`PacketCodec` encodes/decodes `SparrowPacket`. Transport encryption is a separate layer. This separation allows the outbox to persist protocol packets before the final recipient routing/encryption/wire step.
 
 ## Server protocol
 

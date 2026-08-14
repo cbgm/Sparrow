@@ -1,0 +1,13 @@
+package com.cbgm.sparrow.feature.chats.domain.usecase.group
+
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationActionRepository
+
+class VerifyGroupMemberUseCase(
+    private val repository: GroupVerificationActionRepository
+) {
+    suspend operator fun invoke(
+        groupId: String,
+        contactId: String
+    ): Result<Unit> =
+        repository.verify(groupId, contactId)
+}

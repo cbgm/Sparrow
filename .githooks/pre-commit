@@ -3,7 +3,7 @@
 set -e
 
 echo ""
-echo "Running SecureChat formatting before commit..."
+echo "Running Sparrow formatting before commit..."
 echo ""
 
 # Remember which files were staged before formatting.

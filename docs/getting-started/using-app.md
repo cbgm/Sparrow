@@ -4,11 +4,11 @@ This is the current user flow for the Android client.
 
 ## 1. Complete onboarding
 
-On first launch, follow the welcome/privacy/phone/permission pages and create the local SecureChat identity. The private identity material stays on the device; Android protects the stored private-key bytes through `AndroidPrivateKeyStorage`.
+On first launch, follow the welcome/privacy/phone/permission pages and create the local Sparrow identity. The private identity material stays on the device; Android protects the stored private-key bytes through `AndroidPrivateKeyStorage`.
 
 ## 2. Add a contact
 
-You can bring another SecureChat identity into the app through the sharing/import/QR flows. Device contacts can also be imported/linked where permission is granted.
+You can bring another Sparrow identity into the app through the sharing/import/QR flows. Device contacts can also be imported/linked where permission is granted.
 
 Importing identity information is not the same as cryptographically verifying that person.
 

@@ -33,7 +33,7 @@ function Show-Result {
 
         [System.Windows.MessageBox]::Show(
             $Message,
-            "SecureChat Control Plane",
+            "Sparrow Control Plane",
             [System.Windows.MessageBoxButton]::OK,
             $icon
         ) | Out-Null
@@ -269,7 +269,7 @@ function Read-LocalProperty {
 }
 
 function Resolve-FirebaseCredentials {
-    $configured = Read-LocalProperty -Name "securechat.firebase.adminCredentials"
+    $configured = Read-LocalProperty -Name "sparrow.firebase.adminCredentials"
     if (-not [string]::IsNullOrWhiteSpace($configured)) {
         $expanded = [Environment]::ExpandEnvironmentVariables($configured)
         if (Test-Path -LiteralPath $expanded -PathType Leaf) {
@@ -308,7 +308,7 @@ function Resolve-FirebaseCredentials {
         return $matches[0].FullName
     }
 
-    throw "Firebase Admin credentials were not found. Keep securechat.firebase.adminCredentials in local.properties or place firebase-admin.json in server/control-plane/secrets."
+    throw "Firebase Admin credentials were not found. Keep sparrow.firebase.adminCredentials in local.properties or place firebase-admin.json in server/control-plane/secrets."
 }
 
 function New-RandomSecret {
@@ -426,7 +426,7 @@ try {
     $firebaseComposePath = $firebasePath.Replace("\", "/")
 
     $runtimeEnvironment = @(
-        "CONTROL_PLANE_PROJECT_NAME=securechat-control-plane",
+        "CONTROL_PLANE_PROJECT_NAME=sparrow-control-plane",
         "CONTROL_PLANE_BIND_ADDRESS=0.0.0.0",
         "CONTROL_PLANE_HTTP_PORT=$controlPlanePort",
         "CONTROL_PLANE_SITE_ADDRESS=:80",
@@ -479,7 +479,7 @@ try {
     )
 
     Show-Result `
-        -Message "SecureChat control plane is running.`n`n$controlPlaneUrl" `
+        -Message "Sparrow control plane is running.`n`n$controlPlaneUrl" `
         -IsError $false
 
     exit 0

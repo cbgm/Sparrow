@@ -4,7 +4,7 @@ This page explains the technologies a new contributor/operator will encounter. I
 
 ## Client and build
 
-| Technology | What it is | How SecureChat uses it |
+| Technology | What it is | How Sparrow uses it |
 |---|---|---|
 | Kotlin 2.4 | Programming language | Client, shared code, Gradle build logic and JVM servers |
 | Kotlin Multiplatform | Shared-code platform | `commonMain` business/application/UI code with Android/iOS source sets |
@@ -29,7 +29,7 @@ This page explains the technologies a new contributor/operator will encounter. I
 
 ## Server and operations
 
-| Technology | What it is | How SecureChat uses it |
+| Technology | What it is | How Sparrow uses it |
 |---|---|---|
 | Ktor server + Netty | Kotlin JVM HTTP/WebSocket server | Registry, presence, gateway, federation, mailbox and push applications |
 | Docker | Container runtime | One image/runtime per server service/dependency |
@@ -49,13 +49,13 @@ This page explains the technologies a new contributor/operator will encounter. I
 
 A **Docker image** is a packaged filesystem/runtime for one service. A **container** is a running instance of that image.
 
-SecureChat keeps registry, presence, push, gateway, federation and mailbox as separate images. PostgreSQL, Redis and Caddy use standard upstream images. This makes services independently rebuildable and prevents the deployment from becoming one giant JVM process.
+Sparrow keeps registry, presence, push, gateway, federation and mailbox as separate images. PostgreSQL, Redis and Caddy use standard upstream images. This makes services independently rebuildable and prevents the deployment from becoming one giant JVM process.
 
 ## Docker Compose in plain English
 
 Compose describes which containers belong together, their environment variables, ports, networks, volumes and startup/health dependencies.
 
-SecureChat has two production-shaped units:
+Sparrow has two production-shaped units:
 
 - **Control Plane:** Caddy + node-registry/PostgreSQL + presence-directory/Redis + push/PostgreSQL.
 - **Community Node:** Caddy + gateway + federation/PostgreSQL + mailbox/PostgreSQL + persistent node identity.

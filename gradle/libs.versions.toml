@@ -249,13 +249,13 @@ buildkonfig = { id = "com.codingfeline.buildkonfig", version.ref = "buildkonfig"
 detekt = { id = "dev.detekt", version.ref = "detekt" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint-gradle" }
 
-securechat-lint = { id = "securechat.lint" }
-securechat-kmp-library = { id = "securechat.kmp.library" }
-securechat-kmp-compose = { id = "securechat.kmp.compose" }
-securechat-kmp-testing = { id = "securechat.kmp.testing" }
-securechat-kmp-compose-feature = { id = "securechat.kmp.compose.feature" }
-securechat-kmp-serialization = { id = "securechat.kmp.serialization" }
-securechat-kmp-room = { id = "securechat.kmp.room" }
-securechat-architecture = { id = "securechat.architecture" }
-securechat-quality = { id = "securechat.quality" }
-securechat-properties = { id = "securechat.local-properties" }
+sparrow-lint = { id = "sparrow.lint" }
+sparrow-kmp-library = { id = "sparrow.kmp.library" }
+sparrow-kmp-compose = { id = "sparrow.kmp.compose" }
+sparrow-kmp-testing = { id = "sparrow.kmp.testing" }
+sparrow-kmp-compose-feature = { id = "sparrow.kmp.compose.feature" }
+sparrow-kmp-serialization = { id = "sparrow.kmp.serialization" }
+sparrow-kmp-room = { id = "sparrow.kmp.room" }
+sparrow-architecture = { id = "sparrow.architecture" }
+sparrow-quality = { id = "sparrow.quality" }
+sparrow-properties = { id = "sparrow.local-properties" }

@@ -84,7 +84,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          secret="${RUNNER_TEMP}/securechat-compose-validation-secret"
+          secret="${RUNNER_TEMP}/sparrow-compose-validation-secret"
           printf 'validation' > "${secret}"
 
           cat > "${RUNNER_TEMP}/community.env" <<EOF_COMMUNITY
@@ -93,8 +93,8 @@ jobs:
           FEDERATION_ENDPOINT=https://node.example.test
           MAILBOX_ENDPOINT=https://node.example.test
           COMMUNITY_NODE_DOMAIN=node.example.test
-          SECURECHAT_IMAGE_PREFIX=ghcr.io/example/securechat
-          SECURECHAT_IMAGE_TAG=validation
+          SPARROW_IMAGE_PREFIX=ghcr.io/example/sparrow
+          SPARROW_IMAGE_TAG=validation
           MAILBOX_DATABASE_PASSWORD_FILE=${secret}
           FEDERATION_DATABASE_PASSWORD_FILE=${secret}
           FEDERATION_INTERNAL_API_TOKEN_FILE=${secret}
@@ -111,8 +111,8 @@ jobs:
           cat > "${RUNNER_TEMP}/control.env" <<EOF_CONTROL
           CONTROL_PLANE_DOMAIN=control.example.test
           FIREBASE_ADMIN_CREDENTIALS=${secret}
-          SECURECHAT_IMAGE_PREFIX=ghcr.io/example/securechat
-          SECURECHAT_IMAGE_TAG=validation
+          SPARROW_IMAGE_PREFIX=ghcr.io/example/sparrow
+          SPARROW_IMAGE_TAG=validation
           NODE_REGISTRY_DATABASE_PASSWORD_FILE=${secret}
           PRESENCE_REDIS_PASSWORD_FILE=${secret}
           PUSH_DATABASE_PASSWORD_FILE=${secret}
@@ -175,7 +175,7 @@ jobs:
           set -euo pipefail
 
           owner="${GITHUB_REPOSITORY_OWNER,,}"
-          image_prefix="ghcr.io/${owner}/securechat"
+          image_prefix="ghcr.io/${owner}/sparrow"
 
           image_tags=("sha-${SOURCE_SHA}")
 
@@ -201,7 +201,7 @@ jobs:
           )
 
           created_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-          context_root="${RUNNER_TEMP}/securechat-server-images"
+          context_root="${RUNNER_TEMP}/sparrow-server-images"
 
           rm -rf "${context_root}"
           mkdir -p "${context_root}"
@@ -265,7 +265,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           $owner = "${{ github.repository_owner }}".ToLowerInvariant()
-          $imagePrefix = "ghcr.io/$owner/securechat"
+          $imagePrefix = "ghcr.io/$owner/sparrow"
 
           if (-not [string]::IsNullOrWhiteSpace($env:PR_NUMBER)) {
               $imageTag = "pr-$($env:PR_NUMBER)"
@@ -283,14 +283,14 @@ jobs:
         run: |
           New-Item -ItemType Directory -Path dist-control-plane/artifact -Force | Out-Null
           Expand-Archive `
-              -LiteralPath dist-control-plane/securechat-control-plane.zip `
+              -LiteralPath dist-control-plane/sparrow-control-plane.zip `
               -DestinationPath dist-control-plane/artifact `
               -Force
 
           foreach ($required in @(
-              "Start-SecureChatControlPlane.cmd",
+              "Start-SparrowControlPlane.cmd",
               "Bootstrap-ControlPlane.ps1",
-              "securechat.conf",
+              "sparrow.conf",
               "docker-compose.production.yml",
               "index.html",
               "secrets/README.txt"
@@ -300,18 +300,18 @@ jobs:
               }
           }
 
-          $controlConfig = Get-Content -LiteralPath dist-control-plane/artifact/securechat.conf -Raw
+          $controlConfig = Get-Content -LiteralPath dist-control-plane/artifact/sparrow.conf -Raw
           if ($controlConfig -notmatch '(?m)^CONFIGURED=false$') {
-              throw "Control-plane securechat.conf must start with CONFIGURED=false in the distributable template."
+              throw "Control-plane sparrow.conf must start with CONFIGURED=false in the distributable template."
           }
           if ($controlConfig -notmatch '(?m)^CONTROL_PLANE_ID=$') {
-              throw "Control-plane securechat.conf is missing the instance-ID field."
+              throw "Control-plane sparrow.conf is missing the instance-ID field."
           }
 
       - name: Upload control-plane bundle
         uses: actions/upload-artifact@v7
         with:
-          name: securechat-control-plane-${{ github.event.pull_request.number || 'manual' }}
+          name: sparrow-control-plane-${{ github.event.pull_request.number || 'manual' }}
           path: dist-control-plane/artifact
           if-no-files-found: error
           retention-days: 14
@@ -338,7 +338,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           $owner = "${{ github.repository_owner }}".ToLowerInvariant()
-          $imagePrefix = "ghcr.io/$owner/securechat"
+          $imagePrefix = "ghcr.io/$owner/sparrow"
 
           if (-not [string]::IsNullOrWhiteSpace($env:PR_NUMBER)) {
               $imageTag = "pr-$($env:PR_NUMBER)"
@@ -356,15 +356,15 @@ jobs:
         run: |
           New-Item -ItemType Directory -Path dist-community/artifact -Force | Out-Null
           Expand-Archive `
-              -LiteralPath dist-community/securechat-community-node.zip `
+              -LiteralPath dist-community/sparrow-community-node.zip `
               -DestinationPath dist-community/artifact `
               -Force
 
 
           foreach ($required in @(
-              "Start-SecureChatNode.cmd",
+              "Start-SparrowNode.cmd",
               "Bootstrap-CommunityNode.ps1",
-              "securechat.conf",
+              "sparrow.conf",
               "docker-compose.production.yml",
               "index.html"
           )) {
@@ -373,24 +373,24 @@ jobs:
               }
           }
 
-          $nodeConfig = Get-Content -LiteralPath dist-community/artifact/securechat.conf -Raw
+          $nodeConfig = Get-Content -LiteralPath dist-community/artifact/sparrow.conf -Raw
           if ($nodeConfig -notmatch '(?m)^CONFIGURED=false$') {
-              throw "Community-node securechat.conf must start with CONFIGURED=false in the distributable template."
+              throw "Community-node sparrow.conf must start with CONFIGURED=false in the distributable template."
           }
           if ($nodeConfig -match '(?m)^CONTROL_PLANE_URLS=') {
-              throw "Community-node securechat.conf must not require a manual CONTROL_PLANE_URLS list."
+              throw "Community-node sparrow.conf must not require a manual CONTROL_PLANE_URLS list."
           }
           if ($nodeConfig -notmatch '(?m)^CONTROL_PLANE_DIRECTORY_URL=$') {
-              throw "Community-node securechat.conf is missing CONTROL_PLANE_DIRECTORY_URL."
+              throw "Community-node sparrow.conf is missing CONTROL_PLANE_DIRECTORY_URL."
           }
           if ($nodeConfig -match '(?m)^CONTROL_PLANE_BOOTSTRAP_URL=') {
-              throw "Community-node securechat.conf must not contain a bootstrap fallback URL."
+              throw "Community-node sparrow.conf must not contain a bootstrap fallback URL."
           }
 
       - name: Upload community-node bundle
         uses: actions/upload-artifact@v7
         with:
-          name: securechat-community-node-${{ github.event.pull_request.number || 'manual' }}
+          name: sparrow-community-node-${{ github.event.pull_request.number || 'manual' }}
           path: dist-community/artifact
           if-no-files-found: error
           retention-days: 14

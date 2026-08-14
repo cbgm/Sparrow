@@ -11,7 +11,7 @@ gateway
 federation + PostgreSQL
 mailbox + PostgreSQL
 persistent node identity
-securechat.conf
+sparrow.conf
 launchers
 ```
 
@@ -20,7 +20,7 @@ launchers
 Run:
 
 ```text
-Start-SecureChatNode.cmd
+Start-SparrowNode.cmd
 ```
 
 The launcher opens configuration with:
@@ -34,13 +34,13 @@ The launcher opens configuration with:
 Run:
 
 ```bash
-./start-securechat-node.sh
+./start-sparrow-node.sh
 ```
 
 or on macOS open:
 
 ```text
-Start-SecureChatNode.command
+Start-SparrowNode.command
 ```
 
 ## Directory behavior

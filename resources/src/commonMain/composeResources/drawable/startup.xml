@@ -5,78 +5,54 @@
     android:viewportWidth="320"
     android:viewportHeight="320">
 
-    <!-- Outer soft glow -->
+    <!-- Small front-facing Sparrow head behind the shield. -->
     <path
-        android:fillColor="#1635E6FF"
+        android:fillColor="#35E6FF"
         android:pathData="
-            M160,30
-            C85,30 35,80 35,160
-            C35,240 85,290 160,290
-            C235,290 285,240 285,160
-            C285,80 235,30 160,30
+            M160,52
+            C128,52 102,76 102,108
+            C102,140 128,160 160,160
+            C192,160 218,140 218,108
+            C218,76 192,52 160,52
             Z" />
 
-    <!-- Shield fill -->
+    <!-- Eyes. -->
     <path
-        android:fillColor="#2410BBD4"
+        android:fillColor="#071A2E"
         android:pathData="
-            M160,38
-            C127,62 94,76 62,85
-            V158
-            C62,217 99,260 160,286
-            C221,260 258,217 258,158
-            V85
-            C226,76 193,62 160,38
+            M129,103
+            a6,6 0,1 0,12,0
+            a6,6 0,1 0,-12,0" />
+
+    <path
+        android:fillColor="#071A2E"
+        android:pathData="
+            M179,103
+            a6,6 0,1 0,12,0
+            a6,6 0,1 0,-12,0" />
+
+    <!-- Beak. -->
+    <path
+        android:fillColor="#071A2E"
+        android:pathData="
+            M160,113
+            L173,122
+            L160,132
+            L147,122
             Z" />
 
-    <!-- Shield outline -->
+    <!-- Shield fill. -->
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#35E6FF"
-        android:strokeWidth="8"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
+        android:fillColor="#102A46"
         android:pathData="
-            M160,38
-            C127,62 94,76 62,85
-            V158
-            C62,217 99,260 160,286
-            C221,260 258,217 258,158
-            V85
-            C226,76 193,62 160,38
+            M160,130
+            C125,146 93,150 64,155
+            C66,221 99,269 160,301
+            C221,269 254,221 256,155
+            C227,150 195,146 160,130
             Z" />
 
-    <!-- Inner shield line -->
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#8035E6FF"
-        android:strokeWidth="3"
-        android:strokeLineJoin="round"
-        android:pathData="
-            M160,56
-            C132,75 104,88 80,95
-            V157
-            C80,205 109,239 160,262
-            C211,239 240,205 240,157
-            V95
-            C216,88 188,75 160,56
-            Z" />
-
-    <!-- Chat bubble fill -->
-    <path
-        android:fillColor="#2618BFD5"
-        android:pathData="
-            M105,111
-            C105,82 129,66 162,66
-            C196,66 220,86 220,116
-            C220,146 195,168 162,168
-            H139
-            L112,190
-            L119,160
-            C110,147 105,132 105,111
-            Z" />
-
-    <!-- Chat bubble outline -->
+    <!-- Shield outer line. -->
     <path
         android:fillColor="#00000000"
         android:strokeColor="#35E6FF"
@@ -84,84 +60,26 @@
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
         android:pathData="
-            M105,111
-            C105,82 129,66 162,66
-            C196,66 220,86 220,116
-            C220,146 195,168 162,168
-            H139
-            L112,190
-            L119,160
-            C110,147 105,132 105,111
+            M160,130
+            C125,146 93,150 64,155
+            C66,221 99,269 160,301
+            C221,269 254,221 256,155
+            C227,150 195,146 160,130
             Z" />
 
-    <!-- Message dots -->
-    <path
-        android:fillColor="#35E6FF"
-        android:pathData="
-            M135,116
-            a7,7 0,1 0,14,0
-            a7,7 0,1 0,-14,0" />
-
-    <path
-        android:fillColor="#35E6FF"
-        android:pathData="
-            M157,116
-            a7,7 0,1 0,14,0
-            a7,7 0,1 0,-14,0" />
-
-    <path
-        android:fillColor="#35E6FF"
-        android:pathData="
-            M179,116
-            a7,7 0,1 0,14,0
-            a7,7 0,1 0,-14,0" />
-
-    <!-- Network lines -->
+    <!-- Inner shield line: same detail as the Compose SparrowMark. -->
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#5535E6FF"
-        android:strokeWidth="2"
+        android:strokeColor="#8035E6FF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
         android:pathData="
-            M85,101 L112,128
-            M235,103 L214,133
-            M92,194 L127,164
-            M229,194 L196,164
-            M160,259 L160,170" />
-
-    <!-- Network nodes -->
-    <path
-        android:fillColor="#35E6FF"
-        android:pathData="
-            M82,98
-            a5,5 0,1 0,10,0
-            a5,5 0,1 0,-10,0" />
-
-    <path
-        android:fillColor="#35E6FF"
-        android:pathData="
-            M230,99
-            a5,5 0,1 0,10,0
-            a5,5 0,1 0,-10,0" />
-
-    <path
-        android:fillColor="#35E6FF"
-        android:pathData="
-            M88,194
-            a5,5 0,1 0,10,0
-            a5,5 0,1 0,-10,0" />
-
-    <path
-        android:fillColor="#35E6FF"
-        android:pathData="
-            M224,194
-            a5,5 0,1 0,10,0
-            a5,5 0,1 0,-10,0" />
-
-    <path
-        android:fillColor="#35E6FF"
-        android:pathData="
-            M155,255
-            a5,5 0,1 0,10,0
-            a5,5 0,1 0,-10,0" />
+            M160,142
+            C130,155 104,160 78,165
+            C82,216 112,256 160,283
+            C208,256 238,216 242,165
+            C216,160 190,155 160,142
+            Z" />
 
 </vector>

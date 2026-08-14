@@ -21,7 +21,7 @@ services:
         condition: service_started
 
   node-registry:
-    image: ${SECURECHAT_IMAGE_PREFIX:?Missing SECURECHAT_IMAGE_PREFIX}-node-registry:${SECURECHAT_IMAGE_TAG:?Missing SECURECHAT_IMAGE_TAG}
+    image: ${SPARROW_IMAGE_PREFIX:?Missing SPARROW_IMAGE_PREFIX}-node-registry:${SPARROW_IMAGE_TAG:?Missing SPARROW_IMAGE_TAG}
     build: !reset null
     pull_policy: always
     healthcheck: !reset null
@@ -39,7 +39,7 @@ services:
       - registry-signing:/data/signing
 
   presence-directory:
-    image: ${SECURECHAT_IMAGE_PREFIX:?Missing SECURECHAT_IMAGE_PREFIX}-presence-directory:${SECURECHAT_IMAGE_TAG:?Missing SECURECHAT_IMAGE_TAG}
+    image: ${SPARROW_IMAGE_PREFIX:?Missing SPARROW_IMAGE_PREFIX}-presence-directory:${SPARROW_IMAGE_TAG:?Missing SPARROW_IMAGE_TAG}
     build: !reset null
     pull_policy: always
     healthcheck: !reset null
@@ -50,7 +50,7 @@ services:
         condition: service_healthy
 
   push:
-    image: ${SECURECHAT_IMAGE_PREFIX:?Missing SECURECHAT_IMAGE_PREFIX}-push:${SECURECHAT_IMAGE_TAG:?Missing SECURECHAT_IMAGE_TAG}
+    image: ${SPARROW_IMAGE_PREFIX:?Missing SPARROW_IMAGE_PREFIX}-push:${SPARROW_IMAGE_TAG:?Missing SPARROW_IMAGE_TAG}
     build: !reset null
     pull_policy: always
     healthcheck: !reset null

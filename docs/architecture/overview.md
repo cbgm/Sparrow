@@ -1,6 +1,6 @@
 # Architecture overview
 
-SecureChat is a Kotlin Multiplatform client plus a federated Kotlin server system. The code is intentionally split by responsibility rather than by deployment convenience.
+Sparrow is a Kotlin Multiplatform client plus a federated Kotlin server system. The code is intentionally split by responsibility rather than by deployment convenience.
 
 ## High-level view
 
@@ -58,7 +58,7 @@ flowchart LR
 
 ## Application startup
 
-The Android application entry point is deliberately thin. `SecureChatApplication` initializes dependency injection; the shared application shell and startup orchestration live in `:shared`.
+The Android application entry point is deliberately thin. `SparrowApplication` initializes dependency injection; the shared application shell and startup orchestration live in `:shared`.
 
 `AppViewModel` owns application startup and foreground runtime orchestration. Its startup path includes:
 

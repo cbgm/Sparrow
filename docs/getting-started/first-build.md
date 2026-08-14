@@ -28,6 +28,8 @@ The APK is written below:
 androidApp/build/outputs/apk/debug/
 ```
 
+The Android application ID is `com.cbgm.sparrow`. For FCM/background wake-ups, `androidApp/google-services.json` must belong to a Firebase Android app registered with that package name. A debug build can still be compiled without the file because the Google Services plugin is applied only when the file exists.
+
 ## 3. Run checks
 
 ```bash
@@ -54,7 +56,7 @@ For a realistic local setup, run one Control Plane and at least one Community No
 
 Run `androidApp` from Android Studio. On startup:
 
-1. `SecureChatApplication` starts Android Koin wiring.
+1. `SparrowApplication` starts Android Koin wiring.
 2. shared `App()` creates `AppViewModel`.
 3. `AppViewModel.initializeApplication()` initializes crypto, language, notifications and Control Plane discovery.
 4. after identity is ready and the app is foregrounded, `TransportConnectionManager` starts.

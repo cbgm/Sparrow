@@ -4,7 +4,7 @@ This is direction, not a release promise.
 
 ## Current usable baseline
 
-Android currently has the core SecureChat experience: identity/onboarding, contacts/invitations/verification, Direct chats, Group chats/membership/admin/security, delivery/read/typing, Control Plane discovery/failover, Community Node federation/mailbox delivery, Android notifications, Docker launchers and release automation.
+Android currently has the core Sparrow experience: identity/onboarding, contacts/invitations/verification, Direct chats, Group chats/membership/admin/security, delivery/read/typing, Control Plane discovery/failover, Community Node federation/mailbox delivery, Android notifications, Docker launchers and release automation.
 
 ## Near-term priorities
 

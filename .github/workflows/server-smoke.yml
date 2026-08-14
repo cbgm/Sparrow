@@ -42,7 +42,7 @@ jobs:
       - name: Create Disabled Firebase Credential
         shell: bash
         run: |
-          credential_path="$RUNNER_TEMP/securechat-firebase-admin.json"
+          credential_path="$RUNNER_TEMP/sparrow-firebase-admin.json"
           printf '{}\n' > "$credential_path"
           chmod 644 "$credential_path"
           echo "FIREBASE_ADMIN_CREDENTIALS=$credential_path" >> "$GITHUB_ENV"
@@ -50,7 +50,7 @@ jobs:
       - name: Build and Test Two-Node Network
         shell: pwsh
         run: |
-          ./server/scripts/Test-SecureChatNetwork.ps1 `
+          ./server/scripts/Test-SparrowNetwork.ps1 `
               -MultiNode `
               -Start `
               -BuildImages `

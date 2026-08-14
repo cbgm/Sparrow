@@ -4,7 +4,7 @@ Messaging crosses modules, but each module has a narrow job.
 
 | Concern | Owner | Representative classes |
 |---|---|---|
-| Packet contracts | `:core:protocol` | `SecureChatPacket`, `PacketCodec`, packet data classes |
+| Packet contracts | `:core:protocol` | `SparrowPacket`, `PacketCodec`, packet data classes |
 | Persistent outbox contract | `:core:protocol` | `ProtocolOutbox`, `OutboxProcessor`, `OutgoingWireSender` |
 | Persistent outbox storage | `:data:database` | `DefaultProtocolOutbox` + Room DAOs |
 | Conversation meaning | `:feature:chats` | Direct/Group repositories, handlers, state machines |

@@ -18,9 +18,9 @@ $nodeAEnvironment = Join-Path $workDirectory "node-a.env"
 $nodeBEnvironment = Join-Path $workDirectory "node-b.env"
 $firebaseCredential = Join-Path $workDirectory "firebase-admin.invalid.json"
 
-$controlProject = "securechat-control-plane-smoke"
-$nodeAProject = "securechat-community-node-a-smoke"
-$nodeBProject = "securechat-community-node-b-smoke"
+$controlProject = "sparrow-control-plane-smoke"
+$nodeAProject = "sparrow-community-node-a-smoke"
+$nodeBProject = "sparrow-community-node-b-smoke"
 
 function Write-Utf8File {
     param(
@@ -116,7 +116,7 @@ function Get-NodeAuthentication {
     $cliArguments = @(
         "exec", "-T", "federation",
         "java", "-cp", "/app/lib/*",
-        "com.cbgm.securechat.server.security.NodeRequestSignatureCli",
+        "com.cbgm.sparrow.server.security.NodeRequestSignatureCli",
         "/data/node.identity", $Method, $Path
     )
     if (-not [string]::IsNullOrEmpty($Body)) {
@@ -141,10 +141,10 @@ function Get-NodeAuthenticationHeaders {
     param([Parameter(Mandatory = $true)][hashtable]$Authentication)
 
     return @{
-        "X-SecureChat-Node-Id" = $Authentication["nodeId"]
-        "X-SecureChat-Timestamp" = $Authentication["timestamp"]
-        "X-SecureChat-Nonce" = $Authentication["nonce"]
-        "X-SecureChat-Signature" = $Authentication["signature"]
+        "X-Sparrow-Node-Id" = $Authentication["nodeId"]
+        "X-Sparrow-Timestamp" = $Authentication["timestamp"]
+        "X-Sparrow-Nonce" = $Authentication["nonce"]
+        "X-Sparrow-Signature" = $Authentication["signature"]
     }
 }
 
@@ -183,7 +183,7 @@ function New-SmokePresenceRoute {
             -Arguments @(
                 "exec", "-T", "federation",
                 "java", "-cp", "/app/lib/*",
-                "com.cbgm.securechat.server.security.PresenceRouteRegistrationCli",
+                "com.cbgm.sparrow.server.security.PresenceRouteRegistrationCli",
                 "/data/node.identity", $NodeId, $connectionId, "1", [string]$expiresAt
             )
     $route = Convert-KeyValueOutput -Output $output
@@ -381,7 +381,7 @@ function Send-SmokeFederatedEnvelope {
             -Uri "http://localhost:$SourceFederationPort/internal/v1/outgoing-envelopes" `
             -Method Post `
             -Headers @{
-                "X-SecureChat-Internal-Token" = $SourceFederationToken
+                "X-Sparrow-Internal-Token" = $SourceFederationToken
             } `
             -ContentType "application/json" `
             -Body $envelopeBody `

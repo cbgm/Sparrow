@@ -17,7 +17,7 @@ Generated automatically by `./gradlew architectureReport`.
 | Kotlin files | 963 |
 | Production Kotlin files | 873 |
 | Test Kotlin files | 90 |
-| Resource files | 58 |
+| Resource files | 48 |
 
 ## Modules by group
 

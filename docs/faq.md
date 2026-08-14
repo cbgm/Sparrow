@@ -2,7 +2,7 @@
 
 ## Is there an official downloadable release?
 
-Not yet. The workflow is ready to create individual assets plus a combined `securechat-<version>-full.zip`, but no official `v*` tag has been published at the time of this documentation update.
+Not yet. The workflow is ready to create individual assets plus a combined `sparrow-<version>-full.zip`, but no official `v*` tag has been published at the time of this documentation update.
 
 ## Which client is usable?
 
