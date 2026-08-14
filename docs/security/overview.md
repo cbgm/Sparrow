@@ -1,322 +1,71 @@
-# Security Overview
+# Security overview
 
-## Introduction
+SecureChat separates client cryptography, identity verification and server infrastructure authentication. This page describes the current implementation; it is not a formal security proof or external audit.
 
-Security is the primary design goal of SecureChat.
+## Client cryptographic building blocks
 
-Every architectural decision is evaluated from a security perspective before convenience or performance.
+| Purpose | Implementation |
+|---|---|
+| Identity encryption key pair | `SodiumIdentityKeyGenerator` using libsodium `Box.keypair()` |
+| Identity signing key pair | `SodiumIdentityKeyGenerator` using libsodium `Signature.keypair()` |
+| Direct transport payload encryption | `SodiumTransportMessageCipher` using libsodium sealed boxes |
+| Detached signatures | `SodiumDetachedSignatureCrypto` |
+| Group symmetric encryption | `SodiumGroupCrypto` using XChaCha20-Poly1305-IETF |
+| Group-key wrapping | `SodiumGroupCrypto` using sealed boxes |
+| Safety number | `SafetyNumberGenerator` using SHA-256 |
+| Android private-key at-rest protection | `AndroidPrivateKeyStorage` using Android Keystore AES-256 + AES-GCM |
 
-Unlike traditional messaging applications, SecureChat assumes that transport infrastructure cannot be trusted.
+## Security boundary
 
-The relay forwards encrypted data but must never be able to read message contents.
+```mermaid
+flowchart LR
+    PLAIN[Message plaintext]
+    PACKET[Protocol packet]
+    CRYPTO[Client crypto]
+    WIRE[Opaque transport payload]
+    SERVER[Gateway / Federation / Mailbox]
+    RECIP[Recipient client]
 
----
-
-# Security Goals
-
-SecureChat is designed around the following goals.
-
-- End-to-end encryption
-- Strong identity verification
-- Forward secrecy where applicable
-- Platform-independent cryptography
-- Explicit trust model
-- Minimal metadata exposure
-- Open and auditable implementation
-
----
-
-# Threat Model
-
-SecureChat protects against
-
-- passive network observers
-- malicious Wi-Fi networks
-- compromised relay servers
-- message interception
-- message modification
-- identity spoofing
-- unauthorized message reading
-
-SecureChat does **not** attempt to protect against a fully compromised endpoint device.
-
-If an attacker controls the user's device, application-level encryption cannot guarantee confidentiality.
-
----
-
-# Security Architecture
-
-```
-User A
-
-↓
-
-Identity Keys
-
-↓
-
-Session Keys
-
-↓
-
-Encrypted Message
-
-↓
-
-Relay
-
-↓
-
-Encrypted Message
-
-↓
-
-Session Keys
-
-↓
-
-Identity Keys
-
-↓
-
-User B
+    PLAIN --> PACKET --> CRYPTO --> WIRE --> SERVER --> WIRE --> RECIP
+    RECIP -->|decrypt + decode locally| PLAIN
 ```
 
-The relay only transports encrypted payloads.
+For encrypted message paths, server components route/store opaque payloads and do not need the chat plaintext.
 
-It never receives plaintext.
+## Identity
 
----
+Each client identity has separate encryption and signing key material. The public identity is shareable; the private material is kept local. Android wraps the libsodium private-key bytes with an AES key stored in Android Keystore before storing ciphertext/IV metadata in app-private preferences.
 
-# Security Layers
+## Direct transport protection
 
-SecureChat separates security into several independent layers.
+`SodiumTransportMessageCipher` uses libsodium sealed boxes (`Box.seal` / `Box.sealOpen`) with 32-byte box public/private keys. The transport format carries an explicit mode/version so decoding can reject unsupported formats.
 
-```
-Identity
+## Groups
 
-↓
+`SodiumGroupCrypto` generates a 32-byte group key and encrypts group message content with XChaCha20-Poly1305-IETF and a 24-byte nonce. Associated data binds protocol context. Group keys are wrapped to members with sealed boxes, and signed group payloads use detached signatures.
 
-Authentication
+Membership/security epochs are managed client-side by the Group security/membership components; server routing is not a source of group membership authority.
 
-↓
+## Safety numbers
 
-Transport
+`SafetyNumberGenerator` deterministically orders the two parties' public identity key sets, prefixes lengths, includes the domain separator `SecureChat Safety Number v1`, hashes with SHA-256, and renders five-digit groups. Both peers should derive the same number for the same current identities.
 
-↓
+## Server authentication
 
-Encryption
+Server nodes use their own long-lived node identity and signed requests. `server:security` contains:
 
-↓
+- `NodeIdentity` / `NodeIdentityStore`;
+- `NodeRequestAuthentication` / `NodeRequestAuthorizer`;
+- `ProtocolSignatures`;
+- `ReplayProtection`;
+- `BoundedRateLimiter` and the `enforceRateLimit()` helper;
+- registry certificate/signature helpers.
 
-Storage
-```
+Signed node descriptors let clients verify that a discovered Community Node is authorized by the Control Plane trust material rather than trusting an arbitrary URL returned by an unverified source.
 
-Each layer has a single responsibility.
+## What this does not claim
 
-Compromise of one layer should not automatically compromise the others.
-
----
-
-# Identity
-
-Every SecureChat user owns a cryptographic identity.
-
-The identity is generated locally.
-
-Private keys never leave the user's device.
-
-The public identity can be shared safely.
-
-Identity generation is described in detail in **identity.md**.
-
----
-
-# Authentication
-
-Authentication is based on public-key cryptography.
-
-SecureChat authenticates users through their cryptographic identities rather than usernames or passwords.
-
-This prevents identity spoofing during encrypted communication.
-
----
-
-# Encryption
-
-Messages are encrypted before leaving the device.
-
-Encryption occurs entirely on the client.
-
-The relay never performs encryption or decryption.
-
-Only the communicating devices possess the keys required to decrypt message contents.
-
-Direct packets use recipient sealed-box transport. Group messages use one XChaCha20-Poly1305 key
-per epoch plus an Ed25519 signature from the individual sender. See
-[Encryption](encryption.md#secure-group-messages) for the concrete classes and trust boundaries.
-
-A group can be created from ordinary contacts even when their secure identities are not stored
-yet. The recipient explicitly accepts a signed `GroupInvitePacket`; its signed
-`GroupJoinRequestPacket` then proves possession of the exchanged public keys. After welcome-key
-installation, `GroupReadyAcknowledgementPacket` prevents the creator from releasing queued content
-too early. Automatically discovered identities remain unverified until users compare safety
-numbers.
-
----
-
-# Transport
-
-Transport security is independent from message security.
-
-Even if the transport layer is intercepted, encrypted payloads remain unreadable without the appropriate cryptographic keys.
-
----
-
-# Relay
-
-The relay server has a deliberately limited role.
-
-Responsibilities include
-
-- client registration
-- message forwarding
-- connection management
-
-The relay
-
-- cannot decrypt messages
-- cannot generate identities
-- cannot verify safety numbers
-- cannot modify encrypted content without detection
-
----
-
-# Local Storage
-
-Sensitive information is stored only when necessary.
-
-Examples include
-
-- encrypted private keys
-- encrypted message database
-- cached public identities
-
-Private key material is protected using platform security mechanisms.
-
----
-
-# Safety Numbers
-
-SecureChat allows users to verify one another through safety numbers.
-
-Verification ensures that both parties possess the expected public identity keys.
-
-Once verified, the application can detect unexpected identity changes.
-
----
-
-# Metadata
-
-While message contents are encrypted, some metadata remains unavoidable.
-
-Examples include
-
-- connection times
-- approximate message timing
-- online status
-- network addresses
-
-SecureChat minimizes metadata where practical but does not claim to eliminate it completely.
-
----
-
-# Cryptographic Libraries
-
-Cryptographic operations are centralized inside the Core Crypto module.
-
-Application code should never implement cryptographic algorithms directly.
-
-This approach
-
-- reduces duplication
-- simplifies auditing
-- prevents inconsistent implementations
-
----
-
-# Secure Defaults
-
-SecureChat prefers secure defaults over optional security.
-
-Examples include
-
-- encryption enabled automatically whenever possible
-- verified identities retained
-- plaintext avoided when encrypted communication is available
-
-Users should not need deep cryptographic knowledge to communicate securely.
-
----
-
-# Build-Time Security
-
-The project includes automated checks that help maintain security.
-
-Examples include
-
-- architecture validation
-- custom Detekt rules
-- forbidden cryptographic APIs
-- commonMain platform restrictions
-
-These checks reduce the likelihood of introducing accidental security regressions.
-
----
-
-# Security Reviews
-
-Every security-sensitive change should be reviewed carefully.
-
-Particular attention should be given to
-
-- cryptographic code
-- protocol changes
-- identity management
-- message serialization
-- key storage
-
-Security-related changes should remain as small and focused as possible.
-
----
-
-# Responsible Design
-
-SecureChat intentionally separates
-
-- security decisions
-- business logic
-- presentation
-- infrastructure
-
-This separation makes the implementation easier to understand and audit.
-
-Security should never depend on UI behaviour.
-
----
-
-# Summary
-
-Security is not a single feature within SecureChat.
-
-It is a property of the entire architecture.
-
-Identity, encryption, transport and storage are designed to work together so that sensitive information remains protected throughout its lifetime.
-
-The following documents describe each security component in detail.
-
-- Identity
-- Transport
-- Encryption
-- Safety Numbers
-- Threat Model
+- No claim of a completed independent cryptographic audit.
+- No claim that metadata (timing, IP connection, routing activity, node load) is hidden from all infrastructure.
+- No claim of iOS parity; the iOS runtime is not usable yet.
+- Security depends on correct key verification, endpoint trust, OS integrity and release/build key handling.

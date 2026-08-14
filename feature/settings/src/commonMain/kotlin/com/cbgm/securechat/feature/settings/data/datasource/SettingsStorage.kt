@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.settings.data.storage
+package com.cbgm.securechat.feature.settings.data.datasource
 
 interface SettingsStorage {
     suspend fun getLanguageTag(): String?

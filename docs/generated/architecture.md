@@ -6,12 +6,12 @@ Generated automatically by `./gradlew architectureReport`.
 
 | Metric | Count |
 |---|---:|
-| Modules | 24 |
+| Modules | 34 |
 | Module groups | 11 |
-| Project dependencies | 75 |
-| Kotlin files | 684 |
-| Test Kotlin files | 43 |
-| Resource files | 57 |
+| Project dependencies | 101 |
+| Kotlin files | 963 |
+| Test Kotlin files | 90 |
+| Resource files | 58 |
 
 ## Module groups
 
@@ -56,13 +56,23 @@ Generated automatically by `./gradlew architectureReport`.
 - [**quality** (`:quality`)](modules/quality.md)
 - [**detekt-rules** (`:quality:detekt-rules`)](modules/quality-detekt-rules.md)
 
-### relay
-
-- [**relay** (`:relay`)](modules/relay.md)
-
 ### resources
 
 - [**resources** (`:resources`)](modules/resources.md)
+
+### server
+
+- [**server** (`:server`)](modules/server.md)
+- [**federation** (`:server:federation`)](modules/server-federation.md)
+- [**gateway** (`:server:gateway`)](modules/server-gateway.md)
+- [**mailbox** (`:server:mailbox`)](modules/server-mailbox.md)
+- [**node-registry** (`:server:node-registry`)](modules/server-node-registry.md)
+- [**observability** (`:server:observability`)](modules/server-observability.md)
+- [**persistence** (`:server:persistence`)](modules/server-persistence.md)
+- [**presence-directory** (`:server:presence-directory`)](modules/server-presence-directory.md)
+- [**protocol** (`:server:protocol`)](modules/server-protocol.md)
+- [**push** (`:server:push`)](modules/server-push.md)
+- [**security** (`:server:security`)](modules/server-security.md)
 
 ### shared
 
@@ -118,12 +128,22 @@ graph TD
         module_quality_detekt_rules[":quality:detekt-rules"]
     end
 
-    subgraph group_relay["relay"]
-        module_relay[":relay"]
-    end
-
     subgraph group_resources["resources"]
         module_resources[":resources"]
+    end
+
+    subgraph group_server["server"]
+        module_server[":server"]
+        module_server_federation[":server:federation"]
+        module_server_gateway[":server:gateway"]
+        module_server_mailbox[":server:mailbox"]
+        module_server_node_registry[":server:node-registry"]
+        module_server_observability[":server:observability"]
+        module_server_persistence[":server:persistence"]
+        module_server_presence_directory[":server:presence-directory"]
+        module_server_protocol[":server:protocol"]
+        module_server_push[":server:push"]
+        module_server_security[":server:security"]
     end
 
     subgraph group_shared["shared"]
@@ -134,22 +154,7 @@ graph TD
         module_startup[":startup"]
     end
 
-    module_androidApp --> module_core
-    module_androidApp --> module_core_crypto
-    module_androidApp --> module_core_protocol
-    module_androidApp --> module_data_database
-    module_androidApp --> module_feature_chats
-    module_androidApp --> module_feature_contactimport
-    module_androidApp --> module_feature_contacts
-    module_androidApp --> module_feature_identity
-    module_androidApp --> module_feature_messaging
-    module_androidApp --> module_feature_onboarding
-    module_androidApp --> module_feature_settings
-    module_androidApp --> module_feature_transport
-    module_androidApp --> module_notification
-    module_androidApp --> module_resources
     module_androidApp --> module_shared
-    module_androidApp --> module_startup
     module_core_protocol --> module_core
     module_core_ui --> module_resources
     module_data_database --> module_core
@@ -187,6 +192,7 @@ graph TD
     module_feature_settings --> module_core
     module_feature_settings --> module_core_ui
     module_feature_transport --> module_core
+    module_feature_transport --> module_core_crypto
     module_feature_transport --> module_core_protocol
     module_navigation --> module_core
     module_navigation --> module_core_ui
@@ -199,13 +205,53 @@ graph TD
     module_navigation --> module_notification
     module_navigation --> module_startup
     module_notification --> module_core
+    module_notification --> module_core_crypto
     module_notification --> module_feature_chats
     module_notification --> module_feature_messaging
     module_notification --> module_feature_transport
+    module_notification --> module_resources
+    module_server_federation --> module_server_observability
+    module_server_federation --> module_server_persistence
+    module_server_federation --> module_server_protocol
+    module_server_federation --> module_server_security
+    module_server_gateway --> module_server_observability
+    module_server_gateway --> module_server_persistence
+    module_server_gateway --> module_server_protocol
+    module_server_gateway --> module_server_security
+    module_server_mailbox --> module_server_observability
+    module_server_mailbox --> module_server_persistence
+    module_server_mailbox --> module_server_protocol
+    module_server_mailbox --> module_server_security
+    module_server_node_registry --> module_server_observability
+    module_server_node_registry --> module_server_persistence
+    module_server_node_registry --> module_server_protocol
+    module_server_node_registry --> module_server_security
+    module_server_persistence --> module_server_protocol
+    module_server_presence_directory --> module_server_observability
+    module_server_presence_directory --> module_server_persistence
+    module_server_presence_directory --> module_server_protocol
+    module_server_presence_directory --> module_server_security
+    module_server_push --> module_server_observability
+    module_server_push --> module_server_persistence
+    module_server_push --> module_server_protocol
+    module_server_push --> module_server_security
+    module_server_security --> module_server_protocol
     module_shared --> module_core
+    module_shared --> module_core_crypto
+    module_shared --> module_core_protocol
     module_shared --> module_core_ui
+    module_shared --> module_data_database
+    module_shared --> module_feature_chats
+    module_shared --> module_feature_contactimport
+    module_shared --> module_feature_contacts
+    module_shared --> module_feature_identity
+    module_shared --> module_feature_messaging
+    module_shared --> module_feature_onboarding
     module_shared --> module_feature_settings
+    module_shared --> module_feature_transport
     module_shared --> module_navigation
+    module_shared --> module_notification
+    module_shared --> module_startup
     module_startup --> module_core_ui
     module_startup --> module_feature_identity
     module_startup --> module_feature_onboarding

@@ -10,10 +10,12 @@ import com.cbgm.securechat.core.protocol.outbox.OutboxStatus
 import com.cbgm.securechat.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.securechat.core.protocol.outbox.ProtocolOutboxItem
 import com.cbgm.securechat.core.protocol.packet.ChatMessagePacket
+import com.cbgm.securechat.core.protocol.packet.ContactInvitePacket
 import com.cbgm.securechat.core.protocol.packet.ContactReadyPacket
 import com.cbgm.securechat.core.protocol.packet.ContactVerificationReceiptPacket
 import com.cbgm.securechat.core.protocol.packet.GroupChatMessagePacket
 import com.cbgm.securechat.core.protocol.packet.GroupCreatedPacket
+import com.cbgm.securechat.core.protocol.packet.GroupInvitePacket
 import com.cbgm.securechat.core.protocol.packet.GroupMemberPayload
 import com.cbgm.securechat.core.protocol.packet.SecureChatPacket
 import com.cbgm.securechat.core.protocol.transport.OutgoingWireSender
@@ -27,8 +29,10 @@ import com.cbgm.securechat.feature.contacts.domain.model.ImportDeviceContactRequ
 import com.cbgm.securechat.feature.contacts.domain.model.KeyExchangeStatus
 import com.cbgm.securechat.feature.contacts.domain.model.SecureChatIdentity
 import com.cbgm.securechat.feature.contacts.domain.repository.ContactRepository
-import com.cbgm.securechat.feature.contacts.domain.usecase.GetContact
-import com.cbgm.securechat.feature.messaging.domain.relay.ContactRelayIdResolver
+import com.cbgm.securechat.feature.contacts.domain.usecase.GetContactUseCase
+import com.cbgm.securechat.feature.messaging.application.routing.ContactRoutingIdResolver
+import com.cbgm.securechat.feature.messaging.application.routing.GroupRoutingIdResolver
+import com.cbgm.securechat.feature.messaging.application.routing.GroupTransportKeyResolver
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -69,7 +73,7 @@ class DefaultOutboxProcessorTest {
                 listener.events
             )
             assertEquals(listOf("outbox-1"), outbox.sentItemIds)
-            assertEquals(listOf("recipient-relay-id" to "encoded-transport-payload"), sender.sent)
+            assertEquals(listOf("recipient-routing-id" to "encoded-transport-payload"), sender.sent)
         }
 
     @Test
@@ -162,13 +166,15 @@ class DefaultOutboxProcessorTest {
                 )
             val cipher = RecordingTransportMessageCipher()
             val payloadCodec = RecordingTransportPayloadCodec()
+            val sender = RecordingOutgoingWireSender()
             val processor =
                 createProcessor(
                     outbox = outbox,
                     contact = createContact(keyExchangeStatus = KeyExchangeStatus.ONE_WAY),
                     cipher = cipher,
                     payloadCodec = payloadCodec,
-                    packetCodec = TestPacketCodec()
+                    packetCodec = TestPacketCodec(),
+                    sender = sender
                 )
 
             val result = processor.processPending().getOrThrow()
@@ -177,6 +183,80 @@ class DefaultOutboxProcessorTest {
             assertEquals(0, cipher.callCount)
             assertEquals(TransportEncryptionMode.PLAINTEXT, payloadCodec.payloads.single().mode)
             assertContentEquals(GROUP_MESSAGE_PACKET_BYTES, payloadCodec.payloads.single().payload)
+            assertEquals(
+                listOf("group-recipient-routing-id" to "encoded-transport-payload"),
+                sender.sent
+            )
+        }
+
+    @Test
+    fun contactInviteUsesPlainBootstrapTransportEvenWhenContactIsAlreadyMutual() =
+        runTest {
+            val outbox =
+                FakeProtocolOutbox(
+                    listOf(createItem(encodedPacket = CONTACT_INVITE_PACKET_BYTES))
+                )
+            val resolver = RecordingContactRoutingIdResolver()
+            val sender = RecordingOutgoingWireSender()
+            val cipher = RecordingTransportMessageCipher()
+            val payloadCodec = RecordingTransportPayloadCodec()
+            val processor =
+                createProcessor(
+                    outbox = outbox,
+                    contact = createContact(keyExchangeStatus = KeyExchangeStatus.MUTUAL),
+                    cipher = cipher,
+                    payloadCodec = payloadCodec,
+                    packetCodec = TestPacketCodec(),
+                    sender = sender,
+                    contactRoutingIdResolver = resolver
+                )
+
+            val result = processor.processPending().getOrThrow()
+
+            assertEquals(1, result.sentCount)
+            assertEquals(0, cipher.callCount)
+            assertEquals(TransportEncryptionMode.PLAINTEXT, payloadCodec.payloads.single().mode)
+            assertEquals(0, resolver.canonicalResolveCount)
+            assertEquals(1, resolver.bootstrapResolveCount)
+            assertEquals(
+                listOf("bootstrap-recipient-routing-id" to "encoded-transport-payload"),
+                sender.sent
+            )
+        }
+
+    @Test
+    fun groupInviteUsesPlainBootstrapTransportEvenWhenContactIsAlreadyMutual() =
+        runTest {
+            val outbox =
+                FakeProtocolOutbox(
+                    listOf(createItem(encodedPacket = GROUP_INVITE_PACKET_BYTES))
+                )
+            val resolver = RecordingContactRoutingIdResolver()
+            val sender = RecordingOutgoingWireSender()
+            val cipher = RecordingTransportMessageCipher()
+            val payloadCodec = RecordingTransportPayloadCodec()
+            val processor =
+                createProcessor(
+                    outbox = outbox,
+                    contact = createContact(keyExchangeStatus = KeyExchangeStatus.MUTUAL),
+                    cipher = cipher,
+                    payloadCodec = payloadCodec,
+                    packetCodec = TestPacketCodec(),
+                    sender = sender,
+                    contactRoutingIdResolver = resolver
+                )
+
+            val result = processor.processPending().getOrThrow()
+
+            assertEquals(1, result.sentCount)
+            assertEquals(0, cipher.callCount)
+            assertEquals(TransportEncryptionMode.PLAINTEXT, payloadCodec.payloads.single().mode)
+            assertEquals(0, resolver.canonicalResolveCount)
+            assertEquals(1, resolver.bootstrapResolveCount)
+            assertEquals(
+                listOf("bootstrap-recipient-routing-id" to "encoded-transport-payload"),
+                sender.sent
+            )
         }
 
     @Test
@@ -348,22 +428,23 @@ class DefaultOutboxProcessorTest {
         payloadCodec: RecordingTransportPayloadCodec = RecordingTransportPayloadCodec(),
         packetCodec: PacketCodec = TestPacketCodec(),
         sender: RecordingOutgoingWireSender = RecordingOutgoingWireSender(),
-        listener: RecordingDeliveryStateListener = RecordingDeliveryStateListener()
+        listener: RecordingDeliveryStateListener = RecordingDeliveryStateListener(),
+        contactRoutingIdResolver: ContactRoutingIdResolver = RecordingContactRoutingIdResolver(),
+        groupRoutingIdResolver: GroupRoutingIdResolver = RecordingGroupRoutingIdResolver()
     ): DefaultOutboxProcessor =
         DefaultOutboxProcessor(
             protocolOutbox = outbox,
-            getContact = GetContact(FakeContactRepository(contact)),
+            getContact = GetContactUseCase(FakeContactRepository(contact)),
             transportPayloadFactory =
                 DefaultOutgoingTransportPayloadFactory(
                     transportMessageCipher = cipher,
-                    packetTransportPolicy = DefaultOutgoingPacketTransportPolicy()
+                    packetTransportPolicy = DefaultOutgoingPacketTransportPolicy(),
+                    groupTransportKeyResolver = NoGroupTransportKeyResolver
                 ),
             transportPayloadCodec = payloadCodec,
             packetCodec = packetCodec,
-            contactRelayIdResolver =
-                object : ContactRelayIdResolver {
-                    override suspend fun resolve(contactId: String): Result<String> = Result.success("recipient-relay-id")
-                },
+            contactRoutingIdResolver = contactRoutingIdResolver,
+            groupRoutingIdResolver = groupRoutingIdResolver,
             outgoingWireSender = sender,
             deliveryStateListener = listener
         )
@@ -452,6 +533,8 @@ class DefaultOutboxProcessorTest {
         }
 
         override suspend fun retry(itemId: String): Result<Unit> = Result.success(Unit)
+
+        override suspend fun resend(packetId: String): Result<Unit> = Result.success(Unit)
 
         override suspend fun requeueInterrupted(): Result<Unit> = Result.success(Unit)
 
@@ -551,6 +634,35 @@ class DefaultOutboxProcessorTest {
                         senderSignature = byteArrayOf(3)
                     )
                 )
+            } else if (encodedPacket.contentEquals(GROUP_INVITE_PACKET_BYTES)) {
+                Result.success(
+                    GroupInvitePacket(
+                        packetId = "group-invite-invitation-1",
+                        invitationId = "group-invitation-1",
+                        groupId = "group-1",
+                        title = "Group",
+                        createdAtEpochMilliseconds = 1L,
+                        expiresAtEpochMilliseconds = 2L,
+                        challenge = ByteArray(32) { 1 },
+                        ownerEncryptionPublicKey = ByteArray(32) { 2 },
+                        ownerSigningPublicKey = ByteArray(32) { 3 },
+                        ownerSignature = ByteArray(64) { 4 }
+                    )
+                )
+            } else if (encodedPacket.contentEquals(CONTACT_INVITE_PACKET_BYTES)) {
+                Result.success(
+                    ContactInvitePacket(
+                        packetId = "contact-invite-invitation-1",
+                        invitationId = "invitation-1",
+                        displayName = "+491701234567",
+                        createdAtEpochMilliseconds = 1L,
+                        expiresAtEpochMilliseconds = 2L,
+                        inviteChallenge = ByteArray(32) { 1 },
+                        encryptionPublicKey = ByteArray(32) { 2 },
+                        signingPublicKey = ByteArray(32) { 3 },
+                        signature = ByteArray(64) { 4 }
+                    )
+                )
             } else if (encodedPacket.contentEquals(CONTACT_READY_PACKET_BYTES)) {
                 Result.success(
                     ContactReadyPacket(
@@ -588,6 +700,49 @@ class DefaultOutboxProcessorTest {
                     )
                 )
             }
+    }
+
+    private data object NoGroupTransportKeyResolver : GroupTransportKeyResolver {
+        override suspend fun resolveEncryptionPublicKey(
+            packet: SecureChatPacket,
+            contactId: String
+        ): Result<ByteArray?> = Result.success(null)
+    }
+
+    private class RecordingGroupRoutingIdResolver : GroupRoutingIdResolver {
+        override suspend fun resolve(
+            groupId: String,
+            contactId: String
+        ): Result<String> = Result.success("group-recipient-routing-id")
+
+        override suspend fun resolveMembers(groupId: String): Result<Map<String, String>> =
+            Result.success(emptyMap())
+
+        override fun resolveRemovedMember(signingPublicKey: ByteArray): Result<String> =
+            Result.success("removed-member-routing-id")
+
+        override suspend fun resolveForMessage(
+            messageId: String,
+            contactId: String
+        ): Result<String?> = Result.success(null)
+
+        override suspend fun resolveContactId(routingId: String): Result<String?> =
+            Result.success(null)
+    }
+
+    private class RecordingContactRoutingIdResolver : ContactRoutingIdResolver {
+        var canonicalResolveCount: Int = 0
+        var bootstrapResolveCount: Int = 0
+
+        override suspend fun resolve(contactId: String): Result<String> {
+            canonicalResolveCount += 1
+            return Result.success("recipient-routing-id")
+        }
+
+        override suspend fun resolveBootstrap(contactId: String): Result<String> {
+            bootstrapResolveCount += 1
+            return Result.success("bootstrap-recipient-routing-id")
+        }
     }
 
     private class RecordingOutgoingWireSender(
@@ -677,8 +832,10 @@ class DefaultOutboxProcessorTest {
         val ENCODED_PACKET = byteArrayOf(1, 2, 3)
         val GROUP_PACKET_BYTES = byteArrayOf(4, 5, 6)
         val GROUP_MESSAGE_PACKET_BYTES = byteArrayOf(7, 8, 9)
-        val CONTACT_READY_PACKET_BYTES = byteArrayOf(10, 11, 12)
-        val VERIFICATION_RECEIPT_PACKET_BYTES = byteArrayOf(13, 14, 15)
+        val CONTACT_INVITE_PACKET_BYTES = byteArrayOf(10, 11, 12)
+        val CONTACT_READY_PACKET_BYTES = byteArrayOf(13, 14, 15)
+        val VERIFICATION_RECEIPT_PACKET_BYTES = byteArrayOf(16, 17, 18)
+        val GROUP_INVITE_PACKET_BYTES = byteArrayOf(19, 20, 21)
         val REMOTE_ENCRYPTION_KEY = ByteArray(32) { 13 }
         val REMOTE_SIGNING_KEY = ByteArray(32) { 16 }
     }

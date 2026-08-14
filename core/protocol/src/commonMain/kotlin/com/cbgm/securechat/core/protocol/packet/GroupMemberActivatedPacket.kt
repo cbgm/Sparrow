@@ -25,7 +25,7 @@ data class GroupMemberActivatedPacket(
         require(groupId.isNotBlank()) { "Group ID must not be blank" }
         require(epoch > 0) { "Group epoch must be positive" }
         require(activationId.isNotBlank()) { "Activation ID must not be blank" }
-        require(member.role == GROUP_MEMBER_ROLE) { "Activated group member must use the member role" }
+        require(member.role in GROUP_MEMBER_ROLES) { "Activated group member uses an unsupported role" }
         require(member.encryptionPublicKey.isNotEmpty()) { "Activated group member requires an encryption key" }
         require(member.signingPublicKey.isNotEmpty()) { "Activated group member requires a signing key" }
         require(activatedAtEpochMilliseconds >= 0L) { "Activation timestamp must not be negative" }
@@ -64,6 +64,6 @@ data class GroupMemberActivatedPacket(
         const val FINAL_ROUND = 0
         const val DISCOVERY_ROUND = 1
         const val RECIPROCAL_ROUND = 2
-        private const val GROUP_MEMBER_ROLE = "MEMBER"
+        private val GROUP_MEMBER_ROLES = setOf("OWNER", "ADMIN", "MEMBER")
     }
 }

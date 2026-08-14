@@ -1,0 +1,195 @@
+package com.cbgm.securechat.feature.contacts.presentation.blocklist.components
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.cbgm.securechat.core.ui.component.ContactAvatar
+import com.cbgm.securechat.core.ui.component.SecureChatAlertDialog
+import com.cbgm.securechat.core.ui.component.SecureChatApprovalButton
+import com.cbgm.securechat.core.ui.component.SecureChatSecondaryButton
+import com.cbgm.securechat.core.ui.theme.spacing
+import com.cbgm.securechat.feature.contacts.domain.model.Contact
+import com.cbgm.securechat.resources.Res
+import com.cbgm.securechat.resources.base_close
+import com.cbgm.securechat.resources.feature_contacts_add_blocked_contact
+import com.cbgm.securechat.resources.feature_contacts_add_blocked_contact_description
+import com.cbgm.securechat.resources.feature_contacts_block_phone_number
+import com.cbgm.securechat.resources.feature_contacts_choose_existing_contact
+import com.cbgm.securechat.resources.feature_contacts_no_contacts_to_block
+import com.cbgm.securechat.resources.feature_contacts_no_phone_number
+import com.cbgm.securechat.resources.feature_contacts_phone_number
+import com.cbgm.securechat.resources.feature_contacts_securechat_contact
+import com.cbgm.securechat.resources.feature_contacts_unnamed_contact
+import org.jetbrains.compose.resources.stringResource
+
+private val Field = Color(0xFF102A46)
+
+@Composable
+fun AddBlockedContactDialog(
+    phoneNumber: String,
+    phoneNumberError: String?,
+    contacts: List<Contact>,
+    enabled: Boolean,
+    onPhoneNumberChanged: (String) -> Unit,
+    onBlockPhoneNumber: () -> Unit,
+    onContactSelected: (Contact) -> Unit,
+    onDismiss: () -> Unit
+) {
+    SecureChatAlertDialog(
+        onDismissRequest = onDismiss,
+        title = stringResource(Res.string.feature_contacts_add_blocked_contact),
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
+                Text(
+                    text = stringResource(Res.string.feature_contacts_add_blocked_contact_description),
+                    style = MaterialTheme.typography.bodySmall
+                )
+
+                OutlinedTextField(
+                    value = phoneNumber,
+                    onValueChange = onPhoneNumberChanged,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = enabled,
+                    singleLine = true,
+                    isError = phoneNumberError != null,
+                    label = {
+                        Text(text = stringResource(Res.string.feature_contacts_phone_number))
+                    },
+                    supportingText =
+                        phoneNumberError?.let { error ->
+                            {
+                                Text(text = error)
+                            }
+                        },
+                    keyboardOptions =
+                        KeyboardOptions(
+                            keyboardType = KeyboardType.Phone,
+                            imeAction = ImeAction.Done
+                        ),
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedContainerColor = Field,
+                            unfocusedContainerColor = Field,
+                            focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .18f),
+                            focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .72f),
+                            cursorColor = MaterialTheme.colorScheme.secondary
+                        )
+                )
+
+                SecureChatApprovalButton(
+                    onClick = onBlockPhoneNumber,
+                    fillMaxWidth = false,
+                    enabled = enabled && phoneNumber.isNotBlank(),
+                    text = stringResource(Res.string.feature_contacts_block_phone_number)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    HorizontalDivider(modifier = Modifier.weight(1f))
+
+                    Text(
+                        text = stringResource(Res.string.feature_contacts_choose_existing_contact),
+                        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.small),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+
+                    HorizontalDivider(modifier = Modifier.weight(1f))
+                }
+
+                if (contacts.isEmpty()) {
+                    Text(
+                        text = stringResource(Res.string.feature_contacts_no_contacts_to_block),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                } else {
+                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp)) {
+                        items(
+                            items = contacts,
+                            key = Contact::id
+                        ) { contact ->
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .clickable(enabled = enabled) {
+                                            onContactSelected(contact)
+                                        }.padding(vertical = MaterialTheme.spacing.small),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                ContactAvatar(
+                                    name =
+                                        contact.displayName
+                                            ?: contact.preferredPhoneNumber?.value ?: "?"
+                                )
+                                Spacer(modifier = Modifier.size(MaterialTheme.spacing.small))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text =
+                                            contact.displayName
+                                                ?: contact.preferredPhoneNumber?.value
+                                                ?: stringResource(Res.string.feature_contacts_unnamed_contact),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = contact.subtitle(),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            SecureChatSecondaryButton(
+                fillMaxWidth = false,
+                onClick = onDismiss,
+                text = stringResource(Res.string.base_close)
+            )
+        }
+    )
+}
+
+@Composable
+private fun Contact.subtitle(): String =
+    preferredPhoneNumber?.value
+        ?: if (secureChatIdentity != null) {
+            stringResource(Res.string.feature_contacts_securechat_contact)
+        } else {
+            stringResource(Res.string.feature_contacts_no_phone_number)
+        }

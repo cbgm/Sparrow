@@ -1,0 +1,185 @@
+name: ${CONTROL_PLANE_PROJECT_NAME:-securechat-control-plane}
+
+x-securechat-service: &securechat-service
+  restart: unless-stopped
+  build:
+    context: ../..
+    dockerfile: server/Dockerfile
+  healthcheck:
+    test: ["CMD-SHELL", "java -cp '/app/lib/*' com.cbgm.securechat.server.observability.ReadinessProbe http://127.0.0.1:$${PORT}/health/ready"]
+    interval: 10s
+    timeout: 5s
+    retries: 6
+    start_period: 20s
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      CONTROL_PLANE_SITE_ADDRESS: ${CONTROL_PLANE_SITE_ADDRESS:-:80}
+    ports:
+      - "${CONTROL_PLANE_BIND_ADDRESS:-0.0.0.0}:${CONTROL_PLANE_HTTP_PORT:-8390}:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./index.html:/srv/index.html:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      node-registry:
+        condition: service_healthy
+      presence-directory:
+        condition: service_healthy
+      push:
+        condition: service_healthy
+
+  node-registry-database:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: securechat_registry
+      POSTGRES_USER: securechat_registry
+      POSTGRES_PASSWORD: ${NODE_REGISTRY_DATABASE_PASSWORD:-local-development-password}
+    ports:
+      - "127.0.0.1:${NODE_REGISTRY_DATABASE_PORT:-5537}:5432"
+    volumes:
+      - node-registry-database-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  node-registry:
+    <<: *securechat-service
+    image: securechat-node-registry:local
+    build:
+      context: ../..
+      dockerfile: server/Dockerfile
+      args:
+        SERVICE: node-registry
+    environment:
+      PORT: 8090
+      REGISTRY_IDENTITY_PATH: /data/registry.identity
+      NODE_REGISTRY_DATABASE_URL: jdbc:postgresql://node-registry-database:5432/securechat_registry
+      NODE_REGISTRY_DATABASE_USER: securechat_registry
+      NODE_REGISTRY_DATABASE_PASSWORD: ${NODE_REGISTRY_DATABASE_PASSWORD:-local-development-password}
+      NODE_REGISTRY_REGISTRATION_RATE_LIMIT_REQUESTS: ${NODE_REGISTRY_REGISTRATION_RATE_LIMIT_REQUESTS:-30}
+      NODE_REGISTRY_REGISTRATION_RATE_LIMIT_WINDOW_MILLISECONDS: ${NODE_REGISTRY_REGISTRATION_RATE_LIMIT_WINDOW_MILLISECONDS:-3600000}
+      NODE_REGISTRY_HEARTBEAT_GRACE_MILLISECONDS: ${NODE_REGISTRY_HEARTBEAT_GRACE_MILLISECONDS:-5000}
+      NODE_REGISTRY_HEARTBEAT_RATE_LIMIT_REQUESTS: ${NODE_REGISTRY_HEARTBEAT_RATE_LIMIT_REQUESTS:-180}
+      NODE_REGISTRY_HEARTBEAT_RATE_LIMIT_WINDOW_MILLISECONDS: ${NODE_REGISTRY_HEARTBEAT_RATE_LIMIT_WINDOW_MILLISECONDS:-60000}
+      NODE_REGISTRY_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS: ${NODE_REGISTRY_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS:-100000}
+      TRUST_PROXY_HEADERS: "true"
+    ports:
+      - "127.0.0.1:${NODE_REGISTRY_DIAGNOSTIC_PORT:-8391}:8090"
+    volumes:
+      - registry-identity:/data
+    depends_on:
+      node-registry-database:
+        condition: service_healthy
+
+  presence-redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+      - --requirepass
+      - ${PRESENCE_REDIS_PASSWORD:-local-development-password}
+    environment:
+      REDISCLI_AUTH: ${PRESENCE_REDIS_PASSWORD:-local-development-password}
+    ports:
+      - "127.0.0.1:${PRESENCE_REDIS_PORT:-6480}:6379"
+    volumes:
+      - presence-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  presence-directory:
+    <<: *securechat-service
+    image: securechat-presence-directory:local
+    build:
+      context: ../..
+      dockerfile: server/Dockerfile
+      args:
+        SERVICE: presence-directory
+    environment:
+      PORT: 8091
+      NODE_REGISTRY_URL: http://node-registry:8090
+      PRESENCE_REDIS_URL: redis://presence-redis:6379
+      PRESENCE_REDIS_PASSWORD: ${PRESENCE_REDIS_PASSWORD:-local-development-password}
+      PRESENCE_MAXIMUM_TTL_MILLISECONDS: ${PRESENCE_MAXIMUM_TTL_MILLISECONDS:-120000}
+    ports:
+      - "127.0.0.1:${PRESENCE_DIRECTORY_DIAGNOSTIC_PORT:-8392}:8091"
+    depends_on:
+      node-registry:
+        condition: service_healthy
+      presence-redis:
+        condition: service_healthy
+
+  push-database:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: securechat_push
+      POSTGRES_USER: securechat_push
+      POSTGRES_PASSWORD: ${PUSH_DATABASE_PASSWORD:-local-development-password}
+    ports:
+      - "127.0.0.1:${PUSH_DATABASE_PORT:-5535}:5432"
+    volumes:
+      - push-database-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  push:
+    <<: *securechat-service
+    image: securechat-push:local
+    build:
+      context: ../..
+      dockerfile: server/Dockerfile
+      args:
+        SERVICE: push
+    environment:
+      PORT: 8095
+      NODE_REGISTRY_URL: http://node-registry:8090
+      PRESENCE_DIRECTORY_URL: http://presence-directory:8091
+      PUSH_INTERNAL_API_TOKEN: ${PUSH_INTERNAL_API_TOKEN:-local-push-development-token}
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-admin.json
+      PUSH_DATABASE_URL: jdbc:postgresql://push-database:5432/securechat_push
+      PUSH_DATABASE_USER: securechat_push
+      PUSH_DATABASE_PASSWORD: ${PUSH_DATABASE_PASSWORD:-local-development-password}
+      PUSH_DEVICE_REGISTRATION_RATE_LIMIT_REQUESTS: ${PUSH_DEVICE_REGISTRATION_RATE_LIMIT_REQUESTS:-60}
+      PUSH_DEVICE_REGISTRATION_RATE_LIMIT_WINDOW_MILLISECONDS: ${PUSH_DEVICE_REGISTRATION_RATE_LIMIT_WINDOW_MILLISECONDS:-60000}
+      PUSH_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS: ${PUSH_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS:-100000}
+    ports:
+      - "127.0.0.1:${PUSH_DIAGNOSTIC_PORT:-8395}:8095"
+    volumes:
+      - type: bind
+        source: ${FIREBASE_ADMIN_CREDENTIALS:?Define FIREBASE_ADMIN_CREDENTIALS}
+        target: /run/secrets/firebase-admin.json
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      node-registry:
+        condition: service_healthy
+      push-database:
+        condition: service_healthy
+
+volumes:
+  caddy-data:
+  caddy-config:
+  registry-identity:
+  node-registry-database-data:
+  presence-redis-data:
+  push-database-data:

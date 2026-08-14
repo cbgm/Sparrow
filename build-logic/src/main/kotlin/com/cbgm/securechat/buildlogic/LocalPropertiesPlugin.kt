@@ -7,6 +7,8 @@ import java.util.Properties
 open class LocalPropertiesExtension(
     project: Project
 ) {
+    private val providers = project.providers
+
     private val properties =
         Properties().apply {
             val file =
@@ -21,17 +23,25 @@ open class LocalPropertiesExtension(
         key: String,
         defaultValue: String
     ): String =
-        properties.getProperty(
-            key,
-            defaultValue
-        )
+        providers
+            .gradleProperty(key)
+            .orNull
+            ?.takeIf(String::isNotBlank)
+            ?: properties.getProperty(
+                key,
+                defaultValue
+            )
 
     fun getOrNull(
         key: String
     ): String? =
-        properties
-            .getProperty(key)
+        providers
+            .gradleProperty(key)
+            .orNull
             ?.takeIf(String::isNotBlank)
+            ?: properties
+                .getProperty(key)
+                ?.takeIf(String::isNotBlank)
 
     fun buildConfigString(
         key: String,

@@ -1,0 +1,15 @@
+services:
+  caddy:
+    environment:
+      COMMUNITY_NODE_SITE_ADDRESS: ${COMMUNITY_NODE_DOMAIN:?Set COMMUNITY_NODE_DOMAIN}
+    ports: !override
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+      - "127.0.0.1:${COMMUNITY_NODE_HTTP_PORT:-8490}:8080"
+
+  federation:
+    environment:
+      CLIENT_ENDPOINT: wss://${COMMUNITY_NODE_DOMAIN:?Set COMMUNITY_NODE_DOMAIN}/v1/gateway
+      FEDERATION_ENDPOINT: https://${COMMUNITY_NODE_DOMAIN:?Set COMMUNITY_NODE_DOMAIN}
+      MAILBOX_ENDPOINT: https://${COMMUNITY_NODE_DOMAIN:?Set COMMUNITY_NODE_DOMAIN}

@@ -1,0 +1,125 @@
+name: Standalone Community Node Smoke Test
+
+on:
+  pull_request:
+    branches: [ "develop" ]
+    paths:
+      - "server/**"
+      - "build-logic/**"
+      - "gradle/**"
+      - "gradle.properties"
+      - "settings.gradle.kts"
+      - ".github/workflows/server-community-node-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: community-node-smoke-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  standalone-community-nodes:
+    name: Isolated control plane and nodes
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run isolated community-node smoke test
+        shell: pwsh
+        run: |
+          ./server/scripts/Test-StandaloneCommunityNodes.ps1 `
+            -BuildImages `
+            -KeepRunning `
+            -TimeoutSeconds 420
+
+      - name: Collect Compose diagnostics
+        if: failure()
+        shell: bash
+        run: |
+          set +e
+          mkdir -p server/.standalone-smoke/logs
+
+          collect_project() {
+            local project="$1"
+            local env_file="$2"
+            local compose_file="$3"
+            local output_name="$4"
+
+            if [[ -f "$env_file" ]]; then
+              docker compose \
+                --project-name "$project" \
+                --env-file "$env_file" \
+                -f "$compose_file" \
+                ps --all > "server/.standalone-smoke/logs/${output_name}-ps.txt" 2>&1
+              docker compose \
+                --project-name "$project" \
+                --env-file "$env_file" \
+                -f "$compose_file" \
+                logs --no-color > "server/.standalone-smoke/logs/${output_name}.log" 2>&1
+            fi
+          }
+
+          collect_project \
+            securechat-control-plane-smoke \
+            server/.standalone-smoke/control-plane.env \
+            server/control-plane/docker-compose.yml \
+            control-plane
+          collect_project \
+            securechat-community-node-a-smoke \
+            server/.standalone-smoke/node-a.env \
+            server/community-node/docker-compose.yml \
+            node-a
+          collect_project \
+            securechat-community-node-b-smoke \
+            server/.standalone-smoke/node-b.env \
+            server/community-node/docker-compose.yml \
+            node-b
+
+          docker network ls > server/.standalone-smoke/logs/docker-networks.txt 2>&1
+          docker volume ls > server/.standalone-smoke/logs/docker-volumes.txt 2>&1
+
+      - name: Upload diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: standalone-community-node-smoke-diagnostics
+          path: server/.standalone-smoke/logs
+          if-no-files-found: ignore
+
+      - name: Remove smoke-test projects
+        if: always()
+        shell: bash
+        run: |
+          set +e
+
+          remove_project() {
+            local project="$1"
+            local env_file="$2"
+            local compose_file="$3"
+
+            if [[ -f "$env_file" ]]; then
+              docker compose \
+                --project-name "$project" \
+                --env-file "$env_file" \
+                -f "$compose_file" \
+                down -v --remove-orphans
+            fi
+          }
+
+          remove_project \
+            securechat-community-node-b-smoke \
+            server/.standalone-smoke/node-b.env \
+            server/community-node/docker-compose.yml
+          remove_project \
+            securechat-community-node-a-smoke \
+            server/.standalone-smoke/node-a.env \
+            server/community-node/docker-compose.yml
+          remove_project \
+            securechat-control-plane-smoke \
+            server/.standalone-smoke/control-plane.env \
+            server/control-plane/docker-compose.yml

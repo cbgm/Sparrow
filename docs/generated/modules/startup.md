@@ -10,8 +10,8 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `startup` |
 | Directory | `startup` |
 | Build file | `startup/build.gradle.kts` |
-| Kotlin files | 8 |
-| Production Kotlin files | 8 |
+| Kotlin files | 9 |
+| Production Kotlin files | 9 |
 | Test Kotlin files | 0 |
 | Resource files | 1 |
 | Direct dependencies | 3 |
@@ -19,11 +19,8 @@ Generated automatically by `./gradlew architectureReport`.
 
 ## Source sets
 
-- `androidDeviceTest`
-- `androidHostTest`
 - `androidMain`
 - `commonMain`
-- `iosMain`
 
 ## Dependencies
 
@@ -33,5 +30,5 @@ Generated automatically by `./gradlew architectureReport`.
 
 ## Dependents
 
-- [`:androidApp`](../modules/androidApp.md)
 - [`:navigation`](../modules/navigation.md)
+- [`:shared`](../modules/shared.md)

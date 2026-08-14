@@ -71,7 +71,10 @@ data class GroupMembershipChangePayload(
     val memberSigningPublicKey: ByteArray
 ) {
     init {
-        require(reason == GroupMemberRemovedPacket.REASON_MEMBER_LEFT) {
+        require(
+            reason == GroupMemberRemovedPacket.REASON_MEMBER_LEFT ||
+                reason == GroupMemberRemovedPacket.REASON_REMOVED_BY_OWNER
+        ) {
             "Unsupported group membership change reason"
         }
         require(memberSigningPublicKey.isNotEmpty()) {

@@ -1,202 +1,216 @@
-# Local Development and Manual Testing
+# Local development on Windows and macOS
 
-This guide describes the local two-device test setup for SecureChat on Windows.
+This is the practical “bring everything to life” guide for the current repository **before the first official tagged release exists**.
 
-The setup uses:
+For normal app/network testing use:
 
-- the local relay server
-- two Android emulators
-- one SecureChat installation per emulator
-- unique emulator phone numbers
+- one Control Plane;
+- at least one Community Node;
+- preferably two Community Nodes for federation/failover tests;
+- two or more Android emulators/devices.
 
-## Prerequisites
+## 1. Configure the Android build
 
-- Windows
-- Android Studio and the Android SDK
-- two Android Virtual Devices named `first` and `second`
-- Java and Gradle requirements described in [Installation](../getting-started/installation.md)
+Repository-root `local.properties`:
 
-Both emulators should use a compatible Android image and should be configured before running the helper script.
+```properties
+controlPlaneDirectoryUrl=https://gist.githubusercontent.com/cbgm/26bb9651e7d2d3fd464df02e8808387f/raw/522436a432e48b9f53f3210b76278e2217f126f8/gistfile1.txt
+```
 
-## 1. Start the relay server
+Keep your normal `sdk.dir=...` line too.
 
-Start the local relay from the repository root:
+The response may be `text/plain`; its body is parsed explicitly as JSON.
+
+## Windows: easiest path
+
+### Control Plane
+
+The preferred operator experience is the generated bundle. If you have a CI/release image tag, create it from the repository root:
 
 ```powershell
-.\gradlew :relay:run
+.\server\scripts\New-ControlPlaneBundle.ps1 `
+    -ImagePrefix ghcr.io/cbgm/securechat `
+    -ImageTag <image-tag>
 ```
 
-The relay listens on port `8080`.
-
-The Android emulator reaches the host machine through `10.0.2.2`, so the client WebSocket endpoint is:
+Extract the generated ZIP and run:
 
 ```text
-ws://10.0.2.2:8080/relay
+Start-SecureChatControlPlane.cmd
 ```
 
-## 2. Check relay health
+The launcher shows saved values as prefilled configuration, starts Docker Desktop if needed, prepares secrets/state and waits for readiness.
 
-Before investigating client-side connection or message-delivery problems, verify that the relay is running.
-
-Open this URL on the Windows host:
+Then open:
 
 ```text
-http://localhost:8080/health
+http://<control-plane-host>:8390/index
 ```
 
-PowerShell can also check it directly:
+### Community Node
+
+Generate:
 
 ```powershell
-Invoke-RestMethod http://localhost:8080/health
+.\server\scripts\New-CommunityNodeBundle.ps1 `
+    -ImagePrefix ghcr.io/cbgm/securechat `
+    -ImageTag <image-tag>
 ```
 
-The current relay returns a plain-text response in this format:
+Extract and run:
 
 ```text
-ok connectedClients=0 pendingEnvelopes=0
+Start-SecureChatNode.cmd
 ```
 
-The values change while clients connect and envelopes wait for offline recipients.
-
-- `connectedClients` is the number of currently connected relay clients.
-- `pendingEnvelopes` is the number of envelopes currently waiting in the relay's pending store.
-
-If the endpoint is unavailable:
-
-1. Verify that `:relay:run` is still running.
-2. Check the relay console for startup errors.
-3. Verify that port `8080` is not already occupied.
-4. Confirm that local firewall rules are not blocking the process.
-
-## 3. Start both Android emulators
-
-The repository contains this Windows helper script:
+Enter the same Control Plane **directory URL**, not a hardcoded list of planes. Then open:
 
 ```text
-scripts/start-local-test-emulators.bat
+http://<node-host>:8490/index
 ```
 
-The script starts two AVDs with fixed emulator ports and unique phone numbers:
+### Android
 
-| AVD | Emulator serial | Phone number |
-|---|---|---|
-| `first` | `emulator-5554` | `15550000001` |
-| `second` | `emulator-5556` | `15550000002` |
-
-The emulator executable path inside the script must be adapted to the local Android SDK installation.
-
-Run it from the repository root:
+Build:
 
 ```powershell
-.\scripts\start-local-test-emulators.bat
+.\gradlew.bat :androidApp:assembleDebug
 ```
 
-The script disables snapshot loading so each test session starts without restoring an older emulator snapshot.
+Run `androidApp` from Android Studio or install the APK under `androidApp/build/outputs/apk/debug/`.
 
-## 4. Run SecureChat on both devices
+## macOS: app + Community Node bundle + Control Plane from source
 
-After both emulators have started:
+### Android
 
-1. Select `emulator-5554` in Android Studio and run SecureChat.
-2. Select `emulator-5556` and run SecureChat again.
-3. Complete onboarding independently on both devices.
-4. Confirm that each emulator exposes its assigned phone number where the platform allows it.
+```bash
+./gradlew :androidApp:assembleDebug
+```
 
-## 5. Typical manual test flow
+Android Studio can run the same `androidApp` target as on Windows.
 
-1. Start the relay server.
-2. Verify `http://localhost:8080/health`.
-3. Start both emulators with the helper script.
-4. Launch SecureChat on both devices.
-5. Complete onboarding and create one identity per device.
-6. Exchange or scan identities.
-7. Verify the safety number on both devices.
-8. Send messages in both directions.
-9. Verify sent, delivered, and read state changes.
-10. Disconnect one device and send another message.
-11. Reconnect the device and verify queued-message delivery.
+### Control Plane from source
 
-For the implementation details behind this flow, see [Transport Feature](../features/transport.md).
+The friendly Control Plane release bundle is currently Windows-only. Install Docker Desktop and provide a valid Firebase Admin service-account JSON file because the current Control Plane Compose stack mounts it into the push service.
 
-## Contacts during local testing
+```bash
+export FIREBASE_ADMIN_CREDENTIALS=/absolute/path/to/firebase-admin.json
+docker compose -f server/control-plane/docker-compose.yml up -d --build
+```
 
-SecureChat synchronizes device contacts when the Contacts screen is opened.
+Watch startup:
 
-After changing a contact in the Android Contacts application:
+```bash
+docker compose -f server/control-plane/docker-compose.yml ps
+docker compose -f server/control-plane/docker-compose.yml logs -f
+```
 
-1. Return to SecureChat.
-2. Open the Contacts screen again.
-3. Verify that the imported contact data has been refreshed.
-
-## Troubleshooting
-
-### A client cannot connect
-
-Verify all of the following:
-
-- `http://localhost:8080/health` responds on the host.
-- the app uses `ws://10.0.2.2:8080/relay`
-- the relay process is still running
-- the emulator has network access
-
-Do not configure the Android emulator client with `localhost`. Inside the emulator, `localhost` refers to the emulator itself.
-
-### A message remains queued
-
-Check:
-
-- the relay health endpoint is reachable
-- the sender is connected
-- the recipient identity and keys are available
-- the recipient reconnects to the same relay
-- the relay console does not show protocol or WebSocket errors
-
-The health response can also reveal whether envelopes are waiting:
+Open:
 
 ```text
-ok connectedClients=1 pendingEnvelopes=1
+http://localhost:8390/index
 ```
 
-### The emulator script cannot find the executable
+If Android devices/emulators or another machine need the Control Plane, use the Mac's reachable LAN/public address in your directory JSON rather than `localhost`.
 
-Open Android Studio and check:
+### Community Node release-style launcher
+
+A release candidate/full release can provide a macOS/Linux Community Node package containing:
 
 ```text
-Settings > Languages & Frameworks > Android SDK
+Start-SecureChatNode.command
+start-securechat-node.sh
 ```
 
-Then update `EMU` in `scripts/start-local-test-emulators.bat` to point to that SDK's `emulator.exe`.
+After extracting:
 
-### List connected emulators
-
-```powershell
-adb devices
+```bash
+chmod +x start-securechat-node.sh bootstrap-community-node.sh
+./start-securechat-node.sh
 ```
 
-Expected serials:
+The script configures the deployment and Control Plane directory. Open the resulting node `/index` page.
+
+### Community Node directly from source (advanced)
+
+If you do not have a launcher bundle/image tag yet, you can run the source Compose stack by supplying the runtime endpoints explicitly. Use an address reachable by your test clients/other nodes (`<LAN_IP>` below):
+
+```bash
+export CONTROL_PLANE_URL=http://host.docker.internal:8390
+export CLIENT_ENDPOINT=ws://<LAN_IP>:8490/v1/gateway
+export FEDERATION_ENDPOINT=http://<LAN_IP>:8490
+export MAILBOX_ENDPOINT=http://<LAN_IP>:8490
+
+docker compose -f server/community-node/docker-compose.yml up -d --build
+```
+
+Then open:
 
 ```text
-emulator-5554
-emulator-5556
+http://<LAN_IP>:8490/index
 ```
 
-### Inspect logs
+For more than one node, use independent Compose project names/ports/volumes or the repository smoke-test tooling instead of starting identical projects on the same ports.
 
-First emulator:
+## Server-development stack
+
+`server/docker-compose.yml` is useful for service development/smoke work because it exposes internal diagnostic ports directly. It is **not** the same operator-facing topology as the two Caddy launcher packages.
+
+It requires a Firebase Admin credential path in `server/.env` or the shell environment:
+
+```dotenv
+FIREBASE_ADMIN_CREDENTIALS=/absolute/path/firebase-admin.json
+```
+
+Start:
+
+```bash
+docker compose -f server/docker-compose.yml up -d --build
+```
+
+For production-shaped app testing prefer the Control Plane/Community Node deployments above because they expose the same Caddy routes used by launchers/releases.
+
+## Verify the topology
+
+Control Plane:
+
+```text
+/index -> registry / presence / push / nodes
+```
+
+Community Node:
+
+```text
+/index -> gateway / advertised planes / federation / mailbox
+```
+
+Android Developer Settings should show:
+
+- reachable Control Planes;
+- verified nodes;
+- the current node;
+- live connection counts;
+- recently failed nodes as `COOLDOWN` with `0` connections.
+
+## Two-node smoke test
+
+On Windows/PowerShell:
 
 ```powershell
-adb -s emulator-5554 logcat
+.\server\scripts\Test-StandaloneCommunityNodes.ps1 -BuildImages
 ```
 
-Second emulator:
+This is the fastest way to verify registration, two independent identities, federation and destination storage.
 
-```powershell
-adb -s emulator-5556 logcat
-```
+## Troubleshooting order
 
-## Related documentation
+1. Open Control Plane `/index`.
+2. Open Community Node `/index`.
+3. Run `docker compose ps` for the failing deployment.
+4. Inspect only the failing service logs first.
+5. Check Android logcat around `DefaultTransportConnectionManager` and `DefaultWebSocketTransportClient`.
+6. If Caddy returns 502, inspect the upstream container instead of changing routes immediately.
 
-- [Development Workflow](../getting-started/development-workflow.md)
-- [Testing](testing.md)
-- [Transport Feature](../features/transport.md)
-- [Relay API](../api/relay.md)
+## Emulator networking
+
+`localhost` inside an Android emulator is the emulator itself. `10.0.2.2` reaches the development host from the standard Android emulator, but SecureChat's normal flow should still use the configured Control Plane directory and signed node descriptors rather than a hardcoded gateway URL.

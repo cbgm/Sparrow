@@ -1,20 +1,29 @@
 package com.cbgm.securechat.feature.messaging.application.outbox
 
+import com.cbgm.securechat.core.protocol.packet.ContactInviteAcceptedPacket
+import com.cbgm.securechat.core.protocol.packet.ContactInviteDeclinedPacket
+import com.cbgm.securechat.core.protocol.packet.ContactInvitePacket
 import com.cbgm.securechat.core.protocol.packet.ContactReadyPacket
 import com.cbgm.securechat.core.protocol.packet.ContactVerificationReceiptPacket
 import com.cbgm.securechat.core.protocol.packet.GroupCreatedPacket
+import com.cbgm.securechat.core.protocol.packet.GroupInviteDeclinedPacket
+import com.cbgm.securechat.core.protocol.packet.GroupInvitePacket
+import com.cbgm.securechat.core.protocol.packet.GroupInviteReceivedPacket
+import com.cbgm.securechat.core.protocol.packet.GroupJoinRequestPacket
 import com.cbgm.securechat.core.protocol.packet.GroupLeaveRequestPacket
 import com.cbgm.securechat.core.protocol.packet.GroupMemberActivatedPacket
 import com.cbgm.securechat.core.protocol.packet.GroupMemberActivationAcknowledgementPacket
 import com.cbgm.securechat.core.protocol.packet.GroupVerificationReceiptPacket
 import com.cbgm.securechat.core.protocol.packet.GroupVerificationSnapshotPacket
 import com.cbgm.securechat.core.protocol.packet.GroupVerificationSnapshotRequestPacket
+import com.cbgm.securechat.core.protocol.packet.MailboxRoutePacket
 import com.cbgm.securechat.core.protocol.packet.SecureChatPacket
 import com.cbgm.securechat.feature.contacts.domain.model.Contact
 
 data class OutgoingTransportRequirement(
     val requiresEncryption: Boolean,
     val allowsEncryptionBeforeMutualIdentity: Boolean = false,
+    val forcePlaintext: Boolean = false,
     val encryptionUnavailableMessage: String = "This protocol packet requires an encrypted SecureChat transport"
 )
 
@@ -32,6 +41,18 @@ class DefaultOutgoingPacketTransportPolicy : OutgoingPacketTransportPolicy {
     ): Result<OutgoingTransportRequirement> =
         runCatching {
             when (packet) {
+                is ContactInvitePacket,
+                is ContactInviteAcceptedPacket,
+                is ContactInviteDeclinedPacket,
+                is GroupInvitePacket,
+                is GroupInviteReceivedPacket,
+                is GroupJoinRequestPacket,
+                is GroupInviteDeclinedPacket ->
+                    OutgoingTransportRequirement(
+                        requiresEncryption = false,
+                        forcePlaintext = true
+                    )
+
                 is ContactReadyPacket -> {
                     validateContactReadyIdentity(packet = packet, contact = contact)
                     OutgoingTransportRequirement(
@@ -57,11 +78,12 @@ class DefaultOutgoingPacketTransportPolicy : OutgoingPacketTransportPolicy {
                 is GroupMemberActivationAcknowledgementPacket,
                 is GroupVerificationReceiptPacket,
                 is GroupVerificationSnapshotRequestPacket,
-                is GroupVerificationSnapshotPacket ->
+                is GroupVerificationSnapshotPacket,
+                is MailboxRoutePacket ->
                     OutgoingTransportRequirement(
                         requiresEncryption = true,
                         encryptionUnavailableMessage =
-                            "Group packets require a mutual SecureChat key exchange"
+                            "Protocol packet requires a mutual SecureChat key exchange"
                     )
 
                 else -> OutgoingTransportRequirement(requiresEncryption = false)

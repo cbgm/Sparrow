@@ -18,7 +18,7 @@ interface ContactMergeService {
     ): ContactMergeResult
 }
 
-class DefaultContactMergeService(
+class ContactMergeServiceImpl(
     private val contactDao: ContactDao,
     private val phoneNumberNormalizer: PhoneNumberNormalizer
 ) : ContactMergeService {

@@ -8,7 +8,7 @@ enum class IncomingEnvelopeProcessingResult {
 interface IncomingEnvelopeProcessor {
     suspend fun process(
         envelopeId: String,
-        senderRelayId: String,
+        senderRoutingId: String,
         encodedTransportPayload: String
     ): Result<IncomingEnvelopeProcessingResult>
 }

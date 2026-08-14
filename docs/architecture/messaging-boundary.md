@@ -1,146 +1,83 @@
-# Messaging Boundary
+# Messaging boundary
 
-Messaging spans several modules, but each concern has one owner. The most important distinction is:
+Messaging crosses modules, but each module has a narrow job.
 
-> `:feature:messaging` coordinates a message operation; `:feature:transport` moves opaque data.
-
-The detailed direct and group runtime trace is in
-[Conversation, Messaging, and Delivery Flow](../features/message-transport-flow.md).
-
-## Ownership map
-
-| Concern | Owner | Main classes |
+| Concern | Owner | Representative classes |
 |---|---|---|
-| Conversation and message behavior | `:feature:chats` | `DefaultChatsRepository`, `DirectConversationStore`, `GroupMembershipMessageFactory` |
-| Group invitation consent, add/remove/leave membership changes, activation, and membership timeline events | `:feature:chats` | `GroupInvitationCoordinator`, `GroupCreatedPacketHandler`, `GroupInvitationManager`, `GroupLeaveRequestPacketHandler`, `GroupMembershipMessageFactory` |
-| Group epoch security | `:feature:chats` | `GroupSecurityManager`, `GroupProtocolPayloadEncoder`, `AndroidGroupKeyStorage` |
-| User-visible delivery state | `:feature:chats` | `MessageDeliveryStateMachine`, `MessageDeliveryStateCoordinator` |
-| Incoming packet behavior | Feature that understands the packet | `ChatMessagePacketHandler`, group invite/join/decline/welcome/ready handlers, `IdentityPacketHandler` |
-| Packet model and dispatch contracts | `:core:protocol` | `SecureChatPacket`, `PacketCodec`, `ProtocolPacketHandler`, `TypedProtocolPacketHandler` |
-| Persistent outgoing queue contract | `:core:protocol` | `ProtocolOutbox`, `OutboxStateMachine` |
-| Persistent outgoing queue implementation | `:data:database` | `DefaultProtocolOutbox`, `ProtocolOutboxDao` |
-| Send/receive orchestration | `:feature:messaging` | `DefaultOutboxRunner`, `DefaultOutboxProcessor`, `DefaultIncomingRelayRunner` |
-| Contact/relay address mapping | `:feature:messaging` | `DefaultContactRelayIdResolver`, `DefaultContactByRelayIdResolver` |
-| Typing adapter | `:feature:messaging` | `RelayTypingIndicatorGateway` |
-| WebSocket and reconnect mechanics | `:feature:transport` | `DefaultWebSocketTransportClient`, `DefaultRelayConnectionManager` |
-| Wire sender adapter | `:feature:transport` | `WebSocketOutgoingWireSender` |
-| Relay storage and routing | `:relay` | `RelayWebSocketHandler`, `DefaultRelayEnvelopeRouter`, `InMemoryPendingEnvelopeStore` |
-| Process startup | `:androidApp` | `SecureChatApplication.startRuntimeServices()` |
-
-## Dependency direction
-
-```mermaid
-flowchart TD
-    App[":androidApp"] --> Messaging[":feature:messaging"]
-    App --> Chats[":feature:chats"]
-    Messaging --> Chats
-    Messaging --> Contacts[":feature:contacts"]
-    Messaging --> Transport[":feature:transport"]
-    Messaging --> Protocol[":core:protocol"]
-    Chats --> Protocol
-    Contacts --> Protocol
-    Transport --> Protocol
-```
-
-The generated report shows the exact dependencies. The boundary rules behind the graph are:
-
-- `:core:protocol` defines stable contracts without depending on features.
-- `:feature:chats` and `:feature:contacts` own packet meaning and register typed handlers.
-- `:feature:transport` never loads a contact, conversation, Room entity, or protocol packet.
-- `:feature:messaging` is allowed to depend on chats, contacts, transport, crypto, protocol, and
-  database because its job is to coordinate those boundaries.
-- `:androidApp` starts long-running services but does not implement their behavior.
+| Packet contracts | `:core:protocol` | `SecureChatPacket`, `PacketCodec`, packet data classes |
+| Persistent outbox contract | `:core:protocol` | `ProtocolOutbox`, `OutboxProcessor`, `OutgoingWireSender` |
+| Persistent outbox storage | `:data:database` | `DefaultProtocolOutbox` + Room DAOs |
+| Conversation meaning | `:feature:chats` | Direct/Group repositories, handlers, state machines |
+| Contact/identity packet meaning | `:feature:contacts` | invitation/identity handlers and use cases |
+| Send/receive orchestration | `:feature:messaging` | `DefaultOutboxRunner`, `DefaultOutboxProcessor`, `DefaultIncomingEnvelopeRunner`, `DefaultIncomingEnvelopeProcessor` |
+| Wire connection/discovery | `:feature:transport` | `DefaultTransportConnectionManager`, `DefaultWebSocketTransportClient`, discovery clients |
+| Client edge | `:server:gateway` | `GatewayWebSocketHandler`, `GatewaySessionHandler`, `ConnectionRegistry` |
+| Cross-node forwarding | `:server:federation` | `FederationRouter`, `FederationPeerRouter`, `OutboundEnvelopeRetryAgent` |
+| Offline store | `:server:mailbox` | `configureMailboxRoutes()`, `MailboxStorage`, `PostgresMailboxStore` |
+| Android wake-up | `:server:push` + `:notification` | `PushCoordinator`, `FirebasePushSender`, `SynchronizePendingMessages` |
 
 ## Outgoing boundary
 
-The originating feature creates a `SecureChatPacket` and calls `ProtocolOutbox.enqueue()`. From that
-point, the messaging runtime owns the attempt:
-
 ```mermaid
-flowchart TD
-    Feature["Feature repository or handler"] --> Outbox["ProtocolOutbox"]
-    Outbox --> Processor["DefaultOutboxProcessor"]
-    Processor --> Policy["OutgoingPacketTransportPolicy"]
-    Processor --> Wire["OutgoingWireSender"]
-    Wire --> WebSocket["WebSocketTransportClient"]
+sequenceDiagram
+    participant VM as Direct/Group ViewModel
+    participant UC as Send*MessageUseCase
+    participant Repo as MessageRepository
+    participant Proc as *OutgoingMessageProcessor
+    participant Outbox as ProtocolOutbox
+    participant Runner as DefaultOutboxRunner
+    participant OP as DefaultOutboxProcessor
+    participant Sender as OutgoingWireSender
+    participant WS as DefaultWebSocketTransportClient
+
+    VM->>UC: send(text)
+    UC->>Repo: send(...)
+    Repo->>Proc: create/store/enqueue
+    Proc->>Outbox: enqueue(packet)
+    Runner->>OP: processPending()
+    OP->>OP: encode + transport policy + resolve routing ID
+    OP->>Sender: send(routingId, encrypted/encoded payload)
+    Sender->>WS: send envelope
 ```
 
-This lets chat, receipt, group, and identity packets use one persistent send pipeline. Feature code
-does not need to know whether the current wire transport is WebSocket-based.
+`DefaultOutboxProcessor` deliberately does not know whether a message bubble is Direct or Group. It decodes the already-created packet, asks `OutgoingTransportPayloadFactory` how it must be protected, resolves a routing ID with `ContactRoutingIdResolver` or `GroupRoutingIdResolver`, and hands opaque bytes to the wire sender.
+
+It processes recipient groups concurrently with a maximum of eight recipient groups at once, while preserving ordering within one recipient group.
 
 ## Incoming boundary
 
-The transport client exposes an opaque `RelayEnvelope`. Messaging resolves the sender and obtains
-the local decryption keys, then crosses the protocol boundary:
-
 ```mermaid
-flowchart TD
-    WebSocket["WebSocketTransportClient.incomingEnvelopes"] --> Gateway["IncomingRelayGateway"]
-    Gateway --> Runner["DefaultIncomingRelayRunner"]
-    Runner --> Incoming["IncomingMessageHandler"]
-    Incoming --> Dispatch["ProtocolPacketHandler"]
-    Dispatch --> Typed["TypedProtocolPacketHandler"]
+sequenceDiagram
+    participant WS as DefaultWebSocketTransportClient
+    participant G as WebSocketIncomingEnvelopeGateway
+    participant R as DefaultIncomingEnvelopeRunner
+    participant P as DefaultIncomingEnvelopeProcessor
+    participant C as core IncomingMessageHandler
+    participant IP as chats IncomingPacketProcessor
+    participant Router as IncomingPacketRouter
+    participant D as DirectIncomingPacketProcessor
+    participant GR as GroupIncomingPacketProcessor
+
+    WS-->>G: TransportEnvelope
+    G-->>R: queued incoming envelope
+    R->>P: process(envelope)
+    P->>P: resolve sender contact / local keys
+    P->>C: decode secure transport message
+    C->>IP: decoded payload
+    IP->>IP: PacketCodec.decode()
+    IP->>Router: route packet
+    Router->>D: Direct packet
+    Router->>GR: Group packet
+    R-->>WS: acknowledge after successful processing
 ```
 
-`IncomingMessageHandler` is implemented by `IncomingMessageProcessor` in `:feature:chats`. The name
-reflects the pipeline entry point; after decoding, `DefaultProtocolPacketHandler` may dispatch to
-handlers owned by chats or contacts.
+The transport layer treats packet bytes as opaque. Packet semantics are decided only after the client has decoded/decrypted them.
 
-The relay envelope is acknowledged only after the complete handler call succeeds. This is a
-reliability boundary, not just a networking detail.
+## Direct and Group callbacks
 
-## Package layout
+Shared receipts/outbox callbacks are dispatched by narrow routers:
 
-`:feature:messaging` is intentionally UI-less:
+- `ReceiptIncomingPacketRouter` → Direct or Group receipt handlers.
+- `ChatOutboxDeliveryStateRouter` → Direct or Group delivery coordinator.
 
-```text
-feature/messaging/.../feature/messaging/
-├── application/
-│   ├── incoming/
-│   │   ├── IncomingRelayRunner.kt
-│   │   └── DefaultIncomingRelayRunner.kt
-│   └── outbox/
-│       ├── DefaultOutboxProcessor.kt
-│       ├── DefaultOutboxRunner.kt
-│       ├── OutgoingPacketTransportPolicy.kt
-│       └── OutgoingTransportPayloadFactory.kt
-├── domain/
-│   └── relay/
-│       ├── ContactRelayIdResolver.kt
-│       ├── ContactByRelayIdResolver.kt
-│       └── IncomingRelayGateway.kt
-├── data/
-│   ├── relay/
-│   │   ├── DefaultContactRelayIdResolver.kt
-│   │   ├── DefaultContactByRelayIdResolver.kt
-│   │   └── WebSocketIncomingRelayGateway.kt
-│   └── typing/
-│       └── RelayTypingIndicatorGateway.kt
-└── di/
-    └── MessagingModule.kt
-```
-
-Application classes own long-running workflows and packet transport policy. Domain interfaces
-describe address-resolution and incoming-wire ports. Data classes implement those ports using
-contacts, Room, or transport.
-
-## Rules for future code
-
-Place new code according to the decision it makes:
-
-- If it decides what a chat action means, put it in `:feature:chats`.
-- If it manages group epochs, membership key snapshots, or group payload authentication, put it in
-  `:feature:chats/data/security`.
-- If it decides what a contact or identity exchange means, put it in `:feature:contacts`.
-- If it coordinates persisted packets, crypto, addressing, and the wire, put it in
-  `:feature:messaging`.
-- If a packet needs special outer encryption or recipient-key validation, extend
-  `OutgoingPacketTransportPolicy`; keep that branching out of `DefaultOutboxProcessor`.
-- If it only opens connections, serializes relay frames, or sends opaque payloads, put it in
-  `:feature:transport`.
-- If it defines a transport-independent packet or port, put it in `:core:protocol`.
-- If it stores Room entities or implements the persistent outbox, put it in `:data:database`.
-- If it routes opaque envelopes between processes, put it in `:relay`.
-
-Do not add transport payloads or private key parameters to `ChatsRepository`, and do not make
-ViewModels depend on `WebSocketTransportClient`, DAOs, or crypto implementations.
+Those routers dispatch only. They do not contain Direct/Group lifecycle rules.

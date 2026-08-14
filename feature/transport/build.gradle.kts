@@ -19,6 +19,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(projects.core)
+            implementation(projects.core.crypto)
             implementation(projects.core.protocol)
 
             implementation(libs.bundles.coroutines)
@@ -30,6 +31,7 @@ kotlin {
 
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.koin.android)
         }
 
         if (isMacOs) {

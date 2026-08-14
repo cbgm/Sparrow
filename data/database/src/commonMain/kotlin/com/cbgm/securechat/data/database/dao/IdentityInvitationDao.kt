@@ -23,6 +23,18 @@ interface IdentityInvitationDao {
 
     @Query(
         """
+        UPDATE identity_invitations
+        SET contactId = :toContactId
+        WHERE contactId = :fromContactId
+        """
+    )
+    suspend fun reassignContact(
+        fromContactId: String,
+        toContactId: String
+    )
+
+    @Query(
+        """
         SELECT *
         FROM identity_invitations
         WHERE contactId = :contactId
@@ -57,6 +69,36 @@ interface IdentityInvitationDao {
         """
     )
     fun observeLatestForContact(contactId: String): Flow<IdentityInvitationEntity?>
+
+    @Query(
+        """
+        SELECT *
+        FROM identity_invitations
+        WHERE contactId = :contactId
+          AND state IN (:states)
+        ORDER BY updatedAtEpochMilliseconds DESC, createdAtEpochMilliseconds DESC
+        LIMIT 1
+        """
+    )
+    suspend fun findLatestForContactByStates(
+        contactId: String,
+        states: List<String>
+    ): IdentityInvitationEntity?
+
+    @Query(
+        """
+        SELECT *
+        FROM identity_invitations
+        WHERE contactId = :contactId
+          AND state IN (:states)
+        ORDER BY updatedAtEpochMilliseconds DESC, createdAtEpochMilliseconds DESC
+        LIMIT 1
+        """
+    )
+    fun observeLatestForContactByStates(
+        contactId: String,
+        states: List<String>
+    ): Flow<IdentityInvitationEntity?>
 
     @Query(
         """

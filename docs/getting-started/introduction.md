@@ -1,297 +1,80 @@
 # Introduction
 
-## Welcome
+SecureChat is a secure-messaging project with two major parts:
 
-Welcome to SecureChat.
+1. an Android-first Kotlin Multiplatform client;
+2. a federated Kotlin server system split into Control Planes and Community Nodes.
 
-SecureChat is a modern end-to-end encrypted messaging application built with Kotlin Multiplatform.
+The main design goal is to keep client chat logic, transport logic and server routing understandable as the
+project grows. Direct chats and Group chats deliberately have separate code paths; common code is shared only
+where the semantics are actually common.
 
-The project emphasizes
+## Current platform status
 
-- privacy
-- modular architecture
-- maintainability
-- automation
-- developer experience
+| Target | Status |
+|---|---|
+| Android | Usable development target and current product target |
+| iOS | Project/Xcode/KMP source sets exist, but important runtime/platform functionality is not implemented yet |
+| Server | JVM/Ktor services running in Docker |
 
-Unlike many applications where the build system, architecture and documentation evolve independently, SecureChat treats them as equally important parts of the project.
+Do not interpret the presence of `iosMain` source sets as feature parity. The iOS host currently exists mainly so
+shared code can evolve toward multiplatform support.
 
----
+## Client responsibilities
 
-# Vision
+The client owns:
 
-The long-term vision of SecureChat is to provide a communication platform that is
+- local identity/key material;
+- contacts and trust state;
+- direct/group conversation state;
+- packet creation and packet processing;
+- end-to-end encryption/decryption;
+- persistent outgoing outbox;
+- node discovery/failover;
+- mailbox synchronization and Android push wake-ups.
 
-- secure by default
-- easy to maintain
-- fully documented
-- cross-platform
-- independently auditable
+The server does not receive message plaintext from the application protocol.
 
-Every architectural decision supports one or more of these goals.
+## Server responsibilities
 
----
+A **Control Plane** provides:
 
-# Project Philosophy
+- signed Community Node discovery (`node-registry`);
+- temporary client presence routes (`presence-directory` + Redis);
+- Android push/wake-up infrastructure (`push`).
 
-SecureChat follows several guiding principles.
+A **Community Node** provides:
 
-## Privacy First
+- WebSocket client connections (`gateway`);
+- cross-node routing/retry (`federation`);
+- recipient-selected offline ciphertext storage (`mailbox`).
 
-User privacy is the primary design objective.
+Both deployments use Caddy as their public edge and expose an operator `/index` page.
 
-Private keys remain on the device.
+## Control Plane directory
 
-Messages are encrypted before transmission.
+Apps and Community Nodes do not keep a hardcoded list of Control Plane addresses. They start from one directory
+URL whose body looks like:
 
-The relay is treated as untrusted.
-
----
-
-## Simplicity
-
-Simple systems are easier to
-
-- understand
-- review
-- test
-- secure
-
-Whenever multiple solutions exist, the simpler solution is generally preferred.
-
----
-
-## Modularity
-
-The project is intentionally divided into many Gradle modules.
-
-Each module has
-
-- a clear responsibility
-- explicit dependencies
-- minimal coupling
-
-This keeps the project maintainable as it grows.
-
----
-
-## Automation
-
-Automation replaces repetitive manual work wherever possible.
-
-Examples include
-
-- formatting
-- architecture validation
-- documentation generation
-- quality verification
-- Git hooks
-
-Developers should focus on writing application code rather than maintaining tooling.
-
----
-
-# Technology Stack
-
-SecureChat is primarily built using
-
-- Kotlin
-- Kotlin Multiplatform
-- Compose Multiplatform
-- Koin
-- Ktor
-- Room
-- Gradle Convention Plugins
-
-These technologies provide a modern, strongly typed and multiplatform development experience.
-
----
-
-# Architecture
-
-The project follows Clean Architecture.
-
-```
-Presentation
-
-↓
-
-Domain
-
-↓
-
-Data
+```json
+{
+  "controlPlanes": [
+    "https://plane-a.example.com",
+    "https://plane-b.example.com"
+  ]
+}
 ```
 
-Business rules remain independent from Android and infrastructure.
-
-Architecture is enforced automatically during the build.
-
----
-
-# Security
-
-Security is not implemented as an isolated feature.
-
-Instead it is integrated throughout the architecture.
-
-Core principles include
-
-- end-to-end encryption
-- cryptographic identities
-- Safety Numbers
-- secure key storage
-- authenticated transport
-
-Every message is encrypted before leaving the device.
-
----
-
-# Build System
-
-The SecureChat build infrastructure is highly automated.
-
-Major features include
-
-- Convention Plugins
-- Architecture Plugin
-- Quality Plugin
-- Version Catalog
-- Generated Documentation
-- Repository-managed Git hooks
-
-Most modules require very little Gradle configuration.
-
----
-
-# Documentation
-
-Documentation is divided into
-
-- handwritten engineering guides
-- automatically generated architecture documentation
-
-Generated documentation is produced directly from the Gradle project, ensuring that architecture documentation always matches the repository.
-
----
-
-# Repository Layout
-
-The project is organized into several top-level areas.
-
-```
-androidApp/
-
-build-logic/
-
-core/
-
-data/
-
-feature/
-
-navigation/
-
-shared/
-
-relay/
-
-quality/
-
-docs/
-```
-
-Each directory has a clearly defined purpose.
-
----
-
-# Development Workflow
-
-Typical workflow
-
-```
-Create Feature
-
-↓
-
-Implement
-
-↓
-
-Run quality
-
-↓
-
-Run tests
-
-↓
-
-Generate documentation
-
-↓
-
-Commit
-```
-
-Commands
-
-```bash
-./gradlew quality
-```
-
-```bash
-./gradlew architectureReport
-```
-
----
-
-# Intended Audience
-
-This documentation is intended for
-
-- new contributors
-- maintainers
-- reviewers
-- future project members
-
-It should provide enough context to understand both the implementation and the reasoning behind it.
-
----
-
-# Learning Path
-
-Recommended reading order
-
-1. Introduction
-2. Project Structure
-3. Local Development
-4. Architecture
-5. Security
-6. Features
-7. Development
-8. Build
-9. API
-
-Generated documentation should be consulted whenever detailed module information is required.
-
----
-
-# Contributing
-
-Before contributing
-
-- read the architecture overview
-- understand Clean Architecture
-- follow the coding standards
-- execute the quality pipeline
-- regenerate architecture documentation when necessary
-
-Maintaining consistency is considered part of every contribution.
-
----
-
-# Summary
-
-SecureChat combines modern Kotlin Multiplatform development with a strong emphasis on architecture, security and automation.
-
-The project is designed to remain understandable and maintainable even as it grows, allowing developers to focus on building secure communication features rather than managing infrastructure complexity.
+The HTTP `Content-Type` is irrelevant; the response body is explicitly parsed as JSON.
+
+For local builds, the directory URL is stored in `local.properties` as `controlPlaneDirectoryUrl`. The shared
+module exposes it through `BuildKonfig.CONTROL_PLANE_DIRECTORY_URL`, and `AppViewModel` owns synchronization and
+health maintenance.
+
+## Read next
+
+- [Installation](installation.md)
+- [First build](first-build.md)
+- [Project structure](project-structure.md)
+- [Server overview](../server/overview.md)
+- [Architecture](../architecture/overview.md)

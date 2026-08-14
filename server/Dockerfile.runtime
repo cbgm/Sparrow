@@ -1,0 +1,15 @@
+# syntax=docker/dockerfile:1.7
+
+FROM eclipse-temurin:21-jre
+
+ARG SERVICE
+ENV SERVICE=${SERVICE}
+
+WORKDIR /app
+
+COPY --chown=65532:65532 app/ /app/
+COPY --chown=65532:65532 data/ /data/
+
+USER 65532:65532
+
+ENTRYPOINT ["/bin/sh", "-c", "exec /app/bin/$SERVICE"]

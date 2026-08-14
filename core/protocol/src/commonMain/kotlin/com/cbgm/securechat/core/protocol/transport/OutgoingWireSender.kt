@@ -8,7 +8,7 @@ package com.cbgm.securechat.core.protocol.transport
  * - Bluetooth
  * - Wi-Fi Direct
  * - WebSocket
- * - HTTP relay
+ * - HTTP gateway
  * - another transport
  *
  * The sender does not inspect or modify the payload.

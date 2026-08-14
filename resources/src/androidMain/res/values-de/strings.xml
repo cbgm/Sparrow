@@ -5,4 +5,9 @@
     <string name="notification_channel_messages">Messages</string>
     <string name="notification_channel_messages_description">Benachrichtigung für neue SecureChat Nachricht</string>
     <string name="notification_new_message">Neue Nachricht</string>
+    <string name="feature_chats_group_promote_admin">Zum Admin machen</string>
+    <string name="feature_chats_group_promote_admin_description">%1$s zum Gruppen-Admin machen? Admins können Mitglieder hinzufügen und entfernen sowie weitere Admins ernennen.</string>
+    <string name="feature_chats_group_promote_before_leave">Neuen Admin auswählen</string>
+    <string name="feature_chats_group_promote_before_leave_description">Du bist der einzige Admin. Ernenne ein anderes aktives Mitglied zum Admin, bevor du die Gruppe verlässt.</string>
+    <string name="feature_chats_group_member_unavailable">Nicht verfügbar — erneut einladen</string>
 </resources>

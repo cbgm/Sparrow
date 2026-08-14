@@ -1,7 +1,10 @@
 package com.cbgm.securechat.feature.chats.presentation.model
 
-import com.cbgm.securechat.feature.chats.domain.model.GroupVerificationMembershipStatus
-import com.cbgm.securechat.feature.chats.domain.model.GroupVerificationPair
+import com.cbgm.securechat.feature.chats.domain.model.group.GroupVerificationMembershipStatus
+import com.cbgm.securechat.feature.chats.domain.model.group.GroupVerificationPair
+import com.cbgm.securechat.feature.chats.presentation.details.mapper.buildGroupVerificationSummary
+import com.cbgm.securechat.feature.chats.presentation.details.model.GroupMemberVerificationState
+import com.cbgm.securechat.feature.chats.presentation.details.model.GroupMemberVerificationUiState
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -42,7 +45,8 @@ class GroupVerificationSummaryTest {
                             adminVerified = false,
                             participantVerified = false
                         )
-                    )
+                    ),
+                currentMemberContactIds = setOf("contact-a", "contact-b")
             )
 
         assertEquals(4, summary.totalMemberCount)
@@ -80,7 +84,9 @@ class GroupVerificationSummaryTest {
                 ownerContactId = "admin-contact",
                 ownerDisplayName = "Admin",
                 ownInvitationId = "self",
-                rows = rows
+                rows = rows,
+                remoteAdminContactIds = setOf("admin-contact"),
+                currentMemberContactIds = setOf("admin-contact")
             )
 
         assertEquals(3, summary.totalMemberCount)
@@ -112,7 +118,9 @@ class GroupVerificationSummaryTest {
                             adminVerified = false,
                             participantVerified = false
                         )
-                    )
+                    ),
+                remoteAdminContactIds = setOf("admin-contact"),
+                currentMemberContactIds = setOf("admin-contact")
             )
 
         assertEquals(
@@ -123,6 +131,47 @@ class GroupVerificationSummaryTest {
                     .distinct()
                     .size
         )
+    }
+
+    @Test
+    fun missingReferenceAdminIsNotRenderedAsCurrentMember() {
+        val summary =
+            buildGroupVerificationSummary(
+                isLocalAdmin = false,
+                ownerContactId = "admin-contact",
+                ownerDisplayName = "Admin",
+                ownInvitationId = "self",
+                rows =
+                    listOf(
+                        pair(
+                            invitationId = "self",
+                            contactId = null,
+                            displayName = "Participant",
+                            active = true,
+                            adminVerified = true,
+                            participantVerified = true
+                        )
+                    )
+            )
+
+        assertEquals(listOf("Participant"), summary.members.map { member -> member.displayName })
+        assertEquals(0, summary.adminCount)
+        assertEquals(1, summary.totalMemberCount)
+    }
+
+    @Test
+    fun soleLocalAdminHasAuthoritativeStateWithoutRemoteMembers() {
+        val summary =
+            buildGroupVerificationSummary(
+                isLocalAdmin = true,
+                ownerContactId = null,
+                ownerDisplayName = "Admin",
+                ownInvitationId = null,
+                rows = emptyList()
+            )
+
+        assertTrue(summary.hasAuthoritativeState)
+        assertEquals(1, summary.totalMemberCount)
     }
 
     @Test

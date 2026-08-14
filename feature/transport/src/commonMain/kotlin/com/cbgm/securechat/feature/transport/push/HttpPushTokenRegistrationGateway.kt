@@ -1,8 +1,7 @@
 package com.cbgm.securechat.feature.transport.push
 
-import com.cbgm.securechat.feature.transport.relay.api.PushDeviceRegistrationRequest
-import com.cbgm.securechat.feature.transport.relay.config.RelayTransportConfig
-import com.cbgm.securechat.feature.transport.relay.identity.LocalRelayIdProvider
+import com.cbgm.securechat.feature.transport.controlplane.ControlPlaneRequestRouter
+import com.cbgm.securechat.feature.transport.routing.LocalRoutingIdProvider
 import io.ktor.client.HttpClient
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -12,8 +11,8 @@ import io.ktor.http.contentType
 
 class HttpPushTokenRegistrationGateway(
     private val httpClient: HttpClient,
-    private val localRelayIdProvider: LocalRelayIdProvider,
-    private val relayTransportConfig: RelayTransportConfig
+    private val localRoutingIdProvider: LocalRoutingIdProvider,
+    private val controlPlaneRequestRouter: ControlPlaneRequestRouter
 ) : PushTokenRegistrationGateway {
     override suspend fun register(
         token: String,
@@ -24,27 +23,30 @@ class HttpPushTokenRegistrationGateway(
                 "Push token must not be blank"
             }
 
-            val relayId =
-                localRelayIdProvider
-                    .getLocalRelayId()
+            val routingId =
+                localRoutingIdProvider
+                    .getLocalRoutingId()
                     .getOrThrow()
 
-            val response =
-                httpClient.post(
-                    urlString = "${relayTransportConfig.httpBaseUrl}/push/devices"
-                ) {
-                    contentType(ContentType.Application.Json)
-                    setBody(
-                        PushDeviceRegistrationRequest(
-                            relayId = relayId,
-                            token = token,
-                            platform = platform.name
-                        )
-                    )
-                }
+            controlPlaneRequestRouter
+                .executeAll { endpoint ->
+                    val response =
+                        httpClient.post(
+                            urlString = "${endpoint.baseUrl}/push/devices"
+                        ) {
+                            contentType(ContentType.Application.Json)
+                            setBody(
+                                PushDeviceRegistrationRequest(
+                                    routingId = routingId,
+                                    token = token,
+                                    platform = platform.name
+                                )
+                            )
+                        }
 
-            check(response.status == HttpStatusCode.NoContent) {
-                "Push-token registration failed with ${response.status}"
-            }
+                    check(response.status == HttpStatusCode.NoContent) {
+                        "Push-token registration failed with ${response.status}"
+                    }
+                }.getOrThrow()
         }
 }

@@ -1,0 +1,8 @@
+.git
+.gradle
+.idea
+.kotlin
+**/build
+*.zip
+local.properties
+androidApp/google-services.json

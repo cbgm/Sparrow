@@ -2,27 +2,31 @@ package com.cbgm.securechat.feature.settings.di
 
 import com.cbgm.securechat.core.security.ContactBlocklistRepository
 import com.cbgm.securechat.core.security.DirectIdentitySetupModeRepository
-import com.cbgm.securechat.feature.settings.data.repository.DefaultContactBlocklistRepository
-import com.cbgm.securechat.feature.settings.data.repository.DefaultDirectIdentitySetupModeRepository
+import com.cbgm.securechat.feature.settings.data.datasource.registerPlatformSettingsStorage
+import com.cbgm.securechat.feature.settings.data.repository.ContactBlocklistRepositoryImpl
+import com.cbgm.securechat.feature.settings.data.repository.DirectIdentitySetupModeRepositoryImpl
 import com.cbgm.securechat.feature.settings.data.repository.LicencesRepositoryImpl
 import com.cbgm.securechat.feature.settings.data.repository.SettingsRepositoryImpl
-import com.cbgm.securechat.feature.settings.data.storage.registerPlatformSettingsStorage
 import com.cbgm.securechat.feature.settings.domain.repository.LicensesRepository
 import com.cbgm.securechat.feature.settings.domain.repository.SettingsRepository
+import com.cbgm.securechat.feature.settings.domain.usecase.ClearLocalDataUseCase
 import com.cbgm.securechat.feature.settings.domain.usecase.GetAppLanguageUseCase
 import com.cbgm.securechat.feature.settings.domain.usecase.GetBuildInfoUseCase
 import com.cbgm.securechat.feature.settings.domain.usecase.GetDeveloperEnabledUseCase
+import com.cbgm.securechat.feature.settings.domain.usecase.GetLicensesUseCase
 import com.cbgm.securechat.feature.settings.domain.usecase.InitAppLanguageUseCase
-import com.cbgm.securechat.feature.settings.domain.usecase.ObserveBlockUnknownContactInvites
-import com.cbgm.securechat.feature.settings.domain.usecase.ObserveBlockedContactIds
-import com.cbgm.securechat.feature.settings.domain.usecase.ObserveDirectIdentitySetupMode
+import com.cbgm.securechat.feature.settings.domain.usecase.ObserveBlockUnknownContactInvitesUseCase
+import com.cbgm.securechat.feature.settings.domain.usecase.ObserveBlockedContactIdsUseCase
+import com.cbgm.securechat.feature.settings.domain.usecase.ObserveDirectIdentitySetupModeUseCase
 import com.cbgm.securechat.feature.settings.domain.usecase.SetAppLanguageUseCase
-import com.cbgm.securechat.feature.settings.domain.usecase.SetBlockUnknownContactInvites
+import com.cbgm.securechat.feature.settings.domain.usecase.SetBlockUnknownContactInvitesUseCase
 import com.cbgm.securechat.feature.settings.domain.usecase.SetDeveloperEnabledUseCase
-import com.cbgm.securechat.feature.settings.domain.usecase.SetDirectIdentitySetupMode
-import com.cbgm.securechat.feature.settings.presentation.screen.DeveloperMenuViewModel
-import com.cbgm.securechat.feature.settings.presentation.screen.LicensesViewModel
-import com.cbgm.securechat.feature.settings.presentation.screen.SettingsViewModel
+import com.cbgm.securechat.feature.settings.domain.usecase.SetDirectIdentitySetupModeUseCase
+import com.cbgm.securechat.feature.settings.presentation.developer.DeveloperMenuViewModel
+import com.cbgm.securechat.feature.settings.presentation.disclaimer.DisclaimerViewModel
+import com.cbgm.securechat.feature.settings.presentation.licenses.LicensesViewModel
+import com.cbgm.securechat.feature.settings.presentation.network.ControlPlaneSettingsViewModel
+import com.cbgm.securechat.feature.settings.presentation.overview.SettingsViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
@@ -38,11 +42,11 @@ val settingsModule =
         }
 
         single<DirectIdentitySetupModeRepository> {
-            DefaultDirectIdentitySetupModeRepository(settingsStorage = get())
+            DirectIdentitySetupModeRepositoryImpl(settingsStorage = get())
         }
 
         single<ContactBlocklistRepository> {
-            DefaultContactBlocklistRepository(settingsStorage = get())
+            ContactBlocklistRepositoryImpl(settingsStorage = get())
         }
 
         single<LicensesRepository> {
@@ -74,24 +78,34 @@ val settingsModule =
         }
 
         factory {
-            ObserveDirectIdentitySetupMode(repository = get())
+            ObserveDirectIdentitySetupModeUseCase(repository = get())
         }
 
         factory {
-            SetDirectIdentitySetupMode(repository = get())
+            SetDirectIdentitySetupModeUseCase(repository = get())
         }
 
         factory {
-            ObserveBlockUnknownContactInvites(repository = get())
+            ObserveBlockUnknownContactInvitesUseCase(repository = get())
         }
 
         factory {
-            SetBlockUnknownContactInvites(repository = get())
+            SetBlockUnknownContactInvitesUseCase(repository = get())
         }
 
         factory {
-            ObserveBlockedContactIds(repository = get())
+            ObserveBlockedContactIdsUseCase(repository = get())
         }
+
+        factory {
+            ClearLocalDataUseCase(settingsRepository = get())
+        }
+
+        factory {
+            GetLicensesUseCase(repository = get())
+        }
+
+        viewModel { DisclaimerViewModel() }
 
         viewModel {
             SettingsViewModel(
@@ -109,10 +123,24 @@ val settingsModule =
         }
 
         viewModel {
-            DeveloperMenuViewModel(settingsRepository = get())
+            ControlPlaneSettingsViewModel(
+                configuration = get(),
+                statusStore = get(),
+                healthMonitor = get(),
+                directorySynchronizer = get()
+            )
         }
 
         viewModel {
-            LicensesViewModel(licensesRepository = get())
+            DeveloperMenuViewModel(
+                clearLocalDataUseCase = get(),
+                getBuildInfoUseCase = get(),
+                setDeveloperEnabledUseCase = get(),
+                transportDiagnosticsProvider = get()
+            )
+        }
+
+        viewModel {
+            LicensesViewModel(getLicenses = get())
         }
     }

@@ -6,25 +6,28 @@ import com.cbgm.securechat.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.securechat.core.protocol.identity.LocalSigningPublicKeyProvider
 import com.cbgm.securechat.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.securechat.core.protocol.phone.PhoneNumberNormalizer
-import com.cbgm.securechat.feature.identity.data.protocol.IdentityLocalEncryptionKeyPairProvider
-import com.cbgm.securechat.feature.identity.data.protocol.IdentityLocalPhoneNumberProvider
-import com.cbgm.securechat.feature.identity.data.protocol.IdentityLocalPublicIdentityProvider
-import com.cbgm.securechat.feature.identity.data.protocol.IdentityLocalSigningKeyPairProvider
-import com.cbgm.securechat.feature.identity.data.protocol.IdentityLocalSigningPublicKeyProvider
-import com.cbgm.securechat.feature.identity.data.repository.DefaultIdentityRepository
-import com.cbgm.securechat.feature.identity.data.sharing.DefaultIdentityShareCodec
+import com.cbgm.securechat.feature.identity.data.provider.IdentityLocalEncryptionKeyPairProvider
+import com.cbgm.securechat.feature.identity.data.provider.IdentityLocalPhoneNumberProvider
+import com.cbgm.securechat.feature.identity.data.provider.IdentityLocalPublicIdentityProvider
+import com.cbgm.securechat.feature.identity.data.provider.IdentityLocalSigningKeyPairProvider
+import com.cbgm.securechat.feature.identity.data.provider.IdentityLocalSigningPublicKeyProvider
+import com.cbgm.securechat.feature.identity.data.repository.IdentityRepositoryImpl
+import com.cbgm.securechat.feature.identity.data.repository.IdentityShareRepositoryImpl
 import com.cbgm.securechat.feature.identity.domain.repository.IdentityRepository
-import com.cbgm.securechat.feature.identity.domain.repository.storage.LocalPhoneNameStorage
-import com.cbgm.securechat.feature.identity.domain.service.IdentityShareCodec
-import com.cbgm.securechat.feature.identity.domain.usecase.CreateIdentity
-import com.cbgm.securechat.feature.identity.domain.usecase.CreateSharedIdentity
-import com.cbgm.securechat.feature.identity.domain.usecase.GetIdentityStatus
-import com.cbgm.securechat.feature.identity.domain.usecase.GetLocalPhoneNumber
-import com.cbgm.securechat.feature.identity.domain.usecase.GetPublicIdentity
-import com.cbgm.securechat.feature.identity.domain.usecase.NormalizeLocalPhoneNumber
-import com.cbgm.securechat.feature.identity.domain.usecase.SaveLocalPhoneName
-import com.cbgm.securechat.feature.identity.presentation.screen.IdentityViewModel
-import com.cbgm.securechat.feature.identity.presentation.screen.ShareIdentityViewModel
+import com.cbgm.securechat.feature.identity.domain.repository.IdentityShareRepository
+import com.cbgm.securechat.feature.identity.domain.repository.LocalIdentityProfileRepository
+import com.cbgm.securechat.feature.identity.domain.usecase.CreateIdentityUseCase
+import com.cbgm.securechat.feature.identity.domain.usecase.CreateSharedIdentityUseCase
+import com.cbgm.securechat.feature.identity.domain.usecase.DecodeSharedIdentityUseCase
+import com.cbgm.securechat.feature.identity.domain.usecase.GetIdentityStatusUseCase
+import com.cbgm.securechat.feature.identity.domain.usecase.GetLocalPhoneNumberUseCase
+import com.cbgm.securechat.feature.identity.domain.usecase.GetPublicIdentityUseCase
+import com.cbgm.securechat.feature.identity.domain.usecase.NormalizeLocalPhoneNumberUseCase
+import com.cbgm.securechat.feature.identity.domain.usecase.ObserveLocalIdentityReadyUseCase
+import com.cbgm.securechat.feature.identity.domain.usecase.RecoverIncompleteIdentityUseCase
+import com.cbgm.securechat.feature.identity.domain.usecase.SaveLocalPhoneNameUseCase
+import com.cbgm.securechat.feature.identity.presentation.setup.IdentityViewModel
+import com.cbgm.securechat.feature.identity.presentation.share.ShareIdentityViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
@@ -32,40 +35,55 @@ val identityModule =
     module {
 
         single<IdentityRepository> {
-            DefaultIdentityRepository(
+            IdentityRepositoryImpl(
                 identityKeyGenerator = get(),
+                signatureCrypto = get(),
                 privateKeyStorage = get(),
                 publicIdentityStorage = get()
             )
         }
 
         single {
-            CreateIdentity(repository = get<IdentityRepository>())
+            CreateIdentityUseCase(repository = get<IdentityRepository>())
         }
 
         single {
-            GetIdentityStatus(repository = get<IdentityRepository>())
+            GetIdentityStatusUseCase(repository = get<IdentityRepository>())
         }
 
         single {
-            GetPublicIdentity(repository = get<IdentityRepository>())
+            RecoverIncompleteIdentityUseCase(
+                identityRepository = get<IdentityRepository>(),
+                localIdentityChangeHandler = get()
+            )
         }
 
         single {
-            GetLocalPhoneNumber(localPhoneNameStorage = get<LocalPhoneNameStorage>())
+            GetPublicIdentityUseCase(repository = get<IdentityRepository>())
         }
 
         single {
-            NormalizeLocalPhoneNumber(phoneNumberNormalizer = get<PhoneNumberNormalizer>())
+            GetLocalPhoneNumberUseCase(localIdentityProfileRepository = get<LocalIdentityProfileRepository>())
+        }
+
+        factory {
+            ObserveLocalIdentityReadyUseCase(
+                identityRepository = get(),
+                localIdentityProfileRepository = get()
+            )
         }
 
         single {
-            SaveLocalPhoneName(localPhoneNameStorage = get<LocalPhoneNameStorage>())
+            NormalizeLocalPhoneNumberUseCase(phoneNumberNormalizer = get<PhoneNumberNormalizer>())
+        }
+
+        single {
+            SaveLocalPhoneNameUseCase(localIdentityProfileRepository = get<LocalIdentityProfileRepository>())
         }
 
         single<LocalPhoneNumberProvider> {
             IdentityLocalPhoneNumberProvider(
-                localPhoneNameStorage = get<LocalPhoneNameStorage>(),
+                localIdentityProfileRepository = get<LocalIdentityProfileRepository>(),
                 phoneNumberNormalizer = get<PhoneNumberNormalizer>()
             )
         }
@@ -86,33 +104,37 @@ val identityModule =
             IdentityLocalSigningPublicKeyProvider(identityRepository = get<IdentityRepository>())
         }
 
-        single<IdentityShareCodec> {
-            DefaultIdentityShareCodec()
+        single<IdentityShareRepository> {
+            IdentityShareRepositoryImpl()
         }
 
         factory {
-            CreateSharedIdentity(
-                getPublicIdentity = get<GetPublicIdentity>(),
-                localPhoneNameStorage = get<LocalPhoneNameStorage>(),
+            DecodeSharedIdentityUseCase(identityShareRepository = get<IdentityShareRepository>())
+        }
+
+        factory {
+            CreateSharedIdentityUseCase(
+                getPublicIdentity = get<GetPublicIdentityUseCase>(),
+                localIdentityProfileRepository = get<LocalIdentityProfileRepository>(),
                 phoneNumberNormalizer = get<PhoneNumberNormalizer>(),
-                identityShareCodec = get<IdentityShareCodec>()
+                identityShareRepository = get<IdentityShareRepository>()
             )
         }
 
         viewModel {
             IdentityViewModel(
-                getIdentityStatus = get<GetIdentityStatus>(),
-                getPublicIdentity = get<GetPublicIdentity>(),
-                createIdentity = get<CreateIdentity>(),
-                getLocalPhoneNumber = get<GetLocalPhoneNumber>(),
-                normalizeLocalPhoneNumber = get<NormalizeLocalPhoneNumber>(),
-                saveLocalPhoneName = get<SaveLocalPhoneName>()
+                getIdentityStatus = get<GetIdentityStatusUseCase>(),
+                getPublicIdentity = get<GetPublicIdentityUseCase>(),
+                createIdentity = get<CreateIdentityUseCase>(),
+                getLocalPhoneNumber = get<GetLocalPhoneNumberUseCase>(),
+                normalizeLocalPhoneNumber = get<NormalizeLocalPhoneNumberUseCase>(),
+                saveLocalPhoneName = get<SaveLocalPhoneNameUseCase>()
             )
         }
 
         viewModel {
             ShareIdentityViewModel(
-                createSharedIdentity = get<CreateSharedIdentity>()
+                createSharedIdentity = get<CreateSharedIdentityUseCase>()
             )
         }
     }

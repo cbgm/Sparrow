@@ -6,20 +6,20 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import com.cbgm.securechat.core.protocol.phone.DefaultPhoneNumberNormalizer
 import com.cbgm.securechat.data.database.SecureChatDatabase
-import com.cbgm.securechat.feature.contactimport.domain.usecase.ImportSharedIdentity
-import com.cbgm.securechat.feature.contacts.data.merge.DefaultContactMergeService
-import com.cbgm.securechat.feature.contacts.data.repository.DefaultContactKeyExchangeStore
-import com.cbgm.securechat.feature.contacts.data.repository.DefaultContactRepository
-import com.cbgm.securechat.feature.contacts.domain.device.AddDeviceContactRequest
-import com.cbgm.securechat.feature.contacts.domain.device.AddDeviceContactResult
-import com.cbgm.securechat.feature.contacts.domain.device.DeviceContactWriter
-import com.cbgm.securechat.feature.contacts.domain.identity.IdentityExchangeStarter
+import com.cbgm.securechat.feature.contactimport.domain.usecase.ImportSharedIdentityUseCase
+import com.cbgm.securechat.feature.contacts.data.merge.ContactMergeServiceImpl
+import com.cbgm.securechat.feature.contacts.data.repository.ContactKeyExchangeRepositoryImpl
+import com.cbgm.securechat.feature.contacts.data.repository.ContactRepositoryImpl
 import com.cbgm.securechat.feature.contacts.domain.model.ContactPhoneNumberType
 import com.cbgm.securechat.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.securechat.feature.contacts.domain.model.ImportDeviceContactRequest
 import com.cbgm.securechat.feature.contacts.domain.model.ImportDevicePhoneNumber
-import com.cbgm.securechat.feature.contacts.domain.usecase.ImportContact
-import com.cbgm.securechat.feature.identity.data.sharing.DefaultIdentityShareCodec
+import com.cbgm.securechat.feature.contacts.domain.model.device.AddDeviceContactRequest
+import com.cbgm.securechat.feature.contacts.domain.model.device.AddDeviceContactResult
+import com.cbgm.securechat.feature.contacts.domain.repository.DeviceContactWriterRepository
+import com.cbgm.securechat.feature.contacts.domain.repository.IdentityExchangeRepository
+import com.cbgm.securechat.feature.contacts.domain.usecase.ImportContactUseCase
+import com.cbgm.securechat.feature.identity.data.repository.IdentityShareRepositoryImpl
 import com.cbgm.securechat.feature.identity.domain.model.SharedContactDetails
 import com.cbgm.securechat.feature.identity.domain.model.SharedIdentityPayload
 import kotlinx.coroutines.Dispatchers
@@ -35,9 +35,9 @@ import kotlin.test.assertTrue
 
 class ImportSharedIdentityIntegrationTest {
     private lateinit var database: SecureChatDatabase
-    private lateinit var contactRepository: DefaultContactRepository
-    private lateinit var importSharedIdentity: ImportSharedIdentity
-    private val identityShareCodec = DefaultIdentityShareCodec()
+    private lateinit var contactRepository: ContactRepositoryImpl
+    private lateinit var importSharedIdentity: ImportSharedIdentityUseCase
+    private val identityShareRepository = IdentityShareRepositoryImpl()
 
     @BeforeTest
     fun setUp() {
@@ -54,23 +54,23 @@ class ImportSharedIdentityIntegrationTest {
         val phoneNumberNormalizer = DefaultPhoneNumberNormalizer()
 
         contactRepository =
-            DefaultContactRepository(
+            ContactRepositoryImpl(
                 contactDao = contactDao,
                 mergeService =
-                    DefaultContactMergeService(
+                    ContactMergeServiceImpl(
                         contactDao = contactDao,
                         phoneNumberNormalizer = phoneNumberNormalizer
                     ),
-                contactKeyExchangeStore = DefaultContactKeyExchangeStore(contactDao),
-                identityExchangeStarter = TestIdentityExchangeStarter,
+                contactKeyExchangeRepository = ContactKeyExchangeRepositoryImpl(contactDao),
+                identityExchangeRepository = TestIdentityExchangeRepository,
                 phoneNumberNormalizer = phoneNumberNormalizer,
-                deviceContactWriter = TestDeviceContactWriter
+                deviceContactWriterRepository = TestDeviceContactWriterRepository
             )
 
         importSharedIdentity =
-            ImportSharedIdentity(
-                identityShareCodec = identityShareCodec,
-                importContact = ImportContact(contactRepository)
+            ImportSharedIdentityUseCase(
+                identityShareRepository = identityShareRepository,
+                importContact = ImportContactUseCase(contactRepository)
             )
     }
 
@@ -173,7 +173,7 @@ class ImportSharedIdentityIntegrationTest {
         displayName: String?,
         phoneNumber: String
     ): String =
-        identityShareCodec
+        identityShareRepository
             .encode(
                 SharedIdentityPayload(
                     version = 1,
@@ -193,13 +193,13 @@ class ImportSharedIdentityIntegrationTest {
         }
 }
 
-private object TestIdentityExchangeStarter : IdentityExchangeStarter {
+private object TestIdentityExchangeRepository : IdentityExchangeRepository {
     override suspend fun ensureStarted(contactId: String): Result<Unit> = Result.success(Unit)
 
     override suspend fun startManualExchange(contactId: String): Result<Unit> = Result.success(Unit)
 }
 
-private object TestDeviceContactWriter : DeviceContactWriter {
+private object TestDeviceContactWriterRepository : DeviceContactWriterRepository {
     override suspend fun addIfNotExists(
         request: AddDeviceContactRequest
     ): AddDeviceContactResult = AddDeviceContactResult.AlreadyExists

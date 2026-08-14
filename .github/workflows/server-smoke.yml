@@ -1,0 +1,94 @@
+name: Server Smoke Test
+
+on:
+  pull_request:
+    branches: [ "develop" ]
+    paths:
+      - "server/**"
+      - "build-logic/**"
+      - "gradle/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradlew"
+      - "gradlew.bat"
+      - ".github/workflows/server-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: server-smoke-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  two-node-smoke:
+    name: Two-Node Server Smoke Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      COMPOSE_PARALLEL_LIMIT: "1"
+      DOCKER_BUILDKIT: "1"
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Show Docker Versions
+        run: |
+          docker version
+          docker compose version
+
+      - name: Create Disabled Firebase Credential
+        shell: bash
+        run: |
+          credential_path="$RUNNER_TEMP/securechat-firebase-admin.json"
+          printf '{}\n' > "$credential_path"
+          chmod 644 "$credential_path"
+          echo "FIREBASE_ADMIN_CREDENTIALS=$credential_path" >> "$GITHUB_ENV"
+
+      - name: Build and Test Two-Node Network
+        shell: pwsh
+        run: |
+          ./server/scripts/Test-SecureChatNetwork.ps1 `
+              -MultiNode `
+              -Start `
+              -BuildImages `
+              -ExpectedNodes 2 `
+              -ExpectedMailboxCountA 0 `
+              -ExpectedMailboxCountB 0 `
+              -ExpectedPushDevices 0 `
+              -TimeoutSeconds 240
+
+      - name: Capture Compose Diagnostics
+        if: failure()
+        shell: bash
+        run: |
+          docker compose \
+            -f server/docker-compose.yml \
+            -f server/docker-compose.multinode.yml \
+            ps --all > server-compose-state.txt || true
+          docker compose \
+            -f server/docker-compose.yml \
+            -f server/docker-compose.multinode.yml \
+            logs --no-color --timestamps > server-compose.log 2>&1 || true
+
+      - name: Upload Compose Diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-smoke-diagnostics
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            server-compose-state.txt
+            server-compose.log
+
+      - name: Stop Two-Node Network
+        if: always()
+        shell: bash
+        run: |
+          docker compose \
+            -f server/docker-compose.yml \
+            -f server/docker-compose.multinode.yml \
+            down --volumes --remove-orphans || true

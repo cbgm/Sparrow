@@ -1,374 +1,246 @@
-# Release Process
+# Release process
 
-## Overview
+SecureChat has release automation configured, but **no official tagged full release has been published yet**.
+This page describes the workflow that will create the first and later releases.
 
-This document describes the recommended release workflow for SecureChat.
+## Branches
 
-The objective is to produce releases that are
+Normal development:
 
-- reproducible
-- well tested
-- fully documented
-- easy to audit
-- easy to roll back if necessary
-
-The release process intentionally follows the same engineering principles used during normal development.
-
----
-
-# Release Goals
-
-Every release should satisfy the following requirements.
-
-- Successful build
-- Passing test suite
-- Passing quality verification
-- Updated generated documentation
-- Version information updated
-- Tagged source code
-
-No release should bypass the normal quality pipeline.
-
----
-
-# Release Workflow
-
-The complete release process is
-
-```
-Development
-
-↓
-
-Feature Complete
-
-↓
-
-Code Freeze
-
-↓
-
-Quality
-
-↓
-
-Tests
-
-↓
-
-Architecture Report
-
-↓
-
-Release Build
-
-↓
-
-Tag
-
-↓
-
-Publish
+```text
+feature/* -> PR -> develop -> master
 ```
 
-Each step should complete successfully before continuing.
+Create a release line from `master`:
 
----
-
-# Code Freeze
-
-Before creating a release
-
-- stop feature development
-- stabilize the branch
-- review open issues
-- resolve known blockers
-
-Only release-critical fixes should be merged after the freeze begins.
-
----
-
-# Version Update
-
-Update the application version.
-
-Typical versioning follows
-
-```
-Major.Minor.Patch
+```text
+release/0.1
+release/0.2
+release/1.0
 ```
 
-Examples
+Do not use `master/release/...`; Git refs cannot coexist with a `master` branch in that shape.
 
+## Repository variables
+
+Configure in GitHub Actions **Variables**:
+
+```text
+CONTROL_PLANE_DIRECTORY_URL
+CONTROL_PLANE_RELEASE_DIRECTORY_URL
 ```
-1.0.0
 
-1.1.0
+The debug APK uses `CONTROL_PLANE_DIRECTORY_URL`. The signed release APK uses
+`CONTROL_PLANE_RELEASE_DIRECTORY_URL`. Both are written into CI `local.properties` as:
 
-1.1.1
-
-2.0.0
+```properties
+controlPlaneDirectoryUrl=...
 ```
 
-Version changes should be committed separately from feature work whenever practical.
+and become common KMP `BuildKonfig.CONTROL_PLANE_DIRECTORY_URL`.
 
----
+## Android signing secrets
 
-# Quality Verification
+Configure GitHub Actions **Secrets**:
 
-Execute
+```text
+ANDROID_RELEASE_KEYSTORE_BASE64
+ANDROID_RELEASE_KEYSTORE_PASSWORD
+ANDROID_RELEASE_KEY_ALIAS
+ANDROID_RELEASE_KEY_PASSWORD
+```
+
+`ANDROID_RELEASE_KEYSTORE_BASE64` is the Base64-encoded `.jks` file, not a password. Keep the original keystore in
+a secure backup; losing the signing key prevents future APKs from being installed as updates to the same app.
+
+Example key creation in Windows CMD:
+
+```cmd
+keytool -genkeypair -keystore sparrow-release.jks -alias sparrow -keyalg RSA -keysize 4096 -validity 10000
+```
+
+The key password and keystore password may be the same if desired.
+
+Convert the keystore to Base64 for GitHub. Windows PowerShell:
+
+```powershell
+[Convert]::ToBase64String(
+    [IO.File]::ReadAllBytes("sparrow-release.jks")
+) | Set-Content "sparrow-release-keystore-base64.txt"
+```
+
+macOS/Linux:
 
 ```bash
-./gradlew quality
+base64 < sparrow-release.jks > sparrow-release-keystore-base64.txt
 ```
 
-This performs
+Paste that file's contents into `ANDROID_RELEASE_KEYSTORE_BASE64`. The other three secrets contain the actual
+keystore password, alias and key password. Back up the original `.jks` offline; do not commit it.
 
-- formatting
-- static analysis
-- architecture validation
-- generated documentation verification
+## Create a release branch
 
-A release should never proceed while quality checks fail.
-
----
-
-# Test Execution
-
-Run the complete test suite.
+When `master` is ready to stabilize a release line:
 
 ```bash
-./gradlew test
+git switch master
+git pull
+git switch -c release/0.1
+git push -u origin release/0.1
 ```
 
-Verify
+Every later push to that branch creates/updates release-candidate artifacts according to the changed files below.
+It does **not** publish the official GitHub Release yet.
 
-- unit tests
-- integration tests
-- build-logic tests
+## Every push to `release/**`
 
-Any failing test blocks the release.
+`.github/scripts/resolve-release-changes.sh` classifies the diff.
 
----
+| Changed files | Artifacts |
+|---|---|
+| client/shared/features/resources | debug APK + signed release APK |
+| `server/node-registry/**` | node-registry image + Control Plane bundle |
+| `server/presence-directory/**` | presence image + Control Plane bundle |
+| `server/push/**` | push image + Control Plane bundle |
+| `server/gateway/**` | gateway image + Community Node bundle |
+| `server/federation/**` | federation image + Community Node bundle |
+| `server/mailbox/**` | mailbox image + Community Node bundle |
+| shared server protocol/security/persistence/observability | all server images + both bundles |
+| Control Plane launcher/Caddy/compose only | Control Plane bundle only |
+| Community Node launcher/Caddy/compose only | Community Node bundle only |
+| docs only | validation only; no distributable artifact |
+| build/release infrastructure | conservative full artifact build |
 
-# Architecture Documentation
+The first push of a new release line has no useful previous release-line SHA and therefore bootstraps a full build.
 
-Generate fresh documentation.
+Unchanged server images are not unnecessarily rebuilt. The workflow can copy existing image manifests to the new
+immutable candidate tag so a launcher bundle still references one reproducible tag across all services.
+
+## Candidate versions
+
+A branch such as `release/0.1` produces versions similar to:
+
+```text
+0.1-rc.<github-run-number>-<short-sha>
+```
+
+and immutable image tags similar to:
+
+```text
+release-0-1-sha-<short-sha>
+```
+
+A moving `release-0-1` image tag represents the current release line; immutable candidate tags preserve exact
+candidate contents.
+
+## What builds in common examples
+
+App-only change (`feature/chats/**`, `shared/**`, etc.):
+
+```text
+✓ debug APK
+✓ signed release APK
+✗ server image rebuilds
+✗ unrelated launcher bundles
+```
+
+Push-service-only change:
+
+```text
+✓ push image
+✓ Control Plane bundle that references the new candidate tag
+✗ Android APKs
+✗ Community Node bundle
+```
+
+Community Node Caddy/launcher-only change:
+
+```text
+✓ Community Node bundle
+✗ gateway/federation/mailbox image rebuilds
+✗ Android APKs
+```
+
+A shared server-security/protocol change conservatively rebuilds all server images and both server bundles.
+
+## Tagging a full release
+
+Tag an exact commit that belongs to a `release/**` branch:
 
 ```bash
-./gradlew architectureReport
+git tag v0.1.0-alpha.1
+git push origin v0.1.0-alpha.1
 ```
 
-Review generated files before committing them.
+Stable format also works:
 
-Commit documentation changes if the project structure has changed.
-
----
-
-# Dependency Review
-
-Review recently added dependencies.
-
-Verify
-
-- actively maintained
-- compatible licenses
-- required versions
-- security updates
-
-Remove unused dependencies before releasing.
-
----
-
-# Build
-
-Create a clean release build.
-
-```bash
-./gradlew clean build
+```text
+v0.1.0
 ```
 
-A release build should always start from a clean state.
+A `v*` tag **forces a complete build**, regardless of change detection:
 
----
+- debug APK;
+- signed release APK;
+- all server images;
+- Control Plane launcher package;
+- Community Node Windows package;
+- Community Node macOS/Linux package;
+- checksums and release metadata;
+- combined full ZIP;
+- GitHub Release/Pre-Release.
 
-# Release Checklist
+Tags with a suffix such as `-alpha.1` are published as prereleases. A plain semantic version is published as a
+normal release. The workflow verifies that the tagged commit belongs to a `release/**` branch; do not tag an arbitrary
+feature/develop/master commit and expect it to publish.
 
-Before publishing verify
+After the workflow succeeds, open the repository's **Releases** page. GitHub shows the individual assets plus the
+combined full ZIP. GitHub also adds its normal source-code ZIP/tarball automatically; those source archives are not the
+same thing as SecureChat's packaged `securechat-<version>-full.zip`.
 
-- Build successful
-- Tests passing
-- Quality passing
-- Documentation updated
-- Version updated
-- Changelog updated
-- Generated documentation committed
+## Full ZIP
 
----
+The GitHub release includes individual assets and:
 
-# Tagging
-
-After verification create a Git tag.
-
-Example
-
-```bash
-git tag v1.0.0
+```text
+securechat-<version>-full.zip
 ```
 
-Push the tag.
+Conceptually:
 
-```bash
-git push origin v1.0.0
+```text
+SecureChat-<version>/
+├── app/
+│   ├── securechat-<version>-debug.apk
+│   └── securechat-<version>-release.apk
+├── control-plane/
+│   └── securechat-control-plane-<version>-windows.zip
+├── community-node/
+│   ├── securechat-community-node-<version>-windows.zip
+│   └── securechat-community-node-<version>-macos-linux.tar.gz
+├── RELEASE.txt
+├── MANIFEST.txt
+└── SHA256SUMS.txt
 ```
 
-Tags provide an immutable reference for every released version.
+The outer GitHub release also has checksums including the full ZIP itself.
 
----
+## Release APK optimization
 
-# Changelog
+Release builds use:
 
-Every release should include a changelog.
-
-Typical sections
-
-- Added
-- Changed
-- Fixed
-- Removed
-- Security
-
-The changelog should describe user-visible changes rather than implementation details.
-
----
-
-# Continuous Integration
-
-CI should execute the same verification as local development.
-
-Typical pipeline
-
-```
-Checkout
-
-↓
-
-Build
-
-↓
-
-Tests
-
-↓
-
-Quality
-
-↓
-
-Architecture Verification
-
-↓
-
-Package
+```text
+R8 minification = enabled
+resource shrinking = enabled
+optimized default ProGuard configuration
 ```
 
-A release should never rely on checks that are not executed locally.
+Debug builds remain unminified.
 
----
+`mapping.txt` is uploaded as a private GitHub Actions artifact for 90 days so obfuscated stack traces can be
+de-obfuscated. It is deliberately not published in the public release/full ZIP.
 
-# Rollback
+## Docker images and launcher packages
 
-If a release issue is discovered
-
-1. identify the affected version
-2. fix the issue on a dedicated branch
-3. create a patch release
-4. publish a new version
-
-Avoid modifying existing release tags.
-
----
-
-# Hotfix Releases
-
-Critical production issues may require a hotfix.
-
-Recommended flow
-
-```
-Release Tag
-
-↓
-
-Hotfix Branch
-
-↓
-
-Fix
-
-↓
-
-Quality
-
-↓
-
-Tests
-
-↓
-
-Patch Release
-```
-
-Hotfixes should remain as small as possible.
-
----
-
-# Documentation
-
-Documentation should always match the released source code.
-
-If architecture changes occur during a release cycle
-
-```bash
-./gradlew architectureReport
-```
-
-should be executed before publishing.
-
-Generated documentation is considered part of the release artifact.
-
----
-
-# Security Review
-
-Before major releases review
-
-- cryptographic changes
-- protocol modifications
-- identity management
-- dependency updates
-- transport implementation
-
-Security-sensitive changes deserve additional attention.
-
----
-
-# Post Release
-
-After publishing
-
-- verify CI artifacts
-- verify release tag
-- update project roadmap
-- reopen feature development
-- create the next development version
-
----
-
-# Summary
-
-The SecureChat release process emphasizes repeatability and verification.
-
-Every release should pass the complete quality pipeline, include current generated documentation and be reproducible from the tagged source code.
-
-Following this workflow helps ensure that releases remain stable, traceable and easy to maintain.
+Launcher bundles contain Compose/Caddy/config/launcher files, not six duplicated server binaries. They pull the
+versioned images from GHCR. Full release tags therefore bind launcher packages to exact server image versions.

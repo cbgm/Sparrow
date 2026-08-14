@@ -7,16 +7,16 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cbgm.securechat.feature.identity.presentation.model.IdentityUiState
 import com.cbgm.securechat.feature.identity.presentation.platform.PhoneNumberHintLauncher
 import com.cbgm.securechat.feature.identity.presentation.platform.PhoneNumberHintResult
-import com.cbgm.securechat.feature.identity.presentation.screen.IdentityViewModel
-import com.cbgm.securechat.feature.onboarding.platform.AutomaticPhoneNumberReader
-import com.cbgm.securechat.feature.onboarding.platform.AutomaticPhoneNumberResult
-import com.cbgm.securechat.feature.onboarding.platform.OnboardingPermissionRequester
+import com.cbgm.securechat.feature.identity.presentation.setup.IdentityViewModel
+import com.cbgm.securechat.feature.identity.presentation.setup.model.IdentityUiEvent
+import com.cbgm.securechat.feature.identity.presentation.setup.model.IdentityUiState
+import com.cbgm.securechat.feature.onboarding.device.AutomaticPhoneNumberReader
+import com.cbgm.securechat.feature.onboarding.device.AutomaticPhoneNumberResult
+import com.cbgm.securechat.feature.onboarding.device.OnboardingPermissionRequester
 import com.cbgm.securechat.feature.onboarding.presentation.model.OnboardingPage
-import com.cbgm.securechat.feature.onboarding.presentation.screen.OnboardingScreen
-import com.cbgm.securechat.feature.onboarding.presentation.screen.OnboardingViewModel
+import com.cbgm.securechat.feature.onboarding.presentation.model.OnboardingUiEvent
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -38,13 +38,7 @@ fun OnboardingRoute(
         requestId = state.automaticPhoneRequestId,
         enabled = state.page == OnboardingPage.PHONE && state.phonePermissionGranted,
         onResult = { result ->
-            when (result) {
-                is AutomaticPhoneNumberResult.Found ->
-                    identityViewModel.onSuggestedPhoneNumber(result.phoneNumber)
-                AutomaticPhoneNumberResult.Unavailable -> Unit
-                is AutomaticPhoneNumberResult.Failed ->
-                    identityViewModel.onPhoneNumberHintFailed(result.message)
-            }
+            handleAutomaticPhoneNumberResult(result, identityViewModel)
         }
     )
 
@@ -52,15 +46,7 @@ fun OnboardingRoute(
         requestId = hintRequestId,
         enabled = state.page == OnboardingPage.PHONE,
         onResult = { result ->
-            when (result) {
-                is PhoneNumberHintResult.Selected ->
-                    identityViewModel.onSuggestedPhoneNumber(result.phoneNumber)
-                PhoneNumberHintResult.Unavailable ->
-                    identityViewModel.onPhoneNumberHintUnavailable()
-                PhoneNumberHintResult.Cancelled -> Unit
-                is PhoneNumberHintResult.Failed ->
-                    identityViewModel.onPhoneNumberHintFailed(result.message)
-            }
+            handlePhoneNumberHintResult(result, identityViewModel)
         }
     )
 
@@ -75,12 +61,54 @@ fun OnboardingRoute(
     OnboardingScreen(
         state = state,
         identityState = identityState,
-        onNext = viewModel::next,
-        onRequestPermissions = viewModel::requestPermissions,
-        onChooseAnotherNumber = { hintRequestId += 1 },
-        onRetryAutomaticNumber = viewModel::retryAutomaticPhoneNumber,
-        onPhoneNumberChanged = identityViewModel::onPhoneNumberChanged,
-        onApproveAndCreate = identityViewModel::createNewIdentity,
-        onNameChanged = identityViewModel::onNameChanged
+        onUiEvent = { event ->
+            handleOnboardingUiEvent(
+                event = event,
+                viewModel = viewModel,
+                identityViewModel = identityViewModel,
+                onChooseAnotherNumber = { hintRequestId += 1 }
+            )
+        }
     )
+}
+
+private fun handleOnboardingUiEvent(
+    event: OnboardingUiEvent,
+    viewModel: OnboardingViewModel,
+    identityViewModel: IdentityViewModel,
+    onChooseAnotherNumber: () -> Unit
+) {
+    when (event) {
+        OnboardingUiEvent.ChooseAnotherNumberClicked -> onChooseAnotherNumber()
+        is OnboardingUiEvent.PhoneNumberChanged ->
+            identityViewModel.onUiEvent(IdentityUiEvent.PhoneNumberChanged(event.value))
+        is OnboardingUiEvent.NameChanged ->
+            identityViewModel.onUiEvent(IdentityUiEvent.NameChanged(event.value))
+        OnboardingUiEvent.ApproveAndCreateClicked ->
+            identityViewModel.onUiEvent(IdentityUiEvent.CreateIdentityClicked)
+        else -> viewModel.onUiEvent(event)
+    }
+}
+
+private fun handleAutomaticPhoneNumberResult(
+    result: AutomaticPhoneNumberResult,
+    identityViewModel: IdentityViewModel
+) {
+    when (result) {
+        is AutomaticPhoneNumberResult.Found -> identityViewModel.onSuggestedPhoneNumber(result.phoneNumber)
+        AutomaticPhoneNumberResult.Unavailable -> Unit
+        is AutomaticPhoneNumberResult.Failed -> identityViewModel.onPhoneNumberHintFailed(result.message)
+    }
+}
+
+private fun handlePhoneNumberHintResult(
+    result: PhoneNumberHintResult,
+    identityViewModel: IdentityViewModel
+) {
+    when (result) {
+        is PhoneNumberHintResult.Selected -> identityViewModel.onSuggestedPhoneNumber(result.phoneNumber)
+        PhoneNumberHintResult.Unavailable -> identityViewModel.onPhoneNumberHintUnavailable()
+        PhoneNumberHintResult.Cancelled -> Unit
+        is PhoneNumberHintResult.Failed -> identityViewModel.onPhoneNumberHintFailed(result.message)
+    }
 }

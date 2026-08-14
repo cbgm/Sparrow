@@ -1,169 +1,100 @@
-# Transport
+# Transport and failover
 
-`:feature:transport` owns relay and WebSocket mechanics. It does not own conversations, contacts,
-message delivery rules, crypto policy, or persistent outbox orchestration.
+`:feature:transport` is responsible for getting opaque application payloads to/from the server edge. It does not own Direct/Group conversation rules.
 
-For the complete direct and group application flow, see
-[Conversation, Messaging, and Delivery Flow](message-transport-flow.md).
-
-## Boundary
-
-| Transport owns | Owned elsewhere |
-|---|---|
-| Ktor `HttpClient` creation | Packet definitions in `:core:protocol` |
-| Relay JSON and frame models | Encryption and payload codec in `:core:crypto` |
-| Local and remote relay IDs | Contact-to-relay mapping in `:feature:messaging` |
-| WebSocket registration and frames | Persistent outbox in `:data:database` |
-| Connection state and reconnect loop | Send/receive orchestration in `:feature:messaging` |
-| `OutgoingWireSender` implementation | Message and receipt behavior in `:feature:chats` |
-
-The payload of `RelayEnvelope` is opaque to this module.
-
-## Package map
-
-```text
-feature/transport/.../feature/transport/
-├── connection/
-│   ├── RelayConnectionManager.kt
-│   ├── DefaultRelayConnectionManager.kt
-│   └── TransportConnectionState.kt
-├── relay/
-│   ├── codec/RelayJson.kt
-│   ├── config/RelayTransportConfig.kt
-│   ├── identity/
-│   │   ├── LocalRelayIdProvider.kt
-│   │   ├── DefaultLocalRelayIdProvider.kt
-│   │   ├── RelayIdGenerator.kt
-│   │   └── Sha256RelayIdGenerator.kt
-│   └── model/
-│       ├── RelayClientMessage.kt
-│       ├── RelayEnvelope.kt
-│       ├── RelayServerMessage.kt
-│       └── RelayTypingEvent.kt
-├── sender/
-│   └── WebSocketOutgoingWireSender.kt
-├── websocket/
-│   ├── WebsocketTransportClient.kt
-│   ├── DefaultWebSocketTransportClient.kt
-│   └── platform HTTP-client implementations
-└── di/TransportModule.kt
-```
-
-The interface filename is currently `WebsocketTransportClient.kt`; the declared interface is
-`WebSocketTransportClient`.
-
-## Connection lifecycle
-
-`DefaultRelayConnectionManager` implements `RelayConnectionManager`. It:
-
-1. gets the local relay ID from `LocalRelayIdProvider`;
-2. calls `WebSocketTransportClient.connect(serverUrl, localRelayId)`;
-3. waits up to 15 seconds for `Connected` or `Failed`;
-4. stays suspended while a connected session remains active;
-5. disconnects the old session after failure or closure;
-6. reconnects with exponential backoff from one to 30 seconds.
-
-The observable states are:
+## Discovery chain
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Disconnected
-    Disconnected --> Connecting: connect
-    Connecting --> Connected: Registered
-    Connecting --> Failed: timeout or error
-    Connected --> Disconnected: normal close
-    Connected --> Failed: connection error
-    Failed --> Connecting: reconnect
+flowchart LR
+    BK[BuildKonfig.CONTROL_PLANE_DIRECTORY_URL]
+    DS[HttpControlPlaneDirectorySynchronizer]
+    CP[verified Control Planes]
+    ND[NodeDirectorySource / verifier]
+    ER[DefaultNodeEndpointResolver]
+    CM[DefaultTransportConnectionManager]
+    WS[DefaultWebSocketTransportClient]
+
+    BK --> DS --> CP --> ND --> ER --> CM --> WS
 ```
 
-`DefaultWebSocketTransportClient` owns the active Ktor session and publishes its state as a
-`StateFlow<TransportConnectionState>`.
+`AppViewModel` synchronizes the configured directory during startup. The directory response body is read as raw text and decoded as JSON, so `text/plain` and `application/json` both work.
 
-## Registration
+The directory format is:
 
-After opening the socket, `DefaultWebSocketTransportClient` sends
-`RelayClientMessage.Register(localRelayId)`. It changes to `Connected` only after receiving a
-matching `RelayServerMessage.Registered`. A different returned relay ID changes the state to
-`Failed`.
-
-## Outgoing envelopes
-
-`WebSocketOutgoingWireSender` implements the `OutgoingWireSender` port declared by
-`:core:protocol`.
-
-It:
-
-1. validates the relay recipient and payload;
-2. obtains the local relay ID;
-3. creates a version-1 `RelayEnvelope` with a new `envelopeId`;
-4. calls `sendEnvelopeAndAwaitAcceptance()` using the timeout from `RelayTransportConfig`.
-
-`DefaultWebSocketTransportClient` tracks one `CompletableDeferred` per envelope ID. Receiving
-`RelayServerMessage.EnvelopeAccepted` completes that deferred. Socket closure fails every pending
-deferred.
-
-Success means relay acceptance, not recipient delivery.
-
-## Incoming envelopes
-
-`RelayServerMessage.IncomingEnvelope` is emitted through:
-
-```kotlin
-WebSocketTransportClient.incomingEnvelopes: Flow<RelayEnvelope>
+```json
+{
+  "controlPlanes": [
+    "https://plane-a.example.com",
+    "https://plane-b.example.com"
+  ]
+}
 ```
 
-Transport does not decode `RelayEnvelope.payload`. `WebSocketIncomingRelayGateway` maps it to the
-transport-neutral `IncomingRelayEnvelope`, which `DefaultIncomingRelayRunner` consumes.
+Settings can also accept either a single Control Plane URL or a directory URL in the same Add field.
 
-After application handling succeeds, messaging calls `IncomingRelayGateway.acknowledge()`. The
-WebSocket adapter delegates to `WebSocketTransportClient.acknowledgeIncomingEnvelope()`, which
-sends `RelayClientMessage.AcknowledgeEnvelope`.
+## Important transport classes
 
-## Typing state
+### Control Plane
 
-Typing state uses:
+- `HttpControlPlaneDirectorySynchronizer`
+- `HttpControlPlaneHealthMonitor`
+- `ControlPlaneCandidateVerifier`
+- `ControlPlaneRequestRouter`
+- `NodeControlPlaneDirectorySource`
+- `NodeControlPlaneDiscoverySynchronizer`
 
-- `RelayClientMessage.TypingState` from client to relay;
-- `RelayServerMessage.TypingState` from relay to recipient;
-- `RelayTypingEvent` on the client's `incomingTypingEvents` flow.
+### Node discovery/failover
 
-Typing events are transient, require a live connection, and are not part of the persistent outbox.
+- `NodeDirectorySource`
+- `NodeDirectoryVerifier`
+- `NodeDirectoryCache`
+- `DefaultNodeEndpointResolver`
+- `FailedNodeTracker`
+- `TransportDiagnosticsState`
 
-## Relay JSON
+### WebSocket/routing
 
-`createRelayJson()` supplies a dedicated `Json` instance qualified as `RelayJson` in
-`transportModule`. Relay client/server messages use Kotlin serialization sealed types and serial
-names such as `register`, `send_envelope`, `incoming_envelope`, and `envelope_accepted`.
+- `DefaultTransportConnectionManager`
+- `DefaultWebSocketTransportClient`
+- `WebSocketOutgoingWireSender`
+- `ClientPresenceRouteManager`
+- `ClientRouteRegistrationFactory`
+- `Sha256RoutingIdGenerator`
 
-Do not use the protocol `Json` instance for relay frames. Relay frames and SecureChat packets have
-different sealed hierarchies and compatibility boundaries.
+### Offline/push
 
-## Dependency injection
+- `HttpMailboxGateway`
+- `HttpPushTokenRegistrationGateway`
+- `HttpPendingEnvelopeGateway`
 
-`transportModule` provides:
+## WebSocket connection
 
-| Contract/type | Production implementation |
-|---|---|
-| `HttpClient` | `createPlatformHttpClient()` |
-| qualified relay `Json` | `createRelayJson()` |
-| `RelayIdGenerator` | `Sha256RelayIdGenerator` |
-| `LocalRelayIdProvider` | `DefaultLocalRelayIdProvider` |
-| `WebSocketTransportClient` | `DefaultWebSocketTransportClient` |
-| `RelayConnectionManager` | `DefaultRelayConnectionManager` |
-| `OutgoingWireSender` | `WebSocketOutgoingWireSender` |
+The selected node exposes `/v1/gateway`. `DefaultWebSocketTransportClient` first obtains gateway information, opens the WebSocket, registers/refreshes the signed presence route, then sends/receives envelopes, acknowledgements and ephemeral typing data.
 
-`messagingModule` consumes these interfaces and connects them to contacts, crypto, the protocol
-outbox, and incoming handlers.
+The server-side counterpart is `GatewayWebSocketHandler`/`GatewaySessionHandler`.
 
-## Extension rules
+## Failover and cooldown
 
-- Add a new relay frame to `RelayClientMessage` or `RelayServerMessage`, update both client and
-  server models, and define compatibility behavior.
-- Replace the WebSocket wire by implementing `OutgoingWireSender`; do not modify chat repositories
-  to know the new transport.
-- Supply an `IncomingRelayGateway` adapter for another incoming wire; do not modify
-  `DefaultIncomingRelayRunner`.
-- Replace relay ID derivation behind `RelayIdGenerator` and migrate persisted mappings.
-- Keep payload inspection out of this module. If transport needs to branch on packet meaning, that
-  decision belongs in `:feature:messaging` or the packet-owning feature.
-- Do not interpret `EnvelopeAccepted` as `DELIVERED`.
+When a node fails, `FailedNodeTracker` temporarily excludes it from endpoint selection. A new verified node is selected and the connection manager reconnects.
+
+Developer diagnostics preserve a recently disappeared node as `COOLDOWN` so the operator can see what happened. A cooldown node always reports **0 connections** in the client diagnostics even if the most recent directory snapshot contained an older non-zero count.
+
+Dead nodes are excluded from actual routing immediately; retaining a diagnostics row does not make them eligible again.
+
+## Route refresh
+
+Presence routes are signed and expire. Refresh timestamps/expiry must advance with time. `DefaultWebSocketTransportClient` maintains a server-clock baseline plus monotonic elapsed time so a later refresh does not reuse the original absolute server timestamp. Reusing the original timestamp would eventually make the gateway reject a refresh as `INVALID_ROUTE_REFRESH`.
+
+## Control Plane/node health freshness
+
+The Settings network screen probes Control Plane health frequently for human-visible status. Community Nodes heartbeat healthy state frequently as well; unavailable planes are retried on a slower interval to avoid unnecessary request spam.
+
+## What transport does not do
+
+Transport must not:
+
+- load a conversation and decide Direct vs Group semantics;
+- implement membership rules;
+- decide whether a member is allowed to see Group history;
+- turn a delivery receipt into a UI state by itself;
+- decrypt application packet meaning for the server.

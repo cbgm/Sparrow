@@ -1,336 +1,49 @@
-# Frequently Asked Questions
+# FAQ
 
-## General
+## Is there an official downloadable release?
 
-### What is SecureChat?
+Not yet. The workflow is ready to create individual assets plus a combined `securechat-<version>-full.zip`, but no official `v*` tag has been published at the time of this documentation update.
 
-SecureChat is a Kotlin Multiplatform end-to-end encrypted messaging application focused on privacy, maintainability and clean architecture.
+## Which client is usable?
 
----
+Android. iOS source sets/Xcode host exist, but major runtime/platform functionality is still missing; iOS is not currently supported.
 
-### Which platforms are supported?
+## How do I know whether a server is healthy?
 
-The project is designed around Kotlin Multiplatform.
+Open `/index` on it. Control Plane `/index` links registry/presence/push/node-directory status; Community Node `/index` links gateway, control-plane list, federation and mailbox status.
 
-Currently Android is the primary platform.
+## Why does the app use a Control Plane directory URL?
 
-The architecture allows additional platforms to reuse the same business logic.
+To avoid hardcoding deployment plane addresses. The directory returns a JSON `controlPlanes` array. Its HTTP content type may be `text/plain` or `application/json` because the body is parsed explicitly as JSON.
 
----
+## Can Settings add both a single plane and a directory?
 
-### Is SecureChat open source?
+Yes. The Add field attempts to parse the entered URL as a Control Plane directory; if it is not a valid directory document it is treated as a single manual plane URL.
 
-The project architecture assumes open development and auditable cryptographic implementations.
+## What happens if a Community Node starts while Control Planes are offline?
 
-Licensing depends on the repository configuration.
+An already-configured node can start with cached plane addresses and keeps retrying. A fresh node without cached addresses keeps retrying the configured directory instead of exiting.
 
----
+## Why is a dead node shown as COOLDOWN?
 
-## Architecture
+So Developer Settings shows the recent failure instead of making the row disappear immediately. Dead/cooldown nodes are excluded from routing and show `0` connections.
 
-### Why are there so many modules?
+## Does the server read chat plaintext?
 
-The project intentionally separates responsibilities.
+Normal encrypted Direct/Group delivery is designed so gateway/federation/mailbox route or store opaque encrypted data. Client code owns packet decryption/meaning. Infrastructure still observes some metadata; see [Threat model](security/threat-model.md).
 
-Benefits include
+## Are Direct and Group chats implemented by the same repository?
 
-- better maintainability
-- explicit dependencies
-- faster builds
-- easier testing
+No. This is intentional. They have different repositories, outgoing/incoming paths, delivery state machines and typing/membership logic.
 
----
+## Are attachments implemented?
 
-### Why use Clean Architecture?
+No complete attachment feature is documented as working currently. Do not advertise planned roadmap items as current functionality.
 
-Clean Architecture separates
+## How are releases built?
 
-- presentation
-- business logic
-- infrastructure
+Create `release/x.y` from `master`. Release-branch pushes create change-aware candidate artifacts. A `v*` tag on the release line triggers the complete GitHub release. See [Release process](development/release-process.md).
 
-This keeps the application easier to maintain as it grows.
+## Where are generated architecture docs?
 
----
-
-### Why Kotlin Multiplatform?
-
-Business logic should be written once and reused across supported platforms.
-
-Only platform-specific code remains platform dependent.
-
----
-
-## Security
-
-### Are messages encrypted?
-
-Yes.
-
-Messages are encrypted on the sender's device before being transmitted.
-
-Only the intended recipient can decrypt them.
-
----
-
-### Can the relay read messages?
-
-No.
-
-The relay only forwards encrypted packets.
-
-It never receives plaintext.
-
----
-
-### Are private keys uploaded?
-
-No.
-
-Private keys remain on the user's device.
-
-Only public identity information is shared.
-
----
-
-### Why are Safety Numbers needed?
-
-Encryption alone cannot verify identity.
-
-Safety Numbers allow two users to confirm they possess the expected public identity keys.
-
----
-
-### What happens if a contact changes identity?
-
-The previous verification becomes invalid.
-
-The contact should be verified again before being trusted.
-
----
-
-## Messaging
-
-### Are messages stored locally?
-
-Yes.
-
-Messages are stored locally after successful decryption.
-
-The relay is not intended to become permanent message storage.
-
----
-
-### Can messages be sent while offline?
-
-Yes.
-
-Messages are queued locally and transmitted after the connection has been restored.
-
----
-
-### Are attachments supported?
-
-Attachment support is planned.
-
-Future attachments will use the same end-to-end encryption pipeline as text messages.
-
----
-
-## Development
-
-### Where should reusable code go?
-
-Generally
-
-```
-Core
-```
-
-or
-
-```
-Shared
-```
-
-depending on whether the functionality is application-specific.
-
----
-
-### Where should business logic go?
-
-Business logic belongs inside
-
-```
-domain/
-```
-
-UseCases should remain independent of Android.
-
----
-
-### Where should Compose code go?
-
-Compose belongs inside
-
-```
-presentation/
-```
-
-Presentation should not implement business rules.
-
----
-
-### Can ViewModels access Room?
-
-No.
-
-ViewModels communicate with repositories through UseCases.
-
-Room belongs inside the Data layer.
-
----
-
-## Build
-
-### How do I build the project?
-
-```bash
-./gradlew build
-```
-
----
-
-### How do I run quality checks?
-
-```bash
-./gradlew quality
-```
-
----
-
-### How do I regenerate architecture documentation?
-
-```bash
-./gradlew architectureReport
-```
-
----
-
-### How do I install Git hooks?
-
-```bash
-./gradlew setup
-```
-
----
-
-### Should generated documentation be edited?
-
-No.
-
-Generated documentation should always be regenerated through Gradle.
-
----
-
-## Documentation
-
-### Which documentation is handwritten?
-
-Examples include
-
-```
-Architecture
-
-Security
-
-Development
-
-Features
-
-API
-
-Build
-```
-
----
-
-### Which documentation is generated?
-
-Examples include
-
-```
-Module Pages
-
-Dependency Matrix
-
-Statistics
-
-Mermaid Diagram
-```
-
-These files are regenerated automatically.
-
----
-
-## Contributing
-
-### Should formatting be performed manually?
-
-No.
-
-Execute
-
-```bash
-./gradlew qualityFix
-```
-
-instead.
-
----
-
-### Should Detekt warnings be suppressed?
-
-Only when absolutely necessary.
-
-Fixing the underlying issue is strongly preferred.
-
----
-
-### Should generated files be committed?
-
-Yes.
-
-Generated architecture documentation is considered part of the repository.
-
----
-
-## Future
-
-### Will desktop platforms be supported?
-
-The architecture has been designed to support additional Kotlin Multiplatform targets in the future.
-
----
-
-### Will group chats be supported?
-
-Group chats are supported, including signed invitations, encrypted group messages, verification,
-and owner-controlled member add/remove with epoch rotation. See
-[Conversation, Messaging, and Delivery Flow](features/message-transport-flow.md#group-creation-and-per-member-activation).
-
----
-
-### Will voice and video calls be supported?
-
-These are long-term roadmap items.
-
-They will build upon the existing identity, transport and encryption architecture.
-
----
-
-# Summary
-
-This FAQ answers the most common questions about SecureChat's architecture, security model, development workflow and build infrastructure.
-
-When in doubt, consult the relevant handbook section for more detailed information.
+`docs/generated/`. Regenerate with `./gradlew architectureReport`; do not edit those pages manually.

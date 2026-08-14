@@ -1,9 +1,10 @@
 package com.cbgm.securechat.feature.contactimport.di
 
-import com.cbgm.securechat.feature.contactimport.domain.usecase.ImportSharedIdentity
-import com.cbgm.securechat.feature.contactimport.domain.usecase.VerifyContactByQr
-import com.cbgm.securechat.feature.contactimport.presentation.screen.ImportIdentityViewModel
-import com.cbgm.securechat.feature.contactimport.presentation.screen.VerifyContactQrViewModel
+import com.cbgm.securechat.feature.contactimport.domain.usecase.ImportSharedIdentityUseCase
+import com.cbgm.securechat.feature.contactimport.domain.usecase.VerifyContactByQrUseCase
+import com.cbgm.securechat.feature.contactimport.presentation.importing.ImportIdentityViewModel
+import com.cbgm.securechat.feature.contactimport.presentation.scan.ScanIdentityNavigationViewModel
+import com.cbgm.securechat.feature.contactimport.presentation.verify.VerifyContactQrViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
@@ -11,23 +12,30 @@ val contactImportModule =
     module {
 
         factory {
-            ImportSharedIdentity(
-                identityShareCodec = get(),
+            ImportSharedIdentityUseCase(
+                identityShareRepository = get(),
                 importContact = get()
             )
         }
 
         factory {
-            VerifyContactByQr(
-                identityShareCodec = get(),
+            VerifyContactByQrUseCase(
+                identityShareRepository = get(),
                 importContact = get(),
                 verifyContact = get()
             )
         }
 
-        viewModel {
+        viewModel { parameters ->
             ImportIdentityViewModel(
+                route = parameters.get(),
                 importSharedIdentity = get()
+            )
+        }
+
+        viewModel { parameters ->
+            ScanIdentityNavigationViewModel(
+                route = parameters.get()
             )
         }
 

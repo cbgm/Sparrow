@@ -1,11 +1,17 @@
 package com.cbgm.securechat.feature.transport.websocket
 
+import com.cbgm.securechat.core.id.IdGenerator
 import com.cbgm.securechat.core.logging.SecureChatLog
+import com.cbgm.securechat.core.time.SystemClock
 import com.cbgm.securechat.feature.transport.connection.TransportConnectionState
-import com.cbgm.securechat.feature.transport.relay.model.RelayClientMessage
-import com.cbgm.securechat.feature.transport.relay.model.RelayEnvelope
-import com.cbgm.securechat.feature.transport.relay.model.RelayServerMessage
-import com.cbgm.securechat.feature.transport.relay.model.RelayTypingEvent
+import com.cbgm.securechat.feature.transport.gateway.model.ClientRouteRegistration
+import com.cbgm.securechat.feature.transport.gateway.model.FederatedEnvelope
+import com.cbgm.securechat.feature.transport.gateway.model.GatewayClientMessage
+import com.cbgm.securechat.feature.transport.gateway.model.GatewayServerMessage
+import com.cbgm.securechat.feature.transport.gateway.model.GatewayTypingEvent
+import com.cbgm.securechat.feature.transport.gateway.model.TransportEnvelope
+import com.cbgm.securechat.feature.transport.presence.ClientPresenceRouteManager
+import com.cbgm.securechat.feature.transport.presence.PresenceRouteConnection
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
 import io.ktor.client.plugins.websocket.webSocket
@@ -27,6 +33,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -34,9 +41,10 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlin.time.Duration.Companion.milliseconds
 
-class DefaultWebSocketTransportClient(
+class DefaultWebSocketTransportClient internal constructor(
     private val httpClient: HttpClient,
-    private val json: Json
+    private val json: Json,
+    private val presenceRouteManager: ClientPresenceRouteManager
 ) : WebSocketTransportClient {
     private val logger = SecureChatLog.withTag("DefaultWebSocketTransportClient")
 
@@ -48,15 +56,17 @@ class DefaultWebSocketTransportClient(
     override val connectionState: StateFlow<TransportConnectionState> =
         mutableConnectionState.asStateFlow()
 
-    private val mutableIncomingEnvelopes =
-        MutableSharedFlow<RelayEnvelope>(extraBufferCapacity = INCOMING_BUFFER_CAPACITY)
+    private val mutableRegisteredRoutingAliases = MutableStateFlow<Set<String>>(emptySet())
 
-    override val incomingEnvelopes: Flow<RelayEnvelope> = mutableIncomingEnvelopes.asSharedFlow()
+    private val mutableIncomingEnvelopes =
+        MutableSharedFlow<TransportEnvelope>(extraBufferCapacity = INCOMING_BUFFER_CAPACITY)
+
+    override val incomingEnvelopes: Flow<TransportEnvelope> = mutableIncomingEnvelopes.asSharedFlow()
 
     private val mutableIncomingTypingEvents =
-        MutableSharedFlow<RelayTypingEvent>(extraBufferCapacity = INCOMING_BUFFER_CAPACITY)
+        MutableSharedFlow<GatewayTypingEvent>(extraBufferCapacity = INCOMING_BUFFER_CAPACITY)
 
-    override val incomingTypingEvents: Flow<RelayTypingEvent> =
+    override val incomingTypingEvents: Flow<GatewayTypingEvent> =
         mutableIncomingTypingEvents.asSharedFlow()
 
     private val sessionMutex = Mutex()
@@ -73,14 +83,14 @@ class DefaultWebSocketTransportClient(
 
     override fun connect(
         serverUrl: String,
-        localRelayId: String
+        localRoutingId: String
     ) {
         require(serverUrl.isNotBlank()) {
-            "Relay server URL must not be blank"
+            "Gateway WebSocket URL must not be blank"
         }
 
-        require(localRelayId.isNotBlank()) {
-            "Local relay ID must not be blank"
+        require(localRoutingId.isNotBlank()) {
+            "Local routing ID must not be blank"
         }
 
         if (connectionJob?.isActive == true) return
@@ -89,13 +99,13 @@ class DefaultWebSocketTransportClient(
             clientScope.launch {
                 runConnection(
                     serverUrl = serverUrl,
-                    localRelayId = localRelayId
+                    localRoutingId = localRoutingId
                 )
             }
     }
 
     override suspend fun sendEnvelopeAndAwaitAcceptance(
-        envelope: RelayEnvelope,
+        envelope: TransportEnvelope,
         timeoutMilliseconds: Long
     ): Result<Unit> =
         runCatching {
@@ -104,7 +114,7 @@ class DefaultWebSocketTransportClient(
             }
 
             check(connectionState.value is TransportConnectionState.Connected) {
-                "WebSocket relay is not connected"
+                "WebSocket transport is not connected"
             }
 
             val acknowledgement = CompletableDeferred<Unit>()
@@ -130,6 +140,26 @@ class DefaultWebSocketTransportClient(
             }
         }
 
+    override suspend fun sendFederatedEnvelopeAndAwaitAcceptance(
+        envelope: FederatedEnvelope,
+        timeoutMilliseconds: Long
+    ): Result<Unit> =
+        awaitEnvelopeAcceptance(envelope.envelopeId, timeoutMilliseconds) {
+            sendFederatedEnvelopeFrame(envelope)
+        }
+
+    override suspend fun awaitRoutingAlias(
+        routingAlias: String,
+        timeoutMilliseconds: Long
+    ): Result<Unit> =
+        runCatching {
+            require(routingAlias.isNotBlank()) { "Routing alias must not be blank" }
+            require(timeoutMilliseconds > 0L) { "Routing alias timeout must be positive" }
+            withTimeout(timeoutMilliseconds.milliseconds) {
+                mutableRegisteredRoutingAliases.first { aliases -> routingAlias in aliases }
+            }
+        }
+
     override suspend fun acknowledgeIncomingEnvelope(envelopeId: String): Result<Unit> =
         runCatching {
             require(envelopeId.isNotBlank()) {
@@ -145,12 +175,12 @@ class DefaultWebSocketTransportClient(
                     )
 
                 val clientMessage =
-                    RelayClientMessage.AcknowledgeEnvelope(
+                    GatewayClientMessage.AcknowledgeEnvelope(
                         envelopeId = envelopeId
                     )
 
                 val encodedMessage =
-                    json.encodeToString<RelayClientMessage>(
+                    json.encodeToString<GatewayClientMessage>(
                         clientMessage
                     )
 
@@ -166,11 +196,11 @@ class DefaultWebSocketTransportClient(
     ): Result<Unit> =
         runCatching {
             require(recipientId.isNotBlank()) {
-                "Recipient relay ID must not be blank"
+                "Recipient routing ID must not be blank"
             }
 
             check(connectionState.value is TransportConnectionState.Connected) {
-                "WebSocket relay is not connected"
+                "WebSocket transport is not connected"
             }
 
             sendMutex.withLock {
@@ -182,14 +212,14 @@ class DefaultWebSocketTransportClient(
                     )
 
                 val clientMessage =
-                    RelayClientMessage.TypingState(
+                    GatewayClientMessage.TypingState(
                         recipientId = recipientId,
                         isTyping = isTyping
                     )
 
                 activeSession.send(
                     Frame.Text(
-                        json.encodeToString<RelayClientMessage>(
+                        json.encodeToString<GatewayClientMessage>(
                             clientMessage
                         )
                     )
@@ -224,14 +254,19 @@ class DefaultWebSocketTransportClient(
 
         failPendingAcknowledgements(error = IllegalStateException("WebSocket disconnected"))
 
+        mutableRegisteredRoutingAliases.value = emptySet()
         mutableConnectionState.value = TransportConnectionState.Disconnected
     }
 
+    @Suppress("CyclomaticComplexMethod", "LongMethod", "NestedBlockDepth")
     private suspend fun runConnection(
         serverUrl: String,
-        localRelayId: String
+        localRoutingId: String
     ) {
         mutableConnectionState.value = TransportConnectionState.Connecting
+
+        val connectionId = IdGenerator.generate()
+        val generation = SystemClock.nowEpochMilliseconds()
 
         try {
             httpClient.webSocket(urlString = serverUrl) {
@@ -241,46 +276,139 @@ class DefaultWebSocketTransportClient(
 
                 logger.info { "WebSocket session opened" }
 
-                sendRegistration(
-                    activeSession = this,
-                    localRelayId = localRelayId
-                )
+                val gatewayInformation =
+                    presenceRouteManager
+                        .fetchGatewayInformation(serverUrl = serverUrl)
+                        .onFailure { error ->
+                            logger.warn {
+                                "Gateway information unavailable; using compatible registration: " +
+                                    (error.message ?: "unknown error")
+                            }
+                        }.getOrNull()
 
-                incoming.consumeEach { frame ->
-                    when (frame) {
-                        is Frame.Text -> {
-                            handleTextFrame(
-                                encodedMessage = frame.readText(),
-                                expectedRelayId = localRelayId
-                            )
-                        }
+                val presenceConnection =
+                    PresenceRouteConnection(
+                        serverUrl = serverUrl,
+                        routingId = localRoutingId,
+                        connectionId = connectionId,
+                        generation = generation,
+                        initialGatewayInformation = gatewayInformation,
+                        initialRouteEstablished = false,
+                        connectionIdRegistered = gatewayInformation != null
+                    )
+                val routeRegistration =
+                    gatewayInformation?.let { information ->
+                        presenceRouteManager
+                            .createRegistration(
+                                connection = presenceConnection,
+                                gatewayInformation = information
+                            ).getOrElse { error ->
+                                throw IllegalStateException(
+                                    "Could not create signed presence route",
+                                    error
+                                )
+                            }
+                    }
 
-                        is Frame.Close -> {
-                            val reason = closeReason.await()
+                val signedRegistrationSent =
+                    sendRegistration(
+                        activeSession = this,
+                        localRoutingId = localRoutingId,
+                        connectionId = connectionId,
+                        connectionIdRegistered = gatewayInformation != null,
+                        routeRegistration = routeRegistration
+                    )
 
-                            logger.info {
-                                "Received WebSocket close frame: " +
-                                    "code=${reason?.code}, " +
-                                    "message=${reason?.message}"
+                val routeRefreshJob =
+                    launch {
+                        presenceRouteManager.maintain(
+                            connection =
+                                presenceConnection.copy(
+                                    initialRouteEstablished = signedRegistrationSent
+                                ),
+                            sendRefresh = { registration ->
+                                runCatching {
+                                    sendMutex.withLock {
+                                        this@webSocket.send(
+                                            Frame.Text(
+                                                json.encodeToString<GatewayClientMessage>(
+                                                    GatewayClientMessage.RefreshRoute(registration)
+                                                )
+                                            )
+                                        )
+                                    }
+                                    mutableRegisteredRoutingAliases.value =
+                                        registration.route.aliases.orEmpty().toSet()
+                                }
+                            },
+                            reconnect = {
+                                this@webSocket.close(
+                                    CloseReason(
+                                        code = CloseReason.Codes.NORMAL,
+                                        message = "Reconnect for signed presence"
+                                    )
+                                )
+                            },
+                            fail = { error ->
+                                mutableConnectionState.value =
+                                    TransportConnectionState.Failed(
+                                        message = error?.message ?: "Presence route refresh failed"
+                                    )
+                                this@webSocket.close(
+                                    CloseReason(
+                                        code = CloseReason.Codes.INTERNAL_ERROR,
+                                        message = "Presence route refresh failed"
+                                    )
+                                )
+                            }
+                        )
+                    }
+
+                try {
+                    incoming.consumeEach { frame ->
+                        when (frame) {
+                            is Frame.Text -> {
+                                handleTextFrame(
+                                    encodedMessage = frame.readText(),
+                                    expectedRoutingId = localRoutingId,
+                                    registeredAliases =
+                                        routeRegistration
+                                            ?.route
+                                            ?.aliases
+                                            .orEmpty()
+                                            .toSet()
+                                )
+                            }
+
+                            is Frame.Close -> {
+                                val reason = closeReason.await()
+
+                                logger.info {
+                                    "Received WebSocket close frame: " +
+                                        "code=${reason?.code}, " +
+                                        "message=${reason?.message}"
+                                }
+                            }
+
+                            is Frame.Binary -> {
+                                logger.warn { "Ignoring unsupported binary WebSocket frame" }
+                            }
+
+                            is Frame.Ping -> {
+                                /*
+                                 * Ktor handles pong responses internally.
+                                 */
+                            }
+
+                            is Frame.Pong -> {
+                                /*
+                                 * Ktor handles ping/pong internally.
+                                 */
                             }
                         }
-
-                        is Frame.Binary -> {
-                            logger.warn { "Ignoring unsupported binary WebSocket frame" }
-                        }
-
-                        is Frame.Ping -> {
-                            /*
-                             * Ktor handles pong responses internally.
-                             */
-                        }
-
-                        is Frame.Pong -> {
-                            /*
-                             * Ktor handles ping/pong internally.
-                             */
-                        }
                     }
+                } finally {
+                    routeRefreshJob.cancelAndJoin()
                 }
 
                 val reason = closeReason.await()
@@ -292,7 +420,9 @@ class DefaultWebSocketTransportClient(
                 }
             }
 
-            mutableConnectionState.value = TransportConnectionState.Disconnected
+            if (mutableConnectionState.value !is TransportConnectionState.Failed) {
+                mutableConnectionState.value = TransportConnectionState.Disconnected
+            }
         } catch (
             error: CancellationException
         ) {
@@ -309,6 +439,7 @@ class DefaultWebSocketTransportClient(
                     message = error.message ?: "WebSocket connection failed"
                 )
         } finally {
+            mutableRegisteredRoutingAliases.value = emptySet()
             sessionMutex.withLock {
                 session = null
             }
@@ -321,18 +452,36 @@ class DefaultWebSocketTransportClient(
 
     private suspend fun sendRegistration(
         activeSession: DefaultClientWebSocketSession,
-        localRelayId: String
-    ) {
-        val registration = RelayClientMessage.Register(relayId = localRelayId)
+        localRoutingId: String,
+        connectionId: String,
+        connectionIdRegistered: Boolean,
+        routeRegistration: ClientRouteRegistration?
+    ): Boolean {
+        val registration =
+            GatewayClientMessage.Register(
+                routingId = localRoutingId,
+                connectionId = connectionId.takeIf { connectionIdRegistered },
+                generation = routeRegistration?.route?.generation,
+                expiresAtEpochMilliseconds = routeRegistration?.route?.expiresAtEpochMilliseconds,
+                aliases = routeRegistration?.route?.aliases?.takeIf { it.isNotEmpty() },
+                clientSigningPublicKey = routeRegistration?.clientSigningPublicKey,
+                clientSignature = routeRegistration?.route?.clientSignature
+            )
 
-        val encodedRegistration = json.encodeToString<RelayClientMessage>(registration)
+        val encodedRegistration = json.encodeToString<GatewayClientMessage>(registration)
 
-        activeSession.send(Frame.Text(encodedRegistration))
+        sendMutex.withLock {
+            activeSession.send(Frame.Text(encodedRegistration))
+        }
 
-        logger.debug { "Relay registration sent for $localRelayId" }
+        logger.debug {
+            "Gateway registration sent for $localRoutingId; signed=${routeRegistration != null}"
+        }
+
+        return routeRegistration != null
     }
 
-    private suspend fun sendEnvelopeFrame(envelope: RelayEnvelope) {
+    private suspend fun sendEnvelopeFrame(envelope: TransportEnvelope) {
         sendMutex.withLock {
             val activeSession =
                 sessionMutex.withLock {
@@ -341,61 +490,103 @@ class DefaultWebSocketTransportClient(
                     "WebSocket session is not available"
                 )
 
-            val clientMessage = RelayClientMessage.SendEnvelope(envelope = envelope)
+            val clientMessage = GatewayClientMessage.SendEnvelope(envelope = envelope)
 
-            val encodedMessage = json.encodeToString<RelayClientMessage>(clientMessage)
+            val encodedMessage = json.encodeToString<GatewayClientMessage>(clientMessage)
 
             activeSession.send(Frame.Text(encodedMessage))
         }
     }
 
+    private suspend fun sendFederatedEnvelopeFrame(envelope: FederatedEnvelope) {
+        sendMutex.withLock {
+            val activeSession =
+                sessionMutex.withLock { session }
+                    ?: error("WebSocket session is not available")
+            activeSession.send(
+                Frame.Text(
+                    json.encodeToString<GatewayClientMessage>(
+                        GatewayClientMessage.SendFederatedEnvelope(envelope)
+                    )
+                )
+            )
+        }
+    }
+
+    private suspend fun awaitEnvelopeAcceptance(
+        envelopeId: String,
+        timeoutMilliseconds: Long,
+        send: suspend () -> Unit
+    ): Result<Unit> =
+        runCatching {
+            require(timeoutMilliseconds > 0L) { "Acknowledgement timeout must be positive" }
+            check(connectionState.value is TransportConnectionState.Connected) {
+                "WebSocket transport is not connected"
+            }
+            val acknowledgement = CompletableDeferred<Unit>()
+            acknowledgementsMutex.withLock {
+                check(!pendingAcknowledgements.containsKey(envelopeId)) {
+                    "Envelope is already awaiting acknowledgement"
+                }
+                pendingAcknowledgements[envelopeId] = acknowledgement
+            }
+            try {
+                send()
+                withTimeout(timeoutMilliseconds.milliseconds) { acknowledgement.await() }
+            } finally {
+                acknowledgementsMutex.withLock { pendingAcknowledgements.remove(envelopeId) }
+            }
+        }
+
     private suspend fun handleTextFrame(
         encodedMessage: String,
-        expectedRelayId: String
+        expectedRoutingId: String,
+        registeredAliases: Set<String>
     ) {
         val message =
             runCatching {
-                json.decodeFromString<RelayServerMessage>(encodedMessage)
+                json.decodeFromString<GatewayServerMessage>(encodedMessage)
             }.getOrElse { error ->
-                logger.error(error) { "Invalid relay response" }
+                logger.error(error) { "Invalid gateway response" }
 
                 mutableConnectionState.value =
                     TransportConnectionState.Failed(
-                        message = error.message ?: "Invalid relay response"
+                        message = error.message ?: "Invalid gateway response"
                     )
 
                 return
             }
 
         when (message) {
-            is RelayServerMessage.Registered -> {
-                if (message.relayId != expectedRelayId) {
+            is GatewayServerMessage.Registered -> {
+                if (message.routingId != expectedRoutingId) {
                     mutableConnectionState.value =
-                        TransportConnectionState.Failed(message = "Relay registered an unexpected identity")
+                        TransportConnectionState.Failed(message = "Gateway registered an unexpected routing identity")
 
                     return
                 }
 
-                logger.info { "Relay registration accepted for ${message.relayId}" }
+                logger.info { "Gateway registration accepted for ${message.routingId}" }
 
+                mutableRegisteredRoutingAliases.value = registeredAliases
                 mutableConnectionState.value =
-                    TransportConnectionState.Connected(relayId = message.relayId)
+                    TransportConnectionState.Connected(routingId = message.routingId)
             }
 
-            is RelayServerMessage.IncomingEnvelope -> {
+            is GatewayServerMessage.IncomingEnvelope -> {
                 mutableIncomingEnvelopes.emit(message.envelope)
             }
 
-            is RelayServerMessage.TypingState -> {
+            is GatewayServerMessage.TypingState -> {
                 mutableIncomingTypingEvents.emit(
-                    RelayTypingEvent(
+                    GatewayTypingEvent(
                         senderId = message.senderId,
                         isTyping = message.isTyping
                     )
                 )
             }
 
-            is RelayServerMessage.EnvelopeAccepted -> {
+            is GatewayServerMessage.EnvelopeAccepted -> {
                 val acknowledgement =
                     acknowledgementsMutex.withLock {
                         pendingAcknowledgements[message.envelopeId]
@@ -404,11 +595,17 @@ class DefaultWebSocketTransportClient(
                 acknowledgement?.complete(Unit)
             }
 
-            is RelayServerMessage.Error -> {
-                logger.warn { "Relay error ${message.code}: ${message.message}" }
+            is GatewayServerMessage.Error -> {
+                logger.warn { "Gateway error ${message.code}: ${message.message}" }
+
+                if (message.code in FATAL_ROUTE_ERROR_CODES) {
+                    throw IllegalStateException(
+                        "Presence route rejected by gateway: ${message.code}"
+                    )
+                }
 
                 /*
-                 * A relay error does not always mean the underlying
+                 * A gateway error does not always mean the underlying
                  * WebSocket connection is broken.
                  *
                  * Keep the connection state unchanged here. The
@@ -437,5 +634,13 @@ class DefaultWebSocketTransportClient(
 
     private companion object {
         const val INCOMING_BUFFER_CAPACITY = 64
+
+        val FATAL_ROUTE_ERROR_CODES =
+            setOf(
+                "INVALID_ROUTE",
+                "INVALID_ROUTE_REFRESH",
+                "ROUTE_REJECTED",
+                "ALREADY_REGISTERED"
+            )
     }
 }

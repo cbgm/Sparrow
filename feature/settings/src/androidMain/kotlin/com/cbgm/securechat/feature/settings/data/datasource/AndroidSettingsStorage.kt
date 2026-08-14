@@ -1,4 +1,4 @@
-package com.cbgm.securechat.feature.settings.data.storage
+package com.cbgm.securechat.feature.settings.data.datasource
 
 import android.content.Context
 import androidx.core.content.edit

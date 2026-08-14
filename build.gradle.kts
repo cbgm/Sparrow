@@ -1,5 +1,4 @@
 import java.util.Properties
-import kotlin.apply
 
 plugins {
     // this is necessary to avoid the plugins to be loaded multiple times

@@ -38,7 +38,9 @@ data class GroupMemberRemovedPacket(
                 "A voluntary leave must advance the group epoch"
             }
         }
-        require(challenge.isNotEmpty()) { "Invitation challenge must not be empty" }
+        if (epoch == PENDING_INVITATION_EPOCH) {
+            require(challenge.isNotEmpty()) { "Pending invitation challenge must not be empty" }
+        }
         if (epoch > PENDING_INVITATION_EPOCH) {
             require(removedMemberSigningPublicKey.isNotEmpty()) {
                 "Active removed member signing key must not be empty"

@@ -1,0 +1,70 @@
+(securechat_control_routes) {
+    encode zstd gzip
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "no-referrer"
+        -Server
+    }
+
+    @root path /
+    handle @root {
+        redir /index 308
+    }
+
+    @index path /index
+    handle @index {
+        root * /srv
+        rewrite * /index.html
+        file_server
+    }
+
+    @nodes path /v1/nodes /v1/nodes/*
+    handle @nodes {
+        reverse_proxy node-registry:8090
+    }
+
+    @registry_health path /health/registry
+    handle @registry_health {
+        rewrite * /health/ready
+        reverse_proxy node-registry:8090
+    }
+
+    @presence path /v1/routes /v1/routes/*
+    handle @presence {
+        reverse_proxy presence-directory:8091
+    }
+
+    @presence_health path /health/presence
+    handle @presence_health {
+        rewrite * /health/ready
+        reverse_proxy presence-directory:8091
+    }
+
+    @node_push path /v1/node-push /v1/node-push/*
+    handle @node_push {
+        reverse_proxy push:8095
+    }
+
+    @push_health path /health/push
+    handle @push_health {
+        rewrite * /health/ready
+        reverse_proxy push:8095
+    }
+
+    @push path /push /push/*
+    handle @push {
+        reverse_proxy push:8095
+    }
+
+    respond 404
+}
+
+{$CONTROL_PLANE_SITE_ADDRESS} {
+    import securechat_control_routes
+}
+
+:8080 {
+    import securechat_control_routes
+}

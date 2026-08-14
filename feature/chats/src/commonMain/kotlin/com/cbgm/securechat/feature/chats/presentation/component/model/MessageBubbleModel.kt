@@ -1,0 +1,23 @@
+package com.cbgm.securechat.feature.chats.presentation.component.model
+
+import com.cbgm.securechat.feature.chats.domain.model.MessageContentStatus
+import com.cbgm.securechat.feature.chats.domain.model.MessageDeliveryStatus
+import com.cbgm.securechat.feature.chats.domain.model.MessageSecurity
+
+data class MessageBubbleModel(
+    val id: String,
+    val text: String,
+    val isMine: Boolean,
+    val security: MessageSecurity,
+    val contentStatus: MessageContentStatus,
+    val deliveryStatus: MessageDeliveryStatus,
+    val senderName: String? = null,
+    val senderIsInContacts: Boolean = true,
+    val deliveryProgress: DeliveryProgressModel = DeliveryProgressModel()
+)
+
+data class DeliveryProgressModel(
+    val recipientCount: Int = 0,
+    val deliveredCount: Int = 0,
+    val readCount: Int = 0
+)

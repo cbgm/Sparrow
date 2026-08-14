@@ -5,4 +5,9 @@
     <string name="notification_channel_messages">Messages</string>
     <string name="notification_channel_messages_description">Benachrichtigung für neue SecureChat Nachricht</string>
     <string name="notification_new_message">Neue Nachricht</string>
+    <string name="feature_chats_group_promote_admin">Promote to admin</string>
+    <string name="feature_chats_group_promote_admin_description">Promote %1$s to group admin? Admins can add and remove members and promote other admins.</string>
+    <string name="feature_chats_group_promote_before_leave">Choose a new admin</string>
+    <string name="feature_chats_group_promote_before_leave_description">You are the only admin. Promote another active member before leaving this group.</string>
+    <string name="feature_chats_group_member_unavailable">Unavailable — re-invite required</string>
 </resources>

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SecureChat Community Node</title>
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 56rem; line-height: 1.5; }
+        h1 { margin-bottom: .25rem; }
+        ul { padding-left: 1.25rem; }
+        li { margin: .6rem 0; }
+        code { background: #f2f2f2; padding: .1rem .3rem; border-radius: .25rem; }
+    </style>
+</head>
+<body>
+    <h1>SecureChat Community Node</h1>
+    <p>Operational endpoints exposed by this Community Node.</p>
+    <ul>
+        <li><a href="/health/gateway">Gateway health</a> — gateway readiness.</li>
+        <li><a href="/v1/gateway/info">Gateway information</a> — node identity and route timing.</li>
+        <li><a href="/v1/control-planes">Control Planes</a> — Control Plane addresses currently advertised by the node.</li>
+        <li><a href="/health/federation">Federation health</a> — federation readiness.</li>
+        <li><a href="/v1/federation/capabilities">Federation capabilities</a> — supported federation capabilities.</li>
+        <li><a href="/health/mailbox">Mailbox health</a> — mailbox readiness.</li>
+    </ul>
+    <p>All links are relative to this node, so the page works for LAN and public deployments.</p>
+</body>
+</html>

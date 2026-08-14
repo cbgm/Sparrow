@@ -29,12 +29,14 @@ androidx-splashscreen = "1.2.0"
 kotlincrypto-hash = "0.8.0"
 kotlinx-serialization = "1.9.0"
 ktor = "3.5.1"
+micrometer = "1.17.0"
 okio = "3.16.4"
 logback = "1.5.18"
 play-services-auth = "21.1.1"
 about-libs-compose = "15.0.4"
 about-libs-render = "0.43.0"
 about-libs-plugin = "15.0.4"
+buildkonfig = "0.22.0"
 detekt = "2.0.0-alpha.5"
 ktlint-gradle = "14.2.0"
 ktlint-engine = "1.7.1"
@@ -45,6 +47,9 @@ firebase-messaging = "25.0.1"
 firebase-admin = "9.10.0"
 firebase-analytics = "23.2.0"
 google-services = "4.5.0"
+hikari = "7.1.0"
+postgresql = "42.7.13"
+jedis = "5.2.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -108,6 +113,7 @@ ktor-client-websockets = { module = "io.ktor:ktor-client-websockets", version.re
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
 ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 
 okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 
@@ -120,21 +126,26 @@ ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
 ktor-server-netty = { module = "io.ktor:ktor-server-netty", version.ref = "ktor" }
 ktor-server-websockets = { module = "io.ktor:ktor-server-websockets", version.ref = "ktor" }
 ktor-server-call-logging = { module = "io.ktor:ktor-server-call-logging", version.ref = "ktor" }
+ktor-server-call-id = { module = "io.ktor:ktor-server-call-id", version.ref = "ktor" }
+ktor-server-metrics-micrometer = { module = "io.ktor:ktor-server-metrics-micrometer", version.ref = "ktor" }
 ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negotiation", version.ref = "ktor" }
+ktor-server-forwarded-header = { module = "io.ktor:ktor-server-forwarded-header", version.ref = "ktor" }
 ktor-server-test-host = { module = "io.ktor:ktor-server-test-host", version.ref = "ktor" }
 ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus", version.ref = "micrometer" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging", version.ref = "firebase-messaging" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics", version.ref = "firebase-analytics" }
 firebase-admin = { module = "com.google.firebase:firebase-admin", version.ref = "firebase-admin" }
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
+hikari = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+jedis = { module = "redis.clients:jedis", version.ref = "jedis" }
 
 compose-rules-detekt = { module = "io.nlopez.compose.rules:detekt", version.ref = "compose-rules" }
 compose-rules-ktlint = { module = "io.nlopez.compose.rules:ktlint", version.ref = "compose-rules" }
 detekt-api = { module = "dev.detekt:detekt-api", version.ref = "detekt" }
-detekt-test = { module = "dev.detekt:detekt-test", version.ref = "detekt" }
-detekt-test-assertj = { module = "dev.detekt:detekt-test-assertj", version.ref = "detekt" }
 
 [bundles]
 compose = [
@@ -217,6 +228,7 @@ ktor-server = [
     "ktor-server-websockets",
     "ktor-server-call-logging",
     "ktor-server-content-negotiation",
+    "ktor-server-forwarded-header",
     "ktor-serialization-kotlinx-json"
 ]
 
@@ -233,6 +245,7 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 kotlin-serialization-classpath = { id = "org.jetbrains.kotlin.plugin.serialization" }
 about-libs = { id = "com.mikepenz.aboutlibraries.plugin", version.ref = "about-libs-plugin" }
 google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }
+buildkonfig = { id = "com.codingfeline.buildkonfig", version.ref = "buildkonfig" }
 detekt = { id = "dev.detekt", version.ref = "detekt" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint-gradle" }
 

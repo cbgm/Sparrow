@@ -41,10 +41,10 @@ class DefaultOutboxRunner(
 
         /*
          * start() is also the connection-available signal. It is called for
-         * every successful relay connection, not only on process startup.
+         * every successful transport connection, not only on process startup.
          *
          * Recover packets left in PROCESSING by a cancelled send/process
-         * death and retry packets that failed while the relay was offline.
+         * death and retry packets that failed while the transport was offline.
          */
         runnerScope.launch {
             runCatching {

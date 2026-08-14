@@ -137,6 +137,8 @@ class DefaultOutboxRunnerTest {
 
         override suspend fun retry(itemId: String): Result<Unit> = Result.failure(UnsupportedOperationException())
 
+        override suspend fun resend(packetId: String): Result<Unit> = Result.success(Unit)
+
         override suspend fun requeueInterrupted(): Result<Unit> {
             events.send("requeue")
             return Result.success(Unit)
