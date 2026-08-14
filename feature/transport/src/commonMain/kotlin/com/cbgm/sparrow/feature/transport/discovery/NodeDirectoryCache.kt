@@ -13,5 +13,15 @@ interface NodeDirectoryCache {
 data class CachedNodeDirectory(
     val encodedDirectory: String,
     @SerialName("trustedAuthorityNodeId")
-    val trustedRootNodeId: String
-)
+    val trustedRootNodeId: String,
+    val sourceControlPlaneBaseUrl: String? = null,
+    val trustedRootsByControlPlane: Map<String, String> = emptyMap()
+) {
+    fun trustedRootForSource(): String =
+        sourceControlPlaneBaseUrl
+            ?.let(trustedRootsByControlPlane::get)
+            ?: trustedRootNodeId
+
+    fun trustedRootFor(baseUrl: String): String? =
+        trustedRootsByControlPlane[baseUrl]
+}

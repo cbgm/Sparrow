@@ -1,4 +1,7 @@
-# App-specific R8 rules belong here.
-# Keep this file intentionally minimal and add targeted rules only when a
-# library or runtime feature proves that it needs them. Dependencies should
-# contribute their own consumer rules.
+# JNA accesses these classes and members from native code.
+# They must keep their original names and members when R8 is enabled.
+-dontwarn java.awt.*
+
+-keep class com.sun.jna.* {  *;}
+-keep class * extends com.sun.jna.* {  *;}
+-keepclassmembers class * extends com.sun.jna.* { public *;}

@@ -301,6 +301,10 @@ jobs:
       - name: Create release local.properties
         env:
           CONTROL_PLANE_RELEASE_DIRECTORY_URL: ${{ vars.CONTROL_PLANE_RELEASE_DIRECTORY_URL }}
+          KEY_KEYSTORE_FILE: ${{ secrets.KEY_STORE_FILE }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         shell: bash
         run: |
           set -euo pipefail
