@@ -3,13 +3,16 @@ package com.cbgm.securechat.feature.transport.connection
 import com.cbgm.securechat.core.transport.TransportDiagnosticConnectionState
 import com.cbgm.securechat.core.transport.TransportDiagnostics
 import com.cbgm.securechat.core.transport.TransportNodeDiagnostic
+import com.cbgm.securechat.core.transport.TransportNodeDiagnosticState
 import com.cbgm.securechat.feature.transport.discovery.NodeEndpoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 internal class TransportDiagnosticsState(
-    registryUrl: String?
+    registryUrl: String?,
+    private val missingNodeCooldownMilliseconds: Long,
+    private val now: () -> Long
 ) {
     private val _diagnostics =
         MutableStateFlow(
@@ -19,6 +22,7 @@ internal class TransportDiagnosticsState(
         )
 
     private var resolvedEndpoints: List<NodeEndpoint> = emptyList()
+    private val missingEndpoints = mutableMapOf<String, MissingEndpoint>()
     private var failedConnectedNodeId: String? = null
 
     val diagnostics: StateFlow<TransportDiagnostics> = _diagnostics.asStateFlow()
@@ -38,7 +42,7 @@ internal class TransportDiagnosticsState(
         registryAuthorityVerified: Boolean,
         registryUrl: String?
     ) {
-        resolvedEndpoints = endpoints
+        updateResolvedEndpoints(endpoints)
         updateNodes(
             currentNodeId = _diagnostics.value.currentNodeId,
             cooldownUntilEpochMillisecondsByNodeId = cooldownUntilEpochMillisecondsByNodeId
@@ -141,30 +145,80 @@ internal class TransportDiagnosticsState(
         )
     }
 
+    private fun updateResolvedEndpoints(endpoints: List<NodeEndpoint>) {
+        val currentTime = now()
+        val resolvedNodeIds = endpoints.mapTo(mutableSetOf(), NodeEndpoint::nodeId)
+
+        missingEndpoints.entries.removeAll { (nodeId, missing) ->
+            nodeId in resolvedNodeIds || missing.cooldownUntilEpochMilliseconds <= currentTime
+        }
+        resolvedEndpoints
+            .filterNot { endpoint -> endpoint.nodeId in resolvedNodeIds }
+            .forEach { endpoint ->
+                missingEndpoints.putIfAbsent(
+                    endpoint.nodeId,
+                    MissingEndpoint(
+                        endpoint = endpoint,
+                        cooldownUntilEpochMilliseconds =
+                            currentTime + missingNodeCooldownMilliseconds
+                    )
+                )
+            }
+
+        resolvedEndpoints = endpoints
+    }
+
     private fun updateNodes(
         currentNodeId: String?,
         cooldownUntilEpochMillisecondsByNodeId: Map<String, Long>
     ) {
+        val currentTime = now()
+        missingEndpoints.entries.removeAll { (_, missing) ->
+            missing.cooldownUntilEpochMilliseconds <= currentTime
+        }
+
+        val resolvedNodes =
+            resolvedEndpoints.map { endpoint ->
+                val cooldownUntilEpochMilliseconds =
+                    cooldownUntilEpochMillisecondsByNodeId[endpoint.nodeId]
+
+                TransportNodeDiagnostic(
+                    nodeId = endpoint.nodeId,
+                    websocketUrl = endpoint.websocketUrl,
+                    state =
+                        endpoint.diagnosticState(
+                            currentNodeId = currentNodeId,
+                            cooldownUntilEpochMillisecondsByNodeId =
+                            cooldownUntilEpochMillisecondsByNodeId
+                        ),
+                    activeConnections = endpoint.activeConnections,
+                    cooldownUntilEpochMilliseconds = cooldownUntilEpochMilliseconds
+                )
+            }
+        val missingNodes =
+            missingEndpoints.values.map { missing ->
+                TransportNodeDiagnostic(
+                    nodeId = missing.endpoint.nodeId,
+                    websocketUrl = missing.endpoint.websocketUrl,
+                    state =
+                        if (missing.endpoint.nodeId == currentNodeId) {
+                            TransportNodeDiagnosticState.CURRENT
+                        } else {
+                            TransportNodeDiagnosticState.COOLDOWN
+                        },
+                    activeConnections = 0,
+                    cooldownUntilEpochMilliseconds = missing.cooldownUntilEpochMilliseconds
+                )
+            }
+
         _diagnostics.value =
             _diagnostics.value.copy(
-                availableNodes =
-                    resolvedEndpoints.map { endpoint ->
-                        val cooldownUntilEpochMilliseconds =
-                            cooldownUntilEpochMillisecondsByNodeId[endpoint.nodeId]
-
-                        TransportNodeDiagnostic(
-                            nodeId = endpoint.nodeId,
-                            websocketUrl = endpoint.websocketUrl,
-                            state =
-                                endpoint.diagnosticState(
-                                    currentNodeId = currentNodeId,
-                                    cooldownUntilEpochMillisecondsByNodeId =
-                                    cooldownUntilEpochMillisecondsByNodeId
-                                ),
-                            activeConnections = endpoint.activeConnections,
-                            cooldownUntilEpochMilliseconds = cooldownUntilEpochMilliseconds
-                        )
-                    }
+                availableNodes = resolvedNodes + missingNodes
             )
     }
+
+    private data class MissingEndpoint(
+        val endpoint: NodeEndpoint,
+        val cooldownUntilEpochMilliseconds: Long
+    )
 }

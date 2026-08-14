@@ -49,7 +49,9 @@ class DefaultTransportConnectionManager(
 
     private val diagnosticsState =
         TransportDiagnosticsState(
-            registryUrl = controlPlaneConfiguration.activeEndpoint.value?.baseUrl
+            registryUrl = controlPlaneConfiguration.activeEndpoint.value?.baseUrl,
+            missingNodeCooldownMilliseconds = transportConfig.failedNodeCooldownMilliseconds,
+            now = SystemClock::nowEpochMilliseconds
         )
 
     override val diagnostics: StateFlow<TransportDiagnostics> = diagnosticsState.diagnostics
