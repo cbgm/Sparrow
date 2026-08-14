@@ -10,17 +10,15 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `core` |
 | Directory | `core` |
 | Build file | `core/build.gradle.kts` |
-| Kotlin files | 10 |
-| Production Kotlin files | 10 |
+| Kotlin files | 13 |
+| Production Kotlin files | 13 |
 | Test Kotlin files | 0 |
 | Resource files | 1 |
 | Direct dependencies | 0 |
-| Direct dependents | 13 |
+| Direct dependents | 12 |
 
 ## Source sets
 
-- `androidDeviceTest`
-- `androidHostTest`
 - `androidMain`
 - `commonMain`
 - `iosMain`
@@ -31,7 +29,6 @@ None.
 
 ## Dependents
 
-- [`:androidApp`](../modules/androidApp.md)
 - [`:core:protocol`](../modules/core-protocol.md)
 - [`:data:database`](../modules/data-database.md)
 - [`:feature:chats`](../modules/feature-chats.md)

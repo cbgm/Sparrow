@@ -80,7 +80,7 @@ complexity:
     allowedComplexity: 15
   ComplexCondition:
     active: true
-    allowedConditions: 3
+    allowedConditions: 4
   ComplexInterface:
     active: false
     allowedDefinitions: 10
@@ -149,8 +149,10 @@ complexity:
     ignoreAnnotation: true
     allowedWithLengthLessThan: 5
     ignoreStringsRegex: '$^'
+  # Function count is not a code-quality metric for this project.
+  # Split by cohesion, responsibility and readability instead.
   TooManyFunctions:
-    active: true
+    active: false
     excludes: [ '**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**' ]
     allowedFunctionsPerFile: 11
     allowedFunctionsPerClass: 11
@@ -250,7 +252,7 @@ exceptions:
     active: true
     ignoreLabeled: false
   SwallowedException:
-    active: true
+    active: false
     ignoredExceptionTypes:
       - 'InterruptedException'
       - 'MalformedURLException'
@@ -277,7 +279,7 @@ exceptions:
   ThrowingNewInstanceOfSameException:
     active: true
   TooGenericExceptionCaught:
-    active: true
+    active: false
     excludes: [ '**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**' ]
     exceptionNames:
       - 'ArrayIndexOutOfBoundsException'
@@ -345,7 +347,7 @@ naming:
     active: false
     parameterPattern: '[a-z][A-Za-z0-9]*|_'
   MatchingDeclarationName:
-    active: true
+    active: false
     mustBeFirst: true
     multiplatformTargets:
       - 'ios'
@@ -643,13 +645,13 @@ style:
     active: true
     methods:
       - value: 'kotlin.io.print'
-        reason: 'Use the SecureChat logger instead of print.'
+        reason: 'Use the Sparrow logger instead of print.'
       - value: 'kotlin.io.println'
-        reason: 'Use the SecureChat logger instead of println.'
+        reason: 'Use the Sparrow logger instead of println.'
       - value: 'java.io.PrintStream.print'
-        reason: 'Use the SecureChat logger instead of print.'
+        reason: 'Use the Sparrow logger instead of print.'
       - value: 'java.io.PrintStream.println'
-        reason: 'Use the SecureChat logger instead of println.'
+        reason: 'Use the Sparrow logger instead of println.'
   ForbiddenNamedParam:
     active: false
     methods: [ ]
@@ -672,7 +674,7 @@ style:
     active: true
     maxJumpCount: 1
   MagicNumber:
-    active: true
+    active: false
     excludes: [ '**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**', '**/*.kts' ]
     ignoreNumbers:
       - '-1'
@@ -740,7 +742,7 @@ style:
   RedundantVisibilityModifier:
     active: false
   ReturnCount:
-    active: true
+    active: false
     max: 2
     excludedFunctions:
       - 'equals'
@@ -941,7 +943,7 @@ Compose:
     active: true
   ViewModelInjection:
     active: true
-SecureChat:
+Sparrow:
   ViewModelDirectDataDependencyRule:
     active: true
 

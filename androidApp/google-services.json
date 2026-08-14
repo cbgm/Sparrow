@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "229331495492",
-    "project_id": "chat-9ebf2",
-    "storage_bucket": "chat-9ebf2.firebasestorage.app"
+    "project_number": "201358693851",
+    "project_id": "sparrow-a9048",
+    "storage_bucket": "sparrow-a9048.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:229331495492:android:bf3e1d3453001a1be66a11",
+        "mobilesdk_app_id": "1:201358693851:android:6f8573815dadca9002c3fe",
         "android_client_info": {
-          "package_name": "com.cbgm.securechat"
+          "package_name": "com.cbgm.sparrow"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAyc5pwZWaC7hI8hG3l6E_GuSc1UdyuyeU"
+          "current_key": "AIzaSyC_CkvAQLMLuuCcct-PQDxcpVqg0DxRnHU"
         }
       ],
       "services": {

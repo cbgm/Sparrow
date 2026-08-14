@@ -10,19 +10,18 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `core` |
 | Directory | `core/ui` |
 | Build file | `core/ui/build.gradle.kts` |
-| Kotlin files | 27 |
-| Production Kotlin files | 27 |
-| Test Kotlin files | 0 |
+| Kotlin files | 33 |
+| Production Kotlin files | 32 |
+| Test Kotlin files | 1 |
 | Resource files | 1 |
 | Direct dependencies | 1 |
 | Direct dependents | 9 |
 
 ## Source sets
 
-- `androidDeviceTest`
-- `androidHostTest`
 - `androidMain`
 - `commonMain`
+- `commonTest`
 - `iosMain`
 
 ## Dependencies

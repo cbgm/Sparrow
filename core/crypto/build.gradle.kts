@@ -1,11 +1,11 @@
 plugins {
-    alias(libs.plugins.securechat.kmp.library)
-    alias(libs.plugins.securechat.kmp.testing)
+    alias(libs.plugins.sparrow.kmp.library)
+    alias(libs.plugins.sparrow.kmp.testing)
 }
 
 kotlin {
     android {
-        namespace = "com.cbgm.securechat.core.crypto"
+        namespace = "com.cbgm.sparrow.core.crypto"
     }
 
     sourceSets {

@@ -1,125 +1,72 @@
-# Push notifications
+# Push notifications and offline delivery
 
-SecureChat uses the existing WebSocket while the Android UI is visible. When the UI is no longer visible, the WebSocket is disconnected and Firebase Cloud Messaging wakes the app for a short pending-message synchronization.
+Push is used as a **wake-up mechanism**, not as the canonical plaintext message transport.
 
-FCM carries only an opaque wake-up ID. The encrypted relay envelopes stay on the relay until the client processes and acknowledges them.
+## Components
 
-## Android Firebase setup
+Client/common notification orchestration:
 
-1. Create or select a Firebase project.
-2. Add an Android application with package name `com.cbgm.securechat`.
-3. Download `google-services.json` and place it at:
+- `RegisterPushToken`
+- `SynchronizePendingMessages`
+- `ConversationNotificationCoordinator`
+- `AppVisibilityState`
 
-   ```text
-   androidApp/google-services.json
-   ```
+Android implementation:
 
-4. Use an emulator or device with Google Play services.
-5. Sync Gradle and reinstall the Android application.
+- `SparrowFirebaseMessagingService`
+- `PushTokenRegistrationWorker`
+- `PendingMessageSyncWorker`
+- `AndroidNotificationRuntime`
+- `SparrowNotificationManager`
 
-The Google Services Gradle plugin is applied only when that file exists. This keeps the project buildable before local Firebase configuration is added, but push delivery remains disabled until it is present.
+Transport gateways:
 
-## Relay Firebase Admin setup
+- `HttpPushTokenRegistrationGateway`
+- `HttpPendingEnvelopeGateway`
+- mailbox gateway in `:feature:transport`
 
-Create a Firebase service-account key for the same Firebase project. Keep the JSON file outside the repository.
+Server:
 
-PowerShell:
+- `PushCoordinator`
+- `FirebasePushSender`
+- `PostgresPushDeviceStore`
+- `PostgresPendingEnvelopeStore`
+- `PostgresWakeUpStore`
+- `MailboxPushNotifier`
 
-```powershell
-$env:GOOGLE_APPLICATION_CREDENTIALS = "C:\secure\securechat-firebase-service-account.json"
-.\gradlew.bat :relay:run
+## Normal offline flow
+
+```mermaid
+sequenceDiagram
+    participant S as Sender
+    participant F as Federation
+    participant M as Recipient mailbox
+    participant P as Push service
+    participant FCM as FCM
+    participant R as Android recipient
+
+    S->>F: opaque encrypted envelope
+    F->>M: store envelope
+    M->>P: wake-up identifier
+    P->>FCM: FCM data notification
+    FCM-->>R: wake
+    R->>M: fetch pending envelope
+    R->>R: decrypt/process locally
+    R->>M: acknowledge
 ```
 
-Git Bash:
+Legacy/compatibility pending-envelope behavior can exist for clients that do not yet have a usable mailbox route, but the preferred model is recipient-selected mailbox delivery.
 
-```bash
-export GOOGLE_APPLICATION_CREDENTIALS=/secure/securechat-firebase-service-account.json
-./gradlew :relay:run
-```
+## Firebase credentials
 
-Without Application Default Credentials, the relay starts normally but logs that push delivery is disabled.
+The Control Plane push service needs Firebase Admin credentials for real FCM delivery. Without them, local server health may still run depending on configuration, but real Android background wake-ups will not work.
 
-## Runtime flow
+Do not commit `firebase-admin.json` or other production credentials.
 
-```text
-App visible
-  -> WebSocket connected
-  -> envelope is processed and ACKed immediately
+### Android Firebase app after the Sparrow rebrand
 
-App backgrounded or process killed
-  -> relay retains encrypted envelope
-  -> relay waits briefly for a WebSocket ACK
-  -> if still pending, relay sends high-priority FCM data wake-up
-  -> FirebaseMessagingService schedules expedited Koin Worker
-  -> Worker downloads all pending envelopes for the wake-up
-  -> existing incoming-envelope processor stores them
-  -> Worker ACKs each successfully processed envelope
-  -> Android displays or updates one notification per conversation
+The Android application ID is now `com.cbgm.sparrow`. Register that Android app in the existing Firebase project and replace `androidApp/google-services.json` with the configuration downloaded for **that exact package name** before validating real FCM delivery. The server-side Firebase Admin service account can stay in the same Firebase project.
 
-Notification tap
-  -> securechat://chat/{conversationId}
-  -> shared notification navigation resolves direct or group chat
-  -> exact conversation opens after startup completes
-```
+## Force stop caveat
 
-## Manual test
-
-Use two Google Play-enabled emulators. The examples assume the receiver is `emulator-5556`.
-
-1. Start the relay with Firebase Admin credentials.
-2. Open SecureChat on both emulators and complete onboarding.
-3. Confirm token registration:
-
-   ```powershell
-   curl http://localhost:8080/health
-   ```
-
-   `pushDevices` should be at least `2` after both clients have started and obtained FCM tokens.
-
-4. Put the receiver in the background:
-
-   ```powershell
-   adb -s emulator-5556 shell input keyevent KEYCODE_HOME
-   ```
-
-5. Send a message from the other emulator.
-6. After the relay fallback delay, the receiver should display a message notification.
-7. Tap the notification. The exact direct or group conversation should open.
-
-### Test process recreation
-
-Kill only the process, not the Android package stopped state:
-
-```powershell
-adb -s emulator-5556 shell am kill com.cbgm.securechat
-```
-
-Then send another message. FCM should recreate the process, Koin should construct the Worker, and the notification should appear.
-
-Do not use this command for the push-delivery test:
-
-```powershell
-adb -s emulator-5556 shell am force-stop com.cbgm.securechat
-```
-
-Android intentionally blocks background delivery after an explicit force-stop until the user opens the app again.
-
-## Useful logs
-
-Receiver:
-
-```powershell
-adb -s emulator-5556 logcat | findstr /I "FirebaseMessaging WorkManager PendingMessageSync SecureChat"
-```
-
-Relay:
-
-```text
-Firebase Admin is not configured
-FCM wake-up failed
-Push fallback failed
-```
-
-## Current server limitation
-
-The relay's envelope, wake-up, and push-token stores are currently in memory because the existing relay is in memory. Messages survive client disconnects but not a relay-process restart. Before production deployment, replace these stores with authenticated persistent storage and add retention/cleanup policies.
+Android's explicit **Force stop** prevents normal background scheduling/FCM behavior until the user launches the app again. Test “background delivery” by leaving the app/background process normally, not by relying on Force stop as a supported delivery state.

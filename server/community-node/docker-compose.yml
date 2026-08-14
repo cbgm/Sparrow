@@ -1,0 +1,170 @@
+name: ${COMMUNITY_NODE_PROJECT_NAME:-sparrow-community-node}
+
+x-community-service: &community-service
+  restart: unless-stopped
+  build:
+    context: ../..
+    dockerfile: server/Dockerfile
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  healthcheck:
+    test: ["CMD-SHELL", "java -cp '/app/lib/*' com.cbgm.sparrow.server.observability.ReadinessProbe http://127.0.0.1:$${PORT}/health/ready"]
+    interval: 10s
+    timeout: 5s
+    retries: 6
+    start_period: 20s
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      COMMUNITY_NODE_SITE_ADDRESS: ${COMMUNITY_NODE_SITE_ADDRESS:-:80}
+    ports:
+      - "${COMMUNITY_NODE_BIND_ADDRESS:-0.0.0.0}:${COMMUNITY_NODE_HTTP_PORT:-8490}:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./index.html:/srv/index.html:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      mailbox:
+        condition: service_healthy
+      federation:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+
+  mailbox-database:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sparrow_mailbox
+      POSTGRES_USER: sparrow_mailbox
+      POSTGRES_PASSWORD: ${MAILBOX_DATABASE_PASSWORD:-local-development-password}
+    ports:
+      - "127.0.0.1:${MAILBOX_DATABASE_PORT:-5636}:5432"
+    volumes:
+      - mailbox-database-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  mailbox:
+    <<: *community-service
+    image: sparrow-mailbox:local
+    build:
+      context: ../..
+      dockerfile: server/Dockerfile
+      args:
+        SERVICE: mailbox
+    environment:
+      PORT: 8092
+      NODE_IDENTITY_PATH: /data/node.identity
+      MAILBOX_DATABASE_URL: jdbc:postgresql://mailbox-database:5432/sparrow_mailbox
+      MAILBOX_DATABASE_USER: sparrow_mailbox
+      MAILBOX_DATABASE_PASSWORD: ${MAILBOX_DATABASE_PASSWORD:-local-development-password}
+      CONTROL_PLANE_URLS: ${CONTROL_PLANE_URLS:-}
+      PUSH_NODE_API_URL: ${CONTROL_PLANE_URL:?Set CONTROL_PLANE_URL}
+      MAILBOX_MAXIMUM_MAILBOXES: ${MAILBOX_MAXIMUM_MAILBOXES:-100000}
+      MAILBOX_MAXIMUM_MAILBOXES_PER_CLIENT: ${MAILBOX_MAXIMUM_MAILBOXES_PER_CLIENT:-100}
+      MAILBOX_CREATION_RATE_LIMIT_REQUESTS: ${MAILBOX_CREATION_RATE_LIMIT_REQUESTS:-30}
+      MAILBOX_CREATION_RATE_LIMIT_WINDOW_MILLISECONDS: ${MAILBOX_CREATION_RATE_LIMIT_WINDOW_MILLISECONDS:-3600000}
+      MAILBOX_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS: ${MAILBOX_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS:-100000}
+    ports:
+      - "127.0.0.1:${MAILBOX_DIAGNOSTIC_PORT:-8492}:8092"
+    volumes:
+      - node-identity:/data
+    depends_on:
+      mailbox-database:
+        condition: service_healthy
+
+  federation-database:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sparrow_federation
+      POSTGRES_USER: sparrow_federation
+      POSTGRES_PASSWORD: ${FEDERATION_DATABASE_PASSWORD:-local-development-password}
+    ports:
+      - "127.0.0.1:${FEDERATION_DATABASE_PORT:-5638}:5432"
+    volumes:
+      - federation-database-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  federation:
+    <<: *community-service
+    image: sparrow-federation:local
+    build:
+      context: ../..
+      dockerfile: server/Dockerfile
+      args:
+        SERVICE: federation
+    environment:
+      PORT: 8093
+      NODE_IDENTITY_PATH: /data/node.identity
+      CONTROL_PLANE_URLS: ${CONTROL_PLANE_URLS:-}
+      NODE_REGISTRY_URL: ${CONTROL_PLANE_URL:?Set CONTROL_PLANE_URL}
+      PRESENCE_DIRECTORY_URL: ${CONTROL_PLANE_URL:?Set CONTROL_PLANE_URL}
+      GATEWAY_INTERNAL_URL: http://gateway:8094
+      CLIENT_ENDPOINT: ${CLIENT_ENDPOINT:?Set CLIENT_ENDPOINT}
+      FEDERATION_ENDPOINT: ${FEDERATION_ENDPOINT:?Set FEDERATION_ENDPOINT}
+      MAILBOX_ENDPOINT: ${MAILBOX_ENDPOINT:?Set MAILBOX_ENDPOINT}
+      FEDERATION_INTERNAL_API_TOKEN: ${FEDERATION_INTERNAL_API_TOKEN:-local-federation-development-token}
+      GATEWAY_INTERNAL_API_TOKEN: ${GATEWAY_INTERNAL_API_TOKEN:-local-gateway-development-token}
+      FEDERATION_DATABASE_URL: jdbc:postgresql://federation-database:5432/sparrow_federation
+      FEDERATION_DATABASE_USER: sparrow_federation
+      FEDERATION_DATABASE_PASSWORD: ${FEDERATION_DATABASE_PASSWORD:-local-development-password}
+      FEDERATION_INCOMING_RATE_LIMIT_REQUESTS: ${FEDERATION_INCOMING_RATE_LIMIT_REQUESTS:-1200}
+      FEDERATION_INCOMING_RATE_LIMIT_WINDOW_MILLISECONDS: ${FEDERATION_INCOMING_RATE_LIMIT_WINDOW_MILLISECONDS:-60000}
+      FEDERATION_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS: ${FEDERATION_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS:-100000}
+    ports:
+      - "127.0.0.1:${FEDERATION_DIAGNOSTIC_PORT:-8493}:8093"
+    volumes:
+      - node-identity:/data
+    depends_on:
+      mailbox:
+        condition: service_healthy
+      federation-database:
+        condition: service_healthy
+
+  gateway:
+    <<: *community-service
+    image: sparrow-gateway:local
+    build:
+      context: ../..
+      dockerfile: server/Dockerfile
+      args:
+        SERVICE: gateway
+    environment:
+      PORT: 8094
+      NODE_IDENTITY_PATH: /data/node.identity
+      FEDERATION_INTERNAL_URL: http://federation:8093
+      CONTROL_PLANE_URLS: ${CONTROL_PLANE_URLS:-}
+      ADVERTISED_CONTROL_PLANE_URLS: ${ADVERTISED_CONTROL_PLANE_URLS:-}
+      PRESENCE_DIRECTORY_URL: ${CONTROL_PLANE_URL:?Set CONTROL_PLANE_URL}
+      PUSH_NODE_API_URL: ${CONTROL_PLANE_URL:?Set CONTROL_PLANE_URL}
+      FEDERATION_INTERNAL_API_TOKEN: ${FEDERATION_INTERNAL_API_TOKEN:-local-federation-development-token}
+      GATEWAY_INTERNAL_API_TOKEN: ${GATEWAY_INTERNAL_API_TOKEN:-local-gateway-development-token}
+      ROUTE_LIFETIME_MILLISECONDS: ${ROUTE_LIFETIME_MILLISECONDS:-90000}
+      ROUTE_REFRESH_INTERVAL_MILLISECONDS: ${ROUTE_REFRESH_INTERVAL_MILLISECONDS:-30000}
+    ports:
+      - "127.0.0.1:${GATEWAY_DIAGNOSTIC_PORT:-8494}:8094"
+    volumes:
+      - node-identity:/data
+    depends_on:
+      federation:
+        condition: service_healthy
+
+volumes:
+  caddy-data:
+  caddy-config:
+  node-identity:
+  mailbox-database-data:
+  federation-database-data:

@@ -1,382 +1,64 @@
 # Glossary
 
-## Overview
+**Control Plane**  
+The discovery/control deployment containing node registry, presence directory and push service behind Caddy.
 
-This glossary defines the terminology used throughout the SecureChat project.
+**Control Plane directory**  
+External JSON document containing a `controlPlanes` array. It is the configurable source of Control Plane URLs for app builds and Community Nodes.
 
-The objective is to ensure that developers, contributors and reviewers use consistent language when discussing the architecture, protocol and implementation.
+**Community Node**  
+The message-routing deployment containing gateway, federation and mailbox services behind Caddy.
 
----
+**Caddy**  
+Reverse proxy/edge server that exposes friendly HTTP(S)/WSS paths and forwards them to Docker-internal services.
 
-# A
+**Docker image**  
+Packaged filesystem/runtime for one server service.
 
-## Architecture Plugin
+**Docker Compose**  
+Configuration/tool used to run multiple images, networks, volumes and dependencies as one deployment.
 
-A custom Gradle plugin that automatically discovers the project structure, validates architectural rules and generates documentation.
+**PostgreSQL**  
+Durable relational database used by registry, push, federation queue and mailbox services.
 
----
+**Redis**  
+Fast in-memory datastore used for short-lived presence routes.
 
-## Attachment
+**Routing ID**  
+Protocol identifier used to locate a client route without using a human contact name/phone number directly as the wire destination.
 
-A non-text message payload such as
+**Presence route**  
+Short-lived signed mapping from a client routing identity to its current Community Node/connection.
 
-- image
-- video
-- file
-- audio
+**ProtocolOutbox**  
+Persistent client boundary where feature-owned packets are queued before final transport preparation/sending.
 
-Attachments use the same end-to-end encryption pipeline as text messages.
+**Federation**  
+Signed Community Node-to-Community Node forwarding path when sender and recipient are not on the same gateway.
 
----
+**Mailbox**  
+Recipient-selected capability-protected offline store containing opaque encrypted envelopes.
 
-# C
+**FCM**  
+Firebase Cloud Messaging; used on Android as a wake-up mechanism for pending/offline delivery.
 
-## Clean Architecture
+**Safety number**  
+Human-comparable value derived from both parties' current public identity keys by `SafetyNumberGenerator`.
 
-The architectural style used throughout SecureChat.
+**Security epoch**  
+Group membership/key version used to determine current active members and the group encryption state for Group traffic.
 
-It separates the application into
+**Cooldown**  
+Temporary client diagnostic/selection state for a failed node. Cooldown nodes are not routing candidates and display zero live connections.
 
-```
-Presentation
+**BuildKonfig**  
+KMP Gradle plugin used to expose build-time configuration such as `CONTROL_PLANE_DIRECTORY_URL` to common code.
 
-↓
+**R8**  
+Android release optimizer/minifier. Release builds also shrink resources; mapping files are retained privately in CI for de-obfuscation.
 
-Domain
+**Release candidate**  
+Artifacts created from a `release/**` branch push. They are change-aware and are not automatically the official GitHub Release.
 
-↓
-
-Data
-```
-
-Each layer has a single responsibility.
-
----
-
-## Configuration Cache
-
-A Gradle feature that caches the configured build model.
-
-It significantly reduces build times by avoiding repeated project configuration.
-
----
-
-## Convention Plugin
-
-A reusable Gradle plugin that configures multiple modules consistently.
-
-Convention plugins replace duplicated Gradle build scripts.
-
----
-
-# D
-
-## Data Layer
-
-The implementation layer of Clean Architecture.
-
-Typical responsibilities include
-
-- Room
-- repositories
-- networking
-- persistence
-- mapping
-
----
-
-## Dependency Matrix
-
-A generated document showing module dependencies across the entire project.
-
----
-
-## Domain Layer
-
-The business layer of Clean Architecture.
-
-Contains
-
-- UseCases
-- domain models
-- repository interfaces
-
----
-
-# E
-
-## End-to-End Encryption
-
-A security model where only communicating devices can decrypt message contents.
-
-The relay cannot read encrypted messages.
-
----
-
-# F
-
-## Feature Module
-
-A Gradle module implementing user-visible functionality.
-
-Examples include
-
-- Chats
-- Contacts
-- Identity
-- Transport
-
----
-
-# G
-
-## Generated Documentation
-
-Documentation automatically produced by the Architecture Plugin.
-
-Examples include
-
-- architecture overview
-- module pages
-- dependency matrix
-- statistics
-
-Generated documentation should never be edited manually.
-
----
-
-# I
-
-## Identity
-
-A user's cryptographic identity.
-
-Consists of
-
-- signing key pair
-- encryption key pair
-
-Private keys never leave the device.
-
----
-
-## Included Build
-
-The Gradle project
-
-```
-build-logic/
-```
-
-which provides convention plugins and custom build infrastructure.
-
----
-
-# J
-
-## JSON Report
-
-Machine-readable architecture information generated by the build.
-
-Intended for tooling rather than human editing.
-
----
-
-# K
-
-## Koin
-
-The dependency injection framework used throughout SecureChat.
-
----
-
-## Kotlin Multiplatform
-
-The technology used to share business logic across supported platforms.
-
----
-
-# M
-
-## Mermaid
-
-A diagram language used to generate architecture diagrams.
-
-The Architecture Plugin automatically generates Mermaid diagrams from the Gradle project.
-
----
-
-## Module
-
-An independent Gradle project with a clearly defined responsibility.
-
-Examples
-
-```
-core:crypto
-
-feature:contacts
-
-data:database
-```
-
----
-
-# P
-
-## Presentation Layer
-
-The UI layer.
-
-Contains
-
-- Compose
-- ViewModels
-- UI State
-
-Business logic should not be implemented here.
-
----
-
-## Protocol
-
-The format used to exchange messages between SecureChat clients.
-
-Independent from transport and platform.
-
----
-
-# Q
-
-## Quality Pipeline
-
-The automated verification process executed through
-
-```bash
-./gradlew quality
-```
-
-It combines
-
-- formatting
-- static analysis
-- architecture validation
-- documentation verification
-
----
-
-# R
-
-## Relay
-
-The SecureChat server responsible for forwarding encrypted packets.
-
-The relay cannot decrypt messages.
-
----
-
-## Repository
-
-An abstraction that provides access to data.
-
-Presentation communicates with repositories through UseCases rather than directly accessing storage.
-
----
-
-# S
-
-## Safety Number
-
-A deterministic fingerprint generated from both participants' public identity keys.
-
-Used to verify contact identities.
-
----
-
-## Shared Module
-
-A Gradle module containing reusable application-specific functionality shared between multiple features.
-
----
-
-## Source Set
-
-A Kotlin Multiplatform source directory such as
-
-```
-commonMain
-
-androidMain
-
-commonTest
-```
-
----
-
-# T
-
-## Transport
-
-The layer responsible for delivering encrypted packets between clients.
-
-Transport does not perform encryption.
-
----
-
-# U
-
-## UseCase
-
-A single business operation.
-
-Examples include
-
-```
-SendMessageUseCase
-
-ImportContactUseCase
-
-GenerateIdentityUseCase
-```
-
-UseCases belong inside the Domain layer.
-
----
-
-# V
-
-## Version Catalog
-
-The Gradle dependency registry located at
-
-```
-gradle/libs.versions.toml
-```
-
-It centralizes all dependency and plugin versions.
-
----
-
-## ViewModel
-
-The presentation component responsible for coordinating UI state.
-
-ViewModels communicate with the Domain layer rather than infrastructure directly.
-
----
-
-# W
-
-## WebSocket
-
-The transport protocol currently used for communication between SecureChat clients and the relay.
-
-It carries encrypted packets but does not provide end-to-end encryption itself.
-
----
-
-# Summary
-
-This glossary provides a shared vocabulary for the SecureChat project.
-
-Using consistent terminology improves communication, documentation quality and architectural discussions while making the project easier for new contributors to understand.
+**Full release**  
+A `v*` tagged build that rebuilds/publishes the complete APK + server image + launcher package set and combined full ZIP.

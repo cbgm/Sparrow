@@ -1,0 +1,882 @@
+name: Release Packages
+
+on:
+  push:
+    branches:
+      - "release/**"
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: release-packages-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: "21"
+
+jobs:
+  changes:
+    name: Resolve changed artifacts
+    runs-on: ubuntu-latest
+    outputs:
+      full_build: ${{ steps.changes.outputs.full_build }}
+      android: ${{ steps.changes.outputs.android }}
+      node_registry: ${{ steps.changes.outputs.node_registry }}
+      presence_directory: ${{ steps.changes.outputs.presence_directory }}
+      push: ${{ steps.changes.outputs.push }}
+      mailbox: ${{ steps.changes.outputs.mailbox }}
+      federation: ${{ steps.changes.outputs.federation }}
+      gateway: ${{ steps.changes.outputs.gateway }}
+      control_plane_package: ${{ steps.changes.outputs.control_plane_package }}
+      community_node_package: ${{ steps.changes.outputs.community_node_package }}
+      any_artifacts: ${{ steps.changes.outputs.any_artifacts }}
+
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect affected release artifacts
+        id: changes
+        shell: bash
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          FORCE_FULL: ${{ github.ref_type == 'tag' }}
+        run: |
+          .github/scripts/resolve-release-changes.sh \
+            "${BEFORE_SHA}" \
+            "${GITHUB_SHA}" \
+            "${FORCE_FULL}"
+
+  metadata:
+    name: Resolve release metadata
+    needs: changes
+    runs-on: ubuntu-latest
+    outputs:
+      version_name: ${{ steps.metadata.outputs.version_name }}
+      version_code: ${{ steps.metadata.outputs.version_code }}
+      artifact_version: ${{ steps.metadata.outputs.artifact_version }}
+      image_tag: ${{ steps.metadata.outputs.image_tag }}
+      release_line_tag: ${{ steps.metadata.outputs.release_line_tag }}
+      short_sha: ${{ steps.metadata.outputs.short_sha }}
+      publish_release: ${{ steps.metadata.outputs.publish_release }}
+      prerelease: ${{ steps.metadata.outputs.prerelease }}
+
+    steps:
+      - name: Resolve version and image tags
+        id: metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          short_sha="${GITHUB_SHA:0:8}"
+          version_code="${GITHUB_RUN_NUMBER}"
+          publish_release="false"
+          prerelease="true"
+
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.][A-Za-z0-9][A-Za-z0-9.-]*)?$ ]]; then
+              echo "::error::Release tags must look like v0.1.0 or v0.1.0-alpha.1."
+              exit 1
+            fi
+
+            version_name="${GITHUB_REF_NAME#v}"
+            artifact_version="${version_name}"
+            image_tag="${GITHUB_REF_NAME}"
+            release_major="${version_name%%.*}"
+            release_remainder="${version_name#*.}"
+            release_minor="${release_remainder%%.*}"
+            release_line_tag="release-${release_major}-${release_minor}"
+            publish_release="true"
+
+            if [[ "${version_name}" != *-* ]]; then
+              prerelease="false"
+            fi
+          else
+            release_line="${GITHUB_REF_NAME#release/}"
+            if [[ "${release_line}" == "${GITHUB_REF_NAME}" ]] ||
+               [[ ! "${release_line}" =~ ^[0-9]+\.[0-9]+([.][0-9]+)?$ ]]; then
+              echo "::error::Release branches must be created from master and named release/0.1 or release/0.1.0."
+              exit 1
+            fi
+
+            version_name="${release_line}-rc.${GITHUB_RUN_NUMBER}"
+            artifact_version="${version_name}-${short_sha}"
+            image_line="${release_line//./-}"
+            release_line_tag="release-${image_line}"
+            image_tag="${release_line_tag}-sha-${short_sha}"
+          fi
+
+          if (( version_code > 2100000000 )); then
+            echo "::error::GitHub run number no longer fits into Android versionCode."
+            exit 1
+          fi
+
+          {
+            echo "version_name=${version_name}"
+            echo "version_code=${version_code}"
+            echo "artifact_version=${artifact_version}"
+            echo "image_tag=${image_tag}"
+            echo "release_line_tag=${release_line_tag}"
+            echo "short_sha=${short_sha}"
+            echo "publish_release=${publish_release}"
+            echo "prerelease=${prerelease}"
+          } >> "${GITHUB_OUTPUT}"
+
+          echo "Version: ${version_name}"
+          echo "Immutable image tag: ${image_tag}"
+          echo "Release-line image tag: ${release_line_tag}"
+
+  validate:
+    name: Validate release commit
+    needs:
+      - changes
+      - metadata
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Verify tagged commit belongs to a release branch
+        if: github.ref_type == 'tag'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin '+refs/heads/release/*:refs/remotes/origin/release/*'
+          if ! git branch --remotes --contains "${GITHUB_SHA}" | grep -Eq 'origin/release/'; then
+            echo "::error::Release tags must point to a commit from a release/* branch."
+            exit 1
+          fi
+
+      - name: Create validation local.properties
+        env:
+          CONTROL_PLANE_RELEASE_DIRECTORY_URL: ${{ vars.CONTROL_PLANE_RELEASE_DIRECTORY_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'controlPlaneDirectoryUrl=%s\n' "${CONTROL_PLANE_RELEASE_DIRECTORY_URL:-}" > local.properties
+
+      - name: Run quality checks
+        run: ./gradlew qualityCheck -x verifyArchitectureReport --no-daemon --stacktrace --console=plain
+
+      - name: Run host and multiplatform tests
+        run: ./gradlew allTests --no-daemon --stacktrace --console=plain
+
+      - name: Upload validation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-validation-${{ needs.metadata.outputs.artifact_version }}
+          if-no-files-found: ignore
+          retention-days: 30
+          path: |
+            **/build/reports/tests/**
+            **/build/test-results/**
+            **/build/reports/detekt/**
+            **/build/reports/ktlint/**
+
+  android-debug-package:
+    name: Build debug APK
+    needs:
+      - changes
+      - metadata
+      - validate
+    if: needs.changes.outputs.android == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Create debug local.properties
+        env:
+          CONTROL_PLANE_DIRECTORY_URL: ${{ vars.CONTROL_PLANE_DIRECTORY_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${CONTROL_PLANE_DIRECTORY_URL}" ]]; then
+            echo "::error::Set the CONTROL_PLANE_DIRECTORY_URL repository variable."
+            exit 1
+          fi
+          printf 'controlPlaneDirectoryUrl=%s\n' "${CONTROL_PLANE_DIRECTORY_URL}" > local.properties
+
+      - name: Build debug APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew \
+            :androidApp:assembleDebug \
+            -PappVersionName="${{ needs.metadata.outputs.version_name }}" \
+            -PappVersionCode="${{ needs.metadata.outputs.version_code }}" \
+            --no-daemon \
+            --stacktrace \
+            --console=plain
+
+      - name: Name debug APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ needs.metadata.outputs.artifact_version }}"
+          debug_apk="$(find androidApp/build/outputs/apk/debug -maxdepth 1 -name '*.apk' -type f | head -n 1)"
+          if [[ -z "${debug_apk}" ]]; then
+            echo "::error::Android debug APK output is missing."
+            exit 1
+          fi
+          mkdir -p dist/android-debug
+          cp "${debug_apk}" "dist/android-debug/sparrow-${version}-debug.apk"
+          (cd dist/android-debug && sha256sum sparrow-*.apk > SHA256SUMS.txt)
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: sparrow-android-debug-${{ needs.metadata.outputs.artifact_version }}
+          path: dist/android-debug
+          if-no-files-found: error
+          retention-days: 30
+
+  android-release-package:
+    name: Build signed release APK
+    needs:
+      - changes
+      - metadata
+      - validate
+    if: needs.changes.outputs.android == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Create release local.properties
+        env:
+          CONTROL_PLANE_RELEASE_DIRECTORY_URL: ${{ vars.CONTROL_PLANE_RELEASE_DIRECTORY_URL }}
+          KEY_KEYSTORE_FILE: ${{ secrets.KEY_STORE_FILE }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${CONTROL_PLANE_RELEASE_DIRECTORY_URL}" ]]; then
+            echo "::error::Set the CONTROL_PLANE_RELEASE_DIRECTORY_URL repository variable."
+            exit 1
+          fi
+          printf 'controlPlaneDirectoryUrl=%s\n' "${CONTROL_PLANE_RELEASE_DIRECTORY_URL}" > local.properties
+
+      - name: Prepare release signing key
+        env:
+          ANDROID_RELEASE_KEYSTORE_BASE64: ${{ secrets.ANDROID_RELEASE_KEYSTORE_BASE64 }}
+          ANDROID_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD }}
+          ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
+          ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for variable in \
+            ANDROID_RELEASE_KEYSTORE_BASE64 \
+            ANDROID_RELEASE_KEYSTORE_PASSWORD \
+            ANDROID_RELEASE_KEY_ALIAS \
+            ANDROID_RELEASE_KEY_PASSWORD; do
+            if [[ -z "${!variable}" ]]; then
+              echo "::error::Missing required GitHub secret ${variable}."
+              exit 1
+            fi
+          done
+
+          keystore="${RUNNER_TEMP}/sparrow-release.jks"
+          printf '%s' "${ANDROID_RELEASE_KEYSTORE_BASE64}" | base64 --decode > "${keystore}"
+          chmod 600 "${keystore}"
+
+          {
+            echo "RELEASE_STORE_FILE=${keystore}"
+            echo "RELEASE_STORE_PASSWORD=${ANDROID_RELEASE_KEYSTORE_PASSWORD}"
+            echo "RELEASE_KEY_ALIAS=${ANDROID_RELEASE_KEY_ALIAS}"
+            echo "RELEASE_KEY_PASSWORD=${ANDROID_RELEASE_KEY_PASSWORD}"
+          } >> "${GITHUB_ENV}"
+
+      - name: Build signed release APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew \
+            :androidApp:assembleRelease \
+            -PappVersionName="${{ needs.metadata.outputs.version_name }}" \
+            -PappVersionCode="${{ needs.metadata.outputs.version_code }}" \
+            -PreleaseStoreFile="${RELEASE_STORE_FILE}" \
+            -PreleaseStorePassword="${RELEASE_STORE_PASSWORD}" \
+            -PreleaseKeyAlias="${RELEASE_KEY_ALIAS}" \
+            -PreleaseKeyPassword="${RELEASE_KEY_PASSWORD}" \
+            --no-daemon \
+            --stacktrace \
+            --console=plain
+
+      - name: Verify and name release APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ needs.metadata.outputs.artifact_version }}"
+          release_apk="$(find androidApp/build/outputs/apk/release -maxdepth 1 -name '*.apk' -type f | head -n 1)"
+          if [[ -z "${release_apk}" ]]; then
+            echo "::error::Android release APK output is missing."
+            exit 1
+          fi
+
+          apksigner="$(find "${ANDROID_HOME}/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          if [[ -z "${apksigner}" ]]; then
+            echo "::error::Could not find Android apksigner."
+            exit 1
+          fi
+          "${apksigner}" verify --verbose --print-certs "${release_apk}"
+
+          mkdir -p dist/android-release
+          cp "${release_apk}" "dist/android-release/sparrow-${version}-release.apk"
+          (cd dist/android-release && sha256sum sparrow-*.apk > SHA256SUMS.txt)
+
+          mapping_file="androidApp/build/outputs/mapping/release/mapping.txt"
+          if [[ ! -s "${mapping_file}" ]]; then
+            echo "::error::R8 mapping output is missing for the minified release build."
+            exit 1
+          fi
+          mkdir -p dist/android-mapping
+          cp "${mapping_file}" "dist/android-mapping/mapping-${version}.txt"
+
+      - name: Upload R8 mapping
+        uses: actions/upload-artifact@v4
+        with:
+          name: sparrow-android-mapping-${{ needs.metadata.outputs.artifact_version }}
+          path: dist/android-mapping
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Upload signed release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: sparrow-android-release-${{ needs.metadata.outputs.artifact_version }}
+          path: dist/android-release
+          if-no-files-found: error
+          retention-days: 30
+
+  server-artifacts:
+    name: Build changed server images and bundles
+    needs:
+      - changes
+      - metadata
+      - validate
+    if: >-
+      needs.changes.outputs.control_plane_package == 'true' ||
+      needs.changes.outputs.community_node_package == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve image rebuild and alias plan
+        id: image-plan
+        shell: bash
+        env:
+          IMAGE_TAG: ${{ needs.metadata.outputs.image_tag }}
+          RELEASE_LINE_TAG: ${{ needs.metadata.outputs.release_line_tag }}
+          CONTROL_PLANE_PACKAGE: ${{ needs.changes.outputs.control_plane_package }}
+          COMMUNITY_NODE_PACKAGE: ${{ needs.changes.outputs.community_node_package }}
+          CHANGE_NODE_REGISTRY: ${{ needs.changes.outputs.node_registry }}
+          CHANGE_PRESENCE_DIRECTORY: ${{ needs.changes.outputs.presence_directory }}
+          CHANGE_PUSH: ${{ needs.changes.outputs.push }}
+          CHANGE_MAILBOX: ${{ needs.changes.outputs.mailbox }}
+          CHANGE_FEDERATION: ${{ needs.changes.outputs.federation }}
+          CHANGE_GATEWAY: ${{ needs.changes.outputs.gateway }}
+        run: |
+          set -euo pipefail
+
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          image_prefix="ghcr.io/${owner}/sparrow"
+          required=()
+
+          if [[ "${CONTROL_PLANE_PACKAGE}" == "true" ]]; then
+            required+=(node-registry presence-directory push)
+          fi
+          if [[ "${COMMUNITY_NODE_PACKAGE}" == "true" ]]; then
+            required+=(mailbox federation gateway)
+          fi
+
+          rebuild=()
+          alias=()
+          reuse=()
+
+          for service in "${required[@]}"; do
+            variable_name="CHANGE_${service^^}"
+            variable_name="${variable_name//-/_}"
+            changed="${!variable_name}"
+            image="${image_prefix}-${service}"
+
+            if [[ "${changed}" == "true" ]]; then
+              rebuild+=("${service}")
+              continue
+            fi
+
+            if docker buildx imagetools inspect "${image}:${IMAGE_TAG}" >/dev/null 2>&1; then
+              reuse+=("${service}")
+            elif docker buildx imagetools inspect "${image}:${RELEASE_LINE_TAG}" >/dev/null 2>&1; then
+              alias+=("${service}")
+            else
+              echo "No ${RELEASE_LINE_TAG} base image exists for ${service}; bootstrapping it now."
+              rebuild+=("${service}")
+            fi
+          done
+
+          {
+            echo "rebuild_services=${rebuild[*]}"
+            echo "alias_services=${alias[*]}"
+            echo "reuse_services=${reuse[*]}"
+          } >> "${GITHUB_OUTPUT}"
+
+          echo "Rebuild: ${rebuild[*]:-none}"
+          echo "Alias only: ${alias[*]:-none}"
+          echo "Reuse existing candidate: ${reuse[*]:-none}"
+
+      - name: Build changed server distributions
+        if: steps.image-plan.outputs.rebuild_services != ''
+        shell: bash
+        env:
+          REBUILD_SERVICES: ${{ steps.image-plan.outputs.rebuild_services }}
+        run: |
+          set -euo pipefail
+          tasks=()
+          for service in ${REBUILD_SERVICES}; do
+            tasks+=(":server:${service}:installDist")
+          done
+
+          ./gradlew \
+            "${tasks[@]}" \
+            --no-daemon \
+            --no-configuration-cache \
+            --max-workers=2 \
+            --console=plain
+
+      - name: Publish rebuilt images
+        if: steps.image-plan.outputs.rebuild_services != ''
+        shell: bash
+        env:
+          REBUILD_SERVICES: ${{ steps.image-plan.outputs.rebuild_services }}
+          IMAGE_TAG: ${{ needs.metadata.outputs.image_tag }}
+          RELEASE_LINE_TAG: ${{ needs.metadata.outputs.release_line_tag }}
+          VERSION_NAME: ${{ needs.metadata.outputs.version_name }}
+        run: |
+          set -euo pipefail
+
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          image_prefix="ghcr.io/${owner}/sparrow"
+          created_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          context_root="${RUNNER_TEMP}/sparrow-release-images"
+          rm -rf "${context_root}"
+          mkdir -p "${context_root}"
+
+          for service in ${REBUILD_SERVICES}; do
+            distribution="server/${service}/build/install/${service}"
+            if [[ ! -f "${distribution}/bin/${service}" ]]; then
+              echo "::error::Missing server distribution ${distribution}."
+              exit 1
+            fi
+
+            context="${context_root}/${service}"
+            mkdir -p "${context}/app" "${context}/data"
+            cp -a "${distribution}/." "${context}/app/"
+            touch "${context}/data/.keep"
+            cp server/Dockerfile.runtime "${context}/Dockerfile"
+
+            image="${image_prefix}-${service}"
+            echo "Publishing ${image}:${IMAGE_TAG}"
+
+            docker buildx build \
+              --file "${context}/Dockerfile" \
+              --platform linux/amd64,linux/arm64 \
+              --build-arg "SERVICE=${service}" \
+              --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+              --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+              --label "org.opencontainers.image.version=${VERSION_NAME}" \
+              --label "org.opencontainers.image.created=${created_at}" \
+              --provenance=false \
+              --push \
+              --tag "${image}:${IMAGE_TAG}" \
+              --tag "${image}:${RELEASE_LINE_TAG}" \
+              "${context}"
+          done
+
+      - name: Copy unchanged image manifests to immutable candidate tag
+        if: steps.image-plan.outputs.alias_services != ''
+        shell: bash
+        env:
+          ALIAS_SERVICES: ${{ steps.image-plan.outputs.alias_services }}
+          IMAGE_TAG: ${{ needs.metadata.outputs.image_tag }}
+          RELEASE_LINE_TAG: ${{ needs.metadata.outputs.release_line_tag }}
+        run: |
+          set -euo pipefail
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          image_prefix="ghcr.io/${owner}/sparrow"
+
+          for service in ${ALIAS_SERVICES}; do
+            image="${image_prefix}-${service}"
+            echo "Copying ${image}:${RELEASE_LINE_TAG} -> ${image}:${IMAGE_TAG} without rebuilding."
+            docker buildx imagetools create \
+              --tag "${image}:${IMAGE_TAG}" \
+              "${image}:${RELEASE_LINE_TAG}"
+          done
+
+      - name: Build affected launcher bundles
+        shell: pwsh
+        env:
+          IMAGE_TAG: ${{ needs.metadata.outputs.image_tag }}
+          ARTIFACT_VERSION: ${{ needs.metadata.outputs.artifact_version }}
+          BUILD_CONTROL_PLANE: ${{ needs.changes.outputs.control_plane_package }}
+          BUILD_COMMUNITY_NODE: ${{ needs.changes.outputs.community_node_package }}
+        run: |
+          $owner = "${{ github.repository_owner }}".ToLowerInvariant()
+          $imagePrefix = "ghcr.io/$owner/sparrow"
+
+          if ($env:BUILD_CONTROL_PLANE -eq "true") {
+              ./server/scripts/New-ControlPlaneBundle.ps1 `
+                  -OutputDirectory dist-control-plane `
+                  -ImagePrefix $imagePrefix `
+                  -ImageTag $env:IMAGE_TAG
+
+              New-Item -ItemType Directory -Path dist/server/control-plane -Force | Out-Null
+              Copy-Item `
+                  -LiteralPath dist-control-plane/sparrow-control-plane.zip `
+                  -Destination "dist/server/control-plane/sparrow-control-plane-$($env:ARTIFACT_VERSION)-windows.zip"
+
+              Push-Location dist/server/control-plane
+              Get-ChildItem -File -Filter "sparrow-*" | ForEach-Object {
+                  $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+                  "$hash  $($_.Name)"
+              } | Set-Content -LiteralPath SHA256SUMS.txt -Encoding utf8
+              Pop-Location
+          }
+
+          if ($env:BUILD_COMMUNITY_NODE -eq "true") {
+              ./server/scripts/New-CommunityNodeBundle.ps1 `
+                  -OutputDirectory dist-community-node `
+                  -ImagePrefix $imagePrefix `
+                  -ImageTag $env:IMAGE_TAG
+
+              New-Item -ItemType Directory -Path dist/server/community-node -Force | Out-Null
+              Copy-Item `
+                  -LiteralPath dist-community-node/sparrow-community-node.zip `
+                  -Destination "dist/server/community-node/sparrow-community-node-$($env:ARTIFACT_VERSION)-windows.zip"
+              Copy-Item `
+                  -LiteralPath dist-community-node/sparrow-community-node.tar.gz `
+                  -Destination "dist/server/community-node/sparrow-community-node-$($env:ARTIFACT_VERSION)-macos-linux.tar.gz"
+
+              Push-Location dist/server/community-node
+              Get-ChildItem -File -Filter "sparrow-*" | ForEach-Object {
+                  $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+                  "$hash  $($_.Name)"
+              } | Set-Content -LiteralPath SHA256SUMS.txt -Encoding utf8
+              Pop-Location
+          }
+
+      - name: Upload Control Plane package
+        if: needs.changes.outputs.control_plane_package == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sparrow-control-plane-${{ needs.metadata.outputs.artifact_version }}
+          path: dist/server/control-plane
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Community Node package
+        if: needs.changes.outputs.community_node_package == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sparrow-community-node-${{ needs.metadata.outputs.artifact_version }}
+          path: dist/server/community-node
+          if-no-files-found: error
+          retention-days: 30
+
+  release-summary:
+    name: Release candidate summary
+    needs:
+      - changes
+      - metadata
+      - validate
+      - android-debug-package
+      - android-release-package
+      - server-artifacts
+    if: always() && needs.validate.result == 'success' && github.ref_type != 'tag'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Summarize generated artifacts
+        shell: bash
+        run: |
+          {
+            echo "## Release candidate ${{ needs.metadata.outputs.version_name }}"
+            echo
+            echo "Immutable server image tag: \`${{ needs.metadata.outputs.image_tag }}\`"
+            echo
+            if [[ "${{ needs.changes.outputs.any_artifacts }}" != "true" ]]; then
+              echo "No distributable artifacts were affected by this push. Validation still ran."
+            else
+              echo "Only artifacts affected by this push were rebuilt or repackaged."
+            fi
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  publish-release:
+    name: Publish full GitHub release
+    needs:
+      - changes
+      - metadata
+      - validate
+      - android-debug-package
+      - android-release-package
+      - server-artifacts
+    if: >-
+      always() &&
+      needs.metadata.outputs.publish_release == 'true' &&
+      needs.validate.result == 'success' &&
+      needs.android-debug-package.result == 'success' &&
+      needs.android-release-package.result == 'success' &&
+      needs.server-artifacts.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Download debug APK
+        uses: actions/download-artifact@v4
+        with:
+          name: sparrow-android-debug-${{ needs.metadata.outputs.artifact_version }}
+          path: downloads/debug
+
+      - name: Download signed release APK
+        uses: actions/download-artifact@v4
+        with:
+          name: sparrow-android-release-${{ needs.metadata.outputs.artifact_version }}
+          path: downloads/release
+
+      - name: Download Control Plane package
+        uses: actions/download-artifact@v4
+        with:
+          name: sparrow-control-plane-${{ needs.metadata.outputs.artifact_version }}
+          path: downloads/control-plane
+
+      - name: Download Community Node package
+        uses: actions/download-artifact@v4
+        with:
+          name: sparrow-community-node-${{ needs.metadata.outputs.artifact_version }}
+          path: downloads/community-node
+
+      - name: Assemble individual release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          find downloads -type f -name 'sparrow-*' -exec cp '{}' dist/ ';'
+
+          package_count="$(find dist -maxdepth 1 -type f -name 'sparrow-*' | wc -l)"
+          if [[ "${package_count}" -ne 5 ]]; then
+            echo "::error::Expected 5 full-release packages, found ${package_count}."
+            find downloads -maxdepth 3 -type f -print
+            exit 1
+          fi
+
+          cat > dist/RELEASE.txt <<EOF_RELEASE
+          Sparrow ${{ needs.metadata.outputs.version_name }}
+          Commit: ${GITHUB_SHA}
+          Server image tag: ${{ needs.metadata.outputs.image_tag }}
+
+          Packages:
+          - Debug Android APK
+          - Signed release Android APK
+          - Windows Control Plane bundle
+          - Windows Community Node bundle
+          - macOS/Linux Community Node bundle
+          EOF_RELEASE
+
+      - name: Assemble full downloadable ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="${{ needs.metadata.outputs.artifact_version }}"
+          package_root="dist/full/Sparrow-${version}"
+          mkdir -p \
+            "${package_root}/app" \
+            "${package_root}/control-plane" \
+            "${package_root}/community-node"
+
+          debug_apk="$(find dist -maxdepth 1 -type f -name 'sparrow-*-debug.apk' | head -n 1)"
+          release_apk="$(find dist -maxdepth 1 -type f -name 'sparrow-*-release.apk' | head -n 1)"
+          control_plane="$(find dist -maxdepth 1 -type f -name 'sparrow-control-plane-*-windows.zip' | head -n 1)"
+          node_windows="$(find dist -maxdepth 1 -type f -name 'sparrow-community-node-*-windows.zip' | head -n 1)"
+          node_macos_linux="$(find dist -maxdepth 1 -type f -name 'sparrow-community-node-*-macos-linux.tar.gz' | head -n 1)"
+
+          for required_file in \
+            "${debug_apk}" \
+            "${release_apk}" \
+            "${control_plane}" \
+            "${node_windows}" \
+            "${node_macos_linux}"; do
+            if [[ -z "${required_file}" || ! -f "${required_file}" ]]; then
+              echo "::error::Full release ZIP is missing one or more required release assets."
+              find dist -maxdepth 2 -type f -print
+              exit 1
+            fi
+          done
+
+          cp "${debug_apk}" "${package_root}/app/"
+          cp "${release_apk}" "${package_root}/app/"
+          cp "${control_plane}" "${package_root}/control-plane/"
+          cp "${node_windows}" "${package_root}/community-node/"
+          cp "${node_macos_linux}" "${package_root}/community-node/"
+          cp dist/RELEASE.txt "${package_root}/RELEASE.txt"
+
+          cat > "${package_root}/MANIFEST.txt" <<EOF_MANIFEST
+          Sparrow full release package
+          Version: ${{ needs.metadata.outputs.version_name }}
+          Commit: ${GITHUB_SHA}
+          Server image tag: ${{ needs.metadata.outputs.image_tag }}
+
+          app/
+            Debug Android APK
+            Signed release Android APK
+
+          control-plane/
+            Windows Control Plane launcher bundle
+
+          community-node/
+            Windows Community Node launcher bundle
+            macOS/Linux Community Node launcher bundle
+          EOF_MANIFEST
+
+          (
+            cd "${package_root}"
+            find app control-plane community-node -type f -print0 \
+              | sort -z \
+              | xargs -0 sha256sum > SHA256SUMS.txt
+          )
+
+          full_zip="dist/sparrow-${version}-full.zip"
+          (
+            cd dist/full
+            zip -qr "../$(basename "${full_zip}")" "Sparrow-${version}"
+          )
+
+          if [[ ! -s "${full_zip}" ]]; then
+            echo "::error::Full release ZIP was not created."
+            exit 1
+          fi
+
+          rm -rf dist/full
+
+      - name: Generate release checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum sparrow-* > SHA256SUMS.txt
+
+      - name: Upload complete release package
+        uses: actions/upload-artifact@v4
+        with:
+          name: sparrow-release-${{ needs.metadata.outputs.artifact_version }}
+          path: |
+            dist/sparrow-*
+            dist/RELEASE.txt
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Publish GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PRERELEASE: ${{ needs.metadata.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+
+          prerelease_argument=()
+          if [[ "${PRERELEASE}" == "true" ]]; then
+            prerelease_argument+=(--prerelease)
+          fi
+
+          gh release create "${GITHUB_REF_NAME}" \
+            dist/* \
+            --title "Sparrow ${{ needs.metadata.outputs.version_name }}" \
+            --generate-notes \
+            "${prerelease_argument[@]}"

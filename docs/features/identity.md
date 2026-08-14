@@ -1,104 +1,51 @@
 # Identity
 
-`:feature:identity` owns the local SecureChat identity, its storage ports, identity-sharing codec,
-and setup/share presentation. Remote contact identities and verification belong to
-`:feature:contacts`.
+`:feature:identity` owns the local cryptographic identity lifecycle and sharing UI.
 
-## Package structure
+## What an identity contains
 
-```text
-feature/identity/.../feature/identity/
-├── domain/
-│   ├── model/              # PublicIdentity, IdentityStatus, shared payload
-│   ├── repository/
-│   │   ├── IdentityRepository.kt
-│   │   └── storage/        # private/public key and phone-name ports
-│   ├── service/            # IdentityShareCodec
-│   └── usecase/            # create, inspect, normalize, save, share
-├── data/
-│   ├── protocol/           # adapters implementing core protocol identity ports
-│   ├── repository/         # DefaultIdentityRepository
-│   └── sharing/            # DefaultIdentityShareCodec
-├── presentation/
-│   ├── model/
-│   ├── platform/           # share, phone hint, QR abstractions
-│   └── screen/
-│       ├── setup/component/
-│       └── share/
-└── di/IdentityModule.kt
+The public identity contains the public encryption/signing keys and profile information required by the protocol. Private keys are kept local.
+
+Key classes:
+
+- `CreateIdentityUseCase`
+- `IdentityRepositoryImpl`
+- `SodiumIdentityKeyGenerator` in `:core:crypto`
+- `PublicIdentityStorage` / `PrivateKeyStorage`
+- `AndroidPublicIdentityStorage`
+- `AndroidPrivateKeyStorage`
+- `IdentityLocalEncryptionKeyPairProvider`
+- `IdentityLocalSigningKeyPairProvider`
+- `CreateSharedIdentityUseCase`
+- `DecodeSharedIdentityUseCase`
+
+## Creation
+
+```mermaid
+sequenceDiagram
+    participant UI as IdentityViewModel
+    participant UC as CreateIdentityUseCase
+    participant R as IdentityRepositoryImpl
+    participant K as SodiumIdentityKeyGenerator
+    participant PUB as PublicIdentityStorage
+    participant PRIV as PrivateKeyStorage
+
+    UI->>UC: create identity
+    UC->>R: create
+    R->>K: generate key pairs
+    K-->>R: encryption + signing keys
+    R->>PUB: store public identity
+    R->>PRIV: store private keys securely
 ```
 
-There is no startup package inside identity. Startup UI and initialization are in the separate
-`:startup` module. Android process runtime startup is in `SecureChatApplication`.
+Android private keys are wrapped using an Android Keystore AES key; see [Identity and key storage](../security/identity.md).
 
-## Local identity domain
+## Sharing/import
 
-`IdentityRepository` exposes local identity lifecycle. `DefaultIdentityRepository` coordinates key
-generation and the storage ports:
+`ShareIdentityViewModel` and `CreateSharedIdentityUseCase` create the shareable payload/QR representation. Import/scanning lives in `:feature:contactimport`, which calls `ImportSharedIdentityUseCase` and contact-domain operations.
 
-- `PrivateKeyStorage`;
-- `PublicIdentityStorage`.
+The imported payload is not automatically equivalent to “verified.” Verification is a separate user/security decision.
 
-`LocalPhoneNameStorage` stores the local phone/name data used by identity setup and relay-address
-derivation.
+## iOS status
 
-Main use cases:
-
-| Use case | Responsibility |
-|---|---|
-| `CreateIdentity` | Generate and persist a local identity |
-| `GetIdentityStatus` | Determine setup state |
-| `GetPublicIdentity` | Return public encryption/signing material |
-| `GetLocalPhoneNumber` | Read the configured phone number |
-| `NormalizeLocalPhoneNumber` | Normalize input through `PhoneNumberNormalizer` |
-| `SaveLocalPhoneName` | Persist phone/name data |
-| `CreateSharedIdentity` | Build an encoded share payload |
-
-## Protocol adapters
-
-Other modules depend on stable interfaces in `:core:protocol`, not on `IdentityRepository`
-directly. Identity supplies these adapters:
-
-| Core protocol port | Identity adapter |
-|---|---|
-| `LocalEncryptionKeyPairProvider` | `IdentityLocalEncryptionKeyPairProvider` |
-| `LocalPublicIdentityProvider` | `IdentityLocalPublicIdentityProvider` |
-| `LocalSigningKeyPairProvider` | `IdentityLocalSigningKeyPairProvider` |
-| `LocalSigningPublicKeyProvider` | `IdentityLocalSigningPublicKeyProvider` |
-| `LocalPhoneNumberProvider` | `IdentityLocalPhoneNumberProvider` |
-
-This keeps `:core:protocol`, `:feature:messaging`, and `:feature:contacts` independent of identity
-storage details.
-
-## Setup and sharing UI
-
-`IdentityRoute` renders `IdentityScreen` with `IdentityViewModel`.
-`ShareIdentityRoute` renders `ShareIdentityScreen` with `ShareIdentityViewModel`.
-Setup-specific reusable elements are under `presentation/screen/setup/component`.
-
-Platform actions are abstracted under `presentation/platform`, including
-`rememberIdentityShareLauncher()`, `PhoneNumberHintLauncher()`, and QR-code support.
-
-`DefaultIdentityShareCodec` handles the share representation. Sharing public identity data is
-separate from the relay-based identity exchange.
-
-## Messaging integration
-
-Once identity and phone number are ready, `SecureChatApplication` starts the relay runtime.
-
-- `DefaultLocalRelayIdProvider` reads the phone through `LocalPhoneNumberProvider`.
-- `DefaultIncomingRelayRunner` obtains decryption keys through
-  `LocalEncryptionKeyPairProvider`.
-- `DefaultIdentityExchangeStarter` obtains public keys through `LocalPublicIdentityProvider`.
-- Identity packet handlers obtain signing material through `LocalSigningKeyPairProvider`.
-
-The identity feature does not send WebSocket frames and does not own remote contact trust.
-
-## Extension rules
-
-- Keep private key access behind storage/provider interfaces.
-- Add local identity operations as use cases.
-- Keep remote identity and safety-number verification in `:feature:contacts`.
-- Implement protocol-facing needs as adapters to `:core:protocol` ports.
-- Keep startup flow in `:startup`/`:androidApp`, not under the identity package.
-- Keep platform sharing and hints behind presentation platform abstractions.
+Some common identity code and limited iOS platform stubs exist, but the iOS application runtime is not currently usable. Do not interpret these source sets as completed iOS identity persistence/feature parity.

@@ -10,8 +10,8 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `navigation` |
 | Directory | `navigation` |
 | Build file | `navigation/build.gradle.kts` |
-| Kotlin files | 5 |
-| Production Kotlin files | 5 |
+| Kotlin files | 14 |
+| Production Kotlin files | 14 |
 | Test Kotlin files | 0 |
 | Resource files | 1 |
 | Direct dependencies | 10 |
@@ -19,11 +19,8 @@ Generated automatically by `./gradlew architectureReport`.
 
 ## Source sets
 
-- `androidDeviceTest`
-- `androidHostTest`
 - `androidMain`
 - `commonMain`
-- `iosMain`
 
 ## Dependencies
 

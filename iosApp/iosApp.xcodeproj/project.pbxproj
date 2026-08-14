@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		AA83193580E0ED74A999CB46 /* SecureChat.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SecureChat.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA83193580E0ED74A999CB46 /* Sparrow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sparrow.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -59,7 +59,7 @@
 		65E0DBD75BF3644F17228539 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				AA83193580E0ED74A999CB46 /* SecureChat.app */,
+				AA83193580E0ED74A999CB46 /* Sparrow.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -87,7 +87,7 @@
 			packageProductDependencies = (
 			);
 			productName = iosApp;
-			productReference = AA83193580E0ED74A999CB46 /* SecureChat.app */;
+			productReference = AA83193580E0ED74A999CB46 /* Sparrow.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */

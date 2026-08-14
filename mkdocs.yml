@@ -1,6 +1,6 @@
-site_name: SecureChat Documentation
-site_description: Engineering documentation for SecureChat
-site_author: SecureChat
+site_name: Sparrow Documentation
+site_description: Engineering documentation for Sparrow
+site_author: Sparrow
 docs_dir: docs
 site_dir: site
 
@@ -38,18 +38,37 @@ theme:
 
 nav:
   - Home: index.md
+  - Why Sparrow?: why-sparrow.md
+  - Technology Stack: technology-stack.md
   - Getting Started:
       - Introduction: getting-started/introduction.md
       - Installation: getting-started/installation.md
       - First Build: getting-started/first-build.md
+      - Using the Android App: getting-started/using-app.md
       - Development Workflow: getting-started/development-workflow.md
       - Project Structure: getting-started/project-structure.md
+  - Server & Operations:
+      - Overview: server/overview.md
+      - Control Plane: server/control-plane.md
+      - Community Node: server/community-node.md
+      - Docker & Troubleshooting: server/operations.md
+      - Secrets: server/secrets.md
   - Architecture:
       - Overview: architecture/overview.md
       - Clean Architecture: architecture/clean-architecture.md
       - Dependency Rules: architecture/dependency-rules.md
       - Module Types: architecture/module-types.md
       - Messaging Boundary: architecture/messaging-boundary.md
+      - "Chats: Direct & Group": architecture/chats.md
+  - Features:
+      - Current Feature Status: features/current-features.md
+      - Chats: features/chats.md
+      - Contacts: features/contacts.md
+      - Identity: features/identity.md
+      - Onboarding: features/onboarding.md
+      - Messaging & Delivery Flow: features/message-transport-flow.md
+      - Transport: features/transport.md
+      - Push Notifications: push-notifications.md
   - Security:
       - Overview: security/overview.md
       - Identity: security/identity.md
@@ -57,48 +76,26 @@ nav:
       - Transport: security/transport.md
       - Safety Numbers: security/safety-numbers.md
       - Threat Model: security/threat-model.md
-  - Features:
-      - Chats: features/chats.md
-      - Contacts: features/contacts.md
-      - Identity: features/identity.md
-      - Onboarding: features/onboarding.md
-      - Conversation, Messaging, and Delivery Flow: features/message-transport-flow.md
-      - Transport: features/transport.md
+  - API:
+      - Gateway: api/gateway.md
+      - WebSocket: api/websocket.md
+      - Protocol: api/protocol.md
   - Development:
-      - Local Development and Manual Testing: development/local-development.md
+      - Local Development: development/local-development.md
+      - Extending the Project: development/extending.md
       - Coding Style: development/coding-style.md
       - Logging: development/logging.md
       - Testing: development/testing.md
       - Contributing: development/contributing.md
       - Release Process: development/release-process.md
-  - Build Infrastructure:
-      - Overview: build/index.md
-      - Build System: build/overview.md
-      - Convention Plugins: build/convention-plugins.md
-      - Quality Pipeline: build/quality.md
-      - Architecture Plugin: build/architecture-plugin.md
-      - Git Hooks: build/git-hooks.md
-      - Gradle Tasks: build/tasks.md
-      - Version Catalog: build/version-catalog.md
-      - Dependency Management: build/dependency-management.md
-      - Configuration Cache: build/configuration-cache.md
-      - Documentation Generation: build/documentation-generation.md
-      - Continuous Integration: build/ci.md
-      - Custom Detekt Rules: build/custom-detekt-rules.md
-      - Troubleshooting: build/troubleshooting.md
-      - Extending the Build: build/extending.md
-  - API:
-      - Relay: api/relay.md
-      - WebSocket: api/websocket.md
-      - Protocol: api/protocol.md
   - Generated Reference:
       - Overview: generated/index.md
       - Architecture: generated/architecture.md
       - Module Catalog: generated/modules.md
       - Dependency Matrix: generated/dependency-matrix.md
       - Statistics: generated/statistics.md
-  - Roadmap: roadmap.md
   - Design Decisions: design-decisions.md
+  - Roadmap: roadmap.md
   - FAQ: faq.md
   - Glossary: glossary.md
 

@@ -1,321 +1,79 @@
-# First Build
+# First build
 
-## Overview
+## 1. Make sure `local.properties` contains the directory URL
 
-This guide explains what happens during the first build of SecureChat and how to verify that the project has been configured correctly.
-
-Unlike many Android projects, SecureChat performs considerably more work than simply compiling Kotlin code.
-
-The build also verifies project quality, architecture and generated documentation.
-
----
-
-# Build Pipeline
-
-The first build follows this high-level flow.
-
-```
-Gradle
-
-↓
-
-Build Logic
-
-↓
-
-Convention Plugins
-
-↓
-
-Project Configuration
-
-↓
-
-Compilation
-
-↓
-
-Quality
-
-↓
-
-Architecture
-
-↓
-
-Verification
-
-↓
-
-Success
+```properties
+controlPlaneDirectoryUrl=https://example.com/control-planes.json
 ```
 
----
+The URL must return JSON containing `controlPlanes`. It can be served as `text/plain`.
 
-# Step 1 — Build Logic
+## 2. Build Android
 
-Before any project module is compiled, Gradle builds the included build located at
+Windows:
 
-```
-build-logic/
-```
-
-This project provides
-
-- convention plugins
-- architecture validation
-- quality automation
-- shared Gradle utilities
-
-Every other module depends on this build.
-
-If build logic fails, the rest of the project cannot compile.
-
----
-
-# Step 2 — Configure Modules
-
-The convention plugins configure every module automatically.
-
-Examples include
-
-- Android configuration
-- Kotlin Multiplatform
-- Compose
-- Room
-- Serialization
-- Testing
-
-This eliminates duplicated Gradle configuration throughout the project.
-
----
-
-# Step 3 — Resolve Dependencies
-
-Gradle downloads
-
-- Kotlin
-- AndroidX
-- Compose
-- Coroutines
-- Ktor
-- Room
-- Koin
-
-along with any other declared dependencies.
-
-The first build may therefore take several minutes.
-
-Subsequent builds reuse the local Gradle cache.
-
----
-
-# Step 4 — Compile Sources
-
-Gradle compiles
-
-- build logic
-- commonMain
-- androidMain
-- test source sets
-
-Generated code from tools such as Room is also compiled.
-
----
-
-# Step 5 — Run Verification
-
-During a normal build SecureChat executes
-
-- KtLint
-- Detekt
-- Architecture Validation
-- Documentation Verification
-
-This ensures every successful build satisfies the project's engineering standards.
-
----
-
-# Build Tasks
-
-The most commonly used tasks are shown below.
-
-| Task | Purpose |
-|------|---------|
-| `build` | Compile the complete project |
-| `check` | Verification lifecycle |
-| `quality` | Format then verify |
-| `qualityFix` | Automatic formatting |
-| `qualityCheck` | Verification only |
-| `validateArchitecture` | Validate module graph |
-| `architectureReport` | Generate documentation |
-
----
-
-# Expected Output
-
-A successful build should end with output similar to
-
-```
-BUILD SUCCESSFUL
+```text
+gradlew.bat :androidApp:assembleDebug
 ```
 
-No architecture violations should be reported.
+macOS/Linux:
 
-No Detekt errors should be reported.
-
-No KtLint errors should be reported.
-
----
-
-# Build Outputs
-
-Gradle generates build artifacts inside
-
-```
-build/
+```bash
+./gradlew :androidApp:assembleDebug
 ```
 
-for each module.
+The APK is written below:
 
-Generated architecture documentation is written to
-
-```
-docs/generated/
+```text
+androidApp/build/outputs/apk/debug/
 ```
 
-These files are version controlled and should be committed whenever the project structure changes.
+The Android application ID is `com.cbgm.sparrow`. For FCM/background wake-ups, `androidApp/google-services.json` must belong to a Firebase Android app registered with that package name. A debug build can still be compiled without the file because the Google Services plugin is applied only when the file exists.
 
----
+## 3. Run checks
 
-# Common Build Problems
-
-## Build Logic Compilation
-
-If
-
-```
-:build-logic:compileKotlin
+```bash
+./gradlew qualityCheck
+./gradlew allTests
 ```
 
-fails, resolve those errors first.
+On Windows use `gradlew.bat` if your shell does not execute `./gradlew`.
 
-Because every convention plugin lives inside the included build, consumer modules cannot be configured until build logic compiles successfully.
+## 4. Android device tests
 
----
+Start an emulator/device, then:
 
-## Architecture Verification
-
-If
-
-```
-verifyArchitectureReport
+```bash
+./gradlew connectedCheck
 ```
 
-fails, regenerate the documentation.
+## 5. Start servers
 
-```
+For a realistic local setup, run one Control Plane and at least one Community Node. See
+[Local development](../development/local-development.md).
+
+## 6. Run the Android app
+
+Run `androidApp` from Android Studio. On startup:
+
+1. `SparrowApplication` starts Android Koin wiring.
+2. shared `App()` creates `AppViewModel`.
+3. `AppViewModel.initializeApplication()` initializes crypto, language, notifications and Control Plane discovery.
+4. after identity is ready and the app is foregrounded, `TransportConnectionManager` starts.
+5. the selected Community Node is connected through `/v1/gateway`.
+
+## iOS note
+
+A shared iOS framework and Xcode host exist, but this is **not a usable first-build path**. Important platform
+implementations and runtime wiring are still incomplete. Do not use an iOS build as a feature-validation target.
+
+## Build cache and generated architecture docs
+
+Normal code builds use Gradle's caches. If module dependencies change, regenerate architecture reference:
+
+```bash
 ./gradlew architectureReport
+./gradlew verifyArchitectureReport
 ```
 
-Review the generated files before committing them.
-
----
-
-## Quality Verification
-
-If
-
-```
-qualityCheck
-```
-
-fails, read the reported task carefully.
-
-Typical causes include
-
-- formatting
-- static analysis
-- architecture validation
-
-Address the underlying issue rather than disabling the verification.
-
----
-
-# Configuration Cache
-
-SecureChat has been designed to support Gradle's Configuration Cache wherever practical.
-
-The first build performs full configuration.
-
-Subsequent builds are significantly faster when the cache can be reused.
-
-Developers should avoid introducing custom Gradle tasks that invalidate the cache unnecessarily.
-
----
-
-# Build Performance
-
-Typical build performance improves after
-
-- dependency downloads
-- build logic compilation
-- Gradle daemon startup
-- configuration cache creation
-
-The first build is therefore expected to be noticeably slower than later builds.
-
----
-
-# Daily Workflow
-
-Most developers rarely execute `build` directly.
-
-Instead the recommended workflow is
-
-```
-Develop
-
-↓
-
-quality
-
-↓
-
-Commit
-
-↓
-
-Push
-
-↓
-
-CI
-
-↓
-
-Merge
-```
-
-This keeps the repository consistently formatted and verified.
-
----
-
-# Continuous Integration
-
-The CI pipeline performs the same verification as local development.
-
-A change that passes locally should also pass in CI provided the generated documentation has been committed.
-
-The build intentionally avoids maintaining separate local and CI quality rules.
-
----
-
-# Next Steps
-
-Continue with
-
-- Development Workflow
-- Project Structure
-
-These guides explain how day-to-day development is performed within the SecureChat project.
+`docs/generated/` is generated output; do not edit it manually.
