@@ -386,6 +386,55 @@ function Get-DirectoryControlPlaneUrls {
     return $urls
 }
 
+function Get-CachedControlPlaneUrls {
+    param([Parameter(Mandatory = $true)][string]$Mode)
+
+    if (-not (Test-Path -LiteralPath $runtimeEnvironmentPath -PathType Leaf)) {
+        return @()
+    }
+
+    $runtime = Read-EnvironmentFile -Path $runtimeEnvironmentPath
+    $cachedValue = if ($runtime.ContainsKey("ADVERTISED_CONTROL_PLANE_URLS")) {
+            $runtime["ADVERTISED_CONTROL_PLANE_URLS"]
+        } elseif ($runtime.ContainsKey("CONTROL_PLANE_URLS")) {
+            $runtime["CONTROL_PLANE_URLS"]
+        } else {
+            ""
+        }
+
+    if ([string]::IsNullOrWhiteSpace($cachedValue)) {
+        return @()
+    }
+
+    $urls = [System.Collections.Generic.List[string]]::new()
+    foreach ($rawValue in ($cachedValue -split '[,;]')) {
+        try {
+            $normalized = Normalize-ControlPlaneUrl -Value $rawValue -Mode $Mode
+            if (-not [string]::IsNullOrWhiteSpace($normalized) -and -not $urls.Contains($normalized)) {
+                $urls.Add($normalized)
+            }
+        } catch {
+            Write-Log "Ignoring cached control-plane address '$rawValue': $($_.Exception.Message)"
+        }
+    }
+
+    return @($urls)
+}
+
+function Wait-RetryInterval {
+    param([Parameter(Mandatory = $true)][int]$Seconds)
+
+    $steps = $Seconds * 10
+    for ($step = 0; $step -lt $steps; $step++) {
+        if ($form.IsDisposed) {
+            throw "Community-node startup was cancelled."
+        }
+
+        Start-Sleep -Milliseconds 100
+        [System.Windows.Forms.Application]::DoEvents()
+    }
+}
+
 function Resolve-ConfiguredControlPlaneUrls {
     param(
         [Parameter(Mandatory = $true)][hashtable]$Config,
@@ -402,8 +451,23 @@ function Resolve-ConfiguredControlPlaneUrls {
         throw "securechat.conf is missing CONTROL_PLANE_DIRECTORY_URL."
     }
 
-    Set-Status "Loading control-plane directory..."
-    return @(Get-DirectoryControlPlaneUrls -DirectoryUrl $directoryUrl -Mode $Mode)
+    while ($true) {
+        Set-Status "Loading control-plane directory..."
+        try {
+            return @(Get-DirectoryControlPlaneUrls -DirectoryUrl $directoryUrl -Mode $Mode)
+        } catch {
+            Write-Log "Control-plane directory unavailable: $($_.Exception.Message)"
+
+            $cachedUrls = @(Get-CachedControlPlaneUrls -Mode $Mode)
+            if ($cachedUrls.Count -gt 0) {
+                Write-Detail "Directory unavailable; using the last known control-plane addresses."
+                return $cachedUrls
+            }
+
+            Set-Status "Control-plane directory unavailable. Retrying in 5 seconds..."
+            Wait-RetryInterval -Seconds 5
+        }
+    }
 }
 
 function Find-Docker {
@@ -725,8 +789,14 @@ function Resolve-ControlPlaneCandidates {
     }
 
     if ($null -eq $selected) {
+        $fallback = $configuredUrls[0]
+        $selected = [PSCustomObject]@{
+            HostProbeUrl = $fallback
+            ContainerUrl = (Convert-ControlPlaneUrlForContainer -ConfiguredUrl $fallback)
+        }
         $failureDetails = $failures -join "`n"
-        throw "None of the control planes returned by CONTROL_PLANE_DIRECTORY_URL are reachable.`n$failureDetails"
+        Write-Log "No control plane is currently reachable; node services will keep retrying in the background.`n$failureDetails"
+        Write-Detail "No control plane is currently reachable. Starting node; registration will retry automatically."
     }
 
     return [PSCustomObject]@{

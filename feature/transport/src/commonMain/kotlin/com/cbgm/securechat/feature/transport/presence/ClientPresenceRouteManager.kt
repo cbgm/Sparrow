@@ -29,7 +29,9 @@ internal class ClientPresenceRouteManager(
                     ?.toLongOrNull()
 
             gatewayInformation.copy(
-                serverTimeEpochMilliseconds = serverTimeEpochMilliseconds
+                serverTimeEpochMilliseconds = serverTimeEpochMilliseconds,
+                serverTimeObservedAtEpochMilliseconds =
+                    serverTimeEpochMilliseconds?.let { SystemClock.nowEpochMilliseconds() }
             )
         }
 
@@ -162,7 +164,15 @@ internal fun routeExpirationEpochMilliseconds(
 ): Long {
     val serverTimeEpochMilliseconds = gatewayInformation.serverTimeEpochMilliseconds
     if (serverTimeEpochMilliseconds != null) {
-        return serverTimeEpochMilliseconds + gatewayInformation.routeLifetimeMilliseconds
+        val elapsedSinceObservation =
+            gatewayInformation.serverTimeObservedAtEpochMilliseconds
+                ?.let { observedAt ->
+                    (localNowEpochMilliseconds - observedAt).coerceAtLeast(0L)
+                }
+                ?: 0L
+        return serverTimeEpochMilliseconds +
+            elapsedSinceObservation +
+            gatewayInformation.routeLifetimeMilliseconds
     }
 
     val maximumSafetyMargin =

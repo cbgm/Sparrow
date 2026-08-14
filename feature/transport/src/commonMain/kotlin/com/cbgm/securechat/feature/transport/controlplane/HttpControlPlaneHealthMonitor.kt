@@ -43,7 +43,7 @@ class HttpControlPlaneHealthMonitor(
     }
 
     private companion object {
-        const val HEALTH_TIMEOUT_MILLISECONDS = 3_000L
+        const val HEALTH_TIMEOUT_MILLISECONDS = 1_000L
         const val MIN_SUCCESS_STATUS = 200
         const val MAX_SUCCESS_STATUS = 299
     }

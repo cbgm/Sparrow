@@ -45,13 +45,18 @@ set +a
 MODE="${MODE:-lan}"
 PUBLIC_DOMAIN="${PUBLIC_DOMAIN:-}"
 CONTROL_PLANE_URLS="${CONTROL_PLANE_URLS:-}"
+if [[ -z "$CONTROL_PLANE_URLS" && -f "$RUNTIME_ENV" ]]; then
+  CONTROL_PLANE_URLS="$(grep -E '^ADVERTISED_CONTROL_PLANE_URLS=' "$RUNTIME_ENV" | tail -n 1 | cut -d= -f2- || true)"
+  if [[ -z "$CONTROL_PLANE_URLS" ]]; then
+    CONTROL_PLANE_URLS="$(grep -E '^CONTROL_PLANE_URLS=' "$RUNTIME_ENV" | tail -n 1 | cut -d= -f2- || true)"
+  fi
+fi
 
 if [[ "$MODE" != "lan" && "$MODE" != "public" ]]; then
   echo "securechat.conf MODE must be lan or public." >&2
   exit 1
 fi
 
-: "${CONTROL_PLANE_URLS:?securechat.conf is missing CONTROL_PLANE_URLS}"
 : "${SECURECHAT_IMAGE_PREFIX:?securechat.conf is missing SECURECHAT_IMAGE_PREFIX}"
 : "${SECURECHAT_IMAGE_TAG:?securechat.conf is missing SECURECHAT_IMAGE_TAG}"
 
@@ -67,6 +72,54 @@ http_ready() {
   fi
   return 1
 }
+
+fetch_url() {
+  local url="$1"
+  if command -v curl >/dev/null 2>&1; then
+    curl --fail --silent --show-error --max-time 8 "$url" 2>/dev/null
+    return
+  fi
+  if command -v wget >/dev/null 2>&1; then
+    wget --quiet --timeout=8 --output-document=- "$url" 2>/dev/null
+    return
+  fi
+  return 1
+}
+
+parse_control_plane_directory() {
+  local document="$1"
+  local array
+  array="$(printf '%s' "$document" | tr '\r\n' ' ' | sed -n 's/.*"controlPlanes"[[:space:]]*:[[:space:]]*\[\([^]]*\)\].*/\1/p')"
+  [[ -n "$array" ]] || return 1
+  printf '%s' "$array" |
+    tr ',' '\n' |
+    sed -E 's/^[[:space:]]*"([^"]+)"[[:space:]]*$/\1/' |
+    awk 'NF' |
+    paste -sd, -
+}
+
+resolve_configured_control_planes() {
+  if [[ -n "$CONTROL_PLANE_URLS" ]]; then
+    return
+  fi
+
+  if [[ -z "${CONTROL_PLANE_DIRECTORY_URL:-}" ]]; then
+    echo "securechat.conf is missing CONTROL_PLANE_DIRECTORY_URL." >&2
+    exit 1
+  fi
+
+  while [[ -z "$CONTROL_PLANE_URLS" ]]; do
+    local document
+    document="$(fetch_url "$CONTROL_PLANE_DIRECTORY_URL" || true)"
+    CONTROL_PLANE_URLS="$(parse_control_plane_directory "$document" || true)"
+    if [[ -z "$CONTROL_PLANE_URLS" ]]; then
+      echo "Control-plane directory unavailable; retrying in 5 seconds." >&2
+      sleep 5
+    fi
+  done
+}
+
+resolve_configured_control_planes
 
 normalize_control_plane_url() {
   local value="$1"
@@ -111,8 +164,8 @@ if [[ ${#NORMALIZED_CONTROL_PLANE_URLS[@]} -eq 0 ]]; then
 fi
 
 if [[ -z "$CONTROL_PLANE_URL" ]]; then
-  echo "None of the control planes configured in securechat.conf are reachable." >&2
-  exit 1
+  CONTROL_PLANE_URL="${NORMALIZED_CONTROL_PLANE_URLS[0]}"
+  echo "No control plane is currently reachable; starting the node and retrying in the background." >&2
 fi
 
 control_plane_host() {

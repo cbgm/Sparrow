@@ -80,6 +80,7 @@ private class NodeRegistrationClient(
     private val now: () -> Long
 ) {
     private val nextRegistrationAt = mutableMapOf<String, Long>()
+    private val retryAfter = mutableMapOf<String, Long>()
 
     suspend fun synchronize(activeConnections: Int?) {
         endpointPool.all().forEach { baseUrl ->
@@ -91,17 +92,25 @@ private class NodeRegistrationClient(
         baseUrl: String,
         activeConnections: Int?
     ) {
+        val currentTime = now()
+        if (currentTime < (retryAfter[baseUrl] ?: Long.MIN_VALUE)) {
+            return
+        }
+
         try {
-            if (now() >= (nextRegistrationAt[baseUrl] ?: Long.MIN_VALUE)) {
+            if (currentTime >= (nextRegistrationAt[baseUrl] ?: Long.MIN_VALUE)) {
                 register(baseUrl)
             }
             heartbeat(baseUrl, activeConnections)
             endpointPool.markReachable(baseUrl)
+            retryAfter.remove(baseUrl)
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (error: Exception) {
             endpointPool.markUnavailable(baseUrl)
-            nextRegistrationAt[baseUrl] = now() + config.retryDelayMilliseconds
+            val retryAt = now() + config.retryDelayMilliseconds
+            nextRegistrationAt[baseUrl] = retryAt
+            retryAfter[baseUrl] = retryAt
             logger.warn(
                 "Control-plane synchronization failed for node {} at {}: {}",
                 identity.nodeId,
@@ -219,7 +228,7 @@ data class NodeRegistrationConfig(
     private companion object {
         const val DEFAULT_DESCRIPTOR_LIFETIME_MILLISECONDS = 60L * 60L * 1_000L
         const val DEFAULT_REGISTRATION_REFRESH_MILLISECONDS = 10L * 60L * 1_000L
-        const val DEFAULT_HEARTBEAT_INTERVAL_MILLISECONDS = 2_000L
+        const val DEFAULT_HEARTBEAT_INTERVAL_MILLISECONDS = 1_000L
         const val DEFAULT_RETRY_DELAY_MILLISECONDS = 5_000L
     }
 }

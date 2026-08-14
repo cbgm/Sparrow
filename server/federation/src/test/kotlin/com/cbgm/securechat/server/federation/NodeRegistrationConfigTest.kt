@@ -16,7 +16,7 @@ class NodeRegistrationConfigTest {
 
         assertEquals(60L * 60L * 1_000L, config.descriptorLifetimeMilliseconds)
         assertEquals(10L * 60L * 1_000L, config.registrationRefreshMilliseconds)
-        assertEquals(2_000L, config.heartbeatIntervalMilliseconds)
+        assertEquals(1_000L, config.heartbeatIntervalMilliseconds)
         assertTrue(
             config.descriptorLifetimeMilliseconds >=
                 config.registrationRefreshMilliseconds * MINIMUM_SAFETY_FACTOR

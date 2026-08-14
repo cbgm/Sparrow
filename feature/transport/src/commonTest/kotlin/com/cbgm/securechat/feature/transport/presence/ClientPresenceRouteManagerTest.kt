@@ -26,6 +26,26 @@ class ClientPresenceRouteManagerTest {
     }
 
     @Test
+    fun cachedGatewayClockAdvancesWhileConnectionRemainsOpen() {
+        val gatewayInformation =
+            GatewayNodeInformation(
+                nodeId = "node-a",
+                routeLifetimeMilliseconds = 90_000L,
+                routeRefreshIntervalMilliseconds = 30_000L,
+                serverTimeEpochMilliseconds = 1_000_000L,
+                serverTimeObservedAtEpochMilliseconds = 2_000_000L
+            )
+
+        val expiration =
+            routeExpirationEpochMilliseconds(
+                gatewayInformation = gatewayInformation,
+                localNowEpochMilliseconds = 2_060_000L
+            )
+
+        assertEquals(1_150_000L, expiration)
+    }
+
+    @Test
     fun legacyGatewayLeavesClockSkewSafetyMargin() {
         val localNow = 1_000_000L
         val gatewayInformation =

@@ -9,7 +9,9 @@ data class GatewayNodeInformation(
     val routeLifetimeMilliseconds: Long,
     val routeRefreshIntervalMilliseconds: Long,
     @Transient
-    val serverTimeEpochMilliseconds: Long? = null
+    val serverTimeEpochMilliseconds: Long? = null,
+    @Transient
+    val serverTimeObservedAtEpochMilliseconds: Long? = null
 ) {
     init {
         require(nodeId.isNotBlank()) { "Gateway node ID must not be blank" }

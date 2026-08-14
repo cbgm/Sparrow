@@ -183,7 +183,7 @@ class ControlPlaneSettingsViewModel(
     }
 
     private companion object {
-        const val HEALTH_REFRESH_INTERVAL_MILLISECONDS = 30_000L
+        const val HEALTH_REFRESH_INTERVAL_MILLISECONDS = 1_000L
     }
 }
 
