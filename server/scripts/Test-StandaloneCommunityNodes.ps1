@@ -386,38 +386,59 @@ function Send-SmokeFederatedEnvelope {
             -ContentType "application/json" `
             -Body $envelopeBody `
             -TimeoutSec 20
+    if ($acknowledgement.envelopeId -ne $envelopeId) {
+        throw (
+            "$SourceName to $DestinationName federation returned an acknowledgement for " +
+            "'$($acknowledgement.envelopeId)' instead of '$envelopeId'."
+        )
+    }
     if (
-        $acknowledgement.envelopeId -ne $envelopeId -or
-        $acknowledgement.state -ne "STORED_AT_DESTINATION"
+        $acknowledgement.state -ne "STORED_AT_DESTINATION" -and
+        $acknowledgement.state -ne "QUEUED_AT_GATEWAY"
     ) {
         throw (
-            "$SourceName to $DestinationName federation did not store the envelope. " +
-            "Expected STORED_AT_DESTINATION, got '$($acknowledgement.state)'."
+            "$SourceName to $DestinationName federation returned unexpected state " +
+            "'$($acknowledgement.state)'."
         )
     }
 
     $pendingPath = "/v1/node-push/recipients/$($route['routingId'])/envelopes"
-    $pendingAuthentication =
-        Get-NodeAuthentication `
-            -Project $DestinationProject `
-            -EnvironmentFile $DestinationEnvironmentFile `
-            -ComposeFile $DestinationComposeFile `
-            -Method "GET" `
-            -Path $pendingPath
-    $pending =
-        Invoke-RestMethod `
-            -Uri "http://localhost:8390$pendingPath" `
-            -Method Get `
-            -Headers (
-                Get-NodeAuthenticationHeaders `
-                    -Authentication $pendingAuthentication
-            ) `
-            -TimeoutSec 10
-    $storedEnvelope = @($pending.envelopes | Where-Object { $_.envelopeId -eq $envelopeId })
-    if ($storedEnvelope.Count -ne 1) {
-        throw "$DestinationName did not store the federated envelope in the push service."
+    $deadline = [DateTime]::UtcNow.AddSeconds(30)
+    $storedEnvelope = @()
+
+    while ([DateTime]::UtcNow -lt $deadline -and $storedEnvelope.Count -eq 0) {
+        $pendingAuthentication =
+            Get-NodeAuthentication `
+                -Project $DestinationProject `
+                -EnvironmentFile $DestinationEnvironmentFile `
+                -ComposeFile $DestinationComposeFile `
+                -Method "GET" `
+                -Path $pendingPath
+        $pending =
+            Invoke-RestMethod `
+                -Uri "http://localhost:8390$pendingPath" `
+                -Method Get `
+                -Headers (
+                    Get-NodeAuthenticationHeaders `
+                        -Authentication $pendingAuthentication
+                ) `
+                -TimeoutSec 10
+        $storedEnvelope = @($pending.envelopes | Where-Object { $_.envelopeId -eq $envelopeId })
+        if ($storedEnvelope.Count -eq 0) {
+            Start-Sleep -Seconds 1
+        }
     }
-    Write-Host "PASS $SourceName federated an envelope to isolated $DestinationName."
+
+    if ($storedEnvelope.Count -ne 1) {
+        throw (
+            "$DestinationName did not store the federated envelope in the push service " +
+            "within 30 seconds. Initial state was '$($acknowledgement.state)'."
+        )
+    }
+    Write-Host (
+        "PASS $SourceName federated an envelope to isolated $DestinationName " +
+        "(initial state $($acknowledgement.state))."
+    )
 }
 
 function Stop-Project {

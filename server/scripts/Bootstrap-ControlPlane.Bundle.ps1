@@ -863,6 +863,78 @@ function Synchronize-PostgresPassword {
     }
 }
 
+function Reset-ObsoletePushSchemaIfNeeded {
+    Set-Status "Checking push database schema..."
+
+    $schemaCheckSql = @"
+SELECT CASE
+    WHEN to_regclass('public.push_devices') IS NULL THEN 'EMPTY'
+    WHEN EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'push_devices'
+          AND column_name = 'routing_id'
+    ) THEN 'CURRENT'
+    ELSE 'OBSOLETE'
+END;
+"@
+
+    $composeFileArguments = $script:ComposeFileArguments
+    $output = & $script:Docker compose `
+        --env-file $runtimeEnvironmentPath `
+        @composeFileArguments `
+        exec -T `
+        push-database `
+        psql `
+        -v ON_ERROR_STOP=1 `
+        -At `
+        -U securechat_push `
+        -d securechat_push `
+        -c $schemaCheckSql 2>&1
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not inspect the push database schema."
+    }
+
+    $schemaState = ($output | Out-String).Trim()
+    Write-Log "push database schema: $schemaState"
+
+    if ($schemaState -ne "OBSOLETE") {
+        return
+    }
+
+    Set-Status "Resetting obsolete push database schema..."
+    Write-Detail "Detected the pre-routing-id push schema. Resetting only push runtime data."
+
+    $resetSql = @"
+DROP TABLE IF EXISTS push_wake_ups CASCADE;
+DROP TABLE IF EXISTS pending_envelopes CASCADE;
+DROP TABLE IF EXISTS push_devices CASCADE;
+"@
+
+    $resetOutput = & $script:Docker compose `
+        --env-file $runtimeEnvironmentPath `
+        @composeFileArguments `
+        exec -T `
+        push-database `
+        psql `
+        -v ON_ERROR_STOP=1 `
+        -U securechat_push `
+        -d securechat_push `
+        -c $resetSql 2>&1
+
+    foreach ($line in $resetOutput) {
+        Write-Log "push database reset: $line"
+    }
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not reset the obsolete push database schema."
+    }
+
+    Write-Detail "Obsolete push database schema removed. The push service will create the current schema."
+}
+
 function Test-HttpReady {
     param(
         [string]$Url,
@@ -1058,6 +1130,8 @@ try {
             -DatabaseUser "securechat_push" `
             -DatabaseName "securechat_push" `
             -Password $pushPassword
+
+        Reset-ObsoletePushSchemaIfNeeded
 
         Set-ProgressValue -Value 80
         Set-Status "Preparing registry signing storage..."
