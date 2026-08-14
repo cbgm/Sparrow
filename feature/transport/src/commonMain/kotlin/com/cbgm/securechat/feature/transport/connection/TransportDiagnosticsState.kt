@@ -182,16 +182,23 @@ internal class TransportDiagnosticsState(
                 val cooldownUntilEpochMilliseconds =
                     cooldownUntilEpochMillisecondsByNodeId[endpoint.nodeId]
 
+                val diagnosticState =
+                    endpoint.diagnosticState(
+                        currentNodeId = currentNodeId,
+                        cooldownUntilEpochMillisecondsByNodeId =
+                        cooldownUntilEpochMillisecondsByNodeId
+                    )
+
                 TransportNodeDiagnostic(
                     nodeId = endpoint.nodeId,
                     websocketUrl = endpoint.websocketUrl,
-                    state =
-                        endpoint.diagnosticState(
-                            currentNodeId = currentNodeId,
-                            cooldownUntilEpochMillisecondsByNodeId =
-                            cooldownUntilEpochMillisecondsByNodeId
-                        ),
-                    activeConnections = endpoint.activeConnections,
+                    state = diagnosticState,
+                    activeConnections =
+                        if (diagnosticState == TransportNodeDiagnosticState.COOLDOWN) {
+                            0
+                        } else {
+                            endpoint.activeConnections
+                        },
                     cooldownUntilEpochMilliseconds = cooldownUntilEpochMilliseconds
                 )
             }

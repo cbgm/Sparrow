@@ -25,6 +25,28 @@ class TransportDiagnosticsStateTest {
     }
 
     @Test
+    fun cooldownNodeUsesZeroConnectionsEvenWhileDirectoryStillReportsOldCount() {
+        val state = createState(now = { 1_000L })
+        val nodeA = node("node-a", activeConnections = 3)
+        val nodeB = node("node-b", activeConnections = 1)
+
+        state.resolved(
+            endpoints = listOf(nodeA, nodeB),
+            cooldownUntilEpochMillisecondsByNodeId = mapOf(nodeA.nodeId to 61_000L),
+            registryAuthorityVerified = true,
+            registryUrl = "https://plane.example"
+        )
+
+        val cooldownNode = state.diagnostics.value.availableNodes.single { it.nodeId == nodeA.nodeId }
+        val availableNode = state.diagnostics.value.availableNodes.single { it.nodeId == nodeB.nodeId }
+
+        assertEquals(TransportNodeDiagnosticState.COOLDOWN, cooldownNode.state)
+        assertEquals(0, cooldownNode.activeConnections)
+        assertEquals(TransportNodeDiagnosticState.AVAILABLE, availableNode.state)
+        assertEquals(1, availableNode.activeConnections)
+    }
+
+    @Test
     fun missingNodeIsRemovedAfterCooldownExpires() {
         var now = 1_000L
         val state = createState(now = { now })
