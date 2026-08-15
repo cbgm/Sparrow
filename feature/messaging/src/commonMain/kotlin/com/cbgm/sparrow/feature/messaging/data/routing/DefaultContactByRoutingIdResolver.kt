@@ -13,6 +13,8 @@ import com.cbgm.sparrow.feature.messaging.application.routing.ContactByRoutingId
 import com.cbgm.sparrow.feature.messaging.application.routing.GroupRoutingIdResolver
 import com.cbgm.sparrow.feature.transport.routing.RoutingIdGenerator
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class DefaultContactByRoutingIdResolver(
     private val contactRepository: ContactRepository,
@@ -21,6 +23,9 @@ class DefaultContactByRoutingIdResolver(
     private val routingIdGenerator: RoutingIdGenerator,
     private val groupRoutingIdResolver: GroupRoutingIdResolver
 ) : ContactByRoutingIdResolver {
+    private val reconcileMutex = Mutex()
+    private var lastReconcileAtEpochMilliseconds: Long = 0L
+
     override suspend fun resolveContactId(routingId: String): Result<String?> =
         runCatching {
             require(routingId.isNotBlank()) {
@@ -28,22 +33,24 @@ class DefaultContactByRoutingIdResolver(
             }
 
             val bootstrap = routingId.startsWith(BOOTSTRAP_ROUTING_ID_PREFIX)
-            val contacts = contactRepository.observeContacts().first()
+
             if (bootstrap) {
                 val mappedContactId = contactRoutingIdDao.findContactIdByRoutingId(routingId)
                 if (mappedContactId != null) {
-                    val matchingContactId = findMatchingContactId(routingId, contacts)
-                    if (matchingContactId != null && matchingContactId != mappedContactId) {
-                        persistBootstrapMapping(
-                            contactId = matchingContactId,
-                            routingId = routingId
-                        )
-                        deleteAnonymousBootstrapPlaceholder(mappedContactId)
-                        return@runCatching matchingContactId
-                    }
+                    /*
+                     * Trust the cached mapping instead of re-scanning every
+                     * contact (and re-hashing every phone number) on every
+                     * message. If the mapping has drifted - e.g. this
+                     * bootstrap contact just got linked to a real device
+                     * contact - the periodic reconcileKnownContacts() sweep
+                     * repairs it within its throttle window instead of doing
+                     * that work inline on the hot path.
+                     */
                     return@runCatching mappedContactId
                 }
             }
+
+            val contacts = contactRepository.observeContacts().first()
 
             val matchingContactId = findMatchingContactId(routingId, contacts)
             if (matchingContactId != null) {
@@ -81,6 +88,20 @@ class DefaultContactByRoutingIdResolver(
 
     override suspend fun reconcileKnownContacts(): Result<Unit> =
         runCatching {
+            /*
+             * This walks every known contact's phone numbers, re-derives their
+             * routing id (SHA-256) and does a DB lookup for each one. It exists
+             * to repair stale bootstrap routing mappings (e.g. after a contact
+             * is imported or merged), not to gate delivery of the message that
+             * just arrived. Running it on every single incoming envelope made
+             * receiving messages O(messages * contacts) and serialized behind
+             * envelope processing. Throttle it to a periodic background sweep
+             * instead - callers can keep invoking it per-message for free.
+             */
+            if (!shouldReconcileNow()) {
+                return@runCatching
+            }
+
             val contacts = contactRepository.observeContacts().first()
             val bootstrapRoutingIds =
                 contacts
@@ -108,6 +129,17 @@ class DefaultContactByRoutingIdResolver(
                     routingId = routingId
                 )
                 deleteAnonymousBootstrapPlaceholder(mappedContactId)
+            }
+        }
+
+    private suspend fun shouldReconcileNow(): Boolean =
+        reconcileMutex.withLock {
+            val now = SystemClock.nowEpochMilliseconds()
+            if (now - lastReconcileAtEpochMilliseconds < RECONCILE_THROTTLE_MILLISECONDS) {
+                false
+            } else {
+                lastReconcileAtEpochMilliseconds = now
+                true
             }
         }
 
@@ -184,5 +216,6 @@ class DefaultContactByRoutingIdResolver(
 
     private companion object {
         const val BOOTSTRAP_ROUTING_ID_PREFIX = "scphone1_"
+        const val RECONCILE_THROTTLE_MILLISECONDS = 30_000L
     }
 }

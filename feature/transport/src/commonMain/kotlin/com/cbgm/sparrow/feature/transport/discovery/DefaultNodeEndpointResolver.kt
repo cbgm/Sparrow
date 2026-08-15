@@ -22,7 +22,6 @@ class DefaultNodeEndpointResolver(
 ) : NodeEndpointResolver {
     private val logger = SparrowLog.withTag("DefaultNodeEndpointResolver")
     private val resolutionMutex = Mutex()
-    private var fetchedRemoteDirectory = false
 
     override suspend fun resolve(
         localRoutingId: String,
@@ -49,11 +48,10 @@ class DefaultNodeEndpointResolver(
         val cachedDirectory = cached?.decode()
         val currentTime = now()
         val trustedRootNodeId =
-            config.trustedRegistryRootNodeId ?: cached?.trustedRootForSource()
+            config.trustedRegistryRootNodeId ?: cached?.trustedRootNodeId
 
         if (
             !forceRefresh &&
-            fetchedRemoteDirectory &&
             isReusable(cachedDirectory, trustedRootNodeId, currentTime)
         ) {
             return checkNotNull(cachedDirectory).endpointsFor(localRoutingId)
@@ -126,12 +124,7 @@ class DefaultNodeEndpointResolver(
     ): Result<SignedNodeDirectory> =
         source.fetch(endpoint.baseUrl).mapCatching { encodedDirectory ->
             val remoteDirectory = json.decodeFromString<SignedNodeDirectory>(encodedDirectory)
-            val rootNodeId =
-                trustedRoot(
-                    endpoint = endpoint,
-                    remoteDirectory = remoteDirectory,
-                    cached = cached
-                )
+            val rootNodeId = trustedRoot(remoteDirectory, cached)
             verifier
                 .verify(
                     signedDirectory = remoteDirectory,
@@ -139,46 +132,32 @@ class DefaultNodeEndpointResolver(
                     supportedProtocolVersion = config.supportedProtocolVersion,
                     nowEpochMilliseconds = currentTime
                 ).getOrThrow()
-            cacheVerifiedDirectory(
-                endpoint = endpoint,
-                remoteDirectory = remoteDirectory,
-                rootNodeId = rootNodeId,
-                cached = cached
-            )
-            fetchedRemoteDirectory = true
+            cacheVerifiedDirectory(remoteDirectory, rootNodeId)
             remoteDirectory
         }
 
     private fun trustedRoot(
-        endpoint: ControlPlaneEndpoint,
         remoteDirectory: SignedNodeDirectory,
         cached: CachedNodeDirectory?
     ): String =
         config.trustedRegistryRootNodeId
-            ?: cached?.trustedRootFor(endpoint.baseUrl)
+            ?: cached?.trustedRootNodeId
             ?: verifier.rootNodeId(remoteDirectory).getOrThrow().also { rootNodeId ->
                 logger.warn {
-                    "Trusting registry root $rootNodeId on first use for ${endpoint.baseUrl}"
+                    "Trusting registry root $rootNodeId on first use; " +
+                        "configure its root node ID for production"
                 }
             }
 
     private suspend fun cacheVerifiedDirectory(
-        endpoint: ControlPlaneEndpoint,
         remoteDirectory: SignedNodeDirectory,
-        rootNodeId: String,
-        cached: CachedNodeDirectory?
+        rootNodeId: String
     ) {
         runCatching {
-            val trustedRoots =
-                cached
-                    ?.trustedRootsByControlPlane
-                    .orEmpty() + (endpoint.baseUrl to rootNodeId)
             cache.write(
                 CachedNodeDirectory(
                     encodedDirectory = json.encodeToString(remoteDirectory),
-                    trustedRootNodeId = rootNodeId,
-                    sourceControlPlaneBaseUrl = endpoint.baseUrl,
-                    trustedRootsByControlPlane = trustedRoots
+                    trustedRootNodeId = rootNodeId
                 )
             )
         }.onFailure { error ->

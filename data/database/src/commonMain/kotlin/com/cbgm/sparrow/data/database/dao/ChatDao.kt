@@ -113,6 +113,26 @@ interface ChatDao {
     @Query("SELECT * FROM conversations WHERE id = :conversationId LIMIT 1")
     fun observeConversationWithMessagesById(conversationId: String): Flow<ConversationWithMessages?>
 
+    /*
+     * observeConversationWithMessagesById() loads the *entire* message
+     * history for a conversation via an unbounded @Relation, and Room's
+     * Flow invalidation is table-scoped - so every delivery/read-receipt
+     * status change on any message re-triggers a full reload of the whole
+     * history. This bounded query lets callers combine a lightweight
+     * conversation Flow with only the most recent N messages instead, so
+     * repeated status updates stay cheap regardless of how long the
+     * conversation has gotten.
+     */
+    @Query(
+        """
+        SELECT * FROM messages
+        WHERE conversationId = :conversationId
+        ORDER BY createdAtEpochMilliseconds DESC
+        LIMIT :limit
+        """
+    )
+    fun observeRecentMessages(conversationId: String, limit: Int): Flow<List<MessageEntity>>
+
     @Query("SELECT * FROM conversation_participants WHERE conversationId = :conversationId")
     fun observeConversationParticipants(conversationId: String): Flow<List<ConversationParticipantEntity>>
 

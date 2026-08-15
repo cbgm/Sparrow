@@ -14,7 +14,6 @@ internal class PostgresOutboundEnvelopeStorage(
 
     override suspend fun enqueue(envelope: FederatedEnvelope): OutboundEnvelopeEntry =
         database.withConnection { connection ->
-            purgeExpired(connection)
             connection
                 .prepareStatement(
                     """
@@ -127,9 +126,16 @@ internal class PostgresOutboundEnvelopeStorage(
         }
     }
 
+    /*
+     * get() and enqueue() are on the per-envelope hot path (called for
+     * every message/invite/receipt routed through the gateway). Sweeping
+     * expired rows there fired an extra DELETE on every single send.
+     * pendingDue() already runs on a schedule via OutboundEnvelopeRetryAgent,
+     * so that's the only place that still purges - cleanup now happens
+     * periodically instead of on every message.
+     */
     override suspend fun get(envelopeId: String): OutboundEnvelopeEntry? =
         database.withConnection { connection ->
-            purgeExpired(connection)
             find(connection, envelopeId)
         }
 

@@ -17,210 +17,779 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.scale
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.translate
 
-object SparrowBrandColors {
-    val Black = Color(0xFF020817)
-    val Background = Color(0xFF071A2E)
-    val Surface = Color(0xFF102A46)
-    val Accent = Color(0xFF35E6FF)
-    val OnDark = Color(0xFFF7FBFF)
-}
+private const val SparrowViewportWidth = 1254f
+private const val SparrowViewportHeight = 1254f
+private const val ShieldTopY = 495f
+private const val BirdHiddenOffsetY = 220f
+private const val ArtworkMinX = 313f
+private const val ArtworkMaxX = 942f
+private const val ArtworkMinY = 210f
+private const val ArtworkMaxY = 1110f
+private const val ArtworkWidth = ArtworkMaxX - ArtworkMinX
+private const val ArtworkHeight = ArtworkMaxY - ArtworkMinY
+private const val ArtworkCenterX = (ArtworkMinX + ArtworkMaxX) / 2f
+private const val ArtworkCenterY = (ArtworkMinY + ArtworkMaxY) / 2f
+private const val AnimatedFillScale = 0.98f
 
+private const val LeftEyeCenterX = 540f
+private const val RightEyeCenterX = 714.5f
+private const val EyeCenterY = 403f
+private const val EyeCoverWidth = 92f
+private const val EyeCoverHeight = 66f
+private val SparrowHeadBlinkColor = Color(0xFF02E6FA)
+private val SparrowClosedEyeColor = Color(0xFF030D22)
+
+/**
+ * Compose Canvas conversion of sparrow_mark_dark_1024.svg.
+ *
+ * The SVG background rectangle is deliberately omitted: the mark itself is transparent.
+ * Every visible path comes directly from the supplied SVG. Animation only transforms/clips
+ * those original paths; it does not redraw or simplify the bird or shield.
+ *
+ * The canvas is fitted to the actual visible artwork bounds instead of the full SVG viewport,
+ * so the mark fills the available space without the excessive empty margins that were present
+ * before.
+ *
+ * Animation sequence:
+ * 1. Shield scales/fades into place.
+ * 2. Bird rises from behind the shield.
+ * 3. Finished mark gets a very subtle idle bob/pulse.
+ */
 @Composable
 fun SparrowAnimation(
     modifier: Modifier = Modifier,
     animated: Boolean = false
 ) {
-    var started by remember { mutableStateOf(!animated) }
+    val parsedPaths = remember {
+        SparrowPathSpecs
+            .drop(1) // SVG path 0 is only the full rectangular background.
+            .map { spec ->
+                ParsedSparrowPath(
+                    path = parseSvgPath(
+                        data = spec.data,
+                        translateX = spec.translateX,
+                        translateY = spec.translateY
+                    ),
+                    color = spec.color
+                )
+            }
+    }
 
+    var started by remember(animated) { mutableStateOf(!animated) }
     LaunchedEffect(animated) {
-        if (animated) {
-            started = true
-        }
+        started = true
     }
 
     val shieldProgress by animateFloatAsState(
-        targetValue = if (started) 1f else 0.78f,
+        targetValue = if (started) 1f else 0f,
         animationSpec = tween(
-            durationMillis = 420,
+            durationMillis = 460,
             easing = FastOutSlowInEasing
         ),
         label = "sparrowShieldReveal"
     )
-    val headProgress by animateFloatAsState(
+
+    val birdProgress by animateFloatAsState(
         targetValue = if (started) 1f else 0f,
         animationSpec = tween(
-            durationMillis = 520,
-            delayMillis = 150,
+            durationMillis = 620,
+            delayMillis = 180,
             easing = FastOutSlowInEasing
         ),
-        label = "sparrowHeadReveal"
+        label = "sparrowBirdRise"
     )
 
-    val infiniteTransition = rememberInfiniteTransition(label = "sparrowIdle")
-    val pulse by infiniteTransition.animateFloat(
-        initialValue = 0.992f,
-        targetValue = 1.012f,
+    val idleTransition = rememberInfiniteTransition(label = "sparrowIdle")
+    val idleBob by idleTransition.animateFloat(
+        initialValue = -2.5f,
+        targetValue = 2.5f,
         animationSpec = infiniteRepeatable(
             animation = tween(
-                durationMillis = 1_800,
+                durationMillis = 2_200,
                 easing = FastOutSlowInEasing
             ),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "sparrowPulse"
+        label = "sparrowBirdBob"
     )
-    val blink by infiniteTransition.animateFloat(
+    val idlePulse by idleTransition.animateFloat(
+        initialValue = 0.998f,
+        targetValue = 1.004f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = 2_000,
+                easing = FastOutSlowInEasing
+            ),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "sparrowMarkPulse"
+    )
+
+    val eyeOpenness by idleTransition.animateFloat(
         initialValue = 1f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
             animation = keyframes {
-                durationMillis = 3_200
+                durationMillis = 3_800
                 1f at 0
-                1f at 2_400
-                0.12f at 2_480
-                1f at 2_580
-                1f at 3_200
+                1f at 2_600
+                0f at 2_675
+                1f at 2_770
+                1f at 3_800
             }
         ),
         label = "sparrowBlink"
     )
 
-    SparrowMarkCanvas(
-        modifier = modifier
-            .aspectRatio(1f)
-            .graphicsLayer {
-                val idleScale = if (animated) pulse else 1f
-                scaleX = idleScale
-                scaleY = idleScale
-            },
-        headProgress = headProgress,
-        shieldProgress = shieldProgress,
-        eyeScaleY = if (animated) blink else 1f
-    )
-}
-
-@Composable
-private fun SparrowMarkCanvas(
-    headProgress: Float,
-    shieldProgress: Float,
-    eyeScaleY: Float,
-    modifier: Modifier = Modifier
-) {
-    Canvas(modifier = modifier) {
-        val unit = size.minDimension
-        val centerX = size.width / 2f
-        val headWidth = unit * 0.36f
-        val headHeight = unit * 0.34f
-        val headTop = unit * 0.16f + (1f - headProgress) * unit * 0.13f
-
-        drawOval(
-            color = SparrowBrandColors.Accent,
-            topLeft = Offset(
-                x = centerX - headWidth / 2f,
-                y = headTop
-            ),
-            size = Size(headWidth, headHeight)
+    Canvas(modifier = modifier.aspectRatio(1f)) {
+        val boundsScale = minOf(
+            size.width / ArtworkWidth,
+            size.height / ArtworkHeight
         )
-
-        val eyeY = headTop + headHeight * 0.47f
-        val eyeOffsetX = headWidth * 0.20f
-        val eyeRadius = unit * 0.018f
-        val eyeHeight = eyeRadius * eyeScaleY
-
-        listOf(centerX - eyeOffsetX, centerX + eyeOffsetX).forEach { eyeX ->
-            drawOval(
-                color = SparrowBrandColors.Background,
-                topLeft = Offset(eyeX - eyeRadius, eyeY - eyeHeight),
-                size = Size(eyeRadius * 2f, eyeHeight * 2f)
-            )
-        }
-
-        val beakCenterY = headTop + headHeight * 0.60f
-        val beakHalfWidth = unit * 0.038f
-        val beak = Path().apply {
-            moveTo(centerX, beakCenterY - beakHalfWidth * 0.55f)
-            lineTo(centerX + beakHalfWidth, beakCenterY)
-            lineTo(centerX, beakCenterY + beakHalfWidth * 0.65f)
-            lineTo(centerX - beakHalfWidth, beakCenterY)
-            close()
-        }
-        drawPath(
-            path = beak,
-            color = SparrowBrandColors.Background
-        )
-
-        val shieldScale = 0.78f + 0.22f * shieldProgress
-        val shield = createShieldPath(
-            width = size.width,
-            height = size.height
-        )
+        val markScale = if (animated) idlePulse else 1f
+        val contentScale = boundsScale * AnimatedFillScale
 
         scale(
-            scale = shieldScale,
-            pivot = Offset(centerX, size.height * 0.50f)
+            scale = markScale,
+            pivot = Offset(size.width / 2f, size.height / 2f)
         ) {
-            drawPath(
-                path = shield,
-                color = SparrowBrandColors.Surface,
-                alpha = shieldProgress
+            translate(
+                left = size.width / 2f,
+                top = size.height / 2f
+            ) {
+                scale(scale = contentScale, pivot = Offset.Zero) {
+                    translate(
+                        left = -ArtworkCenterX,
+                        top = -ArtworkCenterY
+                    ) {
+                        drawAnimatedSparrow(
+                            paths = parsedPaths,
+                            shieldProgress = if (animated) shieldProgress else 1f,
+                            birdProgress = if (animated) birdProgress else 1f,
+                            birdIdleOffsetY = if (animated) idleBob else 0f,
+                            eyeOpenness = if (animated) eyeOpenness else 1f
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun DrawScope.drawAnimatedSparrow(
+    paths: List<ParsedSparrowPath>,
+    shieldProgress: Float,
+    birdProgress: Float,
+    birdIdleOffsetY: Float,
+    eyeOpenness: Float
+) {
+    // Bird is drawn first and clipped at the shield edge, so it genuinely rises from behind it.
+    clipRect(
+        left = 0f,
+        top = 0f,
+        right = SparrowViewportWidth,
+        bottom = ShieldTopY
+    ) {
+        val birdOffsetY = (1f - birdProgress) * BirdHiddenOffsetY +
+            birdIdleOffsetY * birdProgress
+
+        translate(top = birdOffsetY) {
+            drawSparrowPaths(
+                paths = paths,
+                alpha = birdProgress
             )
-            drawPath(
-                path = shield,
-                color = SparrowBrandColors.Accent,
-                alpha = shieldProgress,
-                style = Stroke(width = unit * 0.022f)
+            drawBlinkingEyes(
+                eyeOpenness = if (birdProgress > 0.98f) eyeOpenness else 1f,
+                alpha = birdProgress
+            )
+        }
+    }
+
+    // Same exact SVG paths, but only the shield half is visible in this pass.
+    // Scaling around its top edge makes it feel like the shield locks into place.
+    clipRect(
+        left = 0f,
+        top = ShieldTopY,
+        right = SparrowViewportWidth,
+        bottom = SparrowViewportHeight
+    ) {
+        val revealScale = 0.84f + 0.16f * shieldProgress
+        scale(
+            scale = revealScale,
+            pivot = Offset(SparrowViewportWidth / 2f, ShieldTopY)
+        ) {
+            drawSparrowPaths(
+                paths = paths,
+                alpha = shieldProgress
             )
         }
     }
 }
 
-private fun createShieldPath(
-    width: Float,
-    height: Float
-): Path {
-    val cx = width / 2f
-    return Path().apply {
-        moveTo(cx, height * 0.405f)
-        cubicTo(
-            width * 0.39f,
-            height * 0.455f,
-            width * 0.29f,
-            height * 0.47f,
-            width * 0.20f,
-            height * 0.485f
+private fun DrawScope.drawBlinkingEyes(
+    eyeOpenness: Float,
+    alpha: Float
+) {
+    val closedAmount = (1f - eyeOpenness).coerceIn(0f, 1f)
+    if (closedAmount <= 0.001f) return
+
+    val coverHeight = EyeCoverHeight * closedAmount
+    val coverTop = EyeCenterY - coverHeight / 2f
+    val cornerRadius = CornerRadius(22f, 22f)
+
+    listOf(LeftEyeCenterX, RightEyeCenterX).forEach { eyeCenterX ->
+        drawRoundRect(
+            color = SparrowHeadBlinkColor.copy(alpha = alpha),
+            topLeft = Offset(
+                x = eyeCenterX - EyeCoverWidth / 2f,
+                y = coverTop
+            ),
+            size = Size(EyeCoverWidth, coverHeight),
+            cornerRadius = cornerRadius
         )
-        cubicTo(
-            width * 0.205f,
-            height * 0.69f,
-            width * 0.31f,
-            height * 0.84f,
-            cx,
-            height * 0.94f
-        )
-        cubicTo(
-            width * 0.69f,
-            height * 0.84f,
-            width * 0.795f,
-            height * 0.69f,
-            width * 0.80f,
-            height * 0.485f
-        )
-        cubicTo(
-            width * 0.71f,
-            height * 0.47f,
-            width * 0.61f,
-            height * 0.455f,
-            cx,
-            height * 0.405f
-        )
-        close()
+
+        if (closedAmount > 0.72f) {
+            drawLine(
+                color = SparrowClosedEyeColor.copy(alpha = alpha),
+                start = Offset(eyeCenterX - 25f, EyeCenterY),
+                end = Offset(eyeCenterX + 25f, EyeCenterY),
+                strokeWidth = 5f
+            )
+        }
     }
 }
+
+private fun DrawScope.drawSparrowPaths(
+    paths: List<ParsedSparrowPath>,
+    alpha: Float
+) {
+    paths.forEach { item ->
+        drawPath(
+            path = item.path,
+            color = item.color.copy(alpha = item.color.alpha * alpha)
+        )
+    }
+}
+
+private data class ParsedSparrowPath(
+    val path: Path,
+    val color: Color
+)
+
+private data class SparrowPathSpec(
+    val data: String,
+    val color: Color,
+    val translateX: Float,
+    val translateY: Float
+)
+
+/**
+ * Minimal SVG path parser for this asset.
+ * The supplied SVG only uses M, C and Z commands, but L is supported for
+ * standards-compliant extra coordinate pairs following M.
+ */
+private fun parseSvgPath(
+    data: String,
+    translateX: Float,
+    translateY: Float
+): Path {
+    val tokens = SvgTokenRegex.findAll(data).map { it.value }.toList()
+    val path = Path()
+    var index = 0
+    var command = ' '
+
+    fun number(): Float = tokens[index++].toFloat()
+
+    fun isCommand(token: String): Boolean =
+        token.length == 1 && token[0] in "MCZ"
+
+    while (index < tokens.size) {
+        val token = tokens[index]
+        if (isCommand(token)) {
+            command = token[0]
+            index++
+            if (command == 'Z') {
+                path.close()
+                continue
+            }
+        }
+
+        when (command) {
+            'M' -> {
+                val x = number() + translateX
+                val y = number() + translateY
+                path.moveTo(x, y)
+                command = 'L'
+            }
+
+            'L' -> {
+                val x = number() + translateX
+                val y = number() + translateY
+                path.lineTo(x, y)
+            }
+
+            'C' -> {
+                val x1 = number() + translateX
+                val y1 = number() + translateY
+                val x2 = number() + translateX
+                val y2 = number() + translateY
+                val x3 = number() + translateX
+                val y3 = number() + translateY
+                path.cubicTo(x1, y1, x2, y2, x3, y3)
+            }
+
+            else -> error("Unsupported SVG path command: $command")
+        }
+    }
+
+    return path
+}
+
+private val SvgTokenRegex = Regex(
+    pattern = """[MCZ]|[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?"""
+)
+
+private val SparrowPathSpecs = listOf(
+    SparrowPathSpec(
+        data = """M0 0 C413.8 0 827.6 0 1254 0 C1254 413.8 1254 827.6 1254 1254 C840.2 1254 426.4 1254 0 1254 C0 840.2 0 426.4 0 0 Z""",
+        color = Color(0xFF01091E),
+        translateX = 0f,
+        translateY = 0f
+    ),
+    SparrowPathSpec(
+        data = """M0,0L28.2,24.6L49.2,52.6L64.5,84L74.2,117.9L75.8,131.1L75.7,157.8L67.8,197.4L58.5,220.1L46,241.3L28.7,263.7L23,270L21,270L21,272L30.7,270.9L61,231L92.2,268.1L101.6,284.1L104,292L207,313L206.9,362.8L198.8,469.5L189.2,539.6L167.9,587.8L150.8,620L131.6,650.9L106.4,685.4L58.4,741.1L17.8,779.8L-31.7,819.1L-57.7,837.1L-99.2,862.1L-107.6,865L-143.7,844L-191.3,810.6L-234.7,775.1L-268.3,744.1L-307.9,699.4L-335.5,663.2L-360.3,624.8L-381.9,584.6L-402,540L-418.5,397.2L-420,313L-316.7,290.8L-296.4,255.4L-274,231L-272,231L-257.6,253.8L-242,272L-234,271L-253.8,248.7L-274.2,213.2L-283.1,187.3L-288.8,147.4L-287.5,124L-282.8,100.9L-274,76.6L-266.1,60.7L-246.3,31.6L-221.5,6.8L-192.2,-12.7L-176.1,-20.2L-152.4,-28.1L-128,-33L-108.4,-34.4L-91.8,-33.8L-59.5,-28.1L-28.6,-16.7Z""",
+        color = Color(0xFF02102A),
+        translateX = 734f,
+        translateY = 245f
+    ),
+    SparrowPathSpec(
+        data = """M0,0L28.2,24.6L49.2,52.6L64.5,84L74.2,117.9L76.3,144.5L67.8,197.4L46,241.3L21,272L30.7,270.9L61,231L82.8,255L104,292L207,313L206.9,362.8L198.8,469.5L189.2,539.6L150.8,620L106.4,685.4L58.4,741.1L17.8,779.8L-57.7,837.1L-107.6,865L-167.9,827.8L-255.5,756L-307.9,699.4L-360.3,624.8L-402,540L-418.5,397.2L-420,313L-316.7,290.8L-296.4,255.4L-274,231L-242,272L-234,271L-253.8,248.7L-268.3,225.6L-279.1,200.4L-288.8,147.4L-282.8,100.9L-274,76.6L-246.3,31.6L-221.5,6.8L-176.1,-20.2L-125,-33.4L-91.8,-33.8L-59.5,-28.1L-28.6,-16.7ZM-115.8,253.3L-240,295.7L-399,331L-398.6,369.7L-392.3,453.7L-381.5,530.4L-367,566.5L-337.4,621.5L-300.5,674.9L-245.4,736.8L-162,806L-106.3,840.8L-75.1,823.1L-26,788L20.7,748.3L73.2,693.4L123.2,625.4L151.4,573.1L170.9,521.5L184.2,395.3L186,331L41.2,299.4L-101.9,251.7Z""",
+        color = Color(0xFF02E6FA),
+        translateX = 734f,
+        translateY = 245f
+    ),
+    SparrowPathSpec(
+        data = """M0,0L70.9,25.5L127.9,42.7L279.1,76.1L278.8,105.9L274.6,178.4L262.2,273.2L252.1,302.1L225.6,355L201.7,392.1L177.1,425.1L125.8,482.6L61.5,537.6L-8.9,585.4L-14.3,585.8L-56.7,559.7L-90.9,534.7L-124.6,507L-161.5,472.7L-200.5,429.2L-247.3,361.1L-275.3,308.7L-288,279.6L-290.1,270.1L-301.8,174.5L-305.8,109.5L-305.9,76.1L-210,56.4L-143.6,39.8L-63.2,13.8L-22.5,-1.8L-11.2,-3.1ZM-34.9,30.9L-94.6,51.7L-156.6,70.2L-279.9,96.1L-279.1,128.7L-271.4,218.1L-262,277.1L-241.9,320.1L-222.3,355.2L-179.9,415.1L-133.6,466.3L-73,518.1L-21.3,554.6L-12.4,558.2L45.4,519.5L81.5,490.1L113.3,460.1L138.1,434.1L163.4,403L199,350.8L222.9,306L238.1,267.1L246.6,203.2L251.4,147.1L253.1,96.1L130.2,70.2L31.9,39.4L-8.9,24.1L-22.3,25.9Z""",
+        color = Color(0xFF010B20),
+        translateX = 640.938f,
+        translateY = 499.875f
+    ),
+    SparrowPathSpec(
+        data = """M0,0L112.4,37.6L145.1,46.4L256.2,69.7L255.9,95.7L250.1,172.8L241.4,238.5L229.2,272.7L208.1,314.2L185.2,350.7L161.9,382.6L106.9,443.2L53.2,489.6L18.4,514.5L-10.8,531.7L-47.8,507.7L-87.1,477.9L-140.9,429.4L-176.8,389.1L-200.7,357L-229,312.1L-252.8,264.7L-261,242.9L-274.1,133.2L-276.8,69.7L-195.9,53.8L-117.8,33.7L-16.1,-1.5L-7.9,-2.3ZM-18.3,6.9L-91.1,33.2L-140.9,48L-193.3,60.9L-268.8,75.7L-268.9,95.3L-264.3,162L-254.8,235L-250,252.5L-239.9,275.7L-208.8,331.7L-185.5,366L-161.8,395.7L-133.6,426.6L-105.2,453.6L-75.5,478.4L-16,521.1L-9.6,523.6L43.9,487.4L85.4,453.1L116.7,423.4L138.4,400.1L171.1,358.4L207.2,300.7L233.3,244.3L235.4,233.9L245.9,143.6L249.2,75.7L118.3,47.1L46.2,24.4L-6,5.5L-12.2,4.9Z""",
+        color = Color(0xFF04DBF0),
+        translateX = 637.812f,
+        translateY = 526.312f
+    ),
+    SparrowPathSpec(
+        data = """M0,0L1.7,3.7L2,8L-9.7,14.8L-11.4,15.6L-14,16L-11.4,22.1L-10.1,26L-8.5,34.2L-8.3,38.3L-8.4,42.4L-9.1,46.5L-10.2,50.6L-13,56L-16.6,61.4L-20.9,66L-25.9,69.7L-31.8,72.5L-39.2,74.1L-46.3,74.3L-49.8,73.8L-53.3,73L-60.3,69.9L-66.6,64.5L-70.1,60.3L-71.6,58L-74,53L-74,51L-77.9,53.4L-79,53.8L-81.6,54L-83.6,52.9L-84.9,51.6L-85.9,50L-87,48L-51.2,27.3L-15.2,7.1L-2.9,0.4Z""",
+        color = Color(0xFF030D22),
+        translateX = 757f,
+        translateY = 360f
+    ),
+    SparrowPathSpec(
+        data = """M0,0L7.8,3.4L15.3,7.2L30.8,15.7L53.3,28.7L75.5,41L87,48L83,54L75,52L72.2,57.1L70.2,60.2L65.5,65.4L60,69.7L53.2,73.2L46.1,74.3L38.9,74.1L31.9,72.5L28.6,71.1L25.4,69.4L19.7,64.6L15,59.2L11.5,53L9,46L8.4,38.1L9.1,30.6L11,23.3L14,16L6.7,13.2L-3,8L-2,3.8Z""",
+        color = Color(0xFF030D21),
+        translateX = 498f,
+        translateY = 360f
+    ),
+    SparrowPathSpec(
+        data = """M0,0L5.5,3L19.3,13.6L43.7,31.1L41.6,34.8L38.5,37.7L16.7,54.1L3,65.6L0.8,66.9L-1.3,67L-4.8,64.9L-23.3,49.7L-45.3,33.1L-43,29.2L-41.5,27.7L-20.6,13.4L-8,4.3L-4.1,1.1L-2.2,0.2Z""",
+        color = Color(0xFF020B1F),
+        translateX = 628.262f,
+        translateY = 413.945f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C4.3 1 7.8 2.8 11.7 4.8 C12.4 5.2 13.1 5.5 13.8 5.9 C18.8 8.5 18.8 8.5 19.8 11 C20 13 20 13 18.9 14.9 C18.3 15.5 17.8 16.1 17.2 16.7 C16.7 17.3 16.2 17.9 15.6 18.5 C13.2 20.8 11 21 7.7 21.4 C2.8 20.9 1.4 19.4 -2 16 C-3.2 13.6 -3.2 11.8 -3.2 9.1 C-3.3 8.3 -3.3 7.4 -3.3 6.5 C-2.9 3.5 -2 2.2 0 0 Z""",
+        color = Color(0xFFF2F2F3),
+        translateX = 531f,
+        translateY = 388f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C2.4 1.3 2.8 2.4 3.8 4.9 C4.5 9.4 4.4 12.9 2.1 16.9 C-1.2 19.8 -3.8 20.7 -8.1 21.4 C-12.4 20.8 -14.2 18.9 -17.2 15.9 C-18.9 13.2 -19.2 12.2 -19.2 8.9 C-18.4 8.5 -17.6 8.1 -16.7 7.7 C-15.7 7.2 -14.6 6.7 -13.5 6.1 C-12.4 5.6 -11.4 5.1 -10.3 4.5 C-7.2 3 -7.2 3 -4.4 1.2 C-2.2 -0.1 -2.2 -0.1 0 0 Z""",
+        color = Color(0xFFF0F0F2),
+        translateX = 723.188f,
+        translateY = 388.062f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.7 0 1.3 0 2 0 C2 0.9 2.1 1.9 2.1 2.8 C2.2 6.3 2.3 9.7 2.4 13.2 C2.4 14.7 2.5 16.2 2.5 17.7 C2.6 19.8 2.6 22 2.7 24.1 C2.7 25.4 2.8 26.7 2.8 28 C2.7 30.9 2.7 30.9 4 32 C4 34.3 4 36.7 4 39 C3.7 39 3.3 39 3 39 C2.7 43 2.3 46.9 2 51 C1.7 51 1.3 51 1 51 C-0.1 34 -0.1 17 0 0 Z""",
+        color = Color(0xFF02D2E2),
+        translateX = 314f,
+        translateY = 578f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.3 0 0.7 0 1 0 C1.3 3.3 1.7 6.6 2 10 C2.3 10 2.7 10 3 10 C3.3 16.4 3.3 16.4 2 19.3 C0.8 22.5 0.8 25 0.8 28.4 C0.8 29.6 0.8 30.8 0.8 32 C0.8 33.3 0.9 34.5 0.9 35.8 C0.9 37.1 0.9 38.3 0.9 39.6 C0.9 42.8 1 45.9 1 49 C0.7 49 0.3 49 0 49 C0 47.4 0 45.7 0 44 C-0.7 44 -1.3 44 -2 44 C-2.2 34.6 -1.6 25.2 -1 15.8 C-0.9 14.3 -0.8 12.7 -0.7 11.2 C-0.5 7.5 -0.2 3.7 0 0 Z""",
+        color = Color(0xFF03B4C6),
+        translateX = 918f,
+        translateY = 625f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C4.1 0.6 7.3 2.5 10.9 4.4 C10.3 4.7 9.6 5 9 5.4 C6.9 6.4 6.9 6.4 5 7.7 C1.8 8.8 -0.1 7.8 -3.1 6.4 C-3.5 5.4 -3.8 4.5 -4.1 3.4 C-2.1 0.4 -2.1 0.4 0 0 Z""",
+        color = Color(0xFF08E5F5),
+        translateX = 671.125f,
+        translateY = 538.562f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.8 1.8 0.8 1.8 1 4 C-1 6.6 -2.5 7.8 -5.6 8.9 C-8 9 -8 9 -9.8 7.6 C-10.2 7 -10.6 6.5 -11 6 C-8.1 0.6 -6 -0.2 0 0 Z""",
+        color = Color(0xFF09DAF0),
+        translateX = 623f,
+        translateY = 526f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C3 0 5.9 0 9 0 C9.3 0.7 9.7 1.3 10 2 C12 3.1 12 3.1 14 4 C13 5 13 5 10.1 5.1 C8.3 5.1 8.3 5.1 6.4 5.1 C4.6 5 4.6 5 2.8 5 C1.9 5 1 5 0 5 C0 3.4 0 1.7 0 0 Z""",
+        color = Color(0xFF09E5F8),
+        translateX = 426f,
+        translateY = 584f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C1.6 0 3.3 0 5 0 C6.1 3.8 6.1 3.8 5 6 C5.7 6.3 6.3 6.7 7 7 C-1.2 6.6 -1.2 6.6 -4.6 3.9 C-5 3.3 -5.5 2.7 -6 2 C-3.5 2.5 -3.5 2.5 -1 3 C-0.7 2 -0.3 1 0 0 Z""",
+        color = Color(0xFF09DEF0),
+        translateX = 644f,
+        translateY = 531f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C5.7 4.7 10.9 9.7 16 15 C15.3 15.7 14.7 16.3 14 17 C9.1 12.1 4.1 7.1 -1 2 C-0.7 1.3 -0.3 0.7 0 0 Z""",
+        color = Color(0xFF04DEEE),
+        translateX = 474f,
+        translateY = 967f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0 3 0 3 -1.5 4.6 C-2.2 5.2 -2.9 5.7 -3.6 6.3 C-4.3 6.9 -5 7.5 -5.8 8.1 C-6.5 8.8 -7.2 9.4 -8 10 C-9.3 11.1 -10.7 12.3 -12 13.4 C-13 14.3 -14 15.1 -15 16 C-15.7 15.7 -16.3 15.3 -17 15 C-14.5 12.5 -12.1 10 -9.6 7.5 C-8.6 6.4 -8.6 6.4 -7.5 5.3 C-6.8 4.7 -6.2 4 -5.5 3.3 C-4.9 2.7 -4.2 2 -3.6 1.4 C-2 0 -2 0 0 0 Z""",
+        color = Color(0xFF03D6E6),
+        translateX = 462f,
+        translateY = 476f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.8 2.2 0.8 2.2 1 5 C-0.9 7.8 -0.9 7.8 -3 10 C-6 3.4 -6 3.4 -6 0 C-3.5 -1.2 -2.6 -0.8 0 0 Z""",
+        color = Color(0xFF09E4F8),
+        translateX = 409f,
+        translateY = 822f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.3 0 0.7 0 1 0 C1.6 11.1 0.1 20.4 -3 31 C-4 27.9 -4 25.9 -3.2 22.8 C-1.5 15.3 -0.8 7.6 0 0 Z""",
+        color = Color(0xFF03B9C7),
+        translateX = 906f,
+        translateY = 749f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.3 0 0.7 0 1 0 C2.2 9 3.3 17.9 3 27 C2.3 27 1.7 27 1 27 C0.2 20.7 0 15.2 1 9 C0.3 8.7 -0.3 8.3 -1 8 C-0.7 5.4 -0.3 2.7 0 0 Z""",
+        color = Color(0xFF01BDCC),
+        translateX = 340f,
+        translateY = 684f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C2.3 0.3 4.6 0.7 7 1 C6.7 2.6 6.3 4.3 6 6 C3.1 6.1 3.1 6.1 0 6 C-0.7 5.3 -1.3 4.7 -2 4 C-1.3 2.7 -0.7 1.4 0 0 Z""",
+        color = Color(0xFF0AE5F8),
+        translateX = 598f,
+        translateY = 534f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.3 0 0.7 0 1 0 C1.6 7.7 2.1 15.3 2 23 C1.7 23 1.3 23 1 23 C1 21.4 1 19.7 1 18 C0.3 18 -0.3 18 -1 18 C-1.1 11.9 -1.1 6 0 0 Z""",
+        color = Color(0xFF06CADA),
+        translateX = 917f,
+        translateY = 651f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.3 0 0.7 0 1 0 C1.1 10.4 0.8 20.6 0 31 C-0.3 31 -0.7 31 -1 31 C-1.3 23.4 -1.7 15.8 -2 8 C-1.7 8 -1.3 8 -1 8 C-0.7 5.4 -0.3 2.7 0 0 Z""",
+        color = Color(0xFF02A4B5),
+        translateX = 940f,
+        translateY = 602f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.3 0 0.7 0 1 0 C1.7 10.2 2.3 20.5 3 31 C-0.4 26.5 -0.4 26.5 -0.1 21.9 C0.1 18.3 0.1 18.3 -1 15 C-0.9 12.4 -0.8 9.9 -0.6 7.4 C-0.5 6.7 -0.5 6 -0.4 5.2 C-0.3 3.5 -0.1 1.7 0 0 Z""",
+        color = Color(0xFF015361),
+        translateX = 317f,
+        translateY = 656f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C1 0.3 2 0.7 3 1 C1.7 2.4 0.4 3.7 -1 5 C-1.7 5 -2.3 5 -3 5 C-3.2 5.7 -3.5 6.5 -3.8 7.2 C-5.1 10.2 -6.6 11.8 -9 14 C-10 13.7 -11 13.3 -12 13 C-8 8.7 -4.1 4.4 0 0 Z""",
+        color = Color(0xFF011426),
+        translateX = 812f,
+        translateY = 964f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.3 0 0.7 0 1 0 C1 4.3 1 8.6 1 13 C1.3 13 1.7 13 2 13 C1.7 15.3 1.3 17.6 1 20 C0.3 20 -0.3 20 -1 20 C-1.3 21.3 -1.7 22.6 -2 24 C-1 7.1 -1 7.1 0 0 Z""",
+        color = Color(0xFF03B1BF),
+        translateX = 912f,
+        translateY = 703f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C5.7 1.4 8.5 5.7 12 10 C11.3 10.7 10.7 11.3 10 12 C8.3 10.4 6.7 8.8 5 7.1 C4.1 6.2 3.1 5.3 2.2 4.4 C0 2 0 2 0 0 Z""",
+        color = Color(0xFF04C5D9),
+        translateX = 497f,
+        translateY = 954f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C13 -0.4 13 -0.4 19 2 C19.3 2.7 19.7 3.3 20 4 C13.3 3.3 6.7 2.3 0 1 C0 0.7 0 0.3 0 0 Z""",
+        color = Color(0xFF032535),
+        translateX = 843f,
+        translateY = 586f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.3 1 0.7 2 1 3 C-2.3 6.3 -5.6 9.6 -9 13 C-9.7 12.3 -10.3 11.7 -11 11 C-7.4 7.4 -3.7 3.7 0 0 Z""",
+        color = Color(0xFF03C7DA),
+        translateX = 790f,
+        translateY = 985f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.3 0 0.7 0 1 0 C2.5 13.6 2.5 13.6 0 20 C-0.3 20 -0.7 20 -1 20 C-0.7 13.4 -0.3 6.8 0 0 Z""",
+        color = Color(0xFF03C8D9),
+        translateX = 880f,
+        translateY = 695f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C1 0.5 1 0.5 2 1 C2.4 3.7 2.4 3.7 2.6 7.1 C2.7 8.2 2.8 9.3 2.9 10.4 C2.9 11.3 2.9 12.1 3 13 C2 13 1 13 0 13 C0 8.7 0 4.4 0 0 Z""",
+        color = Color(0xFF012739),
+        translateX = 937f,
+        translateY = 660f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.3 0 0.7 0 1 0 C1.3 2.5 1.7 5 2 7.5 C2.1 8.2 2.2 8.9 2.3 9.6 C2.9 14.4 3.1 19.1 3 24 C2.7 24 2.3 24 2 24 C2 22.4 2 20.7 2 19 C1.3 19 0.7 19 0 19 C0 12.7 0 6.5 0 0 Z""",
+        color = Color(0xFF014556),
+        translateX = 366f,
+        translateY = 687f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0 0.3 0 0.7 0 1 C-1.6 1.3 -3.1 1.7 -4.7 2 C-6 2.3 -6 2.3 -7.3 2.6 C-9.9 3 -12.4 3.1 -15 3 C-15 2 -15 1 -15 0 C-9.8 -1.2 -5.2 -0.8 0 0 Z""",
+        color = Color(0xFF011F34),
+        translateX = 405f,
+        translateY = 564f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C4.3 0.5 6.3 3 9.2 6.1 C10.1 7 11 7.9 12 8.8 C12.6 9.6 13.3 10.3 14 11 C13.7 11.7 13.3 12.3 13 13 C8.7 8.7 4.3 4.3 0 0 Z""",
+        color = Color(0xFF011835),
+        translateX = 508f,
+        translateY = 956f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.7 1.7 0.7 1.7 1 4 C-0.4 6.1 -0.4 6.1 -2.3 8.2 C-2.9 9 -3.6 9.7 -4.2 10.4 C-6 12 -6 12 -8 12 C-6.6 9 -4.9 6.4 -2.9 3.8 C-2.1 2.7 -2.1 2.7 -1.2 1.6 C-0.8 1.1 -0.4 0.5 0 0 Z""",
+        color = Color(0xFF001E32),
+        translateX = 838f,
+        translateY = 932f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C-2.3 2.7 -3.6 3.9 -7.1 4.9 C-10 5 -10 5 -13 3 C-11.2 2.3 -9.4 1.6 -7.6 0.9 C-6.6 0.6 -5.6 0.2 -4.6 -0.2 C-2 -1 -2 -1 0 0 Z""",
+        color = Color(0xFF04C2D8),
+        translateX = 612f,
+        translateY = 530f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C-1.6 4.3 -4.5 6.3 -8 9 C-8.7 8.7 -9.3 8.3 -10 8 C-8.7 6.7 -7.4 5.3 -6.1 4 C-5 2.9 -5 2.9 -3.9 1.8 C-2 0 -2 0 0 0 Z""",
+        color = Color(0xFF06D4E7),
+        translateX = 764f,
+        translateY = 941f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C1.2 0.2 1.2 0.2 2.5 0.3 C3.4 0.4 3.4 0.4 4.4 0.6 C4.4 0.9 4.4 1.2 4.4 1.6 C0.1 2.2 -4.2 2.9 -8.6 3.6 C-8 3.2 -7.3 2.9 -6.6 2.6 C-6.6 1.9 -6.6 1.2 -6.6 0.6 C-4.1 -0.7 -2.8 -0.4 0 0 Z""",
+        color = Color(0xFF021E38),
+        translateX = 345.625f,
+        translateY = 574.438f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.3 1 0.7 2 1 3 C-1.3 5.3 -3.6 7.6 -6 10 C-6.3 9 -6.7 8 -7 7 C-4.7 4.7 -2.4 2.4 0 0 Z""",
+        color = Color(0xFF022336),
+        translateX = 779f,
+        translateY = 966f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.8 0.2 1.6 0.4 2.4 0.5 C4.3 1.2 4.3 1.2 5.3 3.2 C-4.1 2.3 -4.1 2.3 -8.7 1.2 C-5.4 -0.7 -3.7 -0.9 0 0 Z""",
+        color = Color(0xFF03D4E7),
+        translateX = 860.688f,
+        translateY = 594.75f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C2 0 4 0 6 0 C6 0.7 6 1.3 6 2 C2 3 -1.9 4 -6 5 C-6 4.3 -6 3.7 -6 3 C-4 2.7 -2 2.3 0 2 C0 1.3 0 0.7 0 0 Z""",
+        color = Color(0xFF02E0EA),
+        translateX = 542f,
+        translateY = 523f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C2 1.6 4 3.3 6 5 C6 5.7 6 6.3 6 7 C7 7.3 8 7.7 9 8 C8.3 8.7 7.7 9.3 7 10 C5.8 8.7 4.7 7.4 3.5 6.1 C2.9 5.4 2.2 4.7 1.5 3.9 C0 2 0 2 0 0 Z""",
+        color = Color(0xFF012543),
+        translateX = 500f,
+        translateY = 946f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.3 0 0.7 0 1 0 C2.3 5.9 1.7 8.8 -1 14 C-1.7 14 -2.3 14 -3 14 C-2.1 9.3 -1 4.7 0 0 Z""",
+        color = Color(0xFF002E48),
+        translateX = 878f,
+        translateY = 766f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.7 0.7 1.3 1.3 2 2 C1.3 2.7 0.7 3.3 0 4 C-0.6 6.6 -0.6 6.6 -1 9 C-4 5.4 -4 5.4 -4 2 C-2.7 1.3 -1.4 0.7 0 0 Z""",
+        color = Color(0xFF01DEED),
+        translateX = 747f,
+        translateY = 374f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0 0.7 0 1.3 0 2 C-1.3 2.5 -2.5 3 -3.8 3.5 C-4.9 3.9 -4.9 3.9 -6 4.3 C-8 5 -8 5 -11 5 C-11 4.3 -11 3.7 -11 3 C-9.3 3 -7.7 3 -6 3 C-6 2.3 -6 1.7 -6 1 C-3 0 -3 0 0 0 Z""",
+        color = Color(0xFF032837),
+        translateX = 589f,
+        translateY = 536f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C-1.5 3.8 -3.8 5.6 -7 8 C-7 5 -7 5 -4.6 2.3 C-2 0 -2 0 0 0 Z""",
+        color = Color(0xFF022436),
+        translateX = 767f,
+        translateY = 980f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.7 0.3 1.3 0.7 2 1 C0 3.3 -2 5.6 -4 8 C-5 7.7 -6 7.3 -7 7 C-4.7 4.7 -2.4 2.4 0 0 Z""",
+        color = Color(0xFF04D3E9),
+        translateX = 728f,
+        translateY = 974f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C1 0 2 0 3 0 C3 3.6 3 7.3 3 11 C2.7 11 2.3 11 2 11 C2 9 2 7 2 5 C1.3 5 0.7 5 0 5 C0 3.4 0 1.7 0 0 Z""",
+        color = Color(0xFF03223E),
+        translateX = 882f,
+        translateY = 642f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C-2.5 2.8 -4.2 4.5 -8 5 C-8 4.3 -8 3.7 -8 3 C-8.7 2.7 -9.3 2.3 -10 2 C-8.7 1.5 -7.4 1 -6.1 0.4 C-5.4 0.1 -4.7 -0.1 -3.9 -0.4 C-2 -1 -2 -1 0 0 Z""",
+        color = Color(0xFF012F43),
+        translateX = 586f,
+        translateY = 512f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C3.8 1.5 5.6 3.8 8 7 C4.2 6.5 2.4 4.9 0 2 C0 1.3 0 0.7 0 0 Z""",
+        color = Color(0xFF04CAE0),
+        translateX = 493f,
+        translateY = 942f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C-0.3 1 -0.7 2 -1 3 C-3.3 3.3 -5.6 3.7 -8 4 C-8.3 3 -8.7 2 -9 1 C-5.9 0.5 -3.1 0 0 0 Z""",
+        color = Color(0xFF011C32),
+        translateX = 462f,
+        translateY = 550f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.7 1 1.3 2 2 3 C0 4.3 -2 5.6 -4 7 C-4.7 6.7 -5.3 6.3 -6 6 C-4 4 -2 2 0 0 Z""",
+        color = Color(0xFF012239),
+        translateX = 746f,
+        translateY = 967f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.3 1 0.7 2 1 3 C-2 7.7 -2 7.7 -5.1 8.6 C-5.8 8.8 -6.4 8.9 -7 9 C-6.6 8.5 -6.2 8 -5.7 7.5 C-5.2 6.9 -4.6 6.3 -4.1 5.6 C-3.5 5 -3 4.4 -2.4 3.7 C-0.9 2 -0.9 2 0 0 Z""",
+        color = Color(0xFF03D1E2),
+        translateX = 801f,
+        translateY = 944f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.3 0.7 0.7 1.3 1 2 C-1.5 5.5 -2.8 7.2 -7 8 C-6 6.9 -5 5.7 -4.1 4.6 C-3.5 3.9 -3 3.3 -2.4 2.6 C-1.6 1.7 -0.8 0.8 0 0 Z""",
+        color = Color(0xFF00243A),
+        translateX = 766f,
+        translateY = 947f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.7 0.7 1.3 1.3 2 2 C-1.5 5 -1.5 5 -5 8 C-4 3.8 -3.1 2.8 0 0 Z""",
+        color = Color(0xFF07E1F0),
+        translateX = 807f,
+        translateY = 938f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0 1 0 2 0 3 C-2.6 3.3 -5.3 3.7 -8 4 C-4.5 0 -4.5 0 0 0 Z""",
+        color = Color(0xFF021E37),
+        translateX = 448f,
+        translateY = 553f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.7 1 1.3 2 2 3 C-1 5.5 -1 5.5 -4 8 C-4.7 7.7 -5.3 7.3 -6 7 C-4 4.7 -2 2.4 0 0 Z""",
+        color = Color(0xFF03C6DA),
+        translateX = 777f,
+        translateY = 501f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.7 0 1.3 0 2 0 C1.7 3.3 1.3 6.6 1 10 C0.3 9.3 -0.3 8.7 -1 8 C-1 5.3 -0.4 2.7 0 0 Z""",
+        color = Color(0xFF01CEDE),
+        translateX = 805f,
+        translateY = 418f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.3 0 0.7 0 1 0 C1.1 4.2 1 7.9 0 12 C-1.5 9.5 -2 8.4 -1.7 5.4 C-1.2 3.6 -0.6 1.8 0 0 Z""",
+        color = Color(0xFF01C2D5),
+        translateX = 808f,
+        translateY = 404f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0 3.6 -1.1 5.1 -3 8 C-4 7.3 -5 6.7 -6 6 C-4 4 -2 2 0 0 Z""",
+        color = Color(0xFF05C6D7),
+        translateX = 786f,
+        translateY = 961f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C1 0.3 2 0.7 3 1 C1.4 2.6 -0.3 4.3 -2 6 C-3 5.7 -4 5.3 -5 5 C-3.4 3.4 -1.7 1.7 0 0 Z""",
+        color = Color(0xFF03DFEF),
+        translateX = 792f,
+        translateY = 955f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.7 0 1.3 0 2 0 C1.3 2.3 0.7 4.6 0 7 C-1 7 -2 7 -3 7 C-2.4 4 -1.7 2.6 0 0 Z""",
+        color = Color(0xFF02DEF0),
+        translateX = 918f,
+        translateY = 790f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C-2.9 1.9 -4.6 2.5 -8 3 C-8 2.3 -8 1.7 -8 1 C-8.7 0.7 -9.3 0.3 -10 0 C-6.3 -1 -3.7 -1 0 0 Z""",
+        color = Color(0xFF031C38),
+        translateX = 493f,
+        translateY = 578f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C-3.3 2.2 -4.3 2.2 -8.2 2.1 C-9.1 2.1 -10 2.1 -10.9 2.1 C-11.6 2 -12.3 2 -13 2 C-8.5 -1 -5.2 -1.3 0 0 Z""",
+        color = Color(0xFF012F42),
+        translateX = 535f,
+        translateY = 531f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C2.2 0.3 2.2 0.3 4 1 C2.4 2.3 0.7 3.6 -1 5 C-1.7 4.3 -2.3 3.7 -3 3 C-1.8 1.4 -1.8 1.4 0 0 Z""",
+        color = Color(0xFF06D3E3),
+        translateX = 759f,
+        translateY = 988f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.7 1.8 0.7 1.8 1 4 C-0.4 5.8 -0.4 5.8 -2 7 C-3 6.7 -4 6.3 -5 6 C-3.4 4 -1.7 2 0 0 Z""",
+        color = Color(0xFF04D1E5),
+        translateX = 821f,
+        translateY = 920f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C1.3 1.6 2.6 3.3 4 5 C3 6 3 6 -0.6 6.1 C-1.7 6 -2.8 6 -4 6 C-3 5.3 -2 4.7 -1 4 C-0.3 1.9 -0.3 1.9 0 0 Z""",
+        color = Color(0xFF09E6F7),
+        translateX = 446f,
+        translateY = 581f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C-0.3 1 -0.7 2 -1 3 C-3 3.3 -5 3.7 -7 4 C-7 3 -7 2 -7 1 C-4.5 0.3 -2.6 0 0 0 Z""",
+        color = Color(0xFF022945),
+        translateX = 482f,
+        translateY = 579f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C-0.3 1 -0.7 2 -1 3 C-3.6 2.7 -6.3 2.3 -9 2 C-5.9 0.1 -3.6 -0.2 0 0 Z""",
+        color = Color(0xFF07C6DB),
+        translateX = 451f,
+        translateY = 579f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C0.7 0.3 1.3 0.7 2 1 C-0.3 3.5 -0.3 3.5 -3 6 C-4 6 -5 6 -6 6 C-4 4 -2 2 0 0 Z""",
+        color = Color(0xFF012335),
+        translateX = 764f,
+        translateY = 506f
+    ),
+    SparrowPathSpec(
+        data = """M0 0 C3 0.5 3 0.5 6 1 C6 2 6 3 6 4 C4.3 3.7 2.7 3.3 1 3 C0.7 2 0.3 1 0 0 Z""",
+        color = Color(0xFF00D2E5),
+        translateX = 629f,
+        translateY = 494f
+    )
+)

@@ -344,7 +344,7 @@ private fun PromoteBeforeLeaveDialog(
                                 .fillMaxWidth()
                                 .clickable(enabled = !isUpdating) { onSelect(contactId) },
                         headlineContent = { Text(member.displayName) },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
                     )
                     if (index < members.lastIndex) {
                         HorizontalDivider()
