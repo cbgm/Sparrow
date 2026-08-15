@@ -4,6 +4,7 @@
 
 **End-to-end encrypted messaging built with Kotlin Multiplatform and a federated Kotlin server stack.**
 
+[![Documentation](https://github.com/cbgm/Sparrow/actions/workflows/docs.yml/badge.svg?branch=master)](https://cbgm.github.io/Sparrow/)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.4.0-7F52FF?logo=kotlin&logoColor=white)
 ![Compose Multiplatform](https://img.shields.io/badge/Compose-Multiplatform-4285F4)
 ![Android](https://img.shields.io/badge/Android-API%2029+-3DDC84?logo=android&logoColor=white)
