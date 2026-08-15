@@ -4,7 +4,8 @@ import com.cbgm.sparrow.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
 import com.cbgm.sparrow.server.protocol.FederatedTypingEvent
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
-import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 private const val DEFAULT_RETRY_BASE_DELAY_MILLISECONDS = 5_000L
 private const val DEFAULT_RETRY_MAXIMUM_DELAY_MILLISECONDS = 5L * 60L * 1_000L
@@ -24,7 +25,7 @@ class FederationRouter(
     private val retryMaximumDelayMilliseconds: Long = DEFAULT_RETRY_MAXIMUM_DELAY_MILLISECONDS,
     private val now: () -> Long = System::currentTimeMillis
 ) {
-    private val inFlightEnvelopeIds = ConcurrentHashMap.newKeySet<String>()
+    private val deliveryMutex = Mutex()
     private val localRouteResolver =
         localGateway as? LocalRouteResolver ?: LocalRouteResolver { null }
     private val peerRouter =
@@ -44,32 +45,32 @@ class FederationRouter(
     }
 
     suspend fun route(envelope: FederatedEnvelope): FederationAcknowledgement {
-        val existing = queue.get(envelope.envelopeId)
-        if (existing?.state == EnvelopeAcceptanceState.STORED_AT_DESTINATION) {
-            return FederationAcknowledgement(
-                envelope.envelopeId,
-                existing.state,
-                duplicate = true
-            )
-        }
+        /*
+         * The queue (ConcurrentHashMap-backed) is already safe for
+         * concurrent access on its own - enqueue/markAttempt/markStored
+         * are atomic per envelopeId. Holding a single global mutex across
+         * deliver() (which does outbound network I/O) serialized every
+         * message on the entire server behind whichever one happened to
+         * be in flight. Only guard the cheap in-memory dedupe check.
+         */
+        val queued =
+            deliveryMutex.withLock {
+                val existing = queue.get(envelope.envelopeId)
+                if (existing?.state == EnvelopeAcceptanceState.STORED_AT_DESTINATION) {
+                    return FederationAcknowledgement(
+                        envelope.envelopeId,
+                        existing.state,
+                        duplicate = true
+                    )
+                }
 
-        val queued = queue.enqueue(envelope)
-        if (!inFlightEnvelopeIds.add(envelope.envelopeId)) {
-            return FederationAcknowledgement(
-                envelope.envelopeId,
-                queued.state,
-                duplicate = true
-            )
-        }
+                queue.enqueue(envelope)
+            }
 
-        return try {
-            deliver(
-                entry = queued,
-                allowControlPlaneFallback = false
-            )
-        } finally {
-            inFlightEnvelopeIds.remove(envelope.envelopeId)
-        }
+        return deliver(
+            entry = queued,
+            allowControlPlaneFallback = false
+        )
     }
 
     suspend fun retryPending(limit: Int): Int {
@@ -77,25 +78,25 @@ class FederationRouter(
         val due = queue.pendingDue(now(), limit)
         var processed = 0
         due.forEach { candidate ->
-            val envelopeId = candidate.envelope.envelopeId
-            if (!inFlightEnvelopeIds.add(envelopeId)) {
-                return@forEach
-            }
-
-            try {
-                val current = queue.get(envelopeId)
-                if (
-                    current?.state == EnvelopeAcceptanceState.QUEUED_AT_GATEWAY &&
-                    current.nextAttemptAtEpochMilliseconds <= now()
-                ) {
-                    deliver(
-                        entry = current,
-                        allowControlPlaneFallback = true
-                    )
-                    processed += 1
+            val readyToDeliver =
+                deliveryMutex.withLock {
+                    val current = queue.get(candidate.envelope.envelopeId)
+                    if (
+                        current?.state == EnvelopeAcceptanceState.QUEUED_AT_GATEWAY &&
+                        current.nextAttemptAtEpochMilliseconds <= now()
+                    ) {
+                        current
+                    } else {
+                        null
+                    }
                 }
-            } finally {
-                inFlightEnvelopeIds.remove(envelopeId)
+
+            if (readyToDeliver != null) {
+                deliver(
+                    entry = readyToDeliver,
+                    allowControlPlaneFallback = true
+                )
+                processed += 1
             }
         }
         return processed
