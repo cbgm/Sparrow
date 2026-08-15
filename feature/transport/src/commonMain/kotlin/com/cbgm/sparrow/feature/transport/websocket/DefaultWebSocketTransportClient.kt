@@ -4,7 +4,6 @@ import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
-import com.cbgm.sparrow.feature.transport.gateway.model.ClientRouteRegistration
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayClientMessage
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayServerMessage
@@ -276,15 +275,19 @@ class DefaultWebSocketTransportClient internal constructor(
 
                 logger.info { "WebSocket session opened" }
 
-                val gatewayInformation =
-                    presenceRouteManager
-                        .fetchGatewayInformation(serverUrl = serverUrl)
-                        .onFailure { error ->
-                            logger.warn {
-                                "Gateway information unavailable; using compatible registration: " +
-                                    (error.message ?: "unknown error")
-                            }
-                        }.getOrNull()
+                /*
+                 * Establish the WebSocket identity first. Presence publication is intentionally
+                 * decoupled from the registration handshake: a slow/unavailable presence service
+                 * must not delay transport availability, delivery receipts, or the outbox.
+                 *
+                 * The connection ID is included from the first frame so the signed route can be
+                 * published immediately afterwards through RefreshRoute without reconnecting.
+                 */
+                sendRegistration(
+                    activeSession = this,
+                    localRoutingId = localRoutingId,
+                    connectionId = connectionId
+                )
 
                 val presenceConnection =
                     PresenceRouteConnection(
@@ -292,40 +295,15 @@ class DefaultWebSocketTransportClient internal constructor(
                         routingId = localRoutingId,
                         connectionId = connectionId,
                         generation = generation,
-                        initialGatewayInformation = gatewayInformation,
+                        initialGatewayInformation = null,
                         initialRouteEstablished = false,
-                        connectionIdRegistered = gatewayInformation != null
-                    )
-                val routeRegistration =
-                    gatewayInformation?.let { information ->
-                        presenceRouteManager
-                            .createRegistration(
-                                connection = presenceConnection,
-                                gatewayInformation = information
-                            ).getOrElse { error ->
-                                throw IllegalStateException(
-                                    "Could not create signed presence route",
-                                    error
-                                )
-                            }
-                    }
-
-                val signedRegistrationSent =
-                    sendRegistration(
-                        activeSession = this,
-                        localRoutingId = localRoutingId,
-                        connectionId = connectionId,
-                        connectionIdRegistered = gatewayInformation != null,
-                        routeRegistration = routeRegistration
+                        connectionIdRegistered = true
                     )
 
                 val routeRefreshJob =
                     launch {
                         presenceRouteManager.maintain(
-                            connection =
-                                presenceConnection.copy(
-                                    initialRouteEstablished = signedRegistrationSent
-                                ),
+                            connection = presenceConnection,
                             sendRefresh = { registration ->
                                 runCatching {
                                     sendMutex.withLock {
@@ -371,12 +349,7 @@ class DefaultWebSocketTransportClient internal constructor(
                                 handleTextFrame(
                                     encodedMessage = frame.readText(),
                                     expectedRoutingId = localRoutingId,
-                                    registeredAliases =
-                                        routeRegistration
-                                            ?.route
-                                            ?.aliases
-                                            .orEmpty()
-                                            .toSet()
+                                    registeredAliases = emptySet()
                                 )
                             }
 
@@ -453,19 +426,12 @@ class DefaultWebSocketTransportClient internal constructor(
     private suspend fun sendRegistration(
         activeSession: DefaultClientWebSocketSession,
         localRoutingId: String,
-        connectionId: String,
-        connectionIdRegistered: Boolean,
-        routeRegistration: ClientRouteRegistration?
-    ): Boolean {
+        connectionId: String
+    ) {
         val registration =
             GatewayClientMessage.Register(
                 routingId = localRoutingId,
-                connectionId = connectionId.takeIf { connectionIdRegistered },
-                generation = routeRegistration?.route?.generation,
-                expiresAtEpochMilliseconds = routeRegistration?.route?.expiresAtEpochMilliseconds,
-                aliases = routeRegistration?.route?.aliases?.takeIf { it.isNotEmpty() },
-                clientSigningPublicKey = routeRegistration?.clientSigningPublicKey,
-                clientSignature = routeRegistration?.route?.clientSignature
+                connectionId = connectionId
             )
 
         val encodedRegistration = json.encodeToString<GatewayClientMessage>(registration)
@@ -475,10 +441,8 @@ class DefaultWebSocketTransportClient internal constructor(
         }
 
         logger.debug {
-            "Gateway registration sent for $localRoutingId; signed=${routeRegistration != null}"
+            "Gateway registration sent for $localRoutingId; presenceDeferred=true"
         }
-
-        return routeRegistration != null
     }
 
     private suspend fun sendEnvelopeFrame(envelope: TransportEnvelope) {

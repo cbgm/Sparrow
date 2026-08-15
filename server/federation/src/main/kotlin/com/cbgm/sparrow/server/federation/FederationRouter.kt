@@ -4,8 +4,7 @@ import com.cbgm.sparrow.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
 import com.cbgm.sparrow.server.protocol.FederatedTypingEvent
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.ConcurrentHashMap
 
 private const val DEFAULT_RETRY_BASE_DELAY_MILLISECONDS = 5_000L
 private const val DEFAULT_RETRY_MAXIMUM_DELAY_MILLISECONDS = 5L * 60L * 1_000L
@@ -25,7 +24,7 @@ class FederationRouter(
     private val retryMaximumDelayMilliseconds: Long = DEFAULT_RETRY_MAXIMUM_DELAY_MILLISECONDS,
     private val now: () -> Long = System::currentTimeMillis
 ) {
-    private val deliveryMutex = Mutex()
+    private val inFlightEnvelopeIds = ConcurrentHashMap.newKeySet<String>()
     private val localRouteResolver =
         localGateway as? LocalRouteResolver ?: LocalRouteResolver { null }
     private val peerRouter =
@@ -44,31 +43,47 @@ class FederationRouter(
         require(retryMaximumDelayMilliseconds >= retryBaseDelayMilliseconds)
     }
 
-    suspend fun route(envelope: FederatedEnvelope): FederationAcknowledgement =
-        deliveryMutex.withLock {
-            val existing = queue.get(envelope.envelopeId)
-            if (existing?.state == EnvelopeAcceptanceState.STORED_AT_DESTINATION) {
-                return@withLock FederationAcknowledgement(
-                    envelope.envelopeId,
-                    existing.state,
-                    duplicate = true
-                )
-            }
-
-            val queued = queue.enqueue(envelope)
-            deliver(
-                entry = queued,
-                allowControlPlaneFallback = false
+    suspend fun route(envelope: FederatedEnvelope): FederationAcknowledgement {
+        val existing = queue.get(envelope.envelopeId)
+        if (existing?.state == EnvelopeAcceptanceState.STORED_AT_DESTINATION) {
+            return FederationAcknowledgement(
+                envelope.envelopeId,
+                existing.state,
+                duplicate = true
             )
         }
+
+        val queued = queue.enqueue(envelope)
+        if (!inFlightEnvelopeIds.add(envelope.envelopeId)) {
+            return FederationAcknowledgement(
+                envelope.envelopeId,
+                queued.state,
+                duplicate = true
+            )
+        }
+
+        return try {
+            deliver(
+                entry = queued,
+                allowControlPlaneFallback = true
+            )
+        } finally {
+            inFlightEnvelopeIds.remove(envelope.envelopeId)
+        }
+    }
 
     suspend fun retryPending(limit: Int): Int {
         require(limit > 0)
         val due = queue.pendingDue(now(), limit)
         var processed = 0
         due.forEach { candidate ->
-            deliveryMutex.withLock {
-                val current = queue.get(candidate.envelope.envelopeId)
+            val envelopeId = candidate.envelope.envelopeId
+            if (!inFlightEnvelopeIds.add(envelopeId)) {
+                return@forEach
+            }
+
+            try {
+                val current = queue.get(envelopeId)
                 if (
                     current?.state == EnvelopeAcceptanceState.QUEUED_AT_GATEWAY &&
                     current.nextAttemptAtEpochMilliseconds <= now()
@@ -79,6 +94,8 @@ class FederationRouter(
                     )
                     processed += 1
                 }
+            } finally {
+                inFlightEnvelopeIds.remove(envelopeId)
             }
         }
         return processed

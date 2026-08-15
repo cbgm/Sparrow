@@ -29,9 +29,7 @@ internal class ClientPresenceRouteManager(
                     ?.toLongOrNull()
 
             gatewayInformation.copy(
-                serverTimeEpochMilliseconds = serverTimeEpochMilliseconds,
-                serverTimeObservedAtEpochMilliseconds =
-                    serverTimeEpochMilliseconds?.let { SystemClock.nowEpochMilliseconds() }
+                serverTimeEpochMilliseconds = serverTimeEpochMilliseconds
             )
         }
 
@@ -74,14 +72,11 @@ internal class ClientPresenceRouteManager(
         var routeEstablished = connection.initialRouteEstablished
 
         while (true) {
-            val delayMilliseconds =
-                if (routeEstablished) {
-                    checkNotNull(gatewayInformation).routeRefreshIntervalMilliseconds
-                } else {
-                    ROUTE_INFORMATION_RETRY_MILLISECONDS
-                }
-            delay(delayMilliseconds.milliseconds)
-
+            /*
+             * The first route publication is attempted immediately. Previously this loop slept
+             * for five seconds before doing any work, which made every cold/release reconnect
+             * needlessly delay presence and downstream delivery state.
+             */
             if (gatewayInformation == null) {
                 gatewayInformation =
                     fetchGatewayInformation(serverUrl = connection.serverUrl)
@@ -93,7 +88,11 @@ internal class ClientPresenceRouteManager(
                         }.getOrNull()
             }
 
-            val information = gatewayInformation ?: continue
+            val information = gatewayInformation
+            if (information == null) {
+                delay(ROUTE_INFORMATION_RETRY_MILLISECONDS.milliseconds)
+                continue
+            }
             if (!connection.connectionIdRegistered) {
                 logger.info {
                     "Gateway now supports signed presence; reconnecting with a client connection ID"
@@ -117,16 +116,19 @@ internal class ClientPresenceRouteManager(
             if (refreshResult.isSuccess) {
                 routeEstablished = true
                 logger.debug { "Signed presence route refreshed for ${connection.routingId}" }
+                delay(information.routeRefreshIntervalMilliseconds.milliseconds)
             } else if (routeEstablished) {
                 fail(refreshResult.exceptionOrNull())
                 return
+            } else {
+                delay(ROUTE_INFORMATION_RETRY_MILLISECONDS.milliseconds)
             }
         }
     }
 
     private companion object {
         const val ROUTE_INFORMATION_RETRY_MILLISECONDS = 5_000L
-        const val SERVER_TIME_HEADER = "X-Sparrow-Server-Time"
+        const val SERVER_TIME_HEADER = "X-SecureChat-Server-Time"
     }
 }
 
@@ -164,15 +166,7 @@ internal fun routeExpirationEpochMilliseconds(
 ): Long {
     val serverTimeEpochMilliseconds = gatewayInformation.serverTimeEpochMilliseconds
     if (serverTimeEpochMilliseconds != null) {
-        val elapsedSinceObservation =
-            gatewayInformation.serverTimeObservedAtEpochMilliseconds
-                ?.let { observedAt ->
-                    (localNowEpochMilliseconds - observedAt).coerceAtLeast(0L)
-                }
-                ?: 0L
-        return serverTimeEpochMilliseconds +
-            elapsedSinceObservation +
-            gatewayInformation.routeLifetimeMilliseconds
+        return serverTimeEpochMilliseconds + gatewayInformation.routeLifetimeMilliseconds
     }
 
     val maximumSafetyMargin =

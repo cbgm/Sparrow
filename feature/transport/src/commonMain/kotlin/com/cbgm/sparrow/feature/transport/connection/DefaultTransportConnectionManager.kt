@@ -174,24 +174,8 @@ class DefaultTransportConnectionManager(
     }
 
     private suspend fun resolveEndpoint(routingId: String): NodeEndpoint {
-        var endpoints = nodeEndpointResolver.resolve(routingId).getOrThrow()
-        var availableEndpoints = failedNodeTracker.available(endpoints)
-
-        if (availableEndpoints.isEmpty()) {
-            nodeEndpointResolver
-                .resolve(
-                    localRoutingId = routingId,
-                    forceRefresh = true
-                ).onSuccess { refreshedEndpoints ->
-                    endpoints = refreshedEndpoints
-                    availableEndpoints = failedNodeTracker.available(refreshedEndpoints)
-                }.onFailure { error ->
-                    logger.warn {
-                        "Node directory refresh before cooldown probe failed: " +
-                            (error.message ?: "unknown error")
-                    }
-                }
-        }
+        val endpoints = nodeEndpointResolver.resolve(routingId).getOrThrow()
+        val availableEndpoints = failedNodeTracker.available(endpoints)
 
         resolvedEndpoints = endpoints
         diagnosticsState.resolved(

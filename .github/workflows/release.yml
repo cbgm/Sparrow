@@ -48,7 +48,8 @@ jobs:
           BEFORE_SHA: ${{ github.event.before }}
           FORCE_FULL: ${{ github.ref_type == 'tag' }}
         run: |
-          .github/scripts/resolve-release-changes.sh \
+          set -euo pipefail
+          bash .github/scripts/resolve-release-changes.sh \
             "${BEFORE_SHA}" \
             "${GITHUB_SHA}" \
             "${FORCE_FULL}"
@@ -175,7 +176,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          printf 'controlPlaneDirectoryUrl=%s\n' "${CONTROL_PLANE_RELEASE_DIRECTORY_URL:-}" > local.properties
+
+          if [[ -z "${CONTROL_PLANE_RELEASE_DIRECTORY_URL:-}" ]]; then
+            echo "::error::Set the CONTROL_PLANE_RELEASE_DIRECTORY_URL repository variable."
+            exit 1
+          fi
+
+          printf 'CONTROL_PLANE_RELEASE_DIRECTORY_URL=%s\n' \
+            "${CONTROL_PLANE_RELEASE_DIRECTORY_URL}" \
+            > local.properties
 
       - name: Run quality checks
         run: ./gradlew qualityCheck -x verifyArchitectureReport --no-daemon --stacktrace --console=plain
@@ -226,15 +235,19 @@ jobs:
 
       - name: Create debug local.properties
         env:
-          CONTROL_PLANE_DIRECTORY_URL: ${{ vars.CONTROL_PLANE_DIRECTORY_URL }}
+          CONTROL_PLANE_RELEASE_DIRECTORY_URL: ${{ vars.CONTROL_PLANE_RELEASE_DIRECTORY_URL }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "${CONTROL_PLANE_DIRECTORY_URL}" ]]; then
-            echo "::error::Set the CONTROL_PLANE_DIRECTORY_URL repository variable."
+
+          if [[ -z "${CONTROL_PLANE_RELEASE_DIRECTORY_URL:-}" ]]; then
+            echo "::error::Set the CONTROL_PLANE_RELEASE_DIRECTORY_URL repository variable."
             exit 1
           fi
-          printf 'controlPlaneDirectoryUrl=%s\n' "${CONTROL_PLANE_DIRECTORY_URL}" > local.properties
+
+          printf 'CONTROL_PLANE_DIRECTORY_URL=%s\n' \
+            "${CONTROL_PLANE_RELEASE_DIRECTORY_URL}" \
+            > local.properties
 
       - name: Build debug APK
         shell: bash
@@ -301,66 +314,115 @@ jobs:
       - name: Create release local.properties
         env:
           CONTROL_PLANE_RELEASE_DIRECTORY_URL: ${{ vars.CONTROL_PLANE_RELEASE_DIRECTORY_URL }}
-          KEY_KEYSTORE_FILE: ${{ secrets.KEY_STORE_FILE }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${CONTROL_PLANE_RELEASE_DIRECTORY_URL:-}" ]]; then
+            echo "::error::Set the CONTROL_PLANE_RELEASE_DIRECTORY_URL repository variable."
+            exit 1
+          fi
+
+          printf 'CONTROL_PLANE_RELEASE_DIRECTORY_URL=%s\n' \
+            "${CONTROL_PLANE_RELEASE_DIRECTORY_URL}" \
+            > local.properties
+
+      - name: Prepare release signing key
+        env:
+          KEY_STORE_FILE: ${{ secrets.KEY_STORE_FILE }}
           KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "${CONTROL_PLANE_RELEASE_DIRECTORY_URL}" ]]; then
-            echo "::error::Set the CONTROL_PLANE_RELEASE_DIRECTORY_URL repository variable."
-            exit 1
-          fi
-          printf 'controlPlaneDirectoryUrl=%s\n' "${CONTROL_PLANE_RELEASE_DIRECTORY_URL}" > local.properties
-
-      - name: Prepare release signing key
-        env:
-          ANDROID_RELEASE_KEYSTORE_BASE64: ${{ secrets.ANDROID_RELEASE_KEYSTORE_BASE64 }}
-          ANDROID_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD }}
-          ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
-          ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
-        shell: bash
-        run: |
-          set -euo pipefail
 
           for variable in \
-            ANDROID_RELEASE_KEYSTORE_BASE64 \
-            ANDROID_RELEASE_KEYSTORE_PASSWORD \
-            ANDROID_RELEASE_KEY_ALIAS \
-            ANDROID_RELEASE_KEY_PASSWORD; do
-            if [[ -z "${!variable}" ]]; then
+            KEY_STORE_FILE \
+            KEY_STORE_PASSWORD \
+            KEY_ALIAS \
+            KEY_PASSWORD; do
+            if [[ -z "${!variable:-}" ]]; then
               echo "::error::Missing required GitHub secret ${variable}."
               exit 1
             fi
           done
 
-          keystore="${RUNNER_TEMP}/sparrow-release.jks"
-          printf '%s' "${ANDROID_RELEASE_KEYSTORE_BASE64}" | base64 --decode > "${keystore}"
+          keystore="${RUNNER_TEMP}/sparrow-release-key.jks"
+
+          if ! printf '%s' "${KEY_STORE_FILE}" | base64 --decode > "${keystore}"; then
+            echo "::error::KEY_STORE_FILE is not valid Base64."
+            exit 1
+          fi
+
           chmod 600 "${keystore}"
 
+          if [[ ! -s "${keystore}" ]]; then
+            echo "::error::Decoded release keystore is empty."
+            exit 1
+          fi
+
+          echo "Validating decoded release keystore..."
+
+          if ! keytool -list \
+            -keystore "${keystore}" \
+            -storepass "${KEY_STORE_PASSWORD}" \
+            >/dev/null; then
+            echo "::error::The decoded KEY_STORE_FILE is not a readable keystore with KEY_STORE_PASSWORD."
+            exit 1
+          fi
+
+          echo "Validating release key alias..."
+
+          if ! keytool -list \
+            -keystore "${keystore}" \
+            -storepass "${KEY_STORE_PASSWORD}" \
+            -alias "${KEY_ALIAS}" \
+            >/dev/null; then
+            echo "::error::The keystore opened successfully, but KEY_ALIAS was not found."
+            exit 1
+          fi
+
           {
-            echo "RELEASE_STORE_FILE=${keystore}"
-            echo "RELEASE_STORE_PASSWORD=${ANDROID_RELEASE_KEYSTORE_PASSWORD}"
-            echo "RELEASE_KEY_ALIAS=${ANDROID_RELEASE_KEY_ALIAS}"
-            echo "RELEASE_KEY_PASSWORD=${ANDROID_RELEASE_KEY_PASSWORD}"
-          } >> "${GITHUB_ENV}"
+            echo "KEY_STORE_FILE=${keystore}"
+            echo "KEY_STORE_PASSWORD=${KEY_STORE_PASSWORD}"
+            echo "KEY_ALIAS=${KEY_ALIAS}"
+            echo "KEY_PASSWORD=${KEY_PASSWORD}"
+          } >> local.properties
 
       - name: Build signed release APK
         shell: bash
         run: |
           set -euo pipefail
+
           ./gradlew \
             :androidApp:assembleRelease \
+            -Pbuildkonfig.flavor=release \
             -PappVersionName="${{ needs.metadata.outputs.version_name }}" \
             -PappVersionCode="${{ needs.metadata.outputs.version_code }}" \
-            -PreleaseStoreFile="${RELEASE_STORE_FILE}" \
-            -PreleaseStorePassword="${RELEASE_STORE_PASSWORD}" \
-            -PreleaseKeyAlias="${RELEASE_KEY_ALIAS}" \
-            -PreleaseKeyPassword="${RELEASE_KEY_PASSWORD}" \
             --no-daemon \
             --stacktrace \
             --console=plain
+
+      - name: Verify release BuildKonfig
+        env:
+          CONTROL_PLANE_RELEASE_DIRECTORY_URL: ${{ vars.CONTROL_PLANE_RELEASE_DIRECTORY_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Generated BuildKonfig files:"
+          find shared/build -type f -name 'BuildKonfig*' -print || true
+
+          if ! grep -R -F -q \
+            -- "${CONTROL_PLANE_RELEASE_DIRECTORY_URL}" \
+            shared/build/generated 2>/dev/null; then
+            echo "::error::CONTROL_PLANE_RELEASE_DIRECTORY_URL was not compiled into BuildKonfig."
+            echo "::error::Refusing to publish a release APK with no Control Plane bootstrap configured."
+            exit 1
+          fi
+
+          echo "Release Control Plane directory URL is present in generated BuildKonfig."
 
       - name: Verify and name release APK
         shell: bash
@@ -483,7 +545,7 @@ jobs:
           for service in "${required[@]}"; do
             variable_name="CHANGE_${service^^}"
             variable_name="${variable_name//-/_}"
-            changed="${!variable_name}"
+            changed="${!variable_name:-false}"
             image="${image_prefix}-${service}"
 
             if [[ "${changed}" == "true" ]]; then

@@ -9,6 +9,7 @@ import com.cbgm.sparrow.server.protocol.FederatedTypingEvent
 import com.cbgm.sparrow.server.protocol.FederationAcknowledgement
 import com.cbgm.sparrow.server.protocol.NodeCapability
 import com.cbgm.sparrow.server.protocol.SparrowNodeDescriptor
+import kotlinx.coroutines.async
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -121,6 +122,93 @@ class FederationRouterTest {
         }
 
     @Test
+    fun differentEnvelopesAreDeliveredConcurrently() =
+        kotlinx.coroutines.test.runTest {
+            val firstStarted = kotlinx.coroutines.CompletableDeferred<Unit>()
+            val releaseFirst = kotlinx.coroutines.CompletableDeferred<Unit>()
+            val localGateway =
+                object : LocalGatewayClient, LocalRouteResolver {
+                    override suspend fun resolve(routingId: String): String = routingId
+
+                    override suspend fun deliver(envelope: FederatedEnvelope): FederationAcknowledgement {
+                        if (envelope.envelopeId == "envelope-1") {
+                            firstStarted.complete(Unit)
+                            releaseFirst.await()
+                        }
+                        return FederationAcknowledgement(
+                            envelope.envelopeId,
+                            EnvelopeAcceptanceState.STORED_AT_DESTINATION
+                        )
+                    }
+                }
+            val router =
+                FederationRouter(
+                    localNodeId = "node-a",
+                    presenceDirectory = { error("Presence must not be used") },
+                    nodeRegistry = { null },
+                    localGateway = localGateway,
+                    remoteFederation = { _, _ -> error("Remote federation must not be used") },
+                    mailbox = { error("Mailbox must not be used") }
+                )
+
+            val first = async { router.route(testEnvelope()) }
+            firstStarted.await()
+
+            val second =
+                kotlinx.coroutines.withTimeout(1_000L) {
+                    router.route(testEnvelope().copy(envelopeId = "envelope-2"))
+                }
+
+            assertEquals(EnvelopeAcceptanceState.STORED_AT_DESTINATION, second.state)
+            releaseFirst.complete(Unit)
+            assertEquals(EnvelopeAcceptanceState.STORED_AT_DESTINATION, first.await().state)
+        }
+
+    @Test
+    fun sameEnvelopeIsNotDeliveredConcurrently() =
+        kotlinx.coroutines.test.runTest {
+            val firstStarted = kotlinx.coroutines.CompletableDeferred<Unit>()
+            val releaseFirst = kotlinx.coroutines.CompletableDeferred<Unit>()
+            var deliveries = 0
+            val localGateway =
+                object : LocalGatewayClient, LocalRouteResolver {
+                    override suspend fun resolve(routingId: String): String = routingId
+
+                    override suspend fun deliver(envelope: FederatedEnvelope): FederationAcknowledgement {
+                        deliveries += 1
+                        firstStarted.complete(Unit)
+                        releaseFirst.await()
+                        return FederationAcknowledgement(
+                            envelope.envelopeId,
+                            EnvelopeAcceptanceState.STORED_AT_DESTINATION
+                        )
+                    }
+                }
+            val router =
+                FederationRouter(
+                    localNodeId = "node-a",
+                    presenceDirectory = { error("Presence must not be used") },
+                    nodeRegistry = { null },
+                    localGateway = localGateway,
+                    remoteFederation = { _, _ -> error("Remote federation must not be used") },
+                    mailbox = { error("Mailbox must not be used") }
+                )
+            val envelope = testEnvelope()
+
+            val first = async { router.route(envelope) }
+            firstStarted.await()
+            val duplicate = router.route(envelope)
+
+            assertTrue(duplicate.duplicate)
+            assertEquals(EnvelopeAcceptanceState.QUEUED_AT_GATEWAY, duplicate.state)
+            assertEquals(1, deliveries)
+
+            releaseFirst.complete(Unit)
+            assertEquals(EnvelopeAcceptanceState.STORED_AT_DESTINATION, first.await().state)
+            assertEquals(1, deliveries)
+        }
+
+    @Test
     fun typingEventIsRoutedToRemoteNodePresence() =
         kotlinx.coroutines.test.runTest {
             var deliveredEvent: FederatedTypingEvent? = null
@@ -166,23 +254,40 @@ class FederationRouterTest {
         }
 
     @Test
-    fun initialRouteDoesNotWaitForControlPlaneFallback() =
+    fun initialRouteUsesPresenceFallbackWithoutWaitingForRetry() =
         kotlinx.coroutines.test.runTest {
             var controlPlaneCalls = 0
+            var deliveredEnvelope: FederatedEnvelope? = null
             val router =
                 FederationRouter(
                     localNodeId = "node-a",
                     presenceDirectory = { routingId ->
                         controlPlaneCalls += 1
-                        ClientRoutingResult(routingId, emptyList())
+                        ClientRoutingResult(
+                            routingId = routingId,
+                            routes =
+                                listOf(
+                                    ClientRoute(
+                                        routingId = routingId,
+                                        nodeId = "node-b",
+                                        connectionId = "connection-b",
+                                        generation = 1L,
+                                        expiresAtEpochMilliseconds = 10_000L,
+                                        clientSignature = byteArrayOf(1)
+                                    )
+                                )
+                        )
                     },
-                    nodeRegistry = TestPeerNodeRegistry(testNodeDescriptor()),
+                    nodeRegistry = { testNodeDescriptor() },
                     localGateway = { error("Recipient is remote") },
-                    remoteFederation =
-                        TestPeerFederationClient(
-                            resolveRoute = { null }
-                        ),
-                    mailbox = { error("Mailbox must not run on initial route") }
+                    remoteFederation = { _, envelope ->
+                        deliveredEnvelope = envelope
+                        FederationAcknowledgement(
+                            envelopeId = envelope.envelopeId,
+                            state = EnvelopeAcceptanceState.STORED_AT_DESTINATION
+                        )
+                    },
+                    mailbox = { error("Mailbox must not run when the recipient is online") }
                 )
 
             val acknowledgement =
@@ -190,8 +295,9 @@ class FederationRouterTest {
                     testEnvelope().copy(mailboxRoute = null)
                 )
 
-            assertEquals(EnvelopeAcceptanceState.QUEUED_AT_GATEWAY, acknowledgement.state)
-            assertEquals(0, controlPlaneCalls)
+            assertEquals(EnvelopeAcceptanceState.STORED_AT_DESTINATION, acknowledgement.state)
+            assertEquals(1, controlPlaneCalls)
+            assertEquals("recipient", requireNotNull(deliveredEnvelope).recipientDeviceRoutingId)
         }
 
     @Test

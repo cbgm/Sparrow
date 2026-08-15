@@ -21,6 +21,18 @@ buildkonfig {
             const = true
         )
     }
+
+    defaultConfigs("release") {
+        buildConfigField(
+            STRING,
+            "CONTROL_PLANE_DIRECTORY_URL",
+            localProperties.get(
+                key = "CONTROL_PLANE_RELEASE_DIRECTORY_URL",
+                defaultValue = ""
+            ),
+            const = true
+        )
+    }
 }
 
 kotlin {
