@@ -219,16 +219,24 @@ class GatewayWebSocketHandler(
         recipients: List<GatewayConnection>
     ): Boolean {
         val transportEnvelope = envelope.toTransportEnvelope()
-
-        return recipients.any { recipient ->
-            runCatching {
-                recipient.send(
-                    GatewayServerMessage.IncomingEnvelope(
-                        envelope = transportEnvelope
+        val deliveredLive =
+            recipients.any { recipient ->
+                runCatching {
+                    recipient.send(
+                        GatewayServerMessage.IncomingEnvelope(
+                            envelope = transportEnvelope
+                        )
                     )
-                )
-            }.isSuccess
+                }.isSuccess
+            }
+
+        if (deliveredLive) {
+            return true
         }
+
+        return runCatching {
+            legacyPush.store(transportEnvelope)
+        }.getOrDefault(false)
     }
 }
 
