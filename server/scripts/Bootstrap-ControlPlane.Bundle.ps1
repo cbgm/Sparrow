@@ -525,6 +525,176 @@ function Ensure-Docker {
     throw "Docker Desktop did not become ready."
 }
 
+function Get-NodeRegistryImageReference {
+    param([Parameter(Mandatory = $true)][hashtable]$Config)
+
+    return "$($Config['SPARROW_IMAGE_PREFIX'])-node-registry:$($Config['SPARROW_IMAGE_TAG'])"
+}
+
+function Remove-BogusGeneratedSecretDirectory {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Container)) {
+        return
+    }
+
+    $children = @(Get-ChildItem -LiteralPath $Path -Force)
+    if ($children.Count -gt 0) {
+        throw "$Path must be a file, but it is a non-empty directory. Move or remove that directory and run the launcher again."
+    }
+
+    Remove-Item -LiteralPath $Path -Force
+    Write-Detail "Removed Docker-created empty directory at generated secret path $Path."
+}
+
+function Get-RegistryIdentityVolumeCandidates {
+    $volumeNames = @(& $script:Docker volume ls --format "{{.Name}}" 2>$null)
+    $ordered = New-Object System.Collections.Generic.List[string]
+
+    foreach ($knownVolume in @(
+        "sparrow-control-plane_registry-identity",
+        "securechat-control-plane_registry-identity",
+        "control-plane_registry-identity"
+    )) {
+        if ($volumeNames -contains $knownVolume -and -not $ordered.Contains($knownVolume)) {
+            $ordered.Add($knownVolume)
+        }
+    }
+
+    foreach ($volume in $volumeNames) {
+        if ($volume -like "*_registry-identity" -and -not $ordered.Contains($volume)) {
+            $ordered.Add($volume)
+        }
+    }
+
+    return @($ordered)
+}
+
+function Try-ExportExistingRegistryRoot {
+    param(
+        [Parameter(Mandatory = $true)][string]$Image,
+        [Parameter(Mandatory = $true)][string]$Destination
+    )
+
+    foreach ($volume in @(Get-RegistryIdentityVolumeCandidates)) {
+        $output = @(
+            & $script:Docker run `
+                --rm `
+                --entrypoint /bin/cat `
+                -v "${volume}:/legacy:ro" `
+                $Image `
+                /legacy/registry.identity 2>$null
+        )
+
+        if ($LASTEXITCODE -eq 0 -and $output.Count -gt 0) {
+            [System.IO.File]::WriteAllLines(
+                $Destination,
+                $output,
+                [System.Text.UTF8Encoding]::new($false)
+            )
+            Write-Detail "Recovered existing registry trust root from Docker volume $volume into secrets/registry-root.identity."
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function New-RegistryRootIdentity {
+    param(
+        [Parameter(Mandatory = $true)][string]$Image,
+        [Parameter(Mandatory = $true)][string]$Destination
+    )
+
+    $dockerSecretsPath = $secretsDirectory.Replace('\', '/')
+    Write-Detail "No existing registry trust root was found. Generating a fresh root identity in secrets/registry-root.identity."
+
+    & $script:Docker run `
+        --rm `
+        --entrypoint java `
+        -v "${dockerSecretsPath}:/secrets" `
+        $Image `
+        -cp "/app/lib/*" `
+        com.cbgm.sparrow.server.security.NodeRequestSignatureCli `
+        /secrets/registry-root.identity `
+        GET `
+        /bootstrap 2>&1 |
+        ForEach-Object { Write-Detail $_.ToString() }
+
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $Destination -PathType Leaf)) {
+        throw "Could not generate a fresh Sparrow registry trust root."
+    }
+}
+
+function Ensure-RegistryAuthority {
+    param([Parameter(Mandatory = $true)][hashtable]$Config)
+
+    $rootIdentityPath = Join-Path $secretsDirectory "registry-root.identity"
+    $authorityIdentityPath = Join-Path $secretsDirectory "registry-authority.identity"
+    $authorityCertificatePath = Join-Path $secretsDirectory "registry-authority-certificate.json"
+
+    Remove-BogusGeneratedSecretDirectory -Path $rootIdentityPath
+    Remove-BogusGeneratedSecretDirectory -Path $authorityIdentityPath
+    Remove-BogusGeneratedSecretDirectory -Path $authorityCertificatePath
+
+    $hasAuthorityIdentity = Test-Path -LiteralPath $authorityIdentityPath -PathType Leaf
+    $hasAuthorityCertificate = Test-Path -LiteralPath $authorityCertificatePath -PathType Leaf
+    $hasIncompleteAuthorityPair = $hasAuthorityIdentity -xor $hasAuthorityCertificate
+
+    if ($hasAuthorityIdentity -and $hasAuthorityCertificate) {
+        Write-Detail "Registry authority files already exist; reusing them."
+        return
+    }
+
+    $image = Get-NodeRegistryImageReference -Config $Config
+    Set-LiveStatus "Preparing registry signing authority..."
+    Write-Detail "Pulling registry image required for authority provisioning."
+    & $script:Docker pull $image 2>&1 | ForEach-Object { Write-Detail $_.ToString() }
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not pull the node-registry image required for authority provisioning."
+    }
+
+    if (-not (Test-Path -LiteralPath $rootIdentityPath -PathType Leaf)) {
+        $recovered = Try-ExportExistingRegistryRoot -Image $image -Destination $rootIdentityPath
+        if (-not $recovered) {
+            if ($hasIncompleteAuthorityPair) {
+                throw "The registry authority pair is incomplete and the existing registry trust root could not be recovered. Refusing to generate a different trust root."
+            }
+            New-RegistryRootIdentity -Image $image -Destination $rootIdentityPath
+        }
+    }
+
+    if ($hasIncompleteAuthorityPair) {
+        Write-Detail "Incomplete registry authority pair found; regenerating both files from the preserved registry trust root."
+        Remove-Item -LiteralPath $authorityIdentityPath -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath $authorityCertificatePath -Force -ErrorAction SilentlyContinue
+    }
+
+    $dockerSecretsPath = $secretsDirectory.Replace('\', '/')
+    & $script:Docker run `
+        --rm `
+        --entrypoint java `
+        -v "${dockerSecretsPath}:/secrets" `
+        $image `
+        -cp "/app/lib/*" `
+        com.cbgm.sparrow.server.registry.RegistryAuthorityProvisioningCli `
+        /secrets/registry-root.identity `
+        /secrets/registry-authority.identity `
+        /secrets/registry-authority-certificate.json 2>&1 |
+        ForEach-Object { Write-Detail $_.ToString() }
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Registry authority provisioning failed."
+    }
+
+    if (-not (Test-Path -LiteralPath $authorityIdentityPath -PathType Leaf) -or
+        -not (Test-Path -LiteralPath $authorityCertificatePath -PathType Leaf)) {
+        throw "Registry authority provisioning did not create the required files."
+    }
+
+    Write-Detail "Registry authority identity and certificate are ready in the secrets folder."
+}
+
 function Find-FirebaseCredentials {
     $candidate = Join-Path $secretsDirectory "firebase-admin.json"
 
@@ -938,6 +1108,7 @@ try {
 
     Set-ProgressValue -Value 15
     Set-Status "Preparing Sparrow secrets..."
+    Write-Detail "Bootstrap revision: registry-authority-autogen-v4"
     New-Item -ItemType Directory -Path $secretsDirectory -Force | Out-Null
 
     $registryPasswordPath = Join-Path $secretsDirectory "node-registry-database-password.txt"
@@ -956,6 +1127,7 @@ try {
     $pushToken = (Get-Content $pushTokenPath -Raw).Trim()
 
     $firebaseCredentials = Find-FirebaseCredentials
+    Ensure-RegistryAuthority -Config $config
 
     $siteAddress = if ($mode -eq "public") { $publicDomain } else { ":80" }
     $runtime = @(
@@ -966,6 +1138,8 @@ try {
         "CONTROL_PLANE_SITE_ADDRESS=$siteAddress",
         "CONTROL_PLANE_DOMAIN=$publicDomain",
         "FIREBASE_ADMIN_CREDENTIALS=$($firebaseCredentials.Replace('\','/'))",
+        "REGISTRY_AUTHORITY_IDENTITY_FILE=./secrets/registry-authority.identity",
+        "REGISTRY_AUTHORITY_CERTIFICATE_FILE=./secrets/registry-authority-certificate.json",
         "NODE_REGISTRY_DATABASE_PASSWORD=$registryPassword",
         "PRESENCE_REDIS_PASSWORD=$presencePassword",
         "PUSH_DATABASE_PASSWORD=$pushPassword",
@@ -1035,6 +1209,15 @@ try {
             -Password $pushPassword
 
         Reset-ObsoletePushSchemaIfNeeded
+
+        Set-ProgressValue -Value 80
+        Set-Status "Preparing registry signing storage..."
+        Invoke-Compose -Arguments @(
+            "run",
+            "--rm",
+            "--no-deps",
+            "registry-signing-init"
+        )
 
         Set-ProgressValue -Value 84
         Set-Status "Starting Sparrow services..."
