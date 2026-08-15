@@ -471,14 +471,11 @@ jobs:
           retention-days: 30
 
   server-artifacts:
-    name: Build changed server images and bundles
+    name: Build server images and bundles
     needs:
       - changes
       - metadata
       - validate
-    if: >-
-      needs.changes.outputs.control_plane_package == 'true' ||
-      needs.changes.outputs.community_node_package == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 75
 
@@ -516,8 +513,6 @@ jobs:
         env:
           IMAGE_TAG: ${{ needs.metadata.outputs.image_tag }}
           RELEASE_LINE_TAG: ${{ needs.metadata.outputs.release_line_tag }}
-          CONTROL_PLANE_PACKAGE: ${{ needs.changes.outputs.control_plane_package }}
-          COMMUNITY_NODE_PACKAGE: ${{ needs.changes.outputs.community_node_package }}
           CHANGE_NODE_REGISTRY: ${{ needs.changes.outputs.node_registry }}
           CHANGE_PRESENCE_DIRECTORY: ${{ needs.changes.outputs.presence_directory }}
           CHANGE_PUSH: ${{ needs.changes.outputs.push }}
@@ -529,14 +524,17 @@ jobs:
 
           owner="${GITHUB_REPOSITORY_OWNER,,}"
           image_prefix="ghcr.io/${owner}/sparrow"
-          required=()
-
-          if [[ "${CONTROL_PLANE_PACKAGE}" == "true" ]]; then
-            required+=(node-registry presence-directory push)
-          fi
-          if [[ "${COMMUNITY_NODE_PACKAGE}" == "true" ]]; then
-            required+=(mailbox federation gateway)
-          fi
+          # Every release candidate must have a complete immutable server image set
+          # because both launcher bundles are always produced. Only changed services
+          # are rebuilt; unchanged services are reused or aliased from the release line.
+          required=(
+            node-registry
+            presence-directory
+            push
+            mailbox
+            federation
+            gateway
+          )
 
           rebuild=()
           alias=()
@@ -661,60 +659,53 @@ jobs:
               "${image}:${RELEASE_LINE_TAG}"
           done
 
-      - name: Build affected launcher bundles
+      - name: Build launcher bundles
         shell: pwsh
         env:
           IMAGE_TAG: ${{ needs.metadata.outputs.image_tag }}
           ARTIFACT_VERSION: ${{ needs.metadata.outputs.artifact_version }}
-          BUILD_CONTROL_PLANE: ${{ needs.changes.outputs.control_plane_package }}
-          BUILD_COMMUNITY_NODE: ${{ needs.changes.outputs.community_node_package }}
         run: |
           $owner = "${{ github.repository_owner }}".ToLowerInvariant()
           $imagePrefix = "ghcr.io/$owner/sparrow"
 
-          if ($env:BUILD_CONTROL_PLANE -eq "true") {
-              ./server/scripts/New-ControlPlaneBundle.ps1 `
-                  -OutputDirectory dist-control-plane `
-                  -ImagePrefix $imagePrefix `
-                  -ImageTag $env:IMAGE_TAG
+          ./server/scripts/New-ControlPlaneBundle.ps1 `
+              -OutputDirectory dist-control-plane `
+              -ImagePrefix $imagePrefix `
+              -ImageTag $env:IMAGE_TAG
 
-              New-Item -ItemType Directory -Path dist/server/control-plane -Force | Out-Null
-              Copy-Item `
-                  -LiteralPath dist-control-plane/sparrow-control-plane.zip `
-                  -Destination "dist/server/control-plane/sparrow-control-plane-$($env:ARTIFACT_VERSION)-windows.zip"
+          New-Item -ItemType Directory -Path dist/server/control-plane -Force | Out-Null
+          Copy-Item `
+              -LiteralPath dist-control-plane/sparrow-control-plane.zip `
+              -Destination "dist/server/control-plane/sparrow-control-plane-$($env:ARTIFACT_VERSION)-windows.zip"
 
-              Push-Location dist/server/control-plane
-              Get-ChildItem -File -Filter "sparrow-*" | ForEach-Object {
-                  $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-                  "$hash  $($_.Name)"
-              } | Set-Content -LiteralPath SHA256SUMS.txt -Encoding utf8
-              Pop-Location
-          }
+          Push-Location dist/server/control-plane
+          Get-ChildItem -File -Filter "sparrow-*" | ForEach-Object {
+              $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+              "$hash  $($_.Name)"
+          } | Set-Content -LiteralPath SHA256SUMS.txt -Encoding utf8
+          Pop-Location
 
-          if ($env:BUILD_COMMUNITY_NODE -eq "true") {
-              ./server/scripts/New-CommunityNodeBundle.ps1 `
-                  -OutputDirectory dist-community-node `
-                  -ImagePrefix $imagePrefix `
-                  -ImageTag $env:IMAGE_TAG
+          ./server/scripts/New-CommunityNodeBundle.ps1 `
+              -OutputDirectory dist-community-node `
+              -ImagePrefix $imagePrefix `
+              -ImageTag $env:IMAGE_TAG
 
-              New-Item -ItemType Directory -Path dist/server/community-node -Force | Out-Null
-              Copy-Item `
-                  -LiteralPath dist-community-node/sparrow-community-node.zip `
-                  -Destination "dist/server/community-node/sparrow-community-node-$($env:ARTIFACT_VERSION)-windows.zip"
-              Copy-Item `
-                  -LiteralPath dist-community-node/sparrow-community-node.tar.gz `
-                  -Destination "dist/server/community-node/sparrow-community-node-$($env:ARTIFACT_VERSION)-macos-linux.tar.gz"
+          New-Item -ItemType Directory -Path dist/server/community-node -Force | Out-Null
+          Copy-Item `
+              -LiteralPath dist-community-node/sparrow-community-node.zip `
+              -Destination "dist/server/community-node/sparrow-community-node-$($env:ARTIFACT_VERSION)-windows.zip"
+          Copy-Item `
+              -LiteralPath dist-community-node/sparrow-community-node.tar.gz `
+              -Destination "dist/server/community-node/sparrow-community-node-$($env:ARTIFACT_VERSION)-macos-linux.tar.gz"
 
-              Push-Location dist/server/community-node
-              Get-ChildItem -File -Filter "sparrow-*" | ForEach-Object {
-                  $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-                  "$hash  $($_.Name)"
-              } | Set-Content -LiteralPath SHA256SUMS.txt -Encoding utf8
-              Pop-Location
-          }
+          Push-Location dist/server/community-node
+          Get-ChildItem -File -Filter "sparrow-*" | ForEach-Object {
+              $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+              "$hash  $($_.Name)"
+          } | Set-Content -LiteralPath SHA256SUMS.txt -Encoding utf8
+          Pop-Location
 
       - name: Upload Control Plane package
-        if: needs.changes.outputs.control_plane_package == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: sparrow-control-plane-${{ needs.metadata.outputs.artifact_version }}
@@ -723,7 +714,6 @@ jobs:
           retention-days: 30
 
       - name: Upload Community Node package
-        if: needs.changes.outputs.community_node_package == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: sparrow-community-node-${{ needs.metadata.outputs.artifact_version }}
@@ -752,11 +742,8 @@ jobs:
             echo
             echo "Immutable server image tag: \`${{ needs.metadata.outputs.image_tag }}\`"
             echo
-            if [[ "${{ needs.changes.outputs.any_artifacts }}" != "true" ]]; then
-              echo "No distributable artifacts were affected by this push. Validation still ran."
-            else
-              echo "Only artifacts affected by this push were rebuilt or repackaged."
-            fi
+            echo "Both server launcher bundles were packaged for this release candidate."
+            echo "Only changed server images were rebuilt; unchanged images were reused or aliased to the immutable candidate tag."
           } >> "${GITHUB_STEP_SUMMARY}"
 
   publish-release:
@@ -942,3 +929,4 @@ jobs:
             --title "Sparrow ${{ needs.metadata.outputs.version_name }}" \
             --generate-notes \
             "${prerelease_argument[@]}"
+
