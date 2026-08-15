@@ -26,6 +26,7 @@ class FederationRouter(
     private val now: () -> Long = System::currentTimeMillis
 ) {
     private val deliveryMutex = Mutex()
+    private val inFlightEnvelopeIds = mutableSetOf<String>()
     private val localRouteResolver =
         localGateway as? LocalRouteResolver ?: LocalRouteResolver { null }
     private val peerRouter =
@@ -46,12 +47,10 @@ class FederationRouter(
 
     suspend fun route(envelope: FederatedEnvelope): FederationAcknowledgement {
         /*
-         * The queue (ConcurrentHashMap-backed) is already safe for
-         * concurrent access on its own - enqueue/markAttempt/markStored
-         * are atomic per envelopeId. Holding a single global mutex across
-         * deliver() (which does outbound network I/O) serialized every
-         * message on the entire server behind whichever one happened to
-         * be in flight. Only guard the cheap in-memory dedupe check.
+         * Keep synchronization limited to cheap in-memory bookkeeping.
+         * Different envelopes must be allowed to perform network delivery
+         * concurrently, but the same envelopeId must never be delivered by
+         * two coroutines at the same time.
          */
         val queued =
             deliveryMutex.withLock {
@@ -64,13 +63,27 @@ class FederationRouter(
                     )
                 }
 
+                if (!inFlightEnvelopeIds.add(envelope.envelopeId)) {
+                    return FederationAcknowledgement(
+                        envelope.envelopeId,
+                        existing?.state ?: EnvelopeAcceptanceState.QUEUED_AT_GATEWAY,
+                        duplicate = true
+                    )
+                }
+
                 queue.enqueue(envelope)
             }
 
-        return deliver(
-            entry = queued,
-            allowControlPlaneFallback = false
-        )
+        return try {
+            deliver(
+                entry = queued,
+                allowControlPlaneFallback = false
+            )
+        } finally {
+            deliveryMutex.withLock {
+                inFlightEnvelopeIds.remove(envelope.envelopeId)
+            }
+        }
     }
 
     suspend fun retryPending(limit: Int): Int {
@@ -80,10 +93,12 @@ class FederationRouter(
         due.forEach { candidate ->
             val readyToDeliver =
                 deliveryMutex.withLock {
-                    val current = queue.get(candidate.envelope.envelopeId)
+                    val envelopeId = candidate.envelope.envelopeId
+                    val current = queue.get(envelopeId)
                     if (
                         current?.state == EnvelopeAcceptanceState.QUEUED_AT_GATEWAY &&
-                        current.nextAttemptAtEpochMilliseconds <= now()
+                        current.nextAttemptAtEpochMilliseconds <= now() &&
+                        inFlightEnvelopeIds.add(envelopeId)
                     ) {
                         current
                     } else {
@@ -92,11 +107,17 @@ class FederationRouter(
                 }
 
             if (readyToDeliver != null) {
-                deliver(
-                    entry = readyToDeliver,
-                    allowControlPlaneFallback = true
-                )
-                processed += 1
+                try {
+                    deliver(
+                        entry = readyToDeliver,
+                        allowControlPlaneFallback = true
+                    )
+                    processed += 1
+                } finally {
+                    deliveryMutex.withLock {
+                        inFlightEnvelopeIds.remove(readyToDeliver.envelope.envelopeId)
+                    }
+                }
             }
         }
         return processed

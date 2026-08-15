@@ -7,8 +7,8 @@
   "maximumDirectDependencyCount": 16,
   "maximumDirectDependentCount": 12,
   "sourceSetCount": 9,
-  "kotlinSourceFileCount": 963,
-  "productionKotlinFileCount": 873,
+  "kotlinSourceFileCount": 965,
+  "productionKotlinFileCount": 875,
   "testKotlinFileCount": 90,
   "resourceFileCount": 48,
   "modulesByGroup": {
@@ -30,7 +30,7 @@
     "androidMain": 18,
     "commonMain": 18,
     "commonTest": 8,
-    "iosMain": 7,
+    "iosMain": 8,
     "iosTest": 1,
     "main": 12,
     "test": 10

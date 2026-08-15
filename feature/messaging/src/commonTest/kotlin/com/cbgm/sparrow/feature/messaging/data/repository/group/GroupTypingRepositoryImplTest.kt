@@ -5,6 +5,7 @@ import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayTypingEvent
 import com.cbgm.sparrow.feature.transport.gateway.model.TransportEnvelope
 import com.cbgm.sparrow.feature.transport.websocket.WebSocketTransportClient
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -45,6 +46,7 @@ class GroupTypingRepositoryImplTest {
             )
         }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun observeMemberMatchesCanonicalGroupRoutingId() =
         runTest {

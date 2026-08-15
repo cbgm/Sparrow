@@ -27,7 +27,7 @@ class ControlPlaneRequestRouterTest {
                 }
 
             assertEquals("ok", result.getOrThrow())
-            assertEquals("https://secondary", configuration.activeEndpoint.value?.baseUrl)
+            assertEquals("https://secondary", configuration.activeEndpoint.value.baseUrl)
             assertEquals(
                 ControlPlaneReachability.UNREACHABLE,
                 configuration.statusFor("https://primary").reachability
@@ -67,7 +67,7 @@ class ControlPlaneRequestRouterTest {
                 ControlPlaneReachability.AVAILABLE,
                 configuration.statusFor("https://secondary").reachability
             )
-            assertEquals("https://primary", configuration.activeEndpoint.value?.baseUrl)
+            assertEquals("https://primary", configuration.activeEndpoint.value.baseUrl)
         }
 
     @Test
