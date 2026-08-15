@@ -96,7 +96,7 @@ Copy-Item `
 
 [System.IO.File]::WriteAllText(
     (Join-Path $bundleRoot "secrets/README.txt"),
-    "Place firebase-admin.json and required registry authority files in this folder before first start.`nThe launcher creates the remaining generated secret files here automatically.`n",
+    "Place firebase-admin.json in this folder before first start.`nThe launcher generates the registry root, registry authority identity/certificate, database passwords, Redis password and push token here automatically.`n",
     [System.Text.UTF8Encoding]::new($false)
 )
 
