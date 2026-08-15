@@ -61,7 +61,7 @@ fun OnboardingScreen(
             modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            SparrowAnimation(modifier = Modifier.size(200.dp), true)
+            SparrowAnimation(modifier = Modifier.size(180.dp), true)
             Spacer(Modifier.height(MaterialTheme.spacing.small))
             Text(
                 text = stringResource(Res.string.base_app_name),
