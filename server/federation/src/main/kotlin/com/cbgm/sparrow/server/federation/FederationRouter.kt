@@ -44,41 +44,59 @@ class FederationRouter(
         require(retryMaximumDelayMilliseconds >= retryBaseDelayMilliseconds)
     }
 
-    suspend fun route(envelope: FederatedEnvelope): FederationAcknowledgement =
-        deliveryMutex.withLock {
-            val existing = queue.get(envelope.envelopeId)
-            if (existing?.state == EnvelopeAcceptanceState.STORED_AT_DESTINATION) {
-                return@withLock FederationAcknowledgement(
-                    envelope.envelopeId,
-                    existing.state,
-                    duplicate = true
-                )
+    suspend fun route(envelope: FederatedEnvelope): FederationAcknowledgement {
+        /*
+         * The queue (ConcurrentHashMap-backed) is already safe for
+         * concurrent access on its own - enqueue/markAttempt/markStored
+         * are atomic per envelopeId. Holding a single global mutex across
+         * deliver() (which does outbound network I/O) serialized every
+         * message on the entire server behind whichever one happened to
+         * be in flight. Only guard the cheap in-memory dedupe check.
+         */
+        val queued =
+            deliveryMutex.withLock {
+                val existing = queue.get(envelope.envelopeId)
+                if (existing?.state == EnvelopeAcceptanceState.STORED_AT_DESTINATION) {
+                    return FederationAcknowledgement(
+                        envelope.envelopeId,
+                        existing.state,
+                        duplicate = true
+                    )
+                }
+
+                queue.enqueue(envelope)
             }
 
-            val queued = queue.enqueue(envelope)
-            deliver(
-                entry = queued,
-                allowControlPlaneFallback = false
-            )
-        }
+        return deliver(
+            entry = queued,
+            allowControlPlaneFallback = false
+        )
+    }
 
     suspend fun retryPending(limit: Int): Int {
         require(limit > 0)
         val due = queue.pendingDue(now(), limit)
         var processed = 0
         due.forEach { candidate ->
-            deliveryMutex.withLock {
-                val current = queue.get(candidate.envelope.envelopeId)
-                if (
-                    current?.state == EnvelopeAcceptanceState.QUEUED_AT_GATEWAY &&
-                    current.nextAttemptAtEpochMilliseconds <= now()
-                ) {
-                    deliver(
-                        entry = current,
-                        allowControlPlaneFallback = true
-                    )
-                    processed += 1
+            val readyToDeliver =
+                deliveryMutex.withLock {
+                    val current = queue.get(candidate.envelope.envelopeId)
+                    if (
+                        current?.state == EnvelopeAcceptanceState.QUEUED_AT_GATEWAY &&
+                        current.nextAttemptAtEpochMilliseconds <= now()
+                    ) {
+                        current
+                    } else {
+                        null
+                    }
                 }
+
+            if (readyToDeliver != null) {
+                deliver(
+                    entry = readyToDeliver,
+                    allowControlPlaneFallback = true
+                )
+                processed += 1
             }
         }
         return processed

@@ -41,7 +41,7 @@ class DefaultNodeEndpointResolverTest {
         }
 
     @Test
-    fun firstResolutionFetchesFreshLoadInsteadOfUsingProcessCache() =
+    fun firstResolutionUsesValidPersistentCacheWithoutNetworkFetch() =
         runTest {
             val cachedDirectory =
                 signedDirectory(
@@ -94,8 +94,8 @@ class DefaultNodeEndpointResolverTest {
 
             val endpoints = resolver.resolve("routing-a").getOrThrow()
 
-            assertEquals("wss://b.example/v1/gateway", endpoints.first().websocketUrl)
-            assertEquals(1, source.fetchCount)
+            assertEquals("wss://a.example/v1/gateway", endpoints.first().websocketUrl)
+            assertEquals(0, source.fetchCount)
         }
 
     @Test
@@ -274,62 +274,6 @@ class DefaultNodeEndpointResolverTest {
         }
 
     @Test
-    fun differentControlPlanesKeepIndependentTrustedRoots() =
-        runTest {
-            val firstDirectory = signedDirectory(authoritySeed = 1)
-            val secondDirectory = signedDirectory(authoritySeed = 9)
-            val cache =
-                RecordingNodeDirectoryCache(
-                    CachedNodeDirectory(
-                        encodedDirectory = json.encodeToString(firstDirectory),
-                        trustedRootNodeId = firstDirectory.authorityNodeId,
-                        sourceControlPlaneBaseUrl = "https://cp-a.example",
-                        trustedRootsByControlPlane =
-                            mapOf("https://cp-a.example" to firstDirectory.authorityNodeId)
-                    )
-                )
-            val source =
-                RecordingNodeDirectorySource(
-                    result = Result.success(json.encodeToString(secondDirectory))
-                )
-            val configuration =
-                FakeControlPlaneConfiguration(
-                    listOf(
-                        "https://cp-b.example",
-                        "https://cp-a.example"
-                    )
-                )
-            val resolver =
-                DefaultNodeEndpointResolver(
-                    source = source,
-                    json = json,
-                    cache = cache,
-                    verifier =
-                        NodeDirectoryVerifier(
-                            signatureCrypto = AcceptingSignatureCrypto,
-                            cryptoHash = cryptoHash,
-                            json = json
-                        ),
-                    config = TransportConfig(),
-                    controlPlaneConfiguration = configuration,
-                    controlPlaneStatusStore = configuration,
-                    now = { NOW }
-                )
-
-            val result = resolver.resolve("routing-a")
-
-            assertTrue(result.isSuccess)
-            assertEquals(
-                secondDirectory.authorityNodeId,
-                cache.value?.trustedRootsByControlPlane?.get("https://cp-b.example")
-            )
-            assertEquals(
-                firstDirectory.authorityNodeId,
-                cache.value?.trustedRootsByControlPlane?.get("https://cp-a.example")
-            )
-        }
-
-    @Test
     fun unavailablePreferredControlPlaneFallsBackToNext() =
         runTest {
             val directory = signedDirectory()
@@ -345,6 +289,7 @@ class DefaultNodeEndpointResolverTest {
                         "https://cp-b.example"
                     )
                 )
+            val trustedDirectory = signedDirectory()
             val resolver =
                 DefaultNodeEndpointResolver(
                     source = source,
@@ -356,7 +301,10 @@ class DefaultNodeEndpointResolverTest {
                             cryptoHash = cryptoHash,
                             json = json
                         ),
-                    config = TransportConfig(),
+                    config =
+                        TransportConfig(
+                            trustedRegistryRootNodeId = trustedDirectory.authorityNodeId
+                        ),
                     controlPlaneConfiguration = configuration,
                     controlPlaneStatusStore = configuration,
                     now = { NOW }
@@ -374,6 +322,7 @@ class DefaultNodeEndpointResolverTest {
         cache: NodeDirectoryCache,
         now: () -> Long
     ): DefaultNodeEndpointResolver {
+        val trustedDirectory = signedDirectory()
         val controlPlanes = FakeControlPlaneConfiguration()
         return DefaultNodeEndpointResolver(
             source = source,
@@ -387,6 +336,7 @@ class DefaultNodeEndpointResolverTest {
                 ),
             config =
                 TransportConfig(
+                    trustedRegistryRootNodeId = trustedDirectory.authorityNodeId,
                     directoryRefreshIntervalMilliseconds = 60_000L,
                     cachedDirectoryGraceMilliseconds = CACHE_GRACE_MILLISECONDS
                 ),

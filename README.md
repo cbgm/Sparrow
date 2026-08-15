@@ -4,11 +4,15 @@
 
 **End-to-end encrypted messaging built with Kotlin Multiplatform and a federated Kotlin server stack.**
 
+[![Documentation](https://github.com/cbgm/Sparrow/actions/workflows/docs.yml/badge.svg?branch=master)](https://cbgm.github.io/Sparrow/)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.4.0-7F52FF?logo=kotlin&logoColor=white)
 ![Compose Multiplatform](https://img.shields.io/badge/Compose-Multiplatform-4285F4)
 ![Android](https://img.shields.io/badge/Android-API%2029+-3DDC84?logo=android&logoColor=white)
 ![iOS](https://img.shields.io/badge/iOS-Not%20usable%20yet-lightgrey?logo=apple)
 ![Server](https://img.shields.io/badge/Server-Ktor%20%2B%20Docker-blue)
+![Architecture](https://img.shields.io/badge/Architecture-Clean-success)
+![Compose UI](https://img.shields.io/badge/UI-Compose_Multiplatform-blue)
+![Detekt](https://img.shields.io/badge/Quality-Detekt-success)
 ![License](https://img.shields.io/badge/License-Apache%202.0-blue)
 
 </div>
@@ -113,7 +117,8 @@ macOS:
 Create or edit the repository-root `local.properties`:
 
 ```properties
-controlPlaneDirectoryUrl=https://gist.githubusercontent.com/cbgm/26bb9651e7d2d3fd464df02e8808387f/raw/522436a432e48b9f53f3210b76278e2217f126f8/gistfile1.txt
+CONTROL_PLANE_DIRECTORY_URL=https://gist.githubusercontent.com/cbgm/26bb9651e7d2d3fd464df02e8808387f/raw/522436a432e48b9f53f3210b76278e2217f126f8/gistfile1.txt
+CONTROL_PLANE_RELEASE_DIRECTORY_URL=https://gist.githubusercontent.com/cbgm/26bb9651e7d2d3fd464df02e8808387f/raw/522436a432e48b9f53f3210b76278e2217f126f8/gistfile1.txt
 ```
 
 The response may be served as `text/plain` or `application/json`; Sparrow reads the body as text and parses
