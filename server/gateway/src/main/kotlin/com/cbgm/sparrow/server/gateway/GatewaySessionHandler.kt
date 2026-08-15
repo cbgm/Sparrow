@@ -84,18 +84,14 @@ internal class GatewaySessionHandler(
             is GatewayClientMessage.Register -> handleRegistration(session, state, message)
             is GatewayClientMessage.SendEnvelope ->
                 state.connection?.let { connection ->
-                    workDispatcher.dispatch(
-                        key = "envelope:${message.envelope.recipientId}"
-                    ) {
+                    workDispatcher.dispatchIndependent {
                         actions.sendEnvelope(connection, message)
                     }
                 } ?: session.sendNotRegistered()
 
             is GatewayClientMessage.SendFederatedEnvelope ->
                 state.connection?.let { connection ->
-                    workDispatcher.dispatch(
-                        key = "envelope:${message.envelope.recipientDeviceRoutingId}"
-                    ) {
+                    workDispatcher.dispatchIndependent {
                         actions.sendFederatedEnvelope(connection, message)
                     }
                 } ?: session.sendNotRegistered()
