@@ -30,8 +30,8 @@ class DefaultOutboxRunnerTest {
                 runner.start()
 
                 assertEquals(
-                    expected = listOf("requeue", "retry-failed"),
-                    actual = receiveEvents(events, count = 2)
+                    expected = listOf("requeue", "retry-failed", "process"),
+                    actual = receiveEvents(events, count = 3)
                 )
             } finally {
                 runner.stop()
@@ -52,7 +52,7 @@ class DefaultOutboxRunnerTest {
 
             try {
                 runner.start()
-                receiveEvents(events, count = 2)
+                receiveEvents(events, count = 3)
 
                 outbox.pending.value = listOf(createItem())
 
@@ -79,13 +79,13 @@ class DefaultOutboxRunnerTest {
 
             try {
                 runner.start()
-                val firstStartEvents = receiveEvents(events, count = 2)
+                val firstStartEvents = receiveEvents(events, count = 3)
 
                 runner.start()
-                val reconnectEvents = receiveEvents(events, count = 2)
+                val reconnectEvents = receiveEvents(events, count = 3)
 
-                assertEquals(listOf("requeue", "retry-failed"), firstStartEvents)
-                assertEquals(listOf("requeue", "retry-failed"), reconnectEvents)
+                assertEquals(listOf("requeue", "retry-failed", "process"), firstStartEvents)
+                assertEquals(listOf("requeue", "retry-failed", "process"), reconnectEvents)
             } finally {
                 runner.stop()
             }

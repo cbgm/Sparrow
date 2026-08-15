@@ -15,6 +15,7 @@ class GatewayWebSocketHandler(
     private val legacyPush: LegacyPushClient,
     private val routeLifetimeMilliseconds: Long
 ) {
+    private val bestEffortPresence = BestEffortPresenceClient(presence)
     private val pushDispatcher =
         GatewayPushDispatcher(
             pushClient = legacyPush,
@@ -25,7 +26,7 @@ class GatewayWebSocketHandler(
         GatewaySessionHandler(
             nodeId = nodeId,
             connections = connections,
-            presence = presence,
+            presence = bestEffortPresence,
             pushActions =
                 GatewayPushActions(
                     deliverPending = pushDispatcher::deliverPending,
@@ -52,6 +53,7 @@ class GatewayWebSocketHandler(
     }
 
     fun close() {
+        bestEffortPresence.close()
         pushDispatcher.close()
     }
 
@@ -218,23 +220,15 @@ class GatewayWebSocketHandler(
     ): Boolean {
         val transportEnvelope = envelope.toTransportEnvelope()
 
-        val stored =
+        return recipients.any { recipient ->
             runCatching {
-                legacyPush.store(transportEnvelope)
-            }.getOrDefault(false)
-
-        val delivered =
-            recipients.any { recipient ->
-                runCatching {
-                    recipient.send(
-                        GatewayServerMessage.IncomingEnvelope(
-                            envelope = transportEnvelope
-                        )
+                recipient.send(
+                    GatewayServerMessage.IncomingEnvelope(
+                        envelope = transportEnvelope
                     )
-                }.isSuccess
-            }
-
-        return stored || delivered
+                )
+            }.isSuccess
+        }
     }
 }
 

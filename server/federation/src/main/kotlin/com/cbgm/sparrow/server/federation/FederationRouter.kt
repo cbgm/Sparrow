@@ -65,7 +65,7 @@ class FederationRouter(
         return try {
             deliver(
                 entry = queued,
-                allowControlPlaneFallback = true
+                allowControlPlaneFallback = false
             )
         } finally {
             inFlightEnvelopeIds.remove(envelope.envelopeId)

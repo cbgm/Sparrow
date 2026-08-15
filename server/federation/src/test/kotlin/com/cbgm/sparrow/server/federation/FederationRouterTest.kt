@@ -254,40 +254,23 @@ class FederationRouterTest {
         }
 
     @Test
-    fun initialRouteUsesPresenceFallbackWithoutWaitingForRetry() =
+    fun initialRouteDoesNotWaitForControlPlaneFallback() =
         kotlinx.coroutines.test.runTest {
             var controlPlaneCalls = 0
-            var deliveredEnvelope: FederatedEnvelope? = null
             val router =
                 FederationRouter(
                     localNodeId = "node-a",
                     presenceDirectory = { routingId ->
                         controlPlaneCalls += 1
-                        ClientRoutingResult(
-                            routingId = routingId,
-                            routes =
-                                listOf(
-                                    ClientRoute(
-                                        routingId = routingId,
-                                        nodeId = "node-b",
-                                        connectionId = "connection-b",
-                                        generation = 1L,
-                                        expiresAtEpochMilliseconds = 10_000L,
-                                        clientSignature = byteArrayOf(1)
-                                    )
-                                )
-                        )
+                        ClientRoutingResult(routingId, emptyList())
                     },
-                    nodeRegistry = { testNodeDescriptor() },
+                    nodeRegistry = TestPeerNodeRegistry(testNodeDescriptor()),
                     localGateway = { error("Recipient is remote") },
-                    remoteFederation = { _, envelope ->
-                        deliveredEnvelope = envelope
-                        FederationAcknowledgement(
-                            envelopeId = envelope.envelopeId,
-                            state = EnvelopeAcceptanceState.STORED_AT_DESTINATION
-                        )
-                    },
-                    mailbox = { error("Mailbox must not run when the recipient is online") }
+                    remoteFederation =
+                        TestPeerFederationClient(
+                            resolveRoute = { null }
+                        ),
+                    mailbox = { error("Mailbox must not run on initial route") }
                 )
 
             val acknowledgement =
@@ -295,9 +278,8 @@ class FederationRouterTest {
                     testEnvelope().copy(mailboxRoute = null)
                 )
 
-            assertEquals(EnvelopeAcceptanceState.STORED_AT_DESTINATION, acknowledgement.state)
-            assertEquals(1, controlPlaneCalls)
-            assertEquals("recipient", requireNotNull(deliveredEnvelope).recipientDeviceRoutingId)
+            assertEquals(EnvelopeAcceptanceState.QUEUED_AT_GATEWAY, acknowledgement.state)
+            assertEquals(0, controlPlaneCalls)
         }
 
     @Test

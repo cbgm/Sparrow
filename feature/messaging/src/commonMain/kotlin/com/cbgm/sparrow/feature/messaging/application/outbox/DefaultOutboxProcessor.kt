@@ -49,8 +49,6 @@ class DefaultOutboxProcessor(
     private val outgoingWireSender: OutgoingWireSender,
     private val deliveryStateListener: OutboxDeliveryStateListener
 ) : OutboxProcessor {
-    private val sendSlots = Semaphore(MAX_CONCURRENT_SENDS)
-
     override suspend fun processPending(limit: Int): Result<OutboxProcessingResult> =
         runCatching {
             require(limit > 0) {
@@ -58,7 +56,7 @@ class DefaultOutboxProcessor(
             }
 
             val pendingItems = protocolOutbox.getPending(limit = limit).getOrThrow()
-            val results = processItems(pendingItems)
+            val results = processByRecipient(pendingItems)
 
             OutboxProcessingResult(
                 processedCount = results.size,
@@ -67,18 +65,25 @@ class DefaultOutboxProcessor(
             )
         }
 
-    private suspend fun processItems(
+    private suspend fun processByRecipient(
         pendingItems: List<ProtocolOutboxItem>
     ): List<Result<Unit>> =
         coroutineScope {
+            val slots = Semaphore(MAX_CONCURRENT_RECIPIENTS)
+
             pendingItems
-                .map { item ->
+                .groupBy(ProtocolOutboxItem::contactId)
+                .values
+                .map { recipientItems ->
                     async {
-                        sendSlots.withPermit {
-                            processItem(item = item)
+                        slots.withPermit {
+                            recipientItems.map { item ->
+                                processItem(item = item)
+                            }
                         }
                     }
                 }.awaitAll()
+                .flatten()
         }
 
     private suspend fun processItem(item: ProtocolOutboxItem): Result<Unit> {
@@ -250,6 +255,6 @@ class DefaultOutboxProcessor(
         }
 
     private companion object {
-        const val MAX_CONCURRENT_SENDS = 8
+        const val MAX_CONCURRENT_RECIPIENTS = 8
     }
 }

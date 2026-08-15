@@ -6,14 +6,11 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import java.util.concurrent.ConcurrentHashMap
 
 internal class GatewaySessionWorkDispatcher {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val queues = ConcurrentHashMap<String, Channel<suspend () -> Unit>>()
-    private val independentSlots = Semaphore(MAX_CONCURRENT_INDEPENDENT_WORK)
 
     fun dispatch(
         key: String,
@@ -24,16 +21,6 @@ internal class GatewaySessionWorkDispatcher {
         }
 
         queueFor(key).trySend(work)
-    }
-
-    fun dispatchIndependent(work: suspend () -> Unit) {
-        scope.launch {
-            independentSlots.withPermit {
-                runCatching {
-                    work()
-                }
-            }
-        }
     }
 
     fun close() {
@@ -53,8 +40,4 @@ internal class GatewaySessionWorkDispatcher {
                 }
             }
         }
-
-    private companion object {
-        const val MAX_CONCURRENT_INDEPENDENT_WORK = 32
-    }
 }

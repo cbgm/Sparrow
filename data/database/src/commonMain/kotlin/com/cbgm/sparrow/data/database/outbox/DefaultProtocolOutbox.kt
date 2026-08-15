@@ -94,14 +94,10 @@ class DefaultProtocolOutbox(
                 event = OutboxEvent.PROCESSING_STARTED
             )
 
-            check(
-                outboxDao.markProcessing(
-                    itemId = itemId,
-                    updatedAt = SystemClock.nowEpochMilliseconds()
-                ) == 1
-            ) {
-                "Outbox item was already claimed by another sender"
-            }
+            outboxDao.markProcessing(
+                itemId = itemId,
+                updatedAt = SystemClock.nowEpochMilliseconds()
+            )
         }
 
     override suspend fun requeueInterrupted(): Result<Unit> =

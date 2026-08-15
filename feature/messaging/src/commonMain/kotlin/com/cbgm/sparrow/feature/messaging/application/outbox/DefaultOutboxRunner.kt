@@ -10,6 +10,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class DefaultOutboxRunner(
     private val protocolOutbox: ProtocolOutbox,
@@ -19,8 +21,9 @@ class DefaultOutboxRunner(
 
     private val runnerScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+    private val processingMutex = Mutex()
+
     private var observationJob: Job? = null
-    private val drainJobs = mutableListOf<Job>()
 
     override fun start() {
         if (observationJob?.isActive != true) {
@@ -30,7 +33,7 @@ class DefaultOutboxRunner(
                         .observePending()
                         .collect { pendingItems ->
                             if (pendingItems.isNotEmpty()) {
-                                ensureDrainWorkers()
+                                processAvailableItems()
                             }
                         }
                 }
@@ -47,6 +50,7 @@ class DefaultOutboxRunner(
             runCatching {
                 protocolOutbox.requeueInterrupted().getOrThrow()
                 protocolOutbox.retryFailed().getOrThrow()
+                processAvailableItems()
             }.onFailure { error ->
                 if (error is CancellationException) {
                     throw error
@@ -60,41 +64,37 @@ class DefaultOutboxRunner(
     override fun stop() {
         observationJob?.cancel()
         observationJob = null
-        drainJobs.forEach { job -> job.cancel() }
-        drainJobs.clear()
-    }
-
-    private fun ensureDrainWorkers() {
-        drainJobs.removeAll { job -> !job.isActive }
-        repeat(MAX_CONCURRENT_DRAIN_WORKERS - drainJobs.size) {
-            drainJobs +=
-                runnerScope.launch {
-                    processAvailableItems()
-                }
-        }
     }
 
     private suspend fun processAvailableItems() {
-        while (true) {
-            val result = outboxProcessor.processPending(limit = 1)
+        processingMutex.withLock {
+            while (true) {
+                val result = outboxProcessor.processPending(limit = PROCESSING_BATCH_SIZE)
 
-            if (result.isFailure) {
-                val error = result.exceptionOrNull()
+                if (result.isFailure) {
+                    val error = result.exceptionOrNull()
 
-                if (error is CancellationException) {
-                    throw error
+                    if (error is CancellationException) {
+                        throw error
+                    }
+
+                    return
                 }
 
-                return
-            }
+                val processingResult = result.getOrThrow()
 
-            if (result.getOrThrow().processedCount == 0) {
-                return
+                if (processingResult.processedCount == 0) {
+                    return
+                }
+
+                if (processingResult.processedCount < PROCESSING_BATCH_SIZE) {
+                    return
+                }
             }
         }
     }
 
     private companion object {
-        const val MAX_CONCURRENT_DRAIN_WORKERS = 8
+        const val PROCESSING_BATCH_SIZE = 20
     }
 }
