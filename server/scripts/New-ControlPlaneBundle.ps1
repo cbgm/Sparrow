@@ -67,6 +67,19 @@ Copy-Item `
     -Destination (Join-Path $bundleRoot "Bootstrap-ControlPlane.ps1") `
     -Force
 
+foreach ($unixLauncher in @(
+    "bootstrap-control-plane.sh",
+    "start-sparrow-control-plane.sh",
+    "Start-SparrowControlPlane.command"
+)) {
+    $sourcePath = Join-Path $controlPlaneRoot $unixLauncher
+    if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
+        throw "Missing Control Plane macOS/Linux launcher: $sourcePath"
+    }
+
+    Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $bundleRoot $unixLauncher) -Force
+}
+
 [System.IO.File]::WriteAllLines(
     (Join-Path $bundleRoot "sparrow.conf"),
     @(
@@ -96,12 +109,15 @@ Copy-Item `
 
 [System.IO.File]::WriteAllText(
     (Join-Path $bundleRoot "secrets/README.txt"),
-    "Place firebase-admin.json in this folder before first start.`nThe launcher generates the registry root, registry authority identity/certificate, database passwords, Redis password and push token here automatically.`n",
+    "Place firebase-admin.json in this folder before first start.`nThe launcher automatically generates the registry authority and remaining generated secret files here.`n",
     [System.Text.UTF8Encoding]::new($false)
 )
 
 foreach ($required in @(
     "Start-SparrowControlPlane.cmd",
+    "bootstrap-control-plane.sh",
+    "start-sparrow-control-plane.sh",
+    "Start-SparrowControlPlane.command",
     "sparrow.conf",
     "index.html",
     "secrets/README.txt"
@@ -121,11 +137,23 @@ Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue
     $false
 )
 
-$hash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
-[System.IO.File]::WriteAllText(
+$tarArchivePath = Join-Path $outputPath "sparrow-control-plane.tar.gz"
+Remove-Item -LiteralPath $tarArchivePath -Force -ErrorAction SilentlyContinue
+& tar -czf $tarArchivePath -C $bundleRoot .
+if ($LASTEXITCODE -ne 0) {
+    throw "Could not create $tarArchivePath"
+}
+
+$zipChecksum = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+$tarChecksum = (Get-FileHash -LiteralPath $tarArchivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+[System.IO.File]::WriteAllLines(
     (Join-Path $outputPath "SHA256SUMS.txt"),
-    "$hash  sparrow-control-plane.zip`n",
+    @(
+        "$zipChecksum  sparrow-control-plane.zip",
+        "$tarChecksum  sparrow-control-plane.tar.gz"
+    ),
     [System.Text.UTF8Encoding]::new($false)
 )
 
 Write-Host "Created $archivePath"
+Write-Host "Created $tarArchivePath"
