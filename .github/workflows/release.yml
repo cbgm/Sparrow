@@ -471,14 +471,11 @@ jobs:
           retention-days: 30
 
   server-artifacts:
-    name: Build changed server images and bundles
+    name: Build server images and bundles
     needs:
       - changes
       - metadata
       - validate
-    if: >-
-      needs.changes.outputs.control_plane_package == 'true' ||
-      needs.changes.outputs.community_node_package == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 75
 
@@ -516,8 +513,6 @@ jobs:
         env:
           IMAGE_TAG: ${{ needs.metadata.outputs.image_tag }}
           RELEASE_LINE_TAG: ${{ needs.metadata.outputs.release_line_tag }}
-          CONTROL_PLANE_PACKAGE: ${{ needs.changes.outputs.control_plane_package }}
-          COMMUNITY_NODE_PACKAGE: ${{ needs.changes.outputs.community_node_package }}
           CHANGE_NODE_REGISTRY: ${{ needs.changes.outputs.node_registry }}
           CHANGE_PRESENCE_DIRECTORY: ${{ needs.changes.outputs.presence_directory }}
           CHANGE_PUSH: ${{ needs.changes.outputs.push }}
@@ -529,14 +524,17 @@ jobs:
 
           owner="${GITHUB_REPOSITORY_OWNER,,}"
           image_prefix="ghcr.io/${owner}/sparrow"
-          required=()
-
-          if [[ "${CONTROL_PLANE_PACKAGE}" == "true" ]]; then
-            required+=(node-registry presence-directory push)
-          fi
-          if [[ "${COMMUNITY_NODE_PACKAGE}" == "true" ]]; then
-            required+=(mailbox federation gateway)
-          fi
+          # Every release candidate must have a complete immutable server image set
+          # because both launcher bundles are always produced. Only changed services
+          # are rebuilt; unchanged services are reused or aliased from the release line.
+          required=(
+            node-registry
+            presence-directory
+            push
+            mailbox
+            federation
+            gateway
+          )
 
           rebuild=()
           alias=()
@@ -661,73 +659,74 @@ jobs:
               "${image}:${RELEASE_LINE_TAG}"
           done
 
-      - name: Build affected launcher bundles
+      - name: Build launcher bundles
         shell: pwsh
         env:
           IMAGE_TAG: ${{ needs.metadata.outputs.image_tag }}
-          ARTIFACT_VERSION: ${{ needs.metadata.outputs.artifact_version }}
-          BUILD_CONTROL_PLANE: ${{ needs.changes.outputs.control_plane_package }}
-          BUILD_COMMUNITY_NODE: ${{ needs.changes.outputs.community_node_package }}
         run: |
           $owner = "${{ github.repository_owner }}".ToLowerInvariant()
           $imagePrefix = "ghcr.io/$owner/sparrow"
 
-          if ($env:BUILD_CONTROL_PLANE -eq "true") {
-              ./server/scripts/New-ControlPlaneBundle.ps1 `
-                  -OutputDirectory dist-control-plane `
-                  -ImagePrefix $imagePrefix `
-                  -ImageTag $env:IMAGE_TAG
+          ./server/scripts/New-ControlPlaneBundle.ps1 `
+              -OutputDirectory dist-control-plane `
+              -ImagePrefix $imagePrefix `
+              -ImageTag $env:IMAGE_TAG
 
-              New-Item -ItemType Directory -Path dist/server/control-plane -Force | Out-Null
-              Copy-Item `
-                  -LiteralPath dist-control-plane/sparrow-control-plane.zip `
-                  -Destination "dist/server/control-plane/sparrow-control-plane-$($env:ARTIFACT_VERSION)-windows.zip"
+          ./server/scripts/New-CommunityNodeBundle.ps1 `
+              -OutputDirectory dist-community-node `
+              -ImagePrefix $imagePrefix `
+              -ImageTag $env:IMAGE_TAG
 
-              Push-Location dist/server/control-plane
-              Get-ChildItem -File -Filter "sparrow-*" | ForEach-Object {
-                  $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-                  "$hash  $($_.Name)"
-              } | Set-Content -LiteralPath SHA256SUMS.txt -Encoding utf8
-              Pop-Location
-          }
+      # upload-artifact already creates a ZIP. Upload unpacked bundle contents so
+      # the downloaded Actions artifact does not contain another ZIP/TAR archive.
+      - name: Prepare unpacked platform artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p \
+            dist/server/control-plane/windows \
+            dist/server/control-plane/macos-linux \
+            dist/server/community-node/windows \
+            dist/server/community-node/macos-linux
 
-          if ($env:BUILD_COMMUNITY_NODE -eq "true") {
-              ./server/scripts/New-CommunityNodeBundle.ps1 `
-                  -OutputDirectory dist-community-node `
-                  -ImagePrefix $imagePrefix `
-                  -ImageTag $env:IMAGE_TAG
+          unzip -q dist-control-plane/sparrow-control-plane.zip \
+            -d dist/server/control-plane/windows
+          tar -xzf dist-control-plane/sparrow-control-plane.tar.gz \
+            -C dist/server/control-plane/macos-linux
+          unzip -q dist-community-node/sparrow-community-node.zip \
+            -d dist/server/community-node/windows
+          tar -xzf dist-community-node/sparrow-community-node.tar.gz \
+            -C dist/server/community-node/macos-linux
 
-              New-Item -ItemType Directory -Path dist/server/community-node -Force | Out-Null
-              Copy-Item `
-                  -LiteralPath dist-community-node/sparrow-community-node.zip `
-                  -Destination "dist/server/community-node/sparrow-community-node-$($env:ARTIFACT_VERSION)-windows.zip"
-              Copy-Item `
-                  -LiteralPath dist-community-node/sparrow-community-node.tar.gz `
-                  -Destination "dist/server/community-node/sparrow-community-node-$($env:ARTIFACT_VERSION)-macos-linux.tar.gz"
-
-              Push-Location dist/server/community-node
-              Get-ChildItem -File -Filter "sparrow-*" | ForEach-Object {
-                  $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-                  "$hash  $($_.Name)"
-              } | Set-Content -LiteralPath SHA256SUMS.txt -Encoding utf8
-              Pop-Location
-          }
-
-      - name: Upload Control Plane package
-        if: needs.changes.outputs.control_plane_package == 'true'
+      - name: Upload Control Plane Windows bundle
         uses: actions/upload-artifact@v4
         with:
-          name: sparrow-control-plane-${{ needs.metadata.outputs.artifact_version }}
-          path: dist/server/control-plane
+          name: sparrow-control-plane-${{ needs.metadata.outputs.artifact_version }}-windows
+          path: dist/server/control-plane/windows
           if-no-files-found: error
           retention-days: 30
 
-      - name: Upload Community Node package
-        if: needs.changes.outputs.community_node_package == 'true'
+      - name: Upload Control Plane macOS/Linux bundle
         uses: actions/upload-artifact@v4
         with:
-          name: sparrow-community-node-${{ needs.metadata.outputs.artifact_version }}
-          path: dist/server/community-node
+          name: sparrow-control-plane-${{ needs.metadata.outputs.artifact_version }}-macos-linux
+          path: dist/server/control-plane/macos-linux
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Community Node Windows bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: sparrow-community-node-${{ needs.metadata.outputs.artifact_version }}-windows
+          path: dist/server/community-node/windows
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Community Node macOS/Linux bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: sparrow-community-node-${{ needs.metadata.outputs.artifact_version }}-macos-linux
+          path: dist/server/community-node/macos-linux
           if-no-files-found: error
           retention-days: 30
 
@@ -752,11 +751,8 @@ jobs:
             echo
             echo "Immutable server image tag: \`${{ needs.metadata.outputs.image_tag }}\`"
             echo
-            if [[ "${{ needs.changes.outputs.any_artifacts }}" != "true" ]]; then
-              echo "No distributable artifacts were affected by this push. Validation still ran."
-            else
-              echo "Only artifacts affected by this push were rebuilt or repackaged."
-            fi
+            echo "Windows and macOS/Linux bundles were packaged for both server roles."
+            echo "Only changed server images were rebuilt; unchanged images were reused or aliased to the immutable candidate tag."
           } >> "${GITHUB_STEP_SUMMARY}"
 
   publish-release:
@@ -791,28 +787,56 @@ jobs:
           name: sparrow-android-release-${{ needs.metadata.outputs.artifact_version }}
           path: downloads/release
 
-      - name: Download Control Plane package
+      - name: Download Control Plane Windows bundle
         uses: actions/download-artifact@v4
         with:
-          name: sparrow-control-plane-${{ needs.metadata.outputs.artifact_version }}
-          path: downloads/control-plane
+          name: sparrow-control-plane-${{ needs.metadata.outputs.artifact_version }}-windows
+          path: downloads/control-plane-windows
 
-      - name: Download Community Node package
+      - name: Download Control Plane macOS/Linux bundle
         uses: actions/download-artifact@v4
         with:
-          name: sparrow-community-node-${{ needs.metadata.outputs.artifact_version }}
-          path: downloads/community-node
+          name: sparrow-control-plane-${{ needs.metadata.outputs.artifact_version }}-macos-linux
+          path: downloads/control-plane-macos-linux
+
+      - name: Download Community Node Windows bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: sparrow-community-node-${{ needs.metadata.outputs.artifact_version }}-windows
+          path: downloads/community-node-windows
+
+      - name: Download Community Node macOS/Linux bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: sparrow-community-node-${{ needs.metadata.outputs.artifact_version }}-macos-linux
+          path: downloads/community-node-macos-linux
 
       - name: Assemble individual release assets
         shell: bash
         run: |
           set -euo pipefail
+          version="${{ needs.metadata.outputs.artifact_version }}"
           mkdir -p dist
-          find downloads -type f -name 'sparrow-*' -exec cp '{}' dist/ ';'
+
+          find downloads/debug -type f -name 'sparrow-*-debug.apk' -exec cp '{}' dist/ ';'
+          find downloads/release -type f -name 'sparrow-*-release.apk' -exec cp '{}' dist/ ';'
+
+          chmod +x \
+            downloads/control-plane-macos-linux/bootstrap-control-plane.sh \
+            downloads/control-plane-macos-linux/start-sparrow-control-plane.sh \
+            downloads/control-plane-macos-linux/Start-SparrowControlPlane.command \
+            downloads/community-node-macos-linux/bootstrap-community-node.sh \
+            downloads/community-node-macos-linux/start-sparrow-node.sh \
+            downloads/community-node-macos-linux/Start-SparrowNode.command
+
+          (cd downloads/control-plane-windows && zip -qr "$GITHUB_WORKSPACE/dist/sparrow-control-plane-${version}-windows.zip" .)
+          tar -czf "dist/sparrow-control-plane-${version}-macos-linux.tar.gz" -C downloads/control-plane-macos-linux .
+          (cd downloads/community-node-windows && zip -qr "$GITHUB_WORKSPACE/dist/sparrow-community-node-${version}-windows.zip" .)
+          tar -czf "dist/sparrow-community-node-${version}-macos-linux.tar.gz" -C downloads/community-node-macos-linux .
 
           package_count="$(find dist -maxdepth 1 -type f -name 'sparrow-*' | wc -l)"
-          if [[ "${package_count}" -ne 5 ]]; then
-            echo "::error::Expected 5 full-release packages, found ${package_count}."
+          if [[ "${package_count}" -ne 6 ]]; then
+            echo "::error::Expected 6 full-release packages, found ${package_count}."
             find downloads -maxdepth 3 -type f -print
             exit 1
           fi
@@ -826,6 +850,7 @@ jobs:
           - Debug Android APK
           - Signed release Android APK
           - Windows Control Plane bundle
+          - macOS/Linux Control Plane bundle
           - Windows Community Node bundle
           - macOS/Linux Community Node bundle
           EOF_RELEASE
@@ -844,14 +869,16 @@ jobs:
 
           debug_apk="$(find dist -maxdepth 1 -type f -name 'sparrow-*-debug.apk' | head -n 1)"
           release_apk="$(find dist -maxdepth 1 -type f -name 'sparrow-*-release.apk' | head -n 1)"
-          control_plane="$(find dist -maxdepth 1 -type f -name 'sparrow-control-plane-*-windows.zip' | head -n 1)"
+          control_plane_windows="$(find dist -maxdepth 1 -type f -name 'sparrow-control-plane-*-windows.zip' | head -n 1)"
+          control_plane_macos_linux="$(find dist -maxdepth 1 -type f -name 'sparrow-control-plane-*-macos-linux.tar.gz' | head -n 1)"
           node_windows="$(find dist -maxdepth 1 -type f -name 'sparrow-community-node-*-windows.zip' | head -n 1)"
           node_macos_linux="$(find dist -maxdepth 1 -type f -name 'sparrow-community-node-*-macos-linux.tar.gz' | head -n 1)"
 
           for required_file in \
             "${debug_apk}" \
             "${release_apk}" \
-            "${control_plane}" \
+            "${control_plane_windows}" \
+            "${control_plane_macos_linux}" \
             "${node_windows}" \
             "${node_macos_linux}"; do
             if [[ -z "${required_file}" || ! -f "${required_file}" ]]; then
@@ -863,7 +890,8 @@ jobs:
 
           cp "${debug_apk}" "${package_root}/app/"
           cp "${release_apk}" "${package_root}/app/"
-          cp "${control_plane}" "${package_root}/control-plane/"
+          cp "${control_plane_windows}" "${package_root}/control-plane/"
+          cp "${control_plane_macos_linux}" "${package_root}/control-plane/"
           cp "${node_windows}" "${package_root}/community-node/"
           cp "${node_macos_linux}" "${package_root}/community-node/"
           cp dist/RELEASE.txt "${package_root}/RELEASE.txt"
@@ -880,6 +908,7 @@ jobs:
 
           control-plane/
             Windows Control Plane launcher bundle
+            macOS/Linux Control Plane launcher bundle
 
           community-node/
             Windows Community Node launcher bundle
@@ -939,6 +968,8 @@ jobs:
 
           gh release create "${GITHUB_REF_NAME}" \
             dist/* \
+            --repo "${GITHUB_REPOSITORY}" \
             --title "Sparrow ${{ needs.metadata.outputs.version_name }}" \
             --generate-notes \
             "${prerelease_argument[@]}"
+
