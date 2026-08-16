@@ -968,6 +968,7 @@ jobs:
 
           gh release create "${GITHUB_REF_NAME}" \
             dist/* \
+            --repo "${GITHUB_REPOSITORY}" \
             --title "Sparrow ${{ needs.metadata.outputs.version_name }}" \
             --generate-notes \
             "${prerelease_argument[@]}"
