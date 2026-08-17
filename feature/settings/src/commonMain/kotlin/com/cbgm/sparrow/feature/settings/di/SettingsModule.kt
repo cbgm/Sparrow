@@ -27,6 +27,7 @@ import com.cbgm.sparrow.feature.settings.presentation.disclaimer.DisclaimerViewM
 import com.cbgm.sparrow.feature.settings.presentation.licenses.LicensesViewModel
 import com.cbgm.sparrow.feature.settings.presentation.network.ControlPlaneSettingsViewModel
 import com.cbgm.sparrow.feature.settings.presentation.overview.SettingsViewModel
+import com.cbgm.sparrow.feature.settings.presentation.profile.ProfileSettingsViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
@@ -119,6 +120,14 @@ val settingsModule =
                 observeBlockUnknownContactInvites = get(),
                 setBlockUnknownContactInvites = get(),
                 observeBlockedContactIds = get()
+            )
+        }
+
+        viewModel {
+            ProfileSettingsViewModel(
+                observeLocalProfilePicture = get(),
+                setLocalProfilePicture = get(),
+                removeLocalProfilePicture = get()
             )
         }
 

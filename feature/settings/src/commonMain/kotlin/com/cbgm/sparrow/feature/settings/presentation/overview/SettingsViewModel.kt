@@ -65,6 +65,7 @@ class SettingsViewModel(
             SettingsUiEvent.LicensesClicked -> navigator.navigateTo(AppRoute.Licenses)
             SettingsUiEvent.DeveloperMenuClicked -> navigator.navigateTo(AppRoute.DeveloperMenu)
             SettingsUiEvent.BlockedContactsClicked -> navigator.navigateTo(AppRoute.BlockedContacts)
+            SettingsUiEvent.ProfileClicked -> navigator.navigateTo(AppRoute.ProfileSettings)
             SettingsUiEvent.ControlPlanesClicked -> navigator.navigateTo(AppRoute.ControlPlanes)
             SettingsUiEvent.VersionRowTapped -> handleVersionTap()
         }
