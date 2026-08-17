@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonOff
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material3.HorizontalDivider
@@ -73,6 +74,9 @@ import com.cbgm.sparrow.resources.feature_settings_open_source_licenses
 import com.cbgm.sparrow.resources.feature_settings_privacy_and_data
 import com.cbgm.sparrow.resources.feature_settings_privacy_policy
 import com.cbgm.sparrow.resources.feature_settings_privacy_policy_subtitle
+import com.cbgm.sparrow.resources.feature_settings_profile
+import com.cbgm.sparrow.resources.feature_settings_profile_picture
+import com.cbgm.sparrow.resources.feature_settings_profile_subtitle
 import com.cbgm.sparrow.resources.feature_settings_security
 import org.jetbrains.compose.resources.stringResource
 
@@ -105,6 +109,15 @@ fun SettingsScreen(
                 subtitle = uiState.currentLanguage.nativeName,
                 onClick = { onUiEvent(SettingsUiEvent.LanguagePickerOpened) },
                 showChevron = false
+            )
+        }
+
+        SettingsSection(title = stringResource(Res.string.feature_settings_profile)) {
+            SettingsRow(
+                icon = Icons.Default.Person,
+                title = stringResource(Res.string.feature_settings_profile_picture),
+                subtitle = stringResource(Res.string.feature_settings_profile_subtitle),
+                onClick = { onUiEvent(SettingsUiEvent.ProfileClicked) }
             )
         }
 

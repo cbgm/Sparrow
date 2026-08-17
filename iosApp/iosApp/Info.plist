@@ -4,5 +4,9 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Sparrow uses the camera to take your profile picture.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Sparrow uses your photo library to choose your profile picture.</string>
 </dict>
 </plist>

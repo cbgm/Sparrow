@@ -5,7 +5,6 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,8 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,13 +23,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.core.ui.component.IdentityVerificationScreen
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
+import com.cbgm.sparrow.core.ui.component.SparrowDialogListItem
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -64,8 +61,8 @@ private enum class DetailsContent {
 @Composable
 fun GroupDetailsFlow(
     conversationId: String,
-    requestLeave: Boolean = false,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    requestLeave: Boolean = false
 ) {
     val verificationViewModel =
         koinViewModel<GroupVerificationViewModel> {
@@ -338,13 +335,10 @@ private fun PromoteBeforeLeaveDialog(
                 Text(stringResource(Res.string.feature_chats_group_promote_before_leave_description))
                 members.forEachIndexed { index, member ->
                     val contactId = member.contactId ?: return@forEachIndexed
-                    ListItem(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable(enabled = !isUpdating) { onSelect(contactId) },
-                        headlineContent = { Text(member.displayName) },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                    SparrowDialogListItem(
+                        text = member.displayName,
+                        isEnabled = !isUpdating,
+                        onClick = { onSelect(contactId) }
                     )
                     if (index < members.lastIndex) {
                         HorizontalDivider()

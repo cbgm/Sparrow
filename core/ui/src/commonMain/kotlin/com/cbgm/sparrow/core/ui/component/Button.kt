@@ -2,9 +2,15 @@ package com.cbgm.sparrow.core.ui.component
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -12,6 +18,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -175,6 +182,31 @@ fun SparrowOutlinedButton(
     }
 }
 
+@Composable
+fun SparrowRoundApprovalButton(
+    onClick: () -> Unit,
+    imageVector: ImageVector,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    Button(
+        onClick = onClick,
+        shape = CircleShape,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.secondary,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
+        contentPadding = PaddingValues(12.dp),
+        modifier = modifier.size(50.dp),
+        enabled = enabled
+    ) {
+        Icon(
+            imageVector = imageVector,
+            contentDescription = null
+        )
+    }
+}
+
 @Preview
 @Composable
 private fun SparrowButtonPreview() {
@@ -195,6 +227,10 @@ private fun SparrowButtonPreview() {
             SparrowBannerButton(
                 onClick = {},
                 text = "Continue"
+            )
+            SparrowRoundApprovalButton(
+                onClick = {},
+                imageVector = Icons.Filled.Check
             )
         }
     }

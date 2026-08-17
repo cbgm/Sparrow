@@ -16,6 +16,7 @@ import com.cbgm.sparrow.feature.identity.data.repository.IdentityShareRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityShareRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.LocalIdentityProfileRepository
+import com.cbgm.sparrow.feature.identity.domain.repository.LocalProfilePictureRepository
 import com.cbgm.sparrow.feature.identity.domain.usecase.CreateIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.CreateSharedIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.DecodeSharedIdentityUseCase
@@ -24,8 +25,11 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.GetLocalPhoneNumberUseCa
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetPublicIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.NormalizeLocalPhoneNumberUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalIdentityReadyUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalProfilePictureUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecoverIncompleteIdentityUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.RemoveLocalProfilePictureUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SaveLocalPhoneNameUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.SetLocalProfilePictureUseCase
 import com.cbgm.sparrow.feature.identity.presentation.setup.IdentityViewModel
 import com.cbgm.sparrow.feature.identity.presentation.share.ShareIdentityViewModel
 import org.koin.core.module.dsl.viewModel
@@ -64,6 +68,18 @@ val identityModule =
 
         single {
             GetLocalPhoneNumberUseCase(localIdentityProfileRepository = get<LocalIdentityProfileRepository>())
+        }
+
+        factory {
+            ObserveLocalProfilePictureUseCase(repository = get<LocalProfilePictureRepository>())
+        }
+
+        factory {
+            SetLocalProfilePictureUseCase(repository = get<LocalProfilePictureRepository>())
+        }
+
+        factory {
+            RemoveLocalProfilePictureUseCase(repository = get<LocalProfilePictureRepository>())
         }
 
         factory {
