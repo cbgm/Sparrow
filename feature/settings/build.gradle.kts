@@ -23,7 +23,6 @@ kotlin {
             implementation(libs.bundles.coroutines)
             implementation(libs.bundles.koin.compose)
 
-            implementation(compose.materialIconsExtended)
             implementation(libs.about.libs.compose)
             implementation(libs.about.libs.render)
         }

@@ -26,8 +26,6 @@ kotlin {
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)
             implementation(libs.bundles.koin.compose)
-
-            implementation(compose.materialIconsExtended)
         }
 
         commonTest.dependencies {

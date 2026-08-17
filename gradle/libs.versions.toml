@@ -51,6 +51,7 @@ google-services = "4.5.0"
 hikari = "7.1.0"
 postgresql = "42.7.13"
 jedis = "5.2.0"
+material-icons = "1.7.3"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -75,6 +76,7 @@ androidx-lifecycle-runtimeCompose = { module = "org.jetbrains.androidx.lifecycle
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "composeMultiplatform" }
 compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "composeMultiplatform" }
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
+compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "material-icons" }
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMultiplatform" }
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
 compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
@@ -160,7 +162,8 @@ compose = [
     "compose-uiToolingPreview",
     "compose-uiTooling",
     "androidx-lifecycle-viewmodelCompose",
-    "androidx-lifecycle-runtimeCompose"
+    "androidx-lifecycle-runtimeCompose",
+    "compose-material-icons-extended"
 ]
 
 coroutines = [

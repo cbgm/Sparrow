@@ -70,7 +70,6 @@ kotlin {
             implementation(libs.bundles.serialization)
 
             implementation(libs.jetbrains.navigation.compose)
-            implementation(compose.materialIconsExtended)
         }
 
         androidMain.dependencies {

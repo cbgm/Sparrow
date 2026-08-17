@@ -23,8 +23,6 @@ kotlin {
             implementation(libs.bundles.coroutines)
             implementation(libs.bundles.koin.compose)
             implementation(libs.okio)
-
-            implementation(compose.materialIconsExtended)
         }
 
         androidMain.dependencies {
