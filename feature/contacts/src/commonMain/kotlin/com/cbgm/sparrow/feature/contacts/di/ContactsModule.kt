@@ -19,6 +19,8 @@ import com.cbgm.sparrow.feature.contacts.data.merge.ContactMergeServiceImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactKeyExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactVerificationRepositoryImpl
+import com.cbgm.sparrow.feature.contacts.data.repository.DeviceContactWriterRepositoryImpl
+import com.cbgm.sparrow.feature.contacts.data.repository.DeviceContactsRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.IdentityExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.IdentityInvitationRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.verification.ContactLocalIdentityChangeHandler
@@ -26,6 +28,8 @@ import com.cbgm.sparrow.feature.contacts.data.verification.ContactVerificationPa
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactKeyExchangeRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactVerificationRepository
+import com.cbgm.sparrow.feature.contacts.domain.repository.DeviceContactWriterRepository
+import com.cbgm.sparrow.feature.contacts.domain.repository.DeviceContactsRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityExchangeRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityInvitationRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.AcceptContactInvitationUseCase
@@ -58,6 +62,14 @@ import org.koin.dsl.module
 
 val contactsModule =
     module {
+
+        single<DeviceContactsRepository> {
+            DeviceContactsRepositoryImpl(dataSource = get())
+        }
+
+        single<DeviceContactWriterRepository> {
+            DeviceContactWriterRepositoryImpl(dataSource = get())
+        }
 
         single<ContactMergeService> {
             ContactMergeServiceImpl(

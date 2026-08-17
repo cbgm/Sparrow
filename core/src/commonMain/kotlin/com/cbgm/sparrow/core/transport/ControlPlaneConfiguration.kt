@@ -34,6 +34,8 @@ interface ControlPlaneConfiguration {
     val directoryBaseUrls: StateFlow<Set<String>>
     val directoryUrl: StateFlow<String?>
 
+    suspend fun initialize() = Unit
+
     fun orderedEndpoints(): List<ControlPlaneEndpoint>
 
     fun markActive(endpoint: ControlPlaneEndpoint)

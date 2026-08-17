@@ -33,7 +33,7 @@ flowchart TD
     K[AES-256 wrapping key<br/>Android Keystore]
     GCM[AES/GCM/NoPadding]
     CT[ciphertext + IV]
-    SP[app-private SharedPreferences]
+    SP[app-private DataStore]
 
     K --> GCM
     PK --> GCM --> CT --> SP

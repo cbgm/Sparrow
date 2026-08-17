@@ -8,6 +8,8 @@ import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
 import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
 import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProcessor
+import com.cbgm.sparrow.feature.identity.data.datasource.PublicIdentityStorage
+import com.cbgm.sparrow.feature.identity.data.datasource.PublicIdentityStorageImpl
 import com.cbgm.sparrow.feature.identity.data.profile.IdentityRemoteProfilePictureMetadataProcessor
 import com.cbgm.sparrow.feature.identity.data.provider.IdentityLocalEncryptionKeyPairProvider
 import com.cbgm.sparrow.feature.identity.data.provider.IdentityLocalPhoneNumberProvider
@@ -17,10 +19,14 @@ import com.cbgm.sparrow.feature.identity.data.provider.IdentityLocalSigningKeyPa
 import com.cbgm.sparrow.feature.identity.data.provider.IdentityLocalSigningPublicKeyProvider
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityShareRepositoryImpl
+import com.cbgm.sparrow.feature.identity.data.repository.LocalIdentityProfileRepositoryImpl
+import com.cbgm.sparrow.feature.identity.data.repository.LocalProfilePictureRepositoryImpl
+import com.cbgm.sparrow.feature.identity.data.repository.RemoteProfilePictureRepositoryImpl
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityShareRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.LocalIdentityProfileRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.LocalProfilePictureRepository
+import com.cbgm.sparrow.feature.identity.domain.repository.RemoteProfilePictureRepository
 import com.cbgm.sparrow.feature.identity.domain.usecase.CreateIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.CreateSharedIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.DecodeSharedIdentityUseCase
@@ -41,6 +47,28 @@ import org.koin.dsl.module
 
 val identityModule =
     module {
+        single<PublicIdentityStorage> {
+            PublicIdentityStorageImpl(dataStore = get())
+        }
+
+        single<LocalIdentityProfileRepository> {
+            LocalIdentityProfileRepositoryImpl(dataStore = get())
+        }
+
+        single<LocalProfilePictureRepository> {
+            LocalProfilePictureRepositoryImpl(
+                dataStore = get(),
+                fileStorage = get()
+            )
+        }
+
+        single<RemoteProfilePictureRepository> {
+            RemoteProfilePictureRepositoryImpl(
+                dataStore = get(),
+                fileStorage = get(),
+                cryptoHash = get()
+            )
+        }
 
         single<IdentityRepository> {
             IdentityRepositoryImpl(

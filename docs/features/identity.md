@@ -12,7 +12,7 @@ Key classes:
 - `IdentityRepositoryImpl`
 - `SodiumIdentityKeyGenerator` in `:core:crypto`
 - `PublicIdentityStorage` / `PrivateKeyStorage`
-- `AndroidPublicIdentityStorage`
+- `PublicIdentityStorageImpl`
 - `AndroidPrivateKeyStorage`
 - `IdentityLocalEncryptionKeyPairProvider`
 - `IdentityLocalSigningKeyPairProvider`

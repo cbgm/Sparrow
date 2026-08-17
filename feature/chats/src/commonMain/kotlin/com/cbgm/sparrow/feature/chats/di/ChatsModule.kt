@@ -45,6 +45,7 @@ import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupPacketBroadcaster
 import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupMembershipPacketProtocol
 import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupProtocolPayloadEncoder
 import com.cbgm.sparrow.feature.chats.data.group.repository.GroupConversationRepositoryImpl
+import com.cbgm.sparrow.feature.chats.data.group.repository.GroupKeyRepositoryImpl
 import com.cbgm.sparrow.feature.chats.data.group.repository.GroupMembershipRepositoryImpl
 import com.cbgm.sparrow.feature.chats.data.group.repository.GroupMessageRepositoryImpl
 import com.cbgm.sparrow.feature.chats.data.group.repository.GroupVerificationActionRepositoryImpl
@@ -65,6 +66,7 @@ import com.cbgm.sparrow.feature.chats.data.storage.UnreadableTransportMessageSto
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectConversationRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectMessageRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupConversationRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupKeyRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupMembershipRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupMessageRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationActionRepository
@@ -213,6 +215,9 @@ private fun org.koin.core.module.Module.registerRepositories() {
     }
     singleOf(::GroupMembershipRepositoryImpl) {
         bind<GroupMembershipRepository>()
+    }
+    singleOf(::GroupKeyRepositoryImpl) {
+        bind<GroupKeyRepository>()
     }
     singleOf(::GroupMessageRepositoryImpl) {
         bind<GroupMessageRepository>()

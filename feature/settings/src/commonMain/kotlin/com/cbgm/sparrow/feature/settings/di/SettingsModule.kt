@@ -2,7 +2,8 @@ package com.cbgm.sparrow.feature.settings.di
 
 import com.cbgm.sparrow.core.security.ContactBlocklistRepository
 import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
-import com.cbgm.sparrow.feature.settings.data.datasource.registerPlatformSettingsStorage
+import com.cbgm.sparrow.feature.settings.data.datasource.SettingsStorage
+import com.cbgm.sparrow.feature.settings.data.datasource.SettingsStorageImpl
 import com.cbgm.sparrow.feature.settings.data.repository.ContactBlocklistRepositoryImpl
 import com.cbgm.sparrow.feature.settings.data.repository.DirectIdentitySetupModeRepositoryImpl
 import com.cbgm.sparrow.feature.settings.data.repository.LicencesRepositoryImpl
@@ -33,7 +34,9 @@ import org.koin.dsl.module
 
 val settingsModule =
     module {
-        registerPlatformSettingsStorage()
+        single<SettingsStorage> {
+            SettingsStorageImpl(dataStore = get())
+        }
 
         single<SettingsRepository> {
             SettingsRepositoryImpl(
