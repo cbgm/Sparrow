@@ -19,6 +19,9 @@ import com.cbgm.sparrow.core.protocol.packet.DirectChatAuthorizationRevokedPacke
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
+import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
+import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProcessor
 import com.cbgm.sparrow.core.protocol.version.ProtocolVersion
 import com.cbgm.sparrow.core.security.ContactBlocklistRepository
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
@@ -65,7 +68,9 @@ class IdentityInvitationRepositoryImpl(
     private val phoneNumberNormalizer: PhoneNumberNormalizer,
     private val contactVerificationRepository: ContactVerificationRepository,
     private val modeRepository: DirectIdentitySetupModeRepository,
-    private val contactBlocklistRepository: ContactBlocklistRepository
+    private val contactBlocklistRepository: ContactBlocklistRepository,
+    private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
+    private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor
 ) : IdentityInvitationRepository {
     private val logger = SparrowLog.withTag("IdentityInvitationRepositoryImpl")
 
@@ -130,6 +135,7 @@ class IdentityInvitationRepositoryImpl(
                 val challenge = secureRandomGenerator.generateBytes(CHALLENGE_SIZE).getOrThrow()
                 val localPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow()
                 val expiresAt = now + INVITATION_LIFETIME_MILLISECONDS
+                val profilePicture = localProfilePictureMetadataProvider.forInvite().getOrElse { ProfilePictureMetadata() }
                 val payload =
                     payloadEncoder.encodeInvite(
                         packetId = packetId,
@@ -138,6 +144,7 @@ class IdentityInvitationRepositoryImpl(
                         displayName = localPhoneNumber,
                         createdAtEpochMilliseconds = now,
                         expiresAtEpochMilliseconds = expiresAt,
+                        profilePicture = profilePicture,
                         inviteChallenge = challenge,
                         encryptionPublicKey = localIdentity.encryptionPublicKey,
                         signingPublicKey = localIdentity.signingPublicKey
@@ -150,6 +157,7 @@ class IdentityInvitationRepositoryImpl(
                         displayName = localPhoneNumber,
                         createdAtEpochMilliseconds = now,
                         expiresAtEpochMilliseconds = expiresAt,
+                        profilePicture = profilePicture,
                         inviteChallenge = challenge.copyOf(),
                         encryptionPublicKey = localIdentity.encryptionPublicKey.copyOf(),
                         signingPublicKey = localIdentity.signingPublicKey.copyOf(),
@@ -311,6 +319,7 @@ class IdentityInvitationRepositoryImpl(
                 requireLocalKeysMatch(localIdentity, signingKeyPair)
 
                 val now = SystemClock.nowEpochMilliseconds()
+                val profilePicture = localProfilePictureMetadataProvider.forInvite().getOrElse { ProfilePictureMetadata() }
                 val responseChallenge = secureRandomGenerator.generateBytes(CHALLENGE_SIZE).getOrThrow()
                 val packetId = acceptedPacketId(invitationId)
                 val payload =
@@ -319,6 +328,7 @@ class IdentityInvitationRepositoryImpl(
                         version = ProtocolVersion.CURRENT,
                         invitationId = invitationId,
                         acceptedAtEpochMilliseconds = now,
+                        profilePicture = profilePicture,
                         inviteChallenge = invitation.inviteChallenge,
                         responseChallenge = responseChallenge,
                         inviterEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
@@ -332,6 +342,7 @@ class IdentityInvitationRepositoryImpl(
                         packetId = packetId,
                         invitationId = invitationId,
                         acceptedAtEpochMilliseconds = now,
+                        profilePicture = profilePicture,
                         inviteChallenge = invitation.inviteChallenge.copyOf(),
                         responseChallenge = responseChallenge.copyOf(),
                         inviterEncryptionPublicKey = invitation.remoteEncryptionPublicKey.copyOf(),
@@ -579,6 +590,7 @@ class IdentityInvitationRepositoryImpl(
                         displayName = packet.displayName,
                         createdAtEpochMilliseconds = packet.createdAtEpochMilliseconds,
                         expiresAtEpochMilliseconds = packet.expiresAtEpochMilliseconds,
+                        profilePicture = packet.profilePicture,
                         inviteChallenge = packet.inviteChallenge,
                         encryptionPublicKey = packet.encryptionPublicKey,
                         signingPublicKey = packet.signingPublicKey
@@ -636,6 +648,12 @@ class IdentityInvitationRepositoryImpl(
                     )
                     return@withLock
                 }
+
+                remoteProfilePictureMetadataProcessor
+                    .apply(contactId, packet.profilePicture)
+                    .onFailure { error ->
+                        logger.warn(error) { "Could not store profile picture for $contactId" }
+                    }
 
                 remotePhoneNumber?.let { phoneNumber ->
                     persistIncomingPhoneNumber(
@@ -782,6 +800,7 @@ class IdentityInvitationRepositoryImpl(
                         version = packet.version,
                         invitationId = packet.invitationId,
                         acceptedAtEpochMilliseconds = packet.acceptedAtEpochMilliseconds,
+                        profilePicture = packet.profilePicture,
                         inviteChallenge = packet.inviteChallenge,
                         responseChallenge = packet.responseChallenge,
                         inviterEncryptionPublicKey = packet.inviterEncryptionPublicKey,
@@ -817,6 +836,12 @@ class IdentityInvitationRepositoryImpl(
                 ) {
                     "Contact signing identity changed during invitation acceptance"
                 }
+
+                remoteProfilePictureMetadataProcessor
+                    .apply(context.contactId, packet.profilePicture)
+                    .onFailure { error ->
+                        logger.warn(error) { "Could not store profile picture for ${context.contactId}" }
+                    }
 
                 if (invitation.state == IdentityHandshakeState.MUTUAL_UNVERIFIED.name) {
                     check(invitation.responseChallenge?.contentEquals(packet.responseChallenge) == true) {
@@ -1586,6 +1611,7 @@ class IdentityInvitationRepositoryImpl(
         val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
         requireLocalKeysMatch(localIdentity, signingKeyPair)
         val acceptedAt = SystemClock.nowEpochMilliseconds()
+        val profilePicture = localProfilePictureMetadataProvider.forInvite().getOrElse { ProfilePictureMetadata() }
         check(acceptedAt <= invitation.expiresAtEpochMilliseconds) {
             "Invitation has expired"
         }
@@ -1596,6 +1622,7 @@ class IdentityInvitationRepositoryImpl(
                 version = ProtocolVersion.CURRENT,
                 invitationId = invitation.invitationId,
                 acceptedAtEpochMilliseconds = acceptedAt,
+                profilePicture = profilePicture,
                 inviteChallenge = invitation.inviteChallenge,
                 responseChallenge = responseChallenge,
                 inviterEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
@@ -1611,6 +1638,7 @@ class IdentityInvitationRepositoryImpl(
                     packetId = packetId,
                     invitationId = invitation.invitationId,
                     acceptedAtEpochMilliseconds = acceptedAt,
+                    profilePicture = profilePicture,
                     inviteChallenge = invitation.inviteChallenge.copyOf(),
                     responseChallenge = responseChallenge.copyOf(),
                     inviterEncryptionPublicKey = invitation.remoteEncryptionPublicKey.copyOf(),

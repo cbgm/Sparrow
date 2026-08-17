@@ -143,7 +143,13 @@ private fun org.koin.core.module.Module.registerGroupData() {
     singleOf(::GroupMessageDeliveryCoordinator)
     singleOf(::GroupOutboxDeliveryHandler)
     singleOf(::GroupProtocolPayloadEncoder)
-    singleOf(::GroupMembershipPacketProtocol)
+    single {
+        GroupMembershipPacketProtocol(
+            groupCrypto = get(),
+            payloadEncoder = get(),
+            localProfilePictureMetadataProvider = get()
+        )
+    }
     singleOf(::GroupWelcomeSecurity)
     singleOf(::GroupSecurityManager)
     singleOf(::GroupVerificationPayloadEncoder)

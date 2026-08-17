@@ -9,6 +9,8 @@ import com.cbgm.sparrow.core.protocol.packet.GroupMemberPayload
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMembershipChangePayload
 import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
+import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
+import com.cbgm.sparrow.core.protocol.profile.ProfilePicturePayload
 import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupProtocolPayloadEncoder
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -62,6 +64,37 @@ class GroupProtocolPayloadEncoderTest {
                 .contentEquals(
                     encoder.encodeJoinRequest(
                         joinRequest.copy(memberSigningPublicKey = byteArrayOf(8))
+                    )
+                )
+        )
+        assertFalse(
+            encoder
+                .encodeInvite(invite)
+                .contentEquals(
+                    encoder.encodeInvite(
+                        invite.copy(
+                            profilePicture =
+                                ProfilePictureMetadata(
+                                    changedAtEpochMilliseconds = 10L,
+                                    hasPicture = true,
+                                    payload = ProfilePicturePayload(byteArrayOf(10))
+                                )
+                        )
+                    )
+                )
+        )
+        assertFalse(
+            encoder
+                .encodeJoinRequest(joinRequest)
+                .contentEquals(
+                    encoder.encodeJoinRequest(
+                        joinRequest.copy(
+                            profilePicture =
+                                ProfilePictureMetadata(
+                                    changedAtEpochMilliseconds = 11L,
+                                    hasPicture = false
+                                )
+                        )
                     )
                 )
         )
@@ -210,6 +243,20 @@ class GroupProtocolPayloadEncoderTest {
                 messageId = "message-1",
                 sentAtEpochMilliseconds = 123L
             )
+        val changedProfile =
+            encoder.encodeMessageAssociatedData(
+                version = 1,
+                groupId = "group-1",
+                epoch = 2,
+                messageId = "message-1",
+                sentAtEpochMilliseconds = 123L,
+                profilePicture =
+                    ProfilePictureMetadata(
+                        changedAtEpochMilliseconds = 10L,
+                        hasPicture = true,
+                        payload = ProfilePicturePayload(byteArrayOf(7))
+                    )
+            )
         val changedCiphertext =
             encoder.encodeMessageSignature(
                 associatedData = associatedData,
@@ -218,6 +265,7 @@ class GroupProtocolPayloadEncoderTest {
             )
 
         assertFalse(associatedData.contentEquals(changedEpoch))
+        assertFalse(associatedData.contentEquals(changedProfile))
         assertFalse(signature.contentEquals(changedCiphertext))
     }
 

@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.contacts.data.invitation
 
 import com.cbgm.sparrow.core.crypto.util.ByteArrays
+import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 
 class IdentityInvitationPayloadEncoder {
     fun encodeInvite(
@@ -10,6 +11,7 @@ class IdentityInvitationPayloadEncoder {
         displayName: String?,
         createdAtEpochMilliseconds: Long,
         expiresAtEpochMilliseconds: Long,
+        profilePicture: ProfilePictureMetadata,
         inviteChallenge: ByteArray,
         encryptionPublicKey: ByteArray,
         signingPublicKey: ByteArray
@@ -22,6 +24,7 @@ class IdentityInvitationPayloadEncoder {
             encodeNullableString(displayName),
             ByteArrays.encodeLong(createdAtEpochMilliseconds),
             ByteArrays.encodeLong(expiresAtEpochMilliseconds),
+            encodeProfilePicture(profilePicture),
             inviteChallenge,
             encryptionPublicKey,
             signingPublicKey
@@ -32,6 +35,7 @@ class IdentityInvitationPayloadEncoder {
         version: Int,
         invitationId: String,
         acceptedAtEpochMilliseconds: Long,
+        profilePicture: ProfilePictureMetadata,
         inviteChallenge: ByteArray,
         responseChallenge: ByteArray,
         inviterEncryptionPublicKey: ByteArray,
@@ -45,6 +49,7 @@ class IdentityInvitationPayloadEncoder {
             ByteArrays.encodeInt(version),
             invitationId.encodeToByteArray(),
             ByteArrays.encodeLong(acceptedAtEpochMilliseconds),
+            encodeProfilePicture(profilePicture),
             inviteChallenge,
             responseChallenge,
             inviterEncryptionPublicKey,
@@ -120,6 +125,13 @@ class IdentityInvitationPayloadEncoder {
         ByteArrays.concatenate(
             ByteArrays.withLengthPrefix(domainSeparator.encodeToByteArray()),
             *fields.map { field -> ByteArrays.withLengthPrefix(field) }.toTypedArray()
+        )
+
+    private fun encodeProfilePicture(metadata: ProfilePictureMetadata): ByteArray =
+        ByteArrays.concatenate(
+            ByteArrays.encodeLong(metadata.changedAtEpochMilliseconds),
+            byteArrayOf(if (metadata.hasPicture) 1 else 0),
+            ByteArrays.withLengthPrefix(metadata.payload?.bytes ?: byteArrayOf())
         )
 
     private fun encodeNullableString(value: String?): ByteArray =

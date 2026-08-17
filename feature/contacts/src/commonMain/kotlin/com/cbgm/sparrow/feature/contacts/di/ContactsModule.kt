@@ -119,7 +119,9 @@ val contactsModule =
                 phoneNumberNormalizer = get(),
                 contactVerificationRepository = get(),
                 modeRepository = get(),
-                contactBlocklistRepository = get()
+                contactBlocklistRepository = get(),
+                localProfilePictureMetadataProvider = get(),
+                remoteProfilePictureMetadataProcessor = get()
             )
         }
 

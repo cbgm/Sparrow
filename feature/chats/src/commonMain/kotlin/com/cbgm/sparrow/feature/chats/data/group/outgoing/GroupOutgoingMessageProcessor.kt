@@ -6,6 +6,8 @@ import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.GroupChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.ReadReceiptPacket
+import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
+import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
@@ -41,7 +43,8 @@ class GroupOutgoingMessageProcessor(
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val protocolOutbox: ProtocolOutbox,
     private val groupSecurityManager: GroupSecurityManager,
-    private val deliveryCoordinator: GroupMessageDeliveryCoordinator
+    private val deliveryCoordinator: GroupMessageDeliveryCoordinator,
+    private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider
 ) {
     private val sendMutex = Mutex()
     private val logger = SparrowLog.withTag("GroupOutgoingMessageProcessor")
@@ -253,6 +256,8 @@ class GroupOutgoingMessageProcessor(
         recipients: List<GroupMemberKeyEntity>
     ): Map<GroupMemberKeyEntity, GroupChatMessagePacket> {
         val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+        val profilePicture =
+            localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
         val securedMessage =
             groupSecurityManager
                 .encryptMessage(
@@ -260,7 +265,8 @@ class GroupOutgoingMessageProcessor(
                     messageId = message.id,
                     sentAtEpochMilliseconds = message.createdAtEpochMilliseconds,
                     plaintext = message.text,
-                    localSigningKeyPair = localSigningKeyPair
+                    localSigningKeyPair = localSigningKeyPair,
+                    profilePicture = profilePicture
                 ).getOrThrow()
 
         return recipients.associateWith { recipient ->
@@ -270,6 +276,7 @@ class GroupOutgoingMessageProcessor(
                 epoch = securedMessage.epoch,
                 messageId = message.id,
                 sentAtEpochMilliseconds = message.createdAtEpochMilliseconds,
+                profilePicture = profilePicture,
                 nonce = securedMessage.nonce.copyOf(),
                 ciphertext = securedMessage.ciphertext.copyOf(),
                 senderSignature = securedMessage.senderSignature.copyOf()

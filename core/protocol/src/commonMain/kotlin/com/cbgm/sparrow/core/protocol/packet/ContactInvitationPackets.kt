@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.core.protocol.packet
 
+import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.protocol.serializer.ByteArrayAsBase64Serializer
 import com.cbgm.sparrow.core.protocol.version.ProtocolVersion
 import kotlinx.serialization.SerialName
@@ -14,6 +15,7 @@ data class ContactInvitePacket(
     val displayName: String?,
     val createdAtEpochMilliseconds: Long,
     val expiresAtEpochMilliseconds: Long,
+    val profilePicture: ProfilePictureMetadata = ProfilePictureMetadata(),
     @Serializable(with = ByteArrayAsBase64Serializer::class)
     val inviteChallenge: ByteArray,
     @Serializable(with = ByteArrayAsBase64Serializer::class)
@@ -43,6 +45,7 @@ data class ContactInvitePacket(
             displayName == other.displayName &&
             createdAtEpochMilliseconds == other.createdAtEpochMilliseconds &&
             expiresAtEpochMilliseconds == other.expiresAtEpochMilliseconds &&
+            profilePicture == other.profilePicture &&
             inviteChallenge.contentEquals(other.inviteChallenge) &&
             encryptionPublicKey.contentEquals(other.encryptionPublicKey) &&
             signingPublicKey.contentEquals(other.signingPublicKey) &&
@@ -55,6 +58,7 @@ data class ContactInvitePacket(
         result = 31 * result + (displayName?.hashCode() ?: 0)
         result = 31 * result + createdAtEpochMilliseconds.hashCode()
         result = 31 * result + expiresAtEpochMilliseconds.hashCode()
+        result = 31 * result + profilePicture.hashCode()
         result = 31 * result + inviteChallenge.contentHashCode()
         result = 31 * result + encryptionPublicKey.contentHashCode()
         result = 31 * result + signingPublicKey.contentHashCode()
@@ -70,6 +74,7 @@ data class ContactInviteAcceptedPacket(
     override val version: Int = ProtocolVersion.CURRENT,
     val invitationId: String,
     val acceptedAtEpochMilliseconds: Long,
+    val profilePicture: ProfilePictureMetadata = ProfilePictureMetadata(),
     @Serializable(with = ByteArrayAsBase64Serializer::class)
     val inviteChallenge: ByteArray,
     @Serializable(with = ByteArrayAsBase64Serializer::class)
@@ -105,6 +110,7 @@ data class ContactInviteAcceptedPacket(
             version == other.version &&
             invitationId == other.invitationId &&
             acceptedAtEpochMilliseconds == other.acceptedAtEpochMilliseconds &&
+            profilePicture == other.profilePicture &&
             inviteChallenge.contentEquals(other.inviteChallenge) &&
             responseChallenge.contentEquals(other.responseChallenge) &&
             inviterEncryptionPublicKey.contentEquals(other.inviterEncryptionPublicKey) &&
@@ -118,6 +124,7 @@ data class ContactInviteAcceptedPacket(
         result = 31 * result + version
         result = 31 * result + invitationId.hashCode()
         result = 31 * result + acceptedAtEpochMilliseconds.hashCode()
+        result = 31 * result + profilePicture.hashCode()
         result = 31 * result + inviteChallenge.contentHashCode()
         result = 31 * result + responseChallenge.contentHashCode()
         result = 31 * result + inviterEncryptionPublicKey.contentHashCode()

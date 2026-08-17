@@ -8,8 +8,10 @@ import com.cbgm.sparrow.feature.identity.data.datasource.PrivateKeyStorage
 import com.cbgm.sparrow.feature.identity.data.datasource.PublicIdentityStorage
 import com.cbgm.sparrow.feature.identity.data.repository.AndroidLocalIdentityProfileRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.AndroidLocalProfilePictureRepositoryImpl
+import com.cbgm.sparrow.feature.identity.data.repository.AndroidRemoteProfilePictureRepositoryImpl
 import com.cbgm.sparrow.feature.identity.domain.repository.LocalIdentityProfileRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.LocalProfilePictureRepository
+import com.cbgm.sparrow.feature.identity.domain.repository.RemoteProfilePictureRepository
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -30,6 +32,13 @@ val androidIdentityStorageModule =
 
         single<LocalProfilePictureRepository> {
             AndroidLocalProfilePictureRepositoryImpl(
+                context = androidContext(),
+                preferences = get()
+            )
+        }
+
+        single<RemoteProfilePictureRepository> {
+            AndroidRemoteProfilePictureRepositoryImpl(
                 context = androidContext(),
                 preferences = get()
             )

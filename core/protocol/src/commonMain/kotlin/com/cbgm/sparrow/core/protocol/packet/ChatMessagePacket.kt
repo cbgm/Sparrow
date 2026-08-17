@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.core.protocol.packet
 
+import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.protocol.version.ProtocolVersion
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -18,7 +19,8 @@ data class ChatMessagePacket(
     val messageId: String,
     val sentAtEpochMilliseconds: Long,
     val text: String,
-    val senderPhoneNumber: String? = null
+    val senderPhoneNumber: String? = null,
+    val profilePicture: ProfilePictureMetadata = ProfilePictureMetadata()
 ) : SparrowPacket {
     init {
         require(packetId.isNotBlank()) {

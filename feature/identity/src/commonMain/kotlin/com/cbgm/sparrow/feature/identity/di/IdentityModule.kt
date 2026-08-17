@@ -6,8 +6,12 @@ import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningPublicKeyProvider
 import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
+import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProcessor
+import com.cbgm.sparrow.feature.identity.data.profile.IdentityRemoteProfilePictureMetadataProcessor
 import com.cbgm.sparrow.feature.identity.data.provider.IdentityLocalEncryptionKeyPairProvider
 import com.cbgm.sparrow.feature.identity.data.provider.IdentityLocalPhoneNumberProvider
+import com.cbgm.sparrow.feature.identity.data.provider.IdentityLocalProfilePictureMetadataProvider
 import com.cbgm.sparrow.feature.identity.data.provider.IdentityLocalPublicIdentityProvider
 import com.cbgm.sparrow.feature.identity.data.provider.IdentityLocalSigningKeyPairProvider
 import com.cbgm.sparrow.feature.identity.data.provider.IdentityLocalSigningPublicKeyProvider
@@ -80,6 +84,14 @@ val identityModule =
 
         factory {
             RemoveLocalProfilePictureUseCase(repository = get<LocalProfilePictureRepository>())
+        }
+
+        single<LocalProfilePictureMetadataProvider> {
+            IdentityLocalProfilePictureMetadataProvider(repository = get())
+        }
+
+        single<RemoteProfilePictureMetadataProcessor> {
+            IdentityRemoteProfilePictureMetadataProcessor(repository = get())
         }
 
         factory {

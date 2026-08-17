@@ -7,6 +7,8 @@ import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.ChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.ReadReceiptPacket
 import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
+import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.entity.MessageEntity
@@ -33,6 +35,7 @@ class DirectOutgoingMessageProcessor(
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
     private val protocolOutbox: ProtocolOutbox,
     private val identityInvitationRepository: IdentityInvitationRepository,
+    private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
     private val deliveryCoordinator: DirectMessageDeliveryCoordinator
 ) {
     private val logger = SparrowLog.withTag("DirectOutgoingMessageProcessor")
@@ -114,7 +117,8 @@ class DirectOutgoingMessageProcessor(
             messageId = IdGenerator.generate(prefix = "message"),
             sentAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
             text = text,
-            senderPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow()
+            senderPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow(),
+            profilePicture = localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
         )
 
     private suspend fun storeQueuedMessage(

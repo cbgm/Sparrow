@@ -14,6 +14,7 @@ import com.cbgm.sparrow.core.protocol.packet.GroupMemberPayload
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMembershipChangePayload
 import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
+import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 
 class GroupProtocolPayloadEncoder {
     fun encodeConversationDeleted(packet: GroupConversationDeletedPacket): ByteArray =
@@ -38,6 +39,7 @@ class GroupProtocolPayloadEncoder {
             encodeString(packet.title),
             ByteArrays.encodeLong(packet.createdAtEpochMilliseconds),
             ByteArrays.encodeLong(packet.expiresAtEpochMilliseconds),
+            encodeProfilePicture(packet.profilePicture),
             ByteArrays.withLengthPrefix(packet.challenge),
             ByteArrays.withLengthPrefix(packet.ownerEncryptionPublicKey),
             ByteArrays.withLengthPrefix(packet.ownerSigningPublicKey)
@@ -62,6 +64,7 @@ class GroupProtocolPayloadEncoder {
             encodeString(packet.packetId),
             encodeString(packet.invitationId),
             encodeString(packet.groupId),
+            encodeProfilePicture(packet.profilePicture),
             ByteArrays.withLengthPrefix(packet.challenge),
             ByteArrays.withLengthPrefix(packet.memberEncryptionPublicKey),
             ByteArrays.withLengthPrefix(packet.memberSigningPublicKey)
@@ -171,7 +174,8 @@ class GroupProtocolPayloadEncoder {
         groupId: String,
         epoch: Int,
         messageId: String,
-        sentAtEpochMilliseconds: Long
+        sentAtEpochMilliseconds: Long,
+        profilePicture: ProfilePictureMetadata = ProfilePictureMetadata()
     ): ByteArray =
         ByteArrays.concatenate(
             MESSAGE_ASSOCIATED_DATA_DOMAIN,
@@ -179,7 +183,8 @@ class GroupProtocolPayloadEncoder {
             encodeString(groupId),
             ByteArrays.encodeInt(epoch),
             encodeString(messageId),
-            ByteArrays.encodeLong(sentAtEpochMilliseconds)
+            ByteArrays.encodeLong(sentAtEpochMilliseconds),
+            encodeProfilePicture(profilePicture)
         )
 
     fun encodeMessageSignature(
@@ -192,6 +197,13 @@ class GroupProtocolPayloadEncoder {
             ByteArrays.withLengthPrefix(associatedData),
             ByteArrays.withLengthPrefix(nonce),
             ByteArrays.withLengthPrefix(ciphertext)
+        )
+
+    private fun encodeProfilePicture(metadata: ProfilePictureMetadata): ByteArray =
+        ByteArrays.concatenate(
+            ByteArrays.encodeLong(metadata.changedAtEpochMilliseconds),
+            byteArrayOf(if (metadata.hasPicture) 1 else 0),
+            ByteArrays.withLengthPrefix(metadata.payload?.bytes ?: byteArrayOf())
         )
 
     private fun encodeMembers(members: List<GroupMemberPayload>): ByteArray =
