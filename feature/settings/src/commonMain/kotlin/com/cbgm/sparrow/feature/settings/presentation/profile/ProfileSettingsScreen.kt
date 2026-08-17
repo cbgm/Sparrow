@@ -14,17 +14,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,10 +40,13 @@ import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.identity.domain.model.LocalProfilePicture
+import com.cbgm.sparrow.feature.settings.presentation.profile.component.ProfilePictureSourceDialog
 import com.cbgm.sparrow.feature.settings.presentation.profile.model.ProfileSettingsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.profile.model.ProfileSettingsUiState
 import com.cbgm.sparrow.feature.settings.presentation.profile.platform.ProfilePictureImage
-import com.cbgm.sparrow.feature.settings.presentation.profile.platform.rememberProfilePictureEditorLauncher
+import com.cbgm.sparrow.feature.settings.presentation.profile.platform.cropAndEncodeProfilePicture
+import com.cbgm.sparrow.feature.settings.presentation.profile.platform.rememberProfilePictureSourceLauncher
+import com.cbgm.sparrow.feature.settings.presentation.profile.screen.ProfilePictureCropScreen
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_settings_profile
 import com.cbgm.sparrow.resources.feature_settings_profile_picture_add
@@ -57,8 +62,44 @@ fun ProfileSettingsScreen(
     onUiEvent: (ProfileSettingsUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val launchPictureEditor = rememberProfilePictureEditorLauncher { bytes ->
-        onUiEvent(ProfileSettingsUiEvent.PictureSelected(bytes))
+    var showPictureSourceChooser by remember { mutableStateOf(false) }
+    var sourcePictureBytes by remember { mutableStateOf<ByteArray?>(null) }
+
+    val pictureSourceLauncher = rememberProfilePictureSourceLauncher { bytes ->
+        if (bytes.isNotEmpty()) {
+            sourcePictureBytes = bytes
+        }
+    }
+
+    sourcePictureBytes?.let { sourceBytes ->
+        ProfilePictureCropScreen(
+            sourceBytes = sourceBytes,
+            onConfirm = { cropRegion ->
+                cropAndEncodeProfilePicture(
+                    sourceBytes = sourceBytes,
+                    cropRegion = cropRegion
+                )?.let { croppedBytes ->
+                    sourcePictureBytes = null
+                    onUiEvent(ProfileSettingsUiEvent.PictureSelected(croppedBytes))
+                }
+            },
+            onDismiss = { sourcePictureBytes = null }
+        )
+        return
+    }
+
+    if (showPictureSourceChooser) {
+        ProfilePictureSourceDialog(
+            onCamera = {
+                showPictureSourceChooser = false
+                pictureSourceLauncher.launchCamera()
+            },
+            onGallery = {
+                showPictureSourceChooser = false
+                pictureSourceLauncher.launchGallery()
+            },
+            onDismiss = { showPictureSourceChooser = false }
+        )
     }
 
     SparrowLazyScaffold(
@@ -71,7 +112,7 @@ fun ProfileSettingsScreen(
         Content(
             uiState = uiState,
             innerPadding = innerPadding,
-            onChangePicture = launchPictureEditor,
+            onChangePicture = { showPictureSourceChooser = true },
             onRemovePicture = { onUiEvent(ProfileSettingsUiEvent.RemovePictureClicked) }
         )
     }
@@ -113,11 +154,10 @@ private fun Content(
     onRemovePicture: () -> Unit
 ) {
     Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = MaterialTheme.spacing.screenPadding),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)
+            .padding(horizontal = MaterialTheme.spacing.screenPadding),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
     ) {
@@ -143,17 +183,13 @@ private fun Content(
             onClick = onChangePicture,
             enabled = !uiState.isSaving,
             modifier = Modifier.fillMaxWidth(),
-            content = {
-                Text(
-                    text = stringResource(
-                        if (uiState.profilePicture.hasPicture) {
-                            Res.string.feature_settings_profile_picture_change
-                        } else {
-                            Res.string.feature_settings_profile_picture_add
-                        }
-                    )
-                )
-            }
+            text = stringResource(
+                if (uiState.profilePicture.hasPicture) {
+                    Res.string.feature_settings_profile_picture_change
+                } else {
+                    Res.string.feature_settings_profile_picture_add
+                }
+            )
         )
 
         if (uiState.profilePicture.hasPicture) {
@@ -163,9 +199,7 @@ private fun Content(
                 onClick = onRemovePicture,
                 enabled = !uiState.isSaving,
                 modifier = Modifier.fillMaxWidth(),
-                content = {
-                    Text(text = stringResource(Res.string.feature_settings_profile_picture_remove))
-                }
+                text = stringResource(Res.string.feature_settings_profile_picture_remove)
             )
         }
 
@@ -186,11 +220,10 @@ private fun ProfilePicture(
     isSaving: Boolean
 ) {
     Box(
-        modifier =
-            Modifier
-                .size(156.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+        modifier = Modifier
+            .size(156.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center
     ) {
         val bytes = picture.bytes
@@ -211,10 +244,9 @@ private fun ProfilePicture(
 
         if (isSaving) {
             Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.35f)),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.35f)),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
