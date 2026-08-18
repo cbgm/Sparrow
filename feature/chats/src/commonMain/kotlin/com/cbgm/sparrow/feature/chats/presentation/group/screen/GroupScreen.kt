@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -699,10 +700,10 @@ private fun MembershipSystemMessage(
             Row(
                 modifier =
                     Modifier.padding(
-                        horizontal = MaterialTheme.spacing.small,
+                        horizontal = MaterialTheme.spacing.base,
                         vertical = MaterialTheme.spacing.base
                     ),
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -712,11 +713,12 @@ private fun MembershipSystemMessage(
                         } else {
                             Icons.Default.PersonRemove
                         },
+                    modifier = Modifier.size(15.dp),
                     contentDescription = null
                 )
                 Text(
                     text = text,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.labelMedium
                 )
             }
         }
