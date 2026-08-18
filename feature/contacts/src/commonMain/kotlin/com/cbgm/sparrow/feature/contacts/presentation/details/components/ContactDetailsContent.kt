@@ -35,11 +35,12 @@ import org.jetbrains.compose.resources.stringResource
 internal fun ContactDetailsContent(
     contact: Contact,
     safetyNumber: SafetyNumber?,
+    modifier: Modifier = Modifier,
+    profilePictureBytes: ByteArray? = null,
     onShareContact: () -> Unit,
     onVerifyIdentity: () -> Unit,
     scrollState: ScrollState,
-    innerPadding: PaddingValues,
-    modifier: Modifier = Modifier
+    innerPadding: PaddingValues
 ) {
     Column(
         modifier =
@@ -53,7 +54,7 @@ internal fun ContactDetailsContent(
                 ),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
     ) {
-        ContactHeader(contact = contact)
+        ContactHeader(contact = contact, profilePictureBytes = profilePictureBytes)
 
         SparrowApprovalButton(
             onClick = onShareContact,

@@ -45,7 +45,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
-import com.cbgm.sparrow.core.ui.component.ContactAvatar
+import com.cbgm.sparrow.core.ui.component.Avatar
 import com.cbgm.sparrow.core.ui.component.PatternBackground
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -163,7 +163,11 @@ private fun TopBar(
                     modifier = Modifier.clickable { onUiEvent(DirectUiEvent.HeaderClicked) },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    ContactAvatar(name = uiState.contactName, size = 36.dp)
+                    Avatar(
+                        name = uiState.contactName,
+                        pictureBytes = uiState.profilePictureBytes,
+                        size = 36.dp
+                    )
                     Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
                     Text(
                         text = uiState.contactName,

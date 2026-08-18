@@ -48,6 +48,7 @@ fun DirectRoute(
         }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val profilePictureBytes by viewModel.profilePictureBytes.collectAsStateWithLifecycle()
     var showIdentitySetupDialog by remember(contactId) { mutableStateOf(false) }
 
     LaunchedEffect(contactId) {
@@ -72,7 +73,7 @@ fun DirectRoute(
     }
 
     DirectScreen(
-        uiState = uiState,
+        uiState = uiState.copy(profilePictureBytes = profilePictureBytes),
         onUiEvent = { event ->
             if (event == DirectUiEvent.ManualIdentitySetupClicked) {
                 showIdentitySetupDialog = true

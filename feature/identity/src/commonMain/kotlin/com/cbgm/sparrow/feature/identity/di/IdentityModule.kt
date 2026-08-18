@@ -8,6 +8,7 @@ import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
 import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
 import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProcessor
+import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureProvider
 import com.cbgm.sparrow.feature.identity.data.datasource.PublicIdentityStorage
 import com.cbgm.sparrow.feature.identity.data.datasource.PublicIdentityStorageImpl
 import com.cbgm.sparrow.feature.identity.data.profile.IdentityRemoteProfilePictureMetadataProcessor
@@ -17,6 +18,7 @@ import com.cbgm.sparrow.feature.identity.data.provider.IdentityLocalProfilePictu
 import com.cbgm.sparrow.feature.identity.data.provider.IdentityLocalPublicIdentityProvider
 import com.cbgm.sparrow.feature.identity.data.provider.IdentityLocalSigningKeyPairProvider
 import com.cbgm.sparrow.feature.identity.data.provider.IdentityLocalSigningPublicKeyProvider
+import com.cbgm.sparrow.feature.identity.data.provider.IdentityRemoteProfilePictureProvider
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityShareRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.LocalIdentityProfileRepositoryImpl
@@ -120,6 +122,10 @@ val identityModule =
 
         single<RemoteProfilePictureMetadataProcessor> {
             IdentityRemoteProfilePictureMetadataProcessor(repository = get())
+        }
+
+        single<RemoteProfilePictureProvider> {
+            IdentityRemoteProfilePictureProvider(repository = get())
         }
 
         factory {

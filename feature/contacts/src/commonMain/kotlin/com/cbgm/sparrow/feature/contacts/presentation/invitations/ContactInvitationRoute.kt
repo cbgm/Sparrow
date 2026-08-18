@@ -15,6 +15,7 @@ fun ContactInvitationRoute(
 ) {
     val invitations by viewModel.pendingInvitations.collectAsStateWithLifecycle()
     val processingInvitationId by viewModel.processingInvitationId.collectAsStateWithLifecycle()
+    val profilePictures by viewModel.profilePictures.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(viewModel) {
@@ -28,6 +29,7 @@ fun ContactInvitationRoute(
     ContactInvitationsScreen(
         invitations = invitations,
         processingInvitationId = processingInvitationId,
+        profilePictures = profilePictures,
         snackbarHostState = snackbarHostState,
         onUiEvent = viewModel::onUiEvent
     )

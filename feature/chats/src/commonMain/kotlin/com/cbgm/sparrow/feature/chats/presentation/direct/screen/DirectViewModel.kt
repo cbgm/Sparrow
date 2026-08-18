@@ -13,6 +13,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.direct.RefreshDirectDeliver
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.RetryDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SendDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SetDirectTypingUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.profile.ObserveRemoteProfilePicturesUseCase
 import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.isDirectChatAuthorized
 import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.resolveContactName
 import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.toSecurityState
@@ -49,6 +50,7 @@ class DirectViewModel(
     private val ensureIdentityExchangeStarted: EnsureIdentityExchangeStartedUseCase,
     observeIdentityHandshakeState: ObserveIdentityHandshakeStateUseCase,
     observeContact: ObserveContactUseCase,
+    observeProfilePictures: ObserveRemoteProfilePicturesUseCase,
     private val observeTyping: ObserveDirectTypingUseCase,
     private val setTyping: SetDirectTypingUseCase
 ) : BaseViewModel() {
@@ -63,6 +65,13 @@ class DirectViewModel(
     private val conversationFlow: Flow<DirectConversation?> = observeConversation(conversationId)
     private val contactFlow: Flow<Contact?> = observeContact(contactId = contactId)
     private val identityHandshakeFlow: Flow<IdentityHandshakeState?> = observeIdentityHandshakeState(contactId)
+    val profilePictureBytes: StateFlow<ByteArray?> =
+        observeProfilePictures(contactId)
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000L),
+                initialValue = null
+            )
     private val identitySetupModeFlow: StateFlow<DirectIdentitySetupMode> =
         observeIdentitySetupMode()
             .stateIn(

@@ -171,6 +171,7 @@ private fun ContactsContent(
         is ContactsUiState.Content -> {
             ContactsList(
                 groups = uiState.groups,
+                profilePictures = uiState.profilePictures,
                 mode = mode,
                 innerPadding = innerPadding,
                 listState = listState,
@@ -207,6 +208,7 @@ private fun ContactsContent(
 @Composable
 private fun ContactsList(
     groups: List<ContactGroupEntity>,
+    profilePictures: Map<String, ByteArray?>,
     mode: ContactsScreenMode,
     innerPadding: PaddingValues,
     listState: LazyListState,
@@ -234,6 +236,7 @@ private fun ContactsList(
 
         contactGroups(
             groups = groups,
+            profilePictures = profilePictures,
             onContactClick = { contact ->
                 when (mode) {
                     is ContactsScreenMode.Overview -> {

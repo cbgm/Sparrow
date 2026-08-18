@@ -8,6 +8,7 @@ import com.cbgm.sparrow.feature.contacts.domain.model.IdentityHandshakeState
 data class DirectUiState(
     val contactId: String = "",
     val contactName: String = "",
+    val profilePictureBytes: ByteArray? = null,
     val messages: List<MessageBubbleModel> = emptyList(),
     val messageText: String = "",
     val isContactTyping: Boolean = false,

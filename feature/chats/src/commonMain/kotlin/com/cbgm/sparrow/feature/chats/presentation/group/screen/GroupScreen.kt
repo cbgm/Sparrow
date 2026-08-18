@@ -11,15 +11,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material3.CircularProgressIndicator
@@ -41,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.component.Avatar
 import com.cbgm.sparrow.core.ui.component.PatternBackground
 import com.cbgm.sparrow.core.ui.component.SparrowBannerButton
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
@@ -165,7 +163,7 @@ private fun TopBar(
                     modifier = Modifier.clickable { onUiEvent(GroupUiEvent.HeaderClicked) },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Avatar()
+                    Avatar(name = uiState.title, size = 36.dp)
                     Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
                     Column {
                         Text(
@@ -410,24 +408,6 @@ private fun memberStatus(status: GroupMemberInvitationStatus): String =
         GroupMemberInvitationStatus.EXPIRED -> stringResource(Res.string.feature_chats_group_member_expired)
         GroupMemberInvitationStatus.FAILED -> stringResource(Res.string.feature_chats_group_member_failed)
     }
-
-@Composable
-private fun Avatar() {
-    Surface(
-        modifier = Modifier.size(36.dp),
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.18f)
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = Icons.Default.Group,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-    }
-}
 
 @Composable
 private fun EmptyContent(

@@ -4,26 +4,33 @@ import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportDeviceContactsUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactProfilePicturesUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
 import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.filterContacts
 import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.groupContactsByInitial
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsEffect
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsUiState
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ContactsViewModel(
     private val observeContacts: ObserveContactsUseCase,
-    private val importDeviceContacts: ImportDeviceContactsUseCase
+    private val importDeviceContacts: ImportDeviceContactsUseCase,
+    private val observeProfilePictures: ObserveContactProfilePicturesUseCase
 ) : BaseViewModel() {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -33,10 +40,10 @@ class ContactsViewModel(
 
     val uiState: StateFlow<ContactsUiState> =
         combine(
-            observeContacts(),
+            observeContactsWithProfilePictures(),
             searchQuery
-        ) { contacts, query ->
-            contacts.toUiState(query)
+        ) { snapshot, query ->
+            snapshot.contacts.toUiState(query, snapshot.profilePictures)
         }.catch { error ->
             emit(ContactsUiState.Error(error.message ?: "Failed to load contacts"))
         }.stateIn(
@@ -67,6 +74,18 @@ class ContactsViewModel(
         }
     }
 
+    private fun observeContactsWithProfilePictures(): Flow<ContactsSnapshot> =
+        observeContacts()
+            .flatMapLatest { contacts ->
+                observeProfilePictures(contacts.mapTo(mutableSetOf(), Contact::id))
+                    .map { profilePictures ->
+                        ContactsSnapshot(
+                            contacts = contacts,
+                            profilePictures = profilePictures
+                        )
+                    }
+            }
+
     private fun importContacts() {
         viewModelScope.launch {
             importDeviceContacts()
@@ -79,24 +98,31 @@ class ContactsViewModel(
     }
 
     private fun showPermissionDenied() {
-        viewModelScope.launch {
-            _effects.send(
-                ContactsEffect.ShowError(
-                    "Contacts permission is required to import device contacts."
-                )
+        emitEffect(
+            ContactsEffect.ShowError(
+                "Contacts permission is required to import device contacts."
             )
-        }
+        )
     }
 
     private fun emitEffect(effect: ContactsEffect) {
         _effects.trySend(effect)
     }
 
-    private fun List<Contact>.toUiState(query: String): ContactsUiState {
+    private fun List<Contact>.toUiState(
+        query: String,
+        profilePictures: Map<String, ByteArray?>
+    ): ContactsUiState {
         if (isEmpty()) return ContactsUiState.Empty
 
         return ContactsUiState.Content(
-            groups = filterContacts(query).groupContactsByInitial()
+            groups = filterContacts(query).groupContactsByInitial(),
+            profilePictures = profilePictures
         )
     }
+
+    private data class ContactsSnapshot(
+        val contacts: List<Contact>,
+        val profilePictures: Map<String, ByteArray?>
+    )
 }

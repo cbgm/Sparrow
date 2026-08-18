@@ -103,6 +103,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.SynchronizeGroupVerif
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.TransferGroupAdminAndLeaveUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.VerifyGroupMemberUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.overview.ObserveConversationOverviewsUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.profile.ObserveRemoteProfilePicturesUseCase
 import com.cbgm.sparrow.feature.chats.presentation.ContactsFlowViewModel
 import com.cbgm.sparrow.feature.chats.presentation.create.CreateGroupViewModel
 import com.cbgm.sparrow.feature.chats.presentation.details.GroupVerificationViewModel
@@ -267,6 +268,7 @@ private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::VerifyGroupMemberUseCase)
 
     singleOf(::ObserveConversationOverviewsUseCase)
+    singleOf(::ObserveRemoteProfilePicturesUseCase)
 }
 
 private fun org.koin.core.module.Module.registerViewModels() {
@@ -280,6 +282,7 @@ private fun org.koin.core.module.Module.registerViewModels() {
     viewModel {
         OverviewViewModel(
             observeConversations = get(),
+            observeProfilePictures = get(),
             deleteDirectConversation = get(),
             deleteGroupConversation = get(),
             getGroupLeaveRequirement = get()
@@ -289,6 +292,7 @@ private fun org.koin.core.module.Module.registerViewModels() {
     viewModel {
         CreateGroupViewModel(
             observeContacts = get(),
+            observeProfilePictures = get(),
             createGroupConversation = get()
         )
     }
@@ -318,6 +322,7 @@ private fun org.koin.core.module.Module.registerViewModels() {
             verifyGroupMember = get(),
             getContactSafetyNumber = get<GetContactSafetyNumberUseCase>(),
             observeContacts = get(),
+            observeProfilePictures = get(),
             addGroupMembers = get(),
             removeGroupMember = get(),
             promoteGroupMember = get(),
@@ -352,6 +357,7 @@ private fun org.koin.core.module.Module.registerViewModels() {
             ensureIdentityExchangeStarted = get<EnsureIdentityExchangeStartedUseCase>(),
             observeIdentityHandshakeState = get<ObserveIdentityHandshakeStateUseCase>(),
             observeContact = get<ObserveContactUseCase>(),
+            observeProfilePictures = get(),
             observeTyping = get(),
             setTyping = get()
         )

@@ -6,7 +6,8 @@ sealed interface ContactsUiState {
     data object Empty : ContactsUiState
 
     data class Content(
-        val groups: List<ContactGroupEntity>
+        val groups: List<ContactGroupEntity>,
+        val profilePictures: Map<String, ByteArray?> = emptyMap()
     ) : ContactsUiState
 
     data class Error(

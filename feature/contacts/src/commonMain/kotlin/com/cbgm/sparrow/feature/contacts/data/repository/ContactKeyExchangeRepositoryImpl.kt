@@ -178,6 +178,16 @@ class ContactKeyExchangeRepositoryImpl(
                 "Expected signing key must not be empty"
             }
 
+            val existingIdentity = contactDao.findPublicIdentityByContactId(contactId)
+            val isAlreadyMutual =
+                existingIdentity != null &&
+                    existingIdentity.encryptionPublicKey.contentEquals(expectedRemoteEncryptionPublicKey) &&
+                    existingIdentity.signingPublicKey.contentEquals(expectedRemoteSigningPublicKey) &&
+                    existingIdentity.keyExchangeStatus == KeyExchangeStatus.MUTUAL.name
+            if (isAlreadyMutual) {
+                return@runCatching
+            }
+
             val updatedRows =
                 contactDao.markLocallyAcceptedForHandshakeIfKeysMatch(
                     contactId = contactId,

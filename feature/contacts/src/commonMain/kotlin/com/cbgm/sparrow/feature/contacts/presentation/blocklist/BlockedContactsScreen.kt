@@ -33,7 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.cbgm.sparrow.core.ui.component.ContactAvatar
+import com.cbgm.sparrow.core.ui.component.Avatar
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -128,6 +128,7 @@ fun BlockedContactsScreen(
                     ) { contact ->
                         BlockedContactRow(
                             contact = contact,
+                            profilePictureBytes = uiState.profilePictures[contact.id],
                             enabled = uiState.processingContactId == null,
                             onUnblock = { onUiEvent(BlockedContactsUiEvent.UnblockContactClicked(contact.id)) }
                         )
@@ -165,6 +166,7 @@ fun BlockedContactsScreen(
             phoneNumber = uiState.phoneNumber,
             phoneNumberError = uiState.phoneNumberError,
             contacts = uiState.availableContacts,
+            profilePictures = uiState.profilePictures,
             enabled = uiState.processingContactId == null,
             onPhoneNumberChanged = { value ->
                 onUiEvent(BlockedContactsUiEvent.PhoneNumberChanged(value))
@@ -181,14 +183,16 @@ fun BlockedContactsScreen(
 @Composable
 private fun BlockedContactRow(
     contact: Contact,
+    profilePictureBytes: ByteArray?,
     enabled: Boolean,
     onUnblock: () -> Unit
 ) {
     Column {
         ListItem(
             leadingContent = {
-                ContactAvatar(
-                    name = contact.displayName ?: contact.preferredPhoneNumber?.value ?: "?"
+                Avatar(
+                    name = contact.displayName ?: contact.preferredPhoneNumber?.value ?: "?",
+                    pictureBytes = profilePictureBytes
                 )
             },
             headlineContent = {

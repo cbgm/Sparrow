@@ -46,7 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.cbgm.sparrow.core.ui.component.ContactAvatar
+import com.cbgm.sparrow.core.ui.component.Avatar
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.ConversationListItem
@@ -149,7 +149,10 @@ private fun ConversationItem(
                     .fillMaxWidth()
                     .clickable(onClick = onClick),
             leadingContent = {
-                ContactAvatar(conversation.contactName)
+                Avatar(
+                    name = conversation.contactName,
+                    pictureBytes = conversation.profilePictureBytes
+                )
             },
             headlineContent = {
                 Text(

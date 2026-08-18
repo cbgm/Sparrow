@@ -33,7 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.cbgm.sparrow.core.ui.component.ContactAvatar
+import com.cbgm.sparrow.core.ui.component.Avatar
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.StatusBadge
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -53,6 +53,7 @@ import org.jetbrains.compose.resources.stringResource
 
 fun LazyListScope.contactGroups(
     groups: List<ContactGroupEntity>,
+    profilePictures: Map<String, ByteArray?>,
     onContactClick: (Contact) -> Unit,
     trailingContent: @Composable (Contact) -> Unit
 ) {
@@ -62,6 +63,7 @@ fun LazyListScope.contactGroups(
     ) { group ->
         ContactGroup(
             group = group,
+            profilePictures = profilePictures,
             onContactClick = onContactClick,
             trailingContent = trailingContent
         )
@@ -221,6 +223,7 @@ fun ContactsErrorContent(
 @Composable
 private fun ContactGroup(
     group: ContactGroupEntity,
+    profilePictures: Map<String, ByteArray?>,
     onContactClick: (Contact) -> Unit,
     trailingContent: @Composable (Contact) -> Unit
 ) {
@@ -248,6 +251,7 @@ private fun ContactGroup(
                 group.contacts.forEach { contact ->
                     ContactListItem(
                         contact = contact,
+                        profilePictureBytes = profilePictures[contact.id],
                         onClick = {
                             onContactClick(contact)
                         },
@@ -264,6 +268,7 @@ private fun ContactGroup(
 @Composable
 private fun ContactListItem(
     contact: Contact,
+    profilePictureBytes: ByteArray?,
     onClick: () -> Unit,
     trailingContent: @Composable () -> Unit
 ) {
@@ -276,7 +281,10 @@ private fun ContactListItem(
                     .fillMaxWidth()
                     .clickable(onClick = onClick),
             leadingContent = {
-                ContactAvatar(name = contact.displayName ?: "?")
+                Avatar(
+                    name = contact.displayName ?: "?",
+                    pictureBytes = profilePictureBytes
+                )
             },
             headlineContent = {
                 Text(

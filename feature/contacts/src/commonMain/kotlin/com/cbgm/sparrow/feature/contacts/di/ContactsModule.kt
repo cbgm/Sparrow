@@ -42,6 +42,8 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportDeviceContactsUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactBlocklistUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactProfilePictureUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactProfilePicturesUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveIdentityHandshakeStateUseCase
@@ -274,6 +276,8 @@ val contactsModule =
         factory { ObservePendingContactInvitationCountUseCase(observePendingContactInvitations = get()) }
         factory { ObserveIdentityHandshakeStateUseCase(identityInvitationRepository = get()) }
         factory { ObserveIdentitySetupModeUseCase(repository = get()) }
+        factory { ObserveContactProfilePictureUseCase(provider = get()) }
+        factory { ObserveContactProfilePicturesUseCase(provider = get()) }
         factory { EnsureIdentityExchangeStartedUseCase(identityExchangeRepository = get()) }
 
         viewModel {
@@ -281,7 +285,8 @@ val contactsModule =
                 observePendingContactInvitations = get(),
                 acceptContactInvitation = get(),
                 declineContactInvitation = get(),
-                declineAndBlockContactInvitation = get()
+                declineAndBlockContactInvitation = get(),
+                observeProfilePictures = get()
             )
         }
 
@@ -289,24 +294,26 @@ val contactsModule =
             BlockedContactsViewModel(
                 observeContactBlocklist = get(),
                 blockContact = get(),
-                unblockContact = get()
+                unblockContact = get(),
+                observeProfilePictures = get()
             )
         }
 
         viewModel {
             ContactsViewModel(
                 observeContacts = get(),
-                importDeviceContacts = get()
+                importDeviceContacts = get(),
+                observeProfilePictures = get()
             )
         }
 
         viewModel { parameters ->
             ContactDetailsViewModel(
                 contactId = parameters.get(),
-                getContact = get(),
                 observeContact = get(),
                 getContactSafetyNumber = get(),
-                verifyContact = get()
+                verifyContact = get(),
+                observeProfilePicture = get()
             )
         }
     }

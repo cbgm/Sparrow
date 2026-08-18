@@ -18,9 +18,10 @@ import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlane
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiStatus
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -32,11 +33,45 @@ class ControlPlaneSettingsViewModel(
     private val healthMonitor: ControlPlaneHealthMonitor,
     private val directorySynchronizer: ControlPlaneDirectorySynchronizer
 ) : BaseViewModel() {
-    private val _uiState = MutableStateFlow(ControlPlaneSettingsUiState())
-    val uiState: StateFlow<ControlPlaneSettingsUiState> = _uiState.asStateFlow()
+    private val actionState = MutableStateFlow(ControlPlaneActionState())
+
+    private val configurationSnapshot =
+        combine(
+            statusStore.statuses,
+            configuration.manualBaseUrls,
+            configuration.directoryBaseUrls,
+            configuration.directoryUrl
+        ) { statuses, manual, directory, directoryUrl ->
+            ConfigurationSnapshot(
+                entries = statuses.toUiModels(manual, directory),
+                directoryUrl = directoryUrl.orEmpty()
+            )
+        }
+
+    val uiState: StateFlow<ControlPlaneSettingsUiState> =
+        combine(
+            configurationSnapshot,
+            actionState
+        ) { configuration, action ->
+            ControlPlaneSettingsUiState(
+                entries = configuration.entries,
+                showAddDialog = action.showAddDialog,
+                newUrl = action.newUrl,
+                addError = action.addError,
+                directoryUrl = configuration.directoryUrl,
+                directoryDraft = action.directoryDraft ?: configuration.directoryUrl,
+                directoryError = action.directoryError,
+                isRefreshing = action.isRefreshing,
+                isDirectorySyncing = action.isDirectorySyncing,
+                lastDirectoryCount = action.lastDirectoryCount
+            )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+            initialValue = ControlPlaneSettingsUiState()
+        )
 
     init {
-        observeConfiguration()
         startHealthRefresh()
         refreshAll()
     }
@@ -45,35 +80,41 @@ class ControlPlaneSettingsViewModel(
         when (event) {
             ControlPlaneSettingsUiEvent.BackClicked -> navigator.popBackStack()
             ControlPlaneSettingsUiEvent.AddClicked ->
-                _uiState.update { it.copy(showAddDialog = true, addError = null) }
+                actionState.update { it.copy(showAddDialog = true, addError = null) }
             ControlPlaneSettingsUiEvent.AddDismissed ->
-                _uiState.update { it.copy(showAddDialog = false, newUrl = "", addError = null) }
+                actionState.update { it.copy(showAddDialog = false, newUrl = "", addError = null) }
             ControlPlaneSettingsUiEvent.AddConfirmed -> addControlPlane()
             ControlPlaneSettingsUiEvent.DirectoryApply -> saveDirectoryUrl()
             ControlPlaneSettingsUiEvent.Refresh -> refreshAll()
             is ControlPlaneSettingsUiEvent.NewUrlChanged ->
-                _uiState.update { it.copy(newUrl = event.value, addError = null) }
+                actionState.update { it.copy(newUrl = event.value, addError = null) }
             is ControlPlaneSettingsUiEvent.DirectoryUrlChanged ->
-                _uiState.update { it.copy(directoryDraft = event.value, directoryError = null) }
+                actionState.update {
+                    it.copy(
+                        directoryDraft = event.value,
+                        directoryError = null
+                    )
+                }
             is ControlPlaneSettingsUiEvent.Remove -> removeControlPlane(event.url)
         }
     }
 
     private fun addControlPlane() {
-        val candidate = _uiState.value.newUrl.normalizeHttpUrl()
+        val candidate = actionState.value.newUrl.normalizeHttpUrl()
         if (candidate == null) {
-            _uiState.update { it.copy(addError = ControlPlaneSettingsError.INVALID_URL) }
+            actionState.update { it.copy(addError = ControlPlaneSettingsError.INVALID_URL) }
             return
         }
         if (candidate in configuration.manualBaseUrls.value) {
-            _uiState.update { it.copy(addError = ControlPlaneSettingsError.DUPLICATE) }
+            actionState.update { it.copy(addError = ControlPlaneSettingsError.DUPLICATE) }
             return
         }
+
         viewModelScope.launch {
             val directoryResult = directorySynchronizer.synchronizeFrom(candidate)
             if (directoryResult.isSuccess) {
-                _uiState.update { current ->
-                    current.copy(
+                actionState.update {
+                    it.copy(
                         showAddDialog = false,
                         newUrl = "",
                         addError = null,
@@ -88,12 +129,12 @@ class ControlPlaneSettingsViewModel(
             configuration
                 .addManual(candidate)
                 .onSuccess {
-                    _uiState.update {
+                    actionState.update {
                         it.copy(showAddDialog = false, newUrl = "", addError = null)
                     }
                     refreshAllNow()
                 }.onFailure {
-                    _uiState.update { it.copy(addError = ControlPlaneSettingsError.SAVE_FAILED) }
+                    actionState.update { it.copy(addError = ControlPlaneSettingsError.SAVE_FAILED) }
                 }
         }
     }
@@ -104,7 +145,7 @@ class ControlPlaneSettingsViewModel(
                 .removeManual(url)
                 .onSuccess { refreshAllNow() }
                 .onFailure {
-                    _uiState.update { state ->
+                    actionState.update { state ->
                         state.copy(addError = ControlPlaneSettingsError.KEEP_ONE)
                     }
                 }
@@ -112,50 +153,24 @@ class ControlPlaneSettingsViewModel(
     }
 
     private fun saveDirectoryUrl() {
-        val draft = _uiState.value.directoryDraft
+        val draft = actionState.value.directoryDraft ?: configuration.directoryUrl.value.orEmpty()
         val normalized = draft.takeIf(String::isNotBlank)?.normalizeHttpUrl()
         if (draft.isNotBlank() && normalized == null) {
-            _uiState.update { it.copy(directoryError = ControlPlaneDirectoryError.INVALID_URL) }
+            actionState.update { it.copy(directoryError = ControlPlaneDirectoryError.INVALID_URL) }
             return
         }
+
         viewModelScope.launch {
             configuration
                 .setDirectoryUrl(normalized)
-                .onSuccess { refreshAllNow() }
-                .onFailure {
-                    _uiState.update { state ->
+                .onSuccess {
+                    actionState.update { it.copy(directoryDraft = null) }
+                    refreshAllNow()
+                }.onFailure {
+                    actionState.update { state ->
                         state.copy(directoryError = ControlPlaneDirectoryError.SAVE_FAILED)
                     }
                 }
-        }
-    }
-
-    private fun observeConfiguration() {
-        viewModelScope.launch {
-            combine(
-                statusStore.statuses,
-                configuration.manualBaseUrls,
-                configuration.directoryBaseUrls,
-                configuration.directoryUrl
-            ) { statuses, manual, directory, directoryUrl ->
-                ConfigurationSnapshot(
-                    entries = statuses.toUiModels(manual, directory),
-                    directoryUrl = directoryUrl.orEmpty()
-                )
-            }.collect { snapshot ->
-                _uiState.update { current ->
-                    current.copy(
-                        entries = snapshot.entries,
-                        directoryUrl = snapshot.directoryUrl,
-                        directoryDraft =
-                            if (current.directoryDraft == current.directoryUrl) {
-                                snapshot.directoryUrl
-                            } else {
-                                current.directoryDraft
-                            }
-                    )
-                }
-            }
         }
     }
 
@@ -173,16 +188,23 @@ class ControlPlaneSettingsViewModel(
     }
 
     private suspend fun refreshAllNow() {
-        _uiState.update { it.copy(isRefreshing = true, directoryError = null) }
+        actionState.update {
+            it.copy(
+                isRefreshing = true,
+                directoryError = null
+            )
+        }
+
         val directoryResult =
             if (configuration.directoryUrl.value == null) {
                 Result.success(0)
             } else {
-                _uiState.update { it.copy(isDirectorySyncing = true) }
+                actionState.update { it.copy(isDirectorySyncing = true) }
                 directorySynchronizer.refresh()
             }
+
         healthMonitor.refresh()
-        _uiState.update { current ->
+        actionState.update { current ->
             current.copy(
                 isRefreshing = false,
                 isDirectorySyncing = false,
@@ -196,6 +218,17 @@ class ControlPlaneSettingsViewModel(
             )
         }
     }
+
+    private data class ControlPlaneActionState(
+        val showAddDialog: Boolean = false,
+        val newUrl: String = "",
+        val addError: ControlPlaneSettingsError? = null,
+        val directoryDraft: String? = null,
+        val directoryError: ControlPlaneDirectoryError? = null,
+        val isRefreshing: Boolean = false,
+        val isDirectorySyncing: Boolean = false,
+        val lastDirectoryCount: Int? = null
+    )
 
     private companion object {
         const val HEALTH_REFRESH_INTERVAL_MILLISECONDS = 1_000L

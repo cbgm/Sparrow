@@ -14,6 +14,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.RemoveGroupMemberUseC
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SynchronizeGroupVerificationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.TransferGroupAdminAndLeaveUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.VerifyGroupMemberUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.profile.ObserveRemoteProfilePicturesUseCase
 import com.cbgm.sparrow.feature.chats.presentation.details.mapper.buildGroupVerificationSummary
 import com.cbgm.sparrow.feature.chats.presentation.details.model.AddGroupMembersUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupDetailsUiEvent
@@ -23,18 +24,23 @@ import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupMemberMana
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupMemberVerificationState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupMemberVerificationUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupVerificationUiState
+import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
 import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.filterContacts
 import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.groupContactsByInitial
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class GroupVerificationViewModel(
     private val conversationId: String,
     observeGroupVerification: ObserveGroupVerificationUseCase,
@@ -42,6 +48,7 @@ class GroupVerificationViewModel(
     private val verifyGroupMember: VerifyGroupMemberUseCase,
     private val getContactSafetyNumber: GetContactSafetyNumberUseCase,
     observeContacts: ObserveContactsUseCase,
+    private val observeProfilePictures: ObserveRemoteProfilePicturesUseCase,
     private val addGroupMembers: AddGroupMembersUseCase,
     private val removeGroupMember: RemoveGroupMemberUseCase,
     private val promoteGroupMember: PromoteGroupMemberUseCase,
@@ -53,7 +60,18 @@ class GroupVerificationViewModel(
     private val verificationState = MutableStateFlow(GroupVerificationSelectionState())
     private val memberManagementState = MutableStateFlow(GroupMemberManagementState())
     private val leaveState = MutableStateFlow(GroupLeaveUiState())
-    private val contactsFlow = observeContacts()
+    private val contactsWithProfilePictures =
+        observeContacts()
+            .flatMapLatest { contacts ->
+                observeProfilePictures(contacts.mapTo(mutableSetOf(), Contact::id))
+                    .map { profilePictures ->
+                        ContactsSnapshot(
+                            contacts = contacts,
+                            profilePictures = profilePictures
+                        )
+                    }
+            }
+
     private val summaryFlow =
         combine(
             observeGroupVerification(conversationId),
@@ -78,10 +96,11 @@ class GroupVerificationViewModel(
         combine(
             summaryFlow,
             verificationState,
-            contactsFlow,
+            contactsWithProfilePictures,
             memberManagementState,
             leaveState
-        ) { summary, verification, contacts, memberManagement, leave ->
+        ) { summary, verification, contactsSnapshot, memberManagement, leave ->
+            val contacts = contactsSnapshot.contacts
             val blockedContactIds =
                 summary.currentMemberContactIds.toMutableSet().also { blocked ->
                     summary.members
@@ -110,6 +129,7 @@ class GroupVerificationViewModel(
                             availableContacts
                                 .filterContacts(memberManagement.searchQuery)
                                 .groupContactsByInitial(),
+                        profilePictures = contactsSnapshot.profilePictures,
                         selectedContactIds =
                             memberManagement.selectedContactIds.filterTo(mutableSetOf()) { contactId ->
                                 availableContacts.any { contact -> contact.id == contactId }
@@ -521,6 +541,11 @@ class GroupVerificationViewModel(
             leaveState.value = GroupLeaveUiState()
         }
     }
+
+    private data class ContactsSnapshot(
+        val contacts: List<Contact>,
+        val profilePictures: Map<String, ByteArray?>
+    )
 
     private data class GroupVerificationSelectionState(
         val selectedContactId: String? = null,

@@ -49,7 +49,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.cbgm.sparrow.core.ui.component.ContactAvatar
+import com.cbgm.sparrow.core.ui.component.Avatar
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.domain.model.PendingContactInvitation
@@ -74,6 +74,7 @@ private const val REVEAL_THRESHOLD_FRACTION = 0.5f
 fun ContactInvitationsScreen(
     invitations: List<PendingContactInvitation>,
     processingInvitationId: String?,
+    profilePictures: Map<String, ByteArray?>,
     snackbarHostState: SnackbarHostState,
     onUiEvent: (ContactInvitationUiEvent) -> Unit,
     modifier: Modifier = Modifier
@@ -146,7 +147,8 @@ fun ContactInvitationsScreen(
                     ) {
                         InvitationRow(
                             invitation = invitation,
-                            isProcessing = processingInvitationId == invitation.invitationId
+                            isProcessing = processingInvitationId == invitation.invitationId,
+                            profilePictureBytes = profilePictures[invitation.contactId]
                         )
                         HorizontalDivider(
                             modifier =
@@ -188,6 +190,7 @@ private fun EmptyInvitations(modifier: Modifier = Modifier) {
 private fun InvitationRow(
     invitation: PendingContactInvitation,
     isProcessing: Boolean,
+    profilePictureBytes: ByteArray?,
     modifier: Modifier = Modifier
 ) {
     val displayName =
@@ -198,7 +201,7 @@ private fun InvitationRow(
     ListItem(
         modifier = modifier.fillMaxWidth(),
         leadingContent = {
-            ContactAvatar(name = displayName)
+            Avatar(name = displayName, pictureBytes = profilePictureBytes)
         },
         headlineContent = {
             Text(

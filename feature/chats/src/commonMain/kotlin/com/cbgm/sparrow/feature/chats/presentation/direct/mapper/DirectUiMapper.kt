@@ -54,7 +54,9 @@ internal fun isDirectChatAuthorized(
 ): Boolean =
     when (identitySetupMode) {
         DirectIdentitySetupMode.AUTOMATIC_INVITATION ->
-            identityHandshakeState == IdentityHandshakeState.MUTUAL_UNVERIFIED
+            identityHandshakeState == IdentityHandshakeState.ACCEPTANCE_SENT ||
+                identityHandshakeState == IdentityHandshakeState.WAITING_FOR_READY ||
+                identityHandshakeState == IdentityHandshakeState.MUTUAL_UNVERIFIED
 
         DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING ->
             contact?.sparrowIdentity?.keyExchangeStatus == KeyExchangeStatus.MUTUAL

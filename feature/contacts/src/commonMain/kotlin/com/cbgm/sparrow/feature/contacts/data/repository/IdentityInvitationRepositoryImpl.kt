@@ -272,17 +272,25 @@ class IdentityInvitationRepositoryImpl(
                     latestInvitation = latestInvitation,
                     latestAuthorizationEvent = latestAuthorizationEvent
                 )
-            if (state != IdentityHandshakeState.MUTUAL_UNVERIFIED) {
+            if (state !in DIRECT_CHAT_AUTHORIZED_STATES) {
                 return@combine state
             }
 
+            val authorizationEvent =
+                when (state) {
+                    IdentityHandshakeState.ACCEPTANCE_SENT,
+                    IdentityHandshakeState.WAITING_FOR_READY -> latestInvitation
+
+                    IdentityHandshakeState.MUTUAL_UNVERIFIED -> latestAuthorizationEvent
+                    else -> null
+                }
             val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrNull()
             if (
-                latestAuthorizationEvent != null &&
+                authorizationEvent != null &&
                 localIdentity != null &&
-                isBoundToLocalIdentity(latestAuthorizationEvent, localIdentity)
+                isBoundToLocalIdentity(authorizationEvent, localIdentity)
             ) {
-                IdentityHandshakeState.MUTUAL_UNVERIFIED
+                state
             } else {
                 null
             }
@@ -373,6 +381,12 @@ class IdentityInvitationRepositoryImpl(
                     )
                     throw error
                 }
+                contactKeyExchangeRepository
+                    .markMutual(
+                        contactId = invitation.contactId,
+                        expectedRemoteEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
+                        expectedRemoteSigningPublicKey = invitation.remoteSigningPublicKey
+                    ).getOrThrow()
                 invitationDao.upsert(
                     requireNotNull(invitationDao.findById(invitationId)).copy(
                         state = IdentityHandshakeState.WAITING_FOR_READY.name,
@@ -1518,12 +1532,23 @@ class IdentityInvitationRepositoryImpl(
                 states = AUTHORIZATION_EVENT_STATES
             )
 
-        return resolveObservedState(
-            latestInvitation = latestInvitation,
-            latestAuthorizationEvent = latestAuthorizationEvent
-        ) == IdentityHandshakeState.MUTUAL_UNVERIFIED &&
-            latestAuthorizationEvent != null &&
-            isBoundToLocalIdentity(latestAuthorizationEvent, localIdentity)
+        val state =
+            resolveObservedState(
+                latestInvitation = latestInvitation,
+                latestAuthorizationEvent = latestAuthorizationEvent
+            )
+        val authorizationEvent =
+            when (state) {
+                IdentityHandshakeState.ACCEPTANCE_SENT,
+                IdentityHandshakeState.WAITING_FOR_READY -> latestInvitation
+
+                IdentityHandshakeState.MUTUAL_UNVERIFIED -> latestAuthorizationEvent
+                else -> null
+            }
+
+        return state in DIRECT_CHAT_AUTHORIZED_STATES &&
+            authorizationEvent != null &&
+            isBoundToLocalIdentity(authorizationEvent, localIdentity)
     }
 
     private fun isBoundToLocalIdentity(
@@ -1648,6 +1673,21 @@ class IdentityInvitationRepositoryImpl(
                     signature = signature.copyOf()
                 )
         ).getOrThrow()
+        contactKeyExchangeRepository
+            .markMutual(
+                contactId = invitation.contactId,
+                expectedRemoteEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
+                expectedRemoteSigningPublicKey = invitation.remoteSigningPublicKey
+            ).getOrThrow()
+        invitationDao.upsert(
+            invitation.copy(
+                state = IdentityHandshakeState.WAITING_FOR_READY.name,
+                updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
+                lastError = null,
+                localEncryptionPublicKey = localIdentity.encryptionPublicKey.copyOf(),
+                localSigningPublicKey = localIdentity.signingPublicKey.copyOf()
+            )
+        )
     }
 
     private suspend fun queueReadyReplay(
@@ -1878,6 +1918,13 @@ class IdentityInvitationRepositoryImpl(
         const val MINIMUM_COUNTRY_CODE_DIGITS = 1
         const val MINIMUM_NATIONAL_NUMBER_DIGITS = 7
         const val SEALED_BOX_TRANSPORT_MODE = "SEALED_BOX"
+
+        val DIRECT_CHAT_AUTHORIZED_STATES =
+            setOf(
+                IdentityHandshakeState.ACCEPTANCE_SENT,
+                IdentityHandshakeState.WAITING_FOR_READY,
+                IdentityHandshakeState.MUTUAL_UNVERIFIED
+            )
 
         val AUTHORIZATION_EVENT_STATES =
             listOf(
