@@ -31,10 +31,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import kotlin.math.roundToInt
 
-private val defaultSwipeActionWidth = 80.dp
+private val defaultSwipeActionWidth = Dimens.SwipeRevealActions.actionWidth
 private const val DEFAULT_REVEAL_THRESHOLD_FRACTION = 0.5f
 
 data class SwipeRevealAction(

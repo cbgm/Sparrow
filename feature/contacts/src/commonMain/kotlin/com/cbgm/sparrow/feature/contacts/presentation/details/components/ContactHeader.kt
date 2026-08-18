@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
@@ -58,13 +59,13 @@ internal fun ContactHeader(
             SparrowAvatar(
                 name = contact.displayName.orEmpty(),
                 pictureBytes = profilePictureBytes,
-                size = 88.dp
+                size = Dimens.ContactDetailsScreen.avatarSize
             )
 
             when {
                 isMutuallyVerified ->
                     Surface(
-                        modifier = Modifier.size(26.dp),
+                        modifier = Modifier.size(Dimens.ContactDetailsScreen.verificationBadgeSize),
                         shape = CircleShape,
                         color = MaterialTheme.colorScheme.secondary
                     ) {
@@ -73,7 +74,7 @@ internal fun ContactHeader(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = null,
                                 tint = Color(0xFF071A2E),
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(Dimens.ContactDetailsScreen.headerStatusIconSize)
                             )
                         }
                     }

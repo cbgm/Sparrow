@@ -13,7 +13,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.startup
 import org.jetbrains.compose.resources.DrawableResource
@@ -39,45 +39,45 @@ fun PatternBackground(
             listOf(
                 PatternElement(
                     resource = Res.drawable.startup,
-                    size = 30.dp,
+                    size = Dimens.PatternBackground.firstIconSize,
                     rotation = -12f,
-                    offsetX = 10.dp,
-                    offsetY = 12.dp
+                    offsetX = Dimens.PatternBackground.firstOffsetX,
+                    offsetY = Dimens.PatternBackground.firstOffsetY
                 ),
                 PatternElement(
                     resource = Res.drawable.startup,
-                    size = 44.dp,
+                    size = Dimens.PatternBackground.secondIconSize,
                     rotation = 8f,
-                    offsetX = 72.dp,
-                    offsetY = 4.dp
+                    offsetX = Dimens.PatternBackground.secondOffsetX,
+                    offsetY = Dimens.PatternBackground.secondOffsetY
                 ),
                 PatternElement(
                     resource = Res.drawable.startup,
-                    size = 26.dp,
+                    size = Dimens.PatternBackground.thirdIconSize,
                     rotation = 18f,
-                    offsetX = 142.dp,
-                    offsetY = 34.dp
+                    offsetX = Dimens.PatternBackground.thirdOffsetX,
+                    offsetY = Dimens.PatternBackground.thirdOffsetY
                 ),
                 PatternElement(
                     resource = Res.drawable.startup,
-                    size = 38.dp,
+                    size = Dimens.PatternBackground.fourthIconSize,
                     rotation = -20f,
-                    offsetX = 26.dp,
-                    offsetY = 86.dp
+                    offsetX = Dimens.PatternBackground.fourthOffsetX,
+                    offsetY = Dimens.PatternBackground.fourthOffsetY
                 ),
                 PatternElement(
                     resource = Res.drawable.startup,
-                    size = 32.dp,
+                    size = Dimens.PatternBackground.fifthIconSize,
                     rotation = 6f,
-                    offsetX = 104.dp,
-                    offsetY = 104.dp
+                    offsetX = Dimens.PatternBackground.fifthOffsetX,
+                    offsetY = Dimens.PatternBackground.fifthOffsetY
                 ),
                 PatternElement(
                     resource = Res.drawable.startup,
-                    size = 22.dp,
+                    size = Dimens.PatternBackground.sixthIconSize,
                     rotation = 24f,
-                    offsetX = 156.dp,
-                    offsetY = 112.dp
+                    offsetX = Dimens.PatternBackground.sixthOffsetX,
+                    offsetY = Dimens.PatternBackground.sixthOffsetY
                 )
             )
         }
@@ -96,8 +96,8 @@ fun PatternBackground(
         Canvas(
             modifier = Modifier.matchParentSize()
         ) {
-            val cellWidthPx = 190.dp.toPx()
-            val cellHeightPx = 150.dp.toPx()
+            val cellWidthPx = Dimens.PatternBackground.cellWidth.toPx()
+            val cellHeightPx = Dimens.PatternBackground.cellHeight.toPx()
 
             var row = 0
             var cellY = -cellHeightPx

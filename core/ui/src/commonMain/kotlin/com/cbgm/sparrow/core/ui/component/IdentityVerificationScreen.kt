@@ -29,7 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_verify_contact
@@ -95,7 +95,7 @@ fun IdentityVerificationScreen(
                     Icon(
                         imageVector = Icons.Default.QrCodeScanner,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(Dimens.IdentityVerificationScreen.iconSize)
                     )
 
                     Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
@@ -158,8 +158,8 @@ fun IdentityVerificationScreen(
                 content = {
                     if (isVerifying) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(Dimens.IdentityVerificationScreen.iconSize),
+                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
                             color = MaterialTheme.colorScheme.onPrimary
                         )
                     } else {

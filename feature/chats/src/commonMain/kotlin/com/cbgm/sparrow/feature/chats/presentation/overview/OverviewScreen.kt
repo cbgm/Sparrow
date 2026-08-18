@@ -47,6 +47,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.ConversationListItem
@@ -201,7 +202,10 @@ private fun ConversationItem(
                         Box(
                             modifier =
                                 Modifier
-                                    .sizeIn(minWidth = 20.dp, minHeight = 20.dp)
+                                    .sizeIn(
+                                        minWidth = Dimens.OverviewScreen.unreadBadgeMinSize,
+                                        minHeight = Dimens.OverviewScreen.unreadBadgeMinSize
+                                    )
                                     .background(MaterialTheme.colorScheme.secondary, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
@@ -234,7 +238,7 @@ private fun EmptyContent(modifier: Modifier = Modifier) {
         Box(
             modifier =
                 Modifier
-                    .size(80.dp)
+                    .size(Dimens.OverviewScreen.emptyStateIconContainerSize)
                     .background(
                         MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
                         CircleShape
@@ -245,7 +249,7 @@ private fun EmptyContent(modifier: Modifier = Modifier) {
                 imageVector = Icons.Default.ChatBubbleOutline,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(Dimens.OverviewScreen.emptyStateIconSize)
             )
         }
 
@@ -273,7 +277,7 @@ private fun SwipeRevealDeleteContainer(
     content: @Composable () -> Unit
 ) {
     val density = LocalDensity.current
-    val actionWidth = 80.dp
+    val actionWidth = Dimens.SwipeRevealActions.actionWidth
     val actionWidthPx = with(density) { actionWidth.toPx() }
     var offset by remember { mutableFloatStateOf(0f) }
 
@@ -294,7 +298,7 @@ private fun SwipeRevealDeleteContainer(
                 imageVector = Icons.Default.DeleteOutline,
                 contentDescription = stringResource(Res.string.feature_chats_delete_conversation),
                 tint = MaterialTheme.colorScheme.onError,
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(Dimens.OverviewScreen.deleteIconSize)
             )
         }
 

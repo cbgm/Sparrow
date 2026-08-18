@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 
 @Composable
@@ -154,7 +155,7 @@ fun SparrowOutlinedButton(
         enabled = enabled,
         border =
             BorderStroke(
-                width = 1.dp,
+                width = Dimens.Button.borderWidth,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             ),
         colors =
@@ -197,7 +198,7 @@ fun SparrowRoundApprovalButton(
             contentColor = MaterialTheme.colorScheme.onSurface
         ),
         contentPadding = PaddingValues(12.dp),
-        modifier = modifier.size(50.dp),
+        modifier = modifier.size(Dimens.Button.iconButtonSize),
         enabled = enabled
     ) {
         Icon(

@@ -14,6 +14,7 @@ data class Spacing(
 
     operator fun times(multiplier: Float): Dp = base * multiplier.toInt()
 
+    val micro = 4.dp
     val small = 16.dp
     val medium = 24.dp
     val large = 32.dp

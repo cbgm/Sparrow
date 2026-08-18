@@ -31,6 +31,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowDialogListItem
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.presentation.details.model.AddGroupMembersUiEvent
@@ -291,9 +292,9 @@ private fun LeaveDialog(
                         CircularProgressIndicator(
                             modifier =
                                 Modifier
-                                    .size(20.dp)
+                                    .size(Dimens.GroupDetailsScreen.verificationProgressSize)
                                     .padding(2.dp),
-                            strokeWidth = 2.dp
+                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
                         )
                     } else {
                         Text(text = stringResource(Res.string.feature_chats_group_leave))
@@ -419,8 +420,8 @@ private fun PromoteDialog(
                 content = {
                     if (isUpdating) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp
+                            modifier = Modifier.size(Dimens.GroupDetailsScreen.verificationProgressSize),
+                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
                         )
                     } else {
                         Text(stringResource(Res.string.feature_chats_group_promote_admin))
@@ -494,9 +495,9 @@ private fun RemoveDialog(
                         CircularProgressIndicator(
                             modifier =
                                 Modifier
-                                    .size(20.dp)
+                                    .size(Dimens.GroupDetailsScreen.verificationProgressSize)
                                     .padding(2.dp),
-                            strokeWidth = 2.dp
+                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
                         )
                     } else {
                         Text(text = stringResource(Res.string.feature_chats_group_remove_member))

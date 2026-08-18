@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 
@@ -68,9 +69,9 @@ internal fun MessageInput(
     /*
      * NEVER CHANGE THESE DURING THE MORPH.
      */
-    val buttonWidth = 42.dp
-    val buttonHeight = 30.dp
-    val overlap = 10.dp
+    val buttonWidth = Dimens.MessageInput.buttonWidth
+    val buttonHeight = Dimens.MessageInput.buttonHeight
+    val overlap = Dimens.MessageInput.overlap
 
     Row(
         modifier = modifier
@@ -86,7 +87,7 @@ internal fun MessageInput(
                 imageVector = Icons.Filled.AttachFile,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(Dimens.MessageInput.attachmentIconSize)
             )
         }
 
@@ -241,7 +242,7 @@ private fun RowScope.SendButton(
                         },
                     modifier = Modifier
                         .padding(start = MaterialTheme.spacing.base.div(2))
-                        .size(18.dp)
+                        .size(Dimens.MessageInput.sendIconSize)
                 )
             }
         }

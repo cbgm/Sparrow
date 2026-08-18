@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
@@ -204,7 +205,7 @@ private fun SecurityIndicator(message: MessageBubbleModel) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(14.dp),
+            modifier = Modifier.size(Dimens.MessageBubble.iconSize),
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.width(MaterialTheme.spacing.base))
@@ -230,7 +231,7 @@ private fun DeliveryIndicator(
                     Icon(
                         imageVector = Icons.Default.Schedule,
                         contentDescription = null,
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(Dimens.MessageBubble.iconSize)
                     )
                 }
             )
@@ -239,8 +240,8 @@ private fun DeliveryIndicator(
                 text = stringResource(Res.string.feature_chats_sending),
                 icon = {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(12.dp),
-                        strokeWidth = 1.5.dp
+                        modifier = Modifier.size(Dimens.MessageBubble.progressSize),
+                        strokeWidth = Dimens.MessageBubble.progressStrokeWidth
                     )
                 }
             )
@@ -267,7 +268,7 @@ private fun CheckDeliveryLabel(text: String) {
             Icon(
                 imageVector = Icons.Default.Check,
                 contentDescription = null,
-                modifier = Modifier.size(14.dp)
+                modifier = Modifier.size(Dimens.MessageBubble.iconSize)
             )
         }
     )
@@ -286,13 +287,13 @@ private fun DoubleCheckDeliveryLabel(
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
-                    modifier = Modifier.size(14.dp),
+                    modifier = Modifier.size(Dimens.MessageBubble.iconSize),
                     tint = color
                 )
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
-                    modifier = Modifier.size(14.dp).padding(start = 1.dp),
+                    modifier = Modifier.size(Dimens.MessageBubble.iconSize).padding(start = 1.dp),
                     tint = color
                 )
             }
@@ -306,7 +307,7 @@ private fun FailedDelivery(onRetryClick: () -> Unit) {
         Icon(
             imageVector = Icons.Default.ErrorOutline,
             contentDescription = null,
-            modifier = Modifier.size(14.dp),
+            modifier = Modifier.size(Dimens.MessageBubble.iconSize),
             tint = MaterialTheme.colorScheme.error
         )
         Spacer(modifier = Modifier.width(3.dp))
@@ -317,12 +318,12 @@ private fun FailedDelivery(onRetryClick: () -> Unit) {
         )
         IconButton(
             onClick = onRetryClick,
-            modifier = Modifier.size(28.dp)
+            modifier = Modifier.size(Dimens.MessageBubble.retrySize)
         ) {
             Icon(
                 imageVector = Icons.Default.Refresh,
                 contentDescription = null,
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(Dimens.MessageBubble.retryIconSize),
                 tint = MaterialTheme.colorScheme.error
             )
         }

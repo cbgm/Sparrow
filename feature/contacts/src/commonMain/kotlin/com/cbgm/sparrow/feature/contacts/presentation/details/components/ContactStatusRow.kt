@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 
@@ -34,7 +35,7 @@ internal fun ContactStatusRow(
             imageVector = icon,
             contentDescription = null,
             tint = iconColor,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(Dimens.ContactDetailsScreen.rowIconSize)
         )
         Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
         Column(modifier = Modifier.weight(1f)) {

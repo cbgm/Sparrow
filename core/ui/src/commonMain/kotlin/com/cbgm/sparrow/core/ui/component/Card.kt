@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Dimens
 
 private data class ShadowLayer(
     val outline: Outline,
@@ -33,7 +34,7 @@ private data class ShadowLayer(
 
 private fun Modifier.bottomFadingShadow(
     shape: Shape,
-    size: Dp = 14.dp,
+    size: Dp = Dimens.Card.iconSize,
     color: Color = Color.Black,
     maxAlpha: Float = 0.30f,
     layerCount: Int = 32
@@ -130,13 +131,13 @@ fun SparrowCard(
                     }
                 }.bottomFadingShadow(
                     shape = shape,
-                    size = 14.dp,
+                    size = Dimens.Card.iconSize,
                     maxAlpha = 0.30f
                 ),
         color = MaterialTheme.colorScheme.primaryContainer,
         shape = shape,
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
+        tonalElevation = Dimens.Base.zero,
+        shadowElevation = Dimens.Base.zero,
         content = content
     )
 }

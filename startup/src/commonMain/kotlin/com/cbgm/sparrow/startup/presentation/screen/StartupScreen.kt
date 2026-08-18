@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowCard
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiState
@@ -85,7 +86,7 @@ fun StartupScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            SparrowAnimation(modifier = Modifier.size(200.dp), true)
+            SparrowAnimation(modifier = Modifier.size(Dimens.StartupScreen.animationSize), true)
 
             Spacer(modifier = Modifier.height(18.dp))
 
@@ -108,7 +109,7 @@ fun StartupScreen(
                 modifier = Modifier.height(MaterialTheme.spacing.medium)
             )
 
-            SparrowCard(modifier = Modifier.widthIn(max = 520.dp)) {
+            SparrowCard(modifier = Modifier.widthIn(max = Dimens.StartupScreen.contentMaxWidth)) {
                 AnimatedContent(
                     targetState = uiState,
                     transitionSpec = {

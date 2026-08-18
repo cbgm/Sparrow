@@ -25,7 +25,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import kotlin.math.roundToInt
 
 @Composable
@@ -139,7 +139,7 @@ internal fun ProfilePictureCropCanvas(
             color = Color.White,
             radius = activeGeometry.cropRadius,
             center = center,
-            style = Stroke(width = 3.dp.toPx())
+            style = Stroke(width = Dimens.ProfilePictureCropScreen.guideStrokeWidth.toPx())
         )
     }
 }

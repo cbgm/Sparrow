@@ -35,6 +35,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
@@ -104,7 +105,7 @@ fun BlockedContactsScreen(
                         imageVector = Icons.Default.Block,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f),
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(Dimens.BlockedContactsScreen.avatarSize)
                     )
                     Text(
                         text = stringResource(Res.string.feature_contacts_blocked_contacts_empty),

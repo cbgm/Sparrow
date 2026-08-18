@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 
 @Composable
@@ -25,16 +25,16 @@ fun IconBadge(
     Box(
         modifier =
             Modifier
-                .size(80.dp)
+                .size(Dimens.IdentityScreen.iconBadgeSize)
                 .background(tint.copy(alpha = 0.12f), CircleShape)
-                .border(1.dp, tint.copy(alpha = 0.3f), CircleShape),
+                .border(Dimens.IdentityScreen.iconBadgeBorderWidth, tint.copy(alpha = 0.3f), CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = tint,
-            modifier = Modifier.size(36.dp)
+            modifier = Modifier.size(Dimens.IdentityScreen.iconBadgeIconSize)
         )
     }
 }

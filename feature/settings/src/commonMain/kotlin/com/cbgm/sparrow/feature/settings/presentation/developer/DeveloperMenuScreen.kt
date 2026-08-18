@@ -29,13 +29,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.transport.TransportDiagnosticConnectionState
 import com.cbgm.sparrow.core.transport.TransportDiagnostics
 import com.cbgm.sparrow.core.transport.TransportNodeDiagnostic
 import com.cbgm.sparrow.core.transport.TransportNodeDiagnosticState
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
@@ -209,8 +209,8 @@ private fun DangerZoneCard(
             ) {
                 if (isClearingLocalData) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(Dimens.DeveloperMenuScreen.progressSize),
+                        strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
                         color = MaterialTheme.colorScheme.error
                     )
                 } else {

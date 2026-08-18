@@ -43,6 +43,7 @@ import com.cbgm.sparrow.core.ui.component.PatternBackground
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowBannerButton
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
@@ -164,7 +165,7 @@ private fun TopBar(
                     modifier = Modifier.clickable { onUiEvent(GroupUiEvent.HeaderClicked) },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SparrowAvatar(name = uiState.title, pictureBytes = uiState.avatarBytes, size = 36.dp)
+                    SparrowAvatar(name = uiState.title, pictureBytes = uiState.avatarBytes, size = Dimens.GroupScreen.topBarAvatarSize)
                     Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
                     Column {
                         Text(
@@ -329,7 +330,7 @@ private fun GroupMessageBubble(
         SparrowAvatar(
             name = message.bubble.senderName.orEmpty(),
             pictureBytes = message.senderProfilePictureBytes,
-            size = 28.dp
+            size = Dimens.GroupScreen.typingAvatarSize
         )
         Spacer(modifier = Modifier.width(6.dp))
         MessageBubble(
@@ -703,7 +704,7 @@ private fun MembershipSystemMessage(
                         } else {
                             Icons.Default.PersonRemove
                         },
-                    modifier = Modifier.size(15.dp),
+                    modifier = Modifier.size(Dimens.GroupScreen.noticeIconSize),
                     contentDescription = null
                 )
                 Text(

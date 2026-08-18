@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_group_name
 import org.jetbrains.compose.resources.stringResource
@@ -95,8 +96,8 @@ fun GroupSelectionContactsTopBar(
                 ) {
                     if (confirming) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp
+                            modifier = Modifier.size(Dimens.ContactsScreen.selectionProgressSize),
+                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
                         )
                     } else {
                         Icon(

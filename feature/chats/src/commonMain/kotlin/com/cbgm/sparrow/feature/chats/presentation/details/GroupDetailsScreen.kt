@@ -60,6 +60,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
 import com.cbgm.sparrow.core.ui.component.SparrowStatusBadge
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupAvatarUiState
@@ -313,7 +314,7 @@ private fun LoadingContent(modifier: Modifier = Modifier) {
 @Composable
 private fun LoadingContentPreview() {
     SparrowTheme {
-        LoadingContent(modifier = Modifier.size(160.dp))
+        LoadingContent(modifier = Modifier.size(Dimens.GroupDetailsScreen.loadingSize))
     }
 }
 
@@ -393,12 +394,12 @@ private fun GroupAvatarSection(
             SparrowAvatar(
                 name = state.title,
                 pictureBytes = state.avatarBytes,
-                size = 104.dp
+                size = Dimens.GroupDetailsScreen.avatarSize
             )
             if (state.isSaving) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(32.dp),
-                    strokeWidth = 3.dp
+                    modifier = Modifier.size(Dimens.GroupDetailsScreen.avatarProgressSize),
+                    strokeWidth = Dimens.GroupDetailsScreen.avatarProgressStrokeWidth
                 )
             }
         }
@@ -617,7 +618,7 @@ private fun MemberRow(
                     imageVector = member.verificationStatusIcon(),
                     contentDescription = null,
                     tint = statusColor,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(Dimens.GroupDetailsScreen.sectionIconSize)
                 )
             },
             headlineContent = {
@@ -801,8 +802,8 @@ private fun MembersCard(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.small,
             color = MaterialTheme.colorScheme.primaryContainer,
-            tonalElevation = 2.dp,
-            shadowElevation = 1.dp
+            tonalElevation = Dimens.Card.tonalElevation,
+            shadowElevation = Dimens.Card.shadowElevation
         ) {
             Column {
                 summary.members.forEachIndexed { index, member ->

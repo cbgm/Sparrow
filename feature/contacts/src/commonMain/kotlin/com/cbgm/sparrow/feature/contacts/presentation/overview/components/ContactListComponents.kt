@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowStatusBadge
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
@@ -99,9 +100,9 @@ fun ContactSelectionCircle(
     Box(
         modifier =
             Modifier
-                .size(24.dp)
+                .size(Dimens.ContactsScreen.contactStatusSize)
                 .border(
-                    width = 2.dp,
+                    width = Dimens.ContactsScreen.contactStatusStroke,
                     color =
                         when {
                             selected -> MaterialTheme.colorScheme.secondary
@@ -119,7 +120,7 @@ fun ContactSelectionCircle(
             Icon(
                 imageVector = Icons.Default.Check,
                 contentDescription = null,
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(Dimens.ContactsScreen.contactStatusIconSize),
                 tint = MaterialTheme.colorScheme.background
             )
         }
@@ -149,7 +150,7 @@ fun EmptyContactsContent(modifier: Modifier = Modifier) {
             Box(
                 modifier =
                     Modifier
-                        .size(80.dp)
+                        .size(Dimens.ContactsScreen.emptyStateIconContainerSize)
                         .background(
                             color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
                             shape = CircleShape
@@ -160,7 +161,7 @@ fun EmptyContactsContent(modifier: Modifier = Modifier) {
                     imageVector = Icons.Default.Contacts,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(Dimens.ContactsScreen.emptyStateIconSize)
                 )
             }
 
@@ -244,8 +245,8 @@ private fun ContactGroup(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.small,
             color = MaterialTheme.colorScheme.primaryContainer,
-            tonalElevation = 2.dp,
-            shadowElevation = 1.dp
+            tonalElevation = Dimens.Card.tonalElevation,
+            shadowElevation = Dimens.Card.shadowElevation
         ) {
             Column {
                 group.contacts.forEach { contact ->

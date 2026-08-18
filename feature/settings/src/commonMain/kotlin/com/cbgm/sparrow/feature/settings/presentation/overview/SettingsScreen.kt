@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
@@ -291,7 +292,7 @@ private fun SettingsRow(
             imageVector = icon,
             contentDescription = null,
             tint = iconTint,
-            modifier = Modifier.size(22.dp)
+            modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize)
         )
 
         Spacer(modifier = Modifier.size(MaterialTheme.spacing.small))
@@ -315,7 +316,7 @@ private fun SettingsRow(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(Dimens.SettingsScreen.secondaryIconSize)
             )
         }
     }
@@ -345,7 +346,7 @@ private fun SettingsSwitchRow(
             imageVector = icon,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
-            modifier = Modifier.size(22.dp)
+            modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize)
         )
 
         Spacer(modifier = Modifier.size(MaterialTheme.spacing.small))

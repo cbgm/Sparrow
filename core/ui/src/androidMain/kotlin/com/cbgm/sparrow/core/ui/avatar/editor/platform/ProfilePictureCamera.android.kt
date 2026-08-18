@@ -31,6 +31,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
 import org.jetbrains.compose.resources.stringResource
@@ -150,7 +151,7 @@ internal fun ProfilePictureCameraScreen(
                     Modifier
                         .align(Alignment.BottomCenter)
                         .padding(bottom = 36.dp)
-                        .size(76.dp)
+                        .size(Dimens.ProfilePictureCameraScreen.buttonSize)
             ) {
                 Text("")
             }

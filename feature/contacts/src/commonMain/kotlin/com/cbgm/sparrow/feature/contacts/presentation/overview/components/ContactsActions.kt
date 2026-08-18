@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_create_group
@@ -49,7 +50,7 @@ private val SheetColor = Color(0xFF102A46)
 @Composable
 fun ContactsFloatingActionButton(onClick: () -> Unit) {
     FloatingActionButton(
-        modifier = Modifier.size(50.dp),
+        modifier = Modifier.size(Dimens.ContactsScreen.addContactButtonSize),
         onClick = onClick,
         containerColor = MaterialTheme.colorScheme.secondary,
         contentColor = MaterialTheme.colorScheme.background
@@ -57,7 +58,7 @@ fun ContactsFloatingActionButton(onClick: () -> Unit) {
         Icon(
             imageVector = Icons.Default.Add,
             contentDescription = null,
-            modifier = Modifier.size(28.dp)
+            modifier = Modifier.size(Dimens.ContactsScreen.addContactIconSize)
         )
     }
 }
@@ -68,15 +69,15 @@ fun CreateGroupListItem(onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.small,
         color = MaterialTheme.colorScheme.primaryContainer,
-        tonalElevation = 2.dp,
-        shadowElevation = 1.dp
+        tonalElevation = Dimens.Card.tonalElevation,
+        shadowElevation = Dimens.Card.shadowElevation
     ) {
         ListItem(
             modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
             leadingContent = {
                 Box(
                     modifier =
-                        Modifier.size(40.dp).background(
+                        Modifier.size(Dimens.ContactsScreen.menuIconContainerSize).background(
                             color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
                             shape = CircleShape
                         ),
@@ -144,8 +145,8 @@ private fun ImportContactSheet(
                     .padding(top = 10.dp)
                     .align(Alignment.CenterHorizontally)
                     .size(
-                        width = 36.dp,
-                        height = 4.dp
+                        width = Dimens.ContactsScreen.dragHandleWidth,
+                        height = Dimens.ContactsScreen.dragHandleHeight
                     ).background(
                         color = Color.White.copy(alpha = 0.25f),
                         shape = RoundedCornerShape(2.dp)
@@ -210,7 +211,7 @@ private fun ImportOptionRow(
                 imageVector = icon,
                 contentDescription = null,
                 tint = Color.White.copy(alpha = 0.85f),
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(Dimens.ContactsScreen.menuItemIconSize)
             )
         },
         headlineContent = {

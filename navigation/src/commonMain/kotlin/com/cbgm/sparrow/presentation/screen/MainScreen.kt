@@ -37,6 +37,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.component.SparrowScrollStateType
 import com.cbgm.sparrow.core.ui.component.SparrowTabbedScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowTabbedScrollStates
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.feature.chats.presentation.ContactsFlow
 import com.cbgm.sparrow.feature.chats.presentation.overview.OverviewRoute
@@ -199,7 +200,7 @@ private fun MainBottomBar(
                     Icon(
                         painter = painterResource(if (isSelected) tab.res else tab.resOutlined),
                         contentDescription = null,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(Dimens.MainScreen.navigationIconSize)
                     )
                 },
                 label = {

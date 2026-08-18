@@ -33,13 +33,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.avatar.editor.AvatarEditor
 import com.cbgm.sparrow.core.ui.avatar.editor.AvatarEditorStrings
 import com.cbgm.sparrow.core.ui.avatar.editor.platform.ProfilePictureImage
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.identity.domain.model.LocalProfilePicture
@@ -206,7 +206,7 @@ private fun ProfilePicture(
 ) {
     Box(
         modifier = Modifier
-            .size(156.dp)
+            .size(Dimens.ProfileSettingsScreen.avatarEditorSize)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center
@@ -223,7 +223,7 @@ private fun ProfilePicture(
                 imageVector = Icons.Default.Person,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
-                modifier = Modifier.size(72.dp)
+                modifier = Modifier.size(Dimens.ProfileSettingsScreen.avatarPlaceholderIconSize)
             )
         }
 

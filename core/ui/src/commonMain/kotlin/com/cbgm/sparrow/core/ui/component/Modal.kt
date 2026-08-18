@@ -26,6 +26,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import kotlinx.coroutines.launch
@@ -136,7 +137,7 @@ fun SparrowOverlayHost(
         sheetGesturesEnabled = !transitionRunning,
         shape = RectangleShape,
         containerColor = Color.Transparent,
-        tonalElevation = 0.dp,
+        tonalElevation = Dimens.Base.zero,
         scrimColor = scrimColor,
         dragHandle = null,
         contentWindowInsets = {

@@ -32,6 +32,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneDirectoryError
@@ -162,8 +163,8 @@ internal fun ControlPlaneDirectoryCard(
                 content = {
                     if (uiState.isDirectorySyncing) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(Dimens.ControlPlaneSettingsScreen.progressSize),
+                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
@@ -329,7 +330,7 @@ private fun StatusDot(status: ControlPlaneUiStatus) {
     Box(
         modifier =
             Modifier
-                .size(12.dp)
+                .size(Dimens.ControlPlaneSettingsScreen.statusIndicatorSize)
                 .background(statusColor(status), CircleShape)
     )
 }

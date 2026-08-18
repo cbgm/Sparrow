@@ -38,6 +38,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.PatternBackground
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contactimport.presentation.importing.model.ImportIdentityUiEvent
@@ -124,7 +125,7 @@ fun ImportIdentityScreen(
                 Icon(
                     imageVector = Icons.Default.QrCodeScanner,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(Dimens.ImportIdentityScreen.headerIconSize)
                 )
 
                 Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
@@ -308,8 +309,8 @@ private fun ImportButton(
     ) {
         if (isImporting) {
             CircularProgressIndicator(
-                modifier = Modifier.size(20.dp),
-                strokeWidth = 2.dp,
+                modifier = Modifier.size(Dimens.ImportIdentityScreen.progressSize),
+                strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
                 color = MaterialTheme.colorScheme.background
             )
         } else {
@@ -344,7 +345,7 @@ private fun StatusBanner(
                 imageVector = icon,
                 contentDescription = null,
                 tint = color,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(Dimens.ImportIdentityScreen.resultIconSize)
             )
 
             Spacer(modifier = Modifier.size(10.dp))

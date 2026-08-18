@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumber
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumberType
@@ -41,7 +42,7 @@ internal fun ContactPhoneNumberRow(
                 imageVector = Icons.Default.Phone,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(Dimens.ContactDetailsScreen.rowIconSize)
             )
         },
         headlineContent = {

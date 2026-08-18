@@ -55,6 +55,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowCard
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.identity.presentation.platform.QrCode
@@ -259,12 +260,12 @@ private fun IdentityOptionsContent(
         Box(
             modifier =
                 Modifier
-                    .size(88.dp)
+                    .size(Dimens.ShareIdentityScreen.avatarSize)
                     .background(
                         color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
                         shape = CircleShape
                     ).border(
-                        width = 1.dp,
+                        width = Dimens.ShareIdentityScreen.dividerWidth,
                         color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
                         shape = CircleShape
                     ),
@@ -274,7 +275,7 @@ private fun IdentityOptionsContent(
                 imageVector = Icons.Default.QrCode2,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(Dimens.ShareIdentityScreen.actionIconContainerSize)
             )
         }
 
@@ -314,8 +315,8 @@ private fun IdentityOptionsContent(
             content = {
                 if (uiState.isGenerating) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(Dimens.ShareIdentityScreen.progressSize),
+                        strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
                         color = MaterialTheme.colorScheme.background
                     )
                 }
@@ -363,14 +364,14 @@ private fun GeneratedIdentityContent(
                                 color = Color.White,
                                 shape = MaterialTheme.shapes.small
                             ).border(
-                                width = 1.dp,
+                                width = Dimens.ShareIdentityScreen.dividerWidth,
                                 color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f),
                                 shape = MaterialTheme.shapes.small
                             ).padding(16.dp)
                 ) {
                     QrCode(
                         content = encodedIdentity,
-                        modifier = Modifier.size(240.dp)
+                        modifier = Modifier.size(Dimens.ShareIdentityScreen.qrCodeSize)
                     )
                 }
 

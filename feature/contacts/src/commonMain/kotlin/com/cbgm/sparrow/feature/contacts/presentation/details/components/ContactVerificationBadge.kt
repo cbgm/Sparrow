@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 
 @Composable
@@ -23,7 +23,7 @@ internal fun ContactVerificationBadge(
     containerColor: Color
 ) {
     Surface(
-        modifier = Modifier.size(26.dp),
+        modifier = Modifier.size(Dimens.ContactDetailsScreen.verificationBadgeSize),
         shape = CircleShape,
         color = containerColor
     ) {
@@ -32,7 +32,7 @@ internal fun ContactVerificationBadge(
                 imageVector = icon,
                 contentDescription = null,
                 tint = Color.White,
-                modifier = Modifier.size(14.dp)
+                modifier = Modifier.size(Dimens.ContactDetailsScreen.verificationBadgeIconSize)
             )
         }
     }

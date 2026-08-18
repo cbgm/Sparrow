@@ -55,6 +55,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
@@ -196,7 +197,7 @@ private fun TopBar(
                     SparrowAvatar(
                         name = uiState.contactName,
                         pictureBytes = uiState.profilePictureBytes,
-                        size = 36.dp
+                        size = Dimens.DirectScreen.topBarAvatarSize
                     )
                     Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
                     Text(
@@ -497,7 +498,7 @@ private fun SecurityBanner(
             Icon(
                 imageVector = state.icon,
                 contentDescription = null,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(Dimens.DirectScreen.invitationIconSize)
             )
             Column(
                 modifier = Modifier.padding(start = MaterialTheme.spacing.small).weight(1f)
@@ -704,7 +705,7 @@ private fun VerifiedSecurityIndicator(modifier: Modifier = Modifier) {
             Icon(
                 imageVector = Icons.Default.Lock,
                 contentDescription = null,
-                modifier = Modifier.size(14.dp),
+                modifier = Modifier.size(Dimens.DirectScreen.statusIconSize),
                 tint = MaterialTheme.colorScheme.secondary
             )
             Spacer(modifier = Modifier.width(6.dp))
