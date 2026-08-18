@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.cbgm.sparrow.core.ui.theme.Alpha
 
 @Composable
 fun SparrowDialogListItem(
@@ -24,7 +25,7 @@ fun SparrowDialogListItem(
         headlineContent = { Text(text) },
         colors = ListItemDefaults.colors(
             containerColor = Color.Transparent,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText)
         )
     )
 }

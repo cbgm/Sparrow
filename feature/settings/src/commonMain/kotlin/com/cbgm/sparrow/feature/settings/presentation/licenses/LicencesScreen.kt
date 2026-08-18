@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import com.cbgm.sparrow.core.ui.component.SparrowStaticScaffold
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.feature.settings.presentation.licenses.model.LicensesUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.licenses.model.LicensesUiState
 import com.cbgm.sparrow.resources.Res
@@ -62,7 +63,7 @@ fun LicensesScreen(
                     rowExpandedBackground = CardColor,
                     rowOnBackground = MaterialTheme.colorScheme.onBackground,
                     rowSubtleContent = MaterialTheme.colorScheme.onBackground,
-                    rowDivider = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.74f),
+                    rowDivider = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.LicencesScreen.rowDivider),
                     actionLinkColor = MaterialTheme.colorScheme.onBackground
                 )
         )

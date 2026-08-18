@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
@@ -81,7 +82,7 @@ fun PhonePage(
                 Spacer(Modifier.height(MaterialTheme.spacing.base))
                 Text(
                     text = stringResource(Res.string.feature_onboarding_phone_routing_description),
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = .74f),
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.OpaqueText),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
                 )
@@ -119,9 +120,9 @@ fun PhonePage(
                             focusedContainerColor = Field,
                             unfocusedContainerColor = Field,
                             focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .18f),
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.TextField.unfocusedBorder),
                             focusedLabelColor = MaterialTheme.colorScheme.secondary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .72f),
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
                             cursorColor = MaterialTheme.colorScheme.secondary
                         )
                 )
@@ -156,9 +157,9 @@ fun PhonePage(
                             focusedContainerColor = Field,
                             unfocusedContainerColor = Field,
                             focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .18f),
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.TextField.unfocusedBorder),
                             focusedLabelColor = MaterialTheme.colorScheme.secondary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .72f),
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
                             cursorColor = MaterialTheme.colorScheme.secondary
                         )
                 )

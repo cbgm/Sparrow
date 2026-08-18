@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowStatusBadge
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -106,7 +107,7 @@ fun ContactSelectionCircle(
                         when {
                             selected -> MaterialTheme.colorScheme.secondary
                             enabled -> MaterialTheme.colorScheme.outline
-                            else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+                            else -> MaterialTheme.colorScheme.outline.copy(alpha = Alpha.ContactsScreen.outline)
                         },
                     shape = MaterialTheme.shapes.circle
                 ).background(
@@ -151,7 +152,7 @@ fun EmptyContactsContent(modifier: Modifier = Modifier) {
                     Modifier
                         .size(Dimens.ContactsScreen.emptyStateIconContainerSize)
                         .background(
-                            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
+                            color = MaterialTheme.colorScheme.secondary.copy(alpha = Alpha.ContactsScreen.secureBackground),
                             shape = MaterialTheme.shapes.circle
                         ),
                 contentAlignment = Alignment.Center
@@ -175,7 +176,7 @@ fun EmptyContactsContent(modifier: Modifier = Modifier) {
             Text(
                 text = stringResource(Res.string.feature_contacts_no_contacts_hint),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
                 textAlign = TextAlign.Center
             )
         }
@@ -237,7 +238,7 @@ private fun ContactGroup(
                 ),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.ContactsScreen.tertiaryContent)
         )
 
         Surface(
@@ -310,7 +311,7 @@ private fun ContactListItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.74f)
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.OpaqueText)
                 )
             },
             trailingContent = trailingContent,
@@ -322,7 +323,7 @@ private fun ContactListItem(
                 Modifier
                     .fillMaxWidth()
                     .padding(start = MaterialTheme.spacing.listDividerStart),
-            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.05f)
+            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.ContactsScreen.actionBackground)
         )
     }
 }

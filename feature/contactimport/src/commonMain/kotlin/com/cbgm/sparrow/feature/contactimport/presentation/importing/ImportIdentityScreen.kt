@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.PatternBackground
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -74,7 +75,7 @@ fun ImportIdentityScreen(
             PatternBackground(
                 modifier = Modifier.fillMaxSize(),
                 backgroundColor = MaterialTheme.colorScheme.background,
-                alpha = 0.04f
+                alpha = Alpha.PatternBackground.conversation
             )
         },
         topBar = { containerColor ->
@@ -100,7 +101,7 @@ fun ImportIdentityScreen(
             Text(
                 text = stringResource(Res.string.feature_contactimport_normal_invitation_description),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
             )
 
             Text(
@@ -113,7 +114,7 @@ fun ImportIdentityScreen(
             Text(
                 text = stringResource(Res.string.feature_contactimport_in_person_qr_description),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
             )
 
             OutlinedButton(
@@ -144,7 +145,7 @@ fun ImportIdentityScreen(
             Text(
                 text = stringResource(Res.string.feature_contactimport_paste_shared_identity_description),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
             )
 
             OutlinedTextField(
@@ -169,9 +170,9 @@ fun ImportIdentityScreen(
                         focusedContainerColor = Field,
                         unfocusedContainerColor = Field,
                         focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.18f),
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.TextField.unfocusedBorder),
                         focusedLabelColor = MaterialTheme.colorScheme.secondary,
-                        unfocusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
                         cursorColor = MaterialTheme.colorScheme.secondary
                     )
             )
@@ -267,13 +268,13 @@ private fun ManualInputDivider() {
     ) {
         HorizontalDivider(
             modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.divider)
         )
 
         Text(
             text = stringResource(Res.string.feature_contactimport_or_paste_manually),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.ImportIdentityScreen.secondaryLabel),
             modifier =
                 Modifier.padding(
                     horizontal = MaterialTheme.spacing.base
@@ -282,7 +283,7 @@ private fun ManualInputDivider() {
 
         HorizontalDivider(
             modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.divider)
         )
     }
 }
@@ -302,8 +303,8 @@ private fun ImportButton(
             ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.secondary,
                 contentColor = MaterialTheme.colorScheme.background,
-                disabledContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
-                disabledContentColor = MaterialTheme.colorScheme.background.copy(alpha = 0.5f)
+                disabledContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = Alpha.ImportIdentityScreen.disabledButtonContainer),
+                disabledContentColor = MaterialTheme.colorScheme.background.copy(alpha = Alpha.ImportIdentityScreen.disabledButtonContent)
             )
     ) {
         if (isImporting) {
@@ -330,7 +331,7 @@ private fun StatusBanner(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraSmall,
-        color = color.copy(alpha = 0.15f)
+        color = color.copy(alpha = Alpha.ImportIdentityScreen.iconBackground)
     ) {
         Row(
             modifier =

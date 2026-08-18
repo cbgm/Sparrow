@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.extensions.toFingerprint
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 
@@ -40,7 +41,7 @@ internal fun IdentityKeySection(
                         shape = MaterialTheme.shapes.medium
                     ).padding(MaterialTheme.spacing.small),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.ContactDetailsScreen.identityKey),
             fontFamily = FontFamily.Monospace
         )
     }

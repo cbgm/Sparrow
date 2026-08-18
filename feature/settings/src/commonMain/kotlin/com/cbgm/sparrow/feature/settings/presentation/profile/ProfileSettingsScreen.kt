@@ -38,6 +38,7 @@ import com.cbgm.sparrow.core.ui.avatar.editor.platform.ProfilePictureImage
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.circle
@@ -158,7 +159,7 @@ private fun Content(
         Text(
             text = stringResource(Res.string.feature_settings_profile_picture_description),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
             textAlign = TextAlign.Center
         )
 
@@ -222,7 +223,7 @@ private fun ProfilePicture(
             Icon(
                 imageVector = Icons.Default.Person,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
                 modifier = Modifier.size(Dimens.ProfileSettingsScreen.avatarPlaceholderIconSize)
             )
         }
@@ -231,7 +232,7 @@ private fun ProfilePicture(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.35f)),
+                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = Alpha.ProfileSettingsScreen.scrim)),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()

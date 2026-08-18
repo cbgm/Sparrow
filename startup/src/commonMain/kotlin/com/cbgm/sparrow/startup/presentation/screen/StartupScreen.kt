@@ -36,6 +36,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowCard
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -101,7 +102,7 @@ fun StartupScreen(
             Text(
                 text = stringResource(Res.string.base_tagline),
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.72f)
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.OpaqueText)
             )
 
             Spacer(
@@ -205,7 +206,7 @@ private fun StartupIdentityContent(
                 Text(
                     text = stringResource(Res.string.feature_startup_contacts_find_by_phone),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
                     textAlign = TextAlign.Center
                 )
 
@@ -245,22 +246,22 @@ private fun StartupIdentityContent(
                         OutlinedTextFieldDefaults.colors(
                             focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            disabledTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.60f),
+                            disabledTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
                             focusedContainerColor = StartupPhoneFieldBackground,
                             unfocusedContainerColor = StartupPhoneFieldBackground,
                             errorContainerColor = StartupPhoneFieldBackground,
                             focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.18f),
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.TextField.unfocusedBorder),
                             errorBorderColor = MaterialTheme.colorScheme.error,
                             focusedLabelColor = MaterialTheme.colorScheme.secondary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
                             errorLabelColor = MaterialTheme.colorScheme.error,
-                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
-                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
-                            focusedSupportingTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.66f),
+                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.TextField.placeholder),
+                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.TextField.placeholder),
+                            focusedSupportingTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
                             unfocusedSupportingTextColor =
                                 MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                    alpha = 0.66f
+                                    alpha = Alpha.OpaqueText
                                 ),
                             errorSupportingTextColor = MaterialTheme.colorScheme.error,
                             cursorColor = MaterialTheme.colorScheme.secondary,
@@ -369,7 +370,7 @@ private fun StartupProgress(message: String) {
     ) {
         CircularProgressIndicator(
             color = MaterialTheme.colorScheme.secondary,
-            trackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f)
+            trackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.StartupScreen.progressTrack)
         )
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
@@ -377,7 +378,7 @@ private fun StartupProgress(message: String) {
         Text(
             text = message,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
             textAlign = TextAlign.Center
         )
     }

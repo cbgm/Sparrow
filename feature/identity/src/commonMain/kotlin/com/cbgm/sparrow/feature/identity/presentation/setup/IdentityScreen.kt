@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowCard
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
@@ -142,7 +143,7 @@ private fun LoadingContent() {
         Text(
             text = stringResource(Res.string.feature_identity_checking_secure_identity),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
         )
     }
 }
@@ -178,7 +179,7 @@ private fun NoIdentityContent(
             text = stringResource(Res.string.feature_identity_identity_enter_phone_description),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
         )
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.large))
@@ -223,9 +224,9 @@ private fun NoIdentityContent(
                             focusedContainerColor = Field,
                             unfocusedContainerColor = Field,
                             focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.18f),
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.TextField.unfocusedBorder),
                             focusedLabelColor = MaterialTheme.colorScheme.secondary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
                             cursorColor = MaterialTheme.colorScheme.secondary,
                             errorBorderColor = MaterialTheme.colorScheme.error,
                             errorLabelColor = MaterialTheme.colorScheme.error,
@@ -272,7 +273,7 @@ private fun ReadyIdentityContent(
             text = stringResource(Res.string.feature_identity_private_keys_protected),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
         )
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
 
@@ -357,7 +358,7 @@ private fun IncompleteIdentityContent(onRetry: () -> Unit) {
         Text(
             text = stringResource(Res.string.feature_identity_incomplete_identity_description),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
             textAlign = TextAlign.Center
         )
 

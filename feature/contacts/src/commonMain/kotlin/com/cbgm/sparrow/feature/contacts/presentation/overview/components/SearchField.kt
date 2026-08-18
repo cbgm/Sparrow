@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -111,7 +112,7 @@ fun SearchField(
                         cursorColor = MaterialTheme.colorScheme.onPrimary,
                         focusedTextColor = MaterialTheme.colorScheme.onPrimary,
                         unfocusedTextColor =
-                            MaterialTheme.colorScheme.onPrimary.copy(alpha = .73f)
+                            MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.OpaqueText)
                     )
             )
         }

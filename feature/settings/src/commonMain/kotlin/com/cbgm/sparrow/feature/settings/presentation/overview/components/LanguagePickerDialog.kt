@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
@@ -58,7 +59,7 @@ fun LanguagePickerDialog(
                                 Text(
                                     text = language.displayName,
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.73f)
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
                                 )
                             }
                         }

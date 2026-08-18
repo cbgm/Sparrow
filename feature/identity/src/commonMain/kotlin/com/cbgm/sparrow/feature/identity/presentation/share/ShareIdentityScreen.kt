@@ -53,6 +53,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowCard
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.circle
@@ -261,11 +262,11 @@ private fun IdentityOptionsContent(
                 Modifier
                     .size(Dimens.ShareIdentityScreen.avatarSize)
                     .background(
-                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
+                        color = MaterialTheme.colorScheme.secondary.copy(alpha = Alpha.ShareIdentityScreen.codeBackground),
                         shape = MaterialTheme.shapes.circle
                     ).border(
                         width = Dimens.ShareIdentityScreen.dividerWidth,
-                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
+                        color = MaterialTheme.colorScheme.secondary.copy(alpha = Alpha.ShareIdentityScreen.codeBorder),
                         shape = MaterialTheme.shapes.circle
                     ),
             contentAlignment = Alignment.Center
@@ -292,13 +293,13 @@ private fun IdentityOptionsContent(
         Text(
             text = stringResource(Res.string.feature_identity_public_keys_always_included),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
             textAlign = TextAlign.Center
         )
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
-        HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
+        HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.divider))
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
@@ -345,7 +346,7 @@ private fun GeneratedIdentityContent(
         Text(
             text = stringResource(Res.string.feature_identity_scan_to_add_you),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
             textAlign = TextAlign.Center
         )
 
@@ -364,7 +365,7 @@ private fun GeneratedIdentityContent(
                                 shape = MaterialTheme.shapes.small
                             ).border(
                                 width = Dimens.ShareIdentityScreen.dividerWidth,
-                                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f),
+                                color = MaterialTheme.colorScheme.secondary.copy(alpha = Alpha.ShareIdentityScreen.accentText),
                                 shape = MaterialTheme.shapes.small
                             ).padding(MaterialTheme.spacing.small)
                 ) {
@@ -404,7 +405,7 @@ private fun GeneratedIdentityContent(
                 Text(
                     text = stringResource(Res.string.feature_identity_share_identity_text_warning),
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
                     textAlign = TextAlign.Center
                 )
             }
@@ -422,7 +423,7 @@ private fun GeneratedIdentityContent(
                     text = stringResource(Res.string.feature_identity_raw_identity),
                     modifier = Modifier.fillMaxWidth(),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
                     fontWeight = FontWeight.SemiBold
                 )
 
@@ -434,7 +435,7 @@ private fun GeneratedIdentityContent(
                         text = encodedIdentity,
                         style = MaterialTheme.typography.bodySmall,
                         fontFamily = FontFamily.Monospace,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.ShareIdentityScreen.primaryText)
                     )
                 }
             }

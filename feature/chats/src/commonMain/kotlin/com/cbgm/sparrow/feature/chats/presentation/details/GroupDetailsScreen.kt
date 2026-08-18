@@ -59,6 +59,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
 import com.cbgm.sparrow.core.ui.component.SparrowStatusBadge
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -636,7 +637,7 @@ private fun MemberRow(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.74f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText)
                 )
             },
             trailingContent = {
@@ -684,7 +685,7 @@ private fun MemberRow(
                     Modifier
                         .fillMaxWidth()
                         .padding(start = MaterialTheme.spacing.listDividerStart),
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.05f)
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.GroupDetailsScreen.actionBackground)
             )
         }
     }
@@ -733,7 +734,7 @@ private fun GroupMemberVerificationUiState.verificationStatusColor(): Color =
 
             GroupMemberVerificationState.ADMIN_VERIFIED_PARTICIPANT,
             GroupMemberVerificationState.PARTICIPANT_VERIFIED_ADMIN ->
-                MaterialTheme.colorScheme.secondary.copy(alpha = 0.73f)
+                MaterialTheme.colorScheme.secondary.copy(alpha = Alpha.GroupDetailsScreen.adminIcon)
 
             GroupMemberVerificationState.UNVERIFIED,
             GroupMemberVerificationState.UNAVAILABLE ->
@@ -794,7 +795,7 @@ private fun MembersCard(
                 ),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.74f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
         )
 
         Surface(
@@ -898,7 +899,7 @@ private fun AdminVerificationCard(
             Text(
                 text = admin.verificationStatusText(),
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.74f),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
                 textAlign = TextAlign.Center,
                 modifier =
                     Modifier

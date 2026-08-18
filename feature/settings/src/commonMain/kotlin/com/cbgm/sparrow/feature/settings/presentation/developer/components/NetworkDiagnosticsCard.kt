@@ -27,6 +27,7 @@ import com.cbgm.sparrow.core.transport.TransportDiagnostics
 import com.cbgm.sparrow.core.transport.TransportNodeDiagnostic
 import com.cbgm.sparrow.core.transport.TransportNodeDiagnosticState
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
@@ -120,7 +121,7 @@ private fun NodeList(diagnostics: TransportDiagnostics) {
         text = stringResource(Res.string.feature_settings_network_nodes),
         style = MaterialTheme.typography.labelLarge,
         fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+        color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
     )
 
     if (diagnostics.availableNodes.isEmpty()) {
@@ -128,7 +129,7 @@ private fun NodeList(diagnostics: TransportDiagnostics) {
             text = stringResource(Res.string.feature_settings_network_no_nodes),
             modifier = Modifier.padding(top = MaterialTheme.spacing.base),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
         )
     } else {
         diagnostics.availableNodes.forEach { node ->
@@ -166,7 +167,7 @@ private fun NodeDiagnosticRow(node: TransportNodeDiagnostic) {
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.NetworkDiagnosticsCard.available)
         )
     }
 }
@@ -209,7 +210,7 @@ private fun NodeDiagnosticHeader(
                         activeConnections
                     ),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
             )
         }
     }
@@ -258,7 +259,7 @@ private fun DiagnosticRow(
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
         )
 
         Text(
@@ -323,7 +324,7 @@ private fun TransportNodeDiagnosticState.displayText(
 private fun TransportNodeDiagnosticState.displayColor(): Color =
     when (this) {
         TransportNodeDiagnosticState.CURRENT -> MaterialTheme.colorScheme.secondary
-        TransportNodeDiagnosticState.AVAILABLE -> MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+        TransportNodeDiagnosticState.AVAILABLE -> MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.NetworkDiagnosticsCard.available)
         TransportNodeDiagnosticState.COOLDOWN -> MaterialTheme.colorScheme.error
     }
 

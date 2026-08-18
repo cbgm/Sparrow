@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.settings.presentation.disclaimer.model.DisclaimerUiEvent
 import com.mikepenz.markdown.m3.Markdown
@@ -57,10 +58,10 @@ fun MarkdownDisclaimerScreen(
                     ),
             colors =
                 markdownColor(
-                    text = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f),
+                    text = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.DisclaimerScreen.content),
                     codeBackground = MarkdownCardColor,
                     inlineCodeBackground = MarkdownCardColor,
-                    dividerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f),
+                    dividerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.divider),
                     tableBackground = MarkdownCardColor
                 ),
             typography =
@@ -84,21 +85,21 @@ fun MarkdownDisclaimerScreen(
                         MaterialTheme.typography.labelMedium.copy(
                             color =
                                 MaterialTheme.colorScheme.onBackground.copy(
-                                    alpha = 0.85f
+                                    alpha = Alpha.DisclaimerScreen.content
                                 )
                         ),
                     paragraph =
                         MaterialTheme.typography.bodySmall.copy(
                             color =
                                 MaterialTheme.colorScheme.onBackground.copy(
-                                    alpha = 0.85f
+                                    alpha = Alpha.DisclaimerScreen.content
                                 )
                         ),
                     list =
                         MaterialTheme.typography.bodySmall.copy(
                             color =
                                 MaterialTheme.colorScheme.onBackground.copy(
-                                    alpha = 0.85f
+                                    alpha = Alpha.DisclaimerScreen.content
                                 )
                         )
                 )

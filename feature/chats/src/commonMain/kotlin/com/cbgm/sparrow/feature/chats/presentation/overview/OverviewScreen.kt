@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.circle
@@ -124,7 +125,7 @@ private fun Content(
                         )
                         HorizontalDivider(
                             modifier = Modifier.fillMaxWidth().padding(start = MaterialTheme.spacing.listDividerStart),
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = .05f)
+                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.OverviewScreen.actionBackground)
                         )
                     }
                 }
@@ -174,9 +175,9 @@ private fun ConversationItem(
                     style = MaterialTheme.typography.bodySmall,
                     color =
                         if (hasUnread) {
-                            MaterialTheme.colorScheme.onPrimary.copy(alpha = .9f)
+                            MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.OverviewScreen.unreadContent)
                         } else {
-                            MaterialTheme.colorScheme.onPrimary.copy(alpha = .74f)
+                            MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.OpaqueText)
                         },
                     fontWeight = if (hasUnread) FontWeight.Medium else FontWeight.Normal
                 )
@@ -193,7 +194,7 @@ private fun ConversationItem(
                             if (hasUnread) {
                                 MaterialTheme.colorScheme.secondary
                             } else {
-                                MaterialTheme.colorScheme.onPrimary.copy(alpha = .74f)
+                                MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.OpaqueText)
                             }
                     )
 
@@ -242,7 +243,7 @@ private fun EmptyContent(modifier: Modifier = Modifier) {
                 Modifier
                     .size(Dimens.OverviewScreen.emptyStateIconContainerSize)
                     .background(
-                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
+                        MaterialTheme.colorScheme.secondary.copy(alpha = Alpha.OverviewScreen.avatarBadge),
                         MaterialTheme.shapes.circle
                     ),
             contentAlignment = Alignment.Center
@@ -267,7 +268,7 @@ private fun EmptyContent(modifier: Modifier = Modifier) {
             text = stringResource(Res.string.feature_chats_no_conversations_hint),
             modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacing.base.div(2)),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
         )
     }
 }

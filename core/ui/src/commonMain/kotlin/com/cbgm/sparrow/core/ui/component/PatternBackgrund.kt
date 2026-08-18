@@ -13,6 +13,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.unit.Dp
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.startup
@@ -32,7 +33,7 @@ private data class PatternElement(
 fun PatternBackground(
     modifier: Modifier = Modifier,
     backgroundColor: Color,
-    alpha: Float = 0.06f
+    alpha: Float = Alpha.PatternBackground.default
 ) {
     val patternElements =
         remember {

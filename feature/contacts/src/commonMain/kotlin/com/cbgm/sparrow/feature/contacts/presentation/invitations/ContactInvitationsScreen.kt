@@ -36,6 +36,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowSwipeRevealItem
 import com.cbgm.sparrow.core.ui.component.SwipeRevealAction
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.domain.model.PendingContactInvitation
@@ -186,7 +187,7 @@ fun ContactInvitationsScreen(
                                 Modifier
                                     .fillMaxWidth()
                                     .padding(start = MaterialTheme.spacing.listDividerStart),
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = .05f)
+                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.ContactInvitationsScreen.actionBackground)
                         )
                     }
                 }
@@ -253,7 +254,7 @@ private fun InvitationRow(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = .74f)
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.OpaqueText)
                     )
                 }
         },

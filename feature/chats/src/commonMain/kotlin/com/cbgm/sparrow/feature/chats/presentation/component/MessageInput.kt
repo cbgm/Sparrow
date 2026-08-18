@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.messageInput
@@ -236,7 +237,7 @@ private fun RowScope.SendButton(
                         if (enabled) {
                             MaterialTheme.colorScheme.secondary
                         } else {
-                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f)
+                            MaterialTheme.colorScheme.secondary.copy(alpha = Alpha.MessageInput.buttonBackground)
                         },
                     modifier = Modifier
                         .padding(start = MaterialTheme.spacing.base.div(2))

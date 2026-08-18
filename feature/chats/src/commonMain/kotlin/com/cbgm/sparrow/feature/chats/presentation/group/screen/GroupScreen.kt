@@ -42,6 +42,7 @@ import com.cbgm.sparrow.core.ui.component.PatternBackground
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowBannerButton
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -114,7 +115,7 @@ fun GroupScreen(
             PatternBackground(
                 modifier = Modifier.fillMaxSize(),
                 backgroundColor = MaterialTheme.colorScheme.background,
-                alpha = 0.04f
+                alpha = Alpha.PatternBackground.conversation
             )
         },
         topBar = { containerColor ->
@@ -176,7 +177,7 @@ private fun TopBar(
                         Text(
                             text = subtitle(uiState),
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -683,7 +684,7 @@ private fun MembershipSystemMessage(
         horizontalArrangement = Arrangement.Center
     ) {
         Surface(
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.88f),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = Alpha.GroupScreen.membershipSystemMessage),
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             shape = MaterialTheme.shapes.small
         ) {

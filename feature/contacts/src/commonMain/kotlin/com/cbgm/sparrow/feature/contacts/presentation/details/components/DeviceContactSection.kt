@@ -10,6 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
@@ -53,9 +54,9 @@ internal fun DeviceContactSection(status: DeviceContactLinkStatus) {
         DeviceContactLinkStatus.MISSING ->
             ContactStatusRow(
                 icon = Icons.Default.LinkOff,
-                iconColor = MaterialTheme.colorScheme.error.copy(alpha = 0.74f),
+                iconColor = MaterialTheme.colorScheme.error.copy(alpha = Alpha.OpaqueText),
                 title = stringResource(Res.string.feature_contacts_device_contact_missing),
-                titleColor = MaterialTheme.colorScheme.error.copy(alpha = 0.74f),
+                titleColor = MaterialTheme.colorScheme.error.copy(alpha = Alpha.OpaqueText),
                 description = stringResource(Res.string.feature_contacts_device_contact_missing_description)
             )
     }

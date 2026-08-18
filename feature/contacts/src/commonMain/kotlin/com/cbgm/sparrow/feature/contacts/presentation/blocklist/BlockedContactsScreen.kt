@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -103,13 +104,13 @@ fun BlockedContactsScreen(
                     Icon(
                         imageVector = Icons.Default.Block,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f),
+                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.BlockedContactsScreen.icon),
                         modifier = Modifier.size(Dimens.BlockedContactsScreen.avatarSize)
                     )
                     Text(
                         text = stringResource(Res.string.feature_contacts_blocked_contacts_empty),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
                     )
                 }
             } else {
@@ -138,7 +139,7 @@ fun BlockedContactsScreen(
                                 Modifier
                                     .fillMaxWidth()
                                     .padding(start = MaterialTheme.spacing.listDividerStart),
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.05f)
+                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.BlockedContactsScreen.actionBackground)
                         )
                     }
                 }

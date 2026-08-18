@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.circle
@@ -26,8 +27,8 @@ fun IconBadge(
         modifier =
             Modifier
                 .size(Dimens.IdentityScreen.iconBadgeSize)
-                .background(tint.copy(alpha = 0.12f), MaterialTheme.shapes.circle)
-                .border(Dimens.IdentityScreen.iconBadgeBorderWidth, tint.copy(alpha = 0.3f), MaterialTheme.shapes.circle),
+                .background(tint.copy(alpha = Alpha.IdentityScreen.iconBadgeBackground), MaterialTheme.shapes.circle)
+                .border(Dimens.IdentityScreen.iconBadgeBorderWidth, tint.copy(alpha = Alpha.IdentityScreen.iconBadgeBorder), MaterialTheme.shapes.circle),
         contentAlignment = Alignment.Center
     ) {
         Icon(

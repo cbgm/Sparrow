@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.messageBubble
@@ -191,7 +192,7 @@ private fun DeliveryProgress(message: MessageBubbleModel) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+        color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
     )
 }
 
@@ -372,7 +373,7 @@ private fun bubbleState(message: MessageBubbleModel): BubbleState =
                 isContentFailed = false,
                 bubbleColor =
                     if (message.isMine) {
-                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.18f)
+                        MaterialTheme.colorScheme.secondary.copy(alpha = Alpha.MessageBubble.verificationBackground)
                     } else {
                         IncomingBubbleColor
                     },

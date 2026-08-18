@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowCard
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -71,7 +72,7 @@ fun OnboardingScreen(
             )
             Text(
                 text = stringResource(Res.string.base_tagline),
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = .72f),
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.OpaqueText),
                 style = MaterialTheme.typography.bodyLarge
             )
             Spacer(Modifier.height(MaterialTheme.spacing.medium))

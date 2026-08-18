@@ -42,6 +42,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -252,7 +253,7 @@ private fun SettingsSection(
         Text(
             text = title.uppercase(),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
             fontWeight = FontWeight.SemiBold,
             modifier =
                 Modifier.padding(
@@ -274,7 +275,7 @@ private fun SettingsRow(
     subtitle: String,
     onClick: () -> Unit,
     showChevron: Boolean = true,
-    iconTint: Color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+    iconTint: Color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.SettingsScreen.icon)
 ) {
     Row(
         modifier =
@@ -306,7 +307,7 @@ private fun SettingsRow(
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
             )
         }
 
@@ -314,7 +315,7 @@ private fun SettingsRow(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
+                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.SettingsScreen.disabledIcon),
                 modifier = Modifier.size(Dimens.SettingsScreen.secondaryIconSize)
             )
         }
@@ -344,7 +345,7 @@ private fun SettingsSwitchRow(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.SettingsScreen.icon),
             modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize)
         )
 
@@ -360,7 +361,7 @@ private fun SettingsSwitchRow(
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
             )
         }
 
@@ -380,7 +381,7 @@ private fun SettingsSwitchRow(
 private fun SettingsDivider() {
     HorizontalDivider(
         modifier = Modifier.padding(start = MaterialTheme.spacing.times(5)),
-        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.06f)
+        color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.divider)
     )
 }
 

@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.extensions.toHexString
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -40,7 +41,7 @@ fun PublicKeySection(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
                 modifier = Modifier.size(Dimens.IdentityScreen.publicKeyIconSize)
             )
 
@@ -59,7 +60,7 @@ fun PublicKeySection(
         Text(
             text = description,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
         )
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.base))
@@ -74,7 +75,7 @@ fun PublicKeySection(
                         shape = MaterialTheme.shapes.medium
                     ).padding(MaterialTheme.spacing.base),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.IdentityScreen.publicKeyValue),
             fontFamily = FontFamily.Monospace
         )
     }

@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.badge
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -25,7 +26,7 @@ fun SparrowStatusBadge(
 ) {
     Surface(
         shape = MaterialTheme.shapes.badge,
-        color = color.copy(alpha = 0.15f)
+        color = color.copy(alpha = Alpha.Badge.container)
     ) {
         Row(
             modifier =

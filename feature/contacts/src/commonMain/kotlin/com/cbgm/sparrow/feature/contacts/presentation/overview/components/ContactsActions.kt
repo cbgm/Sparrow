@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.contactsScreen
@@ -77,7 +78,7 @@ fun CreateGroupListItem(onClick: () -> Unit) {
                 Box(
                     modifier =
                         Modifier.size(Dimens.ContactsScreen.menuIconContainerSize).background(
-                            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
+                            color = MaterialTheme.colorScheme.secondary.copy(alpha = Alpha.ContactsScreen.actionIconBackground),
                             shape = MaterialTheme.shapes.circle
                         ),
                     contentAlignment = Alignment.Center
@@ -147,7 +148,7 @@ private fun ImportContactSheet(
                         width = Dimens.ContactsScreen.dragHandleWidth,
                         height = Dimens.ContactsScreen.dragHandleHeight
                     ).background(
-                        color = Color.White.copy(alpha = 0.25f),
+                        color = Color.White.copy(alpha = Alpha.ContactsScreen.scanOverlay),
                         shape = MaterialTheme.shapes.contactsScreen.dragHandle
                     )
         )
@@ -209,7 +210,7 @@ private fun ImportOptionRow(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = Color.White.copy(alpha = 0.85f),
+                tint = Color.White.copy(alpha = Alpha.ContactsScreen.scanIcon),
                 modifier = Modifier.size(Dimens.ContactsScreen.menuItemIconSize)
             )
         },
@@ -225,7 +226,7 @@ private fun ImportOptionRow(
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.6f)
+                color = Color.White.copy(alpha = Alpha.OpaqueText)
             )
         },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent)

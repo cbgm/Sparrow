@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.contactDetailsScreen
@@ -41,7 +42,7 @@ internal fun ContactPhoneNumberRow(
             Icon(
                 imageVector = Icons.Default.Phone,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.ContactDetailsScreen.phoneIcon),
                 modifier = Modifier.size(Dimens.ContactDetailsScreen.rowIconSize)
             )
         },
@@ -58,7 +59,7 @@ internal fun ContactPhoneNumberRow(
             if (isPreferred) {
                 Surface(
                     shape = MaterialTheme.shapes.contactDetailsScreen.phoneNumber,
-                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = Alpha.ContactDetailsScreen.preferredBackground)
                 ) {
                     Text(
                         text = stringResource(Res.string.base_preferred),
@@ -76,7 +77,7 @@ internal fun ContactPhoneNumberRow(
             ListItemDefaults.colors(
                 containerColor = Color.Transparent,
                 headlineColor = MaterialTheme.colorScheme.onBackground,
-                supportingColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                supportingColor = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
             )
     )
 }

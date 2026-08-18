@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.circle
@@ -122,31 +123,31 @@ internal fun ControlPlaneDirectoryCard(
                     OutlinedTextFieldDefaults.colors(
                         focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        disabledTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.60f),
+                        disabledTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
                         focusedContainerColor = StartupPhoneFieldBackground,
                         unfocusedContainerColor = StartupPhoneFieldBackground,
                         errorContainerColor = StartupPhoneFieldBackground,
                         focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.18f),
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.TextField.unfocusedBorder),
                         errorBorderColor = MaterialTheme.colorScheme.error,
                         focusedLabelColor = MaterialTheme.colorScheme.secondary,
-                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
                         errorLabelColor = MaterialTheme.colorScheme.error,
                         focusedPlaceholderColor =
                             MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                alpha = 0.38f
+                                alpha = Alpha.TextField.placeholder
                             ),
                         unfocusedPlaceholderColor =
                             MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                alpha = 0.38f
+                                alpha = Alpha.TextField.placeholder
                             ),
                         focusedSupportingTextColor =
                             MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                alpha = 0.66f
+                                alpha = Alpha.OpaqueText
                             ),
                         unfocusedSupportingTextColor =
                             MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                alpha = 0.66f
+                                alpha = Alpha.OpaqueText
                             ),
                         errorSupportingTextColor = MaterialTheme.colorScheme.error,
                         cursorColor = MaterialTheme.colorScheme.secondary,
@@ -248,7 +249,7 @@ internal fun ControlPlaneListItem(
                 Modifier
                     .fillMaxWidth()
                     .padding(start = MaterialTheme.spacing.listDividerStart),
-            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.05f)
+            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.ControlPlaneConfigurationCard.actionBackground)
         )
     }
 }

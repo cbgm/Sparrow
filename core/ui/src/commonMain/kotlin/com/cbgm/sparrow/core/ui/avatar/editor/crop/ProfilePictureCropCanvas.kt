@@ -25,6 +25,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import kotlin.math.roundToInt
 
@@ -133,7 +134,7 @@ internal fun ProfilePictureCropCanvas(
 
         drawPath(
             path = mask,
-            color = Color.Black.copy(alpha = 0.58f)
+            color = Color.Black.copy(alpha = Alpha.ProfilePictureCropScreen.scrim)
         )
         drawCircle(
             color = Color.White,

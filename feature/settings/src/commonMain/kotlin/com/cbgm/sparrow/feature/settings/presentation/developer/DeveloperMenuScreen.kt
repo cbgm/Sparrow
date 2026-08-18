@@ -35,6 +35,7 @@ import com.cbgm.sparrow.core.transport.TransportNodeDiagnostic
 import com.cbgm.sparrow.core.transport.TransportNodeDiagnosticState
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -193,7 +194,7 @@ private fun DangerZoneCard(
                         bottom = MaterialTheme.spacing.small
                     ),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
             )
 
             Button(
@@ -203,7 +204,7 @@ private fun DangerZoneCard(
                 shape = MaterialTheme.shapes.extraSmall,
                 colors =
                     ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
+                        containerColor = MaterialTheme.colorScheme.error.copy(alpha = Alpha.DeveloperMenuScreen.destructiveContainer),
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
             ) {
@@ -249,7 +250,7 @@ private fun BuildInfoRow(
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
         )
 
         Text(

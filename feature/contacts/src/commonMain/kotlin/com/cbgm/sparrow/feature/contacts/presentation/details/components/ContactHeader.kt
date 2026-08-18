@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.circle
@@ -134,7 +135,7 @@ internal fun ContactHeader(
                     identity == null -> MaterialTheme.colorScheme.error
                     isMutuallyVerified || verifiedByMe -> MaterialTheme.colorScheme.secondary
                     verifiedByContact -> MaterialTheme.colorScheme.tertiary
-                    else -> MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                    else -> MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
                 },
             textAlign = TextAlign.Center
         )

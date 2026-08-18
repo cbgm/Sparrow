@@ -54,6 +54,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -127,7 +128,7 @@ fun DirectScreen(
             PatternBackground(
                 modifier = Modifier.fillMaxSize(),
                 backgroundColor = MaterialTheme.colorScheme.background,
-                alpha = 0.04f
+                alpha = Alpha.PatternBackground.conversation
             )
         },
         topBar = { containerColor ->
@@ -697,7 +698,7 @@ private fun errorBanner(
 private fun VerifiedSecurityIndicator(modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
+        color = MaterialTheme.colorScheme.secondary.copy(alpha = Alpha.DirectScreen.securityBanner)
     ) {
         Row(
             modifier = Modifier.padding(
