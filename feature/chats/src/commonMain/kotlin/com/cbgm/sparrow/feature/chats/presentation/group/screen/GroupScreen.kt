@@ -39,8 +39,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.cbgm.sparrow.core.ui.component.Avatar
 import com.cbgm.sparrow.core.ui.component.PatternBackground
+import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowBannerButton
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -169,7 +169,7 @@ private fun TopBar(
                     modifier = Modifier.clickable { onUiEvent(GroupUiEvent.HeaderClicked) },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Avatar(name = uiState.title, pictureBytes = groupAvatarBytes, size = 36.dp)
+                    SparrowAvatar(name = uiState.title, pictureBytes = groupAvatarBytes, size = 36.dp)
                     Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
                     Column {
                         Text(
@@ -336,7 +336,7 @@ private fun GroupMessageBubble(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Bottom
     ) {
-        Avatar(
+        SparrowAvatar(
             name = message.bubble.senderName.orEmpty(),
             pictureBytes = profilePictureBytes,
             size = 28.dp

@@ -33,9 +33,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.cbgm.sparrow.core.ui.component.Avatar
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
-import com.cbgm.sparrow.core.ui.component.StatusBadge
+import com.cbgm.sparrow.core.ui.component.SparrowAvatar
+import com.cbgm.sparrow.core.ui.component.SparrowStatusBadge
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
@@ -74,7 +74,7 @@ fun LazyListScope.contactGroups(
 fun ContactStatus(contact: Contact) {
     when {
         contact.deviceContactLinkStatus == DeviceContactLinkStatus.MISSING -> {
-            StatusBadge(
+            SparrowStatusBadge(
                 text = stringResource(Res.string.base_missing),
                 icon = Icons.Default.Warning,
                 color = MaterialTheme.colorScheme.error
@@ -82,7 +82,7 @@ fun ContactStatus(contact: Contact) {
         }
 
         contact.sparrowIdentity != null -> {
-            StatusBadge(
+            SparrowStatusBadge(
                 text = stringResource(Res.string.base_secure),
                 icon = Icons.Default.Verified,
                 color = MaterialTheme.colorScheme.secondary
@@ -281,7 +281,7 @@ private fun ContactListItem(
                     .fillMaxWidth()
                     .clickable(onClick = onClick),
             leadingContent = {
-                Avatar(
+                SparrowAvatar(
                     name = contact.displayName ?: "?",
                     pictureBytes = profilePictureBytes
                 )

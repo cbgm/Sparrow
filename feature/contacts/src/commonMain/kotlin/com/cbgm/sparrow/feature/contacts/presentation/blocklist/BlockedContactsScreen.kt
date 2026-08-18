@@ -33,7 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.cbgm.sparrow.core.ui.component.Avatar
+import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -190,7 +190,7 @@ private fun BlockedContactRow(
     Column {
         ListItem(
             leadingContent = {
-                Avatar(
+                SparrowAvatar(
                     name = contact.displayName ?: contact.preferredPhoneNumber?.value ?: "?",
                     pictureBytes = profilePictureBytes
                 )

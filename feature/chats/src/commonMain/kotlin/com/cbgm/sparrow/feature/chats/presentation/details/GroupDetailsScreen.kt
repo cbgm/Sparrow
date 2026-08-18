@@ -53,13 +53,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.avatar.editor.AvatarEditor
 import com.cbgm.sparrow.core.ui.avatar.editor.AvatarEditorStrings
-import com.cbgm.sparrow.core.ui.component.Avatar
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
+import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
-import com.cbgm.sparrow.core.ui.component.StatusBadge
+import com.cbgm.sparrow.core.ui.component.SparrowStatusBadge
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupAvatarUiEvent
@@ -395,7 +395,7 @@ private fun GroupAvatarSection(
             modifier = Modifier.padding(top = MaterialTheme.spacing.small),
             contentAlignment = Alignment.Center
         ) {
-            Avatar(
+            SparrowAvatar(
                 name = state.title,
                 pictureBytes = state.avatarBytes,
                 size = 104.dp
@@ -649,7 +649,7 @@ private fun MemberRow(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (showVerifyAction) {
-                        StatusBadge(
+                        SparrowStatusBadge(
                             text = stringResource(Res.string.base_verify),
                             icon = Icons.Default.Verified,
                             color = statusColor

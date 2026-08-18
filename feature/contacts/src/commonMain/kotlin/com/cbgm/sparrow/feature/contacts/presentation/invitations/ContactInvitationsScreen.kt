@@ -1,22 +1,12 @@
 package com.cbgm.sparrow.feature.contacts.presentation.invitations
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -37,20 +27,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.cbgm.sparrow.core.ui.component.Avatar
+import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowSwipeRevealItem
+import com.cbgm.sparrow.core.ui.component.SwipeRevealAction
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.domain.model.PendingContactInvitation
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiEvent
@@ -63,11 +49,6 @@ import com.cbgm.sparrow.resources.feature_contacts_decline_invitation
 import com.cbgm.sparrow.resources.feature_contacts_invitations_empty
 import com.cbgm.sparrow.resources.feature_contacts_invitations_title
 import org.jetbrains.compose.resources.stringResource
-import kotlin.math.roundToInt
-
-private val invitationActionWidth = 80.dp
-private const val INVITATION_ACTION_COUNT = 3
-private const val REVEAL_THRESHOLD_FRACTION = 0.5f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -131,19 +112,70 @@ fun ContactInvitationsScreen(
                     items = invitations,
                     key = PendingContactInvitation::invitationId
                 ) { invitation ->
-                    SwipeRevealInvitationActions(
-                        actionsEnabled = processingInvitationId == null,
-                        onAccept = {
-                            onUiEvent(ContactInvitationUiEvent.AcceptClicked(invitation.invitationId))
-                        },
-                        onDecline = {
-                            onUiEvent(ContactInvitationUiEvent.DeclineClicked(invitation.invitationId))
-                        },
-                        onBlock = {
-                            onUiEvent(
-                                ContactInvitationUiEvent.DeclineAndBlockClicked(invitation.invitationId)
+                    SparrowSwipeRevealItem(
+                        enabled = processingInvitationId == null,
+                        actions =
+                            listOf(
+                                SwipeRevealAction(
+                                    backgroundColor =
+                                        MaterialTheme.colorScheme.secondaryContainer,
+                                    contentColor =
+                                        MaterialTheme.colorScheme.onSecondaryContainer,
+                                    onClick = {
+                                        onUiEvent(
+                                            ContactInvitationUiEvent.AcceptClicked(
+                                                invitation.invitationId
+                                            )
+                                        )
+                                    }
+                                ) {
+                                    InvitationSwipeActionContent(
+                                        icon = Icons.Default.Check,
+                                        label =
+                                            stringResource(
+                                                Res.string.feature_contacts_accept_invitation
+                                            )
+                                    )
+                                },
+                                SwipeRevealAction(
+                                    backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    onClick = {
+                                        onUiEvent(
+                                            ContactInvitationUiEvent.DeclineClicked(
+                                                invitation.invitationId
+                                            )
+                                        )
+                                    }
+                                ) {
+                                    InvitationSwipeActionContent(
+                                        icon = Icons.Default.Close,
+                                        label =
+                                            stringResource(
+                                                Res.string.feature_contacts_decline_invitation
+                                            )
+                                    )
+                                },
+                                SwipeRevealAction(
+                                    backgroundColor = MaterialTheme.colorScheme.error,
+                                    contentColor = MaterialTheme.colorScheme.onError,
+                                    onClick = {
+                                        onUiEvent(
+                                            ContactInvitationUiEvent.DeclineAndBlockClicked(
+                                                invitation.invitationId
+                                            )
+                                        )
+                                    }
+                                ) {
+                                    InvitationSwipeActionContent(
+                                        icon = Icons.Default.Block,
+                                        label =
+                                            stringResource(
+                                                Res.string.feature_contacts_block_invitation
+                                            )
+                                    )
+                                }
                             )
-                        }
                     ) {
                         InvitationRow(
                             invitation = invitation,
@@ -201,7 +233,7 @@ private fun InvitationRow(
     ListItem(
         modifier = modifier.fillMaxWidth(),
         leadingContent = {
-            Avatar(name = displayName, pictureBytes = profilePictureBytes)
+            SparrowAvatar(name = displayName, pictureBytes = profilePictureBytes)
         },
         headlineContent = {
             Text(
@@ -239,136 +271,22 @@ private fun InvitationRow(
 }
 
 @Composable
-private fun SwipeRevealInvitationActions(
-    actionsEnabled: Boolean,
-    onAccept: () -> Unit,
-    onDecline: () -> Unit,
-    onBlock: () -> Unit,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    val density = LocalDensity.current
-    val revealWidth = invitationActionWidth * INVITATION_ACTION_COUNT
-    val revealWidthPx = with(density) { revealWidth.toPx() }
-    var offset by remember { mutableFloatStateOf(0f) }
-
-    Box(modifier = modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.matchParentSize(),
-            horizontalArrangement = Arrangement.End
-        ) {
-            InvitationAction(
-                label = stringResource(Res.string.feature_contacts_accept_invitation),
-                backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                enabled = actionsEnabled,
-                onClick = {
-                    offset = 0f
-                    onAccept()
-                }
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-            }
-            InvitationAction(
-                label = stringResource(Res.string.feature_contacts_decline_invitation),
-                backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                enabled = actionsEnabled,
-                onClick = {
-                    offset = 0f
-                    onDecline()
-                }
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            InvitationAction(
-                label = stringResource(Res.string.feature_contacts_block_invitation),
-                backgroundColor = MaterialTheme.colorScheme.error,
-                contentColor = MaterialTheme.colorScheme.onError,
-                enabled = actionsEnabled,
-                onClick = {
-                    offset = 0f
-                    onBlock()
-                }
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Block,
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.onError
-                )
-            }
-        }
-
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .offset { IntOffset(offset.roundToInt(), 0) }
-                    .draggable(
-                        enabled = actionsEnabled,
-                        orientation = Orientation.Horizontal,
-                        state =
-                            rememberDraggableState { delta ->
-                                offset = (offset + delta).coerceIn(-revealWidthPx, 0f)
-                            },
-                        onDragStopped = {
-                            offset =
-                                if (offset <= -revealWidthPx * REVEAL_THRESHOLD_FRACTION) {
-                                    -revealWidthPx
-                                } else {
-                                    0f
-                                }
-                        }
-                    )
-        ) {
-            content()
-        }
-    }
-}
-
-@Composable
-private fun InvitationAction(
-    label: String,
-    backgroundColor: Color,
-    contentColor: Color,
-    enabled: Boolean,
-    onClick: () -> Unit,
-    icon: @Composable () -> Unit
+private fun InvitationSwipeActionContent(
+    icon: ImageVector,
+    label: String
 ) {
     Column(
-        modifier =
-            Modifier
-                .width(invitationActionWidth)
-                .fillMaxHeight()
-                .background(backgroundColor)
-                .clickable(
-                    enabled = enabled,
-                    onClick = onClick
-                ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Box(
-            modifier = Modifier.size(32.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            icon()
-        }
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(24.dp)
+        )
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = contentColor,
             maxLines = 1
         )
     }

@@ -21,7 +21,7 @@ import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import org.jetbrains.compose.resources.decodeToImageBitmap
 
 @Composable
-fun Avatar(
+fun SparrowAvatar(
     name: String,
     modifier: Modifier = Modifier,
     pictureBytes: ByteArray? = null,
@@ -70,8 +70,8 @@ private fun String.toInitials(): String =
 
 @Preview
 @Composable
-private fun AvatarPreview() {
+private fun SparrowAvatarPreview() {
     SparrowTheme {
-        Avatar(name = "Alex Example")
+        SparrowAvatar(name = "Alex Example")
     }
 }
