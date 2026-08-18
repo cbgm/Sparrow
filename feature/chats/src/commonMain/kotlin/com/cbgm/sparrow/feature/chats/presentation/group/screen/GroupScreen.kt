@@ -104,7 +104,8 @@ import org.jetbrains.compose.resources.stringResource
 fun GroupScreen(
     uiState: GroupUiState,
     onUiEvent: (GroupUiEvent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    profilePictures: Map<String, ByteArray?> = emptyMap()
 ) {
     SparrowLazyScaffold(
         modifier = modifier,
@@ -133,6 +134,7 @@ fun GroupScreen(
     ) { innerPadding, listState ->
         Content(
             uiState = uiState,
+            profilePictures = profilePictures,
             listState = listState,
             innerPadding = innerPadding,
             onRetryMessage = { messageId ->
@@ -240,6 +242,7 @@ private fun BottomBar(
 @Composable
 private fun Content(
     uiState: GroupUiState,
+    profilePictures: Map<String, ByteArray?>,
     listState: LazyListState,
     innerPadding: PaddingValues,
     onRetryMessage: (String) -> Unit
@@ -248,12 +251,15 @@ private fun Content(
         uiState.isLoading -> LoadingContent(
             modifier = Modifier.fillMaxSize().padding(innerPadding)
         )
+
         uiState.messages.isEmpty() -> EmptyContent(
             title = uiState.title,
             modifier = Modifier.fillMaxSize().padding(innerPadding)
         )
+
         else -> MessageList(
             messages = uiState.messages,
+            profilePictures = profilePictures,
             listState = listState,
             onRetryMessage = onRetryMessage,
             contentPadding = innerPadding
@@ -264,6 +270,7 @@ private fun Content(
 @Composable
 private fun MessageList(
     messages: List<GroupMessageUiModel>,
+    profilePictures: Map<String, ByteArray?>,
     listState: LazyListState,
     onRetryMessage: (String) -> Unit,
     contentPadding: PaddingValues
@@ -290,9 +297,10 @@ private fun MessageList(
     ) {
         items(items = messages, key = GroupMessageUiModel::id) { message ->
             if (message.type == ChatMessageType.USER) {
-                MessageBubble(
-                    message = message.bubble,
-                    onRetryClick = { onRetryMessage(message.id) }
+                GroupMessageBubble(
+                    message = message,
+                    profilePictureBytes = message.senderContactId?.let(profilePictures::get),
+                    onRetryMessage = onRetryMessage
                 )
             } else {
                 MembershipSystemMessage(
@@ -301,6 +309,38 @@ private fun MessageList(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun GroupMessageBubble(
+    message: GroupMessageUiModel,
+    profilePictureBytes: ByteArray?,
+    onRetryMessage: (String) -> Unit
+) {
+    if (message.bubble.isMine) {
+        MessageBubble(
+            message = message.bubble,
+            onRetryClick = { onRetryMessage(message.id) }
+        )
+        return
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        Avatar(
+            name = message.bubble.senderName.orEmpty(),
+            pictureBytes = profilePictureBytes,
+            size = 28.dp
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        MessageBubble(
+            message = message.bubble,
+            onRetryClick = { onRetryMessage(message.id) },
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -315,10 +355,12 @@ private fun StatusHint(
                 onAccept = { onUiEvent(GroupUiEvent.AcceptInvitation) },
                 onDecline = { onUiEvent(GroupUiEvent.DeclineInvitation) }
             )
+
         uiState.state == GroupConversationState.DELETED -> ConversationDeletedHint()
         uiState.state == GroupConversationState.REMOVED ||
             (uiState.state == GroupConversationState.DECLINED && uiState.messages.isNotEmpty()) ->
             MembershipRemovedHint()
+
         uiState.state == GroupConversationState.LEAVING -> MembershipLeavingHint()
         uiState.state != GroupConversationState.READY && uiState.isMessageInputEnabled ->
             PendingMessageHint(uiState = uiState)
@@ -359,6 +401,7 @@ private fun subtitle(uiState: GroupUiState): String =
     when (uiState.state) {
         GroupConversationState.READY ->
             stringResource(Res.string.feature_chats_group_member_count, uiState.memberCount)
+
         GroupConversationState.INVITED -> stringResource(Res.string.feature_chats_group_status_invited)
         GroupConversationState.JOINING -> stringResource(Res.string.feature_chats_group_status_joining)
         GroupConversationState.WAITING_FOR_MEMBERS ->
@@ -367,12 +410,14 @@ private fun subtitle(uiState: GroupUiState): String =
                 pendingCount = uiState.pendingMemberCount,
                 waitingResource = Res.string.feature_chats_group_status_waiting
             )
+
         GroupConversationState.DISTRIBUTING_KEYS ->
             pendingSubtitle(
                 readyCount = uiState.readyMemberCount,
                 pendingCount = uiState.pendingMemberCount,
                 waitingResource = Res.string.feature_chats_group_status_distributing
             )
+
         GroupConversationState.LEAVING -> stringResource(Res.string.feature_chats_group_status_leaving)
         GroupConversationState.REMOVED -> stringResource(Res.string.feature_chats_group_status_removed)
         GroupConversationState.DELETED -> stringResource(Res.string.feature_chats_group_deleted_status)
@@ -482,7 +527,10 @@ private fun ConversationDeletedHint(modifier: Modifier = Modifier) {
         contentColor = MaterialTheme.colorScheme.onErrorContainer
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.screenPadding, vertical = MaterialTheme.spacing.small)
+            modifier = Modifier.padding(
+                horizontal = MaterialTheme.spacing.screenPadding,
+                vertical = MaterialTheme.spacing.small
+            )
         ) {
             Text(
                 text = stringResource(Res.string.feature_chats_group_deleted_title),
@@ -571,7 +619,10 @@ private fun MembershipLeavingHint(modifier: Modifier = Modifier) {
         contentColor = MaterialTheme.colorScheme.onSecondaryContainer
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.screenPadding, vertical = MaterialTheme.spacing.small)
+            modifier = Modifier.padding(
+                horizontal = MaterialTheme.spacing.screenPadding,
+                vertical = MaterialTheme.spacing.small
+            )
         ) {
             Text(
                 text = stringResource(Res.string.feature_chats_group_leaving_hint_title),
@@ -602,7 +653,10 @@ private fun MembershipRemovedHint(modifier: Modifier = Modifier) {
         contentColor = MaterialTheme.colorScheme.onErrorContainer
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.screenPadding, vertical = MaterialTheme.spacing.small)
+            modifier = Modifier.padding(
+                horizontal = MaterialTheme.spacing.screenPadding,
+                vertical = MaterialTheme.spacing.small
+            )
         ) {
             Text(
                 text = stringResource(Res.string.feature_chats_group_removed_hint_title),

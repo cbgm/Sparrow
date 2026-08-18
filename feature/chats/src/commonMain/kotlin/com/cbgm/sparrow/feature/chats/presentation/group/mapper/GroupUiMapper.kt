@@ -28,7 +28,8 @@ internal fun GroupMessage.toUiModel(
                         readCount = deliveryProgress.readCount
                     )
             ),
-        type = type
+        type = type,
+        senderContactId = senderContactId
     )
 
 internal fun Contact?.displayNameForChat(isInContacts: Boolean): String {

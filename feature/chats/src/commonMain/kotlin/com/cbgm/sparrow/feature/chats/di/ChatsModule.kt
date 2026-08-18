@@ -309,6 +309,7 @@ private fun org.koin.core.module.Module.registerViewModels() {
             acceptInvitation = get(),
             declineInvitation = get(),
             observeContacts = get<ObserveContactsUseCase>(),
+            observeProfilePictures = get(),
             observeMemberTyping = get(),
             setGroupTyping = get()
         )

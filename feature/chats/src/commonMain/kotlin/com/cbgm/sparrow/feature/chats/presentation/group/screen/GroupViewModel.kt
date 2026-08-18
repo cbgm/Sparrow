@@ -17,6 +17,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.RefreshGroupDeliveryS
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.RetryGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SendGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupTypingUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.profile.ObserveRemoteProfilePicturesUseCase
 import com.cbgm.sparrow.feature.chats.presentation.group.mapper.displayNameForChat
 import com.cbgm.sparrow.feature.chats.presentation.group.mapper.toUiModel
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMemberProgressUi
@@ -34,6 +35,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
@@ -52,6 +54,7 @@ class GroupViewModel(
     private val acceptInvitation: AcceptGroupInvitationUseCase,
     private val declineInvitation: DeclineGroupInvitationUseCase,
     observeContacts: ObserveContactsUseCase,
+    private val observeProfilePictures: ObserveRemoteProfilePicturesUseCase,
     private val observeMemberTyping: ObserveGroupMemberTypingUseCase,
     private val setGroupTyping: SetGroupTypingUseCase
 ) : BaseViewModel() {
@@ -84,6 +87,24 @@ class GroupViewModel(
         ) { observation, administration ->
             GroupContext(observation, administration)
         }
+
+    val profilePictures: StateFlow<Map<String, ByteArray?>> =
+        conversationFlow
+            .map { observation ->
+                observation.conversation
+                    ?.messages
+                    .orEmpty()
+                    .asSequence()
+                    .mapNotNull { message -> message.senderContactId }
+                    .filter(String::isNotBlank)
+                    .toSet()
+            }.distinctUntilChanged()
+            .flatMapLatest { contactIds -> observeProfilePictures(contactIds) }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = emptyMap()
+            )
 
     val uiState: StateFlow<GroupUiState> =
         combine(

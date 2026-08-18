@@ -16,6 +16,7 @@ fun GroupRoute(
     viewModel: GroupViewModel = koinViewModel { parametersOf(conversationId) }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val profilePictures by viewModel.profilePictures.collectAsStateWithLifecycle()
 
     val newestMessageId = uiState.messages.firstOrNull()?.id
     LaunchedEffect(conversationId, newestMessageId) {
@@ -29,6 +30,7 @@ fun GroupRoute(
     GroupScreen(
         uiState = uiState,
         onUiEvent = viewModel::onUiEvent,
+        profilePictures = profilePictures,
         modifier = modifier
     )
 }
