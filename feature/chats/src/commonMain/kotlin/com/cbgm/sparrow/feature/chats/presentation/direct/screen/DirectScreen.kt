@@ -212,7 +212,11 @@ private fun BottomBar(
         modifier = Modifier.fillMaxWidth(),
         color = containerColor
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = MaterialTheme.spacing.base)
+        ) {
             Text(
                 text =
                     if (uiState.isContactTyping) {
@@ -256,11 +260,13 @@ private fun Content(
         uiState.isLoading -> LoadingContent(
             modifier = Modifier.fillMaxSize().padding(innerPadding)
         )
+
         uiState.messages.isEmpty() -> EmptyContent(
             contactName = uiState.contactName,
             securityState = uiState.contactSecurityState,
             modifier = Modifier.fillMaxSize().padding(innerPadding)
         )
+
         else -> MessageList(
             messages = uiState.messages,
             listState = listState,
@@ -318,7 +324,10 @@ private fun EmptyContent(
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = stringResource(Res.string.feature_chats_start_conversation_with, contactName),
+                text = stringResource(
+                    Res.string.feature_chats_start_conversation_with,
+                    contactName
+                ),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -469,6 +478,7 @@ private fun SecurityAction(
                 )
             }
         }
+
         securityState == ContactSecurityState.MUTUAL_KEYS_UNVERIFIED ||
             securityState == ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_CONTACT -> {
             TextButton(onClick = onVerifyIdentity) {
@@ -499,6 +509,7 @@ private fun invitationState(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer
             )
+
         IdentityHandshakeState.AWAITING_ACCEPTANCE ->
             SecurityBannerState(
                 icon = Icons.Default.Warning,
@@ -507,6 +518,7 @@ private fun invitationState(
                 containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                 contentColor = MaterialTheme.colorScheme.onTertiaryContainer
             )
+
         IdentityHandshakeState.ACCEPTANCE_SENT,
         IdentityHandshakeState.WAITING_FOR_READY ->
             SecurityBannerState(
@@ -516,15 +528,18 @@ private fun invitationState(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer
             )
+
         IdentityHandshakeState.DECLINED ->
             errorBanner(
                 title = stringResource(Res.string.feature_chats_contact_invitation_declined_title),
                 description = stringResource(Res.string.feature_chats_contact_invitation_declined_description)
             )
+
         IdentityHandshakeState.CONVERSATION_DELETED,
         IdentityHandshakeState.EXPIRED,
         IdentityHandshakeState.FAILED,
         null -> reinviteBanner()
+
         IdentityHandshakeState.MUTUAL_UNVERIFIED -> null
     }
 }
@@ -551,6 +566,7 @@ private fun securityState(
                         stringResource(Res.string.feature_chats_chat_unencrypted_description)
                     }
             )
+
         ContactSecurityState.ONE_WAY_KEYS ->
             errorBanner(
                 icon = Icons.Default.LockOpen,
@@ -567,11 +583,13 @@ private fun securityState(
                         stringResource(Res.string.feature_chats_chat_key_exchange_incomplete_description)
                     }
             )
+
         ContactSecurityState.MUTUAL_KEYS_UNVERIFIED ->
             errorBanner(
                 title = stringResource(Res.string.feature_chats_chat_unverified_title),
                 description = stringResource(Res.string.feature_chats_chat_unverified_description)
             )
+
         ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_ME ->
             SecurityBannerState(
                 icon = Icons.Default.Schedule,
@@ -580,6 +598,7 @@ private fun securityState(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer
             )
+
         ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_CONTACT ->
             SecurityBannerState(
                 icon = Icons.Default.Security,
@@ -588,6 +607,7 @@ private fun securityState(
                 containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                 contentColor = MaterialTheme.colorScheme.onTertiaryContainer
             )
+
         ContactSecurityState.MUTUAL_KEYS_VERIFIED -> reinviteBanner()
     }
 

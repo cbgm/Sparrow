@@ -207,7 +207,11 @@ private fun BottomBar(
     onUiEvent: (GroupUiEvent) -> Unit
 ) {
     Surface(color = containerColor) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = MaterialTheme.spacing.base)
+        ) {
             Text(
                 text =
                     if (uiState.isSomeoneTyping) {
