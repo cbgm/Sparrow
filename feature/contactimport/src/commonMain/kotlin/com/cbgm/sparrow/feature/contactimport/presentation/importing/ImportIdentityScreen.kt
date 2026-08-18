@@ -35,7 +35,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.PatternBackground
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
 import com.cbgm.sparrow.core.ui.theme.Dimens
@@ -336,8 +335,8 @@ private fun StatusBanner(
         Row(
             modifier =
                 Modifier.padding(
-                    horizontal = 16.dp,
-                    vertical = 12.dp
+                    horizontal = MaterialTheme.spacing.small,
+                    vertical = MaterialTheme.spacing.importIdentityScreen.resultVerticalPadding
                 ),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -348,7 +347,7 @@ private fun StatusBanner(
                 modifier = Modifier.size(Dimens.ImportIdentityScreen.resultIconSize)
             )
 
-            Spacer(modifier = Modifier.size(10.dp))
+            Spacer(modifier = Modifier.size(MaterialTheme.spacing.importIdentityScreen.resultIconGap))
 
             Text(
                 text = text,

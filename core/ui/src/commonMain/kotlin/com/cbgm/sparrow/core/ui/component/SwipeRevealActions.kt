@@ -30,9 +30,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.spacing
 import kotlin.math.roundToInt
 
 private val defaultSwipeActionWidth = Dimens.SwipeRevealActions.actionWidth
@@ -184,7 +184,7 @@ private fun SparrowSwipeRevealItemPreview() {
                     Modifier
                         .fillMaxWidth()
                         .background(MaterialTheme.colorScheme.background)
-                        .padding(24.dp)
+                        .padding(MaterialTheme.spacing.medium)
             ) {
                 Text("Swipe me")
             }

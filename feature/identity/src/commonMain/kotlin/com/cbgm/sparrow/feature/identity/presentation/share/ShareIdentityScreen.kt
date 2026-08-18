@@ -48,7 +48,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.BlockScreenshotEffect
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowCard
@@ -367,7 +366,7 @@ private fun GeneratedIdentityContent(
                                 width = Dimens.ShareIdentityScreen.dividerWidth,
                                 color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f),
                                 shape = MaterialTheme.shapes.small
-                            ).padding(16.dp)
+                            ).padding(MaterialTheme.spacing.small)
                 ) {
                     QrCode(
                         content = encodedIdentity,

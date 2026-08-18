@@ -33,7 +33,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowCard
@@ -88,7 +87,7 @@ fun StartupScreen(
         ) {
             SparrowAnimation(modifier = Modifier.size(Dimens.StartupScreen.animationSize), true)
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(MaterialTheme.spacing.startupScreen.titleGap))
 
             Text(
                 text = stringResource(Res.string.base_app_name),

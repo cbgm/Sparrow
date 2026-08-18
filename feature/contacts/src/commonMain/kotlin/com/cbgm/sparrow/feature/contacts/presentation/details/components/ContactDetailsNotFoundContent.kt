@@ -10,7 +10,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -48,7 +47,7 @@ private fun ContactDetailsNotFoundContentPreview() {
     SparrowTheme {
         ContactDetailsNotFoundContent(
             onBack = {},
-            modifier = Modifier.padding(24.dp)
+            modifier = Modifier.padding(MaterialTheme.spacing.screenPadding)
         )
     }
 }

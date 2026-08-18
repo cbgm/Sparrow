@@ -32,7 +32,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.theme.Dimens
@@ -138,7 +137,7 @@ fun BlockedContactsScreen(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
-                                    .padding(start = 80.dp),
+                                    .padding(start = MaterialTheme.spacing.listDividerStart),
                             color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.05f)
                         )
                     }

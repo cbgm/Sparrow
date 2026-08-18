@@ -31,7 +31,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowStatusBadge
@@ -322,7 +321,7 @@ private fun ContactListItem(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(start = 80.dp),
+                    .padding(start = MaterialTheme.spacing.listDividerStart),
             color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.05f)
         )
     }

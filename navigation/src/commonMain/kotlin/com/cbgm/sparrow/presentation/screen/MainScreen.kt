@@ -32,13 +32,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.component.SparrowScrollStateType
 import com.cbgm.sparrow.core.ui.component.SparrowTabbedScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowTabbedScrollStates
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.presentation.ContactsFlow
 import com.cbgm.sparrow.feature.chats.presentation.overview.OverviewRoute
 import com.cbgm.sparrow.feature.identity.presentation.setup.IdentityRoute
@@ -113,8 +113,8 @@ fun MainScreen(
         SparrowOverlayHost(
             visible = showContactsOverlay,
             onDismissRequest = { showContactsOverlay = false },
-            horizontalPadding = 0.dp,
-            topPadding = 48.dp
+            horizontalPadding = MaterialTheme.spacing.zero,
+            topPadding = MaterialTheme.spacing.times(6)
         ) { dismissOverlay ->
             ContactsFlow(
                 onDismiss = dismissOverlay,

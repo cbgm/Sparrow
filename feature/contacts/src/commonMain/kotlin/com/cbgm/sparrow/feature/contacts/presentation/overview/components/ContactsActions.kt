@@ -31,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.contactsScreen
@@ -142,7 +141,7 @@ private fun ImportContactSheet(
         Box(
             modifier =
                 Modifier
-                    .padding(top = 10.dp)
+                    .padding(top = MaterialTheme.spacing.contactsScreen.dragHandleTopPadding)
                     .align(Alignment.CenterHorizontally)
                     .size(
                         width = Dimens.ContactsScreen.dragHandleWidth,

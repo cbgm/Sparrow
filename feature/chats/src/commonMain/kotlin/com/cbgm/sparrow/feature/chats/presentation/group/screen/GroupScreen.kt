@@ -38,7 +38,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.PatternBackground
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowBannerButton
@@ -287,12 +286,12 @@ private fun MessageList(
         reverseLayout = true,
         contentPadding =
             PaddingValues(
-                start = 12.dp,
+                start = MaterialTheme.spacing.messageList.horizontalPadding,
                 top = contentPadding.calculateTopPadding() + MaterialTheme.spacing.small,
-                end = 12.dp,
+                end = MaterialTheme.spacing.messageList.horizontalPadding,
                 bottom = contentPadding.calculateBottomPadding() + MaterialTheme.spacing.small
             ),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
         items(items = messages, key = GroupMessageUiModel::id) { message ->
             if (message.type == ChatMessageType.USER) {
@@ -332,7 +331,7 @@ private fun GroupMessageBubble(
             pictureBytes = message.senderProfilePictureBytes,
             size = Dimens.GroupScreen.typingAvatarSize
         )
-        Spacer(modifier = Modifier.width(6.dp))
+        Spacer(modifier = Modifier.width(MaterialTheme.spacing.groupScreen.senderGap))
         MessageBubble(
             message = message.bubble,
             onRetryClick = { onRetryMessage(message.id) },

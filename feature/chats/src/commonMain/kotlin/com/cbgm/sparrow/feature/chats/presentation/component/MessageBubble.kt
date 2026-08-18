@@ -27,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.messageBubble
@@ -77,7 +76,11 @@ internal fun MessageBubble(
             Metadata(
                 message = message,
                 onRetryClick = onRetryClick,
-                modifier = Modifier.padding(top = 3.dp, start = 4.dp, end = 4.dp)
+                modifier = Modifier.padding(
+                    top = MaterialTheme.spacing.messageBubble.metadataTopPadding,
+                    start = MaterialTheme.spacing.micro,
+                    end = MaterialTheme.spacing.micro
+                )
             )
         }
     }
@@ -99,7 +102,10 @@ private fun SenderLabel(message: MessageBubbleModel) {
 
     Text(
         text = senderLabel,
-        modifier = Modifier.padding(start = 8.dp, bottom = 3.dp),
+        modifier = Modifier.padding(
+            start = MaterialTheme.spacing.base,
+            bottom = MaterialTheme.spacing.messageBubble.senderBottomPadding
+        ),
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.secondary
@@ -156,7 +162,7 @@ private fun Metadata(
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
     ) {
         SecurityIndicator(message = message)
 
@@ -303,7 +309,7 @@ private fun DoubleCheckDeliveryLabel(
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
-                    modifier = Modifier.size(Dimens.MessageBubble.iconSize).padding(start = 1.dp),
+                    modifier = Modifier.size(Dimens.MessageBubble.iconSize).padding(start = MaterialTheme.spacing.messageBubble.stackedCheckStartPadding),
                     tint = color
                 )
             }
@@ -320,7 +326,7 @@ private fun FailedDelivery(onRetryClick: () -> Unit) {
             modifier = Modifier.size(Dimens.MessageBubble.iconSize),
             tint = MaterialTheme.colorScheme.error
         )
-        Spacer(modifier = Modifier.width(3.dp))
+        Spacer(modifier = Modifier.width(MaterialTheme.spacing.messageBubble.deliveryLabelGap))
         Text(
             text = stringResource(Res.string.feature_chats_failed),
             style = MaterialTheme.typography.labelSmall,
@@ -348,7 +354,7 @@ private fun DeliveryLabel(
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         icon()
-        Spacer(modifier = Modifier.width(3.dp))
+        Spacer(modifier = Modifier.width(MaterialTheme.spacing.messageBubble.deliveryLabelGap))
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall,

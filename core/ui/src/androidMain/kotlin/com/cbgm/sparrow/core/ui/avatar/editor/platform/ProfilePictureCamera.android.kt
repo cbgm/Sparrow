@@ -25,7 +25,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -33,6 +32,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.circle
+import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
 import org.jetbrains.compose.resources.stringResource
@@ -124,7 +124,7 @@ internal fun ProfilePictureCameraScreen(
                 modifier =
                     Modifier
                         .align(Alignment.TopStart)
-                        .padding(16.dp)
+                        .padding(MaterialTheme.spacing.small)
             ) {
                 Text(
                     text = stringResource(Res.string.base_cancel),
@@ -151,7 +151,7 @@ internal fun ProfilePictureCameraScreen(
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = 36.dp)
+                        .padding(bottom = MaterialTheme.spacing.profilePictureCameraScreen.captureButtonBottomPadding)
                         .size(Dimens.ProfilePictureCameraScreen.buttonSize)
             ) {
                 Text("")

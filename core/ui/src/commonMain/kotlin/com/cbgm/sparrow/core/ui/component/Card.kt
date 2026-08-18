@@ -23,8 +23,8 @@ import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.theme.spacing
 
 private data class ShadowLayer(
     val outline: Outline,
@@ -123,7 +123,7 @@ fun SparrowCard(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(bottom = 30.dp)
+                .padding(bottom = MaterialTheme.spacing.card.bottomShadowPadding)
                 .graphicsLayer {
                     if (isFadingEnabled) {
                         alpha = cardAlpha

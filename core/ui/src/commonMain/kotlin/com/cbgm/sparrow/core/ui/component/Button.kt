@@ -20,10 +20,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.circle
+import com.cbgm.sparrow.core.ui.theme.spacing
 
 @Composable
 fun SparrowApprovalButton(
@@ -197,7 +197,7 @@ fun SparrowRoundApprovalButton(
             containerColor = MaterialTheme.colorScheme.secondary,
             contentColor = MaterialTheme.colorScheme.onSurface
         ),
-        contentPadding = PaddingValues(12.dp),
+        contentPadding = PaddingValues(MaterialTheme.spacing.button.iconContentPadding),
         modifier = modifier.size(Dimens.Button.iconButtonSize),
         enabled = enabled
     ) {

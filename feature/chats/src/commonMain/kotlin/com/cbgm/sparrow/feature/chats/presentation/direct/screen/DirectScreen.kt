@@ -47,7 +47,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.component.PatternBackground
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
@@ -369,12 +368,12 @@ private fun MessageList(
         reverseLayout = true,
         contentPadding =
             PaddingValues(
-                start = 12.dp,
+                start = MaterialTheme.spacing.messageList.horizontalPadding,
                 top = contentPadding.calculateTopPadding() + MaterialTheme.spacing.small,
-                end = 12.dp,
+                end = MaterialTheme.spacing.messageList.horizontalPadding,
                 bottom = contentPadding.calculateBottomPadding() + MaterialTheme.spacing.small
             ),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
         items(items = messages, key = MessageBubbleModel::id) { message ->
             MessageBubble(
@@ -492,7 +491,10 @@ private fun SecurityBanner(
         contentColor = state.contentColor
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier = Modifier.padding(
+                horizontal = MaterialTheme.spacing.small,
+                vertical = MaterialTheme.spacing.directScreen.securityBannerVerticalPadding
+            ),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -510,7 +512,7 @@ private fun SecurityBanner(
                 )
                 Text(
                     text = state.description,
-                    modifier = Modifier.padding(top = 2.dp),
+                    modifier = Modifier.padding(top = MaterialTheme.spacing.directScreen.securityDescriptionTopPadding),
                     style = MaterialTheme.typography.labelSmall
                 )
             }
@@ -698,7 +700,10 @@ private fun VerifiedSecurityIndicator(modifier: Modifier = Modifier) {
         color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+            modifier = Modifier.padding(
+                horizontal = MaterialTheme.spacing.small,
+                vertical = MaterialTheme.spacing.directScreen.verifiedBannerVerticalPadding
+            ),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
@@ -708,7 +713,7 @@ private fun VerifiedSecurityIndicator(modifier: Modifier = Modifier) {
                 modifier = Modifier.size(Dimens.DirectScreen.statusIconSize),
                 tint = MaterialTheme.colorScheme.secondary
             )
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(MaterialTheme.spacing.directScreen.verifiedContentGap))
             Text(
                 text = stringResource(Res.string.feature_chats_chat_verified_e2ee),
                 style = MaterialTheme.typography.labelSmall,

@@ -34,7 +34,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowCard
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -132,7 +131,7 @@ private fun LoadingContent() {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(top = 80.dp),
+                .padding(top = MaterialTheme.spacing.identityScreen.contentTopPadding),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -173,7 +172,7 @@ private fun NoIdentityContent(
             color = MaterialTheme.colorScheme.onBackground
         )
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.micro))
 
         Text(
             text = stringResource(Res.string.feature_identity_identity_enter_phone_description),
@@ -267,7 +266,7 @@ private fun ReadyIdentityContent(
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Bold
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.micro))
 
         Text(
             text = stringResource(Res.string.feature_identity_private_keys_protected),
@@ -286,7 +285,10 @@ private fun ReadyIdentityContent(
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                modifier = Modifier.padding(
+                    horizontal = MaterialTheme.spacing.identityScreen.protectionBadgeHorizontalPadding,
+                    vertical = MaterialTheme.spacing.identityScreen.protectionBadgeVerticalPadding
+                )
             )
         }
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.large))
@@ -410,7 +412,7 @@ private fun NoIdentityPreview() {
             uiState = IdentityUiState.NoIdentity(phoneNumber = "+491701111111"),
             onUiEvent = {},
             scrollState = ScrollState(0),
-            innerPadding = PaddingValues(0.dp)
+            innerPadding = PaddingValues(MaterialTheme.spacing.zero)
         )
     }
 }
@@ -431,7 +433,7 @@ private fun ReadyIdentityPreview() {
                 ),
             onUiEvent = {},
             scrollState = ScrollState(0),
-            innerPadding = PaddingValues(0.dp)
+            innerPadding = PaddingValues(MaterialTheme.spacing.zero)
         )
     }
 }
@@ -444,7 +446,7 @@ private fun IncompleteIdentityPreview() {
             uiState = IdentityUiState.IncompleteIdentity,
             onUiEvent = {},
             scrollState = ScrollState(0),
-            innerPadding = PaddingValues(0.dp)
+            innerPadding = PaddingValues(MaterialTheme.spacing.zero)
         )
     }
 }
@@ -457,7 +459,7 @@ private fun LoadingIdentityPreview() {
             uiState = IdentityUiState.Error("gdfgdgdg"),
             onUiEvent = {},
             scrollState = ScrollState(0),
-            innerPadding = PaddingValues(0.dp)
+            innerPadding = PaddingValues(MaterialTheme.spacing.zero)
         )
     }
 }

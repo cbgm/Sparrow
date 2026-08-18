@@ -50,7 +50,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.avatar.editor.AvatarEditor
 import com.cbgm.sparrow.core.ui.avatar.editor.AvatarEditorStrings
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
@@ -295,7 +294,7 @@ private fun ErrorContentPreview() {
     SparrowTheme {
         ErrorContent(
             message = "Group details could not be loaded",
-            modifier = Modifier.padding(24.dp)
+            modifier = Modifier.padding(MaterialTheme.spacing.medium)
         )
     }
 }
@@ -597,7 +596,7 @@ private fun MemberRow(
             ?: stringResource(Res.string.feature_chats_group_admin)
     val verifyDescription = stringResource(Res.string.base_verify_contact, displayName)
 
-    Column(modifier = Modifier.fillMaxWidth().padding(0.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacing.zero)) {
         ListItem(
             modifier =
                 Modifier
@@ -684,7 +683,7 @@ private fun MemberRow(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(start = 80.dp),
+                        .padding(start = MaterialTheme.spacing.listDividerStart),
                 color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.05f)
             )
         }

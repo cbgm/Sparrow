@@ -42,7 +42,6 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.messageInput
@@ -99,7 +98,7 @@ internal fun MessageInput(
                 )
                 .padding(
                     horizontal = MaterialTheme.spacing.base,
-                    vertical = 4.dp
+                    vertical = MaterialTheme.spacing.micro
                 ),
             enabled = enabled,
             minLines = 1,

@@ -9,7 +9,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsUiState
@@ -63,7 +62,7 @@ internal fun ContactDetailsBody(
                     Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
-                        .padding(24.dp)
+                        .padding(MaterialTheme.spacing.screenPadding)
             )
     }
 }

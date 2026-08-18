@@ -22,7 +22,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -65,8 +64,8 @@ fun SearchField(
                 interactionSource = interactionSource,
                 contentPadding =
                     PaddingValues(
-                        horizontal = 12.dp,
-                        vertical = 6.dp
+                        horizontal = MaterialTheme.spacing.contactsScreen.searchHorizontalPadding,
+                        vertical = MaterialTheme.spacing.contactsScreen.searchVerticalPadding
                     ),
                 leadingIcon = {
                     Icon(

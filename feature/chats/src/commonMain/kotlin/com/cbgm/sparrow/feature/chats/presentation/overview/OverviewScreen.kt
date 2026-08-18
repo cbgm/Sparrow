@@ -44,7 +44,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -124,7 +123,7 @@ private fun Content(
                             }
                         )
                         HorizontalDivider(
-                            modifier = Modifier.fillMaxWidth().padding(start = 80.dp),
+                            modifier = Modifier.fillMaxWidth().padding(start = MaterialTheme.spacing.listDividerStart),
                             color = MaterialTheme.colorScheme.onPrimary.copy(alpha = .05f)
                         )
                     }
@@ -185,7 +184,7 @@ private fun ConversationItem(
             trailingContent = {
                 Column(
                     horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
                 ) {
                     Text(
                         text = conversation.timestamp,
@@ -214,7 +213,10 @@ private fun ConversationItem(
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF071A2E),
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
+                                modifier = Modifier.padding(
+                                    horizontal = MaterialTheme.spacing.overviewScreen.unreadBadgeHorizontalPadding,
+                                    vertical = MaterialTheme.spacing.overviewScreen.unreadBadgeVerticalPadding
+                                )
                             )
                         }
                     }

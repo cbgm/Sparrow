@@ -24,7 +24,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.core.ui.component.IdentityVerificationScreen
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
@@ -293,7 +292,7 @@ private fun LeaveDialog(
                             modifier =
                                 Modifier
                                     .size(Dimens.GroupDetailsScreen.verificationProgressSize)
-                                    .padding(2.dp),
+                                    .padding(MaterialTheme.spacing.groupDetailsScreen.dialogProgressPadding),
                             strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
                         )
                     } else {
@@ -353,7 +352,7 @@ private fun PromoteBeforeLeaveDialog(
                 errorMessage?.let { message ->
                     Text(
                         text = message,
-                        modifier = Modifier.padding(top = 12.dp),
+                        modifier = Modifier.padding(top = MaterialTheme.spacing.groupDetailsScreen.dialogErrorTopPadding),
                         color = MaterialTheme.colorScheme.error
                     )
                 }
@@ -407,7 +406,7 @@ private fun PromoteDialog(
                 errorMessage?.let { message ->
                     Text(
                         text = message,
-                        modifier = Modifier.padding(top = 12.dp),
+                        modifier = Modifier.padding(top = MaterialTheme.spacing.groupDetailsScreen.dialogErrorTopPadding),
                         color = MaterialTheme.colorScheme.error
                     )
                 }
@@ -496,7 +495,7 @@ private fun RemoveDialog(
                             modifier =
                                 Modifier
                                     .size(Dimens.GroupDetailsScreen.verificationProgressSize)
-                                    .padding(2.dp),
+                                    .padding(MaterialTheme.spacing.groupDetailsScreen.dialogProgressPadding),
                             strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
                         )
                     } else {

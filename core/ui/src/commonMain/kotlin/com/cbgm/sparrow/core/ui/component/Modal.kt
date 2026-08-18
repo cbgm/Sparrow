@@ -22,7 +22,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -174,8 +173,8 @@ fun OverlayHostPreview() {
             visible = true,
             onDismissRequest = {},
             modifier = Modifier.fillMaxSize(),
-            horizontalPadding = 0.dp,
-            topPadding = 48.dp,
+            horizontalPadding = MaterialTheme.spacing.zero,
+            topPadding = MaterialTheme.spacing.times(6),
             // tonalElevation = 8.dp,
             // shadowElevation = 12.dp,
             content = {

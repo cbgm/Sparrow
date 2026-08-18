@@ -21,7 +21,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.avatar.editor.crop.ProfilePictureCropCanvas
 import com.cbgm.sparrow.core.ui.avatar.editor.crop.ProfilePictureCropRegion
 import com.cbgm.sparrow.core.ui.component.SparrowRoundApprovalButton
@@ -79,10 +78,10 @@ internal fun ProfilePictureCropScreen(
                         Modifier
                             .fillMaxSize()
                             .padding(
-                                start = 20.dp,
-                                end = 20.dp,
-                                top = 80.dp,
-                                bottom = 104.dp
+                                start = MaterialTheme.spacing.profilePictureCropScreen.horizontalPadding,
+                                end = MaterialTheme.spacing.profilePictureCropScreen.horizontalPadding,
+                                top = MaterialTheme.spacing.profilePictureCropScreen.topPadding,
+                                bottom = MaterialTheme.spacing.profilePictureCropScreen.bottomPadding
                             )
                 )
             }
