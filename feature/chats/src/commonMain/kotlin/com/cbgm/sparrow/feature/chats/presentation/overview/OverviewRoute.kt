@@ -16,9 +16,11 @@ fun OverviewRoute(
     viewModel: OverviewViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val groupAvatars by viewModel.groupAvatars.collectAsStateWithLifecycle()
 
     OverviewScreen(
         uiState = uiState,
+        groupAvatars = groupAvatars,
         onUiEvent = viewModel::onUiEvent,
         listState = listState,
         innerPadding = innerPadding,

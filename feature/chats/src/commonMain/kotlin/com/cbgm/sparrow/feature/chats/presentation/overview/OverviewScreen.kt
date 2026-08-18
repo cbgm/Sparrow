@@ -63,13 +63,15 @@ import kotlin.math.roundToInt
 @Composable
 fun OverviewScreen(
     uiState: OverviewUiState,
+    modifier: Modifier = Modifier,
+    groupAvatars: Map<String, ByteArray?> = emptyMap(),
     onUiEvent: (OverviewUiEvent) -> Unit,
     listState: LazyListState,
-    innerPadding: PaddingValues,
-    modifier: Modifier = Modifier
+    innerPadding: PaddingValues
 ) {
     Content(
         uiState = uiState,
+        groupAvatars = groupAvatars,
         onUiEvent = onUiEvent,
         listState = listState,
         innerPadding = innerPadding,
@@ -80,6 +82,7 @@ fun OverviewScreen(
 @Composable
 private fun Content(
     uiState: OverviewUiState,
+    groupAvatars: Map<String, ByteArray?>,
     onUiEvent: (OverviewUiEvent) -> Unit,
     listState: LazyListState,
     innerPadding: PaddingValues,
@@ -118,6 +121,7 @@ private fun Content(
                     ) {
                         ConversationItem(
                             conversation = conversation,
+                            groupAvatarBytes = groupAvatars[conversation.conversationId],
                             onClick = {
                                 onUiEvent(OverviewUiEvent.ChatClicked(conversation))
                             }
@@ -137,6 +141,7 @@ private fun Content(
 @Composable
 private fun ConversationItem(
     conversation: ConversationListItem,
+    groupAvatarBytes: ByteArray?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -151,7 +156,12 @@ private fun ConversationItem(
             leadingContent = {
                 Avatar(
                     name = conversation.contactName,
-                    pictureBytes = conversation.profilePictureBytes
+                    pictureBytes =
+                        if (conversation.isGroup) {
+                            groupAvatarBytes
+                        } else {
+                            conversation.profilePictureBytes
+                        }
                 )
             },
             headlineContent = {

@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.chats.data.group.incoming
 
 import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.core.protocol.packet.GroupAvatarUpdatedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.GroupConversationDeletedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
@@ -46,6 +47,7 @@ class GroupIncomingPacketProcessor(
 
 internal fun SparrowPacket.groupIdOrNull(): String? =
     when (this) {
+        is GroupAvatarUpdatedPacket -> groupId
         is GroupCreatedPacket -> groupId
         is GroupConversationDeletedPacket -> groupId
         is GroupMemberActivatedPacket -> groupId

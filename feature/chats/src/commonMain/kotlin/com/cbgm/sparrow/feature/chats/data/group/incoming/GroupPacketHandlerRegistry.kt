@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.chats.data.group.incoming
 
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
+import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupAvatarUpdatedPacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupChatMessagePacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupConversationDeletedPacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupCreatedPacketHandler
@@ -19,6 +20,7 @@ import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupVerificat
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupVerificationSnapshotRequestPacketHandler
 
 class GroupPacketHandlerRegistry(
+    avatarUpdated: GroupAvatarUpdatedPacketHandler,
     groupCreated: GroupCreatedPacketHandler,
     conversationDeleted: GroupConversationDeletedPacketHandler,
     invite: GroupInvitePacketHandler,
@@ -37,6 +39,7 @@ class GroupPacketHandlerRegistry(
 ) {
     private val handlers: List<GroupPacketHandler> =
         listOf(
+            avatarUpdated,
             groupCreated,
             conversationDeleted,
             invite,

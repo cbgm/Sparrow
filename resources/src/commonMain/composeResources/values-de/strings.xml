@@ -465,4 +465,13 @@
     <string name="feature_chats_group_promote_before_leave">Neuen Admin auswählen</string>
     <string name="feature_chats_group_promote_before_leave_description">Du bist der einzige Admin. Ernenne ein anderes aktives Mitglied zum Admin, bevor du die Gruppe verlässt.</string>
     <string name="feature_chats_group_member_unavailable">Nicht verfügbar — erneut einladen</string>
+
+    <string name="feature_chats_group_avatar">Gruppenbild</string>
+    <string name="feature_chats_group_avatar_description">Dieses Bild wird mit den aktuellen Gruppenmitgliedern geteilt.</string>
+    <string name="feature_chats_group_avatar_add">Gruppenbild hinzufügen</string>
+    <string name="feature_chats_group_avatar_change">Gruppenbild ändern</string>
+    <string name="feature_chats_group_avatar_remove">Gruppenbild entfernen</string>
+    <string name="feature_chats_group_avatar_crop">Gruppenbild zuschneiden</string>
+    <string name="feature_chats_group_avatar_take_photo">Foto aufnehmen</string>
+    <string name="feature_chats_group_avatar_choose_gallery">Aus Galerie wählen</string>
 </resources>

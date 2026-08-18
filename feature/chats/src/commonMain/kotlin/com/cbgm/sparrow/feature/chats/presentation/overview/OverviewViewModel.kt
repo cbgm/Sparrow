@@ -8,6 +8,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.GroupLeaveRequirement
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.DeleteDirectConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeleteGroupConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.GetGroupLeaveRequirementUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupAvatarsUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.overview.ObserveConversationOverviewsUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.profile.ObserveRemoteProfilePicturesUseCase
 import com.cbgm.sparrow.feature.chats.presentation.overview.mapper.directContactIds
@@ -18,6 +19,7 @@ import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiStat
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -27,6 +29,7 @@ import kotlinx.coroutines.launch
 class OverviewViewModel(
     observeConversations: ObserveConversationOverviewsUseCase,
     observeProfilePictures: ObserveRemoteProfilePicturesUseCase,
+    observeGroupAvatars: ObserveGroupAvatarsUseCase,
     private val deleteDirectConversation: DeleteDirectConversationUseCase,
     private val deleteGroupConversation: DeleteGroupConversationUseCase,
     private val getGroupLeaveRequirement: GetGroupLeaveRequirementUseCase
@@ -42,6 +45,24 @@ class OverviewViewModel(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
                 initialValue = OverviewUiState.Loading
+            )
+
+    val groupAvatars: StateFlow<Map<String, ByteArray?>> =
+        uiState
+            .map { state ->
+                (state as? OverviewUiState.Content)
+                    ?.conversations
+                    .orEmpty()
+                    .asSequence()
+                    .filter(ConversationListItem::isGroup)
+                    .map(ConversationListItem::conversationId)
+                    .toSet()
+            }.distinctUntilChanged()
+            .flatMapLatest(observeGroupAvatars::invoke)
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = emptyMap()
             )
 
     fun onUiEvent(event: OverviewUiEvent) {

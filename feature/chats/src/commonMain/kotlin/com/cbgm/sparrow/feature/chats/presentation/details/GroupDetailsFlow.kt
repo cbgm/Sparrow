@@ -69,6 +69,11 @@ fun GroupDetailsFlow(
             parametersOf(conversationId)
         }
     val uiState by verificationViewModel.uiState.collectAsStateWithLifecycle()
+    val avatarViewModel =
+        koinViewModel<GroupAvatarViewModel> {
+            parametersOf(conversationId)
+        }
+    val groupAvatarState by avatarViewModel.uiState.collectAsStateWithLifecycle()
     var content by rememberSaveable {
         mutableStateOf(DetailsContent.Overview)
     }
@@ -129,6 +134,8 @@ fun GroupDetailsFlow(
             DetailsContent.Overview -> {
                 GroupDetailsScreen(
                     uiState = GroupDetailsUiState.Content(uiState.summary),
+                    groupAvatarState = groupAvatarState,
+                    onGroupAvatarEvent = avatarViewModel::onUiEvent,
                     onUiEvent = { event ->
                         handleOverviewUiEvent(
                             event = event,

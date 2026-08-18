@@ -17,6 +17,7 @@ fun GroupRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val profilePictures by viewModel.profilePictures.collectAsStateWithLifecycle()
+    val groupAvatar by viewModel.groupAvatar.collectAsStateWithLifecycle()
 
     val newestMessageId = uiState.messages.firstOrNull()?.id
     LaunchedEffect(conversationId, newestMessageId) {
@@ -31,6 +32,7 @@ fun GroupRoute(
         uiState = uiState,
         onUiEvent = viewModel::onUiEvent,
         profilePictures = profilePictures,
+        groupAvatarBytes = groupAvatar,
         modifier = modifier
     )
 }

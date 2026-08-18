@@ -11,6 +11,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.AcceptGroupInvitation
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeclineGroupInvitationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.MarkGroupConversationReadUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupAdministrationUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupAvatarUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupMemberTypingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.RefreshGroupDeliveryStateUseCase
@@ -55,6 +56,7 @@ class GroupViewModel(
     private val declineInvitation: DeclineGroupInvitationUseCase,
     observeContacts: ObserveContactsUseCase,
     private val observeProfilePictures: ObserveRemoteProfilePicturesUseCase,
+    observeGroupAvatar: ObserveGroupAvatarUseCase,
     private val observeMemberTyping: ObserveGroupMemberTypingUseCase,
     private val setGroupTyping: SetGroupTypingUseCase
 ) : BaseViewModel() {
@@ -87,6 +89,15 @@ class GroupViewModel(
         ) { observation, administration ->
             GroupContext(observation, administration)
         }
+
+    val groupAvatar: StateFlow<ByteArray?> =
+        observeGroupAvatar(groupId)
+            .map { avatar -> avatar.bytes }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = null
+            )
 
     val profilePictures: StateFlow<Map<String, ByteArray?>> =
         conversationFlow

@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.messaging.data.routing
 
 import com.cbgm.sparrow.core.protocol.packet.DeliveryReceiptPacket
+import com.cbgm.sparrow.core.protocol.packet.GroupAvatarUpdatedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.GroupConversationDeletedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
@@ -68,6 +69,7 @@ class DefaultGroupTransportKeyResolver(
 
     private fun SparrowPacket.groupIdOrNull(): String? =
         when (this) {
+            is GroupAvatarUpdatedPacket -> groupId
             is GroupChatMessagePacket -> groupId
             is GroupConversationDeletedPacket -> groupId
             is GroupCreatedPacket -> groupId

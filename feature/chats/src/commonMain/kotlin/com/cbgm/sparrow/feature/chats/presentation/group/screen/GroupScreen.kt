@@ -106,7 +106,8 @@ fun GroupScreen(
     uiState: GroupUiState,
     onUiEvent: (GroupUiEvent) -> Unit,
     modifier: Modifier = Modifier,
-    profilePictures: Map<String, ByteArray?> = emptyMap()
+    profilePictures: Map<String, ByteArray?> = emptyMap(),
+    groupAvatarBytes: ByteArray? = null
 ) {
     SparrowLazyScaffold(
         modifier = modifier,
@@ -121,6 +122,7 @@ fun GroupScreen(
         topBar = { containerColor ->
             TopBar(
                 uiState = uiState,
+                groupAvatarBytes = groupAvatarBytes,
                 containerColor = containerColor,
                 onUiEvent = onUiEvent
             )
@@ -149,6 +151,7 @@ fun GroupScreen(
 @Composable
 private fun TopBar(
     uiState: GroupUiState,
+    groupAvatarBytes: ByteArray?,
     containerColor: Color,
     onUiEvent: (GroupUiEvent) -> Unit
 ) {
@@ -166,7 +169,7 @@ private fun TopBar(
                     modifier = Modifier.clickable { onUiEvent(GroupUiEvent.HeaderClicked) },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Avatar(name = uiState.title, size = 36.dp)
+                    Avatar(name = uiState.title, pictureBytes = groupAvatarBytes, size = 36.dp)
                     Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
                     Column {
                         Text(
@@ -256,12 +259,10 @@ private fun Content(
         uiState.isLoading -> LoadingContent(
             modifier = Modifier.fillMaxSize().padding(innerPadding)
         )
-
         uiState.messages.isEmpty() -> EmptyContent(
             title = uiState.title,
             modifier = Modifier.fillMaxSize().padding(innerPadding)
         )
-
         else -> MessageList(
             messages = uiState.messages,
             profilePictures = profilePictures,
@@ -360,12 +361,10 @@ private fun StatusHint(
                 onAccept = { onUiEvent(GroupUiEvent.AcceptInvitation) },
                 onDecline = { onUiEvent(GroupUiEvent.DeclineInvitation) }
             )
-
         uiState.state == GroupConversationState.DELETED -> ConversationDeletedHint()
         uiState.state == GroupConversationState.REMOVED ||
             (uiState.state == GroupConversationState.DECLINED && uiState.messages.isNotEmpty()) ->
             MembershipRemovedHint()
-
         uiState.state == GroupConversationState.LEAVING -> MembershipLeavingHint()
         uiState.state != GroupConversationState.READY && uiState.isMessageInputEnabled ->
             PendingMessageHint(uiState = uiState)
@@ -406,7 +405,6 @@ private fun subtitle(uiState: GroupUiState): String =
     when (uiState.state) {
         GroupConversationState.READY ->
             stringResource(Res.string.feature_chats_group_member_count, uiState.memberCount)
-
         GroupConversationState.INVITED -> stringResource(Res.string.feature_chats_group_status_invited)
         GroupConversationState.JOINING -> stringResource(Res.string.feature_chats_group_status_joining)
         GroupConversationState.WAITING_FOR_MEMBERS ->
@@ -415,14 +413,12 @@ private fun subtitle(uiState: GroupUiState): String =
                 pendingCount = uiState.pendingMemberCount,
                 waitingResource = Res.string.feature_chats_group_status_waiting
             )
-
         GroupConversationState.DISTRIBUTING_KEYS ->
             pendingSubtitle(
                 readyCount = uiState.readyMemberCount,
                 pendingCount = uiState.pendingMemberCount,
                 waitingResource = Res.string.feature_chats_group_status_distributing
             )
-
         GroupConversationState.LEAVING -> stringResource(Res.string.feature_chats_group_status_leaving)
         GroupConversationState.REMOVED -> stringResource(Res.string.feature_chats_group_status_removed)
         GroupConversationState.DELETED -> stringResource(Res.string.feature_chats_group_deleted_status)

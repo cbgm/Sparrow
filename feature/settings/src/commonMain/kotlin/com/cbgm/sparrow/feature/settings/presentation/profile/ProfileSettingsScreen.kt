@@ -34,25 +34,28 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.avatar.editor.AvatarEditor
+import com.cbgm.sparrow.core.ui.avatar.editor.AvatarEditorStrings
+import com.cbgm.sparrow.core.ui.avatar.editor.platform.ProfilePictureImage
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.identity.domain.model.LocalProfilePicture
-import com.cbgm.sparrow.feature.settings.presentation.profile.component.ProfilePictureSourceDialog
 import com.cbgm.sparrow.feature.settings.presentation.profile.model.ProfileSettingsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.profile.model.ProfileSettingsUiState
-import com.cbgm.sparrow.feature.settings.presentation.profile.platform.ProfilePictureImage
-import com.cbgm.sparrow.feature.settings.presentation.profile.platform.cropAndEncodeProfilePicture
-import com.cbgm.sparrow.feature.settings.presentation.profile.platform.rememberProfilePictureSourceLauncher
-import com.cbgm.sparrow.feature.settings.presentation.profile.screen.ProfilePictureCropScreen
 import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.feature_settings_profile
+import com.cbgm.sparrow.resources.feature_settings_profile_picture
 import com.cbgm.sparrow.resources.feature_settings_profile_picture_add
 import com.cbgm.sparrow.resources.feature_settings_profile_picture_change
+import com.cbgm.sparrow.resources.feature_settings_profile_picture_choose_gallery
+import com.cbgm.sparrow.resources.feature_settings_profile_picture_crop
 import com.cbgm.sparrow.resources.feature_settings_profile_picture_description
 import com.cbgm.sparrow.resources.feature_settings_profile_picture_remove
+import com.cbgm.sparrow.resources.feature_settings_profile_picture_take_photo
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,59 +65,41 @@ fun ProfileSettingsScreen(
     onUiEvent: (ProfileSettingsUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var showPictureSourceChooser by remember { mutableStateOf(false) }
-    var sourcePictureBytes by remember { mutableStateOf<ByteArray?>(null) }
+    var showAvatarEditor by remember { mutableStateOf(false) }
 
-    val pictureSourceLauncher = rememberProfilePictureSourceLauncher { bytes ->
-        if (bytes.isNotEmpty()) {
-            sourcePictureBytes = bytes
+    Box(modifier = modifier.fillMaxSize()) {
+        SparrowLazyScaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = MaterialTheme.colorScheme.background,
+            topBar = {
+                TopBar(onBack = { onUiEvent(ProfileSettingsUiEvent.BackClicked) })
+            }
+        ) { innerPadding, _ ->
+            Content(
+                uiState = uiState,
+                innerPadding = innerPadding,
+                onChangePicture = { showAvatarEditor = true },
+                onRemovePicture = { onUiEvent(ProfileSettingsUiEvent.RemovePictureClicked) }
+            )
         }
-    }
 
-    sourcePictureBytes?.let { sourceBytes ->
-        ProfilePictureCropScreen(
-            sourceBytes = sourceBytes,
-            onConfirm = { cropRegion ->
-                cropAndEncodeProfilePicture(
-                    sourceBytes = sourceBytes,
-                    cropRegion = cropRegion
-                )?.let { croppedBytes ->
-                    sourcePictureBytes = null
-                    onUiEvent(ProfileSettingsUiEvent.PictureSelected(croppedBytes))
-                }
-            },
-            onDismiss = { sourcePictureBytes = null }
-        )
-        return
-    }
-
-    if (showPictureSourceChooser) {
-        ProfilePictureSourceDialog(
-            onCamera = {
-                showPictureSourceChooser = false
-                pictureSourceLauncher.launchCamera()
-            },
-            onGallery = {
-                showPictureSourceChooser = false
-                pictureSourceLauncher.launchGallery()
-            },
-            onDismiss = { showPictureSourceChooser = false }
-        )
-    }
-
-    SparrowLazyScaffold(
-        modifier = modifier,
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            TopBar(onBack = { onUiEvent(ProfileSettingsUiEvent.BackClicked) })
+        if (showAvatarEditor) {
+            AvatarEditor(
+                strings =
+                    AvatarEditorStrings(
+                        sourceTitle = stringResource(Res.string.feature_settings_profile_picture),
+                        cropTitle = stringResource(Res.string.feature_settings_profile_picture_crop),
+                        takePhoto = stringResource(Res.string.feature_settings_profile_picture_take_photo),
+                        chooseFromGallery = stringResource(Res.string.feature_settings_profile_picture_choose_gallery),
+                        cancel = stringResource(Res.string.base_cancel)
+                    ),
+                onAvatarSelected = { bytes ->
+                    showAvatarEditor = false
+                    onUiEvent(ProfileSettingsUiEvent.PictureSelected(bytes))
+                },
+                onDismiss = { showAvatarEditor = false }
+            )
         }
-    ) { innerPadding, _ ->
-        Content(
-            uiState = uiState,
-            innerPadding = innerPadding,
-            onChangePicture = { showPictureSourceChooser = true },
-            onRemovePicture = { onUiEvent(ProfileSettingsUiEvent.RemovePictureClicked) }
-        )
     }
 }
 
