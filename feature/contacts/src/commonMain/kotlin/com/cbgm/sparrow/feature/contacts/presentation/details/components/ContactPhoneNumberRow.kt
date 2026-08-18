@@ -2,7 +2,6 @@ package com.cbgm.sparrow.feature.contacts.presentation.details.components
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.Icon
@@ -18,6 +17,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.contactDetailsScreen
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumber
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumberType
 import com.cbgm.sparrow.resources.Res
@@ -57,7 +57,7 @@ internal fun ContactPhoneNumberRow(
         trailingContent = {
             if (isPreferred) {
                 Surface(
-                    shape = RoundedCornerShape(6.dp),
+                    shape = MaterialTheme.shapes.contactDetailsScreen.phoneNumber,
                     color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
                 ) {
                     Text(

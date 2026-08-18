@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -35,6 +33,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.theme.circle
+import com.cbgm.sparrow.core.ui.theme.contactsScreen
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_create_group
@@ -79,7 +79,7 @@ fun CreateGroupListItem(onClick: () -> Unit) {
                     modifier =
                         Modifier.size(Dimens.ContactsScreen.menuIconContainerSize).background(
                             color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
-                            shape = CircleShape
+                            shape = MaterialTheme.shapes.circle
                         ),
                     contentAlignment = Alignment.Center
                 ) {
@@ -149,7 +149,7 @@ private fun ImportContactSheet(
                         height = Dimens.ContactsScreen.dragHandleHeight
                     ).background(
                         color = Color.White.copy(alpha = 0.25f),
-                        shape = RoundedCornerShape(2.dp)
+                        shape = MaterialTheme.shapes.contactsScreen.dragHandle
                     )
         )
 

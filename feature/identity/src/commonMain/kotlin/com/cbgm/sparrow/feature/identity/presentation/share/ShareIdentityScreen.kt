@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -57,6 +56,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.identity.presentation.platform.QrCode
 import com.cbgm.sparrow.feature.identity.presentation.share.model.ShareIdentityUiEvent
@@ -263,11 +263,11 @@ private fun IdentityOptionsContent(
                     .size(Dimens.ShareIdentityScreen.avatarSize)
                     .background(
                         color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
-                        shape = CircleShape
+                        shape = MaterialTheme.shapes.circle
                     ).border(
                         width = Dimens.ShareIdentityScreen.dividerWidth,
                         color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
-                        shape = CircleShape
+                        shape = MaterialTheme.shapes.circle
                     ),
             contentAlignment = Alignment.Center
         ) {

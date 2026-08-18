@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -46,12 +45,10 @@ import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.messageInput
 import com.cbgm.sparrow.core.ui.theme.spacing
 
 private val FieldColor = Color(0xFF102A46)
-private val ButtonNotchRadius = 14.dp
-private val ButtonRightCornerRadius = 28.dp
-
 private const val ShapeAnimationDuration = 220
 
 @Composable
@@ -98,7 +95,7 @@ internal fun MessageInput(
                 .weight(1f)
                 .background(
                     color = FieldColor,
-                    shape = RoundedCornerShape(20.dp)
+                    shape = MaterialTheme.shapes.messageInput.field
                 )
                 .padding(
                     horizontal = MaterialTheme.spacing.base,
@@ -160,6 +157,8 @@ private fun RowScope.SendButton(
      * TextField measurement.
      */
 
+    val messageInputShapes = MaterialTheme.shapes.messageInput
+
     val morphProgress by animateFloatAsState(
         targetValue =
             if (isRound) {
@@ -214,8 +213,8 @@ private fun RowScope.SendButton(
                 .clip(
                     MorphingSendButtonShape(
                         progress = morphProgress,
-                        notchRadius = ButtonNotchRadius,
-                        rightCornerRadius = ButtonRightCornerRadius
+                        notchRadius = messageInputShapes.buttonNotchRadius,
+                        rightCornerRadius = messageInputShapes.buttonRightCornerRadius
                     )
                 )
                 .background(FieldColor)

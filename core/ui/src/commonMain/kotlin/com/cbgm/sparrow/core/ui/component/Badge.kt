@@ -3,7 +3,6 @@ package com.cbgm.sparrow.core.ui.component
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -16,6 +15,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.theme.badge
 
 @Composable
 fun SparrowStatusBadge(
@@ -24,7 +24,7 @@ fun SparrowStatusBadge(
     color: Color
 ) {
     Surface(
-        shape = RoundedCornerShape(6.dp),
+        shape = MaterialTheme.shapes.badge,
         color = color.copy(alpha = 0.15f)
     ) {
         Row(

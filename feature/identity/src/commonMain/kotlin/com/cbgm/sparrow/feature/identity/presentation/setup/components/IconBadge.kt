@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -16,6 +15,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.circle
 
 @Composable
 fun IconBadge(
@@ -26,8 +26,8 @@ fun IconBadge(
         modifier =
             Modifier
                 .size(Dimens.IdentityScreen.iconBadgeSize)
-                .background(tint.copy(alpha = 0.12f), CircleShape)
-                .border(Dimens.IdentityScreen.iconBadgeBorderWidth, tint.copy(alpha = 0.3f), CircleShape),
+                .background(tint.copy(alpha = 0.12f), MaterialTheme.shapes.circle)
+                .border(Dimens.IdentityScreen.iconBadgeBorderWidth, tint.copy(alpha = 0.3f), MaterialTheme.shapes.circle),
         contentAlignment = Alignment.Center
     ) {
         Icon(

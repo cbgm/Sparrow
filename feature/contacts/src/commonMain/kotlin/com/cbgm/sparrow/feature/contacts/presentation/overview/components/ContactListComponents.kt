@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Contacts
@@ -37,6 +36,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowStatusBadge
 import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
@@ -109,10 +109,10 @@ fun ContactSelectionCircle(
                             enabled -> MaterialTheme.colorScheme.outline
                             else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
                         },
-                    shape = CircleShape
+                    shape = MaterialTheme.shapes.circle
                 ).background(
                     color = if (selected) MaterialTheme.colorScheme.secondary else Color.Transparent,
-                    shape = CircleShape
+                    shape = MaterialTheme.shapes.circle
                 ),
         contentAlignment = Alignment.Center
     ) {
@@ -153,7 +153,7 @@ fun EmptyContactsContent(modifier: Modifier = Modifier) {
                         .size(Dimens.ContactsScreen.emptyStateIconContainerSize)
                         .background(
                             color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
-                            shape = CircleShape
+                            shape = MaterialTheme.shapes.circle
                         ),
                 contentAlignment = Alignment.Center
             ) {

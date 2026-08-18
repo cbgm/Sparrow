@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Schedule
@@ -27,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
@@ -66,7 +66,7 @@ internal fun ContactHeader(
                 isMutuallyVerified ->
                     Surface(
                         modifier = Modifier.size(Dimens.ContactDetailsScreen.verificationBadgeSize),
-                        shape = CircleShape,
+                        shape = MaterialTheme.shapes.circle,
                         color = MaterialTheme.colorScheme.secondary
                     ) {
                         Box(contentAlignment = Alignment.Center) {

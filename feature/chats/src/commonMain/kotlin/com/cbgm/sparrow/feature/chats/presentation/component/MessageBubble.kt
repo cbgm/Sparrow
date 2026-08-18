@@ -30,6 +30,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.messageBubble
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
@@ -110,10 +111,19 @@ private fun BubbleBody(
     message: MessageBubbleModel,
     state: BubbleState
 ) {
+    val bubbleShapes = MaterialTheme.shapes.messageBubble
+
     Surface(
         color = state.bubbleColor,
         contentColor = state.contentColor,
-        shape = MessageBubbleShape(isMine = message.isMine)
+        shape =
+            MessageBubbleShape(
+                isMine = message.isMine,
+                cornerRadius = bubbleShapes.cornerRadius,
+                tailWidth = bubbleShapes.tailWidth,
+                tailHeight = bubbleShapes.tailHeight,
+                tailReturnOffset = bubbleShapes.tailReturnOffset
+            )
     ) {
         Row(
             modifier =

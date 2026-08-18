@@ -6,13 +6,17 @@ import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.unit.dp
 import kotlin.math.min
 
 @Stable
 class MessageBubbleShape(
-    private val isMine: Boolean
+    private val isMine: Boolean,
+    private val cornerRadius: Dp,
+    private val tailWidth: Dp,
+    private val tailHeight: Dp,
+    private val tailReturnOffset: Dp
 ) : Shape {
     override fun createOutline(
         size: Size,
@@ -20,9 +24,9 @@ class MessageBubbleShape(
         density: Density
     ): Outline {
         with(density) {
-            val radius = min(18.dp.toPx(), size.height / 2f)
-            val tailWidth = 10.dp.toPx()
-            val tailHeight = 14.dp.toPx()
+            val radius = min(cornerRadius.toPx(), size.height / 2f)
+            val tailWidth = tailWidth.toPx()
+            val tailHeight = tailHeight.toPx()
 
             return Outline.Generic(
                 if (isMine) {
@@ -104,7 +108,7 @@ class MessageBubbleShape(
              */
             cubicTo(
                 bodyRight + tailWidth * 0.35f,
-                bottom - 1.dp.value,
+                bottom - tailReturnOffset.value,
                 bodyRight + tailWidth * 0.05f,
                 bottom - tailHeight * 0.15f,
                 bodyRight - radius * 0.45f,
@@ -201,7 +205,7 @@ class MessageBubbleShape(
                 bodyLeft - tailWidth * 0.05f,
                 bottom - tailHeight * 0.15f,
                 bodyLeft - tailWidth * 0.35f,
-                bottom - 1.dp.value,
+                bottom - tailReturnOffset.value,
                 0f,
                 bottom
             )

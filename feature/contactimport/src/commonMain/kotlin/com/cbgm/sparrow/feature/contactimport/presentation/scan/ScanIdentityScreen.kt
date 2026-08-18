@@ -29,10 +29,10 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowStaticScaffold
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.scanIdentityScreen
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contactimport.device.QrScanner
 import com.cbgm.sparrow.feature.contactimport.presentation.scan.model.ScanIdentityUiEvent
@@ -120,10 +120,13 @@ private fun ScannerOverlay(modifier: Modifier = Modifier) {
     val backgroundColor = MaterialTheme.colorScheme.background
     val accentColor = MaterialTheme.colorScheme.secondary
 
+    val frameCornerRadius = MaterialTheme.shapes.scanIdentityScreen.frameCornerRadius
+
     Canvas(modifier = modifier) {
         val frameSize = size.minDimension * 0.62f
         val left = (size.width - frameSize) / 2f
-        val top = (size.height - frameSize) / 2f - Dimens.ScanIdentityScreen.frameVerticalOffset.toPx()
+        val top =
+            (size.height - frameSize) / 2f - Dimens.ScanIdentityScreen.frameVerticalOffset.toPx()
 
         val scrimPath =
             Path().apply {
@@ -135,7 +138,7 @@ private fun ScannerOverlay(modifier: Modifier = Modifier) {
                                 offset = Offset(left, top),
                                 size = Size(frameSize, frameSize)
                             ),
-                        cornerRadius = CornerRadius(24.dp.toPx())
+                        cornerRadius = CornerRadius(frameCornerRadius.toPx())
                     )
                 )
                 fillType = PathFillType.EvenOdd

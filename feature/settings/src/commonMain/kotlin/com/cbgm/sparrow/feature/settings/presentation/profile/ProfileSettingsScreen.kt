@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
@@ -41,6 +40,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.identity.domain.model.LocalProfilePicture
 import com.cbgm.sparrow.feature.settings.presentation.profile.model.ProfileSettingsUiEvent
@@ -207,7 +207,7 @@ private fun ProfilePicture(
     Box(
         modifier = Modifier
             .size(Dimens.ProfileSettingsScreen.avatarEditorSize)
-            .clip(CircleShape)
+            .clip(MaterialTheme.shapes.circle)
             .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center
     ) {

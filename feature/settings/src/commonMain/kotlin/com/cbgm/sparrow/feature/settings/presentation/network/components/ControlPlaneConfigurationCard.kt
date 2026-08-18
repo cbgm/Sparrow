@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material3.AlertDialog
@@ -34,6 +33,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneDirectoryError
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsError
@@ -331,7 +331,7 @@ private fun StatusDot(status: ControlPlaneUiStatus) {
         modifier =
             Modifier
                 .size(Dimens.ControlPlaneSettingsScreen.statusIndicatorSize)
-                .background(statusColor(status), CircleShape)
+                .background(statusColor(status), MaterialTheme.shapes.circle)
     )
 }
 

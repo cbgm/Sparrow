@@ -2,7 +2,6 @@ package com.cbgm.sparrow.feature.contacts.presentation.details.components
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.Icon
@@ -16,6 +15,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.circle
 
 @Composable
 internal fun ContactVerificationBadge(
@@ -24,7 +24,7 @@ internal fun ContactVerificationBadge(
 ) {
     Surface(
         modifier = Modifier.size(Dimens.ContactDetailsScreen.verificationBadgeSize),
-        shape = CircleShape,
+        shape = MaterialTheme.shapes.circle,
         color = containerColor
     ) {
         Box(contentAlignment = Alignment.Center) {

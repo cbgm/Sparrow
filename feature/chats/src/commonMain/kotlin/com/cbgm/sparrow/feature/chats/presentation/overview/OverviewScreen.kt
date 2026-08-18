@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.DeleteOutline
@@ -49,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.ConversationListItem
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiEvent
@@ -206,7 +206,7 @@ private fun ConversationItem(
                                         minWidth = Dimens.OverviewScreen.unreadBadgeMinSize,
                                         minHeight = Dimens.OverviewScreen.unreadBadgeMinSize
                                     )
-                                    .background(MaterialTheme.colorScheme.secondary, CircleShape),
+                                    .background(MaterialTheme.colorScheme.secondary, MaterialTheme.shapes.circle),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -241,7 +241,7 @@ private fun EmptyContent(modifier: Modifier = Modifier) {
                     .size(Dimens.OverviewScreen.emptyStateIconContainerSize)
                     .background(
                         MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
-                        CircleShape
+                        MaterialTheme.shapes.circle
                     ),
             contentAlignment = Alignment.Center
         ) {
