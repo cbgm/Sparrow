@@ -19,6 +19,8 @@ import com.cbgm.sparrow.feature.contacts.data.merge.ContactMergeServiceImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactKeyExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactVerificationRepositoryImpl
+import com.cbgm.sparrow.feature.contacts.data.repository.DeviceContactWriterRepositoryImpl
+import com.cbgm.sparrow.feature.contacts.data.repository.DeviceContactsRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.IdentityExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.IdentityInvitationRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.verification.ContactLocalIdentityChangeHandler
@@ -26,6 +28,8 @@ import com.cbgm.sparrow.feature.contacts.data.verification.ContactVerificationPa
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactKeyExchangeRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactVerificationRepository
+import com.cbgm.sparrow.feature.contacts.domain.repository.DeviceContactWriterRepository
+import com.cbgm.sparrow.feature.contacts.domain.repository.DeviceContactsRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityExchangeRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityInvitationRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.AcceptContactInvitationUseCase
@@ -38,6 +42,8 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportDeviceContactsUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactBlocklistUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactProfilePictureUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactProfilePicturesUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveIdentityHandshakeStateUseCase
@@ -58,6 +64,14 @@ import org.koin.dsl.module
 
 val contactsModule =
     module {
+
+        single<DeviceContactsRepository> {
+            DeviceContactsRepositoryImpl(dataSource = get())
+        }
+
+        single<DeviceContactWriterRepository> {
+            DeviceContactWriterRepositoryImpl(dataSource = get())
+        }
 
         single<ContactMergeService> {
             ContactMergeServiceImpl(
@@ -119,7 +133,9 @@ val contactsModule =
                 phoneNumberNormalizer = get(),
                 contactVerificationRepository = get(),
                 modeRepository = get(),
-                contactBlocklistRepository = get()
+                contactBlocklistRepository = get(),
+                localProfilePictureMetadataProvider = get(),
+                remoteProfilePictureMetadataProcessor = get()
             )
         }
 
@@ -260,6 +276,8 @@ val contactsModule =
         factory { ObservePendingContactInvitationCountUseCase(observePendingContactInvitations = get()) }
         factory { ObserveIdentityHandshakeStateUseCase(identityInvitationRepository = get()) }
         factory { ObserveIdentitySetupModeUseCase(repository = get()) }
+        factory { ObserveContactProfilePictureUseCase(provider = get()) }
+        factory { ObserveContactProfilePicturesUseCase(provider = get()) }
         factory { EnsureIdentityExchangeStartedUseCase(identityExchangeRepository = get()) }
 
         viewModel {
@@ -267,7 +285,8 @@ val contactsModule =
                 observePendingContactInvitations = get(),
                 acceptContactInvitation = get(),
                 declineContactInvitation = get(),
-                declineAndBlockContactInvitation = get()
+                declineAndBlockContactInvitation = get(),
+                observeProfilePictures = get()
             )
         }
 
@@ -275,24 +294,26 @@ val contactsModule =
             BlockedContactsViewModel(
                 observeContactBlocklist = get(),
                 blockContact = get(),
-                unblockContact = get()
+                unblockContact = get(),
+                observeProfilePictures = get()
             )
         }
 
         viewModel {
             ContactsViewModel(
                 observeContacts = get(),
-                importDeviceContacts = get()
+                importDeviceContacts = get(),
+                observeProfilePictures = get()
             )
         }
 
         viewModel { parameters ->
             ContactDetailsViewModel(
                 contactId = parameters.get(),
-                getContact = get(),
                 observeContact = get(),
                 getContactSafetyNumber = get(),
-                verifyContact = get()
+                verifyContact = get(),
+                observeProfilePicture = get()
             )
         }
     }

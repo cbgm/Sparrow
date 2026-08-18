@@ -6,24 +6,22 @@ import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversationState
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.AcceptGroupInvitationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeclineGroupInvitationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.MarkGroupConversationReadUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupAdministrationUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupAvatarUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupMemberTypingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.RefreshGroupDeliveryStateUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.RetryGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SendGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupTypingUseCase
-import com.cbgm.sparrow.feature.chats.presentation.group.mapper.displayNameForChat
-import com.cbgm.sparrow.feature.chats.presentation.group.mapper.toUiModel
-import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMemberProgressUi
+import com.cbgm.sparrow.feature.chats.domain.usecase.profile.ObserveRemoteProfilePicturesUseCase
+import com.cbgm.sparrow.feature.chats.presentation.group.mapper.toGroupUiState
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
-import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -34,6 +32,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
@@ -52,6 +51,8 @@ class GroupViewModel(
     private val acceptInvitation: AcceptGroupInvitationUseCase,
     private val declineInvitation: DeclineGroupInvitationUseCase,
     observeContacts: ObserveContactsUseCase,
+    private val observeProfilePictures: ObserveRemoteProfilePicturesUseCase,
+    observeGroupAvatar: ObserveGroupAvatarUseCase,
     private val observeMemberTyping: ObserveGroupMemberTypingUseCase,
     private val setGroupTyping: SetGroupTypingUseCase
 ) : BaseViewModel() {
@@ -85,15 +86,56 @@ class GroupViewModel(
             GroupContext(observation, administration)
         }
 
-    val uiState: StateFlow<GroupUiState> =
+    private val groupAvatarFlow: Flow<ByteArray?> =
+        observeGroupAvatar(groupId).map { avatar -> avatar.bytes }
+
+    private val profilePicturesFlow: Flow<Map<String, ByteArray?>> =
+        conversationFlow
+            .map { observation ->
+                observation.conversation
+                    ?.messages
+                    .orEmpty()
+                    .asSequence()
+                    .mapNotNull { message -> message.senderContactId }
+                    .filter(String::isNotBlank)
+                    .toSet()
+            }.distinctUntilChanged()
+            .flatMapLatest { contactIds -> observeProfilePictures(contactIds) }
+
+    private val presentationContext =
         combine(
             contextFlow,
             contactsFlow,
+            profilePicturesFlow,
+            groupAvatarFlow
+        ) { context, contacts, profilePictures, avatarBytes ->
+            GroupPresentationContext(
+                context = context,
+                contacts = contacts,
+                profilePictures = profilePictures,
+                avatarBytes = avatarBytes
+            )
+        }
+
+    val uiState: StateFlow<GroupUiState> =
+        combine(
+            presentationContext,
             messageText,
             errorMessage,
             typingContactIds
-        ) { context, contacts, text, error, typingIds ->
-            context.toUiState(contacts, text, error, typingIds)
+        ) { presentation, text, error, typingIds ->
+            toGroupUiState(
+                conversation = presentation.context.observation.conversation,
+                administration = presentation.context.administration,
+                contacts = presentation.contacts,
+                profilePictures = presentation.profilePictures,
+                avatarBytes = presentation.avatarBytes,
+                currentText = text,
+                currentError = error,
+                observationError = presentation.context.observation.errorMessage,
+                isLoading = presentation.context.observation is GroupConversationObservation.Loading,
+                typingContactIds = typingIds
+            )
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
@@ -132,88 +174,6 @@ class GroupViewModel(
                 .onFailure { error -> logger.warn(error) { "Could not mark group conversation as read" } }
         }
     }
-
-    private fun GroupContext.toUiState(
-        contacts: List<Contact>,
-        currentText: String,
-        currentError: String?,
-        currentTypingIds: Set<String>
-    ): GroupUiState {
-        val conversation = observation.conversation
-        val contactsById = contacts.associateBy(Contact::id)
-        val groupState = conversation?.state ?: GroupConversationState.READY
-
-        return GroupUiState(
-            title = conversation?.title.orEmpty(),
-            messages = conversation.toMessageUiModels(contactsById),
-            messageText = currentText,
-            isSomeoneTyping = currentTypingIds.isNotEmpty(),
-            typingDisplayName = typingDisplayName(currentTypingIds, contactsById),
-            errorMessage = currentError ?: observation.errorMessage,
-            isLoading = observation is GroupConversationObservation.Loading,
-            isMessageInputEnabled = isMessageInputEnabled(conversation, groupState),
-            state = groupState,
-            memberCount = administration.activeMemberCount + (conversation?.pendingParticipantCount ?: 0),
-            readyMemberCount = administration.activeMemberCount,
-            pendingMemberCount = conversation?.pendingParticipantCount ?: 0,
-            showInvitationActions = groupState == GroupConversationState.INVITED,
-            memberProgress = conversation.toMemberProgress(contactsById)
-        )
-    }
-
-    private fun GroupConversation?.toMessageUiModels(contactsById: Map<String, Contact>) =
-        this
-            ?.messages
-            .orEmpty()
-            .asReversed()
-            .map { message ->
-                val sender = message.senderContactId?.let(contactsById::get)
-                val senderIsInContacts = sender?.deviceContactLinkStatus == DeviceContactLinkStatus.LINKED
-                message.toUiModel(
-                    senderName = sender.displayNameForChat(senderIsInContacts),
-                    senderIsInContacts = senderIsInContacts
-                )
-            }
-
-    private fun GroupConversation?.toMemberProgress(contactsById: Map<String, Contact>): List<GroupMemberProgressUi> =
-        this
-            ?.memberInvitationStates
-            .orEmpty()
-            .takeIf { this?.isIncomingInvitation == false }
-            .orEmpty()
-            .map { member ->
-                val contact = contactsById[member.contactId]
-                val isInContacts = contact?.deviceContactLinkStatus == DeviceContactLinkStatus.LINKED
-                GroupMemberProgressUi(
-                    displayName = contact.displayNameForChat(isInContacts),
-                    status = member.status
-                )
-            }
-
-    private fun isMessageInputEnabled(
-        conversation: GroupConversation?,
-        state: GroupConversationState
-    ): Boolean {
-        conversation ?: return false
-        return conversation.isReady ||
-            (!conversation.isIncomingInvitation && state.canQueueMessagesWhilePreparing())
-    }
-
-    private fun GroupConversationState.canQueueMessagesWhilePreparing(): Boolean =
-        this == GroupConversationState.WAITING_FOR_MEMBERS ||
-            this == GroupConversationState.DISTRIBUTING_KEYS
-
-    private fun typingDisplayName(
-        contactIds: Set<String>,
-        contactsById: Map<String, Contact>
-    ): String =
-        contactIds
-            .mapNotNull(contactsById::get)
-            .map { contact ->
-                val isInContacts = contact.deviceContactLinkStatus == DeviceContactLinkStatus.LINKED
-                contact.displayNameForChat(isInContacts)
-            }.filter(String::isNotBlank)
-            .joinToString(", ")
 
     private fun observeParticipants() {
         viewModelScope.launch {
@@ -367,6 +327,13 @@ class GroupViewModel(
     private data class GroupContext(
         val observation: GroupConversationObservation,
         val administration: GroupAdministrationState
+    )
+
+    private data class GroupPresentationContext(
+        val context: GroupContext,
+        val contacts: List<Contact>,
+        val profilePictures: Map<String, ByteArray?>,
+        val avatarBytes: ByteArray?
     )
 
     private companion object {

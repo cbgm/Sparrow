@@ -47,6 +47,7 @@ internal fun ContactDetailsBody(
             ContactDetailsContent(
                 contact = uiState.contact,
                 safetyNumber = uiState.safetyNumber,
+                profilePictureBytes = uiState.profilePictureBytes,
                 onShareContact = onShareContact,
                 onVerifyIdentity = onVerifyIdentity,
                 scrollState = scrollState,

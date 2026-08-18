@@ -15,6 +15,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(projects.core)
+            implementation(projects.core.datastore)
             implementation(projects.core.ui)
             implementation(projects.feature.identity)
 
@@ -22,7 +23,6 @@ kotlin {
             implementation(libs.bundles.coroutines)
             implementation(libs.bundles.koin.compose)
 
-            implementation(compose.materialIconsExtended)
             implementation(libs.about.libs.compose)
             implementation(libs.about.libs.render)
         }
@@ -30,10 +30,6 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.core.ktx)
-            implementation(libs.androidx.camera.core)
-            implementation(libs.androidx.camera.camera2)
-            implementation(libs.androidx.camera.lifecycle)
-            implementation(libs.androidx.camera.view)
             implementation(libs.koin.android)
         }
 

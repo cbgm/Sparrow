@@ -464,4 +464,13 @@
     <string name="feature_chats_group_promote_before_leave">Choose a new admin</string>
     <string name="feature_chats_group_promote_before_leave_description">You are the only admin. Promote another active member before leaving this group.</string>
     <string name="feature_chats_group_member_unavailable">Unavailable — re-invite required</string>
+
+    <string name="feature_chats_group_avatar">Group avatar</string>
+    <string name="feature_chats_group_avatar_description">This picture is shared with current group members.</string>
+    <string name="feature_chats_group_avatar_add">Add group avatar</string>
+    <string name="feature_chats_group_avatar_change">Change group avatar</string>
+    <string name="feature_chats_group_avatar_remove">Remove group avatar</string>
+    <string name="feature_chats_group_avatar_crop">Crop group avatar</string>
+    <string name="feature_chats_group_avatar_take_photo">Take photo</string>
+    <string name="feature_chats_group_avatar_choose_gallery">Choose from gallery</string>
 </resources>

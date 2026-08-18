@@ -11,6 +11,7 @@ import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberPayload
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMembershipChangePayload
+import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.protocol.version.ProtocolVersion
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
@@ -427,7 +428,8 @@ class GroupSecurityManager internal constructor(
         messageId: String,
         sentAtEpochMilliseconds: Long,
         plaintext: String,
-        localSigningKeyPair: LocalSigningKeyPair
+        localSigningKeyPair: LocalSigningKeyPair,
+        profilePicture: ProfilePictureMetadata = ProfilePictureMetadata()
     ): Result<SecuredGroupMessage> =
         runCatching {
             val state = groupSecurityDao.findState(groupId) ?: error("Group security state was not found")
@@ -445,7 +447,8 @@ class GroupSecurityManager internal constructor(
                     groupId = groupId,
                     epoch = state.currentEpoch,
                     messageId = messageId,
-                    sentAtEpochMilliseconds = sentAtEpochMilliseconds
+                    sentAtEpochMilliseconds = sentAtEpochMilliseconds,
+                    profilePicture = profilePicture
                 )
             val encrypted =
                 groupCrypto
@@ -498,7 +501,8 @@ class GroupSecurityManager internal constructor(
                     groupId = packet.groupId,
                     epoch = packet.epoch,
                     messageId = packet.messageId,
-                    sentAtEpochMilliseconds = packet.sentAtEpochMilliseconds
+                    sentAtEpochMilliseconds = packet.sentAtEpochMilliseconds,
+                    profilePicture = packet.profilePicture
                 )
             val signaturePayload =
                 payloadEncoder.encodeMessageSignature(

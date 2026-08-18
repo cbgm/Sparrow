@@ -4,12 +4,50 @@ import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverview
 import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverviewType
 import com.cbgm.sparrow.feature.chats.presentation.overview.formatter.formatConversationTimestamp
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.ConversationListItem
+import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiState
 
-internal fun ConversationOverview.toConversationListItem(): ConversationListItem =
+internal fun List<ConversationOverview>.directContactIds(): Set<String> =
+    asSequence()
+        .filter { conversation -> conversation.type == ConversationOverviewType.DIRECT }
+        .map(ConversationOverview::contactId)
+        .filter(String::isNotBlank)
+        .toSet()
+
+internal fun List<ConversationOverview>.groupIds(): Set<String> =
+    asSequence()
+        .filter { conversation -> conversation.type == ConversationOverviewType.GROUP }
+        .map(ConversationOverview::id)
+        .toSet()
+
+internal fun List<ConversationOverview>.toUiState(
+    profilePictures: Map<String, ByteArray?>,
+    groupAvatars: Map<String, ByteArray?>
+): OverviewUiState =
+    if (isEmpty()) {
+        OverviewUiState.Empty
+    } else {
+        OverviewUiState.Content(
+            conversations =
+                map { conversation ->
+                    conversation.toConversationListItem(
+                        avatarBytes =
+                            when (conversation.type) {
+                                ConversationOverviewType.DIRECT -> profilePictures[conversation.contactId]
+                                ConversationOverviewType.GROUP -> groupAvatars[conversation.id]
+                            }
+                    )
+                }
+        )
+    }
+
+internal fun ConversationOverview.toConversationListItem(
+    avatarBytes: ByteArray? = null
+): ConversationListItem =
     ConversationListItem(
         conversationId = id,
         contactId = contactId,
         contactName = displayName,
+        avatarBytes = avatarBytes,
         lastMessage = lastMessageText.orEmpty(),
         timestamp = lastMessageTimestamp?.let(::formatConversationTimestamp).orEmpty(),
         unreadCount = unreadCount,

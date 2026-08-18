@@ -11,6 +11,7 @@ import com.cbgm.sparrow.core.protocol.packet.ContactInviteAcceptedPacket
 import com.cbgm.sparrow.core.protocol.packet.ContactInviteDeclinedPacket
 import com.cbgm.sparrow.core.protocol.packet.ContactInvitePacket
 import com.cbgm.sparrow.core.protocol.packet.DeliveryReceiptPacket
+import com.cbgm.sparrow.core.protocol.packet.GroupAvatarUpdatedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.GroupConversationDeletedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
@@ -242,6 +243,7 @@ class DefaultOutboxProcessor(
 
     private fun SparrowPacket.groupIdForRouting(): String? =
         when (this) {
+            is GroupAvatarUpdatedPacket -> groupId
             is GroupChatMessagePacket -> groupId
             is GroupCreatedPacket -> groupId
             is GroupLeaveRequestPacket -> groupId

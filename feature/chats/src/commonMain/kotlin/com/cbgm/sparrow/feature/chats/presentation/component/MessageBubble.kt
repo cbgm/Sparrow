@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ErrorOutline
@@ -113,13 +112,7 @@ private fun BubbleBody(
     Surface(
         color = state.bubbleColor,
         contentColor = state.contentColor,
-        shape =
-            RoundedCornerShape(
-                topStart = 16.dp,
-                topEnd = 16.dp,
-                bottomStart = if (message.isMine) 16.dp else 4.dp,
-                bottomEnd = if (message.isMine) 4.dp else 16.dp
-            )
+        shape = MessageBubbleShape(isMine = message.isMine)
     ) {
         Row(
             modifier =

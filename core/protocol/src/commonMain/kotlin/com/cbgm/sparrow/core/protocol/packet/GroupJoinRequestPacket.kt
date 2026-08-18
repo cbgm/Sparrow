@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.core.protocol.packet
 
+import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.protocol.serializer.ByteArrayAsBase64Serializer
 import com.cbgm.sparrow.core.protocol.version.ProtocolVersion
 import kotlinx.serialization.SerialName
@@ -12,6 +13,7 @@ data class GroupJoinRequestPacket(
     override val version: Int = ProtocolVersion.CURRENT,
     val invitationId: String,
     val groupId: String,
+    val profilePicture: ProfilePictureMetadata = ProfilePictureMetadata(),
     @Serializable(with = ByteArrayAsBase64Serializer::class)
     val challenge: ByteArray,
     @Serializable(with = ByteArrayAsBase64Serializer::class)
@@ -40,6 +42,7 @@ data class GroupJoinRequestPacket(
             version == other.version &&
             invitationId == other.invitationId &&
             groupId == other.groupId &&
+            profilePicture == other.profilePicture &&
             challenge.contentEquals(other.challenge) &&
             memberEncryptionPublicKey.contentEquals(other.memberEncryptionPublicKey) &&
             memberSigningPublicKey.contentEquals(other.memberSigningPublicKey) &&
@@ -51,6 +54,7 @@ data class GroupJoinRequestPacket(
         result = 31 * result + version
         result = 31 * result + invitationId.hashCode()
         result = 31 * result + groupId.hashCode()
+        result = 31 * result + profilePicture.hashCode()
         result = 31 * result + challenge.contentHashCode()
         result = 31 * result + memberEncryptionPublicKey.contentHashCode()
         result = 31 * result + memberSigningPublicKey.contentHashCode()

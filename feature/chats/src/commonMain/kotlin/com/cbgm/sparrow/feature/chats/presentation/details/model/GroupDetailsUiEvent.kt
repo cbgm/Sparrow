@@ -42,6 +42,12 @@ sealed interface GroupDetailsUiEvent {
     data object LeaveGroupConfirmed : GroupDetailsUiEvent
 
     data object LeaveGroupDismissed : GroupDetailsUiEvent
+
+    data class AvatarSelected(
+        val bytes: ByteArray
+    ) : GroupDetailsUiEvent
+
+    data object RemoveGroupAvatarClicked : GroupDetailsUiEvent
 }
 
 sealed interface AddGroupMembersUiEvent {

@@ -13,8 +13,7 @@ import org.koin.compose.viewmodel.koinViewModel
 fun ContactInvitationRoute(
     viewModel: ContactInvitationViewModel = koinViewModel()
 ) {
-    val invitations by viewModel.pendingInvitations.collectAsStateWithLifecycle()
-    val processingInvitationId by viewModel.processingInvitationId.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(viewModel) {
@@ -26,8 +25,7 @@ fun ContactInvitationRoute(
     }
 
     ContactInvitationsScreen(
-        invitations = invitations,
-        processingInvitationId = processingInvitationId,
+        uiState = uiState,
         snackbarHostState = snackbarHostState,
         onUiEvent = viewModel::onUiEvent
     )

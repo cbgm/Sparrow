@@ -35,6 +35,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,9 +49,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
-import com.cbgm.sparrow.core.ui.component.ContactAvatar
 import com.cbgm.sparrow.core.ui.component.PatternBackground
+import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
+import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
+import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
@@ -61,6 +68,7 @@ import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.IdentityHandshakeState
 import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.base_verify
 import com.cbgm.sparrow.resources.feature_chats_chat_key_exchange_incomplete_description
 import com.cbgm.sparrow.resources.feature_chats_chat_key_exchange_incomplete_title
@@ -90,13 +98,17 @@ import com.cbgm.sparrow.resources.feature_chats_contact_invitation_sent_descript
 import com.cbgm.sparrow.resources.feature_chats_contact_invitation_sent_title
 import com.cbgm.sparrow.resources.feature_chats_direct_chat_reinvite_required_description
 import com.cbgm.sparrow.resources.feature_chats_direct_chat_reinvite_required_title
+import com.cbgm.sparrow.resources.feature_chats_import_contact_identity
 import com.cbgm.sparrow.resources.feature_chats_loading_chat
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_incomplete_description
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_incomplete_title
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_required_description
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_required_title
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_setup_action
+import com.cbgm.sparrow.resources.feature_chats_manual_identity_setup_description
+import com.cbgm.sparrow.resources.feature_chats_manual_identity_setup_title
 import com.cbgm.sparrow.resources.feature_chats_start_conversation_with
+import com.cbgm.sparrow.resources.feature_identity_share_my_identity
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -106,6 +118,8 @@ fun DirectScreen(
     onUiEvent: (DirectUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showIdentitySetupDialog by rememberSaveable { mutableStateOf(false) }
+
     SparrowLazyScaffold(
         modifier = modifier,
         barColor = MaterialTheme.colorScheme.background,
@@ -120,7 +134,8 @@ fun DirectScreen(
             TopBar(
                 uiState = uiState,
                 containerColor = containerColor,
-                onUiEvent = onUiEvent
+                onUiEvent = onUiEvent,
+                onManualIdentitySetup = { showIdentitySetupDialog = true }
             )
         },
         bottomBar = { containerColor ->
@@ -140,6 +155,20 @@ fun DirectScreen(
             }
         )
     }
+
+    if (showIdentitySetupDialog) {
+        IdentitySetupDialog(
+            onShareIdentity = {
+                showIdentitySetupDialog = false
+                onUiEvent(DirectUiEvent.ShareIdentityClicked)
+            },
+            onImportIdentity = {
+                showIdentitySetupDialog = false
+                onUiEvent(DirectUiEvent.ImportIdentityClicked)
+            },
+            onDismiss = { showIdentitySetupDialog = false }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -147,7 +176,8 @@ fun DirectScreen(
 private fun TopBar(
     uiState: DirectUiState,
     containerColor: Color,
-    onUiEvent: (DirectUiEvent) -> Unit
+    onUiEvent: (DirectUiEvent) -> Unit,
+    onManualIdentitySetup: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         TopAppBar(
@@ -163,7 +193,11 @@ private fun TopBar(
                     modifier = Modifier.clickable { onUiEvent(DirectUiEvent.HeaderClicked) },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    ContactAvatar(name = uiState.contactName, size = 36.dp)
+                    SparrowAvatar(
+                        name = uiState.contactName,
+                        pictureBytes = uiState.profilePictureBytes,
+                        size = 36.dp
+                    )
                     Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
                     Text(
                         text = uiState.contactName,
@@ -183,16 +217,66 @@ private fun TopBar(
             }
         )
 
-        SecurityBanner(
-            securityState = uiState.contactSecurityState,
-            identityHandshakeState = uiState.identityHandshakeState,
-            identitySetupMode = uiState.identitySetupMode,
-            isChatAuthorized = uiState.isMessageInputEnabled,
-            onVerifyIdentity = { onUiEvent(DirectUiEvent.VerifyIdentityClicked) },
-            onManualIdentitySetup = { onUiEvent(DirectUiEvent.ManualIdentitySetupClicked) }
-        )
+        if (!uiState.isLoading) {
+            SecurityBanner(
+                securityState = uiState.contactSecurityState,
+                identityHandshakeState = uiState.identityHandshakeState,
+                identitySetupMode = uiState.identitySetupMode,
+                isChatAuthorized = uiState.isMessageInputEnabled,
+                onVerifyIdentity = { onUiEvent(DirectUiEvent.VerifyIdentityClicked) },
+                onManualIdentitySetup = onManualIdentitySetup
+            )
+        }
 
         uiState.errorMessage?.let { message -> ErrorMessage(message = message) }
+    }
+}
+
+@Composable
+private fun IdentitySetupDialog(
+    onShareIdentity: () -> Unit,
+    onImportIdentity: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    SparrowAlertDialog(
+        onDismissRequest = onDismiss,
+        title = stringResource(Res.string.feature_chats_manual_identity_setup_title),
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(text = stringResource(Res.string.feature_chats_manual_identity_setup_description))
+                Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+                SparrowOutlinedButton(
+                    onClick = onShareIdentity,
+                    modifier = Modifier.fillMaxWidth(),
+                    text = stringResource(Res.string.feature_identity_share_my_identity)
+                )
+                SparrowOutlinedButton(
+                    onClick = onImportIdentity,
+                    modifier = Modifier.fillMaxWidth(),
+                    text = stringResource(Res.string.feature_chats_import_contact_identity)
+                )
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            SparrowSecondaryButton(
+                onClick = onDismiss,
+                text = stringResource(Res.string.base_cancel),
+                fillMaxWidth = false
+            )
+        }
+    )
+}
+
+@Preview
+@Composable
+private fun IdentitySetupDialogPreview() {
+    SparrowTheme {
+        IdentitySetupDialog(
+            onShareIdentity = {},
+            onImportIdentity = {},
+            onDismiss = {}
+        )
     }
 }
 

@@ -6,68 +6,76 @@ import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.settings.domain.usecase.ClearLocalDataUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetBuildInfoUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetDeveloperEnabledUseCase
+import com.cbgm.sparrow.feature.settings.presentation.developer.mapper.toUiState
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
 class DeveloperMenuViewModel(
     private val clearLocalDataUseCase: ClearLocalDataUseCase,
-    private val getBuildInfoUseCase: GetBuildInfoUseCase,
+    getBuildInfoUseCase: GetBuildInfoUseCase,
     private val setDeveloperEnabledUseCase: SetDeveloperEnabledUseCase,
     private val transportDiagnosticsProvider: TransportDiagnosticsProvider
 ) : BaseViewModel() {
-    private val _uiState =
-        MutableStateFlow(
-            DeveloperMenuUiState(
-                buildInfo = getBuildInfoUseCase(),
-                transportDiagnostics = transportDiagnosticsProvider.diagnostics.value
+    private val isClearingLocalData = MutableStateFlow(false)
+    private val buildInfo = getBuildInfoUseCase()
+
+    val uiState: StateFlow<DeveloperMenuUiState> =
+        combine(
+            transportDiagnosticsProvider.diagnostics,
+            isClearingLocalData
+        ) { diagnostics, isClearing ->
+            diagnostics.toUiState(
+                buildInfo = buildInfo,
+                isClearingLocalData = isClearing
             )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+            initialValue =
+                DeveloperMenuUiState(
+                    buildInfo = buildInfo,
+                    transportDiagnostics = transportDiagnosticsProvider.diagnostics.value
+                )
         )
-    val uiState: StateFlow<DeveloperMenuUiState> = _uiState.asStateFlow()
 
     init {
-        observeTransportDiagnostics()
         refreshTransportDiagnostics()
     }
 
     fun onUiEvent(event: DeveloperMenuUiEvent) {
         when (event) {
             DeveloperMenuUiEvent.BackClicked -> navigator.popBackStack()
-            DeveloperMenuUiEvent.ClearLocalDataClicked -> onClearLocalData()
-            DeveloperMenuUiEvent.DisableDeveloperModeClicked -> onDisableDeveloperMode()
+            DeveloperMenuUiEvent.ClearLocalDataClicked -> clearLocalData()
+            DeveloperMenuUiEvent.DisableDeveloperModeClicked -> disableDeveloperMode()
         }
     }
 
-    private fun onClearLocalData() {
+    private fun clearLocalData() {
+        if (isClearingLocalData.value) return
+
         viewModelScope.launch {
-            _uiState.update { it.copy(isClearingLocalData = true) }
-            clearLocalDataUseCase()
-            _uiState.update { it.copy(isClearingLocalData = false) }
+            isClearingLocalData.value = true
+            try {
+                clearLocalDataUseCase()
+            } finally {
+                isClearingLocalData.value = false
+            }
         }
     }
 
-    private fun onDisableDeveloperMode() {
+    private fun disableDeveloperMode() {
         viewModelScope.launch {
             setDeveloperEnabledUseCase(false)
             navigator.popBackStack()
-        }
-    }
-
-    private fun observeTransportDiagnostics() {
-        viewModelScope.launch {
-            transportDiagnosticsProvider.diagnostics.collectLatest { diagnostics ->
-                _uiState.update { current ->
-                    current.copy(transportDiagnostics = diagnostics)
-                }
-            }
         }
     }
 

@@ -13,10 +13,9 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.direct.RefreshDirectDeliver
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.RetryDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SendDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SetDirectTypingUseCase
-import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.isDirectChatAuthorized
-import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.resolveContactName
-import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.toSecurityState
-import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.toUiModel
+import com.cbgm.sparrow.feature.chats.domain.usecase.profile.ObserveRemoteProfilePicturesUseCase
+import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.toDirectUiState
+import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.withProfilePicture
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
@@ -49,6 +48,7 @@ class DirectViewModel(
     private val ensureIdentityExchangeStarted: EnsureIdentityExchangeStartedUseCase,
     observeIdentityHandshakeState: ObserveIdentityHandshakeStateUseCase,
     observeContact: ObserveContactUseCase,
+    observeProfilePictures: ObserveRemoteProfilePicturesUseCase,
     private val observeTyping: ObserveDirectTypingUseCase,
     private val setTyping: SetDirectTypingUseCase
 ) : BaseViewModel() {
@@ -63,6 +63,7 @@ class DirectViewModel(
     private val conversationFlow: Flow<DirectConversation?> = observeConversation(conversationId)
     private val contactFlow: Flow<Contact?> = observeContact(contactId = contactId)
     private val identityHandshakeFlow: Flow<IdentityHandshakeState?> = observeIdentityHandshakeState(contactId)
+    private val profilePictureFlow: Flow<ByteArray?> = observeProfilePictures(contactId)
     private val identitySetupModeFlow: StateFlow<DirectIdentitySetupMode> =
         observeIdentitySetupMode()
             .stateIn(
@@ -81,14 +82,29 @@ class DirectViewModel(
             ConversationContext(conversation, contact, handshake, setupMode)
         }
 
-    val uiState: StateFlow<DirectUiState> =
+    private val functionalUiState: Flow<DirectUiState> =
         combine(
             conversationContext,
             messageText,
             errorMessage,
             isContactTyping
         ) { context, text, error, contactTyping ->
-            context.toUiState(text, error, contactTyping)
+            toDirectUiState(
+                contactId = contactId,
+                fallbackContactName = fallbackContactName,
+                conversation = context.conversation,
+                contact = context.contact,
+                handshake = context.handshake,
+                setupMode = context.setupMode,
+                currentText = text,
+                currentError = error,
+                contactTyping = contactTyping
+            )
+        }
+
+    val uiState: StateFlow<DirectUiState> =
+        combine(functionalUiState, profilePictureFlow) { state, profilePictureBytes ->
+            state.withProfilePicture(profilePictureBytes)
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000L),
@@ -113,7 +129,6 @@ class DirectViewModel(
             DirectUiEvent.HeaderClicked -> openContactDetails()
             is DirectUiEvent.RetryMessage -> retryFailedMessage(event.messageId)
             DirectUiEvent.VerifyIdentityClicked -> verifyIdentity()
-            DirectUiEvent.ManualIdentitySetupClicked -> Unit
             DirectUiEvent.ShareIdentityClicked -> navigator.navigateTo(AppRoute.ShareIdentity)
             DirectUiEvent.ImportIdentityClicked -> navigator.navigateTo(AppRoute.ImportContact(contactId))
             DirectUiEvent.BackClicked -> navigator.popBackStackTo(AppRoute.Main)
@@ -135,25 +150,6 @@ class DirectViewModel(
                 .onFailure { error -> logger.warn(error) { "Could not mark direct conversation as read" } }
         }
     }
-
-    private fun ConversationContext.toUiState(
-        currentText: String,
-        currentError: String?,
-        contactTyping: Boolean
-    ): DirectUiState =
-        DirectUiState(
-            contactId = contactId,
-            contactName = resolveContactName(contact, fallbackContactName),
-            messages = conversation?.messages.orEmpty().asReversed().map { it.toUiModel() },
-            messageText = currentText,
-            isContactTyping = contactTyping,
-            contactSecurityState = contact.toSecurityState(),
-            identityHandshakeState = handshake,
-            identitySetupMode = setupMode,
-            isLoading = contact == null,
-            isMessageInputEnabled = isDirectChatAuthorized(contact, handshake, setupMode),
-            errorMessage = currentError
-        )
 
     private fun observeAutomaticIdentitySetup() {
         viewModelScope.launch {

@@ -17,7 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun StatusBadge(
+fun SparrowStatusBadge(
     text: String,
     icon: ImageVector,
     color: Color

@@ -26,6 +26,7 @@ navigation-compose = "2.9.2"
 zxing = "3.5.4"
 cameraX = "1.5.1"
 androidx-splashscreen = "1.2.0"
+datastore = "1.2.1"
 kotlincrypto-hash = "0.8.0"
 kotlinx-serialization = "1.9.0"
 ktor = "3.5.1"
@@ -50,6 +51,7 @@ google-services = "4.5.0"
 hikari = "7.1.0"
 postgresql = "42.7.13"
 jedis = "5.2.0"
+material-icons = "1.7.3"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -65,6 +67,8 @@ androidx-test-core = { module = "androidx.test:core", version.ref = "androidx-te
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidx-test-runner" }
 androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "androidx-splashscreen" }
 androidx-work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
+androidx-datastore = { module = "androidx.datastore:datastore", version.ref = "datastore" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 
 androidx-lifecycle-viewmodelCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-runtimeCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
@@ -72,6 +76,7 @@ androidx-lifecycle-runtimeCompose = { module = "org.jetbrains.androidx.lifecycle
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "composeMultiplatform" }
 compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "composeMultiplatform" }
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
+compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "material-icons" }
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMultiplatform" }
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
 compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
@@ -157,7 +162,8 @@ compose = [
     "compose-uiToolingPreview",
     "compose-uiTooling",
     "androidx-lifecycle-viewmodelCompose",
-    "androidx-lifecycle-runtimeCompose"
+    "androidx-lifecycle-runtimeCompose",
+    "compose-material-icons-extended"
 ]
 
 coroutines = [

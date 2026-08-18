@@ -19,6 +19,9 @@ import com.cbgm.sparrow.core.protocol.packet.DirectChatAuthorizationRevokedPacke
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
+import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
+import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProcessor
 import com.cbgm.sparrow.core.protocol.version.ProtocolVersion
 import com.cbgm.sparrow.core.security.ContactBlocklistRepository
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
@@ -65,7 +68,9 @@ class IdentityInvitationRepositoryImpl(
     private val phoneNumberNormalizer: PhoneNumberNormalizer,
     private val contactVerificationRepository: ContactVerificationRepository,
     private val modeRepository: DirectIdentitySetupModeRepository,
-    private val contactBlocklistRepository: ContactBlocklistRepository
+    private val contactBlocklistRepository: ContactBlocklistRepository,
+    private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
+    private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor
 ) : IdentityInvitationRepository {
     private val logger = SparrowLog.withTag("IdentityInvitationRepositoryImpl")
 
@@ -130,6 +135,7 @@ class IdentityInvitationRepositoryImpl(
                 val challenge = secureRandomGenerator.generateBytes(CHALLENGE_SIZE).getOrThrow()
                 val localPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow()
                 val expiresAt = now + INVITATION_LIFETIME_MILLISECONDS
+                val profilePicture = localProfilePictureMetadataProvider.forInvite().getOrElse { ProfilePictureMetadata() }
                 val payload =
                     payloadEncoder.encodeInvite(
                         packetId = packetId,
@@ -138,6 +144,7 @@ class IdentityInvitationRepositoryImpl(
                         displayName = localPhoneNumber,
                         createdAtEpochMilliseconds = now,
                         expiresAtEpochMilliseconds = expiresAt,
+                        profilePicture = profilePicture,
                         inviteChallenge = challenge,
                         encryptionPublicKey = localIdentity.encryptionPublicKey,
                         signingPublicKey = localIdentity.signingPublicKey
@@ -150,6 +157,7 @@ class IdentityInvitationRepositoryImpl(
                         displayName = localPhoneNumber,
                         createdAtEpochMilliseconds = now,
                         expiresAtEpochMilliseconds = expiresAt,
+                        profilePicture = profilePicture,
                         inviteChallenge = challenge.copyOf(),
                         encryptionPublicKey = localIdentity.encryptionPublicKey.copyOf(),
                         signingPublicKey = localIdentity.signingPublicKey.copyOf(),
@@ -264,17 +272,25 @@ class IdentityInvitationRepositoryImpl(
                     latestInvitation = latestInvitation,
                     latestAuthorizationEvent = latestAuthorizationEvent
                 )
-            if (state != IdentityHandshakeState.MUTUAL_UNVERIFIED) {
+            if (state !in DIRECT_CHAT_AUTHORIZED_STATES) {
                 return@combine state
             }
 
+            val authorizationEvent =
+                when (state) {
+                    IdentityHandshakeState.ACCEPTANCE_SENT,
+                    IdentityHandshakeState.WAITING_FOR_READY -> latestInvitation
+
+                    IdentityHandshakeState.MUTUAL_UNVERIFIED -> latestAuthorizationEvent
+                    else -> null
+                }
             val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrNull()
             if (
-                latestAuthorizationEvent != null &&
+                authorizationEvent != null &&
                 localIdentity != null &&
-                isBoundToLocalIdentity(latestAuthorizationEvent, localIdentity)
+                isBoundToLocalIdentity(authorizationEvent, localIdentity)
             ) {
-                IdentityHandshakeState.MUTUAL_UNVERIFIED
+                state
             } else {
                 null
             }
@@ -311,6 +327,7 @@ class IdentityInvitationRepositoryImpl(
                 requireLocalKeysMatch(localIdentity, signingKeyPair)
 
                 val now = SystemClock.nowEpochMilliseconds()
+                val profilePicture = localProfilePictureMetadataProvider.forInvite().getOrElse { ProfilePictureMetadata() }
                 val responseChallenge = secureRandomGenerator.generateBytes(CHALLENGE_SIZE).getOrThrow()
                 val packetId = acceptedPacketId(invitationId)
                 val payload =
@@ -319,6 +336,7 @@ class IdentityInvitationRepositoryImpl(
                         version = ProtocolVersion.CURRENT,
                         invitationId = invitationId,
                         acceptedAtEpochMilliseconds = now,
+                        profilePicture = profilePicture,
                         inviteChallenge = invitation.inviteChallenge,
                         responseChallenge = responseChallenge,
                         inviterEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
@@ -332,6 +350,7 @@ class IdentityInvitationRepositoryImpl(
                         packetId = packetId,
                         invitationId = invitationId,
                         acceptedAtEpochMilliseconds = now,
+                        profilePicture = profilePicture,
                         inviteChallenge = invitation.inviteChallenge.copyOf(),
                         responseChallenge = responseChallenge.copyOf(),
                         inviterEncryptionPublicKey = invitation.remoteEncryptionPublicKey.copyOf(),
@@ -362,6 +381,12 @@ class IdentityInvitationRepositoryImpl(
                     )
                     throw error
                 }
+                contactKeyExchangeRepository
+                    .markMutual(
+                        contactId = invitation.contactId,
+                        expectedRemoteEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
+                        expectedRemoteSigningPublicKey = invitation.remoteSigningPublicKey
+                    ).getOrThrow()
                 invitationDao.upsert(
                     requireNotNull(invitationDao.findById(invitationId)).copy(
                         state = IdentityHandshakeState.WAITING_FOR_READY.name,
@@ -579,6 +604,7 @@ class IdentityInvitationRepositoryImpl(
                         displayName = packet.displayName,
                         createdAtEpochMilliseconds = packet.createdAtEpochMilliseconds,
                         expiresAtEpochMilliseconds = packet.expiresAtEpochMilliseconds,
+                        profilePicture = packet.profilePicture,
                         inviteChallenge = packet.inviteChallenge,
                         encryptionPublicKey = packet.encryptionPublicKey,
                         signingPublicKey = packet.signingPublicKey
@@ -636,6 +662,12 @@ class IdentityInvitationRepositoryImpl(
                     )
                     return@withLock
                 }
+
+                remoteProfilePictureMetadataProcessor
+                    .apply(contactId, packet.profilePicture)
+                    .onFailure { error ->
+                        logger.warn(error) { "Could not store profile picture for $contactId" }
+                    }
 
                 remotePhoneNumber?.let { phoneNumber ->
                     persistIncomingPhoneNumber(
@@ -782,6 +814,7 @@ class IdentityInvitationRepositoryImpl(
                         version = packet.version,
                         invitationId = packet.invitationId,
                         acceptedAtEpochMilliseconds = packet.acceptedAtEpochMilliseconds,
+                        profilePicture = packet.profilePicture,
                         inviteChallenge = packet.inviteChallenge,
                         responseChallenge = packet.responseChallenge,
                         inviterEncryptionPublicKey = packet.inviterEncryptionPublicKey,
@@ -817,6 +850,12 @@ class IdentityInvitationRepositoryImpl(
                 ) {
                     "Contact signing identity changed during invitation acceptance"
                 }
+
+                remoteProfilePictureMetadataProcessor
+                    .apply(context.contactId, packet.profilePicture)
+                    .onFailure { error ->
+                        logger.warn(error) { "Could not store profile picture for ${context.contactId}" }
+                    }
 
                 if (invitation.state == IdentityHandshakeState.MUTUAL_UNVERIFIED.name) {
                     check(invitation.responseChallenge?.contentEquals(packet.responseChallenge) == true) {
@@ -989,18 +1028,14 @@ class IdentityInvitationRepositoryImpl(
     ): Result<Unit> =
         runCatching {
             mutex.withLock {
+                require(packet.invitationId.isNotBlank()) {
+                    "Invitation ID must not be blank"
+                }
                 requirePacketId(
                     actualPacketId = packet.packetId,
                     expectedPrefix = "contact-invite-declined",
                     invitationId = packet.invitationId
                 )
-                val invitation = requireInvitation(packet.invitationId, IdentityInvitationDirection.OUTGOING)
-                check(invitation.contactId == context.contactId) {
-                    "Decline contact does not match invitation"
-                }
-                check(invitation.inviteChallenge.contentEquals(packet.inviteChallenge)) {
-                    "Decline challenge does not match invitation"
-                }
 
                 val payload =
                     payloadEncoder.encodeDeclined(
@@ -1019,6 +1054,29 @@ class IdentityInvitationRepositoryImpl(
                         context.receivedAtEpochMilliseconds + MAX_CLOCK_SKEW_MILLISECONDS
                 ) {
                     "Decline response was created too far in the future"
+                }
+
+                val invitation = invitationDao.findById(packet.invitationId)
+                if (invitation == null) {
+                    // Terminal invitation responses are replay-safe. Once the exact invitation
+                    // is gone, do not compare the packet with the contact's current identity:
+                    // the contact may have legitimately re-keyed since this old invitation.
+                    // The packet has already passed its own signature and timestamp checks and
+                    // no local state is mutated for this stale response.
+                    logger.debug {
+                        "Ignoring stale decline for missing invitation ${packet.invitationId}"
+                    }
+                    return@withLock
+                }
+
+                check(invitation.direction == IdentityInvitationDirection.OUTGOING.name) {
+                    "Invitation direction does not match this operation"
+                }
+                check(invitation.contactId == context.contactId) {
+                    "Decline contact does not match invitation"
+                }
+                check(invitation.inviteChallenge.contentEquals(packet.inviteChallenge)) {
+                    "Decline challenge does not match invitation"
                 }
                 check(
                     invitation.remoteSigningPublicKey.isEmpty() ||
@@ -1493,12 +1551,23 @@ class IdentityInvitationRepositoryImpl(
                 states = AUTHORIZATION_EVENT_STATES
             )
 
-        return resolveObservedState(
-            latestInvitation = latestInvitation,
-            latestAuthorizationEvent = latestAuthorizationEvent
-        ) == IdentityHandshakeState.MUTUAL_UNVERIFIED &&
-            latestAuthorizationEvent != null &&
-            isBoundToLocalIdentity(latestAuthorizationEvent, localIdentity)
+        val state =
+            resolveObservedState(
+                latestInvitation = latestInvitation,
+                latestAuthorizationEvent = latestAuthorizationEvent
+            )
+        val authorizationEvent =
+            when (state) {
+                IdentityHandshakeState.ACCEPTANCE_SENT,
+                IdentityHandshakeState.WAITING_FOR_READY -> latestInvitation
+
+                IdentityHandshakeState.MUTUAL_UNVERIFIED -> latestAuthorizationEvent
+                else -> null
+            }
+
+        return state in DIRECT_CHAT_AUTHORIZED_STATES &&
+            authorizationEvent != null &&
+            isBoundToLocalIdentity(authorizationEvent, localIdentity)
     }
 
     private fun isBoundToLocalIdentity(
@@ -1586,6 +1655,7 @@ class IdentityInvitationRepositoryImpl(
         val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
         requireLocalKeysMatch(localIdentity, signingKeyPair)
         val acceptedAt = SystemClock.nowEpochMilliseconds()
+        val profilePicture = localProfilePictureMetadataProvider.forInvite().getOrElse { ProfilePictureMetadata() }
         check(acceptedAt <= invitation.expiresAtEpochMilliseconds) {
             "Invitation has expired"
         }
@@ -1596,6 +1666,7 @@ class IdentityInvitationRepositoryImpl(
                 version = ProtocolVersion.CURRENT,
                 invitationId = invitation.invitationId,
                 acceptedAtEpochMilliseconds = acceptedAt,
+                profilePicture = profilePicture,
                 inviteChallenge = invitation.inviteChallenge,
                 responseChallenge = responseChallenge,
                 inviterEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
@@ -1611,6 +1682,7 @@ class IdentityInvitationRepositoryImpl(
                     packetId = packetId,
                     invitationId = invitation.invitationId,
                     acceptedAtEpochMilliseconds = acceptedAt,
+                    profilePicture = profilePicture,
                     inviteChallenge = invitation.inviteChallenge.copyOf(),
                     responseChallenge = responseChallenge.copyOf(),
                     inviterEncryptionPublicKey = invitation.remoteEncryptionPublicKey.copyOf(),
@@ -1620,6 +1692,21 @@ class IdentityInvitationRepositoryImpl(
                     signature = signature.copyOf()
                 )
         ).getOrThrow()
+        contactKeyExchangeRepository
+            .markMutual(
+                contactId = invitation.contactId,
+                expectedRemoteEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
+                expectedRemoteSigningPublicKey = invitation.remoteSigningPublicKey
+            ).getOrThrow()
+        invitationDao.upsert(
+            invitation.copy(
+                state = IdentityHandshakeState.WAITING_FOR_READY.name,
+                updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
+                lastError = null,
+                localEncryptionPublicKey = localIdentity.encryptionPublicKey.copyOf(),
+                localSigningPublicKey = localIdentity.signingPublicKey.copyOf()
+            )
+        )
     }
 
     private suspend fun queueReadyReplay(
@@ -1850,6 +1937,13 @@ class IdentityInvitationRepositoryImpl(
         const val MINIMUM_COUNTRY_CODE_DIGITS = 1
         const val MINIMUM_NATIONAL_NUMBER_DIGITS = 7
         const val SEALED_BOX_TRANSPORT_MODE = "SEALED_BOX"
+
+        val DIRECT_CHAT_AUTHORIZED_STATES =
+            setOf(
+                IdentityHandshakeState.ACCEPTANCE_SENT,
+                IdentityHandshakeState.WAITING_FOR_READY,
+                IdentityHandshakeState.MUTUAL_UNVERIFIED
+            )
 
         val AUTHORIZATION_EVENT_STATES =
             listOf(

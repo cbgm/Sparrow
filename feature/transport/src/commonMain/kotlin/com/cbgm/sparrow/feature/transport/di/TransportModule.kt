@@ -14,6 +14,7 @@ import com.cbgm.sparrow.feature.transport.config.TransportConfig
 import com.cbgm.sparrow.feature.transport.connection.DefaultTransportConnectionManager
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionManager
 import com.cbgm.sparrow.feature.transport.controlplane.ControlPlaneCandidateVerifier
+import com.cbgm.sparrow.feature.transport.controlplane.ControlPlaneConfigurationImpl
 import com.cbgm.sparrow.feature.transport.controlplane.ControlPlaneRequestRouter
 import com.cbgm.sparrow.feature.transport.controlplane.HttpControlPlaneDirectorySynchronizer
 import com.cbgm.sparrow.feature.transport.controlplane.HttpControlPlaneHealthMonitor
@@ -21,12 +22,13 @@ import com.cbgm.sparrow.feature.transport.controlplane.HttpNodeControlPlaneDirec
 import com.cbgm.sparrow.feature.transport.controlplane.NodeControlPlaneDirectorySource
 import com.cbgm.sparrow.feature.transport.controlplane.NodeControlPlaneDiscoverySynchronizer
 import com.cbgm.sparrow.feature.transport.controlplane.SignedDirectoryControlPlaneCandidateVerifier
+import com.cbgm.sparrow.feature.transport.discovery.DataStoreNodeDirectoryCache
 import com.cbgm.sparrow.feature.transport.discovery.DefaultNodeEndpointResolver
 import com.cbgm.sparrow.feature.transport.discovery.HttpNodeDirectorySource
+import com.cbgm.sparrow.feature.transport.discovery.NodeDirectoryCache
 import com.cbgm.sparrow.feature.transport.discovery.NodeDirectorySource
 import com.cbgm.sparrow.feature.transport.discovery.NodeDirectoryVerifier
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
-import com.cbgm.sparrow.feature.transport.discovery.registerPlatformNodeDirectoryCache
 import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
 import com.cbgm.sparrow.feature.transport.mailbox.HttpMailboxGateway
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
@@ -57,7 +59,24 @@ val transportModule =
             TransportConfig()
         }
 
-        registerPlatformNodeDirectoryCache()
+        single<NodeDirectoryCache> {
+            DataStoreNodeDirectoryCache(
+                dataStore = get(),
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
+            )
+        }
+
+        single<ControlPlaneConfigurationImpl> {
+            ControlPlaneConfigurationImpl(dataStore = get())
+        }
+
+        single<ControlPlaneConfiguration> {
+            get<ControlPlaneConfigurationImpl>()
+        }
+
+        single<ControlPlaneStatusStore> {
+            get<ControlPlaneConfigurationImpl>()
+        }
 
         single<HttpClient> {
             createPlatformHttpClient(

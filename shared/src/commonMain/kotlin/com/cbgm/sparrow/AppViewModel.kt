@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 class AppViewModel(
     private val initAppLanguageUseCase: InitAppLanguageUseCase,
@@ -58,6 +59,7 @@ class AppViewModel(
                 )
             }
         initAppLanguageUseCase()
+        initialization.controlPlaneConfiguration.initialize()
         initialization.platformNotificationRuntime.initialize()
         initialization.conversationNotificationCoordinator.start()
         initializeControlPlaneDirectory()
@@ -101,18 +103,20 @@ class AppViewModel(
             while (isActive) {
                 val result = initialization.controlPlaneDirectorySynchronizer.refresh()
                 delay(
-                    if (result.isSuccess) {
-                        CONTROL_PLANE_DIRECTORY_REFRESH_MILLISECONDS
-                    } else {
-                        CONTROL_PLANE_DIRECTORY_RETRY_MILLISECONDS
-                    }
+                    (
+                        if (result.isSuccess) {
+                            CONTROL_PLANE_DIRECTORY_REFRESH_MILLISECONDS
+                        } else {
+                            CONTROL_PLANE_DIRECTORY_RETRY_MILLISECONDS
+                        }
+                    ).milliseconds
                 )
             }
         }
         viewModelScope.launch {
             while (isActive) {
                 initialization.controlPlaneHealthMonitor.refresh()
-                delay(CONTROL_PLANE_HEALTH_REFRESH_MILLISECONDS)
+                delay(CONTROL_PLANE_HEALTH_REFRESH_MILLISECONDS.milliseconds)
             }
         }
     }

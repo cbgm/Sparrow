@@ -5,6 +5,7 @@ import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.ChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.DeliveryReceiptPacket
+import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProcessor
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.ContactDao
@@ -20,7 +21,8 @@ class DirectMessagePacketHandler(
     private val chatDao: ChatDao,
     private val contactDao: ContactDao,
     private val protocolOutbox: ProtocolOutbox,
-    private val identityInvitationRepository: IdentityInvitationRepository
+    private val identityInvitationRepository: IdentityInvitationRepository,
+    private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor
 ) {
     private val logger = SparrowLog.withTag("DirectMessagePacketHandler")
 
@@ -30,6 +32,11 @@ class DirectMessagePacketHandler(
     ): Result<Unit> =
         runCatching {
             validateMessage(context.contactId, packet)
+            remoteProfilePictureMetadataProcessor
+                .apply(context.contactId, packet.profilePicture)
+                .onFailure { error ->
+                    logger.warn(error) { "Could not store profile picture for ${context.contactId}" }
+                }
             updateSenderDisplayName(context.contactId, packet, context.receivedAtEpochMilliseconds)
 
             val conversation = getOrCreateConversation(context)

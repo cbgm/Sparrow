@@ -5,25 +5,37 @@ import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalProfilePictureUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RemoveLocalProfilePictureUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SetLocalProfilePictureUseCase
+import com.cbgm.sparrow.feature.settings.presentation.profile.mapper.toUiState
 import com.cbgm.sparrow.feature.settings.presentation.profile.model.ProfileSettingsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.profile.model.ProfileSettingsUiState
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class ProfileSettingsViewModel(
-    private val observeLocalProfilePicture: ObserveLocalProfilePictureUseCase,
+    observeLocalProfilePicture: ObserveLocalProfilePictureUseCase,
     private val setLocalProfilePicture: SetLocalProfilePictureUseCase,
     private val removeLocalProfilePicture: RemoveLocalProfilePictureUseCase
 ) : BaseViewModel() {
-    private val _uiState = MutableStateFlow(ProfileSettingsUiState())
-    val uiState: StateFlow<ProfileSettingsUiState> = _uiState.asStateFlow()
+    private val actionState = MutableStateFlow(ProfilePictureActionState())
 
-    init {
-        observeProfilePicture()
-    }
+    val uiState: StateFlow<ProfileSettingsUiState> =
+        combine(
+            observeLocalProfilePicture(),
+            actionState
+        ) { profilePicture, action ->
+            profilePicture.toUiState(
+                isSaving = action.isSaving,
+                errorMessage = action.errorMessage
+            )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+            initialValue = ProfileSettingsUiState()
+        )
 
     fun onUiEvent(event: ProfileSettingsUiEvent) {
         when (event) {
@@ -33,37 +45,42 @@ class ProfileSettingsViewModel(
         }
     }
 
-    private fun observeProfilePicture() {
-        viewModelScope.launch {
-            observeLocalProfilePicture().collect { picture ->
-                _uiState.update { it.copy(profilePicture = picture) }
-            }
-        }
-    }
-
     private fun savePicture(bytes: ByteArray) {
+        if (actionState.value.isSaving) return
+
         viewModelScope.launch {
-            _uiState.update { it.copy(isSaving = true, errorMessage = null) }
+            actionState.value = ProfilePictureActionState(isSaving = true)
             setLocalProfilePicture(bytes)
-                .onFailure { error ->
-                    _uiState.update {
-                        it.copy(errorMessage = error.message ?: "Profile picture could not be saved")
-                    }
+                .onSuccess {
+                    actionState.value = ProfilePictureActionState()
+                }.onFailure { error ->
+                    actionState.value =
+                        ProfilePictureActionState(
+                            errorMessage = error.message ?: "Profile picture could not be saved"
+                        )
                 }
-            _uiState.update { it.copy(isSaving = false) }
         }
     }
 
     private fun removePicture() {
+        if (actionState.value.isSaving) return
+
         viewModelScope.launch {
-            _uiState.update { it.copy(isSaving = true, errorMessage = null) }
+            actionState.value = ProfilePictureActionState(isSaving = true)
             removeLocalProfilePicture()
-                .onFailure { error ->
-                    _uiState.update {
-                        it.copy(errorMessage = error.message ?: "Profile picture could not be removed")
-                    }
+                .onSuccess {
+                    actionState.value = ProfilePictureActionState()
+                }.onFailure { error ->
+                    actionState.value =
+                        ProfilePictureActionState(
+                            errorMessage = error.message ?: "Profile picture could not be removed"
+                        )
                 }
-            _uiState.update { it.copy(isSaving = false) }
         }
     }
+
+    private data class ProfilePictureActionState(
+        val isSaving: Boolean = false,
+        val errorMessage: String? = null
+    )
 }

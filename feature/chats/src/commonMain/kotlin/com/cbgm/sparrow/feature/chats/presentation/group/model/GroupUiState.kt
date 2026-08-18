@@ -10,6 +10,7 @@ data class GroupMemberProgressUi(
 
 data class GroupUiState(
     val title: String = "",
+    val avatarBytes: ByteArray? = null,
     val messages: List<GroupMessageUiModel> = emptyList(),
     val messageText: String = "",
     val isSomeoneTyping: Boolean = false,

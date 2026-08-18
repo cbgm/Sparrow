@@ -1,10 +1,12 @@
 package com.cbgm.sparrow.feature.chats.data.group.incoming.handler
 
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.DeliveryReceiptPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
+import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProcessor
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.entity.MessageEntity
@@ -16,8 +18,11 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 class GroupChatMessagePacketHandler(
     private val chatDao: ChatDao,
     private val protocolOutbox: ProtocolOutbox,
-    private val groupSecurityManager: GroupSecurityManager
+    private val groupSecurityManager: GroupSecurityManager,
+    private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor
 ) : GroupPacketHandler {
+    private val logger = SparrowLog.withTag("GroupChatMessagePacketHandler")
+
     override fun canHandle(packet: SparrowPacket): Boolean = packet is GroupChatMessagePacket
 
     override suspend fun handle(
@@ -53,6 +58,12 @@ class GroupChatMessagePacketHandler(
                         packet = groupPacket,
                         senderContactId = context.contactId
                     ).getOrThrow()
+
+            remoteProfilePictureMetadataProcessor
+                .apply(context.contactId, groupPacket.profilePicture)
+                .onFailure { error ->
+                    logger.warn(error) { "Could not store profile picture for ${context.contactId}" }
+                }
 
             chatDao.upsertMessage(
                 MessageEntity(

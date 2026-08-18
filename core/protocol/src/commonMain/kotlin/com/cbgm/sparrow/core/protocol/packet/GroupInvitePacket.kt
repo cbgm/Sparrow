@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.core.protocol.packet
 
+import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.protocol.serializer.ByteArrayAsBase64Serializer
 import com.cbgm.sparrow.core.protocol.version.ProtocolVersion
 import kotlinx.serialization.SerialName
@@ -15,6 +16,7 @@ data class GroupInvitePacket(
     val title: String,
     val createdAtEpochMilliseconds: Long,
     val expiresAtEpochMilliseconds: Long,
+    val profilePicture: ProfilePictureMetadata = ProfilePictureMetadata(),
     @Serializable(with = ByteArrayAsBase64Serializer::class)
     val challenge: ByteArray,
     @Serializable(with = ByteArrayAsBase64Serializer::class)
@@ -51,6 +53,7 @@ data class GroupInvitePacket(
             title == other.title &&
             createdAtEpochMilliseconds == other.createdAtEpochMilliseconds &&
             expiresAtEpochMilliseconds == other.expiresAtEpochMilliseconds &&
+            profilePicture == other.profilePicture &&
             challenge.contentEquals(other.challenge) &&
             ownerEncryptionPublicKey.contentEquals(other.ownerEncryptionPublicKey) &&
             ownerSigningPublicKey.contentEquals(other.ownerSigningPublicKey) &&
@@ -65,6 +68,7 @@ data class GroupInvitePacket(
         result = 31 * result + title.hashCode()
         result = 31 * result + createdAtEpochMilliseconds.hashCode()
         result = 31 * result + expiresAtEpochMilliseconds.hashCode()
+        result = 31 * result + profilePicture.hashCode()
         result = 31 * result + challenge.contentHashCode()
         result = 31 * result + ownerEncryptionPublicKey.contentHashCode()
         result = 31 * result + ownerSigningPublicKey.contentHashCode()

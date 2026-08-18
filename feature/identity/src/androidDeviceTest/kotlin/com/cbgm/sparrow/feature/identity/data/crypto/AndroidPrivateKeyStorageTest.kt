@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.cbgm.sparrow.core.crypto.SodiumRuntime
 import com.cbgm.sparrow.core.crypto.identity.SodiumIdentityKeyGenerator
+import com.cbgm.sparrow.core.datastore.createSparrowDataStore
 import com.cbgm.sparrow.feature.identity.data.datasource.AndroidPrivateKeyStorage
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -28,7 +29,11 @@ class AndroidPrivateKeyStorageTest {
 
             val context = ApplicationProvider.getApplicationContext<Context>()
 
-            val storage = AndroidPrivateKeyStorage(context = context)
+            val dataStore =
+                createSparrowDataStore(
+                    filePath = context.filesDir.resolve("private-key-test-${System.nanoTime()}.preferences_pb").absolutePath
+                )
+            val storage = AndroidPrivateKeyStorage(dataStore = dataStore)
 
             /**
              * Start from a clean test state.

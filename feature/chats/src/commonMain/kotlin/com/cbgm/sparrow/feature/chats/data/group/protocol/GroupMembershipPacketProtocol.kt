@@ -14,10 +14,13 @@ import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivationAcknowledgemen
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberPayload
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
+import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
+import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 
 class GroupMembershipPacketProtocol(
     private val groupCrypto: GroupCrypto,
-    private val payloadEncoder: GroupProtocolPayloadEncoder
+    private val payloadEncoder: GroupProtocolPayloadEncoder,
+    private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider? = null
 ) {
     suspend fun createConversationDeleted(
         invitationId: String,
@@ -72,6 +75,11 @@ class GroupMembershipPacketProtocol(
                 "Owner signing identity does not match the local signing key"
             }
 
+            val profilePicture =
+                localProfilePictureMetadataProvider
+                    ?.forInvite()
+                    ?.getOrElse { ProfilePictureMetadata() }
+                    ?: ProfilePictureMetadata()
             val unsignedPacket =
                 GroupInvitePacket(
                     packetId = invitePacketId(invitationId),
@@ -80,6 +88,7 @@ class GroupMembershipPacketProtocol(
                     title = title,
                     createdAtEpochMilliseconds = createdAtEpochMilliseconds,
                     expiresAtEpochMilliseconds = expiresAtEpochMilliseconds,
+                    profilePicture = profilePicture,
                     challenge = groupCrypto.generateInvitationChallenge().getOrThrow(),
                     ownerEncryptionPublicKey = ownerIdentity.encryptionPublicKey.copyOf(),
                     ownerSigningPublicKey = ownerIdentity.signingPublicKey.copyOf(),
@@ -160,11 +169,17 @@ class GroupMembershipPacketProtocol(
                 "Member signing identity does not match the local signing key"
             }
 
+            val profilePicture =
+                localProfilePictureMetadataProvider
+                    ?.forInvite()
+                    ?.getOrElse { ProfilePictureMetadata() }
+                    ?: ProfilePictureMetadata()
             val unsignedPacket =
                 GroupJoinRequestPacket(
                     packetId = joinRequestPacketId(invitationId),
                     invitationId = invitationId,
                     groupId = groupId,
+                    profilePicture = profilePicture,
                     challenge = challenge.copyOf(),
                     memberEncryptionPublicKey = memberIdentity.encryptionPublicKey.copyOf(),
                     memberSigningPublicKey = memberIdentity.signingPublicKey.copyOf(),

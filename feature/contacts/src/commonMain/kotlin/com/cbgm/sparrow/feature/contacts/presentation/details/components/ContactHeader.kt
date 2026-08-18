@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
@@ -39,7 +40,10 @@ import com.cbgm.sparrow.resources.feature_contacts_verified_sparrow_contact
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-internal fun ContactHeader(contact: Contact) {
+internal fun ContactHeader(
+    contact: Contact,
+    profilePictureBytes: ByteArray? = null
+) {
     val identity = contact.sparrowIdentity
     val verifiedByMe = identity?.verificationStatus == ContactVerificationStatus.VERIFIED
     val verifiedByContact =
@@ -51,20 +55,11 @@ internal fun ContactHeader(contact: Contact) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(contentAlignment = Alignment.BottomEnd) {
-            Surface(
-                modifier = Modifier.size(88.dp),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = contact.initials(),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+            SparrowAvatar(
+                name = contact.displayName.orEmpty(),
+                pictureBytes = profilePictureBytes,
+                size = 88.dp
+            )
 
             when {
                 isMutuallyVerified ->
@@ -145,17 +140,6 @@ internal fun ContactHeader(contact: Contact) {
         )
     }
 }
-
-private fun Contact.initials(): String =
-    displayName
-        ?.trim()
-        ?.split(regex = Regex("\\s+"))
-        ?.filter(String::isNotBlank)
-        ?.take(2)
-        ?.mapNotNull { part -> part.firstOrNull()?.uppercaseChar() }
-        ?.joinToString(separator = "")
-        ?.takeIf(String::isNotBlank)
-        ?: "?"
 
 @Preview
 @Composable

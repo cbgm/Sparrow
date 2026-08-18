@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.core.protocol.packet
 
+import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.protocol.serializer.ByteArrayAsBase64Serializer
 import com.cbgm.sparrow.core.protocol.version.ProtocolVersion
 import kotlinx.serialization.SerialName
@@ -14,6 +15,7 @@ data class GroupChatMessagePacket(
     val epoch: Int,
     val messageId: String,
     val sentAtEpochMilliseconds: Long,
+    val profilePicture: ProfilePictureMetadata = ProfilePictureMetadata(),
     @Serializable(with = ByteArrayAsBase64Serializer::class)
     val nonce: ByteArray,
     @Serializable(with = ByteArrayAsBase64Serializer::class)
@@ -43,6 +45,7 @@ data class GroupChatMessagePacket(
             epoch == other.epoch &&
             messageId == other.messageId &&
             sentAtEpochMilliseconds == other.sentAtEpochMilliseconds &&
+            profilePicture == other.profilePicture &&
             nonce.contentEquals(other.nonce) &&
             ciphertext.contentEquals(other.ciphertext) &&
             senderSignature.contentEquals(other.senderSignature)
@@ -55,6 +58,7 @@ data class GroupChatMessagePacket(
         result = 31 * result + epoch
         result = 31 * result + messageId.hashCode()
         result = 31 * result + sentAtEpochMilliseconds.hashCode()
+        result = 31 * result + profilePicture.hashCode()
         result = 31 * result + nonce.contentHashCode()
         result = 31 * result + ciphertext.contentHashCode()
         result = 31 * result + senderSignature.contentHashCode()

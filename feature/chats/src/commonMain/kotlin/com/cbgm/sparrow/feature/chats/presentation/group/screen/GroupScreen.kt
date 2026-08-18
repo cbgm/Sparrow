@@ -16,10 +16,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material3.CircularProgressIndicator
@@ -42,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.PatternBackground
+import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowBannerButton
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -165,7 +164,7 @@ private fun TopBar(
                     modifier = Modifier.clickable { onUiEvent(GroupUiEvent.HeaderClicked) },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Avatar()
+                    SparrowAvatar(name = uiState.title, pictureBytes = uiState.avatarBytes, size = 36.dp)
                     Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
                     Column {
                         Text(
@@ -206,7 +205,11 @@ private fun BottomBar(
     onUiEvent: (GroupUiEvent) -> Unit
 ) {
     Surface(color = containerColor) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = MaterialTheme.spacing.base)
+        ) {
             Text(
                 text =
                     if (uiState.isSomeoneTyping) {
@@ -292,9 +295,9 @@ private fun MessageList(
     ) {
         items(items = messages, key = GroupMessageUiModel::id) { message ->
             if (message.type == ChatMessageType.USER) {
-                MessageBubble(
-                    message = message.bubble,
-                    onRetryClick = { onRetryMessage(message.id) }
+                GroupMessageBubble(
+                    message = message,
+                    onRetryMessage = onRetryMessage
                 )
             } else {
                 MembershipSystemMessage(
@@ -303,6 +306,37 @@ private fun MessageList(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun GroupMessageBubble(
+    message: GroupMessageUiModel,
+    onRetryMessage: (String) -> Unit
+) {
+    if (message.bubble.isMine) {
+        MessageBubble(
+            message = message.bubble,
+            onRetryClick = { onRetryMessage(message.id) }
+        )
+        return
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        SparrowAvatar(
+            name = message.bubble.senderName.orEmpty(),
+            pictureBytes = message.senderProfilePictureBytes,
+            size = 28.dp
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        MessageBubble(
+            message = message.bubble,
+            onRetryClick = { onRetryMessage(message.id) },
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -412,24 +446,6 @@ private fun memberStatus(status: GroupMemberInvitationStatus): String =
     }
 
 @Composable
-private fun Avatar() {
-    Surface(
-        modifier = Modifier.size(36.dp),
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.18f)
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = Icons.Default.Group,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-    }
-}
-
-@Composable
 private fun EmptyContent(
     title: String,
     modifier: Modifier = Modifier
@@ -502,7 +518,10 @@ private fun ConversationDeletedHint(modifier: Modifier = Modifier) {
         contentColor = MaterialTheme.colorScheme.onErrorContainer
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.screenPadding, vertical = MaterialTheme.spacing.small)
+            modifier = Modifier.padding(
+                horizontal = MaterialTheme.spacing.screenPadding,
+                vertical = MaterialTheme.spacing.small
+            )
         ) {
             Text(
                 text = stringResource(Res.string.feature_chats_group_deleted_title),
@@ -591,7 +610,10 @@ private fun MembershipLeavingHint(modifier: Modifier = Modifier) {
         contentColor = MaterialTheme.colorScheme.onSecondaryContainer
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.screenPadding, vertical = MaterialTheme.spacing.small)
+            modifier = Modifier.padding(
+                horizontal = MaterialTheme.spacing.screenPadding,
+                vertical = MaterialTheme.spacing.small
+            )
         ) {
             Text(
                 text = stringResource(Res.string.feature_chats_group_leaving_hint_title),
@@ -622,7 +644,10 @@ private fun MembershipRemovedHint(modifier: Modifier = Modifier) {
         contentColor = MaterialTheme.colorScheme.onErrorContainer
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.screenPadding, vertical = MaterialTheme.spacing.small)
+            modifier = Modifier.padding(
+                horizontal = MaterialTheme.spacing.screenPadding,
+                vertical = MaterialTheme.spacing.small
+            )
         ) {
             Text(
                 text = stringResource(Res.string.feature_chats_group_removed_hint_title),
@@ -665,10 +690,10 @@ private fun MembershipSystemMessage(
             Row(
                 modifier =
                     Modifier.padding(
-                        horizontal = MaterialTheme.spacing.small,
+                        horizontal = MaterialTheme.spacing.base,
                         vertical = MaterialTheme.spacing.base
                     ),
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -678,11 +703,12 @@ private fun MembershipSystemMessage(
                         } else {
                             Icons.Default.PersonRemove
                         },
+                    modifier = Modifier.size(15.dp),
                     contentDescription = null
                 )
                 Text(
                     text = text,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.labelMedium
                 )
             }
         }

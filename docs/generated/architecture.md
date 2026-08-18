@@ -6,12 +6,12 @@ Generated automatically by `./gradlew architectureReport`.
 
 | Metric | Count |
 |---|---:|
-| Modules | 34 |
+| Modules | 35 |
 | Module groups | 11 |
-| Project dependencies | 101 |
-| Kotlin files | 965 |
-| Test Kotlin files | 90 |
-| Resource files | 48 |
+| Project dependencies | 107 |
+| Kotlin files | 1037 |
+| Test Kotlin files | 94 |
+| Resource files | 49 |
 
 ## Module groups
 
@@ -23,6 +23,7 @@ Generated automatically by `./gradlew architectureReport`.
 
 - [**core** (`:core`)](modules/core.md)
 - [**crypto** (`:core:crypto`)](modules/core-crypto.md)
+- [**datastore** (`:core:datastore`)](modules/core-datastore.md)
 - [**protocol** (`:core:protocol`)](modules/core-protocol.md)
 - [**ui** (`:core:ui`)](modules/core-ui.md)
 
@@ -94,6 +95,7 @@ graph TD
     subgraph group_core["core"]
         module_core[":core"]
         module_core_crypto[":core:crypto"]
+        module_core_datastore[":core:datastore"]
         module_core_protocol[":core:protocol"]
         module_core_ui[":core:ui"]
     end
@@ -161,6 +163,7 @@ graph TD
     module_data_database --> module_core_protocol
     module_feature_chats --> module_core
     module_feature_chats --> module_core_crypto
+    module_feature_chats --> module_core_datastore
     module_feature_chats --> module_core_protocol
     module_feature_chats --> module_core_ui
     module_feature_chats --> module_data_database
@@ -178,6 +181,7 @@ graph TD
     module_feature_contacts --> module_data_database
     module_feature_identity --> module_core
     module_feature_identity --> module_core_crypto
+    module_feature_identity --> module_core_datastore
     module_feature_identity --> module_core_protocol
     module_feature_identity --> module_core_ui
     module_feature_messaging --> module_core
@@ -190,9 +194,12 @@ graph TD
     module_feature_onboarding --> module_core_ui
     module_feature_onboarding --> module_feature_identity
     module_feature_settings --> module_core
+    module_feature_settings --> module_core_datastore
     module_feature_settings --> module_core_ui
+    module_feature_settings --> module_feature_identity
     module_feature_transport --> module_core
     module_feature_transport --> module_core_crypto
+    module_feature_transport --> module_core_datastore
     module_feature_transport --> module_core_protocol
     module_navigation --> module_core
     module_navigation --> module_core_ui
@@ -238,6 +245,7 @@ graph TD
     module_server_security --> module_server_protocol
     module_shared --> module_core
     module_shared --> module_core_crypto
+    module_shared --> module_core_datastore
     module_shared --> module_core_protocol
     module_shared --> module_core_ui
     module_shared --> module_data_database

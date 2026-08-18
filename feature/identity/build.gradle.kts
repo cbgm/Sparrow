@@ -14,6 +14,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(projects.core)
+            implementation(projects.core.datastore)
             implementation(projects.core.crypto)
             implementation(projects.core.protocol)
             implementation(projects.core.ui)
@@ -21,8 +22,7 @@ kotlin {
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)
             implementation(libs.bundles.koin.compose)
-
-            implementation(compose.materialIconsExtended)
+            implementation(libs.okio)
         }
 
         androidMain.dependencies {
