@@ -187,14 +187,16 @@ private fun TopBar(
             }
         )
 
-        SecurityBanner(
-            securityState = uiState.contactSecurityState,
-            identityHandshakeState = uiState.identityHandshakeState,
-            identitySetupMode = uiState.identitySetupMode,
-            isChatAuthorized = uiState.isMessageInputEnabled,
-            onVerifyIdentity = { onUiEvent(DirectUiEvent.VerifyIdentityClicked) },
-            onManualIdentitySetup = { onUiEvent(DirectUiEvent.ManualIdentitySetupClicked) }
-        )
+        if (!uiState.isLoading) {
+            SecurityBanner(
+                securityState = uiState.contactSecurityState,
+                identityHandshakeState = uiState.identityHandshakeState,
+                identitySetupMode = uiState.identitySetupMode,
+                isChatAuthorized = uiState.isMessageInputEnabled,
+                onVerifyIdentity = { onUiEvent(DirectUiEvent.VerifyIdentityClicked) },
+                onManualIdentitySetup = { onUiEvent(DirectUiEvent.ManualIdentitySetupClicked) }
+            )
+        }
 
         uiState.errorMessage?.let { message -> ErrorMessage(message = message) }
     }

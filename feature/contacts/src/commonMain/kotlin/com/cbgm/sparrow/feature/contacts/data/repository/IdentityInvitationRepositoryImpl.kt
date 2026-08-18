@@ -1028,18 +1028,14 @@ class IdentityInvitationRepositoryImpl(
     ): Result<Unit> =
         runCatching {
             mutex.withLock {
+                require(packet.invitationId.isNotBlank()) {
+                    "Invitation ID must not be blank"
+                }
                 requirePacketId(
                     actualPacketId = packet.packetId,
                     expectedPrefix = "contact-invite-declined",
                     invitationId = packet.invitationId
                 )
-                val invitation = requireInvitation(packet.invitationId, IdentityInvitationDirection.OUTGOING)
-                check(invitation.contactId == context.contactId) {
-                    "Decline contact does not match invitation"
-                }
-                check(invitation.inviteChallenge.contentEquals(packet.inviteChallenge)) {
-                    "Decline challenge does not match invitation"
-                }
 
                 val payload =
                     payloadEncoder.encodeDeclined(
@@ -1058,6 +1054,29 @@ class IdentityInvitationRepositoryImpl(
                         context.receivedAtEpochMilliseconds + MAX_CLOCK_SKEW_MILLISECONDS
                 ) {
                     "Decline response was created too far in the future"
+                }
+
+                val invitation = invitationDao.findById(packet.invitationId)
+                if (invitation == null) {
+                    // Terminal invitation responses are replay-safe. Once the exact invitation
+                    // is gone, do not compare the packet with the contact's current identity:
+                    // the contact may have legitimately re-keyed since this old invitation.
+                    // The packet has already passed its own signature and timestamp checks and
+                    // no local state is mutated for this stale response.
+                    logger.debug {
+                        "Ignoring stale decline for missing invitation ${packet.invitationId}"
+                    }
+                    return@withLock
+                }
+
+                check(invitation.direction == IdentityInvitationDirection.OUTGOING.name) {
+                    "Invitation direction does not match this operation"
+                }
+                check(invitation.contactId == context.contactId) {
+                    "Decline contact does not match invitation"
+                }
+                check(invitation.inviteChallenge.contentEquals(packet.inviteChallenge)) {
+                    "Decline challenge does not match invitation"
                 }
                 check(
                     invitation.remoteSigningPublicKey.isEmpty() ||
