@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,7 +22,9 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -66,48 +69,8 @@ internal fun MessageInput(
      * NEVER CHANGE THESE DURING THE MORPH.
      */
     val buttonWidth = 42.dp
-    val buttonHeight = 38.dp
+    val buttonHeight = 30.dp
     val overlap = 10.dp
-
-    val morphProgress by animateFloatAsState(
-        targetValue =
-            if (isMultiline) {
-                1f
-            } else {
-                0f
-            },
-        animationSpec =
-            tween(
-                durationMillis = ShapeAnimationDuration
-            ),
-        label = "SendButtonMorph"
-    )
-
-    /*
-     * Single-line icon:
-     *
-     * centered inside the original 56dp button body.
-     *
-     * Multiline:
-     *
-     * centered inside the rightmost 38dp circle.
-     *
-     * This animation is entirely internal and cannot affect
-     * TextField measurement.
-     */
-    val iconAreaWidth by animateDpAsState(
-        targetValue =
-            if (isMultiline) {
-                buttonHeight
-            } else {
-                buttonWidth
-            },
-        animationSpec =
-            tween(
-                durationMillis = ShapeAnimationDuration
-            ),
-        label = "SendIconAreaWidth"
-    )
 
     Row(
         modifier = modifier
@@ -118,12 +81,15 @@ internal fun MessageInput(
             .imePadding(),
         verticalAlignment = Alignment.Bottom
     ) {
-        /*
-         * NO start spacer.
-         *
-         * MessageInput therefore starts directly at its
-         * available left edge.
-         */
+        IconButton(onClick = {}, modifier = Modifier.height(buttonHeight).align(Alignment.Bottom)) {
+            Icon(
+                imageVector = Icons.Filled.AttachFile,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
@@ -135,7 +101,7 @@ internal fun MessageInput(
                 )
                 .padding(
                     horizontal = MaterialTheme.spacing.base,
-                    vertical = 8.dp
+                    vertical = 4.dp
                 ),
             enabled = enabled,
             minLines = 1,
@@ -160,64 +126,123 @@ internal fun MessageInput(
                 innerTextField()
             }
         )
-
-        SendButtonSlot(
+        SendButton(
             buttonWidth = buttonWidth,
             buttonHeight = buttonHeight,
             overlap = overlap,
-            modifier = Modifier.align(
-                if (isMultiline) {
-                    Alignment.Bottom
-                } else {
-                    Alignment.CenterVertically
-                }
-            )
+            isRound = isMultiline,
+            onSendClick = onSendClick,
+            enabled = enabled && value.isNotBlank()
+        )
+    }
+}
+
+@Composable
+private fun RowScope.SendButton(
+    buttonWidth: Dp,
+    buttonHeight: Dp,
+    overlap: Dp,
+    isRound: Boolean,
+    onSendClick: () -> Unit,
+    enabled: Boolean
+) {
+    /*
+     * Single-line icon:
+     *
+     * centered inside the original 56dp button body.
+     *
+     * Multiline:
+     *
+     * centered inside the rightmost 38dp circle.
+     *
+     * This animation is entirely internal and cannot affect
+     * TextField measurement.
+     */
+
+    val morphProgress by animateFloatAsState(
+        targetValue =
+            if (isRound) {
+                1f
+            } else {
+                0f
+            },
+        animationSpec =
+            tween(
+                durationMillis = ShapeAnimationDuration
+            ),
+        label = "SendButtonMorph"
+    )
+
+    val iconAreaWidth by animateDpAsState(
+        targetValue =
+            if (isRound) {
+                buttonHeight
+            } else {
+                buttonWidth
+            },
+        animationSpec =
+            tween(
+                durationMillis = ShapeAnimationDuration
+            ),
+        label = "SendIconAreaWidth"
+    )
+
+    SendButtonSlot(
+        buttonWidth = buttonWidth,
+        buttonHeight = buttonHeight,
+        overlap = overlap,
+        modifier = Modifier.align(
+            if (isRound) {
+                Alignment.Bottom
+            } else {
+                Alignment.CenterVertically
+            }
+        )
+    ) {
+        /*
+         * ALWAYS exactly:
+         *
+         * 56 + 16 = 72dp wide
+         *
+         * NEVER animates.
+         */
+        Box(
+            modifier = Modifier
+                .width(buttonWidth + overlap)
+                .height(buttonHeight)
+                .clip(
+                    MorphingSendButtonShape(
+                        progress = morphProgress,
+                        notchRadius = ButtonNotchRadius,
+                        rightCornerRadius = ButtonRightCornerRadius
+                    )
+                )
+                .background(FieldColor)
+                .clickable(
+                    enabled = enabled,
+                    onClick = onSendClick
+                ),
+            contentAlignment = Alignment.CenterEnd
         ) {
-            /*
-             * ALWAYS exactly:
-             *
-             * 56 + 16 = 72dp wide
-             *
-             * NEVER animates.
-             */
             Box(
                 modifier = Modifier
-                    .width(buttonWidth + overlap)
-                    .height(buttonHeight)
-                    .clip(
-                        MorphingSendButtonShape(
-                            progress = morphProgress,
-                            notchRadius = ButtonNotchRadius,
-                            rightCornerRadius = ButtonRightCornerRadius
-                        )
-                    )
-                    .background(FieldColor)
-                    .clickable(
-                        enabled = enabled && value.isNotBlank(),
-                        onClick = onSendClick
-                    ),
-                contentAlignment = Alignment.CenterEnd
+                    .width(iconAreaWidth)
+                    .height(buttonHeight),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Send,
+                    contentDescription = null,
+                    tint =
+                        if (enabled) {
+                            MaterialTheme.colorScheme.secondary
+                        } else {
+                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f)
+                        },
                     modifier = Modifier
-                        .width(iconAreaWidth)
-                        .height(buttonHeight),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = null,
-                        tint =
-                            if (enabled && value.isNotBlank()) {
-                                MaterialTheme.colorScheme.secondary
-                            } else {
-                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f)
-                            },
-                        modifier = Modifier
-                            .padding(start = MaterialTheme.spacing.base.div(2))
-                            .size(18.dp)
-                    )
-                }
+                        .padding(start = MaterialTheme.spacing.base.div(2))
+                        .size(18.dp)
+                )
             }
         }
     }
