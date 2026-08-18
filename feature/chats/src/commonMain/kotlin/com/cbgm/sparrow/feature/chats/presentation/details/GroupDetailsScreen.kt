@@ -62,7 +62,6 @@ import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
 import com.cbgm.sparrow.core.ui.component.SparrowStatusBadge
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupAvatarUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupAvatarUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupDetailsUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupDetailsUiState
@@ -107,10 +106,8 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun GroupDetailsScreen(
     uiState: GroupDetailsUiState,
-    modifier: Modifier = Modifier,
-    groupAvatarState: GroupAvatarUiState = GroupAvatarUiState(),
     onUiEvent: (GroupDetailsUiEvent) -> Unit,
-    onGroupAvatarEvent: (GroupAvatarUiEvent) -> Unit = {}
+    modifier: Modifier = Modifier
 ) {
     var showAvatarEditor by remember { mutableStateOf(false) }
 
@@ -127,12 +124,11 @@ fun GroupDetailsScreen(
         ) { innerPadding, listState ->
             Content(
                 uiState = uiState,
-                groupAvatarState = groupAvatarState,
                 innerPadding = innerPadding,
                 listState = listState,
                 onUiEvent = onUiEvent,
                 onEditGroupAvatar = { showAvatarEditor = true },
-                onRemoveGroupAvatar = { onGroupAvatarEvent(GroupAvatarUiEvent.RemoveAvatarClicked) }
+                onRemoveGroupAvatar = { onUiEvent(GroupDetailsUiEvent.RemoveGroupAvatarClicked) }
             )
         }
 
@@ -148,7 +144,7 @@ fun GroupDetailsScreen(
                     ),
                 onAvatarSelected = { bytes ->
                     showAvatarEditor = false
-                    onGroupAvatarEvent(GroupAvatarUiEvent.AvatarSelected(bytes))
+                    onUiEvent(GroupDetailsUiEvent.AvatarSelected(bytes))
                 },
                 onDismiss = { showAvatarEditor = false }
             )
@@ -193,7 +189,6 @@ private fun TopBar(
 @Composable
 private fun Content(
     uiState: GroupDetailsUiState,
-    groupAvatarState: GroupAvatarUiState,
     innerPadding: PaddingValues,
     listState: LazyListState,
     onUiEvent: (GroupDetailsUiEvent) -> Unit,
@@ -209,7 +204,7 @@ private fun Content(
         is GroupDetailsUiState.Content ->
             MemberList(
                 summary = uiState.summary,
-                groupAvatarState = groupAvatarState,
+                groupAvatarState = uiState.groupAvatar,
                 innerPadding = innerPadding,
                 listState = listState,
                 onVerifyMember = { contactId ->

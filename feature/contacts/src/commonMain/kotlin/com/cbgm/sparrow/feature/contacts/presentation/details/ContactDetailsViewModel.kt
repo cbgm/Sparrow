@@ -9,6 +9,8 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUs
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactProfilePictureUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.VerifyContactUseCase
+import com.cbgm.sparrow.feature.contacts.presentation.details.mapper.toUiState
+import com.cbgm.sparrow.feature.contacts.presentation.details.mapper.withVerificationState
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsUiState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -40,7 +42,10 @@ class ContactDetailsViewModel(
             observeContactDetails(),
             verificationState
         ) { details, verification ->
-            details.withVerificationState(verification)
+            details.withVerificationState(
+                isSaving = verification.isSaving,
+                errorMessage = verification.errorMessage
+            )
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
@@ -65,7 +70,7 @@ class ContactDetailsViewModel(
                 observeContact(contactId),
                 observeProfilePicture(contactId)
             ) { contact, profilePictureBytes ->
-                contact.toDetailsUiState(profilePictureBytes)
+                loadContactDetailsState(contact, profilePictureBytes)
             }.onStart {
                 emit(ContactDetailsUiState.Loading)
             }.catch { error ->
@@ -77,13 +82,14 @@ class ContactDetailsViewModel(
             }
         }
 
-    private suspend fun Contact?.toDetailsUiState(
+    private suspend fun loadContactDetailsState(
+        contact: Contact?,
         profilePictureBytes: ByteArray?
     ): ContactDetailsUiState {
-        this ?: return ContactDetailsUiState.NotFound
+        contact ?: return ContactDetailsUiState.NotFound
 
         val safetyNumber =
-            if (sparrowIdentity == null) {
+            if (contact.sparrowIdentity == null) {
                 null
             } else {
                 getContactSafetyNumber.invoke(contactId)
@@ -94,24 +100,11 @@ class ContactDetailsViewModel(
                     }
             }
 
-        return ContactDetailsUiState.Content(
-            contact = this,
+        return contact.toUiState(
             safetyNumber = safetyNumber,
             profilePictureBytes = profilePictureBytes
         )
     }
-
-    private fun ContactDetailsUiState.withVerificationState(
-        verification: VerificationActionState
-    ): ContactDetailsUiState =
-        if (this is ContactDetailsUiState.Content) {
-            copy(
-                isSavingVerification = verification.isSaving,
-                verificationError = verification.errorMessage
-            )
-        } else {
-            this
-        }
 
     private fun reload() {
         verificationState.value = VerificationActionState()

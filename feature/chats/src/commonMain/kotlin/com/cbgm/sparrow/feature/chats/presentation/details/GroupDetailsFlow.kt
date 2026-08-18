@@ -69,11 +69,6 @@ fun GroupDetailsFlow(
             parametersOf(conversationId)
         }
     val uiState by verificationViewModel.uiState.collectAsStateWithLifecycle()
-    val avatarViewModel =
-        koinViewModel<GroupAvatarViewModel> {
-            parametersOf(conversationId)
-        }
-    val groupAvatarState by avatarViewModel.uiState.collectAsStateWithLifecycle()
     var content by rememberSaveable {
         mutableStateOf(DetailsContent.Overview)
     }
@@ -102,6 +97,7 @@ fun GroupDetailsFlow(
         when {
             content == DetailsContent.VerifyIdentity && uiState.selectedMember == null ->
                 DetailsContent.Overview
+
             else -> content
         }
 
@@ -133,9 +129,10 @@ fun GroupDetailsFlow(
         when (target) {
             DetailsContent.Overview -> {
                 GroupDetailsScreen(
-                    uiState = GroupDetailsUiState.Content(uiState.summary),
-                    groupAvatarState = groupAvatarState,
-                    onGroupAvatarEvent = avatarViewModel::onUiEvent,
+                    uiState = GroupDetailsUiState.Content(
+                        summary = uiState.summary,
+                        groupAvatar = uiState.groupAvatar
+                    ),
                     onUiEvent = { event ->
                         handleOverviewUiEvent(
                             event = event,
@@ -252,6 +249,7 @@ private fun handleOverviewUiEvent(
             viewModel.onUiEvent(event)
             onContentChanged(DetailsContent.VerifyIdentity)
         }
+
         else -> viewModel.onUiEvent(event)
     }
 }
@@ -420,7 +418,10 @@ private fun PromoteDialog(
                 fillMaxWidth = false,
                 content = {
                     if (isUpdating) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
+                        )
                     } else {
                         Text(stringResource(Res.string.feature_chats_group_promote_admin))
                     }

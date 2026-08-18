@@ -8,6 +8,7 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.BlockContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactBlocklistUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactProfilePicturesUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.UnblockContactUseCase
+import com.cbgm.sparrow.feature.contacts.presentation.blocklist.mapper.toUiState
 import com.cbgm.sparrow.feature.contacts.presentation.blocklist.model.BlockedContactsEffect
 import com.cbgm.sparrow.feature.contacts.presentation.blocklist.model.BlockedContactsUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.blocklist.model.BlockedContactsUiState
@@ -39,9 +40,7 @@ class BlockedContactsViewModel(
             observeBlocklistWithProfilePictures(),
             actionState
         ) { snapshot, action ->
-            BlockedContactsUiState(
-                blockedContacts = snapshot.blocklist.blockedContacts,
-                availableContacts = snapshot.blocklist.availableContacts,
+            snapshot.blocklist.toUiState(
                 profilePictures = snapshot.profilePictures,
                 showAddContacts = action.showAddContacts,
                 phoneNumber = action.phoneNumber,

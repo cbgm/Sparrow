@@ -12,6 +12,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupAvatarsUs
 import com.cbgm.sparrow.feature.chats.domain.usecase.overview.ObserveConversationOverviewsUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.profile.ObserveRemoteProfilePicturesUseCase
 import com.cbgm.sparrow.feature.chats.presentation.overview.mapper.directContactIds
+import com.cbgm.sparrow.feature.chats.presentation.overview.mapper.groupIds
 import com.cbgm.sparrow.feature.chats.presentation.overview.mapper.toUiState
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.ConversationListItem
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiEvent
@@ -19,9 +20,8 @@ import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiStat
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -39,30 +39,19 @@ class OverviewViewModel(
     val uiState: StateFlow<OverviewUiState> =
         observeConversations()
             .flatMapLatest { conversations ->
-                observeProfilePictures(conversations.directContactIds())
-                    .map(conversations::toUiState)
+                combine(
+                    observeProfilePictures(conversations.directContactIds()),
+                    observeGroupAvatars(conversations.groupIds())
+                ) { profilePictures, groupAvatars ->
+                    conversations.toUiState(
+                        profilePictures = profilePictures,
+                        groupAvatars = groupAvatars
+                    )
+                }
             }.stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
                 initialValue = OverviewUiState.Loading
-            )
-
-    val groupAvatars: StateFlow<Map<String, ByteArray?>> =
-        uiState
-            .map { state ->
-                (state as? OverviewUiState.Content)
-                    ?.conversations
-                    .orEmpty()
-                    .asSequence()
-                    .filter(ConversationListItem::isGroup)
-                    .map(ConversationListItem::conversationId)
-                    .toSet()
-            }.distinctUntilChanged()
-            .flatMapLatest(observeGroupAvatars::invoke)
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5_000),
-                initialValue = emptyMap()
             )
 
     fun onUiEvent(event: OverviewUiEvent) {

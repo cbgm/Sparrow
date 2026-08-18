@@ -13,8 +13,15 @@ internal fun List<ConversationOverview>.directContactIds(): Set<String> =
         .filter(String::isNotBlank)
         .toSet()
 
+internal fun List<ConversationOverview>.groupIds(): Set<String> =
+    asSequence()
+        .filter { conversation -> conversation.type == ConversationOverviewType.GROUP }
+        .map(ConversationOverview::id)
+        .toSet()
+
 internal fun List<ConversationOverview>.toUiState(
-    profilePictures: Map<String, ByteArray?>
+    profilePictures: Map<String, ByteArray?>,
+    groupAvatars: Map<String, ByteArray?>
 ): OverviewUiState =
     if (isEmpty()) {
         OverviewUiState.Empty
@@ -23,23 +30,24 @@ internal fun List<ConversationOverview>.toUiState(
             conversations =
                 map { conversation ->
                     conversation.toConversationListItem(
-                        profilePictureBytes =
-                            conversation
-                                .takeIf { it.type == ConversationOverviewType.DIRECT }
-                                ?.let { profilePictures[it.contactId] }
+                        avatarBytes =
+                            when (conversation.type) {
+                                ConversationOverviewType.DIRECT -> profilePictures[conversation.contactId]
+                                ConversationOverviewType.GROUP -> groupAvatars[conversation.id]
+                            }
                     )
                 }
         )
     }
 
 internal fun ConversationOverview.toConversationListItem(
-    profilePictureBytes: ByteArray? = null
+    avatarBytes: ByteArray? = null
 ): ConversationListItem =
     ConversationListItem(
         conversationId = id,
         contactId = contactId,
         contactName = displayName,
-        profilePictureBytes = profilePictureBytes,
+        avatarBytes = avatarBytes,
         lastMessage = lastMessageText.orEmpty(),
         timestamp = lastMessageTimestamp?.let(::formatConversationTimestamp).orEmpty(),
         unreadCount = unreadCount,

@@ -5,6 +5,7 @@ import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalProfilePictureUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RemoveLocalProfilePictureUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SetLocalProfilePictureUseCase
+import com.cbgm.sparrow.feature.settings.presentation.profile.mapper.toUiState
 import com.cbgm.sparrow.feature.settings.presentation.profile.model.ProfileSettingsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.profile.model.ProfileSettingsUiState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,8 +27,7 @@ class ProfileSettingsViewModel(
             observeLocalProfilePicture(),
             actionState
         ) { profilePicture, action ->
-            ProfileSettingsUiState(
-                profilePicture = profilePicture,
+            profilePicture.toUiState(
                 isSaving = action.isSaving,
                 errorMessage = action.errorMessage
             )

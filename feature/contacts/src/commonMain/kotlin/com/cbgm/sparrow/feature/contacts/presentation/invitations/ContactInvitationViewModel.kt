@@ -8,14 +8,16 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.DeclineAndBlockContactIn
 import com.cbgm.sparrow.feature.contacts.domain.usecase.DeclineContactInvitationUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactProfilePicturesUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObservePendingContactInvitationsUseCase
+import com.cbgm.sparrow.feature.contacts.presentation.invitations.mapper.toUiState
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationEffect
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiEvent
+import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -30,7 +32,7 @@ class ContactInvitationViewModel(
     private val declineAndBlockContactInvitation: DeclineAndBlockContactInvitationUseCase,
     observeProfilePictures: ObserveContactProfilePicturesUseCase
 ) : BaseViewModel() {
-    val pendingInvitations: StateFlow<List<PendingContactInvitation>> =
+    private val pendingInvitations =
         observePendingContactInvitations()
             .stateIn(
                 scope = viewModelScope,
@@ -38,18 +40,28 @@ class ContactInvitationViewModel(
                 initialValue = emptyList()
             )
 
-    val profilePictures: StateFlow<Map<String, ByteArray?>> =
-        pendingInvitations
-            .flatMapLatest { invitations ->
-                observeProfilePictures(invitations.map(PendingContactInvitation::contactId).toSet())
-            }.stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-                initialValue = emptyMap()
-            )
+    private val profilePictures =
+        pendingInvitations.flatMapLatest { invitations ->
+            observeProfilePictures(invitations.map(PendingContactInvitation::contactId).toSet())
+        }
 
-    private val _processingInvitationId = MutableStateFlow<String?>(null)
-    val processingInvitationId: StateFlow<String?> = _processingInvitationId.asStateFlow()
+    private val processingInvitationId = MutableStateFlow<String?>(null)
+
+    val uiState: StateFlow<ContactInvitationUiState> =
+        combine(
+            pendingInvitations,
+            profilePictures,
+            processingInvitationId
+        ) { invitations, pictures, processingId ->
+            invitations.toUiState(
+                profilePictures = pictures,
+                processingInvitationId = processingId
+            )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+            initialValue = ContactInvitationUiState()
+        )
 
     private val _effects = Channel<ContactInvitationEffect>(capacity = Channel.BUFFERED)
     val effects = _effects.receiveAsFlow()
@@ -85,10 +97,10 @@ class ContactInvitationViewModel(
         invitationId: String,
         operation: suspend () -> Result<Unit>
     ) {
-        if (_processingInvitationId.value != null) return
+        if (processingInvitationId.value != null) return
 
         viewModelScope.launch {
-            _processingInvitationId.value = invitationId
+            processingInvitationId.value = invitationId
 
             val result = operation()
 
@@ -103,7 +115,7 @@ class ContactInvitationViewModel(
             val shouldClose =
                 result.isSuccess && wasLastInvitationHandled(invitationId)
 
-            _processingInvitationId.value = null
+            processingInvitationId.value = null
 
             if (shouldClose) {
                 navigator.popBackStack()

@@ -15,8 +15,6 @@ sealed interface DirectUiEvent {
 
     data object VerifyIdentityClicked : DirectUiEvent
 
-    data object ManualIdentitySetupClicked : DirectUiEvent
-
     data object ShareIdentityClicked : DirectUiEvent
 
     data object ImportIdentityClicked : DirectUiEvent

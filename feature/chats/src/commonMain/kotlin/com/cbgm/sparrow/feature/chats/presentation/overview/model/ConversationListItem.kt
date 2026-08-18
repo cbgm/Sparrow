@@ -4,7 +4,7 @@ data class ConversationListItem(
     val conversationId: String,
     val contactId: String,
     val contactName: String,
-    val profilePictureBytes: ByteArray? = null,
+    val avatarBytes: ByteArray? = null,
     val lastMessage: String = "",
     val timestamp: String,
     val unreadCount: Int = 0,

@@ -116,7 +116,6 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.overview.ObserveConversatio
 import com.cbgm.sparrow.feature.chats.domain.usecase.profile.ObserveRemoteProfilePicturesUseCase
 import com.cbgm.sparrow.feature.chats.presentation.ContactsFlowViewModel
 import com.cbgm.sparrow.feature.chats.presentation.create.CreateGroupViewModel
-import com.cbgm.sparrow.feature.chats.presentation.details.GroupAvatarViewModel
 import com.cbgm.sparrow.feature.chats.presentation.details.GroupVerificationViewModel
 import com.cbgm.sparrow.feature.chats.presentation.direct.screen.DirectViewModel
 import com.cbgm.sparrow.feature.chats.presentation.group.screen.GroupViewModel
@@ -340,17 +339,6 @@ private fun org.koin.core.module.Module.registerViewModels() {
     }
 
     viewModel { parameters ->
-        GroupAvatarViewModel(
-            groupId = parameters.get(),
-            observeConversation = get(),
-            observeAdministration = get(),
-            observeAvatar = get(),
-            setAvatar = get(),
-            removeGroupAvatar = get()
-        )
-    }
-
-    viewModel { parameters ->
         GroupVerificationViewModel(
             conversationId = parameters.get(),
             observeGroupVerification = get(),
@@ -364,6 +352,10 @@ private fun org.koin.core.module.Module.registerViewModels() {
             promoteGroupMember = get(),
             transferGroupAdminAndLeave = get(),
             observeGroupAdministration = get(),
+            observeGroupConversation = get(),
+            observeGroupAvatar = get(),
+            setGroupAvatar = get(),
+            removeGroupAvatar = get(),
             getGroupLeaveRequirement = get(),
             leaveGroup = get()
         )

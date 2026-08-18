@@ -1,16 +1,24 @@
 package com.cbgm.sparrow.feature.contacts.presentation.overview.model
 
 sealed interface ContactsUiState {
-    data object Loading : ContactsUiState
+    val searchQuery: String
 
-    data object Empty : ContactsUiState
+    data class Loading(
+        override val searchQuery: String = ""
+    ) : ContactsUiState
+
+    data class Empty(
+        override val searchQuery: String = ""
+    ) : ContactsUiState
 
     data class Content(
         val groups: List<ContactGroupEntity>,
-        val profilePictures: Map<String, ByteArray?> = emptyMap()
+        val profilePictures: Map<String, ByteArray?> = emptyMap(),
+        override val searchQuery: String = ""
     ) : ContactsUiState
 
     data class Error(
-        val message: String
+        val message: String,
+        override val searchQuery: String = ""
     ) : ContactsUiState
 }

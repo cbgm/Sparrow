@@ -1,15 +1,14 @@
 package com.cbgm.sparrow.feature.chats.presentation.verification
 
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.extensions.toFingerprint
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.VerifyGroupMemberUseCase
+import com.cbgm.sparrow.feature.chats.presentation.verification.mapper.toPreview
 import com.cbgm.sparrow.feature.chats.presentation.verification.model.GroupMemberQrVerificationError
 import com.cbgm.sparrow.feature.chats.presentation.verification.model.GroupMemberQrVerificationUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.verification.model.GroupMemberQrVerificationUiState
 import com.cbgm.sparrow.feature.contactimport.presentation.scan.model.ScannedIdentityPreview
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
-import com.cbgm.sparrow.feature.identity.domain.model.SharedIdentityPayload
 import com.cbgm.sparrow.feature.identity.domain.usecase.DecodeSharedIdentityUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -145,12 +144,3 @@ class GroupMemberQrVerificationViewModel(
         _uiState.update { state -> state.copy(error = error) }
     }
 }
-
-private fun SharedIdentityPayload.toPreview(encodedIdentity: String): ScannedIdentityPreview =
-    ScannedIdentityPreview(
-        encodedIdentity = encodedIdentity,
-        displayName = contactDetails.displayName,
-        phoneNumber = contactDetails.phoneNumber,
-        signingKeyFingerprint = signingPublicKey.toFingerprint(),
-        encryptionKeyFingerprint = encryptionPublicKey.toFingerprint()
-    )

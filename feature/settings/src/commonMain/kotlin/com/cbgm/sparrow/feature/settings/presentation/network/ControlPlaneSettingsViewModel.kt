@@ -4,18 +4,16 @@ import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
 import com.cbgm.sparrow.core.transport.ControlPlaneDirectorySynchronizer
 import com.cbgm.sparrow.core.transport.ControlPlaneEndpoint
-import com.cbgm.sparrow.core.transport.ControlPlaneEndpointStatus
 import com.cbgm.sparrow.core.transport.ControlPlaneHealthMonitor
-import com.cbgm.sparrow.core.transport.ControlPlaneReachability
 import com.cbgm.sparrow.core.transport.ControlPlaneStatusStore
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.feature.settings.presentation.network.mapper.toUiModels
+import com.cbgm.sparrow.feature.settings.presentation.network.mapper.toUiState
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneDirectoryError
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsError
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsUiState
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiModel
-import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiSource
-import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiStatus
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -53,8 +51,7 @@ class ControlPlaneSettingsViewModel(
             configurationSnapshot,
             actionState
         ) { configuration, action ->
-            ControlPlaneSettingsUiState(
-                entries = configuration.entries,
+            configuration.entries.toUiState(
                 showAddDialog = action.showAddDialog,
                 newUrl = action.newUrl,
                 addError = action.addError,
@@ -251,55 +248,3 @@ private fun String.normalizeHttpUrl(): String? {
         }
     return runCatching { ControlPlaneEndpoint(normalized).baseUrl }.getOrNull()
 }
-
-private fun List<ControlPlaneEndpointStatus>.toUiModels(
-    manual: Set<String>,
-    directory: Set<String>
-): List<ControlPlaneUiModel> =
-    map { status ->
-        ControlPlaneUiModel(
-            url = status.endpoint.baseUrl,
-            status = status.toUiStatus(),
-            source = sourceFor(status.endpoint.baseUrl, manual, directory),
-            canRemove = canRemove(status.endpoint.baseUrl, manual, directory)
-        )
-    }.sortedWith(
-        compareBy<ControlPlaneUiModel> { it.status.sortOrder() }
-            .thenBy(ControlPlaneUiModel::url)
-    )
-
-private fun ControlPlaneEndpointStatus.toUiStatus(): ControlPlaneUiStatus =
-    when {
-        reachability == ControlPlaneReachability.UNREACHABLE -> ControlPlaneUiStatus.UNREACHABLE
-        isActive && reachability == ControlPlaneReachability.AVAILABLE -> ControlPlaneUiStatus.ACTIVE
-        reachability == ControlPlaneReachability.AVAILABLE -> ControlPlaneUiStatus.AVAILABLE
-        else -> ControlPlaneUiStatus.CHECKING
-    }
-
-private fun sourceFor(
-    url: String,
-    manual: Set<String>,
-    directory: Set<String>
-): ControlPlaneUiSource =
-    when {
-        url in manual && url in directory -> ControlPlaneUiSource.MANUAL_AND_DIRECTORY
-        url in directory -> ControlPlaneUiSource.DIRECTORY
-        else -> ControlPlaneUiSource.MANUAL
-    }
-
-private fun canRemove(
-    url: String,
-    manual: Set<String>,
-    directory: Set<String>
-): Boolean {
-    if (url !in manual) return false
-    return ((manual - url) + directory).isNotEmpty()
-}
-
-private fun ControlPlaneUiStatus.sortOrder(): Int =
-    when (this) {
-        ControlPlaneUiStatus.ACTIVE -> 0
-        ControlPlaneUiStatus.AVAILABLE -> 1
-        ControlPlaneUiStatus.CHECKING -> 2
-        ControlPlaneUiStatus.UNREACHABLE -> 3
-    }

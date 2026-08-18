@@ -149,7 +149,7 @@ private fun ContactsContent(
     onUiEvent: (ContactsUiEvent) -> Unit
 ) {
     when (uiState) {
-        ContactsUiState.Loading -> {
+        is ContactsUiState.Loading -> {
             LoadingContactsContent(
                 modifier =
                     Modifier
@@ -158,7 +158,7 @@ private fun ContactsContent(
             )
         }
 
-        ContactsUiState.Empty -> {
+        is ContactsUiState.Empty -> {
             EmptyContactsContent(
                 modifier =
                     Modifier

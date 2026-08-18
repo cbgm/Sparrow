@@ -20,7 +20,6 @@ fun ContactsRoute(
     viewModel: ContactsViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(viewModel) {
@@ -48,7 +47,7 @@ fun ContactsRoute(
 
     ContactsScreen(
         uiState = uiState,
-        mode = ContactsScreenMode.Overview(searchQuery = searchQuery),
+        mode = ContactsScreenMode.Overview(searchQuery = uiState.searchQuery),
         onUiEvent = { event ->
             if (event == ContactsUiEvent.ImportDeviceContacts) {
                 requestDeviceContactsPermission()

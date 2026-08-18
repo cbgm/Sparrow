@@ -79,14 +79,39 @@
     ]
   },
   {
+    "name": "datastore",
+    "path": ":core:datastore",
+    "group": "core",
+    "directory": "core/datastore",
+    "buildFile": "core/datastore/build.gradle.kts",
+    "kotlinSourceFileCount": 4,
+    "productionKotlinFileCount": 4,
+    "testKotlinFileCount": 0,
+    "resourceFileCount": 1,
+    "sourceSets": [
+      "androidMain",
+      "commonMain",
+      "iosMain"
+    ],
+    "dependencies": [
+    ],
+    "dependents": [
+      ":feature:chats",
+      ":feature:identity",
+      ":feature:settings",
+      ":feature:transport",
+      ":shared"
+    ]
+  },
+  {
     "name": "protocol",
     "path": ":core:protocol",
     "group": "core",
     "directory": "core/protocol",
     "buildFile": "core/protocol/build.gradle.kts",
-    "kotlinSourceFileCount": 63,
-    "productionKotlinFileCount": 54,
-    "testKotlinFileCount": 9,
+    "kotlinSourceFileCount": 71,
+    "productionKotlinFileCount": 60,
+    "testKotlinFileCount": 11,
     "resourceFileCount": 1,
     "sourceSets": [
       "androidMain",
@@ -112,8 +137,8 @@
     "group": "core",
     "directory": "core/ui",
     "buildFile": "core/ui/build.gradle.kts",
-    "kotlinSourceFileCount": 33,
-    "productionKotlinFileCount": 32,
+    "kotlinSourceFileCount": 49,
+    "productionKotlinFileCount": 48,
     "testKotlinFileCount": 1,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -202,8 +227,8 @@
     "group": "feature",
     "directory": "feature/chats",
     "buildFile": "feature/chats/build.gradle.kts",
-    "kotlinSourceFileCount": 212,
-    "productionKotlinFileCount": 196,
+    "kotlinSourceFileCount": 231,
+    "productionKotlinFileCount": 215,
     "testKotlinFileCount": 16,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -216,6 +241,7 @@
     "dependencies": [
       ":core",
       ":core:crypto",
+      ":core:datastore",
       ":core:protocol",
       ":core:ui",
       ":data:database",
@@ -263,9 +289,9 @@
     "group": "feature",
     "directory": "feature/contacts",
     "buildFile": "feature/contacts/build.gradle.kts",
-    "kotlinSourceFileCount": 123,
-    "productionKotlinFileCount": 120,
-    "testKotlinFileCount": 3,
+    "kotlinSourceFileCount": 134,
+    "productionKotlinFileCount": 130,
+    "testKotlinFileCount": 4,
     "resourceFileCount": 1,
     "sourceSets": [
       "androidDeviceTest",
@@ -294,19 +320,21 @@
     "group": "feature",
     "directory": "feature/identity",
     "buildFile": "feature/identity/build.gradle.kts",
-    "kotlinSourceFileCount": 53,
-    "productionKotlinFileCount": 49,
-    "testKotlinFileCount": 4,
+    "kotlinSourceFileCount": 67,
+    "productionKotlinFileCount": 62,
+    "testKotlinFileCount": 5,
     "resourceFileCount": 1,
     "sourceSets": [
       "androidDeviceTest",
       "androidMain",
       "commonMain",
+      "commonTest",
       "iosMain"
     ],
     "dependencies": [
       ":core",
       ":core:crypto",
+      ":core:datastore",
       ":core:protocol",
       ":core:ui"
     ],
@@ -314,6 +342,7 @@
       ":feature:chats",
       ":feature:contactimport",
       ":feature:onboarding",
+      ":feature:settings",
       ":navigation",
       ":shared",
       ":startup"
@@ -379,8 +408,8 @@
     "group": "feature",
     "directory": "feature/settings",
     "buildFile": "feature/settings/build.gradle.kts",
-    "kotlinSourceFileCount": 60,
-    "productionKotlinFileCount": 60,
+    "kotlinSourceFileCount": 65,
+    "productionKotlinFileCount": 65,
     "testKotlinFileCount": 0,
     "resourceFileCount": 2,
     "sourceSets": [
@@ -390,7 +419,9 @@
     ],
     "dependencies": [
       ":core",
-      ":core:ui"
+      ":core:datastore",
+      ":core:ui",
+      ":feature:identity"
     ],
     "dependents": [
       ":navigation",
@@ -403,8 +434,8 @@
     "group": "feature",
     "directory": "feature/transport",
     "buildFile": "feature/transport/build.gradle.kts",
-    "kotlinSourceFileCount": 71,
-    "productionKotlinFileCount": 57,
+    "kotlinSourceFileCount": 66,
+    "productionKotlinFileCount": 52,
     "testKotlinFileCount": 14,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -416,6 +447,7 @@
     "dependencies": [
       ":core",
       ":core:crypto",
+      ":core:datastore",
       ":core:protocol"
     ],
     "dependents": [
@@ -817,6 +849,7 @@
     "dependencies": [
       ":core",
       ":core:crypto",
+      ":core:datastore",
       ":core:protocol",
       ":core:ui",
       ":data:database",

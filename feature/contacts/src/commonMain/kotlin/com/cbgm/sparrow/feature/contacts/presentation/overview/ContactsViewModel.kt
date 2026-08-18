@@ -6,8 +6,7 @@ import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportDeviceContactsUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactProfilePicturesUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
-import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.filterContacts
-import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.groupContactsByInitial
+import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.toUiState
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsEffect
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsUiState
@@ -17,7 +16,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -32,8 +30,7 @@ class ContactsViewModel(
     private val importDeviceContacts: ImportDeviceContactsUseCase,
     private val observeProfilePictures: ObserveContactProfilePicturesUseCase
 ) : BaseViewModel() {
-    private val _searchQuery = MutableStateFlow("")
-    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+    private val searchQuery = MutableStateFlow("")
 
     private val _effects = Channel<ContactsEffect>(capacity = Channel.BUFFERED)
     val effects = _effects.receiveAsFlow()
@@ -45,16 +42,16 @@ class ContactsViewModel(
         ) { snapshot, query ->
             snapshot.contacts.toUiState(query, snapshot.profilePictures)
         }.catch { error ->
-            emit(ContactsUiState.Error(error.message ?: "Failed to load contacts"))
+            emit(ContactsUiState.Error(error.message ?: "Failed to load contacts", searchQuery.value))
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-            initialValue = ContactsUiState.Loading
+            initialValue = ContactsUiState.Loading()
         )
 
     fun onUiEvent(event: ContactsUiEvent) {
         when (event) {
-            is ContactsUiEvent.SearchQueryChanged -> _searchQuery.value = event.query
+            is ContactsUiEvent.SearchQueryChanged -> searchQuery.value = event.query
             ContactsUiEvent.ImportDeviceContacts -> importContacts()
             ContactsUiEvent.DeviceContactsPermissionDenied -> showPermissionDenied()
             ContactsUiEvent.BackClicked -> emitEffect(ContactsEffect.BackRequested)
@@ -107,18 +104,6 @@ class ContactsViewModel(
 
     private fun emitEffect(effect: ContactsEffect) {
         _effects.trySend(effect)
-    }
-
-    private fun List<Contact>.toUiState(
-        query: String,
-        profilePictures: Map<String, ByteArray?>
-    ): ContactsUiState {
-        if (isEmpty()) return ContactsUiState.Empty
-
-        return ContactsUiState.Content(
-            groups = filterContacts(query).groupContactsByInitial(),
-            profilePictures = profilePictures
-        )
     }
 
     private data class ContactsSnapshot(

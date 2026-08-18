@@ -2,9 +2,16 @@ package com.cbgm.sparrow.feature.chats.presentation.details.mapper
 
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupVerificationMembershipStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupVerificationPair
+import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupAvatarUiState
+import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupLeaveUiState
+import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupMemberManagementUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupMemberVerificationState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupMemberVerificationUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupVerificationSummaryUiState
+import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupVerificationUiState
+import com.cbgm.sparrow.feature.contacts.domain.model.Contact
+import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.filterContacts
+import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.groupContactsByInitial
 
 internal fun buildGroupVerificationSummary(
     isLocalAdmin: Boolean,
@@ -130,3 +137,92 @@ private fun GroupVerificationPair.toVerificationState(): GroupMemberVerification
             GroupMemberVerificationState.PARTICIPANT_VERIFIED_ADMIN
         else -> GroupMemberVerificationState.UNVERIFIED
     }
+
+internal fun toGroupAvatarUiState(
+    title: String,
+    avatarBytes: ByteArray?,
+    canEdit: Boolean,
+    isSaving: Boolean,
+    errorMessage: String?
+): GroupAvatarUiState =
+    GroupAvatarUiState(
+        title = title,
+        avatarBytes = avatarBytes,
+        canEdit = canEdit,
+        isSaving = isSaving,
+        errorMessage = errorMessage
+    )
+
+internal fun toGroupVerificationUiState(
+    summary: GroupVerificationSummaryUiState,
+    groupAvatar: GroupAvatarUiState,
+    contacts: List<Contact>,
+    profilePictures: Map<String, ByteArray?>,
+    selectedContactId: String?,
+    safetyNumber: String,
+    isLoadingSafetyNumber: Boolean,
+    isVerifying: Boolean,
+    verificationError: String?,
+    selectedContactIds: Set<String>,
+    searchQuery: String,
+    removalCandidateContactId: String?,
+    promotionCandidateContactId: String?,
+    isUpdatingMembers: Boolean,
+    memberManagementError: String?,
+    completedRevision: Int,
+    leave: GroupLeaveUiState
+): GroupVerificationUiState {
+    val blockedContactIds =
+        summary.currentMemberContactIds.toMutableSet().also { blocked ->
+            summary.members
+                .filterNot(GroupMemberVerificationUiState::isActive)
+                .filter { member -> member.state == GroupMemberVerificationState.INVITATION_PENDING }
+                .mapNotNullTo(blocked, GroupMemberVerificationUiState::contactId)
+        }
+    val availableContacts = contacts.filterNot { contact -> contact.id in blockedContactIds }
+
+    return GroupVerificationUiState(
+        summary = summary,
+        selectedMember =
+            selectedContactId?.let { contactId ->
+                summary.members.firstOrNull { member ->
+                    member.contactId == contactId && member.canVerify
+                }
+            },
+        safetyNumber = safetyNumber,
+        isLoadingSafetyNumber = isLoadingSafetyNumber,
+        isVerifying = isVerifying,
+        errorMessage = verificationError,
+        groupAvatar = groupAvatar,
+        memberManagement =
+            GroupMemberManagementUiState(
+                availableContactGroups =
+                    availableContacts
+                        .filterContacts(searchQuery)
+                        .groupContactsByInitial(),
+                profilePictures = profilePictures,
+                selectedContactIds =
+                    selectedContactIds.filterTo(mutableSetOf()) { contactId ->
+                        availableContacts.any { contact -> contact.id == contactId }
+                    },
+                searchQuery = searchQuery,
+                removalCandidate =
+                    removalCandidateContactId?.let { contactId ->
+                        summary.members.firstOrNull { member ->
+                            !member.isGroupAdmin && member.contactId == contactId
+                        }
+                    },
+                promotionCandidate =
+                    promotionCandidateContactId?.let { contactId ->
+                        summary.members.firstOrNull { member ->
+                            !member.isGroupAdmin && member.contactId == contactId
+                        }
+                    },
+                promotionRequiredForLeave = summary.requiresAdminPromotionBeforeLeave,
+                isUpdating = isUpdatingMembers,
+                errorMessage = memberManagementError,
+                completedRevision = completedRevision
+            ),
+        leave = leave
+    )
+}

@@ -40,6 +40,7 @@ import com.cbgm.sparrow.core.ui.component.SwipeRevealAction
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.domain.model.PendingContactInvitation
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiEvent
+import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_unknown
 import com.cbgm.sparrow.resources.feature_contacts_accept_invitation
@@ -53,9 +54,7 @@ import org.jetbrains.compose.resources.stringResource
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContactInvitationsScreen(
-    invitations: List<PendingContactInvitation>,
-    processingInvitationId: String?,
-    profilePictures: Map<String, ByteArray?>,
+    uiState: ContactInvitationUiState,
     snackbarHostState: SnackbarHostState,
     onUiEvent: (ContactInvitationUiEvent) -> Unit,
     modifier: Modifier = Modifier
@@ -91,7 +90,7 @@ fun ContactInvitationsScreen(
             )
         }
     ) { innerPadding, listState ->
-        if (invitations.isEmpty()) {
+        if (uiState.invitations.isEmpty()) {
             EmptyInvitations(
                 modifier =
                     Modifier
@@ -109,11 +108,11 @@ fun ContactInvitationsScreen(
                     )
             ) {
                 items(
-                    items = invitations,
+                    items = uiState.invitations,
                     key = PendingContactInvitation::invitationId
                 ) { invitation ->
                     SparrowSwipeRevealItem(
-                        enabled = processingInvitationId == null,
+                        enabled = uiState.processingInvitationId == null,
                         actions =
                             listOf(
                                 SwipeRevealAction(
@@ -179,8 +178,8 @@ fun ContactInvitationsScreen(
                     ) {
                         InvitationRow(
                             invitation = invitation,
-                            isProcessing = processingInvitationId == invitation.invitationId,
-                            profilePictureBytes = profilePictures[invitation.contactId]
+                            isProcessing = uiState.processingInvitationId == invitation.invitationId,
+                            profilePictureBytes = uiState.profilePictures[invitation.contactId]
                         )
                         HorizontalDivider(
                             modifier =

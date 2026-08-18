@@ -4,13 +4,12 @@ import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.CreateGroupConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.profile.ObserveRemoteProfilePicturesUseCase
+import com.cbgm.sparrow.feature.chats.presentation.create.mapper.toUiState
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupEffect
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
-import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.filterContacts
-import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.groupContactsByInitial
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -39,16 +38,11 @@ class CreateGroupViewModel(
             observeContactsWithProfilePictures(),
             formState
         ) { snapshot, form ->
-            val availableContactIds = snapshot.contacts.mapTo(mutableSetOf(), Contact::id)
-            CreateGroupUiState(
+            snapshot.contacts.toUiState(
+                profilePictures = snapshot.profilePictures,
                 title = form.title,
                 searchQuery = form.searchQuery,
-                contactGroups =
-                    snapshot.contacts
-                        .filterContacts(form.searchQuery)
-                        .groupContactsByInitial(),
-                profilePictures = snapshot.profilePictures,
-                selectedContactIds = form.selectedContactIds.intersect(availableContactIds),
+                selectedContactIds = form.selectedContactIds,
                 isCreating = form.isCreating,
                 errorMessage = form.errorMessage ?: snapshot.errorMessage
             )

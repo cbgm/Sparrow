@@ -35,6 +35,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,8 +50,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.component.PatternBackground
+import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
+import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
@@ -61,6 +68,7 @@ import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.IdentityHandshakeState
 import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.base_verify
 import com.cbgm.sparrow.resources.feature_chats_chat_key_exchange_incomplete_description
 import com.cbgm.sparrow.resources.feature_chats_chat_key_exchange_incomplete_title
@@ -90,13 +98,17 @@ import com.cbgm.sparrow.resources.feature_chats_contact_invitation_sent_descript
 import com.cbgm.sparrow.resources.feature_chats_contact_invitation_sent_title
 import com.cbgm.sparrow.resources.feature_chats_direct_chat_reinvite_required_description
 import com.cbgm.sparrow.resources.feature_chats_direct_chat_reinvite_required_title
+import com.cbgm.sparrow.resources.feature_chats_import_contact_identity
 import com.cbgm.sparrow.resources.feature_chats_loading_chat
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_incomplete_description
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_incomplete_title
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_required_description
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_required_title
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_setup_action
+import com.cbgm.sparrow.resources.feature_chats_manual_identity_setup_description
+import com.cbgm.sparrow.resources.feature_chats_manual_identity_setup_title
 import com.cbgm.sparrow.resources.feature_chats_start_conversation_with
+import com.cbgm.sparrow.resources.feature_identity_share_my_identity
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -106,6 +118,8 @@ fun DirectScreen(
     onUiEvent: (DirectUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showIdentitySetupDialog by rememberSaveable { mutableStateOf(false) }
+
     SparrowLazyScaffold(
         modifier = modifier,
         barColor = MaterialTheme.colorScheme.background,
@@ -120,7 +134,8 @@ fun DirectScreen(
             TopBar(
                 uiState = uiState,
                 containerColor = containerColor,
-                onUiEvent = onUiEvent
+                onUiEvent = onUiEvent,
+                onManualIdentitySetup = { showIdentitySetupDialog = true }
             )
         },
         bottomBar = { containerColor ->
@@ -140,6 +155,20 @@ fun DirectScreen(
             }
         )
     }
+
+    if (showIdentitySetupDialog) {
+        IdentitySetupDialog(
+            onShareIdentity = {
+                showIdentitySetupDialog = false
+                onUiEvent(DirectUiEvent.ShareIdentityClicked)
+            },
+            onImportIdentity = {
+                showIdentitySetupDialog = false
+                onUiEvent(DirectUiEvent.ImportIdentityClicked)
+            },
+            onDismiss = { showIdentitySetupDialog = false }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -147,7 +176,8 @@ fun DirectScreen(
 private fun TopBar(
     uiState: DirectUiState,
     containerColor: Color,
-    onUiEvent: (DirectUiEvent) -> Unit
+    onUiEvent: (DirectUiEvent) -> Unit,
+    onManualIdentitySetup: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         TopAppBar(
@@ -194,11 +224,59 @@ private fun TopBar(
                 identitySetupMode = uiState.identitySetupMode,
                 isChatAuthorized = uiState.isMessageInputEnabled,
                 onVerifyIdentity = { onUiEvent(DirectUiEvent.VerifyIdentityClicked) },
-                onManualIdentitySetup = { onUiEvent(DirectUiEvent.ManualIdentitySetupClicked) }
+                onManualIdentitySetup = onManualIdentitySetup
             )
         }
 
         uiState.errorMessage?.let { message -> ErrorMessage(message = message) }
+    }
+}
+
+@Composable
+private fun IdentitySetupDialog(
+    onShareIdentity: () -> Unit,
+    onImportIdentity: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    SparrowAlertDialog(
+        onDismissRequest = onDismiss,
+        title = stringResource(Res.string.feature_chats_manual_identity_setup_title),
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(text = stringResource(Res.string.feature_chats_manual_identity_setup_description))
+                Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+                SparrowOutlinedButton(
+                    onClick = onShareIdentity,
+                    modifier = Modifier.fillMaxWidth(),
+                    text = stringResource(Res.string.feature_identity_share_my_identity)
+                )
+                SparrowOutlinedButton(
+                    onClick = onImportIdentity,
+                    modifier = Modifier.fillMaxWidth(),
+                    text = stringResource(Res.string.feature_chats_import_contact_identity)
+                )
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            SparrowSecondaryButton(
+                onClick = onDismiss,
+                text = stringResource(Res.string.base_cancel),
+                fillMaxWidth = false
+            )
+        }
+    )
+}
+
+@Preview
+@Composable
+private fun IdentitySetupDialogPreview() {
+    SparrowTheme {
+        IdentitySetupDialog(
+            onShareIdentity = {},
+            onImportIdentity = {},
+            onDismiss = {}
+        )
     }
 }
 
@@ -212,11 +290,7 @@ private fun BottomBar(
         modifier = Modifier.fillMaxWidth(),
         color = containerColor
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = MaterialTheme.spacing.base)
-        ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text =
                     if (uiState.isContactTyping) {
@@ -260,13 +334,11 @@ private fun Content(
         uiState.isLoading -> LoadingContent(
             modifier = Modifier.fillMaxSize().padding(innerPadding)
         )
-
         uiState.messages.isEmpty() -> EmptyContent(
             contactName = uiState.contactName,
             securityState = uiState.contactSecurityState,
             modifier = Modifier.fillMaxSize().padding(innerPadding)
         )
-
         else -> MessageList(
             messages = uiState.messages,
             listState = listState,
@@ -324,10 +396,7 @@ private fun EmptyContent(
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = stringResource(
-                    Res.string.feature_chats_start_conversation_with,
-                    contactName
-                ),
+                text = stringResource(Res.string.feature_chats_start_conversation_with, contactName),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -478,7 +547,6 @@ private fun SecurityAction(
                 )
             }
         }
-
         securityState == ContactSecurityState.MUTUAL_KEYS_UNVERIFIED ||
             securityState == ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_CONTACT -> {
             TextButton(onClick = onVerifyIdentity) {
@@ -509,7 +577,6 @@ private fun invitationState(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer
             )
-
         IdentityHandshakeState.AWAITING_ACCEPTANCE ->
             SecurityBannerState(
                 icon = Icons.Default.Warning,
@@ -518,7 +585,6 @@ private fun invitationState(
                 containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                 contentColor = MaterialTheme.colorScheme.onTertiaryContainer
             )
-
         IdentityHandshakeState.ACCEPTANCE_SENT,
         IdentityHandshakeState.WAITING_FOR_READY ->
             SecurityBannerState(
@@ -528,18 +594,15 @@ private fun invitationState(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer
             )
-
         IdentityHandshakeState.DECLINED ->
             errorBanner(
                 title = stringResource(Res.string.feature_chats_contact_invitation_declined_title),
                 description = stringResource(Res.string.feature_chats_contact_invitation_declined_description)
             )
-
         IdentityHandshakeState.CONVERSATION_DELETED,
         IdentityHandshakeState.EXPIRED,
         IdentityHandshakeState.FAILED,
         null -> reinviteBanner()
-
         IdentityHandshakeState.MUTUAL_UNVERIFIED -> null
     }
 }
@@ -566,7 +629,6 @@ private fun securityState(
                         stringResource(Res.string.feature_chats_chat_unencrypted_description)
                     }
             )
-
         ContactSecurityState.ONE_WAY_KEYS ->
             errorBanner(
                 icon = Icons.Default.LockOpen,
@@ -583,13 +645,11 @@ private fun securityState(
                         stringResource(Res.string.feature_chats_chat_key_exchange_incomplete_description)
                     }
             )
-
         ContactSecurityState.MUTUAL_KEYS_UNVERIFIED ->
             errorBanner(
                 title = stringResource(Res.string.feature_chats_chat_unverified_title),
                 description = stringResource(Res.string.feature_chats_chat_unverified_description)
             )
-
         ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_ME ->
             SecurityBannerState(
                 icon = Icons.Default.Schedule,
@@ -598,7 +658,6 @@ private fun securityState(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer
             )
-
         ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_CONTACT ->
             SecurityBannerState(
                 icon = Icons.Default.Security,
@@ -607,7 +666,6 @@ private fun securityState(
                 containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                 contentColor = MaterialTheme.colorScheme.onTertiaryContainer
             )
-
         ContactSecurityState.MUTUAL_KEYS_VERIFIED -> reinviteBanner()
     }
 

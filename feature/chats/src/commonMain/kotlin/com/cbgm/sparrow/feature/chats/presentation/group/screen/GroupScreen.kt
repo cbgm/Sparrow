@@ -105,9 +105,7 @@ import org.jetbrains.compose.resources.stringResource
 fun GroupScreen(
     uiState: GroupUiState,
     onUiEvent: (GroupUiEvent) -> Unit,
-    modifier: Modifier = Modifier,
-    profilePictures: Map<String, ByteArray?> = emptyMap(),
-    groupAvatarBytes: ByteArray? = null
+    modifier: Modifier = Modifier
 ) {
     SparrowLazyScaffold(
         modifier = modifier,
@@ -122,7 +120,6 @@ fun GroupScreen(
         topBar = { containerColor ->
             TopBar(
                 uiState = uiState,
-                groupAvatarBytes = groupAvatarBytes,
                 containerColor = containerColor,
                 onUiEvent = onUiEvent
             )
@@ -137,7 +134,6 @@ fun GroupScreen(
     ) { innerPadding, listState ->
         Content(
             uiState = uiState,
-            profilePictures = profilePictures,
             listState = listState,
             innerPadding = innerPadding,
             onRetryMessage = { messageId ->
@@ -151,7 +147,6 @@ fun GroupScreen(
 @Composable
 private fun TopBar(
     uiState: GroupUiState,
-    groupAvatarBytes: ByteArray?,
     containerColor: Color,
     onUiEvent: (GroupUiEvent) -> Unit
 ) {
@@ -169,7 +164,7 @@ private fun TopBar(
                     modifier = Modifier.clickable { onUiEvent(GroupUiEvent.HeaderClicked) },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SparrowAvatar(name = uiState.title, pictureBytes = groupAvatarBytes, size = 36.dp)
+                    SparrowAvatar(name = uiState.title, pictureBytes = uiState.avatarBytes, size = 36.dp)
                     Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
                     Column {
                         Text(
@@ -250,7 +245,6 @@ private fun BottomBar(
 @Composable
 private fun Content(
     uiState: GroupUiState,
-    profilePictures: Map<String, ByteArray?>,
     listState: LazyListState,
     innerPadding: PaddingValues,
     onRetryMessage: (String) -> Unit
@@ -265,7 +259,6 @@ private fun Content(
         )
         else -> MessageList(
             messages = uiState.messages,
-            profilePictures = profilePictures,
             listState = listState,
             onRetryMessage = onRetryMessage,
             contentPadding = innerPadding
@@ -276,7 +269,6 @@ private fun Content(
 @Composable
 private fun MessageList(
     messages: List<GroupMessageUiModel>,
-    profilePictures: Map<String, ByteArray?>,
     listState: LazyListState,
     onRetryMessage: (String) -> Unit,
     contentPadding: PaddingValues
@@ -305,7 +297,6 @@ private fun MessageList(
             if (message.type == ChatMessageType.USER) {
                 GroupMessageBubble(
                     message = message,
-                    profilePictureBytes = message.senderContactId?.let(profilePictures::get),
                     onRetryMessage = onRetryMessage
                 )
             } else {
@@ -321,7 +312,6 @@ private fun MessageList(
 @Composable
 private fun GroupMessageBubble(
     message: GroupMessageUiModel,
-    profilePictureBytes: ByteArray?,
     onRetryMessage: (String) -> Unit
 ) {
     if (message.bubble.isMine) {
@@ -338,7 +328,7 @@ private fun GroupMessageBubble(
     ) {
         SparrowAvatar(
             name = message.bubble.senderName.orEmpty(),
-            pictureBytes = profilePictureBytes,
+            pictureBytes = message.senderProfilePictureBytes,
             size = 28.dp
         )
         Spacer(modifier = Modifier.width(6.dp))

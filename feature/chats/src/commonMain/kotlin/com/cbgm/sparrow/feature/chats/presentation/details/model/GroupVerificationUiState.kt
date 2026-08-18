@@ -7,6 +7,7 @@ data class GroupVerificationUiState(
     val isLoadingSafetyNumber: Boolean = false,
     val isVerifying: Boolean = false,
     val errorMessage: String? = null,
+    val groupAvatar: GroupAvatarUiState = GroupAvatarUiState(),
     val memberManagement: GroupMemberManagementUiState = GroupMemberManagementUiState(),
     val leave: GroupLeaveUiState = GroupLeaveUiState()
 )
