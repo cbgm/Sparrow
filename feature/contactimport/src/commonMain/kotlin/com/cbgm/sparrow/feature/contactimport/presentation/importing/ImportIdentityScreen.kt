@@ -244,7 +244,6 @@ private fun ImportIdentityTopBar(
         title = {
             Text(
                 text = stringResource(Res.string.feature_contactimport_import_identity),
-                fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleSmall
             )
         },

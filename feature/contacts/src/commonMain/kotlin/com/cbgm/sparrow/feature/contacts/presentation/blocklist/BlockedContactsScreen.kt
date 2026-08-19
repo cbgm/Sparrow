@@ -66,8 +66,7 @@ fun BlockedContactsScreen(
                 title = {
                     Text(
                         text = stringResource(Res.string.feature_contacts_blocked_contacts_title),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.titleSmall
                     )
                 },
                 navigationIcon = {

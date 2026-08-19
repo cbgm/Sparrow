@@ -92,8 +92,7 @@ fun ContactInvitationsScreen(
                 title = {
                     Text(
                         text = stringResource(Res.string.feature_contacts_invitations_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.titleSmall
                     )
                 },
                 navigationIcon = {

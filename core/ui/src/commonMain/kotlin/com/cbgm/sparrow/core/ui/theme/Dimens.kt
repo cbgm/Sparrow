@@ -81,7 +81,6 @@ object Dimens {
 
     object OverviewScreen {
         val unreadBadgeMinSize = 20.dp
-        val deleteIconSize = 28.dp
         val emptyStateIconContainerSize = 80.dp
         val emptyStateIconSize = 36.dp
     }

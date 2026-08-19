@@ -21,7 +21,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -35,6 +34,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowCard
+import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -53,7 +53,6 @@ import com.cbgm.sparrow.resources.feature_identity_choose_phone_number_from_devi
 import com.cbgm.sparrow.resources.feature_identity_encryption_public_key
 import com.cbgm.sparrow.resources.feature_identity_encryption_public_key_description
 import com.cbgm.sparrow.resources.feature_identity_identity_enter_phone_description
-import com.cbgm.sparrow.resources.feature_identity_identity_ready
 import com.cbgm.sparrow.resources.feature_identity_incomplete_identity
 import com.cbgm.sparrow.resources.feature_identity_incomplete_identity_description
 import com.cbgm.sparrow.resources.feature_identity_private_keys_protected
@@ -184,12 +183,11 @@ private fun NoIdentityContent(
 
         SparrowCard {
             Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
-                OutlinedButton(
+                SparrowSecondaryButton(
                     onClick = onRequestPhoneNumberHint,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = stringResource(Res.string.feature_identity_choose_phone_number_from_device))
-                }
+                    modifier = Modifier.fillMaxWidth(),
+                    text = stringResource(Res.string.feature_identity_choose_phone_number_from_device)
+                )
 
                 Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
 
@@ -258,14 +256,6 @@ private fun ReadyIdentityContent(
 
         IconBadge(icon = Icons.Default.VerifiedUser)
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
-
-        Text(
-            text = stringResource(Res.string.feature_identity_identity_ready),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.micro))
 
         Text(
             text = stringResource(Res.string.feature_identity_private_keys_protected),

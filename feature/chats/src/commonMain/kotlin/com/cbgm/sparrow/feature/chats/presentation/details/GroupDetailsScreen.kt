@@ -171,8 +171,7 @@ private fun TopBar(
             title = {
                 Text(
                     text = stringResource(Res.string.feature_chats_group_details_title),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.titleSmall
                 )
             },
             navigationIcon = {
@@ -380,13 +379,6 @@ private fun GroupAvatarSection(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = stringResource(Res.string.feature_chats_group_avatar),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-
         Box(
             modifier = Modifier.padding(top = MaterialTheme.spacing.small),
             contentAlignment = Alignment.Center
