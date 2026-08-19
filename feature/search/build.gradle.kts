@@ -18,6 +18,7 @@ kotlin {
         }
 
         androidMain.dependencies {
+            implementation(libs.androidx.work.runtime)
             implementation(libs.koin.android)
             implementation(libs.mediapipe.tasks.text)
         }
