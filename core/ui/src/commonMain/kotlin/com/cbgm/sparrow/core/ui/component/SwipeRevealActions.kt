@@ -30,11 +30,12 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.spacing
 import kotlin.math.roundToInt
 
-private val defaultSwipeActionWidth = 80.dp
+private val defaultSwipeActionWidth = Dimens.SwipeRevealActions.actionWidth
 private const val DEFAULT_REVEAL_THRESHOLD_FRACTION = 0.5f
 
 data class SwipeRevealAction(
@@ -156,15 +157,15 @@ private fun SparrowSwipeRevealItemPreview() {
             actions =
                 listOf(
                     SwipeRevealAction(
-                        backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        backgroundColor = MaterialTheme.colorScheme.surfaceContainer,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
                         onClick = {}
                     ) {
                         Text("A")
                     },
                     SwipeRevealAction(
-                        backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
                         onClick = {}
                     ) {
                         Text("B")
@@ -183,7 +184,7 @@ private fun SparrowSwipeRevealItemPreview() {
                     Modifier
                         .fillMaxWidth()
                         .background(MaterialTheme.colorScheme.background)
-                        .padding(24.dp)
+                        .padding(MaterialTheme.spacing.medium)
             ) {
                 Text("Swipe me")
             }

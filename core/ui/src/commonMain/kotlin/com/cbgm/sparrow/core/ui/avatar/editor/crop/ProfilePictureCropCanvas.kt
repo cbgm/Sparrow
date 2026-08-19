@@ -16,7 +16,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
@@ -25,7 +24,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.theme.FunctionalColors
 import kotlin.math.roundToInt
 
 @Composable
@@ -39,6 +40,8 @@ internal fun ProfilePictureCropCanvas(
     var zoom by remember(image) { mutableFloatStateOf(MIN_ZOOM) }
     var imageOffset by remember(image) { mutableStateOf(Offset.Zero) }
     val currentOnCropRegionChanged by rememberUpdatedState(onCropRegionChanged)
+    val scrimColor = FunctionalColors.MediaBackground
+    val guideColor = FunctionalColors.MediaForeground
 
     val geometry =
         remember(
@@ -133,13 +136,13 @@ internal fun ProfilePictureCropCanvas(
 
         drawPath(
             path = mask,
-            color = Color.Black.copy(alpha = 0.58f)
+            color = scrimColor.copy(alpha = Alpha.ProfilePictureCropScreen.scrim)
         )
         drawCircle(
-            color = Color.White,
+            color = guideColor,
             radius = activeGeometry.cropRadius,
             center = center,
-            style = Stroke(width = 3.dp.toPx())
+            style = Stroke(width = Dimens.ProfilePictureCropScreen.guideStrokeWidth.toPx())
         )
     }
 }

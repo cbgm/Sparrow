@@ -2,7 +2,6 @@ package com.cbgm.sparrow.feature.contacts.presentation.details.components
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.Icon
@@ -15,8 +14,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.contactDetailsScreen
+import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumber
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumberType
 import com.cbgm.sparrow.resources.Res
@@ -40,8 +42,8 @@ internal fun ContactPhoneNumberRow(
             Icon(
                 imageVector = Icons.Default.Phone,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                modifier = Modifier.size(20.dp)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.ContactDetailsScreen.phoneIcon),
+                modifier = Modifier.size(Dimens.ContactDetailsScreen.rowIconSize)
             )
         },
         headlineContent = {
@@ -56,14 +58,17 @@ internal fun ContactPhoneNumberRow(
         trailingContent = {
             if (isPreferred) {
                 Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
+                    shape = MaterialTheme.shapes.contactDetailsScreen.phoneNumber,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = Alpha.ContactDetailsScreen.preferredBackground)
                 ) {
                     Text(
                         text = stringResource(Res.string.base_preferred),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(
+                            horizontal = MaterialTheme.spacing.base,
+                            vertical = MaterialTheme.spacing.micro
+                        )
                     )
                 }
             }
@@ -71,8 +76,8 @@ internal fun ContactPhoneNumberRow(
         colors =
             ListItemDefaults.colors(
                 containerColor = Color.Transparent,
-                headlineColor = MaterialTheme.colorScheme.onBackground,
-                supportingColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                headlineColor = MaterialTheme.colorScheme.onSurface,
+                supportingColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
     )
 }

@@ -34,7 +34,7 @@ internal fun ContactPhoneNumbersSection(
         Text(
             text = stringResource(Res.string.feature_contacts_no_phone_numbers_stored),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     } else {
         Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base.div(2))) {

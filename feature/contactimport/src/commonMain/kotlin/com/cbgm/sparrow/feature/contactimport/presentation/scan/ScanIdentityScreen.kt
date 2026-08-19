@@ -22,16 +22,17 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowStaticScaffold
+import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.scanIdentityScreen
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contactimport.device.QrScanner
 import com.cbgm.sparrow.feature.contactimport.presentation.scan.model.ScanIdentityUiEvent
@@ -103,7 +104,7 @@ fun ScanIdentityScreen(
                             vertical = MaterialTheme.spacing.times(5)
                         ),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Medium
             )
@@ -116,13 +117,14 @@ fun ScanIdentityScreen(
 // that tells the user exactly where to aim, instead of a bare camera feed.
 @Composable
 private fun ScannerOverlay(modifier: Modifier = Modifier) {
-    val backgroundColor = MaterialTheme.colorScheme.background
-    val accentColor = MaterialTheme.colorScheme.secondary
+    val scrimColor = MaterialTheme.colorScheme.scrim
+    val accentColor = MaterialTheme.colorScheme.primary
+    val frameCornerRadius = MaterialTheme.shapes.scanIdentityScreen.frameCornerRadius
 
     Canvas(modifier = modifier) {
         val frameSize = size.minDimension * 0.62f
         val left = (size.width - frameSize) / 2f
-        val top = (size.height - frameSize) / 2f - 24.dp.toPx()
+        val top = (size.height - frameSize) / 2f - Dimens.ScanIdentityScreen.frameVerticalOffset.toPx()
 
         val scrimPath =
             Path().apply {
@@ -134,16 +136,16 @@ private fun ScannerOverlay(modifier: Modifier = Modifier) {
                                 offset = Offset(left, top),
                                 size = Size(frameSize, frameSize)
                             ),
-                        cornerRadius = CornerRadius(24.dp.toPx())
+                        cornerRadius = CornerRadius(frameCornerRadius.toPx())
                     )
                 )
                 fillType = PathFillType.EvenOdd
             }
 
-        drawPath(path = scrimPath, color = backgroundColor.copy(alpha = 0.65f))
+        drawPath(path = scrimPath, color = scrimColor.copy(alpha = Alpha.ScanIdentityScreen.scrim))
 
-        val cornerLength = 28.dp.toPx()
-        val strokeWidth = 4.dp.toPx()
+        val cornerLength = Dimens.ScanIdentityScreen.frameCornerLength.toPx()
+        val strokeWidth = Dimens.ScanIdentityScreen.frameStrokeWidth.toPx()
         val corners =
             listOf(
                 Offset(left, top) to Pair(1, 1),

@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -20,13 +19,14 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.modal
+import com.cbgm.sparrow.core.ui.theme.rectangle
 import com.cbgm.sparrow.core.ui.theme.spacing
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
@@ -39,15 +39,9 @@ fun SparrowOverlayHost(
     modifier: Modifier = Modifier,
     horizontalPadding: Dp = MaterialTheme.spacing.small,
     topPadding: Dp = MaterialTheme.spacing.times(6),
-    shape: Shape =
-        RoundedCornerShape(
-            topStart = 24.dp,
-            topEnd = 24.dp,
-            bottomStart = 0.dp,
-            bottomEnd = 0.dp
-        ),
+    shape: Shape = MaterialTheme.shapes.modal,
     // containerColor: Color = MaterialTheme.colorScheme.background,
-    scrimColor: Color = Color.Black.copy(alpha = Alpha.Disabled),
+    scrimColor: Color = MaterialTheme.colorScheme.scrim.copy(alpha = Alpha.Disabled),
     // tonalElevation: Dp = 8.dp,
     // shadowElevation: Dp = 12.dp,
     content: @Composable (
@@ -134,9 +128,9 @@ fun SparrowOverlayHost(
         modifier = modifier.fillMaxSize(),
         sheetState = sheetState,
         sheetGesturesEnabled = !transitionRunning,
-        shape = RectangleShape,
+        shape = MaterialTheme.shapes.rectangle,
         containerColor = Color.Transparent,
-        tonalElevation = 0.dp,
+        tonalElevation = Dimens.Base.zero,
         scrimColor = scrimColor,
         dragHandle = null,
         contentWindowInsets = {
@@ -179,8 +173,8 @@ fun OverlayHostPreview() {
             visible = true,
             onDismissRequest = {},
             modifier = Modifier.fillMaxSize(),
-            horizontalPadding = 0.dp,
-            topPadding = 48.dp,
+            horizontalPadding = MaterialTheme.spacing.zero,
+            topPadding = MaterialTheme.spacing.times(6),
             // tonalElevation = 8.dp,
             // shadowElevation = 12.dp,
             content = {

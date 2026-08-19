@@ -21,11 +21,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.avatar.editor.crop.ProfilePictureCropCanvas
 import com.cbgm.sparrow.core.ui.avatar.editor.crop.ProfilePictureCropRegion
 import com.cbgm.sparrow.core.ui.component.SparrowRoundApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowStaticScaffold
+import com.cbgm.sparrow.core.ui.theme.FunctionalColors
 import com.cbgm.sparrow.core.ui.theme.spacing
 import org.jetbrains.compose.resources.decodeToImageBitmap
 
@@ -70,7 +70,7 @@ internal fun ProfilePictureCropScreen(
             )
         }
     ) {
-        Box(modifier = Modifier.background(MaterialTheme.colorScheme.onSurface)) {
+        Box(modifier = Modifier.background(FunctionalColors.MediaBackground)) {
             image?.let {
                 ProfilePictureCropCanvas(
                     image = it,
@@ -79,10 +79,10 @@ internal fun ProfilePictureCropScreen(
                         Modifier
                             .fillMaxSize()
                             .padding(
-                                start = 20.dp,
-                                end = 20.dp,
-                                top = 80.dp,
-                                bottom = 104.dp
+                                start = MaterialTheme.spacing.profilePictureCropScreen.horizontalPadding,
+                                end = MaterialTheme.spacing.profilePictureCropScreen.horizontalPadding,
+                                top = MaterialTheme.spacing.profilePictureCropScreen.topPadding,
+                                bottom = MaterialTheme.spacing.profilePictureCropScreen.bottomPadding
                             )
                 )
             }

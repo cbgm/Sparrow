@@ -18,7 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_contacts
 import org.jetbrains.compose.resources.stringResource
@@ -33,7 +33,7 @@ fun OverviewContactsTopBar(
 ) {
     Column {
         CenterAlignedTopAppBar(
-            windowInsets = WindowInsets(0.dp),
+            windowInsets = WindowInsets(MaterialTheme.spacing.zero),
             colors =
                 TopAppBarDefaults.topAppBarColors(
                     containerColor = containerColor,

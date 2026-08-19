@@ -4,7 +4,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -16,8 +15,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.circle
 import org.jetbrains.compose.resources.decodeToImageBitmap
 
 @Composable
@@ -25,7 +25,7 @@ fun SparrowAvatar(
     name: String,
     modifier: Modifier = Modifier,
     pictureBytes: ByteArray? = null,
-    size: Dp = 48.dp
+    size: Dp = Dimens.Avatar.defaultSize
 ) {
     val picture =
         remember(pictureBytes) {
@@ -36,7 +36,7 @@ fun SparrowAvatar(
 
     Surface(
         modifier = modifier.size(size),
-        shape = CircleShape,
+        shape = MaterialTheme.shapes.circle,
         color = MaterialTheme.colorScheme.secondaryContainer
     ) {
         if (picture != null) {

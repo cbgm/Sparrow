@@ -35,7 +35,7 @@ fun PrivacyPage(onNext: () -> Unit) {
         Text(
             text = stringResource(Res.string.feature_onboarding_privacy_first),
             style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.SemiBold
         )
         Spacer(Modifier.height(MaterialTheme.spacing.small))

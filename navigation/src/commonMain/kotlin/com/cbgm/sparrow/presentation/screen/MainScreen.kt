@@ -32,12 +32,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.component.SparrowScrollStateType
 import com.cbgm.sparrow.core.ui.component.SparrowTabbedScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowTabbedScrollStates
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.presentation.ContactsFlow
 import com.cbgm.sparrow.feature.chats.presentation.overview.OverviewRoute
 import com.cbgm.sparrow.feature.identity.presentation.setup.IdentityRoute
@@ -112,8 +113,8 @@ fun MainScreen(
         SparrowOverlayHost(
             visible = showContactsOverlay,
             onDismissRequest = { showContactsOverlay = false },
-            horizontalPadding = 0.dp,
-            topPadding = 48.dp
+            horizontalPadding = MaterialTheme.spacing.zero,
+            topPadding = MaterialTheme.spacing.times(6)
         ) { dismissOverlay ->
             ContactsFlow(
                 onDismiss = dismissOverlay,
@@ -187,7 +188,7 @@ private fun MainBottomBar(
 ) {
     NavigationBar(
         containerColor = containerColor,
-        contentColor = MaterialTheme.colorScheme.onPrimary
+        contentColor = MaterialTheme.colorScheme.onBackground
     ) {
         MainTab.entries.forEach { tab ->
             val isSelected = selectedTab == tab
@@ -199,7 +200,7 @@ private fun MainBottomBar(
                     Icon(
                         painter = painterResource(if (isSelected) tab.res else tab.resOutlined),
                         contentDescription = null,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(Dimens.MainScreen.navigationIconSize)
                     )
                 },
                 label = {
@@ -210,8 +211,8 @@ private fun MainBottomBar(
                 },
                 colors =
                     NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.secondary,
-                        selectedTextColor = MaterialTheme.colorScheme.secondary,
+                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                        selectedTextColor = MaterialTheme.colorScheme.primary,
                         indicatorColor = Color.Transparent,
                         unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,

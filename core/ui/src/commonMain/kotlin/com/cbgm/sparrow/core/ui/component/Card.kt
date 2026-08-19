@@ -23,7 +23,8 @@ import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.theme.spacing
 
 private data class ShadowLayer(
     val outline: Outline,
@@ -33,8 +34,8 @@ private data class ShadowLayer(
 
 private fun Modifier.bottomFadingShadow(
     shape: Shape,
-    size: Dp = 14.dp,
-    color: Color = Color.Black,
+    size: Dp = Dimens.Card.iconSize,
+    color: Color,
     maxAlpha: Float = 0.30f,
     layerCount: Int = 32
 ): Modifier =
@@ -122,7 +123,7 @@ fun SparrowCard(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(bottom = 30.dp)
+                .padding(bottom = MaterialTheme.spacing.card.bottomShadowPadding)
                 .graphicsLayer {
                     if (isFadingEnabled) {
                         alpha = cardAlpha
@@ -130,13 +131,14 @@ fun SparrowCard(
                     }
                 }.bottomFadingShadow(
                     shape = shape,
-                    size = 14.dp,
+                    size = Dimens.Card.iconSize,
+                    color = MaterialTheme.colorScheme.scrim,
                     maxAlpha = 0.30f
                 ),
-        color = MaterialTheme.colorScheme.primaryContainer,
+        color = MaterialTheme.colorScheme.surfaceContainer,
         shape = shape,
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
+        tonalElevation = Dimens.Base.zero,
+        shadowElevation = Dimens.Base.zero,
         content = content
     )
 }
@@ -149,7 +151,7 @@ fun SparrowCardNoAnimation(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.primaryContainer,
+        color = MaterialTheme.colorScheme.surfaceContainer,
         content = content
     )
 }

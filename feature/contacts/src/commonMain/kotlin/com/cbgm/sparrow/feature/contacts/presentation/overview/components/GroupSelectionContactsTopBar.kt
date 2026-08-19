@@ -23,7 +23,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_group_name
 import org.jetbrains.compose.resources.stringResource
@@ -43,7 +44,7 @@ fun GroupSelectionContactsTopBar(
 ) {
     Column {
         CenterAlignedTopAppBar(
-            windowInsets = WindowInsets(0.dp),
+            windowInsets = WindowInsets(MaterialTheme.spacing.zero),
             colors =
                 TopAppBarDefaults.topAppBarColors(
                     containerColor = containerColor,
@@ -74,9 +75,9 @@ fun GroupSelectionContactsTopBar(
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent,
-                            cursorColor = MaterialTheme.colorScheme.onPrimary,
-                            focusedTextColor = MaterialTheme.colorScheme.onPrimary,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onPrimary
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                            focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onBackground
                         )
                 )
             },
@@ -95,8 +96,8 @@ fun GroupSelectionContactsTopBar(
                 ) {
                     if (confirming) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp
+                            modifier = Modifier.size(Dimens.ContactsScreen.selectionProgressSize),
+                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
                         )
                     } else {
                         Icon(

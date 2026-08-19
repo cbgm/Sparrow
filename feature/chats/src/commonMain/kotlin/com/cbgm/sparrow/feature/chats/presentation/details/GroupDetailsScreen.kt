@@ -50,7 +50,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.avatar.editor.AvatarEditor
 import com.cbgm.sparrow.core.ui.avatar.editor.AvatarEditorStrings
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
@@ -60,6 +59,8 @@ import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
 import com.cbgm.sparrow.core.ui.component.SparrowStatusBadge
+import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupAvatarUiState
@@ -249,7 +250,7 @@ private fun Metric(
                 text = value.toString(),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = label,
@@ -294,7 +295,7 @@ private fun ErrorContentPreview() {
     SparrowTheme {
         ErrorContent(
             message = "Group details could not be loaded",
-            modifier = Modifier.padding(24.dp)
+            modifier = Modifier.padding(MaterialTheme.spacing.medium)
         )
     }
 }
@@ -305,7 +306,7 @@ private fun LoadingContent(modifier: Modifier = Modifier) {
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
-        CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -313,7 +314,7 @@ private fun LoadingContent(modifier: Modifier = Modifier) {
 @Composable
 private fun LoadingContentPreview() {
     SparrowTheme {
-        LoadingContent(modifier = Modifier.size(160.dp))
+        LoadingContent(modifier = Modifier.size(Dimens.GroupDetailsScreen.loadingSize))
     }
 }
 
@@ -393,12 +394,12 @@ private fun GroupAvatarSection(
             SparrowAvatar(
                 name = state.title,
                 pictureBytes = state.avatarBytes,
-                size = 104.dp
+                size = Dimens.GroupDetailsScreen.avatarSize
             )
             if (state.isSaving) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(32.dp),
-                    strokeWidth = 3.dp
+                    modifier = Modifier.size(Dimens.GroupDetailsScreen.avatarProgressSize),
+                    strokeWidth = Dimens.GroupDetailsScreen.avatarProgressStrokeWidth
                 )
             }
         }
@@ -596,7 +597,7 @@ private fun MemberRow(
             ?: stringResource(Res.string.feature_chats_group_admin)
     val verifyDescription = stringResource(Res.string.base_verify_contact, displayName)
 
-    Column(modifier = Modifier.fillMaxWidth().padding(0.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacing.zero)) {
         ListItem(
             modifier =
                 Modifier
@@ -617,7 +618,7 @@ private fun MemberRow(
                     imageVector = member.verificationStatusIcon(),
                     contentDescription = null,
                     tint = statusColor,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(Dimens.GroupDetailsScreen.sectionIconSize)
                 )
             },
             headlineContent = {
@@ -627,7 +628,7 @@ private fun MemberRow(
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
             supportingContent = {
@@ -636,7 +637,7 @@ private fun MemberRow(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.74f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText)
                 )
             },
             trailingContent = {
@@ -656,7 +657,7 @@ private fun MemberRow(
                                 imageVector = Icons.Default.Verified,
                                 contentDescription =
                                     stringResource(Res.string.feature_chats_group_promote_admin),
-                                tint = MaterialTheme.colorScheme.secondary
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
@@ -683,8 +684,8 @@ private fun MemberRow(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(start = 80.dp),
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.05f)
+                        .padding(start = MaterialTheme.spacing.listDividerStart),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
             )
         }
     }
@@ -729,11 +730,11 @@ private fun GroupMemberVerificationUiState.verificationStatusColor(): Color =
                 MaterialTheme.colorScheme.onSurfaceVariant
 
             GroupMemberVerificationState.MUTUALLY_VERIFIED ->
-                MaterialTheme.colorScheme.secondary
+                MaterialTheme.colorScheme.tertiary
 
             GroupMemberVerificationState.ADMIN_VERIFIED_PARTICIPANT,
             GroupMemberVerificationState.PARTICIPANT_VERIFIED_ADMIN ->
-                MaterialTheme.colorScheme.secondary.copy(alpha = 0.73f)
+                MaterialTheme.colorScheme.secondary.copy(alpha = Alpha.GroupDetailsScreen.adminIcon)
 
             GroupMemberVerificationState.UNVERIFIED,
             GroupMemberVerificationState.UNAVAILABLE ->
@@ -794,15 +795,15 @@ private fun MembersCard(
                 ),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.74f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
         )
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.small,
-            color = MaterialTheme.colorScheme.primaryContainer,
-            tonalElevation = 2.dp,
-            shadowElevation = 1.dp
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            tonalElevation = Dimens.Card.tonalElevation,
+            shadowElevation = Dimens.Card.shadowElevation
         ) {
             Column {
                 summary.members.forEachIndexed { index, member ->
@@ -887,7 +888,7 @@ private fun AdminVerificationCard(
                 text = stringResource(Res.string.feature_chats_group_verify_admin_title),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = stringResource(Res.string.feature_chats_group_verify_admin_description),
@@ -898,7 +899,7 @@ private fun AdminVerificationCard(
             Text(
                 text = admin.verificationStatusText(),
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.74f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
                 modifier =
                     Modifier

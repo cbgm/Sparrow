@@ -29,14 +29,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowCard
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
@@ -67,7 +66,6 @@ import com.cbgm.sparrow.resources.feature_identity_your_phone_number
 import org.jetbrains.compose.resources.stringResource
 
 /** Public identity screen contract. */
-private val Field = Color(0xFF102A46)
 
 @Composable
 fun IdentityScreen(
@@ -132,18 +130,18 @@ private fun LoadingContent() {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(top = 80.dp),
+                .padding(top = MaterialTheme.spacing.identityScreen.contentTopPadding),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
         Text(
             text = stringResource(Res.string.feature_identity_checking_secure_identity),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
         )
     }
 }
@@ -173,13 +171,13 @@ private fun NoIdentityContent(
             color = MaterialTheme.colorScheme.onBackground
         )
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.micro))
 
         Text(
             text = stringResource(Res.string.feature_identity_identity_enter_phone_description),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
         )
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.large))
@@ -214,20 +212,20 @@ private fun NoIdentityContent(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     textStyle =
                         MaterialTheme.typography.bodySmall.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.SemiBold
                         ),
                     colors =
                         OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            focusedContainerColor = Field,
-                            unfocusedContainerColor = Field,
-                            focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.18f),
-                            focusedLabelColor = MaterialTheme.colorScheme.secondary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
-                            cursorColor = MaterialTheme.colorScheme.secondary,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.TextField.unfocusedBorder),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
+                            cursorColor = MaterialTheme.colorScheme.primary,
                             errorBorderColor = MaterialTheme.colorScheme.error,
                             errorLabelColor = MaterialTheme.colorScheme.error,
                             errorCursorColor = MaterialTheme.colorScheme.error
@@ -267,26 +265,29 @@ private fun ReadyIdentityContent(
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Bold
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.micro))
 
         Text(
             text = stringResource(Res.string.feature_identity_private_keys_protected),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
         )
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
 
         Surface(
             shape = MaterialTheme.shapes.extraSmall,
-            color = Field
+            color = MaterialTheme.colorScheme.surfaceContainer
         ) {
             Text(
                 text = localPhoneNumber,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(
+                    horizontal = MaterialTheme.spacing.identityScreen.protectionBadgeHorizontalPadding,
+                    vertical = MaterialTheme.spacing.identityScreen.protectionBadgeVerticalPadding
+                )
             )
         }
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.large))
@@ -317,8 +318,8 @@ private fun ReadyIdentityContent(
                     shape = MaterialTheme.shapes.extraSmall,
                     colors =
                         ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondary,
-                            contentColor = Color(0xFF071A2E)
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                 ) {
                     Text(
@@ -355,7 +356,7 @@ private fun IncompleteIdentityContent(onRetry: () -> Unit) {
         Text(
             text = stringResource(Res.string.feature_identity_incomplete_identity_description),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
             textAlign = TextAlign.Center
         )
 
@@ -410,7 +411,7 @@ private fun NoIdentityPreview() {
             uiState = IdentityUiState.NoIdentity(phoneNumber = "+491701111111"),
             onUiEvent = {},
             scrollState = ScrollState(0),
-            innerPadding = PaddingValues(0.dp)
+            innerPadding = PaddingValues(MaterialTheme.spacing.zero)
         )
     }
 }
@@ -431,7 +432,7 @@ private fun ReadyIdentityPreview() {
                 ),
             onUiEvent = {},
             scrollState = ScrollState(0),
-            innerPadding = PaddingValues(0.dp)
+            innerPadding = PaddingValues(MaterialTheme.spacing.zero)
         )
     }
 }
@@ -444,7 +445,7 @@ private fun IncompleteIdentityPreview() {
             uiState = IdentityUiState.IncompleteIdentity,
             onUiEvent = {},
             scrollState = ScrollState(0),
-            innerPadding = PaddingValues(0.dp)
+            innerPadding = PaddingValues(MaterialTheme.spacing.zero)
         )
     }
 }
@@ -457,7 +458,7 @@ private fun LoadingIdentityPreview() {
             uiState = IdentityUiState.Error("gdfgdgdg"),
             onUiEvent = {},
             scrollState = ScrollState(0),
-            innerPadding = PaddingValues(0.dp)
+            innerPadding = PaddingValues(MaterialTheme.spacing.zero)
         )
     }
 }

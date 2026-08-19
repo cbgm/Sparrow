@@ -38,11 +38,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.PatternBackground
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowBannerButton
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
@@ -114,7 +115,7 @@ fun GroupScreen(
             PatternBackground(
                 modifier = Modifier.fillMaxSize(),
                 backgroundColor = MaterialTheme.colorScheme.background,
-                alpha = 0.04f
+                alpha = Alpha.PatternBackground.conversation
             )
         },
         topBar = { containerColor ->
@@ -164,7 +165,7 @@ private fun TopBar(
                     modifier = Modifier.clickable { onUiEvent(GroupUiEvent.HeaderClicked) },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SparrowAvatar(name = uiState.title, pictureBytes = uiState.avatarBytes, size = 36.dp)
+                    SparrowAvatar(name = uiState.title, pictureBytes = uiState.avatarBytes, size = Dimens.GroupScreen.topBarAvatarSize)
                     Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
                     Column {
                         Text(
@@ -176,7 +177,7 @@ private fun TopBar(
                         Text(
                             text = subtitle(uiState),
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -286,12 +287,12 @@ private fun MessageList(
         reverseLayout = true,
         contentPadding =
             PaddingValues(
-                start = 12.dp,
+                start = MaterialTheme.spacing.messageList.horizontalPadding,
                 top = contentPadding.calculateTopPadding() + MaterialTheme.spacing.small,
-                end = 12.dp,
+                end = MaterialTheme.spacing.messageList.horizontalPadding,
                 bottom = contentPadding.calculateBottomPadding() + MaterialTheme.spacing.small
             ),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
         items(items = messages, key = GroupMessageUiModel::id) { message ->
             if (message.type == ChatMessageType.USER) {
@@ -329,9 +330,9 @@ private fun GroupMessageBubble(
         SparrowAvatar(
             name = message.bubble.senderName.orEmpty(),
             pictureBytes = message.senderProfilePictureBytes,
-            size = 28.dp
+            size = Dimens.GroupScreen.typingAvatarSize
         )
-        Spacer(modifier = Modifier.width(6.dp))
+        Spacer(modifier = Modifier.width(MaterialTheme.spacing.groupScreen.senderGap))
         MessageBubble(
             message = message.bubble,
             onRetryClick = { onRetryMessage(message.id) },
@@ -364,8 +365,8 @@ private fun StatusHint(
 @Composable
 private fun PendingMessageHint(uiState: GroupUiState) {
     Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MaterialTheme.colorScheme.onSurface
     ) {
         Column(
             modifier =
@@ -480,7 +481,7 @@ private fun LoadingContent(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
         Text(
             text = stringResource(Res.string.feature_chats_loading_chat),
@@ -504,7 +505,7 @@ private fun ErrorMessage(
                     horizontal = MaterialTheme.spacing.small,
                     vertical = MaterialTheme.spacing.base
                 ),
-        color = MaterialTheme.colorScheme.onErrorContainer,
+        color = MaterialTheme.colorScheme.error,
         style = MaterialTheme.typography.bodySmall,
         textAlign = TextAlign.Center
     )
@@ -550,8 +551,8 @@ private fun InvitationHint(
     onDecline: () -> Unit
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
     ) {
         Column(
             modifier =
@@ -683,8 +684,8 @@ private fun MembershipSystemMessage(
         horizontalArrangement = Arrangement.Center
     ) {
         Surface(
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.88f),
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = Alpha.GroupScreen.membershipSystemMessage),
+            contentColor = MaterialTheme.colorScheme.onSurface,
             shape = MaterialTheme.shapes.small
         ) {
             Row(
@@ -703,7 +704,7 @@ private fun MembershipSystemMessage(
                         } else {
                             Icons.Default.PersonRemove
                         },
-                    modifier = Modifier.size(15.dp),
+                    modifier = Modifier.size(Dimens.GroupScreen.noticeIconSize),
                     contentDescription = null
                 )
                 Text(

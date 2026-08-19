@@ -47,7 +47,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.component.PatternBackground
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
@@ -55,6 +54,8 @@ import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
+import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
@@ -127,7 +128,7 @@ fun DirectScreen(
             PatternBackground(
                 modifier = Modifier.fillMaxSize(),
                 backgroundColor = MaterialTheme.colorScheme.background,
-                alpha = 0.04f
+                alpha = Alpha.PatternBackground.conversation
             )
         },
         topBar = { containerColor ->
@@ -196,7 +197,7 @@ private fun TopBar(
                     SparrowAvatar(
                         name = uiState.contactName,
                         pictureBytes = uiState.profilePictureBytes,
-                        size = 36.dp
+                        size = Dimens.DirectScreen.topBarAvatarSize
                     )
                     Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
                     Text(
@@ -368,12 +369,12 @@ private fun MessageList(
         reverseLayout = true,
         contentPadding =
             PaddingValues(
-                start = 12.dp,
+                start = MaterialTheme.spacing.messageList.horizontalPadding,
                 top = contentPadding.calculateTopPadding() + MaterialTheme.spacing.small,
-                end = 12.dp,
+                end = MaterialTheme.spacing.messageList.horizontalPadding,
                 bottom = contentPadding.calculateBottomPadding() + MaterialTheme.spacing.small
             ),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
         items(items = messages, key = MessageBubbleModel::id) { message ->
             MessageBubble(
@@ -431,7 +432,7 @@ private fun LoadingContent(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
         Text(
             text = stringResource(Res.string.feature_chats_loading_chat),
@@ -455,7 +456,7 @@ private fun ErrorMessage(
                     horizontal = MaterialTheme.spacing.small,
                     vertical = MaterialTheme.spacing.base
                 ),
-        color = MaterialTheme.colorScheme.onErrorContainer,
+        color = MaterialTheme.colorScheme.error,
         style = MaterialTheme.typography.bodySmall,
         textAlign = TextAlign.Center
     )
@@ -491,13 +492,16 @@ private fun SecurityBanner(
         contentColor = state.contentColor
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier = Modifier.padding(
+                horizontal = MaterialTheme.spacing.small,
+                vertical = MaterialTheme.spacing.directScreen.securityBannerVerticalPadding
+            ),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = state.icon,
                 contentDescription = null,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(Dimens.DirectScreen.invitationIconSize)
             )
             Column(
                 modifier = Modifier.padding(start = MaterialTheme.spacing.small).weight(1f)
@@ -509,7 +513,7 @@ private fun SecurityBanner(
                 )
                 Text(
                     text = state.description,
-                    modifier = Modifier.padding(top = 2.dp),
+                    modifier = Modifier.padding(top = MaterialTheme.spacing.directScreen.securityDescriptionTopPadding),
                     style = MaterialTheme.typography.labelSmall
                 )
             }
@@ -582,8 +586,8 @@ private fun invitationState(
                 icon = Icons.Default.Warning,
                 title = stringResource(Res.string.feature_chats_contact_invitation_received_title),
                 description = stringResource(Res.string.feature_chats_contact_invitation_received_description),
-                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
             )
         IdentityHandshakeState.ACCEPTANCE_SENT,
         IdentityHandshakeState.WAITING_FOR_READY ->
@@ -663,8 +667,8 @@ private fun securityState(
                 icon = Icons.Default.Security,
                 title = stringResource(Res.string.feature_chats_chat_verified_by_contact_title),
                 description = stringResource(Res.string.feature_chats_chat_verified_by_contact_description),
-                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
             )
         ContactSecurityState.MUTUAL_KEYS_VERIFIED -> reinviteBanner()
     }
@@ -694,25 +698,29 @@ private fun errorBanner(
 private fun VerifiedSecurityIndicator(modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
+        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = Alpha.DirectScreen.securityBanner),
+        contentColor = MaterialTheme.colorScheme.onTertiaryContainer
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+            modifier = Modifier.padding(
+                horizontal = MaterialTheme.spacing.small,
+                vertical = MaterialTheme.spacing.directScreen.verifiedBannerVerticalPadding
+            ),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Lock,
                 contentDescription = null,
-                modifier = Modifier.size(14.dp),
-                tint = MaterialTheme.colorScheme.secondary
+                modifier = Modifier.size(Dimens.DirectScreen.statusIconSize),
+                tint = MaterialTheme.colorScheme.onTertiaryContainer
             )
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(MaterialTheme.spacing.directScreen.verifiedContentGap))
             Text(
                 text = stringResource(Res.string.feature_chats_chat_verified_e2ee),
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.secondary
+                color = MaterialTheme.colorScheme.onTertiaryContainer
             )
         }
     }

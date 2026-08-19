@@ -22,7 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
@@ -46,13 +46,13 @@ fun SearchField(
                     bottom = MaterialTheme.spacing.small,
                     start = MaterialTheme.spacing.medium,
                     end = MaterialTheme.spacing.medium
-                ).height(44.dp),
+                ).height(Dimens.ContactsScreen.searchHeight),
         textStyle =
             MaterialTheme.typography.bodySmall.copy(
-                color = MaterialTheme.colorScheme.onPrimary
+                color = MaterialTheme.colorScheme.onSurface
             ),
         singleLine = true,
-        cursorBrush = SolidColor(MaterialTheme.colorScheme.onPrimary),
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
         interactionSource = interactionSource,
         decorationBox = { innerTextField ->
             TextFieldDefaults.DecorationBox(
@@ -64,14 +64,14 @@ fun SearchField(
                 interactionSource = interactionSource,
                 contentPadding =
                     PaddingValues(
-                        horizontal = 12.dp,
-                        vertical = 6.dp
+                        horizontal = MaterialTheme.spacing.contactsScreen.searchHorizontalPadding,
+                        vertical = MaterialTheme.spacing.contactsScreen.searchVerticalPadding
                     ),
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(Dimens.ContactsScreen.searchIconSize)
                     )
                 },
                 trailingIcon = {
@@ -80,12 +80,12 @@ fun SearchField(
                             onClick = {
                                 onSearchQueryChanged("")
                             },
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(Dimens.ContactsScreen.searchClearButtonSize)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = null,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(Dimens.ContactsScreen.searchIconSize)
                             )
                         }
                     }
@@ -103,15 +103,15 @@ fun SearchField(
                 colors =
                     TextFieldDefaults.colors(
                         focusedContainerColor =
-                            MaterialTheme.colorScheme.primaryContainer,
+                            MaterialTheme.colorScheme.surfaceContainer,
                         unfocusedContainerColor =
-                            MaterialTheme.colorScheme.primaryContainer,
+                            MaterialTheme.colorScheme.surfaceContainer,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
-                        cursorColor = MaterialTheme.colorScheme.onPrimary,
-                        focusedTextColor = MaterialTheme.colorScheme.onPrimary,
+                        cursorColor = MaterialTheme.colorScheme.primary,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
                         unfocusedTextColor =
-                            MaterialTheme.colorScheme.onPrimary.copy(alpha = .73f)
+                            MaterialTheme.colorScheme.onSurfaceVariant
                     )
             )
         }

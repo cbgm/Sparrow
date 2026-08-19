@@ -11,8 +11,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -23,14 +23,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.theme.FunctionalColors
+import com.cbgm.sparrow.core.ui.theme.circle
+import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
 import org.jetbrains.compose.resources.stringResource
@@ -110,7 +112,7 @@ internal fun ProfilePictureCameraScreen(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(Color.Black)
+                    .background(FunctionalColors.MediaBackground)
         ) {
             AndroidView(
                 factory = { previewView },
@@ -122,11 +124,11 @@ internal fun ProfilePictureCameraScreen(
                 modifier =
                     Modifier
                         .align(Alignment.TopStart)
-                        .padding(16.dp)
+                        .padding(MaterialTheme.spacing.small)
             ) {
                 Text(
                     text = stringResource(Res.string.base_cancel),
-                    color = Color.White
+                    color = FunctionalColors.MediaForeground
                 )
             }
 
@@ -145,12 +147,12 @@ internal fun ProfilePictureCameraScreen(
                         onCaptured = onPictureCaptured
                     )
                 },
-                shape = CircleShape,
+                shape = MaterialTheme.shapes.circle,
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = 36.dp)
-                        .size(76.dp)
+                        .padding(bottom = MaterialTheme.spacing.profilePictureCameraScreen.captureButtonBottomPadding)
+                        .size(Dimens.ProfilePictureCameraScreen.buttonSize)
             ) {
                 Text("")
             }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -15,7 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contactimport.device.rememberQrScannerPermissionRequest
 import com.cbgm.sparrow.feature.contactimport.presentation.scan.ScanIdentityScreen
 import com.cbgm.sparrow.feature.contactimport.presentation.scan.model.ScanIdentityUiEvent
@@ -64,7 +65,7 @@ fun ScanIdentityRoute(
             ) {
                 Text(text = stringResource(Res.string.feature_contactimport_camera_permission_required))
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
 
                 Button(
                     onClick = requestCameraPermission
@@ -72,7 +73,7 @@ fun ScanIdentityRoute(
                     Text(stringResource(Res.string.feature_contactimport_grant_camera_permission))
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(MaterialTheme.spacing.base))
 
                 Button(
                     onClick = { onUiEvent(ScanIdentityUiEvent.BackClicked) }

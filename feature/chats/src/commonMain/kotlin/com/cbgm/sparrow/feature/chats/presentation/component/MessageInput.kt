@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -34,7 +33,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.input.ImeAction
@@ -43,13 +41,11 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
-import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.messageInput
 import com.cbgm.sparrow.core.ui.theme.spacing
-
-private val FieldColor = Color(0xFF102A46)
-private val ButtonNotchRadius = 14.dp
-private val ButtonRightCornerRadius = 28.dp
 
 private const val ShapeAnimationDuration = 220
 
@@ -68,9 +64,9 @@ internal fun MessageInput(
     /*
      * NEVER CHANGE THESE DURING THE MORPH.
      */
-    val buttonWidth = 42.dp
-    val buttonHeight = 30.dp
-    val overlap = 10.dp
+    val buttonWidth = Dimens.MessageInput.buttonWidth
+    val buttonHeight = Dimens.MessageInput.buttonHeight
+    val overlap = Dimens.MessageInput.overlap
 
     Row(
         modifier = modifier
@@ -85,8 +81,8 @@ internal fun MessageInput(
             Icon(
                 imageVector = Icons.Filled.AttachFile,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.size(16.dp)
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(Dimens.MessageInput.attachmentIconSize)
             )
         }
 
@@ -96,12 +92,12 @@ internal fun MessageInput(
             modifier = Modifier
                 .weight(1f)
                 .background(
-                    color = FieldColor,
-                    shape = RoundedCornerShape(20.dp)
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    shape = MaterialTheme.shapes.messageInput.field
                 )
                 .padding(
                     horizontal = MaterialTheme.spacing.base,
-                    vertical = 4.dp
+                    vertical = MaterialTheme.spacing.micro
                 ),
             enabled = enabled,
             minLines = 1,
@@ -109,11 +105,11 @@ internal fun MessageInput(
             textStyle =
                 MaterialTheme.typography.bodyMedium.copy(
                     color =
-                        MaterialTheme.colorScheme.onBackground
+                        MaterialTheme.colorScheme.onSurface
                 ),
             cursorBrush =
                 SolidColor(
-                    MaterialTheme.colorScheme.secondary
+                    MaterialTheme.colorScheme.primary
                 ),
             keyboardOptions =
                 KeyboardOptions(
@@ -158,6 +154,8 @@ private fun RowScope.SendButton(
      * This animation is entirely internal and cannot affect
      * TextField measurement.
      */
+
+    val messageInputShapes = MaterialTheme.shapes.messageInput
 
     val morphProgress by animateFloatAsState(
         targetValue =
@@ -213,11 +211,11 @@ private fun RowScope.SendButton(
                 .clip(
                     MorphingSendButtonShape(
                         progress = morphProgress,
-                        notchRadius = ButtonNotchRadius,
-                        rightCornerRadius = ButtonRightCornerRadius
+                        notchRadius = messageInputShapes.buttonNotchRadius,
+                        rightCornerRadius = messageInputShapes.buttonRightCornerRadius
                     )
                 )
-                .background(FieldColor)
+                .background(MaterialTheme.colorScheme.surfaceContainer)
                 .clickable(
                     enabled = enabled,
                     onClick = onSendClick
@@ -235,13 +233,13 @@ private fun RowScope.SendButton(
                     contentDescription = null,
                     tint =
                         if (enabled) {
-                            MaterialTheme.colorScheme.secondary
+                            MaterialTheme.colorScheme.primary
                         } else {
-                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f)
+                            MaterialTheme.colorScheme.primary.copy(alpha = Alpha.MessageInput.buttonBackground)
                         },
                     modifier = Modifier
                         .padding(start = MaterialTheme.spacing.base.div(2))
-                        .size(18.dp)
+                        .size(Dimens.MessageInput.sendIconSize)
                 )
             }
         }

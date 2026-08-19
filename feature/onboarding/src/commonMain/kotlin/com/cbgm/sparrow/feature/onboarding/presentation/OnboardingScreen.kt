@@ -23,9 +23,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowCard
+import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
@@ -53,7 +54,7 @@ fun OnboardingScreen(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.primary)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(MaterialTheme.spacing.screenPadding),
         contentAlignment = Alignment.Center
     ) {
@@ -61,17 +62,17 @@ fun OnboardingScreen(
             modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            SparrowAnimation(modifier = Modifier.size(180.dp), true)
+            SparrowAnimation(modifier = Modifier.size(Dimens.OnboardingScreen.animationSize), true)
             Spacer(Modifier.height(MaterialTheme.spacing.small))
             Text(
                 text = stringResource(Res.string.base_app_name),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Bold
             )
             Text(
                 text = stringResource(Res.string.base_tagline),
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = .72f),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
                 style = MaterialTheme.typography.bodyLarge
             )
             Spacer(Modifier.height(MaterialTheme.spacing.medium))

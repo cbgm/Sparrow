@@ -3,7 +3,6 @@ package com.cbgm.sparrow.core.ui.component
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -14,7 +13,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.theme.badge
+import com.cbgm.sparrow.core.ui.theme.spacing
 
 @Composable
 fun SparrowStatusBadge(
@@ -23,14 +25,14 @@ fun SparrowStatusBadge(
     color: Color
 ) {
     Surface(
-        shape = RoundedCornerShape(6.dp),
-        color = color.copy(alpha = 0.15f)
+        shape = MaterialTheme.shapes.badge,
+        color = color.copy(alpha = Alpha.Badge.container)
     ) {
         Row(
             modifier =
                 Modifier.padding(
-                    horizontal = 8.dp,
-                    vertical = 4.dp
+                    horizontal = MaterialTheme.spacing.base,
+                    vertical = MaterialTheme.spacing.micro
                 ),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -38,12 +40,12 @@ fun SparrowStatusBadge(
                 imageVector = icon,
                 contentDescription = null,
                 tint = color,
-                modifier = Modifier.size(12.dp)
+                modifier = Modifier.size(Dimens.Badge.iconSize)
             )
 
             Text(
                 text = text,
-                modifier = Modifier.padding(start = 4.dp),
+                modifier = Modifier.padding(start = MaterialTheme.spacing.micro),
                 style = MaterialTheme.typography.labelSmall,
                 color = color,
                 fontWeight = FontWeight.SemiBold

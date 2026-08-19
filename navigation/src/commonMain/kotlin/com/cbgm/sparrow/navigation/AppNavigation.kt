@@ -25,7 +25,6 @@ import com.cbgm.sparrow.notification.application.ResolveNotificationConversation
 import com.cbgm.sparrow.notification.model.NotificationConversationTarget
 import com.cbgm.sparrow.notification.navigation.NotificationNavigationController
 import com.cbgm.sparrow.notification.navigation.NotificationNavigationTarget
-import com.cbgm.sparrow.startup.presentation.screen.component.SparrowAppBackground
 import org.koin.compose.koinInject
 
 @Composable
@@ -82,25 +81,23 @@ fun AppNavigation(
         notificationNavigationController.consume(target)
     }
 
-    SparrowAppBackground {
-        NavHost(
-            navController = navController,
-            startDestination = AppRoute.Startup,
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background)
-        ) {
-            startupNavGraph(
-                onStartupReady = {
-                    startupComplete = true
-                }
-            )
-            mainNavGraph()
-            chatsNavGraph()
-            contactsNavGraph()
-            identityNavGraph()
-            settingsNavGraph()
-        }
+    NavHost(
+        navController = navController,
+        startDestination = AppRoute.Startup,
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+    ) {
+        startupNavGraph(
+            onStartupReady = {
+                startupComplete = true
+            }
+        )
+        mainNavGraph()
+        chatsNavGraph()
+        contactsNavGraph()
+        identityNavGraph()
+        settingsNavGraph()
     }
 }

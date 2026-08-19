@@ -35,9 +35,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.PatternBackground
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
+import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contactimport.presentation.importing.model.ImportIdentityUiEvent
@@ -59,8 +60,6 @@ import com.cbgm.sparrow.resources.feature_contactimport_scan_qr_code
 import com.cbgm.sparrow.resources.feature_contactimport_shared_identity
 import org.jetbrains.compose.resources.stringResource
 
-private val Field = Color(0xFF102A46)
-
 @Composable
 fun ImportIdentityScreen(
     uiState: ImportIdentityUiState,
@@ -74,7 +73,7 @@ fun ImportIdentityScreen(
             PatternBackground(
                 modifier = Modifier.fillMaxSize(),
                 backgroundColor = MaterialTheme.colorScheme.background,
-                alpha = 0.04f
+                alpha = Alpha.PatternBackground.conversation
             )
         },
         topBar = { containerColor ->
@@ -100,7 +99,7 @@ fun ImportIdentityScreen(
             Text(
                 text = stringResource(Res.string.feature_contactimport_normal_invitation_description),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
             )
 
             Text(
@@ -113,7 +112,7 @@ fun ImportIdentityScreen(
             Text(
                 text = stringResource(Res.string.feature_contactimport_in_person_qr_description),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
             )
 
             OutlinedButton(
@@ -124,7 +123,7 @@ fun ImportIdentityScreen(
                 Icon(
                     imageVector = Icons.Default.QrCodeScanner,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(Dimens.ImportIdentityScreen.headerIconSize)
                 )
 
                 Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
@@ -144,7 +143,7 @@ fun ImportIdentityScreen(
             Text(
                 text = stringResource(Res.string.feature_contactimport_paste_shared_identity_description),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
             )
 
             OutlinedTextField(
@@ -164,15 +163,15 @@ fun ImportIdentityScreen(
                     ),
                 colors =
                     OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-                        focusedContainerColor = Field,
-                        unfocusedContainerColor = Field,
-                        focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.18f),
-                        focusedLabelColor = MaterialTheme.colorScheme.secondary,
-                        unfocusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                        cursorColor = MaterialTheme.colorScheme.secondary
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.TextField.unfocusedBorder),
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
+                        cursorColor = MaterialTheme.colorScheme.primary
                     )
             )
 
@@ -210,9 +209,9 @@ fun ImportIdentityScreen(
                     text = statusText,
                     color =
                         if (uiState.importedIdentityTrust == IdentityImportTrust.VERIFIED_IN_PERSON) {
-                            MaterialTheme.colorScheme.secondary
-                        } else {
                             MaterialTheme.colorScheme.tertiary
+                        } else {
+                            MaterialTheme.colorScheme.secondary
                         }
                 )
             }
@@ -267,13 +266,13 @@ private fun ManualInputDivider() {
     ) {
         HorizontalDivider(
             modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.divider)
         )
 
         Text(
             text = stringResource(Res.string.feature_contactimport_or_paste_manually),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.ImportIdentityScreen.secondaryLabel),
             modifier =
                 Modifier.padding(
                     horizontal = MaterialTheme.spacing.base
@@ -282,7 +281,7 @@ private fun ManualInputDivider() {
 
         HorizontalDivider(
             modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.divider)
         )
     }
 }
@@ -300,17 +299,17 @@ private fun ImportButton(
         shape = MaterialTheme.shapes.extraSmall,
         colors =
             ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.secondary,
-                contentColor = MaterialTheme.colorScheme.background,
-                disabledContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
-                disabledContentColor = MaterialTheme.colorScheme.background.copy(alpha = 0.5f)
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = Alpha.ImportIdentityScreen.disabledButtonContainer),
+                disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.ImportIdentityScreen.disabledButtonContent)
             )
     ) {
         if (isImporting) {
             CircularProgressIndicator(
-                modifier = Modifier.size(20.dp),
-                strokeWidth = 2.dp,
-                color = MaterialTheme.colorScheme.background
+                modifier = Modifier.size(Dimens.ImportIdentityScreen.progressSize),
+                strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
+                color = MaterialTheme.colorScheme.onPrimary
             )
         } else {
             Text(
@@ -330,13 +329,13 @@ private fun StatusBanner(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraSmall,
-        color = color.copy(alpha = 0.15f)
+        color = color.copy(alpha = Alpha.ImportIdentityScreen.iconBackground)
     ) {
         Row(
             modifier =
                 Modifier.padding(
-                    horizontal = 16.dp,
-                    vertical = 12.dp
+                    horizontal = MaterialTheme.spacing.small,
+                    vertical = MaterialTheme.spacing.importIdentityScreen.resultVerticalPadding
                 ),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -344,10 +343,10 @@ private fun StatusBanner(
                 imageVector = icon,
                 contentDescription = null,
                 tint = color,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(Dimens.ImportIdentityScreen.resultIconSize)
             )
 
-            Spacer(modifier = Modifier.size(10.dp))
+            Spacer(modifier = Modifier.size(MaterialTheme.spacing.importIdentityScreen.resultIconGap))
 
             Text(
                 text = text,

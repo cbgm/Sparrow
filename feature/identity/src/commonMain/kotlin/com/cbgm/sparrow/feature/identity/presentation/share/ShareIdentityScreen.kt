@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -49,13 +48,15 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.BlockScreenshotEffect
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowCard
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
+import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.identity.presentation.platform.QrCode
 import com.cbgm.sparrow.feature.identity.presentation.share.model.ShareIdentityUiEvent
@@ -208,7 +209,7 @@ private fun ShareIdentityTopBar(
                         onDismissRequest = {
                             onShowOverflowMenuChange(false)
                         },
-                        modifier = Modifier.background(MaterialTheme.colorScheme.primaryContainer)
+                        modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer)
                     ) {
                         DropdownMenuItem(
                             text = {
@@ -259,22 +260,22 @@ private fun IdentityOptionsContent(
         Box(
             modifier =
                 Modifier
-                    .size(88.dp)
+                    .size(Dimens.ShareIdentityScreen.avatarSize)
                     .background(
-                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
-                        shape = CircleShape
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = Alpha.ShareIdentityScreen.codeBackground),
+                        shape = MaterialTheme.shapes.circle
                     ).border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
-                        shape = CircleShape
+                        width = Dimens.ShareIdentityScreen.dividerWidth,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = Alpha.ShareIdentityScreen.codeBorder),
+                        shape = MaterialTheme.shapes.circle
                     ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.QrCode2,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.size(40.dp)
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(Dimens.ShareIdentityScreen.actionIconContainerSize)
             )
         }
 
@@ -292,13 +293,13 @@ private fun IdentityOptionsContent(
         Text(
             text = stringResource(Res.string.feature_identity_public_keys_always_included),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
             textAlign = TextAlign.Center
         )
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
-        HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
@@ -314,9 +315,9 @@ private fun IdentityOptionsContent(
             content = {
                 if (uiState.isGenerating) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.background
+                        modifier = Modifier.size(Dimens.ShareIdentityScreen.progressSize),
+                        strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 }
             }
@@ -345,7 +346,7 @@ private fun GeneratedIdentityContent(
         Text(
             text = stringResource(Res.string.feature_identity_scan_to_add_you),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
             textAlign = TextAlign.Center
         )
 
@@ -360,17 +361,17 @@ private fun GeneratedIdentityContent(
                     modifier =
                         Modifier
                             .background(
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 shape = MaterialTheme.shapes.small
                             ).border(
-                                width = 1.dp,
-                                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f),
+                                width = Dimens.ShareIdentityScreen.dividerWidth,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = Alpha.ShareIdentityScreen.accentText),
                                 shape = MaterialTheme.shapes.small
-                            ).padding(16.dp)
+                            ).padding(MaterialTheme.spacing.small)
                 ) {
                     QrCode(
                         content = encodedIdentity,
-                        modifier = Modifier.size(240.dp)
+                        modifier = Modifier.size(Dimens.ShareIdentityScreen.qrCodeSize)
                     )
                 }
 
@@ -382,8 +383,8 @@ private fun GeneratedIdentityContent(
                     shape = MaterialTheme.shapes.extraSmall,
                     colors =
                         ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondary,
-                            contentColor = MaterialTheme.colorScheme.background
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                 ) {
                     Icon(
@@ -404,7 +405,7 @@ private fun GeneratedIdentityContent(
                 Text(
                     text = stringResource(Res.string.feature_identity_share_identity_text_warning),
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
                     textAlign = TextAlign.Center
                 )
             }
@@ -422,7 +423,7 @@ private fun GeneratedIdentityContent(
                     text = stringResource(Res.string.feature_identity_raw_identity),
                     modifier = Modifier.fillMaxWidth(),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
                     fontWeight = FontWeight.SemiBold
                 )
 
@@ -434,7 +435,7 @@ private fun GeneratedIdentityContent(
                         text = encodedIdentity,
                         style = MaterialTheme.typography.bodySmall,
                         fontFamily = FontFamily.Monospace,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }

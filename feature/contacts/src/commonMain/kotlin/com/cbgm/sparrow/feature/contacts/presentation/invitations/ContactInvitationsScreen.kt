@@ -32,11 +32,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowSwipeRevealItem
 import com.cbgm.sparrow.core.ui.component.SwipeRevealAction
+import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.domain.model.PendingContactInvitation
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiEvent
@@ -117,9 +118,9 @@ fun ContactInvitationsScreen(
                             listOf(
                                 SwipeRevealAction(
                                     backgroundColor =
-                                        MaterialTheme.colorScheme.secondaryContainer,
+                                        MaterialTheme.colorScheme.tertiaryContainer,
                                     contentColor =
-                                        MaterialTheme.colorScheme.onSecondaryContainer,
+                                        MaterialTheme.colorScheme.onTertiaryContainer,
                                     onClick = {
                                         onUiEvent(
                                             ContactInvitationUiEvent.AcceptClicked(
@@ -137,8 +138,8 @@ fun ContactInvitationsScreen(
                                     )
                                 },
                                 SwipeRevealAction(
-                                    backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                    contentColor = MaterialTheme.colorScheme.onSurface,
                                     onClick = {
                                         onUiEvent(
                                             ContactInvitationUiEvent.DeclineClicked(
@@ -185,8 +186,8 @@ fun ContactInvitationsScreen(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
-                                    .padding(start = 80.dp),
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = .05f)
+                                    .padding(start = MaterialTheme.spacing.listDividerStart),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
                         )
                     }
                 }
@@ -205,7 +206,7 @@ private fun EmptyInvitations(modifier: Modifier = Modifier) {
         Icon(
             imageVector = Icons.Outlined.MarkEmailUnread,
             contentDescription = null,
-            modifier = Modifier.size(40.dp),
+            modifier = Modifier.size(Dimens.ContactInvitationsScreen.avatarSize),
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
@@ -241,7 +242,7 @@ private fun InvitationRow(
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onBackground
             )
         },
         supportingContent = {
@@ -253,15 +254,15 @@ private fun InvitationRow(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = .74f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
         },
         trailingContent = {
             if (isProcessing) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    strokeWidth = 2.dp
+                    modifier = Modifier.size(Dimens.ContactInvitationsScreen.progressSize),
+                    strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
                 )
             }
         },
@@ -281,7 +282,7 @@ private fun InvitationSwipeActionContent(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(Dimens.ContactInvitationsScreen.actionIconSize)
         )
         Text(
             text = label,

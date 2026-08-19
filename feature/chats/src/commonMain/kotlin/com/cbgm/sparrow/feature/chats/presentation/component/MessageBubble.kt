@@ -27,8 +27,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.messageBubble
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
@@ -52,8 +54,6 @@ import com.cbgm.sparrow.resources.feature_chats_unable_decrypt_secure_message
 import com.cbgm.sparrow.resources.feature_chats_unable_read_plaintext
 import org.jetbrains.compose.resources.stringResource
 
-private val IncomingBubbleColor = Color(0xFF17324D)
-
 @Composable
 internal fun MessageBubble(
     message: MessageBubbleModel,
@@ -75,7 +75,11 @@ internal fun MessageBubble(
             Metadata(
                 message = message,
                 onRetryClick = onRetryClick,
-                modifier = Modifier.padding(top = 3.dp, start = 4.dp, end = 4.dp)
+                modifier = Modifier.padding(
+                    top = MaterialTheme.spacing.messageBubble.metadataTopPadding,
+                    start = MaterialTheme.spacing.micro,
+                    end = MaterialTheme.spacing.micro
+                )
             )
         }
     }
@@ -97,10 +101,13 @@ private fun SenderLabel(message: MessageBubbleModel) {
 
     Text(
         text = senderLabel,
-        modifier = Modifier.padding(start = 8.dp, bottom = 3.dp),
+        modifier = Modifier.padding(
+            start = MaterialTheme.spacing.base,
+            bottom = MaterialTheme.spacing.messageBubble.senderBottomPadding
+        ),
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.secondary
+        color = MaterialTheme.colorScheme.primary
     )
 }
 
@@ -109,10 +116,19 @@ private fun BubbleBody(
     message: MessageBubbleModel,
     state: BubbleState
 ) {
+    val bubbleShapes = MaterialTheme.shapes.messageBubble
+
     Surface(
         color = state.bubbleColor,
         contentColor = state.contentColor,
-        shape = MessageBubbleShape(isMine = message.isMine)
+        shape =
+            MessageBubbleShape(
+                isMine = message.isMine,
+                cornerRadius = bubbleShapes.cornerRadius,
+                tailWidth = bubbleShapes.tailWidth,
+                tailHeight = bubbleShapes.tailHeight,
+                tailReturnOffset = bubbleShapes.tailReturnOffset
+            )
     ) {
         Row(
             modifier =
@@ -145,7 +161,7 @@ private fun Metadata(
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
     ) {
         SecurityIndicator(message = message)
 
@@ -174,7 +190,7 @@ private fun DeliveryProgress(message: MessageBubbleModel) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+        color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
     )
 }
 
@@ -204,7 +220,7 @@ private fun SecurityIndicator(message: MessageBubbleModel) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(14.dp),
+            modifier = Modifier.size(Dimens.MessageBubble.iconSize),
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.width(MaterialTheme.spacing.base))
@@ -230,7 +246,7 @@ private fun DeliveryIndicator(
                     Icon(
                         imageVector = Icons.Default.Schedule,
                         contentDescription = null,
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(Dimens.MessageBubble.iconSize)
                     )
                 }
             )
@@ -239,8 +255,8 @@ private fun DeliveryIndicator(
                 text = stringResource(Res.string.feature_chats_sending),
                 icon = {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(12.dp),
-                        strokeWidth = 1.5.dp
+                        modifier = Modifier.size(Dimens.MessageBubble.progressSize),
+                        strokeWidth = Dimens.MessageBubble.progressStrokeWidth
                     )
                 }
             )
@@ -253,7 +269,7 @@ private fun DeliveryIndicator(
         MessageDeliveryStatus.READ ->
             DoubleCheckDeliveryLabel(
                 text = stringResource(Res.string.feature_chats_read),
-                color = MaterialTheme.colorScheme.secondary
+                color = MaterialTheme.colorScheme.primary
             )
         MessageDeliveryStatus.FAILED -> FailedDelivery(onRetryClick = onRetryClick)
     }
@@ -267,7 +283,7 @@ private fun CheckDeliveryLabel(text: String) {
             Icon(
                 imageVector = Icons.Default.Check,
                 contentDescription = null,
-                modifier = Modifier.size(14.dp)
+                modifier = Modifier.size(Dimens.MessageBubble.iconSize)
             )
         }
     )
@@ -286,13 +302,13 @@ private fun DoubleCheckDeliveryLabel(
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
-                    modifier = Modifier.size(14.dp),
+                    modifier = Modifier.size(Dimens.MessageBubble.iconSize),
                     tint = color
                 )
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
-                    modifier = Modifier.size(14.dp).padding(start = 1.dp),
+                    modifier = Modifier.size(Dimens.MessageBubble.iconSize).padding(start = MaterialTheme.spacing.messageBubble.stackedCheckStartPadding),
                     tint = color
                 )
             }
@@ -306,10 +322,10 @@ private fun FailedDelivery(onRetryClick: () -> Unit) {
         Icon(
             imageVector = Icons.Default.ErrorOutline,
             contentDescription = null,
-            modifier = Modifier.size(14.dp),
+            modifier = Modifier.size(Dimens.MessageBubble.iconSize),
             tint = MaterialTheme.colorScheme.error
         )
-        Spacer(modifier = Modifier.width(3.dp))
+        Spacer(modifier = Modifier.width(MaterialTheme.spacing.messageBubble.deliveryLabelGap))
         Text(
             text = stringResource(Res.string.feature_chats_failed),
             style = MaterialTheme.typography.labelSmall,
@@ -317,12 +333,12 @@ private fun FailedDelivery(onRetryClick: () -> Unit) {
         )
         IconButton(
             onClick = onRetryClick,
-            modifier = Modifier.size(28.dp)
+            modifier = Modifier.size(Dimens.MessageBubble.retrySize)
         ) {
             Icon(
                 imageVector = Icons.Default.Refresh,
                 contentDescription = null,
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(Dimens.MessageBubble.retryIconSize),
                 tint = MaterialTheme.colorScheme.error
             )
         }
@@ -337,7 +353,7 @@ private fun DeliveryLabel(
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         icon()
-        Spacer(modifier = Modifier.width(3.dp))
+        Spacer(modifier = Modifier.width(MaterialTheme.spacing.messageBubble.deliveryLabelGap))
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall,
@@ -355,11 +371,15 @@ private fun bubbleState(message: MessageBubbleModel): BubbleState =
                 isContentFailed = false,
                 bubbleColor =
                     if (message.isMine) {
-                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.18f)
+                        MaterialTheme.colorScheme.primaryContainer
                     } else {
-                        IncomingBubbleColor
+                        MaterialTheme.colorScheme.surfaceContainerHigh
                     },
-                contentColor = MaterialTheme.colorScheme.onBackground
+                contentColor = if (message.isMine) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                }
             )
         MessageContentStatus.INVALID_PACKET ->
             failedBubbleState(stringResource(Res.string.feature_chats_invalid_message_packet))

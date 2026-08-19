@@ -93,8 +93,8 @@ fun ControlPlaneSettingsScreen(
 
             FloatingActionButton(
                 onClick = { onUiEvent(ControlPlaneSettingsUiEvent.AddClicked) },
-                containerColor = MaterialTheme.colorScheme.secondary,
-                contentColor = MaterialTheme.colorScheme.background,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
                 modifier =
                     Modifier
                         .align(Alignment.BottomEnd)
