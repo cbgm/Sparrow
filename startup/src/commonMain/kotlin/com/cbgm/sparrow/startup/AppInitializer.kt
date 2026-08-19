@@ -3,20 +3,42 @@ package com.cbgm.sparrow.startup
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityStatus
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityStatusUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecoverIncompleteIdentityUseCase
+import com.cbgm.sparrow.feature.transport.connection.TransportConnectionManager
+import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
+import kotlinx.coroutines.flow.first
 
 class AppInitializer(
     private val getIdentityStatus: GetIdentityStatusUseCase,
-    private val recoverIncompleteIdentity: RecoverIncompleteIdentityUseCase
+    private val recoverIncompleteIdentity: RecoverIncompleteIdentityUseCase,
+    private val transportConnectionManager: TransportConnectionManager
 ) {
     suspend fun initialize(): Result<AppInitializationResult> =
         runCatching {
-            val identityStatus = getIdentityStatus().getOrThrow()
-            if (identityStatus == IdentityStatus.INCOMPLETE) {
-                recoverIncompleteIdentity().getOrThrow()
+            val identityStatus = resolveIdentityStatus()
+            if (identityStatus != IdentityStatus.READY) {
+                return@runCatching AppInitializationResult.IdentityRequired
             }
 
-            AppInitializationResult(
-                identityReady = identityStatus == IdentityStatus.READY
-            )
+            when (awaitInitialConnectionResult()) {
+                is TransportConnectionState.Connected -> AppInitializationResult.ReadyOnline
+                is TransportConnectionState.Failed -> AppInitializationResult.ReadyOffline
+                else -> error("Initial transport result must be connected or failed")
+            }
+        }
+
+    private suspend fun resolveIdentityStatus(): IdentityStatus {
+        val initialStatus = getIdentityStatus().getOrThrow()
+        if (initialStatus != IdentityStatus.INCOMPLETE) {
+            return initialStatus
+        }
+
+        recoverIncompleteIdentity().getOrThrow()
+        return getIdentityStatus().getOrThrow()
+    }
+
+    private suspend fun awaitInitialConnectionResult(): TransportConnectionState =
+        transportConnectionManager.connectionState.first { state ->
+            state is TransportConnectionState.Connected ||
+                state is TransportConnectionState.Failed
         }
 }

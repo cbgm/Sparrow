@@ -301,8 +301,6 @@ class GroupOutgoingMessageProcessor(
         contactId: String,
         packetId: String
     ) {
-        val outboxItem = protocolOutbox.findByPacketId(packetId).getOrThrow()
-            ?: error("Linked outbox item was not found")
         val currentState = messageRecipientStateDao.findByPacketId(packetId)
             ?: error("Recipient delivery state was not found")
         val currentStatus = currentState.deliveryStatus.toGroupDeliveryStatus()
@@ -316,7 +314,7 @@ class GroupOutgoingMessageProcessor(
             "Recipient delivery is not retryable"
         }
 
-        protocolOutbox.retry(outboxItem.id).getOrThrow()
+        protocolOutbox.resend(packetId).getOrThrow()
         deliveryCoordinator.applyRetryEvent(messageId, contactId)
     }
 

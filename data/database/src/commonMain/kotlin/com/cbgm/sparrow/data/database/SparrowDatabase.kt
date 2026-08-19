@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.data.database
 
+import androidx.room.AutoMigration
 import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
@@ -50,7 +51,8 @@ import com.cbgm.sparrow.data.database.entity.RemoteMailboxRouteEntity
         LocalMailboxCredentialEntity::class,
         RemoteMailboxRouteEntity::class
     ],
-    version = 26,
+    version = 27,
+    autoMigrations = [AutoMigration(from = 26, to = 27)],
     exportSchema = true
 )
 @ConstructedBy(SparrowDatabaseConstructor::class)

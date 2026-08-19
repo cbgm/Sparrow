@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.domain.model.group
 
+import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -10,6 +11,24 @@ class GroupMessageDeliveryStateMachineTest {
         assertAggregate(MessageDeliveryStatus.SENT, MessageDeliveryStatus.SENT, MessageDeliveryStatus.DELIVERED, MessageDeliveryStatus.READ)
         assertAggregate(MessageDeliveryStatus.DELIVERED, MessageDeliveryStatus.DELIVERED, MessageDeliveryStatus.READ)
         assertAggregate(MessageDeliveryStatus.READ, MessageDeliveryStatus.READ, MessageDeliveryStatus.READ)
+    }
+
+    @Test
+    fun serverAcceptedRecipientFailsOnlyWhenServerRetentionExpires() {
+        val sent =
+            GroupMessageDeliveryStateMachine.transition(
+                MessageDeliveryStatus.SENDING,
+                MessageDeliveryEvent.SEND_SUCCEEDED
+            )
+
+        assertEquals(MessageDeliveryStatus.SENT, sent)
+        assertEquals(
+            MessageDeliveryStatus.FAILED,
+            GroupMessageDeliveryStateMachine.transition(
+                sent,
+                MessageDeliveryEvent.DELIVERY_EXPIRED
+            )
+        )
     }
 
     @Test

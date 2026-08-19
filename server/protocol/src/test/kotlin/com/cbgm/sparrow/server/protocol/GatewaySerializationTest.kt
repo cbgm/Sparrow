@@ -8,6 +8,25 @@ import kotlin.test.assertNotNull
 
 class GatewaySerializationTest {
     @Test
+    fun registeredFrameContainsOnlyStableTransportIdentity() {
+        val encoded =
+            serverJson.encodeToString<GatewayServerMessage>(
+                GatewayServerMessage.Registered(routingId = "routing-id")
+            )
+
+        assertFalse("nodeId" in encoded)
+        assertFalse("routeLifetimeMilliseconds" in encoded)
+        assertFalse("routeRefreshIntervalMilliseconds" in encoded)
+        assertFalse("serverTimeEpochMilliseconds" in encoded)
+
+        val decoded =
+            serverJson.decodeFromString<GatewayServerMessage>(encoded)
+                as GatewayServerMessage.Registered
+
+        assertEquals("routing-id", decoded.routingId)
+    }
+
+    @Test
     fun legacyRegisterFrameStillDecodes() {
         val message =
             serverJson.decodeFromString<GatewayClientMessage>(
@@ -34,6 +53,24 @@ class GatewaySerializationTest {
 
         assertFalse("mailboxRoute" in encoded)
         assertFalse("expiresAtEpochMilliseconds" in encoded)
+    }
+
+    @Test
+    fun envelopeAcceptanceCarriesServerDeliveryDeadline() {
+        val encoded =
+            serverJson.encodeToString<GatewayServerMessage>(
+                GatewayServerMessage.EnvelopeAccepted(
+                    envelopeId = "envelope-id",
+                    expiresAtEpochMilliseconds = 123_456L
+                )
+            )
+
+        val decoded =
+            serverJson.decodeFromString<GatewayServerMessage>(encoded)
+                as GatewayServerMessage.EnvelopeAccepted
+
+        assertEquals("envelope-id", decoded.envelopeId)
+        assertEquals(123_456L, decoded.expiresAtEpochMilliseconds)
     }
 
     @Test

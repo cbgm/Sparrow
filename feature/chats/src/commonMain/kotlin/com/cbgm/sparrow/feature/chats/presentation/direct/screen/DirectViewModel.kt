@@ -11,7 +11,6 @@ import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.MarkDirectConversationReadUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectTypingUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.direct.RefreshDirectDeliveryStateUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.RetryDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SendDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SetDirectTypingUseCase
@@ -43,7 +42,6 @@ class DirectViewModel(
     private val sendMessage: SendDirectMessageUseCase,
     private val markConversationRead: MarkDirectConversationReadUseCase,
     private val retryMessage: RetryDirectMessageUseCase,
-    private val refreshDeliveryState: RefreshDirectDeliveryStateUseCase,
     observeIdentitySetupMode: ObserveIdentitySetupModeUseCase,
     private val ensureIdentityExchangeStarted: EnsureIdentityExchangeStartedUseCase,
     observeIdentityHandshakeState: ObserveIdentityHandshakeStateUseCase,
@@ -125,7 +123,6 @@ class DirectViewModel(
     init {
         observeAutomaticIdentitySetup()
         observeIncomingTyping()
-        observeDeliveryTimeouts()
     }
 
     fun onUiEvent(event: DirectUiEvent) {
@@ -186,15 +183,6 @@ class DirectViewModel(
                 delay(REMOTE_TYPING_TIMEOUT_MILLISECONDS.milliseconds)
                 isContactTyping.value = false
             }
-    }
-
-    private fun observeDeliveryTimeouts() {
-        viewModelScope.launch {
-            while (true) {
-                refreshDeliveryState(conversationId)
-                delay(DELIVERY_REFRESH_INTERVAL_MILLISECONDS.milliseconds)
-            }
-        }
     }
 
     private fun onMessageTextChanged(value: String) {
@@ -282,7 +270,6 @@ class DirectViewModel(
 
     private companion object {
         const val MESSAGE_TEXT_KEY = "messageText"
-        const val DELIVERY_REFRESH_INTERVAL_MILLISECONDS = 15_000L
         const val LOCAL_TYPING_TIMEOUT_MILLISECONDS = 1500
         const val REMOTE_TYPING_TIMEOUT_MILLISECONDS = 3000
     }

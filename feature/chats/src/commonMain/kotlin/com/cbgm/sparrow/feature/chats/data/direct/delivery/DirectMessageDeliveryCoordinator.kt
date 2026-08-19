@@ -1,10 +1,8 @@
 package com.cbgm.sparrow.feature.chats.data.direct.delivery
 
-import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.MessageDeliveryStatusDao
 import com.cbgm.sparrow.feature.chats.data.direct.mapper.toDirectDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
-import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessageDeliveryStateMachine
 
 class DirectMessageDeliveryCoordinator(
@@ -65,20 +63,6 @@ class DirectMessageDeliveryCoordinator(
         }
     }
 
-    suspend fun expireUnconfirmedMessages(
-        conversationId: String,
-        timeoutMilliseconds: Long = DELIVERY_TIMEOUT_MILLISECONDS
-    ) {
-        require(conversationId.isNotBlank()) { "Conversation ID must not be blank" }
-        require(timeoutMilliseconds > 0L) { "Delivery timeout must be positive" }
-        messageDeliveryStatusDao.markUnconfirmedDirectMessagesFailed(
-            conversationId = conversationId,
-            sentStatus = MessageDeliveryStatus.SENT.name,
-            failedStatus = MessageDeliveryStatus.FAILED.name,
-            sentBeforeEpochMilliseconds = SystemClock.nowEpochMilliseconds() - timeoutMilliseconds
-        )
-    }
-
     private fun requireReceiptEvent(
         messageId: String,
         contactId: String,
@@ -89,9 +73,5 @@ class DirectMessageDeliveryCoordinator(
         require(event == MessageDeliveryEvent.DELIVERY_CONFIRMED || event == MessageDeliveryEvent.READ_CONFIRMED) {
             "Only receipt events can be applied by message ID"
         }
-    }
-
-    private companion object {
-        const val DELIVERY_TIMEOUT_MILLISECONDS = 60_000L
     }
 }

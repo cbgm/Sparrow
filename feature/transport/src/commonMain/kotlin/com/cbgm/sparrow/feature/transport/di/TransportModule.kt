@@ -32,7 +32,7 @@ import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
 import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
 import com.cbgm.sparrow.feature.transport.mailbox.HttpMailboxGateway
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
-import com.cbgm.sparrow.feature.transport.presence.ClientPresenceRouteManager
+import com.cbgm.sparrow.feature.transport.presence.ClientPresenceRouteCoordinator
 import com.cbgm.sparrow.feature.transport.presence.ClientRouteRegistrationFactory
 import com.cbgm.sparrow.feature.transport.push.HttpPushTokenRegistrationGateway
 import com.cbgm.sparrow.feature.transport.push.PushTokenRegistrationGateway
@@ -110,7 +110,7 @@ val transportModule =
             DefaultWebSocketTransportClient(
                 httpClient = get<HttpClient>(),
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
-                presenceRouteManager = get<ClientPresenceRouteManager>()
+                presenceRouteCoordinator = get<ClientPresenceRouteCoordinator>()
             )
         }
 
@@ -123,7 +123,7 @@ val transportModule =
         }
 
         single {
-            ClientPresenceRouteManager(
+            ClientPresenceRouteCoordinator(
                 httpClient = get<HttpClient>(),
                 registrationFactory = get<ClientRouteRegistrationFactory>(),
                 localBootstrapRoutingIdProvider = get<LocalBootstrapRoutingIdProvider>()

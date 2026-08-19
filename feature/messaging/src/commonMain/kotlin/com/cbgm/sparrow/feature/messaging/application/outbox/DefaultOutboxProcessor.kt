@@ -30,6 +30,7 @@ import com.cbgm.sparrow.core.protocol.packet.GroupVerificationSnapshotRequestPac
 import com.cbgm.sparrow.core.protocol.packet.ReadReceiptPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.core.protocol.transport.OutgoingWireSender
+import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
 import com.cbgm.sparrow.feature.messaging.application.routing.ContactRoutingIdResolver
 import com.cbgm.sparrow.feature.messaging.application.routing.GroupRoutingIdResolver
@@ -107,6 +108,15 @@ class DefaultOutboxProcessor(
             )
         }
 
+        val acceptance = sendResult.getOrThrow()
+        protocolOutbox
+            .markSent(
+                itemId = item.id,
+                expiresAtEpochMilliseconds = acceptance.expiresAtEpochMilliseconds
+            ).getOrElse { error ->
+                return Result.failure(error)
+            }
+
         return deliveryStateListener.onSent(packetId = item.packetId)
     }
 
@@ -135,7 +145,9 @@ class DefaultOutboxProcessor(
         return Result.failure(error ?: IllegalStateException(errorMessage))
     }
 
-    private suspend fun prepareAndSend(item: ProtocolOutboxItem) {
+    private suspend fun prepareAndSend(
+        item: ProtocolOutboxItem
+    ) = run {
         val contact =
             getContact(contactId = item.contactId).getOrThrow()
                 ?: error("Outbox contact was not found")
@@ -165,13 +177,25 @@ class DefaultOutboxProcessor(
             )
 
         outgoingWireSender
-            .send(
+            .sendWithAcceptance(
                 recipientAddress = recipientRoutingId,
                 encodedTransportPayload = encodedTransportPayload
             ).getOrThrow()
-
-        protocolOutbox.markSent(itemId = item.id).getOrThrow()
     }
+
+    override suspend fun expireAccepted(): Result<Int> =
+        runCatching {
+            val expiredItems =
+                protocolOutbox
+                    .expireSent(SystemClock.nowEpochMilliseconds())
+                    .getOrThrow()
+
+            expiredItems.forEach { item ->
+                deliveryStateListener.onExpired(item.packetId).getOrThrow()
+            }
+
+            expiredItems.size
+        }
 
     private suspend fun resolveRecipientRoutingId(
         contactId: String,

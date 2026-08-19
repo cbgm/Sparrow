@@ -50,6 +50,7 @@ class DefaultProtocolOutbox(
                     status = OutboxStatus.PENDING.name,
                     attemptCount = 0,
                     lastError = null,
+                    expiresAtEpochMilliseconds = null,
                     createdAtEpochMilliseconds = now,
                     updatedAtEpochMilliseconds = now
                 )
@@ -71,6 +72,38 @@ class DefaultProtocolOutbox(
                     entity.toDomain()
                 }
             }
+
+    override fun observeNextSentExpiry(): Flow<Long?> =
+        outboxDao.observeNextSentExpiry()
+
+    override suspend fun expireSent(nowEpochMilliseconds: Long): Result<List<ProtocolOutboxItem>> =
+        runCatching {
+            require(nowEpochMilliseconds >= 0L) { "Current time must not be negative" }
+
+            outboxDao.findExpiredSent(nowEpochMilliseconds).mapNotNull { entity ->
+                OutboxStateMachine.requireTransition(
+                    current = entity.status.toOutboxStatus(),
+                    event = OutboxEvent.DELIVERY_EXPIRED
+                )
+
+                val updated =
+                    outboxDao.markExpired(
+                        itemId = entity.id,
+                        errorMessage = DELIVERY_EXPIRED_ERROR,
+                        updatedAt = nowEpochMilliseconds
+                    )
+                if (updated == 0) {
+                    null
+                } else {
+                    entity
+                        .copy(
+                            status = OutboxStatus.EXPIRED.name,
+                            lastError = DELIVERY_EXPIRED_ERROR,
+                            updatedAtEpochMilliseconds = nowEpochMilliseconds
+                        ).toDomain()
+                }
+            }
+        }
 
     override suspend fun getPending(limit: Int): Result<List<ProtocolOutboxItem>> =
         runCatching {
@@ -124,9 +157,21 @@ class DefaultProtocolOutbox(
         }
 
     override suspend fun markSent(itemId: String): Result<Unit> =
+        markSent(
+            itemId = itemId,
+            expiresAtEpochMilliseconds = Long.MAX_VALUE
+        )
+
+    override suspend fun markSent(
+        itemId: String,
+        expiresAtEpochMilliseconds: Long
+    ): Result<Unit> =
         runCatching {
             require(itemId.isNotBlank()) {
                 "Outbox item ID must not be blank"
+            }
+            require(expiresAtEpochMilliseconds > SystemClock.nowEpochMilliseconds()) {
+                "Server delivery deadline must be in the future"
             }
 
             val existing = outboxDao.findById(itemId = itemId) ?: error("Outbox item was not found")
@@ -138,6 +183,7 @@ class DefaultProtocolOutbox(
 
             outboxDao.markSent(
                 itemId = itemId,
+                expiresAtEpochMilliseconds = expiresAtEpochMilliseconds,
                 updatedAt = SystemClock.nowEpochMilliseconds()
             )
         }
@@ -201,7 +247,8 @@ class DefaultProtocolOutbox(
                 OutboxStatus.PROCESSING -> Unit
 
                 OutboxStatus.SENT,
-                OutboxStatus.FAILED -> {
+                OutboxStatus.FAILED,
+                OutboxStatus.EXPIRED -> {
                     val updatedRows =
                         outboxDao.requeueForResend(
                             packetId = packetId,
@@ -230,6 +277,7 @@ class DefaultProtocolOutbox(
             status = status.toOutboxStatus(),
             attemptCount = attemptCount,
             lastError = lastError,
+            expiresAtEpochMilliseconds = expiresAtEpochMilliseconds,
             createdAtEpochMilliseconds = createdAtEpochMilliseconds,
             updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
         )
@@ -244,10 +292,13 @@ class DefaultProtocolOutbox(
 
             OutboxStatus.FAILED.name -> OutboxStatus.FAILED
 
+            OutboxStatus.EXPIRED.name -> OutboxStatus.EXPIRED
+
             else -> error("Unknown outbox status: $this")
         }
 
     private companion object {
         const val MAX_ERROR_LENGTH = 1_000
+        const val DELIVERY_EXPIRED_ERROR = "Server delivery retention expired"
     }
 }

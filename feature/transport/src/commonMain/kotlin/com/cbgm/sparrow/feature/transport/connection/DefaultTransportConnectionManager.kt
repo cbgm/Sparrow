@@ -20,7 +20,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -83,8 +85,11 @@ class DefaultTransportConnectionManager(
         }
     }
 
+    private val mutableConnectionState =
+        MutableStateFlow<TransportConnectionState>(TransportConnectionState.Disconnected)
+
     override val connectionState: StateFlow<TransportConnectionState> =
-        webSocketTransportClient.connectionState
+        mutableConnectionState.asStateFlow()
 
     override fun start() {
         if (connectionLoopJob?.isActive == true) {
@@ -100,6 +105,7 @@ class DefaultTransportConnectionManager(
         connectionLoopJob = null
         activeJob?.cancelAndJoin()
         webSocketTransportClient.disconnect()
+        mutableConnectionState.value = TransportConnectionState.Disconnected
         diagnosticsState.stopped(
             cooldownUntilEpochMillisecondsByNodeId =
                 failedNodeTracker.cooldownUntilEpochMillisecondsByNodeId(resolvedEndpoints)
@@ -133,6 +139,7 @@ class DefaultTransportConnectionManager(
         var selectedEndpoint: NodeEndpoint? = null
 
         return try {
+            mutableConnectionState.value = TransportConnectionState.Connecting
             diagnosticsState.connecting()
 
             val routingId = localRoutingIdProvider.getLocalRoutingId().getOrThrow()
@@ -143,6 +150,7 @@ class DefaultTransportConnectionManager(
 
             when (val connectionResult = awaitConnectionResult()) {
                 is TransportConnectionState.Connected -> {
+                    mutableConnectionState.value = connectionResult
                     onConnected(endpoint = endpoint, routingId = connectionResult.routingId)
                     val endState = waitForConnectionEnd(routingId, endpoint)
                     onConnectedNodeEnded(endpoint = endpoint, state = endState)
@@ -150,6 +158,7 @@ class DefaultTransportConnectionManager(
                 }
 
                 is TransportConnectionState.Failed -> {
+                    mutableConnectionState.value = connectionResult
                     onConnectionFailure(endpoint = endpoint, message = connectionResult.message)
                     false
                 }
@@ -159,6 +168,11 @@ class DefaultTransportConnectionManager(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
+            val failure =
+                TransportConnectionState.Failed(
+                    message = error.message ?: "Transport connection error"
+                )
+            mutableConnectionState.value = failure
             logger.error(error) { "Transport connection error" }
             selectedEndpoint?.let { endpoint ->
                 failedNodeTracker.recordFailure(endpoint.nodeId)
@@ -253,6 +267,13 @@ class DefaultTransportConnectionManager(
         endpoint: NodeEndpoint,
         state: TransportConnectionState
     ) {
+        mutableConnectionState.value =
+            if (state is TransportConnectionState.Failed) {
+                state
+            } else {
+                TransportConnectionState.Disconnected
+            }
+
         if (state is TransportConnectionState.Failed) {
             failedNodeTracker.recordFailure(endpoint.nodeId)
         } else {

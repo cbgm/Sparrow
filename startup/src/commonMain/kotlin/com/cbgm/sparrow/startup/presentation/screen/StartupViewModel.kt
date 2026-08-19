@@ -3,7 +3,9 @@ package com.cbgm.sparrow.startup.presentation.screen
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.startup.AppInitializationResult
 import com.cbgm.sparrow.startup.AppInitializer
+import com.cbgm.sparrow.startup.presentation.model.StartupConnection
 import com.cbgm.sparrow.startup.presentation.model.StartupUiEvent
 import com.cbgm.sparrow.startup.presentation.model.StartupUiState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,17 +22,18 @@ class StartupViewModel(
 
     private var initializationCompleted = false
 
+    init {
+        initialize()
+    }
+
     fun onUiEvent(event: StartupUiEvent) {
         when (event) {
+            StartupUiEvent.IdentityCreated -> restartInitialization()
             StartupUiEvent.RetryClicked -> retry()
             StartupUiEvent.RequestPhoneNumberHint,
             is StartupUiEvent.PhoneNumberChanged,
             StartupUiEvent.CreateIdentityClicked -> Unit
         }
-    }
-
-    init {
-        initialize()
     }
 
     fun completeStartup() {
@@ -43,15 +46,16 @@ class StartupViewModel(
 
     private fun retry() {
         if (mutableUiState.value !is StartupUiState.Error) return
+        restartInitialization()
+    }
 
+    private fun restartInitialization() {
         initializationCompleted = false
         initialize()
     }
 
     private fun initialize() {
-        if (initializationCompleted) {
-            return
-        }
+        if (initializationCompleted) return
 
         viewModelScope.launch {
             mutableUiState.value = StartupUiState.Loading
@@ -59,14 +63,8 @@ class StartupViewModel(
             appInitializer
                 .initialize()
                 .onSuccess { result ->
-                    initializationCompleted = true
-
-                    mutableUiState.value =
-                        if (result.identityReady) {
-                            StartupUiState.Ready
-                        } else {
-                            StartupUiState.IdentityRequired
-                        }
+                    initializationCompleted = result !is AppInitializationResult.IdentityRequired
+                    mutableUiState.value = result.toUiState()
                 }.onFailure { error ->
                     mutableUiState.value =
                         StartupUiState.Error(
@@ -76,3 +74,10 @@ class StartupViewModel(
         }
     }
 }
+
+private fun AppInitializationResult.toUiState(): StartupUiState =
+    when (this) {
+        AppInitializationResult.IdentityRequired -> StartupUiState.IdentityRequired
+        AppInitializationResult.ReadyOnline -> StartupUiState.Ready(StartupConnection.ONLINE)
+        AppInitializationResult.ReadyOffline -> StartupUiState.Ready(StartupConnection.OFFLINE)
+    }

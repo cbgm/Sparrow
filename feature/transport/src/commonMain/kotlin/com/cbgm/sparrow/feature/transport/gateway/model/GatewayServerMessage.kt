@@ -13,6 +13,12 @@ sealed interface GatewayServerMessage {
     ) : GatewayServerMessage
 
     @Serializable
+    @SerialName("route_registered")
+    data class RouteRegistered(
+        val aliases: List<String> = emptyList()
+    ) : GatewayServerMessage
+
+    @Serializable
     @SerialName("incoming_envelope")
     data class IncomingEnvelope(
         val envelope: TransportEnvelope
@@ -26,14 +32,14 @@ sealed interface GatewayServerMessage {
     ) : GatewayServerMessage
 
     /**
-     * Confirms that the gateway accepted the envelope.
-     *
-     * This does not yet prove that the recipient device read it.
+     * Confirms that the gateway accepted the envelope and owns delivery retries until the
+     * server-declared expiry deadline.
      */
     @Serializable
     @SerialName("envelope_accepted")
     data class EnvelopeAccepted(
-        val envelopeId: String
+        val envelopeId: String,
+        val expiresAtEpochMilliseconds: Long
     ) : GatewayServerMessage
 
     @Serializable

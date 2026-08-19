@@ -31,6 +31,9 @@ class ChatOutboxDeliveryStateRouter(
     override suspend fun onSent(packetId: String): Result<Unit> =
         applyEvent(packetId, MessageDeliveryEvent.SEND_SUCCEEDED)
 
+    override suspend fun onExpired(packetId: String): Result<Unit> =
+        applyEvent(packetId, MessageDeliveryEvent.DELIVERY_EXPIRED)
+
     override suspend fun onFailed(
         packetId: String,
         errorMessage: String

@@ -212,9 +212,13 @@ internal class GatewaySessionHandler(
                 )
 
             else -> {
+                val aliases = registration.route.aliases.orEmpty()
                 connections.updateRoutingAliases(
                     connection = connection,
-                    routingAliases = registration.route.aliases.orEmpty()
+                    routingAliases = aliases
+                )
+                connection.send(
+                    GatewayServerMessage.RouteRegistered(aliases = aliases)
                 )
                 pushActions.deliverPending(connection)
             }

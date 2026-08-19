@@ -6,36 +6,35 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiState
 import com.cbgm.sparrow.feature.onboarding.presentation.OnboardingRoute
+import com.cbgm.sparrow.startup.presentation.model.StartupConnection
+import com.cbgm.sparrow.startup.presentation.model.StartupUiEvent
 import com.cbgm.sparrow.startup.presentation.model.StartupUiState
 import com.cbgm.sparrow.startup.presentation.screen.StartupScreen
 import com.cbgm.sparrow.startup.presentation.screen.StartupViewModel
-import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun StartupRoute(
-    onStartupReady: () -> Unit,
+    onStartupReady: (StartupConnection) -> Unit,
     startupViewModel: StartupViewModel = koinViewModel()
 ) {
     val startupUiState by startupViewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(startupUiState) {
-        if (startupUiState == StartupUiState.Ready) {
-            delay(1000)
-            startupViewModel.completeStartup()
-            onStartupReady()
-        }
+        val ready = startupUiState as? StartupUiState.Ready ?: return@LaunchedEffect
+        startupViewModel.completeStartup()
+        onStartupReady(ready.connection)
     }
 
     when (val state = startupUiState) {
         StartupUiState.IdentityRequired -> {
             OnboardingRoute(
                 onComplete = {
-                    startupViewModel.completeStartup()
-                    onStartupReady()
+                    startupViewModel.onUiEvent(StartupUiEvent.IdentityCreated)
                 }
             )
         }
+
         else -> {
             StartupScreen(
                 uiState = state,
