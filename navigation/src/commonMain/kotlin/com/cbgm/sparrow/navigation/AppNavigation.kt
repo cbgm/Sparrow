@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -31,8 +32,13 @@ import com.cbgm.sparrow.notification.model.NotificationConversationTarget
 import com.cbgm.sparrow.notification.navigation.NotificationNavigationController
 import com.cbgm.sparrow.notification.navigation.NotificationNavigationTarget
 import com.cbgm.sparrow.resources.Res
-import com.cbgm.sparrow.resources.feature_startup_offline_hint
+import com.cbgm.sparrow.resources.app_connection_offline_hint
+import com.cbgm.sparrow.resources.app_connection_reconnected_hint
+import com.cbgm.sparrow.startup.domain.model.AppConnectionAvailability
+import com.cbgm.sparrow.startup.domain.usecase.ObserveAppConnectionAvailabilityUseCase
 import com.cbgm.sparrow.startup.presentation.model.StartupConnection
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 
@@ -40,21 +46,64 @@ import org.koin.compose.koinInject
 fun AppNavigation(
     notificationNavigationController: NotificationNavigationController = koinInject(),
     resolveNotificationConversation: ResolveNotificationConversation = koinInject(),
-    navigator: AppNavigator = koinInject()
+    navigator: AppNavigator = koinInject(),
+    observeAppConnectionAvailability: ObserveAppConnectionAvailabilityUseCase = koinInject()
 ) {
     val navController = rememberNavController()
     val pendingNotificationTarget by notificationNavigationController.pendingTarget.collectAsStateWithLifecycle()
     var startupComplete by rememberSaveable { mutableStateOf(false) }
-    var showOfflineHint by remember { mutableStateOf(false) }
+    var startupWasOffline by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
-    val offlineHint = stringResource(Res.string.feature_startup_offline_hint)
+    val offlineHint = stringResource(Res.string.app_connection_offline_hint)
+    val reconnectedHint = stringResource(Res.string.app_connection_reconnected_hint)
 
     navController.bind(navigator)
 
-    LaunchedEffect(showOfflineHint) {
-        if (!showOfflineHint) return@LaunchedEffect
-        showOfflineHint = false
-        snackbarHostState.showSnackbar(offlineHint)
+    LaunchedEffect(startupComplete) {
+        if (!startupComplete) return@LaunchedEffect
+
+        var connectionUnavailable = startupWasOffline
+        var connectionSnackbarJob: Job? = null
+
+        if (connectionUnavailable) {
+            connectionSnackbarJob =
+                launch {
+                    snackbarHostState.showSnackbar(
+                        message = offlineHint,
+                        duration = SnackbarDuration.Short
+                    )
+                }
+        }
+
+        observeAppConnectionAvailability().collect { availability ->
+            when {
+                availability == AppConnectionAvailability.UNAVAILABLE &&
+                    !connectionUnavailable -> {
+                    connectionUnavailable = true
+                    connectionSnackbarJob?.cancel()
+                    connectionSnackbarJob =
+                        launch {
+                            snackbarHostState.showSnackbar(
+                                message = offlineHint,
+                                duration = SnackbarDuration.Short
+                            )
+                        }
+                }
+
+                availability == AppConnectionAvailability.AVAILABLE &&
+                    connectionUnavailable -> {
+                    connectionUnavailable = false
+                    connectionSnackbarJob?.cancel()
+                    connectionSnackbarJob =
+                        launch {
+                            snackbarHostState.showSnackbar(
+                                message = reconnectedHint,
+                                duration = SnackbarDuration.Short
+                            )
+                        }
+                }
+            }
+        }
     }
 
     LaunchedEffect(pendingNotificationTarget, startupComplete) {
@@ -110,8 +159,8 @@ fun AppNavigation(
         ) {
             startupNavGraph(
                 onStartupReady = { connection ->
+                    startupWasOffline = connection == StartupConnection.OFFLINE
                     startupComplete = true
-                    showOfflineHint = connection == StartupConnection.OFFLINE
                 }
             )
             mainNavGraph()
