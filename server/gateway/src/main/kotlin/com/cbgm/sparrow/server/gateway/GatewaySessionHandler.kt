@@ -3,6 +3,7 @@ package com.cbgm.sparrow.server.gateway
 import com.cbgm.sparrow.server.protocol.ClientRoute
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
 import com.cbgm.sparrow.server.protocol.GatewayClientMessage
+import com.cbgm.sparrow.server.protocol.GatewayNodeInformation
 import com.cbgm.sparrow.server.protocol.GatewayServerMessage
 import com.cbgm.sparrow.server.protocol.serverJson
 import io.ktor.server.websocket.DefaultWebSocketServerSession
@@ -17,6 +18,7 @@ internal class GatewaySessionHandler(
     private val presence: PresenceClient,
     private val pushActions: GatewayPushActions,
     private val routeValidator: GatewayRouteValidator,
+    private val gatewayInformation: GatewayNodeInformation,
     private val actions: GatewayMessageActions
 ) {
     suspend fun handle(session: DefaultWebSocketServerSession) {
@@ -176,7 +178,11 @@ internal class GatewaySessionHandler(
         connections.register(connection)
         connection.send(
             GatewayServerMessage.Registered(
-                routingId = connection.routingId
+                routingId = connection.routingId,
+                nodeId = gatewayInformation.nodeId,
+                routeLifetimeMilliseconds = gatewayInformation.routeLifetimeMilliseconds,
+                routeRefreshIntervalMilliseconds = gatewayInformation.routeRefreshIntervalMilliseconds,
+                serverTimeEpochMilliseconds = System.currentTimeMillis()
             )
         )
         pushActions.deliverPending(connection)
@@ -212,9 +218,13 @@ internal class GatewaySessionHandler(
                 )
 
             else -> {
+                val aliases = registration.route.aliases.orEmpty()
                 connections.updateRoutingAliases(
                     connection = connection,
-                    routingAliases = registration.route.aliases.orEmpty()
+                    routingAliases = aliases
+                )
+                connection.send(
+                    GatewayServerMessage.RouteRegistered(aliases = aliases)
                 )
                 pushActions.deliverPending(connection)
             }

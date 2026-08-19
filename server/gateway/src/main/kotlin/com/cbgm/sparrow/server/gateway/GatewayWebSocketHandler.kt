@@ -3,6 +3,7 @@ package com.cbgm.sparrow.server.gateway
 import com.cbgm.sparrow.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
 import com.cbgm.sparrow.server.protocol.FederatedTypingEvent
+import com.cbgm.sparrow.server.protocol.GatewayNodeInformation
 import com.cbgm.sparrow.server.protocol.GatewayServerMessage
 import com.cbgm.sparrow.server.protocol.TransportEnvelope
 import io.ktor.server.websocket.DefaultWebSocketServerSession
@@ -13,7 +14,8 @@ class GatewayWebSocketHandler(
     private val federation: FederationClient,
     private val presence: PresenceClient,
     private val legacyPush: LegacyPushClient,
-    private val routeLifetimeMilliseconds: Long
+    private val routeLifetimeMilliseconds: Long,
+    private val routeRefreshIntervalMilliseconds: Long
 ) {
     private val bestEffortPresence = BestEffortPresenceClient(presence)
     private val pushDispatcher =
@@ -33,6 +35,12 @@ class GatewayWebSocketHandler(
                     acknowledge = pushDispatcher::acknowledge
                 ),
             routeValidator = GatewayRouteValidator(routeLifetimeMilliseconds),
+            gatewayInformation =
+                GatewayNodeInformation(
+                    nodeId = nodeId,
+                    routeLifetimeMilliseconds = routeLifetimeMilliseconds,
+                    routeRefreshIntervalMilliseconds = routeRefreshIntervalMilliseconds
+                ),
             actions =
                 GatewayMessageActions(
                     sendEnvelope = { connection, message ->

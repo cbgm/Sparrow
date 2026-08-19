@@ -147,7 +147,7 @@ private fun StartupStateContent(
             StartupProgress(message = stringResource(Res.string.feature_startup_preparing_sparrow))
         }
 
-        StartupUiState.Ready -> {
+        is StartupUiState.Ready -> {
             StartupProgress(message = stringResource(Res.string.feature_startup_opening_sparrow))
         }
 

@@ -11,7 +11,8 @@ val startupModule =
         single {
             AppInitializer(
                 getIdentityStatus = get(),
-                recoverIncompleteIdentity = get()
+                recoverIncompleteIdentity = get(),
+                transportConnectionManager = get()
             )
         }
 

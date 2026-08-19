@@ -9,7 +9,17 @@ sealed interface GatewayServerMessage {
     @SerialName("registered")
     data class Registered(
         @SerialName("routingId")
-        val routingId: String
+        val routingId: String,
+        val nodeId: String,
+        val routeLifetimeMilliseconds: Long,
+        val routeRefreshIntervalMilliseconds: Long,
+        val serverTimeEpochMilliseconds: Long
+    ) : GatewayServerMessage
+
+    @Serializable
+    @SerialName("route_registered")
+    data class RouteRegistered(
+        val aliases: List<String> = emptyList()
     ) : GatewayServerMessage
 
     @Serializable
