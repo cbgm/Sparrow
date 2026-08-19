@@ -338,6 +338,12 @@
     <string name="feature_settings_licenses_subtitle">Libraries used in this app</string>
     <string name="feature_settings_open_source_licenses">Open source licenses</string>
     <string name="feature_settings_privacy_and_data">Privacy &amp; data</string>
+    <string name="feature_settings_semantic_search">Semantic message search</string>
+    <string name="feature_settings_semantic_search_subtitle">Find messages by meaning, not just exact words. Processing stays on this device.</string>
+    <string name="feature_settings_semantic_search_downloading">Downloading local search model…</string>
+    <string name="feature_settings_semantic_search_building">Building search index: %1$d / %2$d messages</string>
+    <string name="feature_settings_semantic_search_ready">Ready. Messages and search queries never leave this device.</string>
+    <string name="feature_settings_semantic_search_failed">Semantic search could not be prepared. Turn it off and on to retry.</string>
     <string name="feature_settings_privacy_policy">Privacy policy</string>
     <string name="feature_settings_privacy_policy_subtitle">How your data is handled</string>
     <string name="feature_settings_version_value">%1$s (%2$s)</string>

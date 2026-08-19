@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.di
 
 import com.cbgm.sparrow.AppViewModel
+import com.cbgm.sparrow.core.coroutines.ApplicationCoroutineScope
 import com.cbgm.sparrow.presentation.runtime.AppInitializationDependencies
 import com.cbgm.sparrow.presentation.runtime.ForegroundRuntimeDependencies
 import org.koin.core.module.dsl.viewModel
@@ -8,6 +9,8 @@ import org.koin.dsl.module
 
 val sharedModule =
     module {
+        single { ApplicationCoroutineScope() }
+
         single {
             AppInitializationDependencies(
                 initializeCryptoRuntime = get(),

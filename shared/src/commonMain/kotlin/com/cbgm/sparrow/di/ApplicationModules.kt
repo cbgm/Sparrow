@@ -9,6 +9,7 @@ import com.cbgm.sparrow.feature.contacts.di.contactsModule
 import com.cbgm.sparrow.feature.identity.di.identityModule
 import com.cbgm.sparrow.feature.messaging.di.messagingModule
 import com.cbgm.sparrow.feature.onboarding.di.onboardingModule
+import com.cbgm.sparrow.feature.search.di.searchModule
 import com.cbgm.sparrow.feature.settings.di.settingsModule
 import com.cbgm.sparrow.feature.transport.di.transportModule
 import com.cbgm.sparrow.navigation.di.navigationModule
@@ -31,6 +32,7 @@ internal val commonApplicationModules: List<Module> =
         contactImportModule,
         startupModule,
         settingsModule,
+        searchModule,
         navigationModule,
         sharedModule
     )

@@ -339,6 +339,12 @@
     <string name="feature_settings_licenses_subtitle">In dieser App verwendete Bibliotheken</string>
     <string name="feature_settings_open_source_licenses">Open-Source-Lizenzen</string>
     <string name="feature_settings_privacy_and_data">Datenschutz &amp; Daten</string>
+    <string name="feature_settings_semantic_search">Semantische Nachrichtensuche</string>
+    <string name="feature_settings_semantic_search_subtitle">Nach Bedeutung statt nur nach exakten Wörtern suchen. Verarbeitung bleibt auf diesem Gerät.</string>
+    <string name="feature_settings_semantic_search_downloading">Lokales Suchmodell wird heruntergeladen…</string>
+    <string name="feature_settings_semantic_search_building">Suchindex wird erstellt: %1$d / %2$d Nachrichten</string>
+    <string name="feature_settings_semantic_search_ready">Bereit. Nachrichten und Suchanfragen verlassen dieses Gerät nicht.</string>
+    <string name="feature_settings_semantic_search_failed">Semantische Suche konnte nicht vorbereitet werden. Zum Wiederholen aus- und einschalten.</string>
     <string name="feature_settings_privacy_policy">Datenschutzerklärung</string>
     <string name="feature_settings_privacy_policy_subtitle">Wie deine Daten verarbeitet werden</string>
     <string name="feature_settings_version_value">%1$s (%2$s)</string>

@@ -67,6 +67,10 @@ val androidDatabaseModule =
         }
 
         single {
+            get<SparrowDatabase>().messageSearchDao()
+        }
+
+        single {
             get<SparrowDatabase>().mailboxRouteDao()
         }
 

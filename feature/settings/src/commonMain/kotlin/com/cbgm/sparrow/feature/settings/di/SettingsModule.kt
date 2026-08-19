@@ -122,7 +122,10 @@ val settingsModule =
                 setDirectIdentitySetupMode = get(),
                 observeBlockUnknownContactInvites = get(),
                 setBlockUnknownContactInvites = get(),
-                observeBlockedContactIds = get()
+                observeBlockedContactIds = get(),
+                observeSemanticSearchState = get(),
+                initializeSemanticSearch = get(),
+                setSemanticSearchEnabled = get()
             )
         }
 
