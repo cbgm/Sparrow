@@ -1,7 +1,9 @@
 package com.cbgm.sparrow.feature.chats.presentation.details
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
+import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupLeaveRequirement
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.AddGroupMembersUseCase
@@ -47,7 +49,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class GroupVerificationViewModel(
-    private val conversationId: String,
+    private val savedStateHandle: SavedStateHandle,
     observeGroupVerification: ObserveGroupVerificationUseCase,
     private val synchronizeGroupVerification: SynchronizeGroupVerificationUseCase,
     private val verifyGroupMember: VerifyGroupMemberUseCase,
@@ -66,8 +68,28 @@ class GroupVerificationViewModel(
     private val getGroupLeaveRequirement: GetGroupLeaveRequirementUseCase,
     private val leaveGroup: LeaveGroupUseCase
 ) : BaseViewModel() {
-    private val verificationState = MutableStateFlow(GroupVerificationSelectionState())
-    private val memberManagementState = MutableStateFlow(GroupMemberManagementState())
+    private val conversationId =
+        savedStateHandle.requireRouteArgument<String>(AppRoute.GroupDetails::conversationId.name)
+    private val restoredVerificationContactId =
+        savedStateHandle.get<String>(VERIFICATION_CONTACT_ID_KEY)
+    private val verificationState =
+        MutableStateFlow(
+            GroupVerificationSelectionState(
+                selectedContactId = restoredVerificationContactId,
+                isLoadingSafetyNumber = restoredVerificationContactId != null
+            )
+        )
+    private val memberManagementState =
+        MutableStateFlow(
+            GroupMemberManagementState(
+                selectedContactIds =
+                    savedStateHandle
+                        .get<Array<String>>(SELECTED_CONTACT_IDS_KEY)
+                        .orEmpty()
+                        .toSet(),
+                searchQuery = savedStateHandle.get<String>(MEMBER_SEARCH_QUERY_KEY).orEmpty()
+            )
+        )
     private val leaveState = MutableStateFlow(GroupLeaveUiState())
     private val avatarActionState = MutableStateFlow(GroupAvatarActionState())
     private val contactsWithProfilePictures =
@@ -154,6 +176,8 @@ class GroupVerificationViewModel(
         )
 
     init {
+        persistMemberSelection()
+        restoredVerificationContactId?.let(::loadSafetyNumber)
         synchronize()
     }
 
@@ -233,6 +257,15 @@ class GroupVerificationViewModel(
         )
     }
 
+    private fun persistMemberSelection() {
+        viewModelScope.launch {
+            memberManagementState.collect { state ->
+                savedStateHandle[MEMBER_SEARCH_QUERY_KEY] = state.searchQuery
+                savedStateHandle[SELECTED_CONTACT_IDS_KEY] = state.selectedContactIds.toTypedArray()
+            }
+        }
+    }
+
     private fun synchronize() {
         viewModelScope.launch {
             synchronizeGroupVerification(conversationId)
@@ -258,12 +291,20 @@ class GroupVerificationViewModel(
             return
         }
 
+        selectVerificationContact(contactId)
+        loadSafetyNumber(contactId)
+    }
+
+    private fun selectVerificationContact(contactId: String) {
+        savedStateHandle[VERIFICATION_CONTACT_ID_KEY] = contactId
         verificationState.value =
             GroupVerificationSelectionState(
                 selectedContactId = contactId,
                 isLoadingSafetyNumber = true
             )
+    }
 
+    private fun loadSafetyNumber(contactId: String) {
         viewModelScope.launch {
             getContactSafetyNumber
                 .invoke(contactId = contactId)
@@ -320,7 +361,7 @@ class GroupVerificationViewModel(
                 groupId = conversationId,
                 contactId = contactId
             ).onSuccess {
-                verificationState.value = GroupVerificationSelectionState()
+                clearVerificationSelection()
             }.onFailure { error ->
                 verificationState.update { state ->
                     state.copy(
@@ -336,8 +377,13 @@ class GroupVerificationViewModel(
 
     private fun dismissVerification() {
         if (!verificationState.value.isVerifying) {
-            verificationState.value = GroupVerificationSelectionState()
+            clearVerificationSelection()
         }
+    }
+
+    private fun clearVerificationSelection() {
+        savedStateHandle.remove<String>(VERIFICATION_CONTACT_ID_KEY)
+        verificationState.value = GroupVerificationSelectionState()
     }
 
     private fun updateMemberSearchQuery(query: String) {
@@ -601,4 +647,10 @@ class GroupVerificationViewModel(
         val errorMessage: String? = null,
         val completedRevision: Int = 0
     )
+
+    private companion object {
+        const val VERIFICATION_CONTACT_ID_KEY = "verificationContactId"
+        const val MEMBER_SEARCH_QUERY_KEY = "memberSearchQuery"
+        const val SELECTED_CONTACT_IDS_KEY = "selectedContactIds"
+    }
 }

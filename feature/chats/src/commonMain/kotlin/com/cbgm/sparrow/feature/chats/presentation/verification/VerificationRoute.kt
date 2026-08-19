@@ -5,15 +5,11 @@ import com.cbgm.sparrow.feature.contactimport.presentation.verify.ContactQrVerif
 
 @Composable
 fun VerificationRoute(
-    contactId: String,
     groupId: String?
 ) {
     if (groupId == null) {
-        ContactQrVerificationFlow(contactId = contactId)
+        ContactQrVerificationFlow()
     } else {
-        GroupMemberVerificationFlow(
-            groupId = groupId,
-            contactId = contactId
-        )
+        GroupMemberVerificationFlow()
     }
 }

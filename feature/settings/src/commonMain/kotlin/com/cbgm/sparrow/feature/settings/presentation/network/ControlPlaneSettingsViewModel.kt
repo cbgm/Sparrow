@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.settings.presentation.network
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
 import com.cbgm.sparrow.core.transport.ControlPlaneDirectorySynchronizer
@@ -26,12 +27,27 @@ import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
 class ControlPlaneSettingsViewModel(
+    private val savedStateHandle: SavedStateHandle,
     private val configuration: ControlPlaneConfiguration,
     private val statusStore: ControlPlaneStatusStore,
     private val healthMonitor: ControlPlaneHealthMonitor,
     private val directorySynchronizer: ControlPlaneDirectorySynchronizer
 ) : BaseViewModel() {
+    private val showAddDialog =
+        savedStateHandle.getMutableStateFlow(SHOW_ADD_DIALOG_KEY, false)
+    private val newUrl =
+        savedStateHandle.getMutableStateFlow(NEW_URL_KEY, "")
+    private val directoryDraft =
+        MutableStateFlow(savedStateHandle.get<String>(DIRECTORY_DRAFT_KEY))
     private val actionState = MutableStateFlow(ControlPlaneActionState())
+    private val formState =
+        combine(showAddDialog, newUrl, directoryDraft) { showAddDialog, newUrl, directoryDraft ->
+            ControlPlaneFormState(
+                showAddDialog = showAddDialog,
+                newUrl = newUrl,
+                directoryDraft = directoryDraft
+            )
+        }
 
     private val configurationSnapshot =
         combine(
@@ -49,14 +65,15 @@ class ControlPlaneSettingsViewModel(
     val uiState: StateFlow<ControlPlaneSettingsUiState> =
         combine(
             configurationSnapshot,
+            formState,
             actionState
-        ) { configuration, action ->
+        ) { configuration, form, action ->
             configuration.entries.toUiState(
-                showAddDialog = action.showAddDialog,
-                newUrl = action.newUrl,
+                showAddDialog = form.showAddDialog,
+                newUrl = form.newUrl,
                 addError = action.addError,
                 directoryUrl = configuration.directoryUrl,
-                directoryDraft = action.directoryDraft ?: configuration.directoryUrl,
+                directoryDraft = form.directoryDraft ?: configuration.directoryUrl,
                 directoryError = action.directoryError,
                 isRefreshing = action.isRefreshing,
                 isDirectorySyncing = action.isDirectorySyncing,
@@ -76,28 +93,39 @@ class ControlPlaneSettingsViewModel(
     fun onUiEvent(event: ControlPlaneSettingsUiEvent) {
         when (event) {
             ControlPlaneSettingsUiEvent.BackClicked -> navigator.popBackStack()
-            ControlPlaneSettingsUiEvent.AddClicked ->
-                actionState.update { it.copy(showAddDialog = true, addError = null) }
-            ControlPlaneSettingsUiEvent.AddDismissed ->
-                actionState.update { it.copy(showAddDialog = false, newUrl = "", addError = null) }
+            ControlPlaneSettingsUiEvent.AddClicked -> openAddDialog()
+            ControlPlaneSettingsUiEvent.AddDismissed -> closeAddDialog()
             ControlPlaneSettingsUiEvent.AddConfirmed -> addControlPlane()
             ControlPlaneSettingsUiEvent.DirectoryApply -> saveDirectoryUrl()
             ControlPlaneSettingsUiEvent.Refresh -> refreshAll()
-            is ControlPlaneSettingsUiEvent.NewUrlChanged ->
-                actionState.update { it.copy(newUrl = event.value, addError = null) }
-            is ControlPlaneSettingsUiEvent.DirectoryUrlChanged ->
-                actionState.update {
-                    it.copy(
-                        directoryDraft = event.value,
-                        directoryError = null
-                    )
-                }
+            is ControlPlaneSettingsUiEvent.NewUrlChanged -> updateNewUrl(event.value)
+            is ControlPlaneSettingsUiEvent.DirectoryUrlChanged -> updateDirectoryDraft(event.value)
             is ControlPlaneSettingsUiEvent.Remove -> removeControlPlane(event.url)
         }
     }
 
+    private fun openAddDialog() {
+        showAddDialog.value = true
+        actionState.update { state -> state.copy(addError = null) }
+    }
+
+    private fun closeAddDialog() {
+        clearAddDialogForm()
+        actionState.update { state -> state.copy(addError = null) }
+    }
+
+    private fun updateNewUrl(value: String) {
+        newUrl.value = value
+        actionState.update { state -> state.copy(addError = null) }
+    }
+
+    private fun updateDirectoryDraft(value: String) {
+        setDirectoryDraft(value)
+        actionState.update { state -> state.copy(directoryError = null) }
+    }
+
     private fun addControlPlane() {
-        val candidate = actionState.value.newUrl.normalizeHttpUrl()
+        val candidate = newUrl.value.normalizeHttpUrl()
         if (candidate == null) {
             actionState.update { it.copy(addError = ControlPlaneSettingsError.INVALID_URL) }
             return
@@ -110,10 +138,9 @@ class ControlPlaneSettingsViewModel(
         viewModelScope.launch {
             val directoryResult = directorySynchronizer.synchronizeFrom(candidate)
             if (directoryResult.isSuccess) {
+                clearAddDialogForm()
                 actionState.update {
                     it.copy(
-                        showAddDialog = false,
-                        newUrl = "",
                         addError = null,
                         directoryError = null,
                         lastDirectoryCount = directoryResult.getOrThrow()
@@ -126,9 +153,8 @@ class ControlPlaneSettingsViewModel(
             configuration
                 .addManual(candidate)
                 .onSuccess {
-                    actionState.update {
-                        it.copy(showAddDialog = false, newUrl = "", addError = null)
-                    }
+                    clearAddDialogForm()
+                    actionState.update { it.copy(addError = null) }
                     refreshAllNow()
                 }.onFailure {
                     actionState.update { it.copy(addError = ControlPlaneSettingsError.SAVE_FAILED) }
@@ -150,7 +176,7 @@ class ControlPlaneSettingsViewModel(
     }
 
     private fun saveDirectoryUrl() {
-        val draft = actionState.value.directoryDraft ?: configuration.directoryUrl.value.orEmpty()
+        val draft = directoryDraft.value ?: configuration.directoryUrl.value.orEmpty()
         val normalized = draft.takeIf(String::isNotBlank)?.normalizeHttpUrl()
         if (draft.isNotBlank() && normalized == null) {
             actionState.update { it.copy(directoryError = ControlPlaneDirectoryError.INVALID_URL) }
@@ -161,13 +187,27 @@ class ControlPlaneSettingsViewModel(
             configuration
                 .setDirectoryUrl(normalized)
                 .onSuccess {
-                    actionState.update { it.copy(directoryDraft = null) }
+                    setDirectoryDraft(null)
                     refreshAllNow()
                 }.onFailure {
                     actionState.update { state ->
                         state.copy(directoryError = ControlPlaneDirectoryError.SAVE_FAILED)
                     }
                 }
+        }
+    }
+
+    private fun clearAddDialogForm() {
+        showAddDialog.value = false
+        newUrl.value = ""
+    }
+
+    private fun setDirectoryDraft(value: String?) {
+        directoryDraft.value = value
+        if (value == null) {
+            savedStateHandle.remove<String>(DIRECTORY_DRAFT_KEY)
+        } else {
+            savedStateHandle[DIRECTORY_DRAFT_KEY] = value
         }
     }
 
@@ -216,11 +256,14 @@ class ControlPlaneSettingsViewModel(
         }
     }
 
-    private data class ControlPlaneActionState(
+    private data class ControlPlaneFormState(
         val showAddDialog: Boolean = false,
         val newUrl: String = "",
+        val directoryDraft: String? = null
+    )
+
+    private data class ControlPlaneActionState(
         val addError: ControlPlaneSettingsError? = null,
-        val directoryDraft: String? = null,
         val directoryError: ControlPlaneDirectoryError? = null,
         val isRefreshing: Boolean = false,
         val isDirectorySyncing: Boolean = false,
@@ -228,6 +271,9 @@ class ControlPlaneSettingsViewModel(
     )
 
     private companion object {
+        const val SHOW_ADD_DIALOG_KEY = "showAddDialog"
+        const val NEW_URL_KEY = "newUrl"
+        const val DIRECTORY_DRAFT_KEY = "directoryDraft"
         const val HEALTH_REFRESH_INTERVAL_MILLISECONDS = 1_000L
     }
 }

@@ -18,16 +18,10 @@ import com.cbgm.sparrow.resources.feature_contactimport_qr_verification_failed
 import com.cbgm.sparrow.resources.feature_contactimport_trust_and_verify
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import org.koin.core.parameter.parametersOf
 
 @Composable
 internal fun GroupMemberVerificationFlow(
-    groupId: String,
-    contactId: String,
-    viewModel: GroupMemberQrVerificationViewModel =
-        koinViewModel {
-            parametersOf(groupId, contactId)
-        }
+    viewModel: GroupMemberQrVerificationViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 

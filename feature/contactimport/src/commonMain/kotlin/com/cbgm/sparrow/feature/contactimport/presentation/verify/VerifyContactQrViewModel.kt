@@ -1,6 +1,9 @@
 package com.cbgm.sparrow.feature.contactimport.presentation.verify
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.ui.navigation.AppRoute
+import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.contactimport.domain.usecase.VerifyContactByQrUseCase
 import com.cbgm.sparrow.feature.contactimport.presentation.verify.model.VerifyContactQrUiEvent
@@ -12,9 +15,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class VerifyContactQrViewModel(
-    private val contactId: String,
+    savedStateHandle: SavedStateHandle,
     private val verifyContactByQr: VerifyContactByQrUseCase
 ) : BaseViewModel() {
+    private val contactId =
+        savedStateHandle.requireRouteArgument<String>(AppRoute.VerifyIdentityQr::contactId.name)
     private val _uiState = MutableStateFlow(VerifyContactQrUiState())
     val uiState: StateFlow<VerifyContactQrUiState> = _uiState.asStateFlow()
 

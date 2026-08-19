@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.create
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.CreateGroupConversationUseCase
@@ -27,24 +28,38 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CreateGroupViewModel(
+    savedStateHandle: SavedStateHandle,
     private val observeContacts: ObserveContactsUseCase,
     private val observeProfilePictures: ObserveRemoteProfilePicturesUseCase,
     private val createGroupConversation: CreateGroupConversationUseCase
 ) : BaseViewModel() {
-    private val formState = MutableStateFlow(CreateGroupFormState())
+    private val title = savedStateHandle.getMutableStateFlow(TITLE_KEY, "")
+    private val searchQuery = savedStateHandle.getMutableStateFlow(SEARCH_QUERY_KEY, "")
+    private val selectedContactIds =
+        savedStateHandle.getMutableStateFlow(SELECTED_CONTACT_IDS_KEY, emptyArray<String>())
+    private val actionState = MutableStateFlow(CreateGroupActionState())
+    private val formState =
+        combine(title, searchQuery, selectedContactIds) { title, searchQuery, selectedContactIds ->
+            CreateGroupFormState(
+                title = title,
+                searchQuery = searchQuery,
+                selectedContactIds = selectedContactIds.toSet()
+            )
+        }
 
     val uiState: StateFlow<CreateGroupUiState> =
         combine(
             observeContactsWithProfilePictures(),
-            formState
-        ) { snapshot, form ->
+            formState,
+            actionState
+        ) { snapshot, form, action ->
             snapshot.contacts.toUiState(
                 profilePictures = snapshot.profilePictures,
                 title = form.title,
                 searchQuery = form.searchQuery,
                 selectedContactIds = form.selectedContactIds,
-                isCreating = form.isCreating,
-                errorMessage = form.errorMessage ?: snapshot.errorMessage
+                isCreating = action.isCreating,
+                errorMessage = action.errorMessage ?: snapshot.errorMessage
             )
         }.stateIn(
             scope = viewModelScope,
@@ -86,30 +101,28 @@ class CreateGroupViewModel(
             }
 
     private fun requestBack() {
-        formState.value = CreateGroupFormState()
+        clearForm()
         _effects.trySend(CreateGroupEffect.BackRequested)
     }
 
-    private fun updateTitle(title: String) {
-        formState.update { it.copy(title = title, errorMessage = null) }
+    private fun updateTitle(value: String) {
+        title.value = value
+        clearActionError()
     }
 
     private fun updateSearchQuery(query: String) {
-        formState.update { it.copy(searchQuery = query, errorMessage = null) }
+        searchQuery.value = query
+        clearActionError()
     }
 
     private fun toggleContactSelection(contactId: String) {
-        formState.update { state ->
-            val selectedContactIds =
-                state.selectedContactIds.toMutableSet().apply {
-                    if (!add(contactId)) remove(contactId)
-                }
+        if (actionState.value.isCreating) return
 
-            state.copy(
-                selectedContactIds = selectedContactIds,
-                errorMessage = null
-            )
-        }
+        selectedContactIds.value =
+            selectedContactIds.value.toMutableList().apply {
+                if (!remove(contactId)) add(contactId)
+            }.toTypedArray()
+        clearActionError()
     }
 
     private fun createGroup() {
@@ -117,21 +130,30 @@ class CreateGroupViewModel(
         if (!state.canCreate) return
 
         viewModelScope.launch {
-            formState.update { it.copy(isCreating = true, errorMessage = null) }
+            actionState.value = CreateGroupActionState(isCreating = true)
 
             createGroupConversation(state.title, state.selectedContactIds)
                 .onSuccess { conversationId ->
-                    formState.update { it.copy(isCreating = false) }
+                    clearForm()
                     _effects.send(CreateGroupEffect.GroupCreated(conversationId))
                 }.onFailure { error ->
-                    formState.update {
-                        it.copy(
-                            isCreating = false,
+                    actionState.value =
+                        CreateGroupActionState(
                             errorMessage = error.message ?: "Group could not be created"
                         )
-                    }
                 }
         }
+    }
+
+    private fun clearForm() {
+        title.value = ""
+        searchQuery.value = ""
+        selectedContactIds.value = emptyArray()
+        actionState.value = CreateGroupActionState()
+    }
+
+    private fun clearActionError() {
+        actionState.update { state -> state.copy(errorMessage = null) }
     }
 
     private data class ContactsSnapshot(
@@ -143,8 +165,17 @@ class CreateGroupViewModel(
     private data class CreateGroupFormState(
         val title: String = "",
         val searchQuery: String = "",
-        val selectedContactIds: Set<String> = emptySet(),
+        val selectedContactIds: Set<String> = emptySet()
+    )
+
+    private data class CreateGroupActionState(
         val isCreating: Boolean = false,
         val errorMessage: String? = null
     )
+
+    private companion object {
+        const val TITLE_KEY = "title"
+        const val SEARCH_QUERY_KEY = "searchQuery"
+        const val SELECTED_CONTACT_IDS_KEY = "selectedContactIds"
+    }
 }

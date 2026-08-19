@@ -1,8 +1,10 @@
 package com.cbgm.sparrow.feature.chats.presentation.group.screen
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
+import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
@@ -40,7 +42,7 @@ import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
 class GroupViewModel(
-    private val groupId: String,
+    savedStateHandle: SavedStateHandle,
     observeConversation: ObserveGroupConversationUseCase,
     observeAdministration: ObserveGroupAdministrationUseCase,
     private val sendMessage: SendGroupMessageUseCase,
@@ -54,8 +56,10 @@ class GroupViewModel(
     private val observeMemberTyping: ObserveGroupMemberTypingUseCase,
     private val setGroupTyping: SetGroupTypingUseCase
 ) : BaseViewModel() {
+    private val groupId =
+        savedStateHandle.requireRouteArgument<String>(AppRoute.GroupConversation::conversationId.name)
     private val logger = SparrowLog.withTag("GroupViewModel")
-    private val messageText = MutableStateFlow("")
+    private val messageText = savedStateHandle.getMutableStateFlow(MESSAGE_TEXT_KEY, "")
     private val errorMessage = MutableStateFlow<String?>(null)
     private val typingContactIds = MutableStateFlow<Set<String>>(emptySet())
     private val typingObserverJobs = mutableMapOf<String, Job>()
@@ -325,6 +329,7 @@ class GroupViewModel(
     )
 
     private companion object {
+        const val MESSAGE_TEXT_KEY = "messageText"
         const val LOCAL_TYPING_TIMEOUT_MILLISECONDS = 1500
         const val REMOTE_TYPING_TIMEOUT_MILLISECONDS = 3000
     }

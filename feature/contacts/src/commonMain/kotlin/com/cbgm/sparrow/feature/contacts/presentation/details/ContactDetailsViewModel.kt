@@ -1,7 +1,9 @@
 package com.cbgm.sparrow.feature.contacts.presentation.details
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
+import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
@@ -28,12 +30,14 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ContactDetailsViewModel(
-    private val contactId: String,
+    savedStateHandle: SavedStateHandle,
     private val observeContact: ObserveContactUseCase,
     private val getContactSafetyNumber: GetContactSafetyNumberUseCase,
     private val verifyContact: VerifyContactUseCase,
     private val observeProfilePicture: ObserveContactProfilePictureUseCase
 ) : BaseViewModel() {
+    private val contactId =
+        savedStateHandle.requireRouteArgument<String>(AppRoute.ContactDetails::contactId.name)
     private val reloadRevision = MutableStateFlow(0)
     private val verificationState = MutableStateFlow(VerificationActionState())
 

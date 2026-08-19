@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.contactimport.presentation.importing
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
@@ -14,10 +15,17 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class ImportIdentityViewModel(
-    private val route: AppRoute.ImportContact,
+    private val savedStateHandle: SavedStateHandle,
     private val importSharedIdentity: ImportSharedIdentityUseCase
 ) : BaseViewModel() {
-    private val _uiState = MutableStateFlow(ImportIdentityUiState())
+    private val contactId = savedStateHandle.get<String>(AppRoute.ImportContact::contactId.name)
+    private val scannedIdentity = savedStateHandle.get<String>(AppRoute.ImportContact::scannedIdentity.name)
+    private val _uiState =
+        MutableStateFlow(
+            ImportIdentityUiState(
+                encodedIdentity = savedStateHandle.get<String>(ENCODED_IDENTITY_KEY).orEmpty()
+            )
+        )
     val uiState: StateFlow<ImportIdentityUiState> = _uiState.asStateFlow()
 
     fun onUiEvent(event: ImportIdentityUiEvent) {
@@ -32,13 +40,14 @@ class ImportIdentityViewModel(
     private fun scanQrCode() {
         navigator.navigateTo(
             AppRoute.ScanIdentity(
-                contactId = route.contactId,
-                previousScannedIdentity = route.scannedIdentity
+                contactId = contactId,
+                previousScannedIdentity = scannedIdentity
             )
         )
     }
 
     private fun updateEncodedIdentity(value: String) {
+        savedStateHandle[ENCODED_IDENTITY_KEY] = value
         _uiState.update {
             it.copy(
                 encodedIdentity = value,
@@ -79,6 +88,7 @@ class ImportIdentityViewModel(
                 contactId = contactId,
                 identityImportTrust = identityImportTrust
             ).onSuccess { contact ->
+                savedStateHandle[ENCODED_IDENTITY_KEY] = ""
                 _uiState.update {
                     it.copy(
                         isImporting = false,
@@ -98,5 +108,9 @@ class ImportIdentityViewModel(
                 }
             }
         }
+    }
+
+    private companion object {
+        const val ENCODED_IDENTITY_KEY = "encodedIdentity"
     }
 }

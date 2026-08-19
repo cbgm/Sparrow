@@ -1,9 +1,11 @@
 package com.cbgm.sparrow.feature.chats.presentation.direct.screen
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
+import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.MarkDirectConversationReadUseCase
@@ -35,9 +37,7 @@ import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
 class DirectViewModel(
-    private val conversationId: String,
-    private val contactId: String,
-    private val fallbackContactName: String,
+    savedStateHandle: SavedStateHandle,
     observeConversation: ObserveDirectConversationUseCase,
     private val sendMessage: SendDirectMessageUseCase,
     private val markConversationRead: MarkDirectConversationReadUseCase,
@@ -50,8 +50,14 @@ class DirectViewModel(
     private val observeTyping: ObserveDirectTypingUseCase,
     private val setTyping: SetDirectTypingUseCase
 ) : BaseViewModel() {
+    private val conversationId =
+        savedStateHandle.requireRouteArgument<String>(AppRoute.Chat::conversationId.name)
+    private val contactId =
+        savedStateHandle.requireRouteArgument<String>(AppRoute.Chat::contactId.name)
+    private val fallbackContactName =
+        savedStateHandle.requireRouteArgument<String>(AppRoute.Chat::contactName.name)
     private val logger = SparrowLog.withTag("DirectViewModel")
-    private val messageText = MutableStateFlow("")
+    private val messageText = savedStateHandle.getMutableStateFlow(MESSAGE_TEXT_KEY, "")
     private val errorMessage = MutableStateFlow<String?>(null)
     private val isContactTyping = MutableStateFlow(false)
     private var localTypingStopJob: Job? = null
@@ -263,6 +269,7 @@ class DirectViewModel(
     )
 
     private companion object {
+        const val MESSAGE_TEXT_KEY = "messageText"
         const val LOCAL_TYPING_TIMEOUT_MILLISECONDS = 1500
         const val REMOTE_TYPING_TIMEOUT_MILLISECONDS = 3000
     }

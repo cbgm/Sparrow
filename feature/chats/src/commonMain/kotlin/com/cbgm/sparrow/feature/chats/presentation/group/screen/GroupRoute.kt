@@ -7,13 +7,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.compose.viewmodel.koinViewModel
-import org.koin.core.parameter.parametersOf
 
 @Composable
 fun GroupRoute(
     conversationId: String,
     modifier: Modifier = Modifier,
-    viewModel: GroupViewModel = koinViewModel { parametersOf(conversationId) }
+    viewModel: GroupViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
