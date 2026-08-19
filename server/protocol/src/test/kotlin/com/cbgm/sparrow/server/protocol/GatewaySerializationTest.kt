@@ -8,6 +8,25 @@ import kotlin.test.assertNotNull
 
 class GatewaySerializationTest {
     @Test
+    fun registeredFrameContainsOnlyStableTransportIdentity() {
+        val encoded =
+            serverJson.encodeToString<GatewayServerMessage>(
+                GatewayServerMessage.Registered(routingId = "routing-id")
+            )
+
+        assertFalse("nodeId" in encoded)
+        assertFalse("routeLifetimeMilliseconds" in encoded)
+        assertFalse("routeRefreshIntervalMilliseconds" in encoded)
+        assertFalse("serverTimeEpochMilliseconds" in encoded)
+
+        val decoded =
+            serverJson.decodeFromString<GatewayServerMessage>(encoded)
+                as GatewayServerMessage.Registered
+
+        assertEquals("routing-id", decoded.routingId)
+    }
+
+    @Test
     fun legacyRegisterFrameStillDecodes() {
         val message =
             serverJson.decodeFromString<GatewayClientMessage>(

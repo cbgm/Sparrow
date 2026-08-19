@@ -10,13 +10,28 @@ import kotlin.test.assertTrue
 
 class ClientPresenceRouteStateMachineTest {
     @Test
-    fun gatewayRegistrationStartsPresencePreparationImmediately() {
+    fun gatewayRegistrationLoadsRouteInformationImmediately() {
+        val transition =
+            ClientPresenceRouteStateMachine.transition(
+                current = ClientPresenceRouteState.AwaitingGatewayRegistration,
+                event = ClientPresenceRouteEvent.GatewayRegistered
+            )
+
+        assertIs<ClientPresenceRouteState.LoadingGatewayInformation>(transition.state)
+        assertEquals(
+            listOf(ClientPresenceRouteEffect.LoadGatewayInformation),
+            transition.effects
+        )
+    }
+
+    @Test
+    fun loadedGatewayInformationPreparesPresenceImmediately() {
         val gatewayInformation = gatewayInformation()
 
         val transition =
             ClientPresenceRouteStateMachine.transition(
-                current = ClientPresenceRouteState.AwaitingGatewayRegistration,
-                event = ClientPresenceRouteEvent.GatewayRegistered(gatewayInformation)
+                current = ClientPresenceRouteState.LoadingGatewayInformation,
+                event = ClientPresenceRouteEvent.GatewayInformationLoaded(gatewayInformation)
             )
 
         assertIs<ClientPresenceRouteState.PreparingRegistration>(transition.state)
@@ -64,6 +79,7 @@ class ClientPresenceRouteStateMachineTest {
         assertEquals(aliases, ready.aliases)
         assertEquals(
             listOf(
+                ClientPresenceRouteEffect.AnnounceReady(aliases),
                 ClientPresenceRouteEffect.ScheduleRefresh(
                     gatewayInformation.routeRefreshIntervalMilliseconds
                 )
@@ -144,7 +160,7 @@ class ClientPresenceRouteStateMachineTest {
     }
 
     @Test
-    fun legacyGatewayLeavesClockSkewSafetyMargin() {
+    fun gatewayWithoutServerClockLeavesClockSkewSafetyMargin() {
         val localNow = 1_000_000L
         val gatewayInformation = gatewayInformation()
 
@@ -158,7 +174,7 @@ class ClientPresenceRouteStateMachineTest {
     }
 
     @Test
-    fun legacySafetyMarginNeverExpiresBeforeFirstRefresh() {
+    fun safetyMarginNeverExpiresBeforeFirstRefresh() {
         val localNow = 1_000_000L
         val gatewayInformation =
             GatewayNodeInformation(

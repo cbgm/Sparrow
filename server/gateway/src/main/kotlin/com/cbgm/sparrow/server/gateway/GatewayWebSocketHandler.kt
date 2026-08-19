@@ -3,7 +3,6 @@ package com.cbgm.sparrow.server.gateway
 import com.cbgm.sparrow.server.protocol.EnvelopeAcceptanceState
 import com.cbgm.sparrow.server.protocol.FederatedEnvelope
 import com.cbgm.sparrow.server.protocol.FederatedTypingEvent
-import com.cbgm.sparrow.server.protocol.GatewayNodeInformation
 import com.cbgm.sparrow.server.protocol.GatewayServerMessage
 import com.cbgm.sparrow.server.protocol.TransportEnvelope
 import io.ktor.server.websocket.DefaultWebSocketServerSession
@@ -35,12 +34,6 @@ class GatewayWebSocketHandler(
                     acknowledge = pushDispatcher::acknowledge
                 ),
             routeValidator = GatewayRouteValidator(routeLifetimeMilliseconds),
-            gatewayInformation =
-                GatewayNodeInformation(
-                    nodeId = nodeId,
-                    routeLifetimeMilliseconds = routeLifetimeMilliseconds,
-                    routeRefreshIntervalMilliseconds = routeRefreshIntervalMilliseconds
-                ),
             actions =
                 GatewayMessageActions(
                     sendEnvelope = { connection, message ->

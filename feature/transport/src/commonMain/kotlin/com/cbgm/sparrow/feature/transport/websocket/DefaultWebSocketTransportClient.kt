@@ -7,7 +7,6 @@ import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayClientMessage
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayEnvelopeAcceptance
-import com.cbgm.sparrow.feature.transport.gateway.model.GatewayNodeInformation
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayServerMessage
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayTypingEvent
 import com.cbgm.sparrow.feature.transport.gateway.model.TransportEnvelope
@@ -277,6 +276,7 @@ class DefaultWebSocketTransportClient internal constructor(
 
                 val presenceConnection =
                     PresenceRouteConnection(
+                        serverUrl = serverUrl,
                         routingId = localRoutingId,
                         connectionId = connectionId,
                         generation = generation
@@ -326,8 +326,8 @@ class DefaultWebSocketTransportClient internal constructor(
                                 handleTextFrame(
                                     encodedMessage = frame.readText(),
                                     expectedRoutingId = localRoutingId,
-                                    onGatewayRegistered = { gatewayInformation ->
-                                        presenceSession.onGatewayRegistered(gatewayInformation)
+                                    onGatewayRegistered = {
+                                        presenceSession.onGatewayRegistered()
                                     },
                                     onRouteRegistered = { aliases ->
                                         presenceSession.onRouteAccepted(aliases)
@@ -490,7 +490,7 @@ class DefaultWebSocketTransportClient internal constructor(
     private suspend fun handleTextFrame(
         encodedMessage: String,
         expectedRoutingId: String,
-        onGatewayRegistered: (GatewayNodeInformation) -> Unit,
+        onGatewayRegistered: () -> Unit,
         onRouteRegistered: (Set<String>) -> Unit,
         onRouteRejected: (Throwable) -> Unit
     ) {
@@ -521,15 +521,7 @@ class DefaultWebSocketTransportClient internal constructor(
 
                 mutableRegisteredRoutingAliases.value = emptySet()
 
-                onGatewayRegistered(
-                    GatewayNodeInformation(
-                        nodeId = message.nodeId,
-                        routeLifetimeMilliseconds = message.routeLifetimeMilliseconds,
-                        routeRefreshIntervalMilliseconds = message.routeRefreshIntervalMilliseconds,
-                        serverTimeEpochMilliseconds = message.serverTimeEpochMilliseconds,
-                        serverTimeObservedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
-                    )
-                )
+                onGatewayRegistered()
             }
 
             is GatewayServerMessage.RouteRegistered -> {

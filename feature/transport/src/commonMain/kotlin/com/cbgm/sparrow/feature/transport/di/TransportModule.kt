@@ -124,6 +124,7 @@ val transportModule =
 
         single {
             ClientPresenceRouteCoordinator(
+                httpClient = get<HttpClient>(),
                 registrationFactory = get<ClientRouteRegistrationFactory>(),
                 localBootstrapRoutingIdProvider = get<LocalBootstrapRoutingIdProvider>()
             )

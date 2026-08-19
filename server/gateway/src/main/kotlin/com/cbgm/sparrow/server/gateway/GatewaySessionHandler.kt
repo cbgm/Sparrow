@@ -3,7 +3,6 @@ package com.cbgm.sparrow.server.gateway
 import com.cbgm.sparrow.server.protocol.ClientRoute
 import com.cbgm.sparrow.server.protocol.ClientRouteRegistration
 import com.cbgm.sparrow.server.protocol.GatewayClientMessage
-import com.cbgm.sparrow.server.protocol.GatewayNodeInformation
 import com.cbgm.sparrow.server.protocol.GatewayServerMessage
 import com.cbgm.sparrow.server.protocol.serverJson
 import io.ktor.server.websocket.DefaultWebSocketServerSession
@@ -18,7 +17,6 @@ internal class GatewaySessionHandler(
     private val presence: PresenceClient,
     private val pushActions: GatewayPushActions,
     private val routeValidator: GatewayRouteValidator,
-    private val gatewayInformation: GatewayNodeInformation,
     private val actions: GatewayMessageActions
 ) {
     suspend fun handle(session: DefaultWebSocketServerSession) {
@@ -178,11 +176,7 @@ internal class GatewaySessionHandler(
         connections.register(connection)
         connection.send(
             GatewayServerMessage.Registered(
-                routingId = connection.routingId,
-                nodeId = gatewayInformation.nodeId,
-                routeLifetimeMilliseconds = gatewayInformation.routeLifetimeMilliseconds,
-                routeRefreshIntervalMilliseconds = gatewayInformation.routeRefreshIntervalMilliseconds,
-                serverTimeEpochMilliseconds = System.currentTimeMillis()
+                routingId = connection.routingId
             )
         )
         pushActions.deliverPending(connection)

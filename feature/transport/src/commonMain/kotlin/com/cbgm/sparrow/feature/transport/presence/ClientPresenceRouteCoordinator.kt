@@ -5,6 +5,9 @@ import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.transport.gateway.model.ClientRouteRegistration
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayNodeInformation
 import com.cbgm.sparrow.feature.transport.routing.LocalBootstrapRoutingIdProvider
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.request.get
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -13,8 +16,10 @@ import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
 private const val MAX_COMPATIBILITY_CLOCK_SKEW_MILLISECONDS = 30_000L
+private const val SERVER_TIME_HEADER = "X-Sparrow-Server-Time"
 
 internal class ClientPresenceRouteCoordinator(
+    private val httpClient: HttpClient,
     private val registrationFactory: ClientRouteRegistrationFactory,
     private val localBootstrapRoutingIdProvider: LocalBootstrapRoutingIdProvider
 ) {
@@ -28,6 +33,7 @@ internal class ClientPresenceRouteCoordinator(
         ClientPresenceRouteSession(
             scope = scope,
             connection = connection,
+            httpClient = httpClient,
             registrationFactory = registrationFactory,
             localBootstrapRoutingIdProvider = localBootstrapRoutingIdProvider,
             publishRoute = publishRoute,
@@ -39,6 +45,7 @@ internal class ClientPresenceRouteCoordinator(
 internal class ClientPresenceRouteSession(
     private val scope: CoroutineScope,
     private val connection: PresenceRouteConnection,
+    private val httpClient: HttpClient,
     private val registrationFactory: ClientRouteRegistrationFactory,
     private val localBootstrapRoutingIdProvider: LocalBootstrapRoutingIdProvider,
     private val publishRoute: suspend (ClientRouteRegistration) -> Result<Unit>,
@@ -60,12 +67,8 @@ internal class ClientPresenceRouteSession(
             }
         }
 
-    fun onGatewayRegistered(gatewayInformation: GatewayNodeInformation) {
-        events.trySend(
-            ClientPresenceRouteEvent.GatewayRegistered(
-                gatewayInformation = gatewayInformation
-            )
-        )
+    fun onGatewayRegistered() {
+        events.trySend(ClientPresenceRouteEvent.GatewayRegistered)
     }
 
     fun onRouteAccepted(aliases: Set<String>) {
@@ -84,6 +87,8 @@ internal class ClientPresenceRouteSession(
 
     private suspend fun execute(effect: ClientPresenceRouteEffect) {
         when (effect) {
+            ClientPresenceRouteEffect.LoadGatewayInformation -> loadGatewayInformation()
+
             is ClientPresenceRouteEffect.PrepareRegistration ->
                 prepareRegistration(effect.gatewayInformation)
 
@@ -93,11 +98,49 @@ internal class ClientPresenceRouteSession(
             is ClientPresenceRouteEffect.ScheduleRefresh ->
                 scheduleRefresh(effect.delayMilliseconds)
 
+            is ClientPresenceRouteEffect.AnnounceReady -> {
+                logger.info {
+                    "Presence route ready for ${connection.routingId}; aliases=${effect.aliases.size}"
+                }
+                onReady(effect.aliases)
+            }
+
             is ClientPresenceRouteEffect.Fail -> {
                 logger.warn { "Presence route failed: ${effect.error.message ?: "unknown error"}" }
                 onFailure(effect.error)
             }
         }
+    }
+
+    private suspend fun loadGatewayInformation() {
+        runCatching {
+            val response = httpClient.get(gatewayInformationUrl(connection.serverUrl))
+            val gatewayInformation = response.body<GatewayNodeInformation>()
+            val serverTimeEpochMilliseconds =
+                response.headers[SERVER_TIME_HEADER]
+                    ?.toLongOrNull()
+
+            gatewayInformation.copy(
+                serverTimeEpochMilliseconds = serverTimeEpochMilliseconds,
+                serverTimeObservedAtEpochMilliseconds =
+                    serverTimeEpochMilliseconds?.let { SystemClock.nowEpochMilliseconds() }
+            )
+        }.fold(
+            onSuccess = { gatewayInformation ->
+                events.send(
+                    ClientPresenceRouteEvent.GatewayInformationLoaded(
+                        gatewayInformation = gatewayInformation
+                    )
+                )
+            },
+            onFailure = { error ->
+                events.send(
+                    ClientPresenceRouteEvent.GatewayInformationLoadFailed(
+                        error = error
+                    )
+                )
+            }
+        )
     }
 
     private suspend fun prepareRegistration(gatewayInformation: GatewayNodeInformation) {
@@ -108,17 +151,14 @@ internal class ClientPresenceRouteSession(
                 ?.let(::listOf)
                 .orEmpty()
 
-        val result =
-            registrationFactory.create(
-                routingId = connection.routingId,
-                nodeId = gatewayInformation.nodeId,
-                connectionId = connection.connectionId,
-                generation = connection.generation,
-                expiresAtEpochMilliseconds = routeExpirationEpochMilliseconds(gatewayInformation),
-                aliases = aliases
-            )
-
-        result.fold(
+        registrationFactory.create(
+            routingId = connection.routingId,
+            nodeId = gatewayInformation.nodeId,
+            connectionId = connection.connectionId,
+            generation = connection.generation,
+            expiresAtEpochMilliseconds = routeExpirationEpochMilliseconds(gatewayInformation),
+            aliases = aliases
+        ).fold(
             onSuccess = { registration ->
                 events.send(
                     ClientPresenceRouteEvent.RegistrationPrepared(
@@ -137,20 +177,13 @@ internal class ClientPresenceRouteSession(
     }
 
     private suspend fun publishRegistration(registration: ClientRouteRegistration) {
-        publishRoute(registration).fold(
-            onSuccess = {
-                logger.debug {
-                    "Signed presence route sent for ${connection.routingId}; awaiting gateway acceptance"
-                }
-            },
-            onFailure = { error ->
-                events.send(
-                    ClientPresenceRouteEvent.RoutePublicationFailed(
-                        error = error
-                    )
+        publishRoute(registration).onFailure { error ->
+            events.send(
+                ClientPresenceRouteEvent.RoutePublicationFailed(
+                    error = error
                 )
-            }
-        )
+            )
+        }
     }
 
     private fun scheduleRefresh(delayMilliseconds: Long) {
@@ -164,10 +197,29 @@ internal class ClientPresenceRouteSession(
 }
 
 internal data class PresenceRouteConnection(
+    val serverUrl: String,
     val routingId: String,
     val connectionId: String,
     val generation: Long
 )
+
+internal fun gatewayInformationUrl(serverUrl: String): String {
+    val httpScheme =
+        when {
+            serverUrl.startsWith("wss://") -> "https://"
+            serverUrl.startsWith("ws://") -> "http://"
+            else -> error("Gateway WebSocket URL must use ws:// or wss://")
+        }
+    val authority =
+        serverUrl
+            .substringAfter("://")
+            .substringBefore('/')
+            .substringBefore('?')
+            .takeIf(String::isNotBlank)
+            ?: error("Gateway WebSocket URL must include a host")
+
+    return "$httpScheme$authority/v1/gateway/info"
+}
 
 internal fun routeExpirationEpochMilliseconds(
     gatewayInformation: GatewayNodeInformation,

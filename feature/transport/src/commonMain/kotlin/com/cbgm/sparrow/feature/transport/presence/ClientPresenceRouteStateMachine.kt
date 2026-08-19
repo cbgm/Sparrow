@@ -6,6 +6,8 @@ import com.cbgm.sparrow.feature.transport.gateway.model.GatewayNodeInformation
 internal sealed interface ClientPresenceRouteState {
     data object AwaitingGatewayRegistration : ClientPresenceRouteState
 
+    data object LoadingGatewayInformation : ClientPresenceRouteState
+
     data class PreparingRegistration(
         val gatewayInformation: GatewayNodeInformation
     ) : ClientPresenceRouteState
@@ -26,8 +28,14 @@ internal sealed interface ClientPresenceRouteState {
 }
 
 internal sealed interface ClientPresenceRouteEvent {
-    data class GatewayRegistered(
+    data object GatewayRegistered : ClientPresenceRouteEvent
+
+    data class GatewayInformationLoaded(
         val gatewayInformation: GatewayNodeInformation
+    ) : ClientPresenceRouteEvent
+
+    data class GatewayInformationLoadFailed(
+        val error: Throwable
     ) : ClientPresenceRouteEvent
 
     data class RegistrationPrepared(
@@ -54,6 +62,8 @@ internal sealed interface ClientPresenceRouteEvent {
 }
 
 internal sealed interface ClientPresenceRouteEffect {
+    data object LoadGatewayInformation : ClientPresenceRouteEffect
+
     data class PrepareRegistration(
         val gatewayInformation: GatewayNodeInformation
     ) : ClientPresenceRouteEffect
@@ -64,6 +74,10 @@ internal sealed interface ClientPresenceRouteEffect {
 
     data class ScheduleRefresh(
         val delayMilliseconds: Long
+    ) : ClientPresenceRouteEffect
+
+    data class AnnounceReady(
+        val aliases: Set<String>
     ) : ClientPresenceRouteEffect
 
     data class Fail(
@@ -77,39 +91,35 @@ internal data class ClientPresenceRouteTransition(
 )
 
 /**
- * Single source of truth for the client bootstrap/presence route lifecycle.
+ * Single source of truth for bootstrap/presence route initialization and refresh.
  *
- * Startup is entirely event driven. Gateway registration immediately prepares and publishes the
- * route. The only timer is the protocol-required refresh after the gateway has accepted the route.
+ * Startup is entirely reactive:
+ * gateway registration -> gateway information -> signed route -> gateway acknowledgement -> ready.
+ * The only timer is the protocol refresh timer after the route is ready.
  */
 internal object ClientPresenceRouteStateMachine {
     fun transition(
         current: ClientPresenceRouteState,
         event: ClientPresenceRouteEvent
     ): ClientPresenceRouteTransition =
-        when (current) {
-            ClientPresenceRouteState.AwaitingGatewayRegistration -> transitionFromAwaiting(event)
-            is ClientPresenceRouteState.PreparingRegistration -> transitionFromPreparing(current, event)
-            is ClientPresenceRouteState.PublishingRoute -> transitionFromPublishing(current, event)
-            is ClientPresenceRouteState.Ready -> transitionFromReady(current, event)
-            is ClientPresenceRouteState.Failed -> ClientPresenceRouteTransition(current)
-        }
+        when {
+            current is ClientPresenceRouteState.AwaitingGatewayRegistration &&
+                event is ClientPresenceRouteEvent.GatewayRegistered ->
+                ClientPresenceRouteTransition(
+                    state = ClientPresenceRouteState.LoadingGatewayInformation,
+                    effects = listOf(ClientPresenceRouteEffect.LoadGatewayInformation)
+                )
 
-    private fun transitionFromAwaiting(
-        event: ClientPresenceRouteEvent
-    ): ClientPresenceRouteTransition {
-        val registered = event as? ClientPresenceRouteEvent.GatewayRegistered
-            ?: invalidTransition(ClientPresenceRouteState.AwaitingGatewayRegistration, event)
+            current is ClientPresenceRouteState.LoadingGatewayInformation &&
+                event is ClientPresenceRouteEvent.GatewayInformationLoaded ->
+                preparingRegistration(event.gatewayInformation)
 
-        return preparingRegistration(registered.gatewayInformation)
-    }
+            current is ClientPresenceRouteState.LoadingGatewayInformation &&
+                event is ClientPresenceRouteEvent.GatewayInformationLoadFailed ->
+                failed(event.error)
 
-    private fun transitionFromPreparing(
-        current: ClientPresenceRouteState.PreparingRegistration,
-        event: ClientPresenceRouteEvent
-    ): ClientPresenceRouteTransition =
-        when (event) {
-            is ClientPresenceRouteEvent.RegistrationPrepared ->
+            current is ClientPresenceRouteState.PreparingRegistration &&
+                event is ClientPresenceRouteEvent.RegistrationPrepared ->
                 ClientPresenceRouteTransition(
                     state =
                         ClientPresenceRouteState.PublishingRoute(
@@ -119,43 +129,36 @@ internal object ClientPresenceRouteStateMachine {
                     effects = listOf(ClientPresenceRouteEffect.PublishRoute(event.registration))
                 )
 
-            is ClientPresenceRouteEvent.RegistrationPreparationFailed -> failed(event.error)
-            else -> invalidTransition(current, event)
-        }
+            current is ClientPresenceRouteState.PreparingRegistration &&
+                event is ClientPresenceRouteEvent.RegistrationPreparationFailed ->
+                failed(event.error)
 
-    private fun transitionFromPublishing(
-        current: ClientPresenceRouteState.PublishingRoute,
-        event: ClientPresenceRouteEvent
-    ): ClientPresenceRouteTransition =
-        when (event) {
-            is ClientPresenceRouteEvent.RouteAccepted ->
-                ClientPresenceRouteTransition(
-                    state =
-                        ClientPresenceRouteState.Ready(
-                            gatewayInformation = current.gatewayInformation,
-                            aliases = event.aliases
-                        ),
-                    effects =
-                        listOf(
-                            ClientPresenceRouteEffect.ScheduleRefresh(
-                                delayMilliseconds =
-                                    current.gatewayInformation.routeRefreshIntervalMilliseconds
-                            )
-                        )
+            current is ClientPresenceRouteState.PublishingRoute &&
+                event is ClientPresenceRouteEvent.RouteAccepted ->
+                ready(
+                    gatewayInformation = current.gatewayInformation,
+                    aliases = event.aliases
                 )
 
-            is ClientPresenceRouteEvent.RoutePublicationFailed -> failed(event.error)
-            is ClientPresenceRouteEvent.RouteRejected -> failed(event.error)
-            else -> invalidTransition(current, event)
-        }
+            current is ClientPresenceRouteState.PublishingRoute &&
+                event is ClientPresenceRouteEvent.RoutePublicationFailed ->
+                failed(event.error)
 
-    private fun transitionFromReady(
-        current: ClientPresenceRouteState.Ready,
-        event: ClientPresenceRouteEvent
-    ): ClientPresenceRouteTransition =
-        when (event) {
-            ClientPresenceRouteEvent.RefreshDue -> preparingRegistration(current.gatewayInformation)
-            is ClientPresenceRouteEvent.RouteRejected -> failed(event.error)
+            current is ClientPresenceRouteState.PublishingRoute &&
+                event is ClientPresenceRouteEvent.RouteRejected ->
+                failed(event.error)
+
+            current is ClientPresenceRouteState.Ready &&
+                event is ClientPresenceRouteEvent.RefreshDue ->
+                preparingRegistration(current.gatewayInformation)
+
+            current is ClientPresenceRouteState.Ready &&
+                event is ClientPresenceRouteEvent.RouteRejected ->
+                failed(event.error)
+
+            current is ClientPresenceRouteState.Failed ->
+                ClientPresenceRouteTransition(current)
+
             else -> invalidTransition(current, event)
         }
 
@@ -165,6 +168,25 @@ internal object ClientPresenceRouteStateMachine {
         ClientPresenceRouteTransition(
             state = ClientPresenceRouteState.PreparingRegistration(gatewayInformation),
             effects = listOf(ClientPresenceRouteEffect.PrepareRegistration(gatewayInformation))
+        )
+
+    private fun ready(
+        gatewayInformation: GatewayNodeInformation,
+        aliases: Set<String>
+    ): ClientPresenceRouteTransition =
+        ClientPresenceRouteTransition(
+            state =
+                ClientPresenceRouteState.Ready(
+                    gatewayInformation = gatewayInformation,
+                    aliases = aliases
+                ),
+            effects =
+                listOf(
+                    ClientPresenceRouteEffect.AnnounceReady(aliases),
+                    ClientPresenceRouteEffect.ScheduleRefresh(
+                        delayMilliseconds = gatewayInformation.routeRefreshIntervalMilliseconds
+                    )
+                )
         )
 
     private fun failed(error: Throwable): ClientPresenceRouteTransition =
