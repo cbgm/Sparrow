@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.core.crypto.identity
 
 import com.cbgm.sparrow.core.crypto.SodiumRuntime
+import com.cbgm.sparrow.core.crypto.error.SignatureVerificationException
 import com.ionspin.kotlin.crypto.signature.Signature
 
 class SodiumIdentityAcknowledgementCrypto(
@@ -55,10 +56,14 @@ class SodiumIdentityAcknowledgementCrypto(
                     senderSigningPublicKey = senderSigningPublicKey
                 )
 
-            Signature.verifyDetached(
-                signature = signature.toUByteArray(),
-                message = payload.toUByteArray(),
-                publicKey = senderSigningPublicKey.toUByteArray()
-            )
+            try {
+                Signature.verifyDetached(
+                    signature = signature.toUByteArray(),
+                    message = payload.toUByteArray(),
+                    publicKey = senderSigningPublicKey.toUByteArray()
+                )
+            } catch (error: Throwable) {
+                throw SignatureVerificationException(error)
+            }
         }
 }
