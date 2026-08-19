@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.messaging.application.incoming
 
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.handler.IncomingMessageHandler
+import com.cbgm.sparrow.core.protocol.handler.IncomingMessageRejectedException
 import com.cbgm.sparrow.core.protocol.identity.LocalEncryptionKeyPairProvider
 import com.cbgm.sparrow.feature.messaging.application.routing.ContactByRoutingIdResolver
 
@@ -36,12 +37,19 @@ class DefaultIncomingEnvelopeProcessor(
                     .getEncryptionKeyPair()
                     .getOrThrow()
 
-            incomingMessageHandler.handle(
-                contactId = contactId,
-                encodedTransportPayload = encodedTransportPayload,
-                localEncryptionPublicKey = keyPair.publicKey,
-                localEncryptionPrivateKey = keyPair.privateKey
-            )
+            try {
+                incomingMessageHandler.handle(
+                    contactId = contactId,
+                    encodedTransportPayload = encodedTransportPayload,
+                    localEncryptionPublicKey = keyPair.publicKey,
+                    localEncryptionPrivateKey = keyPair.privateKey
+                )
+            } catch (error: IncomingMessageRejectedException) {
+                logger.warn {
+                    "Incoming envelope rejected permanently: envelopeId=$envelopeId, reason=${error.message}"
+                }
+                return@runCatching IncomingEnvelopeProcessingResult.Rejected
+            }
 
             contactByRoutingIdResolver
                 .reconcileKnownContacts()

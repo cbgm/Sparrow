@@ -1,10 +1,12 @@
 package com.cbgm.sparrow.feature.chats.data.incoming
 
+import com.cbgm.sparrow.core.crypto.error.SignatureVerificationException
 import com.cbgm.sparrow.core.crypto.transport.DecodedTransportMessage
 import com.cbgm.sparrow.core.crypto.transport.IncomingTransportMessageDecoder
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.core.protocol.codec.PacketCodec
 import com.cbgm.sparrow.core.protocol.handler.IncomingMessageHandler
+import com.cbgm.sparrow.core.protocol.handler.IncomingMessageRejectedException
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacket
 import com.cbgm.sparrow.feature.chats.data.storage.UnreadableTransportMessageStorage
@@ -89,8 +91,12 @@ class IncomingPacketProcessor(
     ) {
         val packet =
             packetCodec.decode(decoded.plaintext).getOrElse { error ->
-                throw IllegalArgumentException("Invalid protocol packet", error)
+                throw IncomingMessageRejectedException(
+                    message = "Invalid protocol packet",
+                    cause = error
+                )
             }
+
         packetRouter
             .route(
                 DecodedIncomingPacket(
@@ -100,7 +106,15 @@ class IncomingPacketProcessor(
                     transportMode = decoded.mode.name,
                     receivedAtEpochMilliseconds = receivedAt
                 )
-            ).getOrThrow()
+            ).getOrElse { error ->
+                if (error is SignatureVerificationException) {
+                    throw IncomingMessageRejectedException(
+                        message = "Incoming packet signature is invalid",
+                        cause = error
+                    )
+                }
+                throw error
+            }
     }
 
     private suspend fun storeUnreadable(

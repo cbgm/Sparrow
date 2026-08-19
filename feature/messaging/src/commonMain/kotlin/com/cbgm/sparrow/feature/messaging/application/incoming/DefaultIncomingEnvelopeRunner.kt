@@ -57,16 +57,17 @@ class DefaultIncomingEnvelopeRunner(
                         encodedTransportPayload = encodedTransportPayload
                     ).getOrThrow()
             ) {
-                IncomingEnvelopeProcessingResult.Processed -> {
-                    incomingEnvelopeGateway
-                        .acknowledge(
-                            envelopeId = envelopeId
-                        ).getOrThrow()
+                IncomingEnvelopeProcessingResult.Processed ->
+                    acknowledgeEnvelope(
+                        envelopeId = envelopeId,
+                        rejected = false
+                    )
 
-                    logger.debug {
-                        "Incoming envelope acknowledged: envelopeId=$envelopeId"
-                    }
-                }
+                IncomingEnvelopeProcessingResult.Rejected ->
+                    acknowledgeEnvelope(
+                        envelopeId = envelopeId,
+                        rejected = true
+                    )
 
                 IncomingEnvelopeProcessingResult.UnknownSender -> Unit
             }
@@ -79,6 +80,26 @@ class DefaultIncomingEnvelopeRunner(
         ) {
             logger.error(error) {
                 "Incoming envelope failed: envelopeId=$envelopeId"
+            }
+        }
+    }
+
+    private suspend fun acknowledgeEnvelope(
+        envelopeId: String,
+        rejected: Boolean
+    ) {
+        incomingEnvelopeGateway
+            .acknowledge(
+                envelopeId = envelopeId
+            ).getOrThrow()
+
+        if (rejected) {
+            logger.warn {
+                "Rejected incoming envelope acknowledged and discarded: envelopeId=$envelopeId"
+            }
+        } else {
+            logger.debug {
+                "Incoming envelope acknowledged: envelopeId=$envelopeId"
             }
         }
     }
