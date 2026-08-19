@@ -292,6 +292,7 @@ val contactsModule =
 
         viewModel {
             BlockedContactsViewModel(
+                savedStateHandle = get(),
                 observeContactBlocklist = get(),
                 blockContact = get(),
                 unblockContact = get(),
@@ -301,15 +302,16 @@ val contactsModule =
 
         viewModel {
             ContactsViewModel(
+                savedStateHandle = get(),
                 observeContacts = get(),
                 importDeviceContacts = get(),
                 observeProfilePictures = get()
             )
         }
 
-        viewModel { parameters ->
+        viewModel {
             ContactDetailsViewModel(
-                contactId = parameters.get(),
+                savedStateHandle = get(),
                 observeContact = get(),
                 getContactSafetyNumber = get(),
                 verifyContact = get(),

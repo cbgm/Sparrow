@@ -21,16 +21,12 @@ import com.cbgm.sparrow.resources.feature_contactimport_invalid_identity_qr
 import com.cbgm.sparrow.resources.feature_contactimport_trust_and_verify
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
-import org.koin.compose.viewmodel.koinViewModel
-import org.koin.core.parameter.parametersOf
+import org.koin.compose.viewmodel.koinNavViewModel
 
 @Composable
 fun ContactQrVerificationFlow(
     contactId: String,
-    viewModel: VerifyContactQrViewModel =
-        koinViewModel {
-            parametersOf(contactId)
-        },
+    viewModel: VerifyContactQrViewModel = koinNavViewModel(),
     identityShareRepository: IdentityShareRepository = koinInject()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()

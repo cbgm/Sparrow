@@ -18,18 +18,12 @@ import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_contactimport_trust_and_import
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
-import org.koin.compose.viewmodel.koinViewModel
-import org.koin.core.parameter.parametersOf
+import org.koin.compose.viewmodel.koinNavViewModel
 
 @Composable
 fun ImportIdentityRoute(
     route: AppRoute.ImportContact,
-    viewModel: ImportIdentityViewModel =
-        koinViewModel(
-            parameters = {
-                parametersOf(route)
-            }
-        ),
+    viewModel: ImportIdentityViewModel = koinNavViewModel(),
     identityShareRepository: IdentityShareRepository = koinInject()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()

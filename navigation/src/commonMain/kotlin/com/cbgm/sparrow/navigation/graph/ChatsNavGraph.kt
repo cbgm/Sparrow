@@ -22,9 +22,7 @@ fun NavGraphBuilder.chatsNavGraph() {
         val destination = backStackEntry.toRoute<AppRoute.Chat>()
 
         DirectRoute(
-            conversationId = destination.conversationId,
-            contactId = destination.contactId,
-            contactName = destination.contactName
+            contactId = destination.contactId
         )
     }
 

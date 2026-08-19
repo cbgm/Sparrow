@@ -61,7 +61,6 @@ fun DetailsRoute(
 
         is DetailsTarget.Group -> {
             GroupDetailsFlow(
-                conversationId = target.conversationId,
                 requestLeave = requestGroupLeave
             )
         }

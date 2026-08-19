@@ -136,6 +136,7 @@ val settingsModule =
 
         viewModel {
             ControlPlaneSettingsViewModel(
+                savedStateHandle = get(),
                 configuration = get(),
                 statusStore = get(),
                 healthMonitor = get(),

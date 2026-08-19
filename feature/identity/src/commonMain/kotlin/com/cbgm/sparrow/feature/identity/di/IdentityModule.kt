@@ -185,6 +185,7 @@ val identityModule =
 
         viewModel {
             IdentityViewModel(
+                savedStateHandle = get(),
                 getIdentityStatus = get<GetIdentityStatusUseCase>(),
                 getPublicIdentity = get<GetPublicIdentityUseCase>(),
                 createIdentity = get<CreateIdentityUseCase>(),

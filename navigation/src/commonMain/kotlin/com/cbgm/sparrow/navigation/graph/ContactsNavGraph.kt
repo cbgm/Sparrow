@@ -32,9 +32,7 @@ fun NavGraphBuilder.contactsNavGraph() {
         )
     }
 
-    composable<AppRoute.ScanIdentity> { backStackEntry ->
-        ScanIdentityNavigationRoute(
-            route = backStackEntry.toRoute<AppRoute.ScanIdentity>()
-        )
+    composable<AppRoute.ScanIdentity> {
+        ScanIdentityNavigationRoute()
     }
 }

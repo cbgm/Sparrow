@@ -1,12 +1,17 @@
 package com.cbgm.sparrow.feature.contactimport.presentation.scan
 
+import androidx.lifecycle.SavedStateHandle
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.contactimport.presentation.scan.model.ScanIdentityUiEvent
 
 class ScanIdentityNavigationViewModel(
-    private val route: AppRoute.ScanIdentity
+    savedStateHandle: SavedStateHandle
 ) : BaseViewModel() {
+    private val contactId = savedStateHandle.get<String>(AppRoute.ScanIdentity::contactId.name)
+    private val previousScannedIdentity =
+        savedStateHandle.get<String>(AppRoute.ScanIdentity::previousScannedIdentity.name)
+
     fun onUiEvent(event: ScanIdentityUiEvent) {
         when (event) {
             is ScanIdentityUiEvent.QrCodeScanned -> onQrCodeScanned(event.encodedIdentity)
@@ -19,12 +24,12 @@ class ScanIdentityNavigationViewModel(
             route =
                 AppRoute.ImportContact(
                     scannedIdentity = encodedIdentity,
-                    contactId = route.contactId
+                    contactId = contactId
                 ),
             popUpTo =
                 AppRoute.ImportContact(
-                    scannedIdentity = route.previousScannedIdentity,
-                    contactId = route.contactId
+                    scannedIdentity = previousScannedIdentity,
+                    contactId = contactId
                 ),
             inclusive = true
         )

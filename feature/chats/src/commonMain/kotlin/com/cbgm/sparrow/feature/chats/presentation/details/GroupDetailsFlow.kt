@@ -49,8 +49,7 @@ import com.cbgm.sparrow.resources.feature_chats_group_promote_before_leave_descr
 import com.cbgm.sparrow.resources.feature_chats_group_remove_member
 import com.cbgm.sparrow.resources.feature_chats_group_remove_member_description
 import org.jetbrains.compose.resources.stringResource
-import org.koin.compose.viewmodel.koinViewModel
-import org.koin.core.parameter.parametersOf
+import org.koin.compose.viewmodel.koinNavViewModel
 
 private enum class DetailsContent {
     Overview,
@@ -60,14 +59,10 @@ private enum class DetailsContent {
 
 @Composable
 fun GroupDetailsFlow(
-    conversationId: String,
     modifier: Modifier = Modifier,
     requestLeave: Boolean = false
 ) {
-    val verificationViewModel =
-        koinViewModel<GroupVerificationViewModel> {
-            parametersOf(conversationId)
-        }
+    val verificationViewModel = koinNavViewModel<GroupVerificationViewModel>()
     val uiState by verificationViewModel.uiState.collectAsStateWithLifecycle()
     var content by rememberSaveable {
         mutableStateOf(DetailsContent.Overview)

@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.contacts.presentation.overview
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
@@ -13,7 +14,6 @@ import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsUiS
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
@@ -26,11 +26,12 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ContactsViewModel(
+    savedStateHandle: SavedStateHandle,
     private val observeContacts: ObserveContactsUseCase,
     private val importDeviceContacts: ImportDeviceContactsUseCase,
     private val observeProfilePictures: ObserveContactProfilePicturesUseCase
 ) : BaseViewModel() {
-    private val searchQuery = MutableStateFlow("")
+    private val searchQuery = savedStateHandle.getMutableStateFlow(SEARCH_QUERY_KEY, "")
 
     private val _effects = Channel<ContactsEffect>(capacity = Channel.BUFFERED)
     val effects = _effects.receiveAsFlow()
@@ -110,4 +111,8 @@ class ContactsViewModel(
         val contacts: List<Contact>,
         val profilePictures: Map<String, ByteArray?>
     )
+
+    private companion object {
+        const val SEARCH_QUERY_KEY = "searchQuery"
+    }
 }

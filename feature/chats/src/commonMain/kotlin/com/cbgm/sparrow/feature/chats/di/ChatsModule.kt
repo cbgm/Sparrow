@@ -313,15 +313,16 @@ private fun org.koin.core.module.Module.registerViewModels() {
 
     viewModel {
         CreateGroupViewModel(
+            savedStateHandle = get(),
             observeContacts = get(),
             observeProfilePictures = get(),
             createGroupConversation = get()
         )
     }
 
-    viewModel { parameters ->
+    viewModel {
         GroupViewModel(
-            groupId = parameters.get(),
+            savedStateHandle = get(),
             observeConversation = get(),
             observeAdministration = get(),
             sendMessage = get(),
@@ -338,9 +339,9 @@ private fun org.koin.core.module.Module.registerViewModels() {
         )
     }
 
-    viewModel { parameters ->
+    viewModel {
         GroupVerificationViewModel(
-            conversationId = parameters.get(),
+            savedStateHandle = get(),
             observeGroupVerification = get(),
             synchronizeGroupVerification = get(),
             verifyGroupMember = get(),
@@ -361,21 +362,18 @@ private fun org.koin.core.module.Module.registerViewModels() {
         )
     }
 
-    viewModel { parameters ->
+    viewModel {
         GroupMemberQrVerificationViewModel(
-            groupId = parameters.get(),
-            contactId = parameters.get(),
+            savedStateHandle = get(),
             decodeSharedIdentity = get(),
             getContact = get(),
             verifyGroupMember = get()
         )
     }
 
-    viewModel { parameters ->
+    viewModel {
         DirectViewModel(
-            conversationId = parameters.get(),
-            contactId = parameters.get(),
-            fallbackContactName = parameters.get(),
+            savedStateHandle = get(),
             observeConversation = get(),
             sendMessage = get(),
             markConversationRead = get(),

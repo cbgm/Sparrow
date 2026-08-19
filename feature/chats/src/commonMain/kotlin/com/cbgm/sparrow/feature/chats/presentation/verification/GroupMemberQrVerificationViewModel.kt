@@ -1,6 +1,9 @@
 package com.cbgm.sparrow.feature.chats.presentation.verification
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.ui.navigation.AppRoute
+import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.VerifyGroupMemberUseCase
 import com.cbgm.sparrow.feature.chats.presentation.verification.mapper.toPreview
@@ -17,12 +20,15 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class GroupMemberQrVerificationViewModel(
-    private val groupId: String,
-    private val contactId: String,
+    savedStateHandle: SavedStateHandle,
     private val decodeSharedIdentity: DecodeSharedIdentityUseCase,
     private val getContact: GetContactUseCase,
     private val verifyGroupMember: VerifyGroupMemberUseCase
 ) : BaseViewModel() {
+    private val groupId =
+        savedStateHandle.requireRouteArgument<String>(AppRoute.VerifyIdentityQr::groupId.name)
+    private val contactId =
+        savedStateHandle.requireRouteArgument<String>(AppRoute.VerifyIdentityQr::contactId.name)
     private val _uiState = MutableStateFlow(GroupMemberQrVerificationUiState())
     val uiState: StateFlow<GroupMemberQrVerificationUiState> = _uiState.asStateFlow()
 

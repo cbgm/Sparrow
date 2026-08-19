@@ -11,9 +11,6 @@ fun VerificationRoute(
     if (groupId == null) {
         ContactQrVerificationFlow(contactId = contactId)
     } else {
-        GroupMemberVerificationFlow(
-            groupId = groupId,
-            contactId = contactId
-        )
+        GroupMemberVerificationFlow()
     }
 }
