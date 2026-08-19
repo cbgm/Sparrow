@@ -14,7 +14,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
-import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
@@ -33,13 +32,13 @@ fun WelcomePage(onNext: () -> Unit) {
         Text(
             text = stringResource(Res.string.feature_onboarding_welcome_to_sparrow),
             style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.SemiBold
         )
         Spacer(Modifier.height(MaterialTheme.spacing.small))
         Text(
             text = stringResource(Res.string.feature_onboarding_welcome_description),
-            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.OpaqueText),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center
         )

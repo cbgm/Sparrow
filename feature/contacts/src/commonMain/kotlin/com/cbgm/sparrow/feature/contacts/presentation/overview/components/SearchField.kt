@@ -22,7 +22,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -50,10 +49,10 @@ fun SearchField(
                 ).height(Dimens.ContactsScreen.searchHeight),
         textStyle =
             MaterialTheme.typography.bodySmall.copy(
-                color = MaterialTheme.colorScheme.onPrimary
+                color = MaterialTheme.colorScheme.onSurface
             ),
         singleLine = true,
-        cursorBrush = SolidColor(MaterialTheme.colorScheme.onPrimary),
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
         interactionSource = interactionSource,
         decorationBox = { innerTextField ->
             TextFieldDefaults.DecorationBox(
@@ -104,15 +103,15 @@ fun SearchField(
                 colors =
                     TextFieldDefaults.colors(
                         focusedContainerColor =
-                            MaterialTheme.colorScheme.primaryContainer,
+                            MaterialTheme.colorScheme.surfaceContainer,
                         unfocusedContainerColor =
-                            MaterialTheme.colorScheme.primaryContainer,
+                            MaterialTheme.colorScheme.surfaceContainer,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
-                        cursorColor = MaterialTheme.colorScheme.onPrimary,
-                        focusedTextColor = MaterialTheme.colorScheme.onPrimary,
+                        cursorColor = MaterialTheme.colorScheme.primary,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
                         unfocusedTextColor =
-                            MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.OpaqueText)
+                            MaterialTheme.colorScheme.onSurfaceVariant
                     )
             )
         }

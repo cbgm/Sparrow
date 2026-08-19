@@ -20,7 +20,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -45,8 +44,6 @@ import com.cbgm.sparrow.resources.feature_contacts_phone_number
 import com.cbgm.sparrow.resources.feature_contacts_sparrow_contact
 import com.cbgm.sparrow.resources.feature_contacts_unnamed_contact
 import org.jetbrains.compose.resources.stringResource
-
-private val Field = Color(0xFF102A46)
 
 @Composable
 fun AddBlockedContactDialog(
@@ -93,15 +90,15 @@ fun AddBlockedContactDialog(
                         ),
                     colors =
                         OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            focusedContainerColor = Field,
-                            unfocusedContainerColor = Field,
-                            focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
                             unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.TextField.unfocusedBorder),
-                            focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
                             unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
-                            cursorColor = MaterialTheme.colorScheme.secondary
+                            cursorColor = MaterialTheme.colorScheme.primary
                         )
                 )
 

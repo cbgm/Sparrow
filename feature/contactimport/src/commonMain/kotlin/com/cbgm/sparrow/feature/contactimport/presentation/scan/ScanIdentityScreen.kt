@@ -22,14 +22,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowStaticScaffold
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
@@ -106,7 +104,7 @@ fun ScanIdentityScreen(
                             vertical = MaterialTheme.spacing.times(5)
                         ),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Medium
             )
@@ -119,8 +117,8 @@ fun ScanIdentityScreen(
 // that tells the user exactly where to aim, instead of a bare camera feed.
 @Composable
 private fun ScannerOverlay(modifier: Modifier = Modifier) {
-    val backgroundColor = MaterialTheme.colorScheme.background
-    val accentColor = MaterialTheme.colorScheme.secondary
+    val scrimColor = MaterialTheme.colorScheme.scrim
+    val accentColor = MaterialTheme.colorScheme.primary
     val frameCornerRadius = MaterialTheme.shapes.scanIdentityScreen.frameCornerRadius
 
     Canvas(modifier = modifier) {
@@ -144,7 +142,7 @@ private fun ScannerOverlay(modifier: Modifier = Modifier) {
                 fillType = PathFillType.EvenOdd
             }
 
-        drawPath(path = scrimPath, color = backgroundColor.copy(alpha = Alpha.ScanIdentityScreen.scrim))
+        drawPath(path = scrimPath, color = scrimColor.copy(alpha = Alpha.ScanIdentityScreen.scrim))
 
         val cornerLength = Dimens.ScanIdentityScreen.frameCornerLength.toPx()
         val strokeWidth = Dimens.ScanIdentityScreen.frameStrokeWidth.toPx()

@@ -45,15 +45,13 @@ import com.cbgm.sparrow.resources.feature_contacts_import_sparrow_contact_descri
 import com.cbgm.sparrow.resources.feature_contacts_verify_or_import_identity
 import org.jetbrains.compose.resources.stringResource
 
-private val SheetColor = Color(0xFF102A46)
-
 @Composable
 fun ContactsFloatingActionButton(onClick: () -> Unit) {
     FloatingActionButton(
         modifier = Modifier.size(Dimens.ContactsScreen.addContactButtonSize),
         onClick = onClick,
-        containerColor = MaterialTheme.colorScheme.secondary,
-        contentColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary
     ) {
         Icon(
             imageVector = Icons.Default.Add,
@@ -68,7 +66,7 @@ fun CreateGroupListItem(onClick: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.primaryContainer,
+        color = MaterialTheme.colorScheme.surfaceContainer,
         tonalElevation = Dimens.Card.tonalElevation,
         shadowElevation = Dimens.Card.shadowElevation
     ) {
@@ -78,7 +76,7 @@ fun CreateGroupListItem(onClick: () -> Unit) {
                 Box(
                     modifier =
                         Modifier.size(Dimens.ContactsScreen.menuIconContainerSize).background(
-                            color = MaterialTheme.colorScheme.secondary.copy(alpha = Alpha.ContactsScreen.actionIconBackground),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = Alpha.ContactsScreen.actionIconBackground),
                             shape = MaterialTheme.shapes.circle
                         ),
                     contentAlignment = Alignment.Center
@@ -86,7 +84,7 @@ fun CreateGroupListItem(onClick: () -> Unit) {
                     Icon(
                         imageVector = Icons.Default.GroupAdd,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.secondary
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             },
@@ -95,7 +93,7 @@ fun CreateGroupListItem(onClick: () -> Unit) {
                     text = stringResource(Res.string.feature_chats_create_group),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
@@ -115,8 +113,8 @@ fun ImportContactBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = SheetColor,
-        contentColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        contentColor = MaterialTheme.colorScheme.onSurface,
         dragHandle = null
     ) {
         ImportContactSheet(
@@ -148,7 +146,7 @@ private fun ImportContactSheet(
                         width = Dimens.ContactsScreen.dragHandleWidth,
                         height = Dimens.ContactsScreen.dragHandleHeight
                     ).background(
-                        color = Color.White.copy(alpha = Alpha.ContactsScreen.scanOverlay),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = Alpha.ContactsScreen.scanOverlay),
                         shape = MaterialTheme.shapes.contactsScreen.dragHandle
                     )
         )
@@ -165,14 +163,14 @@ private fun ImportContactSheet(
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             IconButton(onClick = onClose) {
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = null,
-                    tint = Color.White
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -210,7 +208,7 @@ private fun ImportOptionRow(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = Color.White.copy(alpha = Alpha.ContactsScreen.scanIcon),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.ContactsScreen.scanIcon),
                 modifier = Modifier.size(Dimens.ContactsScreen.menuItemIconSize)
             )
         },
@@ -219,14 +217,14 @@ private fun ImportOptionRow(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onSurface
             )
         },
         supportingContent = {
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = Alpha.OpaqueText)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = Alpha.OpaqueText)
             )
         },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent)

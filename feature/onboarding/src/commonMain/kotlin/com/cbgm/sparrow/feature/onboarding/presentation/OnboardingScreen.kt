@@ -54,7 +54,7 @@ fun OnboardingScreen(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.primary)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(MaterialTheme.spacing.screenPadding),
         contentAlignment = Alignment.Center
     ) {
@@ -67,12 +67,12 @@ fun OnboardingScreen(
             Text(
                 text = stringResource(Res.string.base_app_name),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Bold
             )
             Text(
                 text = stringResource(Res.string.base_tagline),
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.OpaqueText),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
                 style = MaterialTheme.typography.bodyLarge
             )
             Spacer(Modifier.height(MaterialTheme.spacing.medium))

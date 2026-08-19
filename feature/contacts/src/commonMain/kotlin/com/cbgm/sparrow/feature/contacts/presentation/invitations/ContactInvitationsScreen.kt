@@ -118,9 +118,9 @@ fun ContactInvitationsScreen(
                             listOf(
                                 SwipeRevealAction(
                                     backgroundColor =
-                                        MaterialTheme.colorScheme.secondaryContainer,
+                                        MaterialTheme.colorScheme.tertiaryContainer,
                                     contentColor =
-                                        MaterialTheme.colorScheme.onSecondaryContainer,
+                                        MaterialTheme.colorScheme.onTertiaryContainer,
                                     onClick = {
                                         onUiEvent(
                                             ContactInvitationUiEvent.AcceptClicked(
@@ -138,8 +138,8 @@ fun ContactInvitationsScreen(
                                     )
                                 },
                                 SwipeRevealAction(
-                                    backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                    contentColor = MaterialTheme.colorScheme.onSurface,
                                     onClick = {
                                         onUiEvent(
                                             ContactInvitationUiEvent.DeclineClicked(
@@ -187,7 +187,7 @@ fun ContactInvitationsScreen(
                                 Modifier
                                     .fillMaxWidth()
                                     .padding(start = MaterialTheme.spacing.listDividerStart),
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.ContactInvitationsScreen.actionBackground)
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
                         )
                     }
                 }
@@ -242,7 +242,7 @@ private fun InvitationRow(
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onBackground
             )
         },
         supportingContent = {
@@ -254,7 +254,7 @@ private fun InvitationRow(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.OpaqueText)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
         },

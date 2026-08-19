@@ -188,7 +188,7 @@ private fun MainBottomBar(
 ) {
     NavigationBar(
         containerColor = containerColor,
-        contentColor = MaterialTheme.colorScheme.onPrimary
+        contentColor = MaterialTheme.colorScheme.onBackground
     ) {
         MainTab.entries.forEach { tab ->
             val isSelected = selectedTab == tab
@@ -211,8 +211,8 @@ private fun MainBottomBar(
                 },
                 colors =
                     NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.secondary,
-                        selectedTextColor = MaterialTheme.colorScheme.secondary,
+                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                        selectedTextColor = MaterialTheme.colorScheme.primary,
                         indicatorColor = Color.Transparent,
                         unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,

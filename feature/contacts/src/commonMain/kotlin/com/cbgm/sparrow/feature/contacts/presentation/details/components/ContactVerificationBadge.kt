@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,13 +26,13 @@ internal fun ContactVerificationBadge(
     Surface(
         modifier = Modifier.size(Dimens.ContactDetailsScreen.verificationBadgeSize),
         shape = MaterialTheme.shapes.circle,
-        color = containerColor
+        color = containerColor,
+        contentColor = contentColorFor(containerColor)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = Color.White,
                 modifier = Modifier.size(Dimens.ContactDetailsScreen.verificationBadgeIconSize)
             )
         }
@@ -44,7 +45,7 @@ private fun ContactVerificationBadgePreview() {
     SparrowTheme {
         ContactVerificationBadge(
             icon = Icons.Default.Security,
-            containerColor = MaterialTheme.colorScheme.secondary
+            containerColor = MaterialTheme.colorScheme.primary
         )
     }
 }

@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -39,8 +40,8 @@ fun SparrowApprovalButton(
         enabled = enabled,
         colors =
             ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.secondary,
-                contentColor = MaterialTheme.colorScheme.onSurface
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             ),
         modifier =
             modifier.then(
@@ -69,7 +70,7 @@ fun SparrowBannerButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     text: String = "",
-    textColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    textColor: Color = LocalContentColor.current,
     fillMaxWidth: Boolean = true,
     content: @Composable () -> Unit = {},
     enabled: Boolean = true
@@ -117,7 +118,7 @@ fun SparrowSecondaryButton(
         enabled = enabled,
         colors =
             ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.surface,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                 contentColor = MaterialTheme.colorScheme.onSurface
             ),
         modifier =
@@ -156,11 +157,11 @@ fun SparrowOutlinedButton(
         border =
             BorderStroke(
                 width = Dimens.Button.borderWidth,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.outline
             ),
         colors =
             ButtonDefaults.outlinedButtonColors(
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                contentColor = MaterialTheme.colorScheme.onSurface
             ),
         modifier =
             modifier.then(
@@ -194,8 +195,8 @@ fun SparrowRoundApprovalButton(
         onClick = onClick,
         shape = MaterialTheme.shapes.circle,
         colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.secondary,
-            contentColor = MaterialTheme.colorScheme.onSurface
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
         ),
         contentPadding = PaddingValues(MaterialTheme.spacing.button.iconContentPadding),
         modifier = modifier.size(Dimens.Button.iconButtonSize),

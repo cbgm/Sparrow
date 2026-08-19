@@ -250,7 +250,7 @@ private fun Metric(
                 text = value.toString(),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = label,
@@ -306,7 +306,7 @@ private fun LoadingContent(modifier: Modifier = Modifier) {
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
-        CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -628,7 +628,7 @@ private fun MemberRow(
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
             supportingContent = {
@@ -657,7 +657,7 @@ private fun MemberRow(
                                 imageVector = Icons.Default.Verified,
                                 contentDescription =
                                     stringResource(Res.string.feature_chats_group_promote_admin),
-                                tint = MaterialTheme.colorScheme.secondary
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
@@ -685,7 +685,7 @@ private fun MemberRow(
                     Modifier
                         .fillMaxWidth()
                         .padding(start = MaterialTheme.spacing.listDividerStart),
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.GroupDetailsScreen.actionBackground)
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
             )
         }
     }
@@ -730,7 +730,7 @@ private fun GroupMemberVerificationUiState.verificationStatusColor(): Color =
                 MaterialTheme.colorScheme.onSurfaceVariant
 
             GroupMemberVerificationState.MUTUALLY_VERIFIED ->
-                MaterialTheme.colorScheme.secondary
+                MaterialTheme.colorScheme.tertiary
 
             GroupMemberVerificationState.ADMIN_VERIFIED_PARTICIPANT,
             GroupMemberVerificationState.PARTICIPANT_VERIFIED_ADMIN ->
@@ -801,7 +801,7 @@ private fun MembersCard(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.small,
-            color = MaterialTheme.colorScheme.primaryContainer,
+            color = MaterialTheme.colorScheme.surfaceContainer,
             tonalElevation = Dimens.Card.tonalElevation,
             shadowElevation = Dimens.Card.shadowElevation
         ) {
@@ -888,7 +888,7 @@ private fun AdminVerificationCard(
                 text = stringResource(Res.string.feature_chats_group_verify_admin_title),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = stringResource(Res.string.feature_chats_group_verify_admin_description),
@@ -899,7 +899,7 @@ private fun AdminVerificationCard(
             Text(
                 text = admin.verificationStatusText(),
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
                 modifier =
                     Modifier

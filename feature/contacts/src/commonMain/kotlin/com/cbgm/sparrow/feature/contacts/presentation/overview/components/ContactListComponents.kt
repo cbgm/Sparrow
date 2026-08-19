@@ -86,7 +86,7 @@ fun ContactStatus(contact: Contact) {
             SparrowStatusBadge(
                 text = stringResource(Res.string.base_secure),
                 icon = Icons.Default.Verified,
-                color = MaterialTheme.colorScheme.secondary
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }
@@ -105,13 +105,13 @@ fun ContactSelectionCircle(
                     width = Dimens.ContactsScreen.contactStatusStroke,
                     color =
                         when {
-                            selected -> MaterialTheme.colorScheme.secondary
+                            selected -> MaterialTheme.colorScheme.primary
                             enabled -> MaterialTheme.colorScheme.outline
                             else -> MaterialTheme.colorScheme.outline.copy(alpha = Alpha.ContactsScreen.outline)
                         },
                     shape = MaterialTheme.shapes.circle
                 ).background(
-                    color = if (selected) MaterialTheme.colorScheme.secondary else Color.Transparent,
+                    color = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
                     shape = MaterialTheme.shapes.circle
                 ),
         contentAlignment = Alignment.Center
@@ -121,7 +121,7 @@ fun ContactSelectionCircle(
                 imageVector = Icons.Default.Check,
                 contentDescription = null,
                 modifier = Modifier.size(Dimens.ContactsScreen.contactStatusIconSize),
-                tint = MaterialTheme.colorScheme.background
+                tint = MaterialTheme.colorScheme.onPrimary
             )
         }
     }
@@ -133,7 +133,7 @@ fun LoadingContactsContent(modifier: Modifier = Modifier) {
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
-        CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -152,7 +152,7 @@ fun EmptyContactsContent(modifier: Modifier = Modifier) {
                     Modifier
                         .size(Dimens.ContactsScreen.emptyStateIconContainerSize)
                         .background(
-                            color = MaterialTheme.colorScheme.secondary.copy(alpha = Alpha.ContactsScreen.secureBackground),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = Alpha.ContactsScreen.secureBackground),
                             shape = MaterialTheme.shapes.circle
                         ),
                 contentAlignment = Alignment.Center
@@ -160,7 +160,7 @@ fun EmptyContactsContent(modifier: Modifier = Modifier) {
                 Icon(
                     imageVector = Icons.Default.Contacts,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.secondary,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(Dimens.ContactsScreen.emptyStateIconSize)
                 )
             }
@@ -244,7 +244,7 @@ private fun ContactGroup(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.small,
-            color = MaterialTheme.colorScheme.primaryContainer,
+            color = MaterialTheme.colorScheme.surfaceContainer,
             tonalElevation = Dimens.Card.tonalElevation,
             shadowElevation = Dimens.Card.shadowElevation
         ) {
@@ -296,7 +296,7 @@ private fun ContactListItem(
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             },
             supportingContent = {
@@ -311,7 +311,7 @@ private fun ContactListItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.OpaqueText)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },
             trailingContent = trailingContent,
@@ -323,7 +323,7 @@ private fun ContactListItem(
                 Modifier
                     .fillMaxWidth()
                     .padding(start = MaterialTheme.spacing.listDividerStart),
-            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.ContactsScreen.actionBackground)
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
         )
     }
 }

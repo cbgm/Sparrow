@@ -25,7 +25,7 @@ fun SparrowDialogListItem(
         headlineContent = { Text(text) },
         colors = ListItemDefaults.colors(
             containerColor = Color.Transparent,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText)
+            contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = Alpha.OpaqueText)
         )
     )
 }

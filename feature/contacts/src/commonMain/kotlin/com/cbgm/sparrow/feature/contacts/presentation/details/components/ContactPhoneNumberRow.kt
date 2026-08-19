@@ -42,7 +42,7 @@ internal fun ContactPhoneNumberRow(
             Icon(
                 imageVector = Icons.Default.Phone,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.ContactDetailsScreen.phoneIcon),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.ContactDetailsScreen.phoneIcon),
                 modifier = Modifier.size(Dimens.ContactDetailsScreen.rowIconSize)
             )
         },
@@ -59,12 +59,12 @@ internal fun ContactPhoneNumberRow(
             if (isPreferred) {
                 Surface(
                     shape = MaterialTheme.shapes.contactDetailsScreen.phoneNumber,
-                    color = MaterialTheme.colorScheme.secondary.copy(alpha = Alpha.ContactDetailsScreen.preferredBackground)
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = Alpha.ContactDetailsScreen.preferredBackground)
                 ) {
                     Text(
                         text = stringResource(Res.string.base_preferred),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.secondary,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(
                             horizontal = MaterialTheme.spacing.base,
                             vertical = MaterialTheme.spacing.micro
@@ -76,8 +76,8 @@ internal fun ContactPhoneNumberRow(
         colors =
             ListItemDefaults.colors(
                 containerColor = Color.Transparent,
-                headlineColor = MaterialTheme.colorScheme.onBackground,
-                supportingColor = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
+                headlineColor = MaterialTheme.colorScheme.onSurface,
+                supportingColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
     )
 }

@@ -8,7 +8,8 @@ object Alpha {
     const val Disabled = 0.38f
     const val OpaqueBar = 0.97f
     const val OpaqueText = 0.6F
-    const val divider = 0.1f
+    const val divider = 0.2f
+    const val itemDivider = 0.05f
 
     object PatternBackground {
         const val default = 0.06f
@@ -28,16 +29,11 @@ object Alpha {
         const val container = 0.15f
     }
 
-    object MessageBubble {
-        const val verificationBackground = 0.18f
-    }
-
     object MessageInput {
         const val buttonBackground = 0.35f
     }
 
     object GroupDetailsScreen {
-        const val actionBackground = 0.05f
         const val adminIcon = 0.73f
     }
 
@@ -50,8 +46,6 @@ object Alpha {
     }
 
     object OverviewScreen {
-        const val actionBackground = 0.05f
-        const val unreadContent = 0.9f
         const val avatarBadge = 0.12f
     }
 
@@ -68,7 +62,6 @@ object Alpha {
 
     object BlockedContactsScreen {
         const val icon = 0.45f
-        const val actionBackground = 0.05f
     }
 
     object ContactDetailsScreen {
@@ -77,15 +70,10 @@ object Alpha {
         const val identityKey = 0.8f
     }
 
-    object ContactInvitationsScreen {
-        const val actionBackground = 0.05f
-    }
-
     object ContactsScreen {
         const val outline = 0.35f
         const val secureBackground = 0.12f
         const val tertiaryContent = 0.5f
-        const val actionBackground = 0.05f
         const val actionIconBackground = 0.15f
         const val scanOverlay = 0.25f
         const val scanIcon = 0.85f
@@ -101,15 +89,10 @@ object Alpha {
         const val codeBackground = 0.12f
         const val codeBorder = 0.3f
         const val accentText = 0.4f
-        const val primaryText = 0.85f
     }
 
     object PermissionsPage {
         const val helperText = 0.58f
-    }
-
-    object DeveloperMenuScreen {
-        const val destructiveContainer = 0.15f
     }
 
     object NetworkDiagnosticsCard {
@@ -118,14 +101,6 @@ object Alpha {
 
     object DisclaimerScreen {
         const val content = 0.85f
-    }
-
-    object LicencesScreen {
-        const val rowDivider = 0.74f
-    }
-
-    object ControlPlaneConfigurationCard {
-        const val actionBackground = 0.05f
     }
 
     object SettingsScreen {

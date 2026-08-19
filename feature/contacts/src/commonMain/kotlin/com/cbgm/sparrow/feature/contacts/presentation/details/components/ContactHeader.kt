@@ -18,7 +18,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -67,13 +66,14 @@ internal fun ContactHeader(
                     Surface(
                         modifier = Modifier.size(Dimens.ContactDetailsScreen.verificationBadgeSize),
                         shape = MaterialTheme.shapes.circle,
-                        color = MaterialTheme.colorScheme.secondary
+                        color = MaterialTheme.colorScheme.tertiary,
+                        contentColor = MaterialTheme.colorScheme.onTertiary
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = null,
-                                tint = Color(0xFF071A2E),
+                                tint = MaterialTheme.colorScheme.onTertiary,
                                 modifier = Modifier.size(Dimens.ContactDetailsScreen.headerStatusIconSize)
                             )
                         }
@@ -82,13 +82,13 @@ internal fun ContactHeader(
                 verifiedByMe ->
                     ContactVerificationBadge(
                         icon = Icons.Default.Schedule,
-                        containerColor = MaterialTheme.colorScheme.secondary
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
 
                 verifiedByContact ->
                     ContactVerificationBadge(
                         icon = Icons.Default.Security,
-                        containerColor = MaterialTheme.colorScheme.tertiary
+                        containerColor = MaterialTheme.colorScheme.secondary
                     )
 
                 identity != null ->
@@ -133,8 +133,9 @@ internal fun ContactHeader(
             color =
                 when {
                     identity == null -> MaterialTheme.colorScheme.error
-                    isMutuallyVerified || verifiedByMe -> MaterialTheme.colorScheme.secondary
-                    verifiedByContact -> MaterialTheme.colorScheme.tertiary
+                    isMutuallyVerified -> MaterialTheme.colorScheme.tertiary
+                    verifiedByMe -> MaterialTheme.colorScheme.primary
+                    verifiedByContact -> MaterialTheme.colorScheme.secondary
                     else -> MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
                 },
             textAlign = TextAlign.Center

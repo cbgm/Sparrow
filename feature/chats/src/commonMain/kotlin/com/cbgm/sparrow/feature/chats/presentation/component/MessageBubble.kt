@@ -54,8 +54,6 @@ import com.cbgm.sparrow.resources.feature_chats_unable_decrypt_secure_message
 import com.cbgm.sparrow.resources.feature_chats_unable_read_plaintext
 import org.jetbrains.compose.resources.stringResource
 
-private val IncomingBubbleColor = Color(0xFF17324D)
-
 @Composable
 internal fun MessageBubble(
     message: MessageBubbleModel,
@@ -109,7 +107,7 @@ private fun SenderLabel(message: MessageBubbleModel) {
         ),
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.secondary
+        color = MaterialTheme.colorScheme.primary
     )
 }
 
@@ -271,7 +269,7 @@ private fun DeliveryIndicator(
         MessageDeliveryStatus.READ ->
             DoubleCheckDeliveryLabel(
                 text = stringResource(Res.string.feature_chats_read),
-                color = MaterialTheme.colorScheme.secondary
+                color = MaterialTheme.colorScheme.primary
             )
         MessageDeliveryStatus.FAILED -> FailedDelivery(onRetryClick = onRetryClick)
     }
@@ -373,11 +371,15 @@ private fun bubbleState(message: MessageBubbleModel): BubbleState =
                 isContentFailed = false,
                 bubbleColor =
                     if (message.isMine) {
-                        MaterialTheme.colorScheme.secondary.copy(alpha = Alpha.MessageBubble.verificationBackground)
+                        MaterialTheme.colorScheme.primaryContainer
                     } else {
-                        IncomingBubbleColor
+                        MaterialTheme.colorScheme.surfaceContainerHigh
                     },
-                contentColor = MaterialTheme.colorScheme.onBackground
+                contentColor = if (message.isMine) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                }
             )
         MessageContentStatus.INVALID_PACKET ->
             failedBubbleState(stringResource(Res.string.feature_chats_invalid_message_packet))

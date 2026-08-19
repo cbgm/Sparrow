@@ -9,7 +9,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -42,13 +41,13 @@ fun PermissionsPage(onRequestPermissions: () -> Unit) {
         Text(
             text = stringResource(Res.string.base_permissions),
             style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.SemiBold
         )
         Spacer(Modifier.height(MaterialTheme.spacing.base))
         Text(
             text = stringResource(Res.string.feature_onboarding_permissions_description),
-            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.OpaqueText),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center
         )
@@ -82,7 +81,7 @@ fun PermissionsPage(onRequestPermissions: () -> Unit) {
         Text(
             text = stringResource(Res.string.feature_onboarding_permissions_settings_hint),
             style = MaterialTheme.typography.labelMedium,
-            color = Color.White.copy(alpha = Alpha.PermissionsPage.helperText),
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.PermissionsPage.helperText),
             textAlign = TextAlign.Center
         )
     }

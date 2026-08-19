@@ -29,7 +29,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -67,7 +66,6 @@ import com.cbgm.sparrow.resources.feature_identity_your_phone_number
 import org.jetbrains.compose.resources.stringResource
 
 /** Public identity screen contract. */
-private val Field = Color(0xFF102A46)
 
 @Composable
 fun IdentityScreen(
@@ -136,7 +134,7 @@ private fun LoadingContent() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
@@ -214,20 +212,20 @@ private fun NoIdentityContent(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     textStyle =
                         MaterialTheme.typography.bodySmall.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.SemiBold
                         ),
                     colors =
                         OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            focusedContainerColor = Field,
-                            unfocusedContainerColor = Field,
-                            focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
                             unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.TextField.unfocusedBorder),
-                            focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
                             unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
-                            cursorColor = MaterialTheme.colorScheme.secondary,
+                            cursorColor = MaterialTheme.colorScheme.primary,
                             errorBorderColor = MaterialTheme.colorScheme.error,
                             errorLabelColor = MaterialTheme.colorScheme.error,
                             errorCursorColor = MaterialTheme.colorScheme.error
@@ -279,13 +277,13 @@ private fun ReadyIdentityContent(
 
         Surface(
             shape = MaterialTheme.shapes.extraSmall,
-            color = Field
+            color = MaterialTheme.colorScheme.surfaceContainer
         ) {
             Text(
                 text = localPhoneNumber,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(
                     horizontal = MaterialTheme.spacing.identityScreen.protectionBadgeHorizontalPadding,
                     vertical = MaterialTheme.spacing.identityScreen.protectionBadgeVerticalPadding
@@ -320,8 +318,8 @@ private fun ReadyIdentityContent(
                     shape = MaterialTheme.shapes.extraSmall,
                     colors =
                         ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondary,
-                            contentColor = Color(0xFF071A2E)
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                 ) {
                     Text(

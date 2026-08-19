@@ -10,7 +10,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
@@ -36,7 +35,7 @@ internal fun NoSparrowIdentityContent() {
     Text(
         text = stringResource(Res.string.feature_contacts_sparrow_keys_attach_later),
         style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
+        color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }
 

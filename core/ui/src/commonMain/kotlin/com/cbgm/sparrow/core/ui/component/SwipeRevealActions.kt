@@ -157,15 +157,15 @@ private fun SparrowSwipeRevealItemPreview() {
             actions =
                 listOf(
                     SwipeRevealAction(
-                        backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        backgroundColor = MaterialTheme.colorScheme.surfaceContainer,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
                         onClick = {}
                     ) {
                         Text("A")
                     },
                     SwipeRevealAction(
-                        backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
                         onClick = {}
                     ) {
                         Text("B")

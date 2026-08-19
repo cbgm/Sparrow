@@ -60,8 +60,6 @@ import com.cbgm.sparrow.resources.feature_contactimport_scan_qr_code
 import com.cbgm.sparrow.resources.feature_contactimport_shared_identity
 import org.jetbrains.compose.resources.stringResource
 
-private val Field = Color(0xFF102A46)
-
 @Composable
 fun ImportIdentityScreen(
     uiState: ImportIdentityUiState,
@@ -165,15 +163,15 @@ fun ImportIdentityScreen(
                     ),
                 colors =
                     OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-                        focusedContainerColor = Field,
-                        unfocusedContainerColor = Field,
-                        focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.TextField.unfocusedBorder),
-                        focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
                         unfocusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
-                        cursorColor = MaterialTheme.colorScheme.secondary
+                        cursorColor = MaterialTheme.colorScheme.primary
                     )
             )
 
@@ -211,9 +209,9 @@ fun ImportIdentityScreen(
                     text = statusText,
                     color =
                         if (uiState.importedIdentityTrust == IdentityImportTrust.VERIFIED_IN_PERSON) {
-                            MaterialTheme.colorScheme.secondary
-                        } else {
                             MaterialTheme.colorScheme.tertiary
+                        } else {
+                            MaterialTheme.colorScheme.secondary
                         }
                 )
             }
@@ -301,17 +299,17 @@ private fun ImportButton(
         shape = MaterialTheme.shapes.extraSmall,
         colors =
             ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.secondary,
-                contentColor = MaterialTheme.colorScheme.background,
-                disabledContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = Alpha.ImportIdentityScreen.disabledButtonContainer),
-                disabledContentColor = MaterialTheme.colorScheme.background.copy(alpha = Alpha.ImportIdentityScreen.disabledButtonContent)
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = Alpha.ImportIdentityScreen.disabledButtonContainer),
+                disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.ImportIdentityScreen.disabledButtonContent)
             )
     ) {
         if (isImporting) {
             CircularProgressIndicator(
                 modifier = Modifier.size(Dimens.ImportIdentityScreen.progressSize),
                 strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
-                color = MaterialTheme.colorScheme.background
+                color = MaterialTheme.colorScheme.onPrimary
             )
         } else {
             Text(

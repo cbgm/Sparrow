@@ -25,6 +25,7 @@ import com.cbgm.sparrow.core.ui.avatar.editor.crop.ProfilePictureCropCanvas
 import com.cbgm.sparrow.core.ui.avatar.editor.crop.ProfilePictureCropRegion
 import com.cbgm.sparrow.core.ui.component.SparrowRoundApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowStaticScaffold
+import com.cbgm.sparrow.core.ui.theme.FunctionalColors
 import com.cbgm.sparrow.core.ui.theme.spacing
 import org.jetbrains.compose.resources.decodeToImageBitmap
 
@@ -69,7 +70,7 @@ internal fun ProfilePictureCropScreen(
             )
         }
     ) {
-        Box(modifier = Modifier.background(MaterialTheme.colorScheme.onSurface)) {
+        Box(modifier = Modifier.background(FunctionalColors.MediaBackground)) {
             image?.let {
                 ProfilePictureCropCanvas(
                     image = it,

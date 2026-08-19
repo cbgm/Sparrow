@@ -16,7 +16,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -26,8 +25,6 @@ import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-
-private val Field = Color(0xFF102A46)
 
 @Composable
 fun PublicKeySection(
@@ -50,7 +47,7 @@ fun PublicKeySection(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.SemiBold
             )
         }
@@ -60,7 +57,7 @@ fun PublicKeySection(
         Text(
             text = description,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.base))
@@ -71,11 +68,11 @@ fun PublicKeySection(
                 Modifier
                     .fillMaxWidth()
                     .background(
-                        color = Field,
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
                         shape = MaterialTheme.shapes.medium
                     ).padding(MaterialTheme.spacing.base),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.IdentityScreen.publicKeyValue),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = Alpha.IdentityScreen.publicKeyValue),
             fontFamily = FontFamily.Monospace
         )
     }

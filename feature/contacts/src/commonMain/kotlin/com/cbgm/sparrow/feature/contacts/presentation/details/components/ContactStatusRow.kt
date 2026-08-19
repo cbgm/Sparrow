@@ -17,7 +17,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -28,7 +27,7 @@ internal fun ContactStatusRow(
     iconColor: Color,
     title: String,
     description: String,
-    titleColor: Color = MaterialTheme.colorScheme.onBackground
+    titleColor: Color = MaterialTheme.colorScheme.onSurface
 ) {
     Row(verticalAlignment = Alignment.Top) {
         Icon(
@@ -49,7 +48,7 @@ internal fun ContactStatusRow(
             Text(
                 text = description,
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -61,7 +60,7 @@ private fun ContactStatusRowPreview() {
     SparrowTheme {
         ContactStatusRow(
             icon = Icons.Default.Link,
-            iconColor = MaterialTheme.colorScheme.secondary,
+            iconColor = MaterialTheme.colorScheme.primary,
             title = "Linked",
             description = "This Sparrow contact is linked to your device contact."
         )

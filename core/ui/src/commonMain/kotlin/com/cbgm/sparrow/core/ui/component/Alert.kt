@@ -23,18 +23,18 @@ fun SparrowAlertDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        containerColor = MaterialTheme.colorScheme.primaryContainer,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = MaterialTheme.shapes.small,
         title = {
             Column {
                 Text(
                     text = title,
-                    color = MaterialTheme.colorScheme.onBackground,
+                    color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(Modifier.height(MaterialTheme.spacing.small))
-                HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.divider))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.divider))
             }
         },
         text = text,

@@ -35,7 +35,6 @@ import com.cbgm.sparrow.core.transport.TransportNodeDiagnostic
 import com.cbgm.sparrow.core.transport.TransportNodeDiagnosticState
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
-import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -141,7 +140,7 @@ private fun BuildInfoCard(buildInfo: BuildInfo) {
                 text = stringResource(Res.string.feature_settings_build_info),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
@@ -194,7 +193,7 @@ private fun DangerZoneCard(
                         bottom = MaterialTheme.spacing.small
                     ),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Button(
@@ -204,15 +203,15 @@ private fun DangerZoneCard(
                 shape = MaterialTheme.shapes.extraSmall,
                 colors =
                     ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error.copy(alpha = Alpha.DeveloperMenuScreen.destructiveContainer),
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
                     )
             ) {
                 if (isClearingLocalData) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(Dimens.DeveloperMenuScreen.progressSize),
                         strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.onErrorContainer
                     )
                 } else {
                     Text(
@@ -250,14 +249,14 @@ private fun BuildInfoRow(
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Text(
             text = value,
             style = MaterialTheme.typography.bodySmall,
             fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }

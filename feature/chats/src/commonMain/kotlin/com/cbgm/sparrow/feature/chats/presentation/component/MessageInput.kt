@@ -33,7 +33,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.input.ImeAction
@@ -48,7 +47,6 @@ import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.messageInput
 import com.cbgm.sparrow.core.ui.theme.spacing
 
-private val FieldColor = Color(0xFF102A46)
 private const val ShapeAnimationDuration = 220
 
 @Composable
@@ -83,7 +81,7 @@ internal fun MessageInput(
             Icon(
                 imageVector = Icons.Filled.AttachFile,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(Dimens.MessageInput.attachmentIconSize)
             )
         }
@@ -94,7 +92,7 @@ internal fun MessageInput(
             modifier = Modifier
                 .weight(1f)
                 .background(
-                    color = FieldColor,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
                     shape = MaterialTheme.shapes.messageInput.field
                 )
                 .padding(
@@ -107,11 +105,11 @@ internal fun MessageInput(
             textStyle =
                 MaterialTheme.typography.bodyMedium.copy(
                     color =
-                        MaterialTheme.colorScheme.onBackground
+                        MaterialTheme.colorScheme.onSurface
                 ),
             cursorBrush =
                 SolidColor(
-                    MaterialTheme.colorScheme.secondary
+                    MaterialTheme.colorScheme.primary
                 ),
             keyboardOptions =
                 KeyboardOptions(
@@ -217,7 +215,7 @@ private fun RowScope.SendButton(
                         rightCornerRadius = messageInputShapes.buttonRightCornerRadius
                     )
                 )
-                .background(FieldColor)
+                .background(MaterialTheme.colorScheme.surfaceContainer)
                 .clickable(
                     enabled = enabled,
                     onClick = onSendClick
@@ -235,9 +233,9 @@ private fun RowScope.SendButton(
                     contentDescription = null,
                     tint =
                         if (enabled) {
-                            MaterialTheme.colorScheme.secondary
+                            MaterialTheme.colorScheme.primary
                         } else {
-                            MaterialTheme.colorScheme.secondary.copy(alpha = Alpha.MessageInput.buttonBackground)
+                            MaterialTheme.colorScheme.primary.copy(alpha = Alpha.MessageInput.buttonBackground)
                         },
                     modifier = Modifier
                         .padding(start = MaterialTheme.spacing.base.div(2))

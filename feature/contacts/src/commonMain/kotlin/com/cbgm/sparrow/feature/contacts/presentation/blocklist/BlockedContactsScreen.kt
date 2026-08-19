@@ -139,7 +139,7 @@ fun BlockedContactsScreen(
                                 Modifier
                                     .fillMaxWidth()
                                     .padding(start = MaterialTheme.spacing.listDividerStart),
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.BlockedContactsScreen.actionBackground)
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
                         )
                     }
                 }
@@ -147,8 +147,8 @@ fun BlockedContactsScreen(
 
             FloatingActionButton(
                 onClick = { onUiEvent(BlockedContactsUiEvent.AddContactClicked) },
-                containerColor = MaterialTheme.colorScheme.secondary,
-                contentColor = MaterialTheme.colorScheme.background,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
                 modifier =
                     Modifier
                         .padding(MaterialTheme.spacing.screenPadding)

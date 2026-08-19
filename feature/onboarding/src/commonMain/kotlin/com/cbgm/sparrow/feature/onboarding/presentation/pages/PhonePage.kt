@@ -14,7 +14,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -44,8 +43,6 @@ import com.cbgm.sparrow.resources.feature_onboarding_try_sim_number_again
 import com.cbgm.sparrow.resources.feature_onboarding_your_name
 import org.jetbrains.compose.resources.stringResource
 
-private val Field = Color(0xFF102A46)
-
 @Composable
 fun PhonePage(
     identityState: IdentityUiState,
@@ -63,7 +60,7 @@ fun PhonePage(
     ) {
         when (identityState) {
             IdentityUiState.Loading -> {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(MaterialTheme.spacing.small))
                 Text(
                     text = if (isCreating) stringResource(Res.string.base_generating_secure_identity) else stringResource(Res.string.feature_onboarding_preparing_phone_setup),
@@ -76,13 +73,13 @@ fun PhonePage(
                 Text(
                     text = stringResource(Res.string.feature_onboarding_approve_phone_number),
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(Modifier.height(MaterialTheme.spacing.base))
                 Text(
                     text = stringResource(Res.string.feature_onboarding_phone_routing_description),
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.OpaqueText),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
                 )
@@ -110,20 +107,20 @@ fun PhonePage(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     textStyle =
                         MaterialTheme.typography.bodySmall.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.SemiBold
                         ),
                     colors =
                         OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            focusedContainerColor = Field,
-                            unfocusedContainerColor = Field,
-                            focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
                             unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.TextField.unfocusedBorder),
-                            focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
                             unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
-                            cursorColor = MaterialTheme.colorScheme.secondary
+                            cursorColor = MaterialTheme.colorScheme.primary
                         )
                 )
                 Spacer(Modifier.height(MaterialTheme.spacing.small))
@@ -147,20 +144,20 @@ fun PhonePage(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     textStyle =
                         MaterialTheme.typography.bodySmall.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.SemiBold
                         ),
                     colors =
                         OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            focusedContainerColor = Field,
-                            unfocusedContainerColor = Field,
-                            focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
                             unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.TextField.unfocusedBorder),
-                            focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
                             unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
-                            cursorColor = MaterialTheme.colorScheme.secondary
+                            cursorColor = MaterialTheme.colorScheme.primary
                         )
                 )
                 Spacer(Modifier.height(MaterialTheme.spacing.base))
@@ -184,7 +181,7 @@ fun PhonePage(
             }
 
             is IdentityUiState.Ready -> {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(MaterialTheme.spacing.medium))
                 Text(
                     text = stringResource(Res.string.base_identity_ready_opening),

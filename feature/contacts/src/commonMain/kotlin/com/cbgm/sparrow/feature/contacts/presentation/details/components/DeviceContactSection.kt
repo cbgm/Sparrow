@@ -45,9 +45,9 @@ internal fun DeviceContactSection(status: DeviceContactLinkStatus) {
         DeviceContactLinkStatus.LINKED ->
             ContactStatusRow(
                 icon = Icons.Default.Link,
-                iconColor = MaterialTheme.colorScheme.secondary,
+                iconColor = MaterialTheme.colorScheme.tertiary,
                 title = stringResource(Res.string.base_linked),
-                titleColor = MaterialTheme.colorScheme.secondary,
+                titleColor = MaterialTheme.colorScheme.tertiary,
                 description = stringResource(Res.string.feature_contacts_device_contact_linked_description)
             )
 

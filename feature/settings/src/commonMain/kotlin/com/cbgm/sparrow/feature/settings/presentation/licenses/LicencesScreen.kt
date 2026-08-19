@@ -14,10 +14,8 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import com.cbgm.sparrow.core.ui.component.SparrowStaticScaffold
-import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.feature.settings.presentation.licenses.model.LicensesUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.licenses.model.LicensesUiState
 import com.cbgm.sparrow.resources.Res
@@ -29,8 +27,6 @@ import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
 import com.mikepenz.aboutlibraries.ui.compose.m3.style.m3VariantColors
 import com.mikepenz.aboutlibraries.ui.compose.produceLibraries
 import org.jetbrains.compose.resources.stringResource
-
-private val CardColor = Color(0xFF102A46)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,11 +56,11 @@ fun LicensesScreen(
                     headerBackground = MaterialTheme.colorScheme.background,
                     headerOnBackground = MaterialTheme.colorScheme.onBackground,
                     rowBackground = MaterialTheme.colorScheme.background,
-                    rowExpandedBackground = CardColor,
+                    rowExpandedBackground = MaterialTheme.colorScheme.surfaceContainer,
                     rowOnBackground = MaterialTheme.colorScheme.onBackground,
-                    rowSubtleContent = MaterialTheme.colorScheme.onBackground,
-                    rowDivider = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.LicencesScreen.rowDivider),
-                    actionLinkColor = MaterialTheme.colorScheme.onBackground
+                    rowSubtleContent = MaterialTheme.colorScheme.onSurfaceVariant,
+                    rowDivider = MaterialTheme.colorScheme.outlineVariant,
+                    actionLinkColor = MaterialTheme.colorScheme.primary
                 )
         )
     }
@@ -103,8 +99,8 @@ private fun LicensesTopBar(onBack: () -> Unit) {
 private fun licensesColors(): DefaultLibraryColors {
     val chipColors =
         DefaultChipColors(
-            containerColor = MaterialTheme.colorScheme.secondary,
-            contentColor = MaterialTheme.colorScheme.onBackground
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
         )
 
     return DefaultLibraryColors(
@@ -113,8 +109,8 @@ private fun licensesColors(): DefaultLibraryColors {
         versionChipColors = chipColors,
         licenseChipColors = chipColors,
         fundingChipColors = chipColors,
-        dialogBackgroundColor = MaterialTheme.colorScheme.background,
-        dialogContentColor = MaterialTheme.colorScheme.onBackground,
-        dialogConfirmButtonColor = MaterialTheme.colorScheme.secondary
+        dialogBackgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        dialogContentColor = MaterialTheme.colorScheme.onSurface,
+        dialogConfirmButtonColor = MaterialTheme.colorScheme.primary
     )
 }

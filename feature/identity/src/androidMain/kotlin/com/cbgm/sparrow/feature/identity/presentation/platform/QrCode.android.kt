@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.feature.identity.presentation.platform
 
 import android.graphics.Bitmap
-import android.graphics.Color
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -11,8 +10,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.set
+import com.cbgm.sparrow.core.ui.theme.FunctionalColors
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
@@ -31,7 +32,7 @@ actual fun QrCode(
         modifier =
             modifier
                 .background(
-                    color = MaterialTheme.colorScheme.surface,
+                    color = FunctionalColors.QrCodeBackground,
                     shape = MaterialTheme.shapes.medium
                 ),
         contentAlignment = Alignment.Center
@@ -62,9 +63,9 @@ private fun createQrBitmap(
         for (y in 0 until size) {
             bitmap[x, y] =
                 if (matrix[x, y]) {
-                    Color.BLACK
+                    FunctionalColors.QrCodeForeground.toArgb()
                 } else {
-                    Color.WHITE
+                    FunctionalColors.QrCodeBackground.toArgb()
                 }
         }
     }

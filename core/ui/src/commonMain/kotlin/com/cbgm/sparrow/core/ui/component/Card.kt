@@ -35,7 +35,7 @@ private data class ShadowLayer(
 private fun Modifier.bottomFadingShadow(
     shape: Shape,
     size: Dp = Dimens.Card.iconSize,
-    color: Color = Color.Black,
+    color: Color,
     maxAlpha: Float = 0.30f,
     layerCount: Int = 32
 ): Modifier =
@@ -132,9 +132,10 @@ fun SparrowCard(
                 }.bottomFadingShadow(
                     shape = shape,
                     size = Dimens.Card.iconSize,
+                    color = MaterialTheme.colorScheme.scrim,
                     maxAlpha = 0.30f
                 ),
-        color = MaterialTheme.colorScheme.primaryContainer,
+        color = MaterialTheme.colorScheme.surfaceContainer,
         shape = shape,
         tonalElevation = Dimens.Base.zero,
         shadowElevation = Dimens.Base.zero,
@@ -150,7 +151,7 @@ fun SparrowCardNoAnimation(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.primaryContainer,
+        color = MaterialTheme.colorScheme.surfaceContainer,
         content = content
     )
 }

@@ -209,7 +209,7 @@ private fun ProfilePicture(
         modifier = Modifier
             .size(Dimens.ProfileSettingsScreen.avatarEditorSize)
             .clip(MaterialTheme.shapes.circle)
-            .background(MaterialTheme.colorScheme.surfaceVariant),
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
         contentAlignment = Alignment.Center
     ) {
         val bytes = picture.bytes

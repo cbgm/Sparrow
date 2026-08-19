@@ -23,7 +23,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
@@ -31,6 +30,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.theme.FunctionalColors
 import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
@@ -112,7 +112,7 @@ internal fun ProfilePictureCameraScreen(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(Color.Black)
+                    .background(FunctionalColors.MediaBackground)
         ) {
             AndroidView(
                 factory = { previewView },
@@ -128,7 +128,7 @@ internal fun ProfilePictureCameraScreen(
             ) {
                 Text(
                     text = stringResource(Res.string.base_cancel),
-                    color = Color.White
+                    color = FunctionalColors.MediaForeground
                 )
             }
 

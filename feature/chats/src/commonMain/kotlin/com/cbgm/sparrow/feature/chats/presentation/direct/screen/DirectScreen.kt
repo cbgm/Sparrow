@@ -432,7 +432,7 @@ private fun LoadingContent(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
         Text(
             text = stringResource(Res.string.feature_chats_loading_chat),
@@ -456,7 +456,7 @@ private fun ErrorMessage(
                     horizontal = MaterialTheme.spacing.small,
                     vertical = MaterialTheme.spacing.base
                 ),
-        color = MaterialTheme.colorScheme.onErrorContainer,
+        color = MaterialTheme.colorScheme.error,
         style = MaterialTheme.typography.bodySmall,
         textAlign = TextAlign.Center
     )
@@ -586,8 +586,8 @@ private fun invitationState(
                 icon = Icons.Default.Warning,
                 title = stringResource(Res.string.feature_chats_contact_invitation_received_title),
                 description = stringResource(Res.string.feature_chats_contact_invitation_received_description),
-                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
             )
         IdentityHandshakeState.ACCEPTANCE_SENT,
         IdentityHandshakeState.WAITING_FOR_READY ->
@@ -667,8 +667,8 @@ private fun securityState(
                 icon = Icons.Default.Security,
                 title = stringResource(Res.string.feature_chats_chat_verified_by_contact_title),
                 description = stringResource(Res.string.feature_chats_chat_verified_by_contact_description),
-                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
             )
         ContactSecurityState.MUTUAL_KEYS_VERIFIED -> reinviteBanner()
     }
@@ -698,7 +698,8 @@ private fun errorBanner(
 private fun VerifiedSecurityIndicator(modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.secondary.copy(alpha = Alpha.DirectScreen.securityBanner)
+        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = Alpha.DirectScreen.securityBanner),
+        contentColor = MaterialTheme.colorScheme.onTertiaryContainer
     ) {
         Row(
             modifier = Modifier.padding(
@@ -712,14 +713,14 @@ private fun VerifiedSecurityIndicator(modifier: Modifier = Modifier) {
                 imageVector = Icons.Default.Lock,
                 contentDescription = null,
                 modifier = Modifier.size(Dimens.DirectScreen.statusIconSize),
-                tint = MaterialTheme.colorScheme.secondary
+                tint = MaterialTheme.colorScheme.onTertiaryContainer
             )
             Spacer(modifier = Modifier.width(MaterialTheme.spacing.directScreen.verifiedContentGap))
             Text(
                 text = stringResource(Res.string.feature_chats_chat_verified_e2ee),
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.secondary
+                color = MaterialTheme.colorScheme.onTertiaryContainer
             )
         }
     }

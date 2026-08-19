@@ -41,7 +41,7 @@ fun SparrowOverlayHost(
     topPadding: Dp = MaterialTheme.spacing.times(6),
     shape: Shape = MaterialTheme.shapes.modal,
     // containerColor: Color = MaterialTheme.colorScheme.background,
-    scrimColor: Color = Color.Black.copy(alpha = Alpha.Disabled),
+    scrimColor: Color = MaterialTheme.colorScheme.scrim.copy(alpha = Alpha.Disabled),
     // tonalElevation: Dp = 8.dp,
     // shadowElevation: Dp = 12.dp,
     content: @Composable (

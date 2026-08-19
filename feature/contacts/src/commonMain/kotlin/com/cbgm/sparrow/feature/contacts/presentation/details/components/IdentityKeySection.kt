@@ -28,7 +28,7 @@ internal fun IdentityKeySection(
             text = title,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onSurface
         )
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.base))
         Text(
@@ -37,11 +37,11 @@ internal fun IdentityKeySection(
                 Modifier
                     .fillMaxWidth()
                     .background(
-                        color = MaterialTheme.colorScheme.background,
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
                         shape = MaterialTheme.shapes.medium
                     ).padding(MaterialTheme.spacing.small),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.ContactDetailsScreen.identityKey),
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.ContactDetailsScreen.identityKey),
             fontFamily = FontFamily.Monospace
         )
     }

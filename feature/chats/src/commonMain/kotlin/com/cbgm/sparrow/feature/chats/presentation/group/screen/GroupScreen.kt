@@ -365,8 +365,8 @@ private fun StatusHint(
 @Composable
 private fun PendingMessageHint(uiState: GroupUiState) {
     Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MaterialTheme.colorScheme.onSurface
     ) {
         Column(
             modifier =
@@ -481,7 +481,7 @@ private fun LoadingContent(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
         Text(
             text = stringResource(Res.string.feature_chats_loading_chat),
@@ -505,7 +505,7 @@ private fun ErrorMessage(
                     horizontal = MaterialTheme.spacing.small,
                     vertical = MaterialTheme.spacing.base
                 ),
-        color = MaterialTheme.colorScheme.onErrorContainer,
+        color = MaterialTheme.colorScheme.error,
         style = MaterialTheme.typography.bodySmall,
         textAlign = TextAlign.Center
     )
@@ -551,8 +551,8 @@ private fun InvitationHint(
     onDecline: () -> Unit
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
     ) {
         Column(
             modifier =
@@ -684,8 +684,8 @@ private fun MembershipSystemMessage(
         horizontalArrangement = Arrangement.Center
     ) {
         Surface(
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = Alpha.GroupScreen.membershipSystemMessage),
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = Alpha.GroupScreen.membershipSystemMessage),
+            contentColor = MaterialTheme.colorScheme.onSurface,
             shape = MaterialTheme.shapes.small
         ) {
             Row(

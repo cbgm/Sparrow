@@ -69,7 +69,7 @@ internal fun NetworkDiagnosticsCard(diagnostics: TransportDiagnostics) {
                 text = stringResource(Res.string.feature_settings_network_diagnostics),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
@@ -121,7 +121,7 @@ private fun NodeList(diagnostics: TransportDiagnostics) {
         text = stringResource(Res.string.feature_settings_network_nodes),
         style = MaterialTheme.typography.labelLarge,
         fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
+        color = MaterialTheme.colorScheme.onSurface
     )
 
     if (diagnostics.availableNodes.isEmpty()) {
@@ -129,7 +129,7 @@ private fun NodeList(diagnostics: TransportDiagnostics) {
             text = stringResource(Res.string.feature_settings_network_no_nodes),
             modifier = Modifier.padding(top = MaterialTheme.spacing.base),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     } else {
         diagnostics.availableNodes.forEach { node ->
@@ -167,7 +167,7 @@ private fun NodeDiagnosticRow(node: TransportNodeDiagnostic) {
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.NetworkDiagnosticsCard.available)
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.NetworkDiagnosticsCard.available)
         )
     }
 }
@@ -190,7 +190,7 @@ private fun NodeDiagnosticHeader(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onSurface
         )
 
         Column(
@@ -210,7 +210,7 @@ private fun NodeDiagnosticHeader(
                         activeConnections
                     ),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -259,7 +259,7 @@ private fun DiagnosticRow(
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Text(
@@ -268,7 +268,7 @@ private fun DiagnosticRow(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }
@@ -323,8 +323,8 @@ private fun TransportNodeDiagnosticState.displayText(
 @Composable
 private fun TransportNodeDiagnosticState.displayColor(): Color =
     when (this) {
-        TransportNodeDiagnosticState.CURRENT -> MaterialTheme.colorScheme.secondary
-        TransportNodeDiagnosticState.AVAILABLE -> MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.NetworkDiagnosticsCard.available)
+        TransportNodeDiagnosticState.CURRENT -> MaterialTheme.colorScheme.primary
+        TransportNodeDiagnosticState.AVAILABLE -> MaterialTheme.colorScheme.tertiary
         TransportNodeDiagnosticState.COOLDOWN -> MaterialTheme.colorScheme.error
     }
 

@@ -24,8 +24,6 @@ import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownColor
 import com.mikepenz.markdown.m3.markdownTypography
 
-private val MarkdownCardColor = Color(0xFF102A46)
-
 @Composable
 fun MarkdownDisclaimerScreen(
     title: String,
@@ -59,10 +57,10 @@ fun MarkdownDisclaimerScreen(
             colors =
                 markdownColor(
                     text = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.DisclaimerScreen.content),
-                    codeBackground = MarkdownCardColor,
-                    inlineCodeBackground = MarkdownCardColor,
-                    dividerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.divider),
-                    tableBackground = MarkdownCardColor
+                    codeBackground = MaterialTheme.colorScheme.surfaceContainer,
+                    inlineCodeBackground = MaterialTheme.colorScheme.surfaceContainer,
+                    dividerColor = MaterialTheme.colorScheme.outlineVariant,
+                    tableBackground = MaterialTheme.colorScheme.surfaceContainer
                 ),
             typography =
                 markdownTypography(

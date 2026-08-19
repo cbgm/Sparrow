@@ -28,7 +28,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -75,7 +74,7 @@ fun StartupScreen(
         modifier =
             modifier
                 .fillMaxSize()
-                .background(color = MaterialTheme.colorScheme.primary)
+                .background(color = MaterialTheme.colorScheme.background)
                 .padding(horizontal = MaterialTheme.spacing.screenPadding)
     ) {
         Column(
@@ -93,7 +92,7 @@ fun StartupScreen(
             Text(
                 text = stringResource(Res.string.base_app_name),
                 style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Bold
             )
 
@@ -102,7 +101,7 @@ fun StartupScreen(
             Text(
                 text = stringResource(Res.string.base_tagline),
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.OpaqueText)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
             )
 
             Spacer(
@@ -194,7 +193,7 @@ private fun StartupIdentityContent(
                 Text(
                     text = stringResource(Res.string.feature_startup_verify_phone_number),
                     style = MaterialTheme.typography.titleSmall,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Center
                 )
@@ -239,21 +238,21 @@ private fun StartupIdentityContent(
                     singleLine = true,
                     textStyle =
                         MaterialTheme.typography.bodyMedium.copy(
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.SemiBold
                         ),
                     colors =
                         OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                             disabledTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
-                            focusedContainerColor = StartupPhoneFieldBackground,
-                            unfocusedContainerColor = StartupPhoneFieldBackground,
-                            errorContainerColor = StartupPhoneFieldBackground,
-                            focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                            errorContainerColor = MaterialTheme.colorScheme.surface,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
                             unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.TextField.unfocusedBorder),
                             errorBorderColor = MaterialTheme.colorScheme.error,
-                            focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
                             unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
                             errorLabelColor = MaterialTheme.colorScheme.error,
                             focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.TextField.placeholder),
@@ -264,7 +263,7 @@ private fun StartupIdentityContent(
                                     alpha = Alpha.OpaqueText
                                 ),
                             errorSupportingTextColor = MaterialTheme.colorScheme.error,
-                            cursorColor = MaterialTheme.colorScheme.secondary,
+                            cursorColor = MaterialTheme.colorScheme.primary,
                             errorCursorColor = MaterialTheme.colorScheme.error
                         ),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
@@ -337,7 +336,7 @@ private fun StartupErrorContent(
         Text(
             text = stringResource(Res.string.feature_startup_setup_failed),
             style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center
         )
@@ -369,7 +368,7 @@ private fun StartupProgress(message: String) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         CircularProgressIndicator(
-            color = MaterialTheme.colorScheme.secondary,
+            color = MaterialTheme.colorScheme.primary,
             trackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.StartupScreen.progressTrack)
         )
 
@@ -395,6 +394,3 @@ private fun StartupScreenPreview() {
         )
     }
 }
-
-private val StartupPhoneFieldBackground =
-    Color(0xFF0B2035)

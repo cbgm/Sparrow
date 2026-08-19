@@ -64,12 +64,12 @@ internal fun ContactDetailsContent(
                 Icon(
                     imageVector = Icons.Default.Share,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onBackground
+                    tint = MaterialTheme.colorScheme.onPrimary
                 )
                 Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
                 Text(
                     text = stringResource(Res.string.base_share_contact),
-                    color = MaterialTheme.colorScheme.onBackground,
+                    color = MaterialTheme.colorScheme.onPrimary,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }

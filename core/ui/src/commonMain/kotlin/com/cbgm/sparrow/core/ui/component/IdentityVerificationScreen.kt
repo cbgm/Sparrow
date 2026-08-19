@@ -166,7 +166,7 @@ fun IdentityVerificationScreen(
                     } else {
                         Text(
                             text = stringResource(Res.string.feature_chats_numbers_match),
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -206,7 +206,7 @@ private fun SafetyNumberContent(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
                             .padding(vertical = MaterialTheme.spacing.small),
                     style = MaterialTheme.typography.titleSmall,
                     fontFamily = FontFamily.Monospace,

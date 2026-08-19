@@ -21,7 +21,7 @@ import com.cbgm.sparrow.core.ui.theme.circle
 @Composable
 fun IconBadge(
     icon: ImageVector,
-    tint: Color = MaterialTheme.colorScheme.secondary
+    tint: Color = MaterialTheme.colorScheme.primary
 ) {
     Box(
         modifier =
@@ -46,7 +46,7 @@ fun IconBadgePreview() {
     SparrowTheme {
         IconBadge(
             icon = androidx.compose.material.icons.Icons.Default.Lock,
-            tint = MaterialTheme.colorScheme.secondary
+            tint = MaterialTheme.colorScheme.primary
         )
     }
 }

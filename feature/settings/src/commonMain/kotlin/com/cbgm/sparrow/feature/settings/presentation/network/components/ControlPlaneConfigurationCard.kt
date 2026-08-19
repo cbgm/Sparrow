@@ -89,7 +89,7 @@ internal fun ControlPlaneDirectoryCard(
             Text(
                 text = stringResource(Res.string.feature_settings_control_plane_directory_title),
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold
             )
             Text(
@@ -98,8 +98,6 @@ internal fun ControlPlaneDirectoryCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = MaterialTheme.spacing.base)
             )
-
-            val StartupPhoneFieldBackground = Color(0xFF0B2035)
 
             OutlinedTextField(
                 value = uiState.directoryDraft,
@@ -116,21 +114,21 @@ internal fun ControlPlaneDirectoryCard(
                 singleLine = true,
                 textStyle =
                     MaterialTheme.typography.bodyMedium.copy(
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.SemiBold
                     ),
                 colors =
                     OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                         disabledTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
-                        focusedContainerColor = StartupPhoneFieldBackground,
-                        unfocusedContainerColor = StartupPhoneFieldBackground,
-                        errorContainerColor = StartupPhoneFieldBackground,
-                        focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        errorContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.TextField.unfocusedBorder),
                         errorBorderColor = MaterialTheme.colorScheme.error,
-                        focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
                         unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
                         errorLabelColor = MaterialTheme.colorScheme.error,
                         focusedPlaceholderColor =
@@ -150,7 +148,7 @@ internal fun ControlPlaneDirectoryCard(
                                 alpha = Alpha.OpaqueText
                             ),
                         errorSupportingTextColor = MaterialTheme.colorScheme.error,
-                        cursorColor = MaterialTheme.colorScheme.secondary,
+                        cursorColor = MaterialTheme.colorScheme.primary,
                         errorCursorColor = MaterialTheme.colorScheme.error
                     )
             )
@@ -199,7 +197,7 @@ internal fun ControlPlaneSummaryCard(uiState: ControlPlaneSettingsUiState) {
         Text(
             text = stringResource(Res.string.feature_settings_control_planes_auto_health),
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -249,7 +247,7 @@ internal fun ControlPlaneListItem(
                 Modifier
                     .fillMaxWidth()
                     .padding(start = MaterialTheme.spacing.listDividerStart),
-            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = Alpha.ControlPlaneConfigurationCard.actionBackground)
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
         )
     }
 }
@@ -363,7 +361,7 @@ private fun sourceText(source: ControlPlaneUiSource): String =
 @Composable
 private fun statusColor(status: ControlPlaneUiStatus): Color =
     when (status) {
-        ControlPlaneUiStatus.ACTIVE -> MaterialTheme.colorScheme.secondary
+        ControlPlaneUiStatus.ACTIVE -> MaterialTheme.colorScheme.primary
         ControlPlaneUiStatus.AVAILABLE -> MaterialTheme.colorScheme.tertiary
         ControlPlaneUiStatus.UNREACHABLE -> MaterialTheme.colorScheme.error
         ControlPlaneUiStatus.CHECKING -> MaterialTheme.colorScheme.onSurfaceVariant
