@@ -53,10 +53,15 @@ object Colors {
     val InverseOnSurface = Color(0xFF10283D)
 }
 
-/** Theme-independent colors required by functional content rather than UI styling. */
+/**
+ * Fixed colors required by functional rendering.
+ *
+ * These intentionally do not follow the application theme.
+ */
 object FunctionalColors {
-    val MediaBackground = Color(0xFF000000)
-    val MediaForeground = Color(0xFFFFFFFF)
-    val QrCodeForeground = Color(0xFF000000)
-    val QrCodeBackground = Color(0xFFFFFFFF)
+    val MediaBackground = Color.Black
+    val MediaForeground = Color.White
+
+    val QrCodeForeground = Color.Black
+    val QrCodeBackground = Color.White
 }
