@@ -474,4 +474,6 @@
     <string name="feature_chats_group_avatar_crop">Gruppenbild zuschneiden</string>
     <string name="feature_chats_group_avatar_take_photo">Foto aufnehmen</string>
     <string name="feature_chats_group_avatar_choose_gallery">Aus Galerie wählen</string>
+    <string name="app_connection_offline_hint">Offline. Sparrow verbindet sich automatisch erneut.</string>
+    <string name="app_connection_reconnected_hint">Wieder online.</string>
 </resources>

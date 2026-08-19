@@ -93,7 +93,8 @@ private fun createGatewayHandler(
                 signer = signer
             ),
         legacyPush = pushClient,
-        routeLifetimeMilliseconds = config.routeLifetimeMilliseconds
+        routeLifetimeMilliseconds = config.routeLifetimeMilliseconds,
+        routeRefreshIntervalMilliseconds = config.routeRefreshIntervalMilliseconds
     )
 }
 

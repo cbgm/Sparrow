@@ -13,7 +13,6 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupAdministr
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupAvatarUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupMemberTypingUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.RefreshGroupDeliveryStateUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.RetryGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SendGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupTypingUseCase
@@ -47,7 +46,6 @@ class GroupViewModel(
     private val sendMessage: SendGroupMessageUseCase,
     private val markConversationRead: MarkGroupConversationReadUseCase,
     private val retryMessage: RetryGroupMessageUseCase,
-    private val refreshDeliveryState: RefreshGroupDeliveryStateUseCase,
     private val acceptInvitation: AcceptGroupInvitationUseCase,
     private val declineInvitation: DeclineGroupInvitationUseCase,
     observeContacts: ObserveContactsUseCase,
@@ -144,7 +142,6 @@ class GroupViewModel(
 
     init {
         observeParticipants()
-        observeDeliveryTimeouts()
     }
 
     fun onUiEvent(event: GroupUiEvent) {
@@ -277,15 +274,6 @@ class GroupViewModel(
         }
     }
 
-    private fun observeDeliveryTimeouts() {
-        viewModelScope.launch {
-            while (true) {
-                refreshDeliveryState(groupId)
-                delay(DELIVERY_REFRESH_INTERVAL_MILLISECONDS.milliseconds)
-            }
-        }
-    }
-
     private fun sendTypingState(isTyping: Boolean) {
         viewModelScope.launch { sendTypingStateNow(isTyping) }
     }
@@ -337,7 +325,6 @@ class GroupViewModel(
     )
 
     private companion object {
-        const val DELIVERY_REFRESH_INTERVAL_MILLISECONDS = 15_000L
         const val LOCAL_TYPING_TIMEOUT_MILLISECONDS = 1500
         const val REMOTE_TYPING_TIMEOUT_MILLISECONDS = 3000
     }

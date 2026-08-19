@@ -8,7 +8,5 @@ interface GroupMessageRepository {
 
     suspend fun retry(messageId: String): Result<Unit>
 
-    suspend fun refreshDeliveryState(groupId: String): Result<Unit>
-
     suspend fun markConversationRead(groupId: String): Result<Unit>
 }

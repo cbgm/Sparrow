@@ -40,6 +40,17 @@ class DirectMessageDeliveryStateMachineTest {
     }
 
     @Test
+    fun serverAcceptedMessageFailsOnlyWhenServerRetentionExpires() {
+        val sent = transition(MessageDeliveryStatus.SENDING, MessageDeliveryEvent.SEND_SUCCEEDED)
+
+        assertEquals(MessageDeliveryStatus.SENT, sent)
+        assertEquals(
+            MessageDeliveryStatus.FAILED,
+            transition(sent, MessageDeliveryEvent.DELIVERY_EXPIRED)
+        )
+    }
+
+    @Test
     fun deliveryReceiptCanRecoverFromEarlierFailure() {
         assertEquals(
             MessageDeliveryStatus.DELIVERED,

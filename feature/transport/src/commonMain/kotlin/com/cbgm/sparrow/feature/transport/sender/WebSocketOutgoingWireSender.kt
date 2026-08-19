@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.transport.sender
 
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.protocol.mailbox.MailboxRouteRepository
+import com.cbgm.sparrow.core.protocol.transport.OutgoingWireAcceptance
 import com.cbgm.sparrow.core.protocol.transport.OutgoingWireSender
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.transport.config.TransportConfig
@@ -22,6 +23,12 @@ class WebSocketOutgoingWireSender(
         recipientAddress: String,
         encodedTransportPayload: String
     ): Result<Unit> =
+        sendWithAcceptance(recipientAddress, encodedTransportPayload).map { Unit }
+
+    override suspend fun sendWithAcceptance(
+        recipientAddress: String,
+        encodedTransportPayload: String
+    ): Result<OutgoingWireAcceptance> =
         runCatching {
             require(recipientAddress.isNotBlank()) { "Recipient address must not be blank" }
             require(encodedTransportPayload.isNotBlank()) { "Transport payload must not be blank" }
@@ -48,39 +55,44 @@ class WebSocketOutgoingWireSender(
                     ?.getOrThrow()
                     ?.takeIf { it.expiresAtEpochMilliseconds > createdAt }
 
-            if (route == null) {
-                webSocketTransportClient
-                    .sendEnvelopeAndAwaitAcceptance(
-                        envelope =
-                            TransportEnvelope(
-                                envelopeId = envelopeId,
-                                senderId = senderRoutingId,
-                                recipientId = recipientAddress,
-                                payload = encodedTransportPayload,
-                                createdAtEpochMilliseconds = createdAt
-                            ),
-                        timeoutMilliseconds = transportConfig.acknowledgementTimeoutMilliseconds
-                    ).getOrThrow()
-            } else {
-                webSocketTransportClient
-                    .sendFederatedEnvelopeAndAwaitAcceptance(
-                        envelope =
-                            FederatedEnvelope(
-                                envelopeId = envelopeId,
-                                senderRoutingId = senderRoutingId,
-                                recipientDeviceRoutingId = recipientAddress,
-                                mailboxRoute = route,
-                                encryptedPayload = encodedTransportPayload,
-                                createdAtEpochMilliseconds = createdAt,
-                                expiresAtEpochMilliseconds =
-                                    minOf(
-                                        createdAt + ENVELOPE_LIFETIME_MILLISECONDS,
-                                        route.expiresAtEpochMilliseconds
-                                    )
-                            ),
-                        timeoutMilliseconds = transportConfig.acknowledgementTimeoutMilliseconds
-                    ).getOrThrow()
-            }
+            val acceptance =
+                if (route == null) {
+                    webSocketTransportClient
+                        .sendEnvelopeAndAwaitServerAcceptance(
+                            envelope =
+                                TransportEnvelope(
+                                    envelopeId = envelopeId,
+                                    senderId = senderRoutingId,
+                                    recipientId = recipientAddress,
+                                    payload = encodedTransportPayload,
+                                    createdAtEpochMilliseconds = createdAt
+                                ),
+                            timeoutMilliseconds = transportConfig.acknowledgementTimeoutMilliseconds
+                        ).getOrThrow()
+                } else {
+                    webSocketTransportClient
+                        .sendFederatedEnvelopeAndAwaitServerAcceptance(
+                            envelope =
+                                FederatedEnvelope(
+                                    envelopeId = envelopeId,
+                                    senderRoutingId = senderRoutingId,
+                                    recipientDeviceRoutingId = recipientAddress,
+                                    mailboxRoute = route,
+                                    encryptedPayload = encodedTransportPayload,
+                                    createdAtEpochMilliseconds = createdAt,
+                                    expiresAtEpochMilliseconds =
+                                        minOf(
+                                            createdAt + ENVELOPE_LIFETIME_MILLISECONDS,
+                                            route.expiresAtEpochMilliseconds
+                                        )
+                                ),
+                            timeoutMilliseconds = transportConfig.acknowledgementTimeoutMilliseconds
+                        ).getOrThrow()
+                }
+
+            OutgoingWireAcceptance(
+                expiresAtEpochMilliseconds = acceptance.expiresAtEpochMilliseconds
+            )
         }
 
     private companion object {

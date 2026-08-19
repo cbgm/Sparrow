@@ -24,4 +24,6 @@ interface OutboxProcessor {
      * one item fails.
      */
     suspend fun processPending(limit: Int = 20): Result<OutboxProcessingResult>
+
+    suspend fun expireAccepted(): Result<Int> = Result.success(0)
 }

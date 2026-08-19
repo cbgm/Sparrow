@@ -9,5 +9,7 @@ sealed interface StartupUiEvent {
 
     data object CreateIdentityClicked : StartupUiEvent
 
+    data object IdentityCreated : StartupUiEvent
+
     data object RetryClicked : StartupUiEvent
 }

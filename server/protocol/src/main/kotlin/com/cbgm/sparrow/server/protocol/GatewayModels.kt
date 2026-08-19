@@ -102,6 +102,12 @@ sealed interface GatewayServerMessage {
     ) : GatewayServerMessage
 
     @Serializable
+    @SerialName("route_registered")
+    data class RouteRegistered(
+        val aliases: List<String> = emptyList()
+    ) : GatewayServerMessage
+
+    @Serializable
     @SerialName("incoming_envelope")
     data class IncomingEnvelope(
         val envelope: TransportEnvelope
@@ -117,7 +123,8 @@ sealed interface GatewayServerMessage {
     @Serializable
     @SerialName("envelope_accepted")
     data class EnvelopeAccepted(
-        val envelopeId: String
+        val envelopeId: String,
+        val expiresAtEpochMilliseconds: Long
     ) : GatewayServerMessage
 
     @Serializable

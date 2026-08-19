@@ -338,6 +338,8 @@
     <string name="feature_startup_detected_edit_or_choose">Detected automatically. You can edit it or choose another number.</string>
     <string name="feature_startup_keys_generated_after_approval">Your encryption keys are generated only after you approve your number.</string>
     <string name="feature_startup_opening_sparrow">Opening Sparrow…</string>
+    <string name="app_connection_offline_hint">Offline. Sparrow will reconnect automatically.</string>
+    <string name="app_connection_reconnected_hint">Back online.</string>
     <string name="feature_startup_partial_identity_no_replacement">Only part of the local identity is available. Sparrow will not generate replacement keys automatically.</string>
     <string name="feature_startup_preparing_sparrow">Preparing Sparrow…</string>
     <string name="feature_startup_setup_failed">Sparrow could not finish setup.</string>

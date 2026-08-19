@@ -43,6 +43,28 @@ interface ProtocolOutboxDao {
 
     @Query(
         """
+        SELECT MIN(expiresAtEpochMilliseconds)
+        FROM protocol_outbox
+        WHERE status = 'SENT'
+          AND expiresAtEpochMilliseconds IS NOT NULL
+        """
+    )
+    fun observeNextSentExpiry(): Flow<Long?>
+
+    @Query(
+        """
+        SELECT *
+        FROM protocol_outbox
+        WHERE status = 'SENT'
+          AND expiresAtEpochMilliseconds IS NOT NULL
+          AND expiresAtEpochMilliseconds <= :nowEpochMilliseconds
+        ORDER BY expiresAtEpochMilliseconds ASC
+        """
+    )
+    suspend fun findExpiredSent(nowEpochMilliseconds: Long): List<ProtocolOutboxEntity>
+
+    @Query(
+        """
         SELECT *
         FROM protocol_outbox
         WHERE status = 'PENDING'
@@ -73,12 +95,14 @@ interface ProtocolOutboxDao {
         UPDATE protocol_outbox
         SET status = 'SENT',
             lastError = NULL,
+            expiresAtEpochMilliseconds = :expiresAtEpochMilliseconds,
             updatedAtEpochMilliseconds = :updatedAt
         WHERE id = :itemId
         """
     )
     suspend fun markSent(
         itemId: String,
+        expiresAtEpochMilliseconds: Long,
         updatedAt: Long
     )
 
@@ -100,11 +124,28 @@ interface ProtocolOutboxDao {
     @Query(
         """
         UPDATE protocol_outbox
-        SET status = 'PENDING',
-            lastError = NULL,
+        SET status = 'EXPIRED',
+            lastError = :errorMessage,
             updatedAtEpochMilliseconds = :updatedAt
         WHERE id = :itemId
-          AND status = 'FAILED'
+          AND status = 'SENT'
+        """
+    )
+    suspend fun markExpired(
+        itemId: String,
+        errorMessage: String,
+        updatedAt: Long
+    ): Int
+
+    @Query(
+        """
+        UPDATE protocol_outbox
+        SET status = 'PENDING',
+            lastError = NULL,
+            expiresAtEpochMilliseconds = NULL,
+            updatedAtEpochMilliseconds = :updatedAt
+        WHERE id = :itemId
+          AND status IN ('FAILED', 'EXPIRED')
         """
     )
     suspend fun retry(
@@ -117,9 +158,10 @@ interface ProtocolOutboxDao {
         UPDATE protocol_outbox
         SET status = 'PENDING',
             lastError = NULL,
+            expiresAtEpochMilliseconds = NULL,
             updatedAtEpochMilliseconds = :updatedAt
         WHERE packetId = :packetId
-          AND status IN ('SENT', 'FAILED')
+          AND status IN ('SENT', 'FAILED', 'EXPIRED')
         """
     )
     suspend fun requeueForResend(
@@ -132,6 +174,7 @@ interface ProtocolOutboxDao {
         UPDATE protocol_outbox
         SET status = 'PENDING',
             lastError = NULL,
+            expiresAtEpochMilliseconds = NULL,
             updatedAtEpochMilliseconds = :updatedAt
         WHERE status = 'PROCESSING'
         """
@@ -143,6 +186,7 @@ interface ProtocolOutboxDao {
         UPDATE protocol_outbox
         SET status = 'PENDING',
             lastError = NULL,
+            expiresAtEpochMilliseconds = NULL,
             updatedAtEpochMilliseconds = :updatedAt
         WHERE status = 'FAILED'
         """

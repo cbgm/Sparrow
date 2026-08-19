@@ -41,7 +41,24 @@ class OutboxStateMachineTest {
     }
 
     @Test
-    fun sentItemCannotMoveBackToFailed() {
+    fun acceptedEnvelopeCanExpireAndThenBeRetried() {
+        val expired =
+            OutboxStateMachine.requireTransition(
+                current = OutboxStatus.SENT,
+                event = OutboxEvent.DELIVERY_EXPIRED
+            )
+        val pending =
+            OutboxStateMachine.requireTransition(
+                current = expired,
+                event = OutboxEvent.RETRY_REQUESTED
+            )
+
+        assertEquals(OutboxStatus.EXPIRED, expired)
+        assertEquals(OutboxStatus.PENDING, pending)
+    }
+
+    @Test
+    fun sentItemCannotMoveBackToTransientFailure() {
         assertFailsWith<IllegalStateException> {
             OutboxStateMachine.requireTransition(
                 current = OutboxStatus.SENT,
@@ -79,17 +96,19 @@ class OutboxStateMachineTest {
     }
 
     @Test
-    fun sentStateIsTerminal() {
-        OutboxEvent.entries.forEach { event ->
-            assertNull(
-                actual =
-                    OutboxStateMachine.transition(
-                        current = OutboxStatus.SENT,
-                        event = event
-                    ),
-                message = "SENT must reject $event"
-            )
-        }
+    fun sentAcceptsOnlyDeliveryExpiry() {
+        OutboxEvent.entries
+            .filterNot { event -> event == OutboxEvent.DELIVERY_EXPIRED }
+            .forEach { event ->
+                assertNull(
+                    actual =
+                        OutboxStateMachine.transition(
+                            current = OutboxStatus.SENT,
+                            event = event
+                        ),
+                    message = "SENT must reject $event"
+                )
+            }
     }
 
     @Test

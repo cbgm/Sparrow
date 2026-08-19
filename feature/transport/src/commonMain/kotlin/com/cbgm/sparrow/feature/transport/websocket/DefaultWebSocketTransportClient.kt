@@ -6,10 +6,11 @@ import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayClientMessage
+import com.cbgm.sparrow.feature.transport.gateway.model.GatewayEnvelopeAcceptance
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayServerMessage
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayTypingEvent
 import com.cbgm.sparrow.feature.transport.gateway.model.TransportEnvelope
-import com.cbgm.sparrow.feature.transport.presence.ClientPresenceRouteManager
+import com.cbgm.sparrow.feature.transport.presence.ClientPresenceRouteCoordinator
 import com.cbgm.sparrow.feature.transport.presence.PresenceRouteConnection
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
@@ -43,7 +44,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class DefaultWebSocketTransportClient internal constructor(
     private val httpClient: HttpClient,
     private val json: Json,
-    private val presenceRouteManager: ClientPresenceRouteManager
+    private val presenceRouteCoordinator: ClientPresenceRouteCoordinator
 ) : WebSocketTransportClient {
     private val logger = SparrowLog.withTag("DefaultWebSocketTransportClient")
 
@@ -78,7 +79,7 @@ class DefaultWebSocketTransportClient internal constructor(
 
     private var connectionJob: Job? = null
 
-    private val pendingAcknowledgements = mutableMapOf<String, CompletableDeferred<Unit>>()
+    private val pendingAcknowledgements = mutableMapOf<String, CompletableDeferred<GatewayEnvelopeAcceptance>>()
 
     override fun connect(
         serverUrl: String,
@@ -107,42 +108,26 @@ class DefaultWebSocketTransportClient internal constructor(
         envelope: TransportEnvelope,
         timeoutMilliseconds: Long
     ): Result<Unit> =
-        runCatching {
-            require(timeoutMilliseconds > 0L) {
-                "Acknowledgement timeout must be positive"
-            }
+        sendEnvelopeAndAwaitServerAcceptance(envelope, timeoutMilliseconds).map { Unit }
 
-            check(connectionState.value is TransportConnectionState.Connected) {
-                "WebSocket transport is not connected"
-            }
-
-            val acknowledgement = CompletableDeferred<Unit>()
-
-            acknowledgementsMutex.withLock {
-                check(!pendingAcknowledgements.containsKey(envelope.envelopeId)) {
-                    "Envelope is already awaiting acknowledgement"
-                }
-
-                pendingAcknowledgements[envelope.envelopeId] = acknowledgement
-            }
-
-            try {
-                sendEnvelopeFrame(envelope = envelope)
-
-                withTimeout(timeoutMilliseconds.milliseconds) {
-                    acknowledgement.await()
-                }
-            } finally {
-                acknowledgementsMutex.withLock {
-                    pendingAcknowledgements.remove(envelope.envelopeId)
-                }
-            }
+    override suspend fun sendEnvelopeAndAwaitServerAcceptance(
+        envelope: TransportEnvelope,
+        timeoutMilliseconds: Long
+    ): Result<GatewayEnvelopeAcceptance> =
+        awaitEnvelopeAcceptance(envelope.envelopeId, timeoutMilliseconds) {
+            sendEnvelopeFrame(envelope)
         }
 
     override suspend fun sendFederatedEnvelopeAndAwaitAcceptance(
         envelope: FederatedEnvelope,
         timeoutMilliseconds: Long
     ): Result<Unit> =
+        sendFederatedEnvelopeAndAwaitServerAcceptance(envelope, timeoutMilliseconds).map { Unit }
+
+    override suspend fun sendFederatedEnvelopeAndAwaitServerAcceptance(
+        envelope: FederatedEnvelope,
+        timeoutMilliseconds: Long
+    ): Result<GatewayEnvelopeAcceptance> =
         awaitEnvelopeAcceptance(envelope.envelopeId, timeoutMilliseconds) {
             sendFederatedEnvelopeFrame(envelope)
         }
@@ -294,53 +279,45 @@ class DefaultWebSocketTransportClient internal constructor(
                         serverUrl = serverUrl,
                         routingId = localRoutingId,
                         connectionId = connectionId,
-                        generation = generation,
-                        initialGatewayInformation = null,
-                        initialRouteEstablished = false,
-                        connectionIdRegistered = true
+                        generation = generation
                     )
 
-                val routeRefreshJob =
-                    launch {
-                        presenceRouteManager.maintain(
-                            connection = presenceConnection,
-                            sendRefresh = { registration ->
-                                runCatching {
-                                    sendMutex.withLock {
-                                        this@webSocket.send(
-                                            Frame.Text(
-                                                json.encodeToString<GatewayClientMessage>(
-                                                    GatewayClientMessage.RefreshRoute(registration)
-                                                )
+                val presenceSession =
+                    presenceRouteCoordinator.createSession(
+                        scope = this,
+                        connection = presenceConnection,
+                        publishRoute = { registration ->
+                            runCatching {
+                                sendMutex.withLock {
+                                    this@webSocket.send(
+                                        Frame.Text(
+                                            json.encodeToString<GatewayClientMessage>(
+                                                GatewayClientMessage.RefreshRoute(registration)
                                             )
                                         )
-                                    }
-                                    mutableRegisteredRoutingAliases.value =
-                                        registration.route.aliases.orEmpty().toSet()
+                                    )
                                 }
-                            },
-                            reconnect = {
-                                this@webSocket.close(
-                                    CloseReason(
-                                        code = CloseReason.Codes.NORMAL,
-                                        message = "Reconnect for signed presence"
-                                    )
-                                )
-                            },
-                            fail = { error ->
-                                mutableConnectionState.value =
-                                    TransportConnectionState.Failed(
-                                        message = error?.message ?: "Presence route refresh failed"
-                                    )
-                                this@webSocket.close(
-                                    CloseReason(
-                                        code = CloseReason.Codes.INTERNAL_ERROR,
-                                        message = "Presence route refresh failed"
-                                    )
-                                )
                             }
-                        )
-                    }
+                        },
+                        onReady = { aliases ->
+                            mutableRegisteredRoutingAliases.value = aliases
+                            mutableConnectionState.value =
+                                TransportConnectionState.Connected(routingId = localRoutingId)
+                        },
+                        onFailure = { error ->
+                            mutableRegisteredRoutingAliases.value = emptySet()
+                            mutableConnectionState.value =
+                                TransportConnectionState.Failed(
+                                    message = error.message ?: "Presence route failed"
+                                )
+                            this@webSocket.close(
+                                CloseReason(
+                                    code = CloseReason.Codes.INTERNAL_ERROR,
+                                    message = "Presence route failed"
+                                )
+                            )
+                        }
+                    )
 
                 try {
                     incoming.consumeEach { frame ->
@@ -349,7 +326,15 @@ class DefaultWebSocketTransportClient internal constructor(
                                 handleTextFrame(
                                     encodedMessage = frame.readText(),
                                     expectedRoutingId = localRoutingId,
-                                    registeredAliases = emptySet()
+                                    onGatewayRegistered = {
+                                        presenceSession.onGatewayRegistered()
+                                    },
+                                    onRouteRegistered = { aliases ->
+                                        presenceSession.onRouteAccepted(aliases)
+                                    },
+                                    onRouteRejected = { error ->
+                                        presenceSession.onRouteRejected(error)
+                                    }
                                 )
                             }
 
@@ -381,7 +366,7 @@ class DefaultWebSocketTransportClient internal constructor(
                         }
                     }
                 } finally {
-                    routeRefreshJob.cancelAndJoin()
+                    presenceSession.close()
                 }
 
                 val reason = closeReason.await()
@@ -481,13 +466,13 @@ class DefaultWebSocketTransportClient internal constructor(
         envelopeId: String,
         timeoutMilliseconds: Long,
         send: suspend () -> Unit
-    ): Result<Unit> =
+    ): Result<GatewayEnvelopeAcceptance> =
         runCatching {
             require(timeoutMilliseconds > 0L) { "Acknowledgement timeout must be positive" }
             check(connectionState.value is TransportConnectionState.Connected) {
                 "WebSocket transport is not connected"
             }
-            val acknowledgement = CompletableDeferred<Unit>()
+            val acknowledgement = CompletableDeferred<GatewayEnvelopeAcceptance>()
             acknowledgementsMutex.withLock {
                 check(!pendingAcknowledgements.containsKey(envelopeId)) {
                     "Envelope is already awaiting acknowledgement"
@@ -505,7 +490,9 @@ class DefaultWebSocketTransportClient internal constructor(
     private suspend fun handleTextFrame(
         encodedMessage: String,
         expectedRoutingId: String,
-        registeredAliases: Set<String>
+        onGatewayRegistered: () -> Unit,
+        onRouteRegistered: (Set<String>) -> Unit,
+        onRouteRejected: (Throwable) -> Unit
     ) {
         val message =
             runCatching {
@@ -532,9 +519,13 @@ class DefaultWebSocketTransportClient internal constructor(
 
                 logger.info { "Gateway registration accepted for ${message.routingId}" }
 
-                mutableRegisteredRoutingAliases.value = registeredAliases
-                mutableConnectionState.value =
-                    TransportConnectionState.Connected(routingId = message.routingId)
+                mutableRegisteredRoutingAliases.value = emptySet()
+
+                onGatewayRegistered()
+            }
+
+            is GatewayServerMessage.RouteRegistered -> {
+                onRouteRegistered(message.aliases.toSet())
             }
 
             is GatewayServerMessage.IncomingEnvelope -> {
@@ -556,26 +547,40 @@ class DefaultWebSocketTransportClient internal constructor(
                         pendingAcknowledgements[message.envelopeId]
                     }
 
-                acknowledgement?.complete(Unit)
+                acknowledgement?.complete(
+                    GatewayEnvelopeAcceptance(
+                        envelopeId = message.envelopeId,
+                        expiresAtEpochMilliseconds = message.expiresAtEpochMilliseconds
+                    )
+                )
             }
 
             is GatewayServerMessage.Error -> {
                 logger.warn { "Gateway error ${message.code}: ${message.message}" }
 
-                if (message.code in FATAL_ROUTE_ERROR_CODES) {
-                    throw IllegalStateException(
-                        "Presence route rejected by gateway: ${message.code}"
-                    )
-                }
+                when (message.code) {
+                    "INVALID_ROUTE_REFRESH",
+                    "ROUTE_REJECTED" ->
+                        onRouteRejected(
+                            IllegalStateException(
+                                "Presence route rejected by gateway: ${message.code}"
+                            )
+                        )
 
-                /*
-                 * A gateway error does not always mean the underlying
-                 * WebSocket connection is broken.
-                 *
-                 * Keep the connection state unchanged here. The
-                 * envelope awaiting acknowledgement will eventually
-                 * time out and the outbox item becomes FAILED.
-                 */
+                    "INVALID_ROUTE",
+                    "ALREADY_REGISTERED" ->
+                        throw IllegalStateException(
+                            "Gateway registration rejected: ${message.code}"
+                        )
+
+                    else -> {
+                        /*
+                         * A gateway error does not always mean the underlying
+                         * WebSocket connection is broken. The envelope awaiting
+                         * acknowledgement will time out and the outbox item becomes FAILED.
+                         */
+                    }
+                }
             }
         }
     }
@@ -598,13 +603,5 @@ class DefaultWebSocketTransportClient internal constructor(
 
     private companion object {
         const val INCOMING_BUFFER_CAPACITY = 64
-
-        val FATAL_ROUTE_ERROR_CODES =
-            setOf(
-                "INVALID_ROUTE",
-                "INVALID_ROUTE_REFRESH",
-                "ROUTE_REJECTED",
-                "ALREADY_REGISTERED"
-            )
     }
 }

@@ -6,6 +6,6 @@ enum class MessageDeliveryEvent {
     SEND_FAILED,
     RETRY_REQUESTED,
     DELIVERY_CONFIRMED,
-    DELIVERY_TIMED_OUT,
+    DELIVERY_EXPIRED,
     READ_CONFIRMED
 }

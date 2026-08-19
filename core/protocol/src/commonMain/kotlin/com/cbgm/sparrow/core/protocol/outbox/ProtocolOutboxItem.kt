@@ -8,6 +8,7 @@ data class ProtocolOutboxItem(
     val status: OutboxStatus,
     val attemptCount: Int,
     val lastError: String?,
+    val expiresAtEpochMilliseconds: Long? = null,
     val createdAtEpochMilliseconds: Long,
     val updatedAtEpochMilliseconds: Long
 ) {
@@ -49,6 +50,7 @@ data class ProtocolOutboxItem(
             status == other.status &&
             attemptCount == other.attemptCount &&
             lastError == other.lastError &&
+            expiresAtEpochMilliseconds == other.expiresAtEpochMilliseconds &&
             createdAtEpochMilliseconds ==
             other.createdAtEpochMilliseconds &&
             updatedAtEpochMilliseconds ==
@@ -69,6 +71,8 @@ data class ProtocolOutboxItem(
         result = 31 * result + attemptCount
 
         result = 31 * result + (lastError?.hashCode() ?: 0)
+
+        result = 31 * result + (expiresAtEpochMilliseconds?.hashCode() ?: 0)
 
         result = 31 * result + createdAtEpochMilliseconds.hashCode()
 

@@ -69,23 +69,6 @@ class GroupMessageDeliveryCoordinator(
         }
     }
 
-    suspend fun expireUnconfirmedRecipients(
-        groupId: String,
-        timeoutMilliseconds: Long = DELIVERY_TIMEOUT_MILLISECONDS
-    ) {
-        require(groupId.isNotBlank()) { "Group ID must not be blank" }
-        require(timeoutMilliseconds > 0L) { "Delivery timeout must be positive" }
-        val cutoff = SystemClock.nowEpochMilliseconds() - timeoutMilliseconds
-        mutex.withLock {
-            messageRecipientStateDao
-                .findByConversationAndDeliveryStatusBefore(groupId, MessageDeliveryStatus.SENT.name, cutoff)
-                .forEach { state ->
-                    updateRecipientState(state, MessageDeliveryEvent.DELIVERY_TIMED_OUT, "Recipient did not confirm delivery")
-                    updateAggregatedStatus(state.messageId)
-                }
-        }
-    }
-
     private suspend fun updateRecipientState(
         state: MessageRecipientStateEntity,
         event: MessageDeliveryEvent,
@@ -107,9 +90,5 @@ class GroupMessageDeliveryCoordinator(
         val statuses = messageRecipientStateDao.findByMessageId(messageId).map { it.deliveryStatus.toGroupDeliveryStatus() }
         val aggregated = GroupMessageDeliveryStateMachine.aggregate(statuses)
         messageDeliveryStatusDao.updateDeliveryStatusByMessageId(messageId, aggregated.name)
-    }
-
-    private companion object {
-        const val DELIVERY_TIMEOUT_MILLISECONDS = 60_000L
     }
 }

@@ -4,14 +4,18 @@ import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.outbox.OutboxProcessor
 import com.cbgm.sparrow.core.protocol.outbox.OutboxRunner
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.core.time.SystemClock
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.time.Duration.Companion.milliseconds
 
 class DefaultOutboxRunner(
     private val protocolOutbox: ProtocolOutbox,
@@ -25,6 +29,8 @@ class DefaultOutboxRunner(
 
     private var observationJob: Job? = null
 
+    private var expiryJob: Job? = null
+
     override fun start() {
         if (observationJob?.isActive != true) {
             observationJob =
@@ -35,6 +41,35 @@ class DefaultOutboxRunner(
                             if (pendingItems.isNotEmpty()) {
                                 processAvailableItems()
                             }
+                        }
+                }
+        }
+
+        if (expiryJob?.isActive != true) {
+            expiryJob =
+                runnerScope.launch {
+                    protocolOutbox
+                        .observeNextSentExpiry()
+                        .collectLatest { expiresAtEpochMilliseconds ->
+                            if (expiresAtEpochMilliseconds == null) {
+                                return@collectLatest
+                            }
+
+                            val remainingMilliseconds =
+                                (expiresAtEpochMilliseconds - SystemClock.nowEpochMilliseconds())
+                                    .coerceAtLeast(0L)
+                            if (remainingMilliseconds > 0L) {
+                                delay(remainingMilliseconds.milliseconds)
+                            }
+
+                            outboxProcessor
+                                .expireAccepted()
+                                .onFailure { error ->
+                                    if (error is CancellationException) {
+                                        throw error
+                                    }
+                                    logger.error(error) { "Accepted-envelope expiry processing failed" }
+                                }
                         }
                 }
         }
@@ -64,6 +99,8 @@ class DefaultOutboxRunner(
     override fun stop() {
         observationJob?.cancel()
         observationJob = null
+        expiryJob?.cancel()
+        expiryJob = null
     }
 
     private suspend fun processAvailableItems() {

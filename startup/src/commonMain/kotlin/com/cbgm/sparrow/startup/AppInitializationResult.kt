@@ -1,5 +1,9 @@
 package com.cbgm.sparrow.startup
 
-data class AppInitializationResult(
-    val identityReady: Boolean
-)
+sealed interface AppInitializationResult {
+    data object IdentityRequired : AppInitializationResult
+
+    data object ReadyOnline : AppInitializationResult
+
+    data object ReadyOffline : AppInitializationResult
+}
