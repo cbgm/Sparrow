@@ -6,13 +6,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.koin.compose.viewmodel.koinNavViewModel
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun DirectRoute(
     contactId: String,
     modifier: Modifier = Modifier,
-    viewModel: DirectViewModel = koinNavViewModel()
+    viewModel: DirectViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 

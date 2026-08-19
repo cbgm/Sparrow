@@ -6,13 +6,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.koin.compose.viewmodel.koinNavViewModel
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun GroupRoute(
     conversationId: String,
     modifier: Modifier = Modifier,
-    viewModel: GroupViewModel = koinNavViewModel()
+    viewModel: GroupViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 

@@ -66,7 +66,6 @@ fun NavGraphBuilder.chatsNavGraph() {
     composable<AppRoute.VerifyIdentityQr> { backStackEntry ->
         val destination = backStackEntry.toRoute<AppRoute.VerifyIdentityQr>()
         VerificationRoute(
-            contactId = destination.contactId,
             groupId = destination.groupId
         )
     }
