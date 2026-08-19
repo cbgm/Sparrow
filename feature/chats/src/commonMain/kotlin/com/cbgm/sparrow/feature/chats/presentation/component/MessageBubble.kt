@@ -52,6 +52,7 @@ import com.cbgm.sparrow.resources.feature_chats_sending
 import com.cbgm.sparrow.resources.feature_chats_sent
 import com.cbgm.sparrow.resources.feature_chats_unable_decrypt_secure_message
 import com.cbgm.sparrow.resources.feature_chats_unable_read_plaintext
+import com.cbgm.sparrow.resources.feature_chats_waiting_for_invitation_acceptance
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -239,6 +240,17 @@ private fun DeliveryIndicator(
 ) {
     when (deliveryStatus) {
         MessageDeliveryStatus.NOT_APPLICABLE -> Unit
+        MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION ->
+            DeliveryLabel(
+                text = stringResource(Res.string.feature_chats_waiting_for_invitation_acceptance),
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = null,
+                        modifier = Modifier.size(Dimens.MessageBubble.iconSize)
+                    )
+                }
+            )
         MessageDeliveryStatus.QUEUED ->
             DeliveryLabel(
                 text = stringResource(Res.string.feature_chats_queued),

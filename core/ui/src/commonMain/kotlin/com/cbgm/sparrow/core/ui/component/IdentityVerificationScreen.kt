@@ -29,8 +29,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_verify_contact
@@ -245,9 +247,25 @@ private fun VerificationTopBar(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
                 maxLines = 1
             )
         }
     )
+}
+
+@Preview
+@Composable
+private fun IdentityVerificationScreenPreview() {
+    SparrowTheme {
+        IdentityVerificationScreen(
+            contactName = "dsffsdf",
+            safetyNumber = "654654654",
+            isLoadingSafetyNumber = false,
+            isVerifying = false,
+            errorMessage = null,
+            onConfirm = {},
+            onScanQrCode = {},
+            onBack = {}
+        )
+    }
 }

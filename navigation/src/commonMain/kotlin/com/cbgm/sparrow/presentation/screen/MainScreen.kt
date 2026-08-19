@@ -30,7 +30,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.component.SparrowScrollStateType
@@ -137,16 +136,12 @@ private fun MainTopBar(
         title = {
             Text(
                 text = stringResource(selectedTab.label),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.titleSmall
             )
         },
         actions = {
             if (selectedTab == MainTab.Chats) {
-                IconButton(
-                    onClick = onOpenInvitations,
-                    enabled = invitationCount > 0
-                ) {
+                IconButton(onClick = onOpenInvitations) {
                     BadgedBox(
                         badge = {
                             if (invitationCount > 0) {

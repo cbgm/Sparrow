@@ -17,6 +17,25 @@ enum class IdentityHandshakeState {
     FAILED
 }
 
+enum class ContactInvitationStatus {
+    PENDING,
+    DECLINED,
+    EXPIRED,
+    FAILED
+}
+
+data class ContactInvitation(
+    val invitationId: String,
+    val contactId: String,
+    val contactName: String?,
+    val contactPhoneNumber: String?,
+    val direction: IdentityInvitationDirection,
+    val status: ContactInvitationStatus,
+    val expiresAtEpochMilliseconds: Long,
+    val updatedAtEpochMilliseconds: Long,
+    val hasUnreadUpdate: Boolean
+)
+
 data class PendingContactInvitation(
     val invitationId: String,
     val contactId: String,

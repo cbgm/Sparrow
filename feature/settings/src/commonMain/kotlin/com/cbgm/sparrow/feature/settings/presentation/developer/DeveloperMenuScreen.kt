@@ -66,7 +66,7 @@ fun DeveloperMenuScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { containerColor ->
-            DeveloperMenuTopBar(
+            TopBar(
                 containerColor = containerColor,
                 onBack = { onUiEvent(DeveloperMenuUiEvent.BackClicked) }
             )
@@ -100,7 +100,7 @@ fun DeveloperMenuScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DeveloperMenuTopBar(
+private fun TopBar(
     containerColor: Color,
     onBack: () -> Unit
 ) {
@@ -115,8 +115,7 @@ private fun DeveloperMenuTopBar(
         title = {
             Text(
                 text = stringResource(Res.string.feature_settings_developer_menu),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleSmall
             )
         },
         navigationIcon = {

@@ -99,7 +99,6 @@ class ControlPlaneSettingsViewModel(
             ControlPlaneSettingsUiEvent.DirectoryApply -> saveDirectoryUrl()
             ControlPlaneSettingsUiEvent.Refresh -> refreshAll()
             is ControlPlaneSettingsUiEvent.NewUrlChanged -> updateNewUrl(event.value)
-            is ControlPlaneSettingsUiEvent.DirectoryUrlChanged -> updateDirectoryDraft(event.value)
             is ControlPlaneSettingsUiEvent.Remove -> removeControlPlane(event.url)
         }
     }
@@ -117,11 +116,6 @@ class ControlPlaneSettingsViewModel(
     private fun updateNewUrl(value: String) {
         newUrl.value = value
         actionState.update { state -> state.copy(addError = null) }
-    }
-
-    private fun updateDirectoryDraft(value: String) {
-        setDirectoryDraft(value)
-        actionState.update { state -> state.copy(directoryError = null) }
     }
 
     private fun addControlPlane() {

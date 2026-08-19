@@ -1,14 +1,20 @@
 package com.cbgm.sparrow.feature.contacts.presentation.invitations.mapper
 
-import com.cbgm.sparrow.feature.contacts.domain.model.PendingContactInvitation
+import com.cbgm.sparrow.feature.contacts.domain.model.ContactInvitation
+import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationTab
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiState
 
-internal fun List<PendingContactInvitation>.toUiState(
+internal fun toUiState(
+    selectedTab: ContactInvitationTab,
+    incomingInvitations: List<ContactInvitation>,
+    outgoingInvitations: List<ContactInvitation>,
     profilePictures: Map<String, ByteArray?>,
     processingInvitationId: String?
 ): ContactInvitationUiState =
     ContactInvitationUiState(
-        invitations = this,
+        selectedTab = selectedTab,
+        incomingInvitations = incomingInvitations,
+        outgoingInvitations = outgoingInvitations,
         processingInvitationId = processingInvitationId,
         profilePictures = profilePictures
     )

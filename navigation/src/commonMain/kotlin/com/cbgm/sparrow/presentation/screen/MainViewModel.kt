@@ -20,8 +20,6 @@ class MainViewModel(
             )
 
     fun openContactInvitations() {
-        if (invitationCount.value > 0) {
-            navigator.navigateTo(AppRoute.ContactInvitations)
-        }
+        navigator.navigateTo(AppRoute.ContactInvitations())
     }
 }

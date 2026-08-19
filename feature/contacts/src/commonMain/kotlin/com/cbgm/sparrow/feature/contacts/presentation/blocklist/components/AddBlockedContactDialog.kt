@@ -27,7 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
-import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
+import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -176,7 +176,7 @@ fun AddBlockedContactDialog(
         },
         confirmButton = {},
         dismissButton = {
-            SparrowSecondaryButton(
+            SparrowOutlinedButton(
                 fillMaxWidth = false,
                 onClick = onDismiss,
                 text = stringResource(Res.string.base_close)

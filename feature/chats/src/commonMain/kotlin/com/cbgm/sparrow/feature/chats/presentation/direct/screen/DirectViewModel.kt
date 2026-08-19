@@ -11,20 +11,24 @@ import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.MarkDirectConversationReadUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectTypingUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.direct.QueueDirectMessageUntilAuthorizedUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.RetryDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SendDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SetDirectTypingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.profile.ObserveRemoteProfilePicturesUseCase
 import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.toDirectUiState
 import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.withProfilePicture
+import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectComposerState
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
+import com.cbgm.sparrow.feature.contacts.domain.model.DirectChatAuthorizationRequiredException
 import com.cbgm.sparrow.feature.contacts.domain.model.IdentityHandshakeState
 import com.cbgm.sparrow.feature.contacts.domain.usecase.EnsureIdentityExchangeStartedUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveIdentityHandshakeStateUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveIdentitySetupModeUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -40,10 +44,12 @@ class DirectViewModel(
     savedStateHandle: SavedStateHandle,
     observeConversation: ObserveDirectConversationUseCase,
     private val sendMessage: SendDirectMessageUseCase,
+    private val queueMessageUntilAuthorized: QueueDirectMessageUntilAuthorizedUseCase,
     private val markConversationRead: MarkDirectConversationReadUseCase,
     private val retryMessage: RetryDirectMessageUseCase,
     observeIdentitySetupMode: ObserveIdentitySetupModeUseCase,
     private val ensureIdentityExchangeStarted: EnsureIdentityExchangeStartedUseCase,
+    private val requireDirectChatAuthorization: RequireDirectChatAuthorizationUseCase,
     observeIdentityHandshakeState: ObserveIdentityHandshakeStateUseCase,
     observeContact: ObserveContactUseCase,
     observeProfilePictures: ObserveRemoteProfilePicturesUseCase,
@@ -116,12 +122,11 @@ class DirectViewModel(
                 DirectUiState(
                     contactId = contactId,
                     contactName = fallbackContactName,
-                    isMessageInputEnabled = false
+                    composerState = DirectComposerState.DISABLED
                 )
         )
 
     init {
-        observeAutomaticIdentitySetup()
         observeIncomingTyping()
     }
 
@@ -154,19 +159,6 @@ class DirectViewModel(
         }
     }
 
-    private fun observeAutomaticIdentitySetup() {
-        viewModelScope.launch {
-            identitySetupModeFlow.collect { mode ->
-                if (mode != DirectIdentitySetupMode.AUTOMATIC_INVITATION) return@collect
-
-                ensureIdentityExchangeStarted(contactId)
-                    .onFailure { error ->
-                        errorMessage.value = error.message ?: "Contact invitation could not be started"
-                    }
-            }
-        }
-    }
-
     private fun observeIncomingTyping() {
         viewModelScope.launch {
             observeTyping(contactId).collect { isTyping ->
@@ -186,7 +178,7 @@ class DirectViewModel(
     }
 
     private fun onMessageTextChanged(value: String) {
-        if (!uiState.value.isMessageInputEnabled) return
+        if (!uiState.value.composerState.isInputEnabled) return
 
         messageText.value = value
         errorMessage.value = null
@@ -194,6 +186,11 @@ class DirectViewModel(
 
         if (value.isBlank()) {
             stopTyping()
+            return
+        }
+
+        if (!uiState.value.composerState.sendsTypingIndicators) {
+            isLocalTyping = false
             return
         }
 
@@ -213,14 +210,66 @@ class DirectViewModel(
     }
 
     private fun sendCurrentMessage() {
-        if (!uiState.value.isMessageInputEnabled) return
+        val composerState = uiState.value.composerState
+        if (!composerState.isSendActionEnabled) return
+
         val text = messageText.value.trim()
         if (text.isEmpty()) return
 
-        messageText.value = ""
         errorMessage.value = null
-        stopTyping()
+        when (composerState) {
+            DirectComposerState.REINVITE_REQUIRED -> queueMessageAndStartReinvite(text)
+            DirectComposerState.REINVITE_PENDING -> queueMessageForPendingReinvite(text)
+            DirectComposerState.READY -> sendAuthorizedMessage(text)
+            DirectComposerState.DISABLED -> Unit
+        }
+    }
+
+    private fun queueMessageAndStartReinvite(text: String) {
         viewModelScope.launch {
+            queueMessageUntilAuthorized(conversationId, text)
+                .onSuccess {
+                    messageText.value = ""
+                    stopTyping()
+                    ensureIdentityExchangeStarted(contactId)
+                        .onFailure { error ->
+                            errorMessage.value = error.message ?: "Contact invitation could not be started"
+                        }
+                }.onFailure { error ->
+                    errorMessage.value = error.message ?: "Message could not be queued"
+                }
+        }
+    }
+
+    private fun queueMessageForPendingReinvite(text: String) {
+        viewModelScope.launch {
+            queueMessageUntilAuthorized(conversationId, text)
+                .onSuccess {
+                    messageText.value = ""
+                    stopTyping()
+                }.onFailure { error ->
+                    errorMessage.value = error.message ?: "Message could not be queued"
+                }
+        }
+    }
+
+    private fun sendAuthorizedMessage(text: String) {
+        viewModelScope.launch {
+            val authorizationError = requireDirectChatAuthorization(contactId).exceptionOrNull()
+            if (authorizationError != null) {
+                if (
+                    identitySetupModeFlow.value == DirectIdentitySetupMode.AUTOMATIC_INVITATION &&
+                    authorizationError is DirectChatAuthorizationRequiredException
+                ) {
+                    queueMessageAndStartReinvite(text)
+                } else {
+                    errorMessage.value = authorizationError.message ?: "Message could not be sent"
+                }
+                return@launch
+            }
+
+            messageText.value = ""
+            stopTyping()
             sendMessage(conversationId, text)
                 .onFailure { error ->
                     messageText.value = text

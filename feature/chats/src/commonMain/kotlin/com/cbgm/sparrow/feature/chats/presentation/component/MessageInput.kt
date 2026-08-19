@@ -54,7 +54,8 @@ internal fun MessageInput(
     value: String,
     onValueChange: (String) -> Unit,
     onSendClick: () -> Unit,
-    enabled: Boolean,
+    inputEnabled: Boolean,
+    sendEnabled: Boolean,
     modifier: Modifier = Modifier
 ) {
     var textLineCount by remember { mutableIntStateOf(1) }
@@ -99,7 +100,7 @@ internal fun MessageInput(
                     horizontal = MaterialTheme.spacing.base,
                     vertical = MaterialTheme.spacing.micro
                 ),
-            enabled = enabled,
+            enabled = inputEnabled,
             minLines = 1,
             maxLines = 5,
             textStyle =
@@ -128,7 +129,7 @@ internal fun MessageInput(
             overlap = overlap,
             isRound = isMultiline,
             onSendClick = onSendClick,
-            enabled = enabled && value.isNotBlank()
+            enabled = sendEnabled && value.isNotBlank()
         )
     }
 }
@@ -322,7 +323,8 @@ private fun MessageInputPreview() {
             value = "Hello",
             onValueChange = {},
             onSendClick = {},
-            enabled = true
+            inputEnabled = true,
+            sendEnabled = true
         )
     }
 }
@@ -337,7 +339,8 @@ private fun MultilineMessageInputPreview() {
                     "onto a second line.",
             onValueChange = {},
             onSendClick = {},
-            enabled = true
+            inputEnabled = true,
+            sendEnabled = true
         )
     }
 }

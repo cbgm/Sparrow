@@ -133,9 +133,9 @@ class CreateGroupViewModel(
             actionState.value = CreateGroupActionState(isCreating = true)
 
             createGroupConversation(state.title, state.selectedContactIds)
-                .onSuccess { conversationId ->
+                .onSuccess {
                     clearForm()
-                    _effects.send(CreateGroupEffect.GroupCreated(conversationId))
+                    _effects.send(CreateGroupEffect.GroupCreated)
                 }.onFailure { error ->
                     actionState.value =
                         CreateGroupActionState(

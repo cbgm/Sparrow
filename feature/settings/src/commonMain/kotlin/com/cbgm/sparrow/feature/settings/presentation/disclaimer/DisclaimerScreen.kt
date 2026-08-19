@@ -35,7 +35,7 @@ fun MarkdownDisclaimerScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { containerColor ->
-            MarkdownDisclaimerTopBar(
+            TopBar(
                 title = title,
                 containerColor = containerColor,
                 onBack = { onUiEvent(DisclaimerUiEvent.BackClicked) }
@@ -107,7 +107,7 @@ fun MarkdownDisclaimerScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MarkdownDisclaimerTopBar(
+private fun TopBar(
     title: String,
     containerColor: Color,
     onBack: () -> Unit
@@ -123,8 +123,7 @@ private fun MarkdownDisclaimerTopBar(
         title = {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleSmall
             )
         },
         navigationIcon = {

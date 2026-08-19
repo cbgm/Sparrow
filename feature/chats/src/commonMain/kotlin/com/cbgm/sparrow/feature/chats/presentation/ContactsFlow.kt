@@ -79,8 +79,7 @@ fun ContactsFlow(
                         handleCreateGroupEffect(
                             event = event,
                             onDismiss = onDismiss,
-                            onBack = { content = ContactsContent.Contacts },
-                            onUiEvent = viewModel::onUiEvent
+                            onBack = { content = ContactsContent.Contacts }
                         )
                     }
                 )
@@ -118,14 +117,10 @@ private fun handleContactsEffect(
 private fun handleCreateGroupEffect(
     event: CreateGroupEffect,
     onDismiss: () -> Unit,
-    onBack: () -> Unit,
-    onUiEvent: (ContactsFlowUiEvent) -> Unit
+    onBack: () -> Unit
 ) {
     when (event) {
         CreateGroupEffect.BackRequested -> onBack()
-        is CreateGroupEffect.GroupCreated -> {
-            onDismiss()
-            onUiEvent(ContactsFlowUiEvent.GroupCreated(event.conversationId))
-        }
+        CreateGroupEffect.GroupCreated -> onDismiss()
     }
 }

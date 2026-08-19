@@ -14,7 +14,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import com.cbgm.sparrow.core.ui.component.SparrowStaticScaffold
 import com.cbgm.sparrow.feature.settings.presentation.licenses.model.LicensesUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.licenses.model.LicensesUiState
@@ -41,7 +40,7 @@ fun LicensesScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            LicensesTopBar(onBack = { onUiEvent(LicensesUiEvent.BackClicked) })
+            TopBar(onBack = { onUiEvent(LicensesUiEvent.BackClicked) })
         }
     ) { innerPadding ->
         LibrariesContainer(
@@ -68,7 +67,7 @@ fun LicensesScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LicensesTopBar(onBack: () -> Unit) {
+private fun TopBar(onBack: () -> Unit) {
     TopAppBar(
         colors =
             TopAppBarDefaults.topAppBarColors(
@@ -80,8 +79,7 @@ private fun LicensesTopBar(onBack: () -> Unit) {
         title = {
             Text(
                 text = stringResource(Res.string.feature_settings_open_source_licenses),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleSmall
             )
         },
         navigationIcon = {

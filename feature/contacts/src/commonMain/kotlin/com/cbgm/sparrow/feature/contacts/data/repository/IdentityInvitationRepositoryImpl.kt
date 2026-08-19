@@ -34,6 +34,8 @@ import com.cbgm.sparrow.data.database.entity.ContactPhoneNumberEntity
 import com.cbgm.sparrow.data.database.entity.ContactRoutingIdEntity
 import com.cbgm.sparrow.data.database.entity.IdentityInvitationEntity
 import com.cbgm.sparrow.feature.contacts.data.invitation.IdentityInvitationPayloadEncoder
+import com.cbgm.sparrow.feature.contacts.domain.model.ContactInvitation
+import com.cbgm.sparrow.feature.contacts.domain.model.ContactInvitationStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumberType
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
@@ -46,13 +48,20 @@ import com.cbgm.sparrow.feature.contacts.domain.model.RemoteIdentityOrigin
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactKeyExchangeRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactVerificationRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityInvitationRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.time.Duration.Companion.milliseconds
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class IdentityInvitationRepositoryImpl(
     private val invitationDao: IdentityInvitationDao,
     private val contactDao: ContactDao,
@@ -199,60 +208,111 @@ class IdentityInvitationRepositoryImpl(
         }
 
     override fun observePendingIncoming(): Flow<List<PendingContactInvitation>> =
+        observeInvitations(IdentityInvitationDirection.INCOMING)
+            .map { invitations ->
+                invitations
+                    .filter { invitation -> invitation.status == ContactInvitationStatus.PENDING }
+                    .map { invitation ->
+                        PendingContactInvitation(
+                            invitationId = invitation.invitationId,
+                            contactId = invitation.contactId,
+                            contactName = invitation.contactName,
+                            contactPhoneNumber = invitation.contactPhoneNumber,
+                            expiresAtEpochMilliseconds = invitation.expiresAtEpochMilliseconds
+                        )
+                    }
+            }
+
+    override fun observeInvitations(
+        direction: IdentityInvitationDirection
+    ): Flow<List<ContactInvitation>> =
         combine(
             invitationDao.observeByDirectionAndStates(
-                direction = IdentityInvitationDirection.INCOMING.name,
-                states = listOf(IdentityHandshakeState.AWAITING_ACCEPTANCE.name)
+                direction = direction.name,
+                states = visibleInvitationStates(direction)
             ),
             contactBlocklistRepository.observeBlockedContactIds()
         ) { invitations, blockedContactIds ->
-            invitations.filterNot { invitation -> invitation.contactId in blockedContactIds }
-        }.map { invitations ->
-            val pending = mutableListOf<PendingContactInvitation>()
-            val now = SystemClock.nowEpochMilliseconds()
-
-            for (invitation in invitations) {
-                if (invitation.expiresAtEpochMilliseconds <= now) {
-                    invitationDao.upsert(
-                        invitation.copy(
-                            state = IdentityHandshakeState.EXPIRED.name,
-                            updatedAtEpochMilliseconds = now,
-                            lastError = "Invitation expired"
-                        )
-                    )
-                    continue
-                }
-
-                val contact = contactDao.findById(invitation.contactId) ?: continue
-                val invitationDisplayName =
-                    invitation.remoteDisplayName
-                        ?.trim()
-                        ?.takeIf(String::isNotBlank)
-                val invitationPhoneNumber =
-                    invitationDisplayName
-                        ?.let { value -> phoneNumberNormalizer.normalize(value).getOrNull() }
-                val contactPhoneNumber =
-                    contact.phoneNumbers
-                        .firstOrNull { phoneNumber ->
-                            phoneNumber.id == contact.contact.preferredPhoneNumberId
-                        }?.value
-                        ?: contact.phoneNumbers.firstOrNull()?.value
-                        ?: invitationPhoneNumber
-                pending +=
-                    PendingContactInvitation(
-                        invitationId = invitation.invitationId,
-                        contactId = invitation.contactId,
-                        contactName =
-                            contact.contact.displayName
-                                ?.takeIf(String::isNotBlank)
-                                ?.takeUnless { displayName -> displayName == contactPhoneNumber }
-                                ?: invitationDisplayName?.takeIf { invitationPhoneNumber == null },
-                        contactPhoneNumber = contactPhoneNumber,
-                        expiresAtEpochMilliseconds = invitation.expiresAtEpochMilliseconds
-                    )
+            if (direction == IdentityInvitationDirection.INCOMING) {
+                invitations.filterNot { invitation -> invitation.contactId in blockedContactIds }
+            } else {
+                invitations
             }
+        }.transformLatest { invitations ->
+            while (true) {
+                val now = SystemClock.nowEpochMilliseconds()
+                emit(
+                    buildList {
+                        for (storedInvitation in invitations) {
+                            if (storedInvitation.hiddenAtEpochMilliseconds != null) continue
 
-            pending
+                            val invitation = expirePendingInvitationIfNeeded(storedInvitation, now)
+                            val status = invitation.toContactInvitationStatus() ?: continue
+                            if (
+                                direction == IdentityInvitationDirection.INCOMING &&
+                                status != ContactInvitationStatus.PENDING
+                            ) {
+                                continue
+                            }
+                            if (!isVisibleInvitationHistory(status, invitation.updatedAtEpochMilliseconds, now)) {
+                                continue
+                            }
+
+                            toContactInvitation(invitation, direction, status)?.let(::add)
+                        }
+                    }
+                )
+
+                val nextWakeAt = nextInvitationWakeAt(invitations, now) ?: awaitCancellation()
+                delay((nextWakeAt - now).coerceAtLeast(1L).milliseconds)
+            }
+        }
+
+    override fun observeAcceptedContactIds(): Flow<Set<String>> =
+        invitationDao
+            .observeLatestInvitations()
+            .map { invitations ->
+                invitations
+                    .filter { invitation ->
+                        invitation.state == IdentityHandshakeState.WAITING_FOR_READY.name ||
+                            invitation.state == IdentityHandshakeState.MUTUAL_UNVERIFIED.name
+                    }
+                    .mapTo(mutableSetOf(), IdentityInvitationEntity::contactId)
+            }
+            .distinctUntilChanged()
+
+    override fun observeDeclinedOutgoingContactIds(): Flow<Set<String>> =
+        invitationDao
+            .observeLatestInvitations()
+            .map { invitations ->
+                invitations
+                    .filter { invitation ->
+                        invitation.direction == IdentityInvitationDirection.OUTGOING.name &&
+                            invitation.state == IdentityHandshakeState.DECLINED.name
+                    }
+                    .mapTo(mutableSetOf(), IdentityInvitationEntity::contactId)
+            }
+            .distinctUntilChanged()
+
+    override suspend fun markViewed(direction: IdentityInvitationDirection): Result<Unit> =
+        runCatching {
+            invitationDao.markDirectionViewed(
+                direction = direction.name,
+                viewedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+            )
+        }
+
+    override suspend fun deleteDeclinedOutgoing(invitationId: String): Result<Unit> =
+        runCatching {
+            require(invitationId.isNotBlank()) { "Invitation ID must not be blank" }
+            val changed =
+                invitationDao.hideByIdAndState(
+                    invitationId = invitationId,
+                    direction = IdentityInvitationDirection.OUTGOING.name,
+                    state = IdentityHandshakeState.DECLINED.name,
+                    hiddenAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+                )
+            check(changed == 1) { "Only declined outgoing invitations can be deleted" }
         }
 
     override fun observeState(contactId: String): Flow<IdentityHandshakeState?> {
@@ -278,9 +338,7 @@ class IdentityInvitationRepositoryImpl(
 
             val authorizationEvent =
                 when (state) {
-                    IdentityHandshakeState.ACCEPTANCE_SENT,
                     IdentityHandshakeState.WAITING_FOR_READY -> latestInvitation
-
                     IdentityHandshakeState.MUTUAL_UNVERIFIED -> latestAuthorizationEvent
                     else -> null
                 }
@@ -374,7 +432,7 @@ class IdentityInvitationRepositoryImpl(
                 enqueueOrResend(invitation.contactId, packet).getOrElse { error ->
                     invitationDao.upsert(
                         requireNotNull(invitationDao.findById(invitationId)).copy(
-                            state = IdentityHandshakeState.FAILED.name,
+                            state = IdentityHandshakeState.ACCEPTANCE_SENT.name,
                             updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
                             lastError = error.message
                         )
@@ -1558,9 +1616,7 @@ class IdentityInvitationRepositoryImpl(
             )
         val authorizationEvent =
             when (state) {
-                IdentityHandshakeState.ACCEPTANCE_SENT,
                 IdentityHandshakeState.WAITING_FOR_READY -> latestInvitation
-
                 IdentityHandshakeState.MUTUAL_UNVERIFIED -> latestAuthorizationEvent
                 else -> null
             }
@@ -1928,11 +1984,132 @@ class IdentityInvitationRepositoryImpl(
         ).getOrThrow()
     }
 
+    private fun nextInvitationWakeAt(
+        invitations: List<IdentityInvitationEntity>,
+        now: Long
+    ): Long? =
+        invitations
+            .asSequence()
+            .filter { invitation -> invitation.hiddenAtEpochMilliseconds == null }
+            .mapNotNull { invitation ->
+                val wakeAt =
+                    when (invitation.state) {
+                        IdentityHandshakeState.INVITE_SENT.name,
+                        IdentityHandshakeState.AWAITING_ACCEPTANCE.name -> invitation.expiresAtEpochMilliseconds
+                        IdentityHandshakeState.MUTUAL_UNVERIFIED.name,
+                        IdentityHandshakeState.DECLINED.name,
+                        IdentityHandshakeState.EXPIRED.name,
+                        IdentityHandshakeState.FAILED.name ->
+                            invitation.updatedAtEpochMilliseconds + INVITATION_HISTORY_RETENTION_MILLISECONDS
+                        else -> null
+                    }
+                wakeAt?.takeIf { it > now }
+            }.minOrNull()
+
+    private fun visibleInvitationStates(direction: IdentityInvitationDirection): List<String> =
+        when (direction) {
+            IdentityInvitationDirection.INCOMING ->
+                listOf(
+                    IdentityHandshakeState.AWAITING_ACCEPTANCE.name,
+                    IdentityHandshakeState.ACCEPTANCE_SENT.name
+                )
+            IdentityInvitationDirection.OUTGOING ->
+                listOf(
+                    IdentityHandshakeState.INVITE_SENT.name,
+                    IdentityHandshakeState.DECLINED.name,
+                    IdentityHandshakeState.EXPIRED.name,
+                    IdentityHandshakeState.FAILED.name
+                )
+        }
+
+    private suspend fun expirePendingInvitationIfNeeded(
+        invitation: IdentityInvitationEntity,
+        now: Long
+    ): IdentityInvitationEntity {
+        if (
+            invitation.state != IdentityHandshakeState.INVITE_SENT.name &&
+            invitation.state != IdentityHandshakeState.AWAITING_ACCEPTANCE.name
+        ) {
+            return invitation
+        }
+        if (invitation.expiresAtEpochMilliseconds > now) return invitation
+
+        val expired =
+            invitation.copy(
+                state = IdentityHandshakeState.EXPIRED.name,
+                updatedAtEpochMilliseconds = now,
+                lastError = "Invitation expired"
+            )
+        invitationDao.upsert(expired)
+        return expired
+    }
+
+    private fun IdentityInvitationEntity.toContactInvitationStatus(): ContactInvitationStatus? =
+        when (state) {
+            IdentityHandshakeState.INVITE_SENT.name,
+            IdentityHandshakeState.AWAITING_ACCEPTANCE.name,
+            IdentityHandshakeState.ACCEPTANCE_SENT.name -> ContactInvitationStatus.PENDING
+            IdentityHandshakeState.DECLINED.name -> ContactInvitationStatus.DECLINED
+            IdentityHandshakeState.EXPIRED.name -> ContactInvitationStatus.EXPIRED
+            IdentityHandshakeState.FAILED.name -> ContactInvitationStatus.FAILED
+            else -> null
+        }
+
+    private fun isVisibleInvitationHistory(
+        status: ContactInvitationStatus,
+        updatedAtEpochMilliseconds: Long,
+        now: Long
+    ): Boolean =
+        status == ContactInvitationStatus.PENDING ||
+            now - updatedAtEpochMilliseconds < INVITATION_HISTORY_RETENTION_MILLISECONDS
+
+    private suspend fun toContactInvitation(
+        invitation: IdentityInvitationEntity,
+        direction: IdentityInvitationDirection,
+        status: ContactInvitationStatus
+    ): ContactInvitation? {
+        val contact = contactDao.findById(invitation.contactId) ?: return null
+        val invitationDisplayName =
+            invitation.remoteDisplayName
+                ?.trim()
+                ?.takeIf(String::isNotBlank)
+        val invitationPhoneNumber =
+            invitationDisplayName
+                ?.let { value -> phoneNumberNormalizer.normalize(value).getOrNull() }
+        val contactPhoneNumber =
+            contact.phoneNumbers
+                .firstOrNull { phoneNumber -> phoneNumber.id == contact.contact.preferredPhoneNumberId }
+                ?.value
+                ?: contact.phoneNumbers.firstOrNull()?.value
+                ?: invitationPhoneNumber
+
+        val viewedAtEpochMilliseconds = invitation.viewedAtEpochMilliseconds
+
+        return ContactInvitation(
+            invitationId = invitation.invitationId,
+            contactId = invitation.contactId,
+            contactName =
+                contact.contact.displayName
+                    ?.takeIf(String::isNotBlank)
+                    ?.takeUnless { displayName -> displayName == contactPhoneNumber }
+                    ?: invitationDisplayName?.takeIf { invitationPhoneNumber == null },
+            contactPhoneNumber = contactPhoneNumber,
+            direction = direction,
+            status = status,
+            expiresAtEpochMilliseconds = invitation.expiresAtEpochMilliseconds,
+            updatedAtEpochMilliseconds = invitation.updatedAtEpochMilliseconds,
+            hasUnreadUpdate =
+                viewedAtEpochMilliseconds == null ||
+                    invitation.updatedAtEpochMilliseconds > viewedAtEpochMilliseconds
+        )
+    }
+
     private companion object {
         const val BOOTSTRAP_ROUTING_ID_PREFIX = "scphone1_"
         const val CHALLENGE_SIZE = 32
         const val INVITATION_LIFETIME_MILLISECONDS = 24L * 60L * 60L * 1_000L
         const val INVITATION_RESTART_GRACE_MILLISECONDS = 5L * 1_000L
+        const val INVITATION_HISTORY_RETENTION_MILLISECONDS = 24L * 60L * 60L * 1_000L
         const val MAX_CLOCK_SKEW_MILLISECONDS = 5L * 60L * 1_000L
         const val MAXIMUM_COUNTRY_CODE_DIGITS = 3
         const val MINIMUM_COUNTRY_CODE_DIGITS = 1
@@ -1941,7 +2118,6 @@ class IdentityInvitationRepositoryImpl(
 
         val DIRECT_CHAT_AUTHORIZED_STATES =
             setOf(
-                IdentityHandshakeState.ACCEPTANCE_SENT,
                 IdentityHandshakeState.WAITING_FOR_READY,
                 IdentityHandshakeState.MUTUAL_UNVERIFIED
             )

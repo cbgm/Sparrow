@@ -111,6 +111,7 @@
     <string name="feature_chats_not_encrypted">Not encrypted</string>
     <string name="feature_chats_numbers_match">Numbers match</string>
     <string name="feature_chats_queued">Queued</string>
+    <string name="feature_chats_waiting_for_invitation_acceptance">Waiting for invitation acceptance</string>
     <string name="feature_chats_read">Read</string>
     <string name="feature_chats_safety_number_unavailable">Safety number unavailable</string>
     <string name="feature_chats_sending">Sending</string>
@@ -174,10 +175,10 @@
     <string name="feature_contacts_verified_by_contact_description">Verify the contact to complete mutual verification.</string>
     <string name="feature_contacts_mutually_verified">Mutually verified</string>
     <string name="feature_contacts_import_from_device">Import from device</string>
-    <string name="feature_contacts_import_from_device_description">Add people by phone number. Opening a chat sends a secure invitation automatically.</string>
+    <string name="feature_contacts_import_from_device_description">Add people by phone number. Selecting a person sends a secure invitation automatically.</string>
     <string name="feature_contacts_import_sparrow_contact_description">Scan an in-person QR to verify, or paste identity text as an unverified fallback</string>
     <string name="feature_contacts_verify_or_import_identity">Verify or import identity</string>
-    <string name="feature_contacts_no_contacts_hint">Tap + to add people from your device. Opening a chat sends a secure invitation automatically.</string>
+    <string name="feature_contacts_no_contacts_hint">Tap + to add people from your device. Selecting a person sends a secure invitation automatically.</string>
     <string name="feature_contacts_no_contacts_yet">No contacts yet</string>
     <string name="feature_contacts_no_phone_number">No phone number</string>
     <string name="feature_contacts_no_phone_numbers_stored">No phone numbers stored.</string>
@@ -204,13 +205,22 @@
     <string name="feature_contacts_accept_invitation">Accept</string>
     <string name="feature_contacts_decline_invitation">Decline</string>
     <string name="feature_contacts_invitations_title">Invitations</string>
+    <string name="feature_contacts_invitations_incoming">Incoming</string>
+    <string name="feature_contacts_invitations_outgoing">Outgoing</string>
+    <string name="feature_contacts_invitations_incoming_empty">No incoming invitations</string>
+    <string name="feature_contacts_invitations_outgoing_empty">No outgoing invitations</string>
+    <string name="feature_contacts_invitation_status_pending">Waiting for response</string>
+    <string name="feature_contacts_invitation_status_declined">Declined</string>
+    <string name="feature_contacts_invitation_status_expired">Expired</string>
+    <string name="feature_contacts_invitation_status_failed">Could not be sent</string>
+    <string name="feature_contacts_delete_outgoing_invitation">Delete</string>
     <string name="feature_contacts_invitations_empty">No open invitations</string>
     <string name="feature_contacts_open_invitations">Open invitations</string>
     <string name="feature_contacts_close_invitations">Close invitations</string>
     <string name="feature_contacts_block_invitation">Decline and block</string>
 
     <!-- Feature: identity -->
-    <string name="feature_identity_approve_number_create_identity">Approve number and create identity</string>
+    <string name="feature_identity_approve_number_create_identity">Approve number and create</string>
     <string name="feature_identity_check_again">Check again</string>
     <string name="feature_identity_checking_secure_identity">Checking secure identity…</string>
     <string name="feature_identity_choose_phone_number_from_device">Choose phone number from device</string>
@@ -228,7 +238,7 @@
     <string name="feature_identity_raw_identity">RAW IDENTITY</string>
     <string name="feature_identity_scan_to_add_you">Let the other person scan this QR directly from your device to verify your identity.</string>
     <string name="feature_identity_share_identity">Share identity</string>
-    <string name="feature_identity_my_identity_qr">My identity QR</string>
+    <string name="feature_identity_my_identity_qr">My identity</string>
     <string name="feature_identity_share_identity_text">Share identity text</string>
     <string name="feature_identity_share_identity_text_warning">Shared or copied identity text does not verify you by itself. In-person QR scanning or safety-number comparison is still required.</string>
     <string name="feature_identity_share_my_identity">Share my identity</string>
@@ -409,8 +419,6 @@
     <string name="feature_chats_group_deleted_status">Group deleted</string>
     <string name="feature_chats_contact_invitation_declined_title">Invitation declined</string>
     <string name="feature_chats_contact_invitation_declined_description">Messages are disabled. A new invitation must be accepted before this chat can continue.</string>
-    <string name="feature_chats_direct_chat_reinvite_required_title">New invitation required</string>
-    <string name="feature_chats_direct_chat_reinvite_required_description">A new invitation must be accepted before either person can send messages.</string>
 
     <!-- Contact blocking -->
     <string name="feature_settings_block_unknown_invites">Block unknown invitations</string>
@@ -432,7 +440,7 @@
     <string name="feature_settings_network">Network</string>
     <string name="feature_settings_control_planes">Control planes</string>
     <string name="feature_settings_control_planes_description">Sparrow tries these addresses in priority order. Unreachable addresses stay visible and are retried automatically.</string>
-    <string name="feature_settings_control_plane_add">Add control plane</string>
+    <string name="feature_settings_control_plane_add">Add</string>
     <string name="feature_settings_control_plane_address">Control-plane or directory address</string>
     <string name="feature_settings_control_planes_refresh">Check control planes</string>
     <string name="feature_settings_control_plane_status_active">Active</string>
@@ -447,15 +455,6 @@
     <string name="feature_settings_control_plane_error_keep_one">At least one control plane must remain.</string>
     <string name="feature_settings_control_plane_error_save_failed">The control-plane list could not be saved.</string>
     <string name="feature_settings_control_planes_settings_subtitle">Manage addresses, discovery and availability</string>
-    <string name="feature_settings_control_plane_directory_title">Control-plane directory</string>
-    <string name="feature_settings_control_plane_directory_description">Optional URL that publishes the current control-plane list. Sparrow syncs it automatically and keeps the last successful list if the directory is unavailable.</string>
-    <string name="feature_settings_control_plane_directory_url">Directory URL</string>
-    <string name="feature_settings_control_plane_directory_apply">Save and sync</string>
-    <string name="feature_settings_control_plane_directory_disabled">No directory configured</string>
-    <string name="feature_settings_control_plane_directory_synced_count">%1$d addresses received from directory</string>
-    <string name="feature_settings_control_plane_directory_sync_failed">Directory unavailable. Using the last successful list.</string>
-    <string name="feature_settings_control_plane_directory_error_invalid_url">Enter a valid http:// or https:// directory URL.</string>
-    <string name="feature_settings_control_plane_directory_error_save_failed">The directory URL could not be saved.</string>
     <string name="feature_settings_control_plane_source_manual">Manual</string>
     <string name="feature_settings_control_plane_source_directory">Directory</string>
     <string name="feature_settings_control_plane_source_manual_and_directory">Manual + directory</string>

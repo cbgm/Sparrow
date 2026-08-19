@@ -58,7 +58,7 @@ fun GroupSelectionContactsTopBar(
                     value = title,
                     onValueChange = onTitleChanged,
                     modifier = Modifier.fillMaxWidth(),
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                    textStyle = MaterialTheme.typography.titleSmall,
                     placeholder = {
                         Text(
                             text = stringResource(Res.string.feature_chats_group_name),
