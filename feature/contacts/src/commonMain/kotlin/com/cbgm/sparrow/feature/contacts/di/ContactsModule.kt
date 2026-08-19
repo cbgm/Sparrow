@@ -36,12 +36,15 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.AcceptContactInvitationU
 import com.cbgm.sparrow.feature.contacts.domain.usecase.BlockContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.DeclineAndBlockContactInvitationUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.DeclineContactInvitationUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.DeleteDeclinedOutgoingInvitationUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.EnsureIdentityExchangeStartedUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportDeviceContactsUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.MarkContactInvitationsViewedUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactBlocklistUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactInvitationsUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactProfilePictureUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactProfilePicturesUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactUseCase
@@ -50,6 +53,7 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveIdentityHandshake
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveIdentitySetupModeUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObservePendingContactInvitationCountUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObservePendingContactInvitationsUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.UnblockContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.VerifyContactUseCase
 import com.cbgm.sparrow.feature.contacts.presentation.blocklist.BlockedContactsViewModel
@@ -267,6 +271,10 @@ val contactsModule =
         factory { AcceptContactInvitationUseCase(identityInvitationRepository = get()) }
         factory { DeclineContactInvitationUseCase(identityInvitationRepository = get()) }
         factory { DeclineAndBlockContactInvitationUseCase(identityInvitationRepository = get()) }
+        factory { DeleteDeclinedOutgoingInvitationUseCase(repository = get()) }
+        factory { MarkContactInvitationsViewedUseCase(repository = get()) }
+        factory { ObserveContactInvitationsUseCase(repository = get()) }
+        factory { RequireDirectChatAuthorizationUseCase(repository = get()) }
         factory {
             ObservePendingContactInvitationsUseCase(
                 identityInvitationRepository = get(),
@@ -282,10 +290,13 @@ val contactsModule =
 
         viewModel {
             ContactInvitationViewModel(
-                observePendingContactInvitations = get(),
+                savedStateHandle = get(),
+                observeContactInvitations = get(),
                 acceptContactInvitation = get(),
                 declineContactInvitation = get(),
                 declineAndBlockContactInvitation = get(),
+                deleteDeclinedOutgoingInvitation = get(),
+                markInvitationsViewed = get(),
                 observeProfilePictures = get()
             )
         }

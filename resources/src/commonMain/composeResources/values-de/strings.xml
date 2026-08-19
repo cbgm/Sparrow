@@ -111,6 +111,7 @@
     <string name="feature_chats_not_encrypted">Nicht verschlüsselt</string>
     <string name="feature_chats_numbers_match">Nummern stimmen überein</string>
     <string name="feature_chats_queued">In Warteschlange</string>
+    <string name="feature_chats_waiting_for_invitation_acceptance">Warte auf Annahme der Einladung</string>
     <string name="feature_chats_read">Gelesen</string>
     <string name="feature_chats_safety_number_unavailable">Sicherheitsnummer nicht verfügbar</string>
     <string name="feature_chats_sending">Wird gesendet</string>
@@ -174,10 +175,10 @@
     <string name="feature_contacts_verified_by_contact_description">Verifiziere den Kontakt, um die gegenseitige Verifizierung abzuschließen.</string>
     <string name="feature_contacts_mutually_verified">Gegenseitig verifiziert</string>
     <string name="feature_contacts_import_from_device">Vom Gerät importieren</string>
-    <string name="feature_contacts_import_from_device_description">Füge Personen per Telefonnummer hinzu. Beim Öffnen eines Chats wird automatisch eine sichere Einladung gesendet.</string>
+    <string name="feature_contacts_import_from_device_description">Füge Personen per Telefonnummer hinzu. Beim Auswählen einer Person wird automatisch eine sichere Einladung gesendet.</string>
     <string name="feature_contacts_import_sparrow_contact_description">Persönlichen QR-Code zur Verifizierung scannen oder Identitätstext als nicht verifizierte Alternative einfügen</string>
     <string name="feature_contacts_verify_or_import_identity">Identität verifizieren oder importieren</string>
-    <string name="feature_contacts_no_contacts_hint">Tippe auf +, um Personen von deinem Gerät hinzuzufügen. Beim Öffnen eines Chats wird automatisch eine sichere Einladung gesendet.</string>
+    <string name="feature_contacts_no_contacts_hint">Tippe auf +, um Personen von deinem Gerät hinzuzufügen. Beim Auswählen einer Person wird automatisch eine sichere Einladung gesendet.</string>
     <string name="feature_contacts_no_contacts_yet">Noch keine Kontakte</string>
     <string name="feature_contacts_no_phone_number">Keine Telefonnummer</string>
     <string name="feature_contacts_no_phone_numbers_stored">Keine Telefonnummern gespeichert.</string>
@@ -204,6 +205,15 @@
     <string name="feature_contacts_accept_invitation">Annehmen</string>
     <string name="feature_contacts_decline_invitation">Ablehnen</string>
     <string name="feature_contacts_invitations_title">Einladungen</string>
+    <string name="feature_contacts_invitations_incoming">Eingehend</string>
+    <string name="feature_contacts_invitations_outgoing">Ausgehend</string>
+    <string name="feature_contacts_invitations_incoming_empty">Keine eingehenden Einladungen</string>
+    <string name="feature_contacts_invitations_outgoing_empty">Keine ausgehenden Einladungen</string>
+    <string name="feature_contacts_invitation_status_pending">Wartet auf Antwort</string>
+    <string name="feature_contacts_invitation_status_declined">Abgelehnt</string>
+    <string name="feature_contacts_invitation_status_expired">Abgelaufen</string>
+    <string name="feature_contacts_invitation_status_failed">Konnte nicht gesendet werden</string>
+    <string name="feature_contacts_delete_outgoing_invitation">Löschen</string>
     <string name="feature_contacts_invitations_empty">Keine offenen Einladungen</string>
     <string name="feature_contacts_open_invitations">Einladungen öffnen</string>
     <string name="feature_contacts_close_invitations">Einladungen schließen</string>
@@ -408,8 +418,6 @@
     <string name="feature_chats_group_deleted_status">Gruppe gelöscht</string>
     <string name="feature_chats_contact_invitation_declined_title">Einladung abgelehnt</string>
     <string name="feature_chats_contact_invitation_declined_description">Nachrichten sind deaktiviert. Eine neue Einladung muss angenommen werden, bevor dieser Chat fortgesetzt werden kann.</string>
-    <string name="feature_chats_direct_chat_reinvite_required_title">Neue Einladung erforderlich</string>
-    <string name="feature_chats_direct_chat_reinvite_required_description">Eine neue Einladung muss angenommen werden, bevor eine der beiden Personen Nachrichten senden kann.</string>
 
     <!-- Kontaktblockierung -->
     <string name="feature_settings_block_unknown_invites">Unbekannte Einladungen blockieren</string>

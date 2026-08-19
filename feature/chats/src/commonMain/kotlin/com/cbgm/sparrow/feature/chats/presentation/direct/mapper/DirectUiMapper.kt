@@ -5,6 +5,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessage
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
+import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectComposerState
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
@@ -56,8 +57,7 @@ internal fun isDirectChatAuthorized(
 ): Boolean =
     when (identitySetupMode) {
         DirectIdentitySetupMode.AUTOMATIC_INVITATION ->
-            identityHandshakeState == IdentityHandshakeState.ACCEPTANCE_SENT ||
-                identityHandshakeState == IdentityHandshakeState.WAITING_FOR_READY ||
+            identityHandshakeState == IdentityHandshakeState.WAITING_FOR_READY ||
                 identityHandshakeState == IdentityHandshakeState.MUTUAL_UNVERIFIED
 
         DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING ->
@@ -74,19 +74,67 @@ internal fun toDirectUiState(
     currentText: String,
     currentError: String?,
     contactTyping: Boolean
-): DirectUiState =
-    DirectUiState(
+): DirectUiState {
+    val isChatAuthorized = isDirectChatAuthorized(contact, handshake, setupMode)
+    val composerState =
+        resolveDirectComposerState(
+            hasConversation = conversation != null,
+            isChatAuthorized = isChatAuthorized,
+            handshake = handshake,
+            setupMode = setupMode
+        )
+
+    return DirectUiState(
         contactId = contactId,
         contactName = resolveContactName(contact, fallbackContactName),
         messages = conversation?.messages.orEmpty().asReversed().map { it.toUiModel() },
         messageText = currentText,
         isContactTyping = contactTyping,
         contactSecurityState = contact.toSecurityState(),
-        identityHandshakeState = handshake,
         identitySetupMode = setupMode,
         isLoading = contact == null,
-        isMessageInputEnabled = isDirectChatAuthorized(contact, handshake, setupMode),
+        isChatAuthorized = isChatAuthorized,
+        composerState = composerState,
         errorMessage = currentError
+    )
+}
+
+internal fun resolveDirectComposerState(
+    hasConversation: Boolean,
+    isChatAuthorized: Boolean,
+    handshake: IdentityHandshakeState?,
+    setupMode: DirectIdentitySetupMode
+): DirectComposerState {
+    if (!hasConversation) return DirectComposerState.DISABLED
+
+    return when (setupMode) {
+        DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING ->
+            if (isChatAuthorized) {
+                DirectComposerState.READY
+            } else {
+                DirectComposerState.DISABLED
+            }
+
+        DirectIdentitySetupMode.AUTOMATIC_INVITATION ->
+            when {
+                isChatAuthorized -> DirectComposerState.READY
+                handshake == IdentityHandshakeState.INVITE_SENT ->
+                    DirectComposerState.REINVITE_PENDING
+
+                handshake in REINVITE_RETRY_STATES ->
+                    DirectComposerState.REINVITE_REQUIRED
+
+                else -> DirectComposerState.DISABLED
+            }
+    }
+}
+
+private val REINVITE_RETRY_STATES =
+    setOf(
+        IdentityHandshakeState.CONVERSATION_DELETED,
+        IdentityHandshakeState.DECLINED,
+        IdentityHandshakeState.EXPIRED,
+        IdentityHandshakeState.FAILED
     )
 
 internal fun DirectUiState.withProfilePicture(profilePictureBytes: ByteArray?): DirectUiState =

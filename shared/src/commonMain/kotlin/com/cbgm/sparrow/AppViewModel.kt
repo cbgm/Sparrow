@@ -62,6 +62,7 @@ class AppViewModel(
         initialization.controlPlaneConfiguration.initialize()
         initialization.platformNotificationRuntime.initialize()
         initialization.conversationNotificationCoordinator.start()
+        startDirectInvitationConversationCoordinator()
         initializeControlPlaneDirectory()
         startControlPlaneMaintenance()
         observeControlPlaneRegistrationTargets()
@@ -96,6 +97,13 @@ class AppViewModel(
                 }
             }
         initialization.controlPlaneHealthMonitor.refresh()
+    }
+
+    private fun startDirectInvitationConversationCoordinator() {
+        viewModelScope.launch {
+            waitUntilLocalIdentityIsReady()
+            initialization.directInvitationConversationCoordinator.run()
+        }
     }
 
     private fun startControlPlaneMaintenance() {

@@ -11,6 +11,11 @@ class DirectMessageRepositoryImpl(
         text: String
     ): Result<Unit> = outgoingMessageProcessor.send(conversationId, text)
 
+    override suspend fun queueUntilAuthorized(
+        conversationId: String,
+        text: String
+    ): Result<Unit> = outgoingMessageProcessor.queueUntilAuthorized(conversationId, text)
+
     override suspend fun retry(messageId: String): Result<Unit> =
         outgoingMessageProcessor.retry(messageId)
 

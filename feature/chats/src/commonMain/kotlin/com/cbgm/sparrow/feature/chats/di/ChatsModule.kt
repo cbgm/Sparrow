@@ -7,7 +7,9 @@ import com.cbgm.sparrow.feature.chats.data.direct.delivery.DirectOutboxDeliveryH
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.DirectIncomingPacketProcessor
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessagePacketHandler
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectReceiptPacketHandler
+import com.cbgm.sparrow.feature.chats.data.direct.invitation.DirectInvitationConversationCoordinator
 import com.cbgm.sparrow.feature.chats.data.direct.outgoing.DirectOutgoingMessageProcessor
+import com.cbgm.sparrow.feature.chats.data.direct.outgoing.DirectPendingAuthorizationMessageCoordinator
 import com.cbgm.sparrow.feature.chats.data.direct.repository.DirectConversationRepositoryImpl
 import com.cbgm.sparrow.feature.chats.data.direct.repository.DirectMessageRepositoryImpl
 import com.cbgm.sparrow.feature.chats.data.direct.storage.DirectConversationStorage
@@ -83,6 +85,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.direct.GetOrCreateDirectCon
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.MarkDirectConversationReadUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectTypingUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.direct.QueueDirectMessageUntilAuthorizedUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.RetryDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SendDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SetDirectTypingUseCase
@@ -125,6 +128,7 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveIdentityHandshakeStateUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveIdentitySetupModeUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
@@ -143,8 +147,10 @@ val chatsModule =
 private fun org.koin.core.module.Module.registerDirectData() {
     singleOf(::DirectConversationStorage)
     singleOf(::DirectMessageDeliveryCoordinator)
+    singleOf(::DirectInvitationConversationCoordinator)
     singleOf(::DirectOutboxDeliveryHandler)
     singleOf(::DirectOutgoingMessageProcessor)
+    singleOf(::DirectPendingAuthorizationMessageCoordinator)
     singleOf(::DirectMessagePacketHandler)
     singleOf(::DirectReceiptPacketHandler)
     singleOf(::DirectIncomingPacketProcessor)
@@ -253,6 +259,7 @@ private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::GetOrCreateDirectConversationUseCase)
     singleOf(::ObserveDirectConversationUseCase)
     singleOf(::SendDirectMessageUseCase)
+    singleOf(::QueueDirectMessageUntilAuthorizedUseCase)
     singleOf(::RetryDirectMessageUseCase)
     singleOf(::MarkDirectConversationReadUseCase)
     singleOf(::DeleteDirectConversationUseCase)
@@ -292,7 +299,9 @@ private fun org.koin.core.module.Module.registerViewModels() {
     viewModel {
         ContactsFlowViewModel(
             getOrCreateDirectConversation = get(),
-            ensureIdentityExchangeStarted = get<EnsureIdentityExchangeStartedUseCase>()
+            ensureIdentityExchangeStarted = get<EnsureIdentityExchangeStartedUseCase>(),
+            observeIdentitySetupMode = get(),
+            requireDirectChatAuthorization = get()
         )
     }
 
@@ -371,10 +380,12 @@ private fun org.koin.core.module.Module.registerViewModels() {
             savedStateHandle = get(),
             observeConversation = get(),
             sendMessage = get(),
+            queueMessageUntilAuthorized = get(),
             markConversationRead = get(),
             retryMessage = get(),
             observeIdentitySetupMode = get<ObserveIdentitySetupModeUseCase>(),
             ensureIdentityExchangeStarted = get<EnsureIdentityExchangeStartedUseCase>(),
+            requireDirectChatAuthorization = get<RequireDirectChatAuthorizationUseCase>(),
             observeIdentityHandshakeState = get<ObserveIdentityHandshakeStateUseCase>(),
             observeContact = get<ObserveContactUseCase>(),
             observeProfilePictures = get(),

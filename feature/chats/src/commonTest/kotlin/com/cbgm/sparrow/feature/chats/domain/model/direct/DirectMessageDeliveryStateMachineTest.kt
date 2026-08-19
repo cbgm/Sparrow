@@ -9,6 +9,23 @@ import kotlin.test.assertTrue
 
 class DirectMessageDeliveryStateMachineTest {
     @Test
+    fun waitingForAuthorizationMovesToQueueOnlyAfterAuthorizationIsGranted() {
+        assertFalse(
+            DirectMessageDeliveryStateMachine.canTransition(
+                MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION,
+                MessageDeliveryEvent.SEND_STARTED
+            )
+        )
+        assertEquals(
+            MessageDeliveryStatus.QUEUED,
+            transition(
+                MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION,
+                MessageDeliveryEvent.AUTHORIZATION_GRANTED
+            )
+        )
+    }
+
+    @Test
     fun outgoingMessageFollowsExpectedTransitions() {
         val sending = transition(MessageDeliveryStatus.QUEUED, MessageDeliveryEvent.SEND_STARTED)
         val sent = transition(sending, MessageDeliveryEvent.SEND_SUCCEEDED)

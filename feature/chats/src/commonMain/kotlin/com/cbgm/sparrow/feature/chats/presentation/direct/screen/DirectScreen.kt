@@ -65,9 +65,9 @@ import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageBubble
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageInput
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
+import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectComposerState
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiState
-import com.cbgm.sparrow.feature.contacts.domain.model.IdentityHandshakeState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.base_verify
@@ -89,16 +89,6 @@ import com.cbgm.sparrow.resources.feature_chats_chat_verified_by_me_keys_descrip
 import com.cbgm.sparrow.resources.feature_chats_chat_verified_by_me_title
 import com.cbgm.sparrow.resources.feature_chats_chat_verified_e2ee
 import com.cbgm.sparrow.resources.feature_chats_chat_verified_keys_description
-import com.cbgm.sparrow.resources.feature_chats_contact_invitation_declined_description
-import com.cbgm.sparrow.resources.feature_chats_contact_invitation_declined_title
-import com.cbgm.sparrow.resources.feature_chats_contact_invitation_finishing_description
-import com.cbgm.sparrow.resources.feature_chats_contact_invitation_finishing_title
-import com.cbgm.sparrow.resources.feature_chats_contact_invitation_received_description
-import com.cbgm.sparrow.resources.feature_chats_contact_invitation_received_title
-import com.cbgm.sparrow.resources.feature_chats_contact_invitation_sent_description
-import com.cbgm.sparrow.resources.feature_chats_contact_invitation_sent_title
-import com.cbgm.sparrow.resources.feature_chats_direct_chat_reinvite_required_description
-import com.cbgm.sparrow.resources.feature_chats_direct_chat_reinvite_required_title
 import com.cbgm.sparrow.resources.feature_chats_import_contact_identity
 import com.cbgm.sparrow.resources.feature_chats_loading_chat
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_incomplete_description
@@ -221,9 +211,8 @@ private fun TopBar(
         if (!uiState.isLoading) {
             SecurityBanner(
                 securityState = uiState.contactSecurityState,
-                identityHandshakeState = uiState.identityHandshakeState,
                 identitySetupMode = uiState.identitySetupMode,
-                isChatAuthorized = uiState.isMessageInputEnabled,
+                isChatAuthorized = uiState.isChatAuthorized,
                 onVerifyIdentity = { onUiEvent(DirectUiEvent.VerifyIdentityClicked) },
                 onManualIdentitySetup = onManualIdentitySetup
             )
@@ -318,7 +307,8 @@ private fun BottomBar(
                 value = uiState.messageText,
                 onValueChange = { onUiEvent(DirectUiEvent.MessageTextChanged(it)) },
                 onSendClick = { onUiEvent(DirectUiEvent.SendClicked) },
-                enabled = !uiState.isLoading && uiState.isMessageInputEnabled
+                inputEnabled = !uiState.isLoading && uiState.composerState.isInputEnabled,
+                sendEnabled = !uiState.isLoading && uiState.composerState.isSendActionEnabled
             )
         }
     }
@@ -465,7 +455,6 @@ private fun ErrorMessage(
 @Composable
 private fun SecurityBanner(
     securityState: ContactSecurityState,
-    identityHandshakeState: IdentityHandshakeState?,
     identitySetupMode: DirectIdentitySetupMode,
     isChatAuthorized: Boolean,
     onVerifyIdentity: () -> Unit,
@@ -478,13 +467,10 @@ private fun SecurityBanner(
     }
 
     val state =
-        invitationState(
-            identityHandshakeState = identityHandshakeState,
-            identitySetupMode = identitySetupMode
-        ) ?: securityState(
+        securityState(
             securityState = securityState,
             identitySetupMode = identitySetupMode
-        )
+        ) ?: return
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -566,56 +552,10 @@ private fun SecurityAction(
 }
 
 @Composable
-private fun invitationState(
-    identityHandshakeState: IdentityHandshakeState?,
-    identitySetupMode: DirectIdentitySetupMode
-): SecurityBannerState? {
-    if (identitySetupMode != DirectIdentitySetupMode.AUTOMATIC_INVITATION) return null
-
-    return when (identityHandshakeState) {
-        IdentityHandshakeState.INVITE_SENT ->
-            SecurityBannerState(
-                icon = Icons.Default.Schedule,
-                title = stringResource(Res.string.feature_chats_contact_invitation_sent_title),
-                description = stringResource(Res.string.feature_chats_contact_invitation_sent_description),
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-        IdentityHandshakeState.AWAITING_ACCEPTANCE ->
-            SecurityBannerState(
-                icon = Icons.Default.Warning,
-                title = stringResource(Res.string.feature_chats_contact_invitation_received_title),
-                description = stringResource(Res.string.feature_chats_contact_invitation_received_description),
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        IdentityHandshakeState.ACCEPTANCE_SENT,
-        IdentityHandshakeState.WAITING_FOR_READY ->
-            SecurityBannerState(
-                icon = Icons.Default.Schedule,
-                title = stringResource(Res.string.feature_chats_contact_invitation_finishing_title),
-                description = stringResource(Res.string.feature_chats_contact_invitation_finishing_description),
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-        IdentityHandshakeState.DECLINED ->
-            errorBanner(
-                title = stringResource(Res.string.feature_chats_contact_invitation_declined_title),
-                description = stringResource(Res.string.feature_chats_contact_invitation_declined_description)
-            )
-        IdentityHandshakeState.CONVERSATION_DELETED,
-        IdentityHandshakeState.EXPIRED,
-        IdentityHandshakeState.FAILED,
-        null -> reinviteBanner()
-        IdentityHandshakeState.MUTUAL_UNVERIFIED -> null
-    }
-}
-
-@Composable
 private fun securityState(
     securityState: ContactSecurityState,
     identitySetupMode: DirectIdentitySetupMode
-): SecurityBannerState =
+): SecurityBannerState? =
     when (securityState) {
         ContactSecurityState.NO_REMOTE_PUBLIC_KEYS ->
             errorBanner(
@@ -670,15 +610,8 @@ private fun securityState(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer
             )
-        ContactSecurityState.MUTUAL_KEYS_VERIFIED -> reinviteBanner()
+        ContactSecurityState.MUTUAL_KEYS_VERIFIED -> null
     }
-
-@Composable
-private fun reinviteBanner() =
-    errorBanner(
-        title = stringResource(Res.string.feature_chats_direct_chat_reinvite_required_title),
-        description = stringResource(Res.string.feature_chats_direct_chat_reinvite_required_description)
-    )
 
 @Composable
 private fun errorBanner(
@@ -743,7 +676,7 @@ private fun DirectScreenPreview() {
                 DirectUiState(
                     contactName = "Alex",
                     isLoading = false,
-                    isMessageInputEnabled = true,
+                    composerState = DirectComposerState.READY,
                     contactSecurityState = ContactSecurityState.MUTUAL_KEYS_VERIFIED
                 ),
             onUiEvent = {}
@@ -760,7 +693,7 @@ private fun DirectMessagesPreview() {
                 DirectUiState(
                     contactName = "Alex",
                     isLoading = false,
-                    isMessageInputEnabled = true,
+                    composerState = DirectComposerState.READY,
                     contactSecurityState = ContactSecurityState.MUTUAL_KEYS_VERIFIED,
                     messages =
                         listOf(

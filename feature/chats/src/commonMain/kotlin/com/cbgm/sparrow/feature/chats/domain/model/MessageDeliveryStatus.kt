@@ -7,6 +7,12 @@ enum class MessageDeliveryStatus {
     NOT_APPLICABLE,
 
     /**
+     * The message is stored locally while a fresh direct-chat invitation is awaiting acceptance.
+     * No protocol packet exists yet.
+     */
+    WAITING_FOR_AUTHORIZATION,
+
+    /**
      * Packet is persisted in the outbox.
      */
     QUEUED,

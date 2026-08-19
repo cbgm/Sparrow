@@ -18,6 +18,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessageDeliveryStateMachine
+import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectPendingAuthorizationMessagePolicy
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityInvitationRepository
@@ -27,7 +28,7 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
  * Owns every outgoing direct-message operation.
  *
  * Red line:
- * Direct use case -> DirectConversationRepositoryImpl -> this processor -> ProtocolOutbox.
+ * Direct use case -> DirectMessageRepositoryImpl -> this processor -> ProtocolOutbox.
  */
 class DirectOutgoingMessageProcessor(
     private val chatDao: ChatDao,
@@ -45,18 +46,74 @@ class DirectOutgoingMessageProcessor(
         text: String
     ): Result<Unit> =
         runCatching {
-            val normalizedText = text.trim()
-            require(normalizedText.isNotEmpty()) { "Message text must not be blank" }
-
+            val normalizedText = requireMessageText(text)
             val target = loadTarget(conversationId)
             identityInvitationRepository
                 .requireDirectChatAuthorization(target.contactId)
                 .getOrThrow()
 
             val contact = getContact(target.contactId).getOrThrow() ?: error("Contact was not found")
-            val packet = createPacket(normalizedText)
+            val packet = createPacket(
+                messageId = IdGenerator.generate(prefix = "message"),
+                text = normalizedText
+            )
             storeQueuedMessage(target, normalizedText, packet, contact)
             enqueue(target.contactId, packet)
+        }
+
+    suspend fun queueUntilAuthorized(
+        conversationId: String,
+        text: String
+    ): Result<Unit> =
+        runCatching {
+            val normalizedText = requireMessageText(text)
+            val target = loadTarget(conversationId)
+            val contact = getContact(target.contactId).getOrThrow() ?: error("Contact was not found")
+            val createdAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+
+            chatDao.upsertMessage(
+                MessageEntity(
+                    id = IdGenerator.generate(prefix = "message"),
+                    conversationId = target.conversationId,
+                    packetId = null,
+                    text = normalizedText,
+                    transportPayload = null,
+                    transportMode = contact.plannedTransportMode().name,
+                    contentStatus = MessageContentStatus.READABLE.name,
+                    deliveryStatus = MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION.name,
+                    senderContactId = null,
+                    isMine = true,
+                    createdAtEpochMilliseconds = createdAtEpochMilliseconds
+                )
+            )
+            chatDao.updateConversationTimestamp(target.conversationId, createdAtEpochMilliseconds)
+        }
+
+    suspend fun releaseWaitingForAuthorization(contactId: String): Result<Unit> =
+        runCatching {
+            identityInvitationRepository.requireDirectChatAuthorization(contactId).getOrThrow()
+            val contact = getContact(contactId).getOrThrow() ?: error("Contact was not found")
+            val nowEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+            val waitingMessages = findWaitingMessages(contactId)
+            val expiredMessages =
+                waitingMessages.filter { message ->
+                    DirectPendingAuthorizationMessagePolicy.isExpired(
+                        createdAtEpochMilliseconds = message.createdAtEpochMilliseconds,
+                        nowEpochMilliseconds = nowEpochMilliseconds
+                    )
+                }
+
+            chatDao.deleteMessagesAndRefreshConversations(expiredMessages)
+            val expiredMessageIds = expiredMessages.mapTo(mutableSetOf(), MessageEntity::id)
+
+            waitingMessages
+                .filterNot { message -> message.id in expiredMessageIds }
+                .forEach { message -> releaseMessage(message, contactId, contact) }
+        }
+
+    suspend fun discardWaitingForAuthorization(contactId: String): Result<Unit> =
+        runCatching {
+            chatDao.deleteMessagesAndRefreshConversations(findWaitingMessages(contactId))
         }
 
     suspend fun retry(messageId: String): Result<Unit> =
@@ -101,6 +158,43 @@ class DirectOutgoingMessageProcessor(
             }
         }
 
+    private suspend fun releaseMessage(
+        message: MessageEntity,
+        contactId: String,
+        contact: Contact
+    ) {
+        val nextStatus =
+            DirectMessageDeliveryStateMachine.transition(
+                current = message.deliveryStatus.toDirectDeliveryStatus(),
+                event = MessageDeliveryEvent.AUTHORIZATION_GRANTED
+            )
+        check(nextStatus == MessageDeliveryStatus.QUEUED) {
+            "Direct message is not waiting for authorization"
+        }
+
+        val packet = createPacket(messageId = message.id, text = message.text)
+        chatDao.upsertMessage(
+            message.copy(
+                packetId = packet.packetId,
+                transportMode = contact.plannedTransportMode().name,
+                deliveryStatus = nextStatus.name
+            )
+        )
+
+        runCatching { enqueue(contactId, packet) }
+            .onFailure { error ->
+                logger.warn(error) {
+                    "Queued direct message could not be released after authorization: messageId=${message.id}"
+                }
+            }
+    }
+
+    private suspend fun findWaitingMessages(contactId: String): List<MessageEntity> =
+        chatDao.findDirectMessagesByContactAndDeliveryStatus(
+            contactId = contactId,
+            deliveryStatus = MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION.name
+        )
+
     private suspend fun loadTarget(conversationId: String): DirectTarget {
         val conversation = chatDao.findConversationById(conversationId)
             ?: error("Direct conversation was not found")
@@ -109,10 +203,13 @@ class DirectOutgoingMessageProcessor(
         return DirectTarget(conversationId = conversation.id, contactId = contactId)
     }
 
-    private suspend fun createPacket(text: String): ChatMessagePacket =
+    private suspend fun createPacket(
+        messageId: String,
+        text: String
+    ): ChatMessagePacket =
         ChatMessagePacket(
             packetId = IdGenerator.generate(prefix = "packet"),
-            messageId = IdGenerator.generate(prefix = "message"),
+            messageId = messageId,
             sentAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
             text = text,
             senderPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow(),
@@ -171,6 +268,11 @@ class DirectOutgoingMessageProcessor(
                 )
         ).getOrThrow()
     }
+
+    private fun requireMessageText(text: String): String =
+        text.trim().also { normalizedText ->
+            require(normalizedText.isNotEmpty()) { "Message text must not be blank" }
+        }
 
     private fun Contact.plannedTransportMode(): TransportEncryptionMode {
         val identity = sparrowIdentity

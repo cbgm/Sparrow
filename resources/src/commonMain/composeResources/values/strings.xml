@@ -111,6 +111,7 @@
     <string name="feature_chats_not_encrypted">Not encrypted</string>
     <string name="feature_chats_numbers_match">Numbers match</string>
     <string name="feature_chats_queued">Queued</string>
+    <string name="feature_chats_waiting_for_invitation_acceptance">Waiting for invitation acceptance</string>
     <string name="feature_chats_read">Read</string>
     <string name="feature_chats_safety_number_unavailable">Safety number unavailable</string>
     <string name="feature_chats_sending">Sending</string>
@@ -174,10 +175,10 @@
     <string name="feature_contacts_verified_by_contact_description">Verify the contact to complete mutual verification.</string>
     <string name="feature_contacts_mutually_verified">Mutually verified</string>
     <string name="feature_contacts_import_from_device">Import from device</string>
-    <string name="feature_contacts_import_from_device_description">Add people by phone number. Opening a chat sends a secure invitation automatically.</string>
+    <string name="feature_contacts_import_from_device_description">Add people by phone number. Selecting a person sends a secure invitation automatically.</string>
     <string name="feature_contacts_import_sparrow_contact_description">Scan an in-person QR to verify, or paste identity text as an unverified fallback</string>
     <string name="feature_contacts_verify_or_import_identity">Verify or import identity</string>
-    <string name="feature_contacts_no_contacts_hint">Tap + to add people from your device. Opening a chat sends a secure invitation automatically.</string>
+    <string name="feature_contacts_no_contacts_hint">Tap + to add people from your device. Selecting a person sends a secure invitation automatically.</string>
     <string name="feature_contacts_no_contacts_yet">No contacts yet</string>
     <string name="feature_contacts_no_phone_number">No phone number</string>
     <string name="feature_contacts_no_phone_numbers_stored">No phone numbers stored.</string>
@@ -204,6 +205,15 @@
     <string name="feature_contacts_accept_invitation">Accept</string>
     <string name="feature_contacts_decline_invitation">Decline</string>
     <string name="feature_contacts_invitations_title">Invitations</string>
+    <string name="feature_contacts_invitations_incoming">Incoming</string>
+    <string name="feature_contacts_invitations_outgoing">Outgoing</string>
+    <string name="feature_contacts_invitations_incoming_empty">No incoming invitations</string>
+    <string name="feature_contacts_invitations_outgoing_empty">No outgoing invitations</string>
+    <string name="feature_contacts_invitation_status_pending">Waiting for response</string>
+    <string name="feature_contacts_invitation_status_declined">Declined</string>
+    <string name="feature_contacts_invitation_status_expired">Expired</string>
+    <string name="feature_contacts_invitation_status_failed">Could not be sent</string>
+    <string name="feature_contacts_delete_outgoing_invitation">Delete</string>
     <string name="feature_contacts_invitations_empty">No open invitations</string>
     <string name="feature_contacts_open_invitations">Open invitations</string>
     <string name="feature_contacts_close_invitations">Close invitations</string>
@@ -409,8 +419,6 @@
     <string name="feature_chats_group_deleted_status">Group deleted</string>
     <string name="feature_chats_contact_invitation_declined_title">Invitation declined</string>
     <string name="feature_chats_contact_invitation_declined_description">Messages are disabled. A new invitation must be accepted before this chat can continue.</string>
-    <string name="feature_chats_direct_chat_reinvite_required_title">New invitation required</string>
-    <string name="feature_chats_direct_chat_reinvite_required_description">A new invitation must be accepted before either person can send messages.</string>
 
     <!-- Contact blocking -->
     <string name="feature_settings_block_unknown_invites">Block unknown invitations</string>

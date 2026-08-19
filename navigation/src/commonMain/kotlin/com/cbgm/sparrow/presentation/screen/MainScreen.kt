@@ -143,10 +143,7 @@ private fun MainTopBar(
         },
         actions = {
             if (selectedTab == MainTab.Chats) {
-                IconButton(
-                    onClick = onOpenInvitations,
-                    enabled = invitationCount > 0
-                ) {
+                IconButton(onClick = onOpenInvitations) {
                     BadgedBox(
                         badge = {
                             if (invitationCount > 0) {

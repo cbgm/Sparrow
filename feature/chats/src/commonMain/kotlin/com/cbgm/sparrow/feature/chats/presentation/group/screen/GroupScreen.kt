@@ -237,7 +237,8 @@ private fun BottomBar(
                 value = uiState.messageText,
                 onValueChange = { onUiEvent(GroupUiEvent.MessageTextChanged(it)) },
                 onSendClick = { onUiEvent(GroupUiEvent.SendClicked) },
-                enabled = !uiState.isLoading && uiState.isMessageInputEnabled
+                inputEnabled = !uiState.isLoading && uiState.isMessageInputEnabled,
+                sendEnabled = !uiState.isLoading && uiState.isMessageInputEnabled
             )
         }
     }

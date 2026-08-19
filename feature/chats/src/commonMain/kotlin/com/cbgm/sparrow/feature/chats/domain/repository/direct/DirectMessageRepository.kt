@@ -6,6 +6,11 @@ interface DirectMessageRepository {
         text: String
     ): Result<Unit>
 
+    suspend fun queueUntilAuthorized(
+        conversationId: String,
+        text: String
+    ): Result<Unit>
+
     suspend fun retry(messageId: String): Result<Unit>
 
     suspend fun markConversationRead(conversationId: String): Result<Unit>

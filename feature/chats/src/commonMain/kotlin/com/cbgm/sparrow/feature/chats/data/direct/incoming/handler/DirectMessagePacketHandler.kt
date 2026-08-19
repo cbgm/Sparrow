@@ -14,14 +14,12 @@ import com.cbgm.sparrow.data.database.entity.ConversationType
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
-import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityInvitationRepository
 
 /** Direct-only incoming chat-message handler. */
 class DirectMessagePacketHandler(
     private val chatDao: ChatDao,
     private val contactDao: ContactDao,
     private val protocolOutbox: ProtocolOutbox,
-    private val identityInvitationRepository: IdentityInvitationRepository,
     private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor
 ) {
     private val logger = SparrowLog.withTag("DirectMessagePacketHandler")
@@ -31,7 +29,7 @@ class DirectMessagePacketHandler(
         packet: ChatMessagePacket
     ): Result<Unit> =
         runCatching {
-            validateMessage(context.contactId, packet)
+            validateMessage(packet)
             remoteProfilePictureMetadataProcessor
                 .apply(context.contactId, packet.profilePicture)
                 .onFailure { error ->
@@ -44,12 +42,8 @@ class DirectMessagePacketHandler(
             sendDeliveryReceipt(context.contactId, packet.messageId)
         }
 
-    private suspend fun validateMessage(
-        contactId: String,
-        packet: ChatMessagePacket
-    ) {
+    private fun validateMessage(packet: ChatMessagePacket) {
         require(packet.text.isNotBlank()) { "Incoming chat message must not be blank" }
-        identityInvitationRepository.requireDirectChatAuthorization(contactId).getOrThrow()
     }
 
     private suspend fun updateSenderDisplayName(

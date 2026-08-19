@@ -77,7 +77,6 @@ object Dimens {
     object StartupScreen {
         val animationSize = 200.dp
         val contentMaxWidth = 520.dp
-        val backgroundArtworkSize = 300.dp
     }
 
     object OverviewScreen {
@@ -116,6 +115,7 @@ object Dimens {
         val avatarSize = 40.dp
         val progressSize = 20.dp
         val actionIconSize = 24.dp
+        val tabIndicatorHeight = 1.dp
     }
 
     object BlockedContactsScreen {

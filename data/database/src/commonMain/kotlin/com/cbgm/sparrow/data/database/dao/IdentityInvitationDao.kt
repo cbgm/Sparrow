@@ -72,6 +72,24 @@ interface IdentityInvitationDao {
 
     @Query(
         """
+        SELECT invitation.*
+        FROM identity_invitations AS invitation
+        WHERE invitation.invitationId = (
+            SELECT latest.invitationId
+            FROM identity_invitations AS latest
+            WHERE latest.contactId = invitation.contactId
+            ORDER BY
+                latest.createdAtEpochMilliseconds DESC,
+                latest.updatedAtEpochMilliseconds DESC,
+                latest.invitationId DESC
+            LIMIT 1
+        )
+        """
+    )
+    fun observeLatestInvitations(): Flow<List<IdentityInvitationEntity>>
+
+    @Query(
+        """
         SELECT *
         FROM identity_invitations
         WHERE contactId = :contactId
@@ -113,4 +131,43 @@ interface IdentityInvitationDao {
         direction: String,
         states: List<String>
     ): Flow<List<IdentityInvitationEntity>>
+
+    @Query(
+        """
+        SELECT *
+        FROM identity_invitations
+        WHERE state IN (:states)
+        ORDER BY updatedAtEpochMilliseconds DESC, createdAtEpochMilliseconds DESC
+        """
+    )
+    fun observeByStates(states: List<String>): Flow<List<IdentityInvitationEntity>>
+
+    @Query(
+        """
+        UPDATE identity_invitations
+        SET viewedAtEpochMilliseconds = :viewedAtEpochMilliseconds
+        WHERE direction = :direction
+          AND hiddenAtEpochMilliseconds IS NULL
+        """
+    )
+    suspend fun markDirectionViewed(
+        direction: String,
+        viewedAtEpochMilliseconds: Long
+    )
+
+    @Query(
+        """
+        UPDATE identity_invitations
+        SET hiddenAtEpochMilliseconds = :hiddenAtEpochMilliseconds
+        WHERE invitationId = :invitationId
+          AND direction = :direction
+          AND state = :state
+        """
+    )
+    suspend fun hideByIdAndState(
+        invitationId: String,
+        direction: String,
+        state: String,
+        hiddenAtEpochMilliseconds: Long
+    ): Int
 }

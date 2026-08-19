@@ -13,6 +13,7 @@ val sharedModule =
                 initializeCryptoRuntime = get(),
                 platformNotificationRuntime = get(),
                 conversationNotificationCoordinator = get(),
+                directInvitationConversationCoordinator = get(),
                 controlPlaneConfiguration = get(),
                 controlPlaneStatusStore = get(),
                 controlPlaneDirectorySynchronizer = get(),

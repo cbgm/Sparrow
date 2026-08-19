@@ -9,6 +9,9 @@ object DirectMessageDeliveryStateMachine {
         event: MessageDeliveryEvent
     ): MessageDeliveryStatus =
         when (current to event) {
+            MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION to MessageDeliveryEvent.AUTHORIZATION_GRANTED ->
+                MessageDeliveryStatus.QUEUED
+
             MessageDeliveryStatus.QUEUED to MessageDeliveryEvent.SEND_STARTED,
             MessageDeliveryStatus.FAILED to MessageDeliveryEvent.SEND_STARTED -> MessageDeliveryStatus.SENDING
 
