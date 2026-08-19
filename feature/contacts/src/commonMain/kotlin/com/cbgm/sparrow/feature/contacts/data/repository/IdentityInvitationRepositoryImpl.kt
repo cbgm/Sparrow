@@ -1623,6 +1623,7 @@ class IdentityInvitationRepositoryImpl(
                         INVITATION_RESTART_GRACE_MILLISECONDS
 
                 OutboxStatus.FAILED,
+                OutboxStatus.EXPIRED,
                 null -> false
             }
         }

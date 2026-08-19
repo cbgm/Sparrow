@@ -37,6 +37,24 @@ class GatewaySerializationTest {
     }
 
     @Test
+    fun envelopeAcceptanceCarriesServerDeliveryDeadline() {
+        val encoded =
+            serverJson.encodeToString<GatewayServerMessage>(
+                GatewayServerMessage.EnvelopeAccepted(
+                    envelopeId = "envelope-id",
+                    expiresAtEpochMilliseconds = 123_456L
+                )
+            )
+
+        val decoded =
+            serverJson.decodeFromString<GatewayServerMessage>(encoded)
+                as GatewayServerMessage.EnvelopeAccepted
+
+        assertEquals("envelope-id", decoded.envelopeId)
+        assertEquals(123_456L, decoded.expiresAtEpochMilliseconds)
+    }
+
+    @Test
     fun signedRegisterFrameDecodesAllRouteProofFields() {
         val encoded =
             "{\"type\":\"register\",\"routingId\":\"scrouting1_test\"," +

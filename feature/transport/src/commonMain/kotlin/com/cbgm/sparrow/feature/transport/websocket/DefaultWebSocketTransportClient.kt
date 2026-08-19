@@ -6,6 +6,7 @@ import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayClientMessage
+import com.cbgm.sparrow.feature.transport.gateway.model.GatewayEnvelopeAcceptance
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayNodeInformation
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayServerMessage
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayTypingEvent
@@ -79,7 +80,7 @@ class DefaultWebSocketTransportClient internal constructor(
 
     private var connectionJob: Job? = null
 
-    private val pendingAcknowledgements = mutableMapOf<String, CompletableDeferred<Unit>>()
+    private val pendingAcknowledgements = mutableMapOf<String, CompletableDeferred<GatewayEnvelopeAcceptance>>()
 
     override fun connect(
         serverUrl: String,
@@ -108,42 +109,26 @@ class DefaultWebSocketTransportClient internal constructor(
         envelope: TransportEnvelope,
         timeoutMilliseconds: Long
     ): Result<Unit> =
-        runCatching {
-            require(timeoutMilliseconds > 0L) {
-                "Acknowledgement timeout must be positive"
-            }
+        sendEnvelopeAndAwaitServerAcceptance(envelope, timeoutMilliseconds).map { Unit }
 
-            check(connectionState.value is TransportConnectionState.Connected) {
-                "WebSocket transport is not connected"
-            }
-
-            val acknowledgement = CompletableDeferred<Unit>()
-
-            acknowledgementsMutex.withLock {
-                check(!pendingAcknowledgements.containsKey(envelope.envelopeId)) {
-                    "Envelope is already awaiting acknowledgement"
-                }
-
-                pendingAcknowledgements[envelope.envelopeId] = acknowledgement
-            }
-
-            try {
-                sendEnvelopeFrame(envelope = envelope)
-
-                withTimeout(timeoutMilliseconds.milliseconds) {
-                    acknowledgement.await()
-                }
-            } finally {
-                acknowledgementsMutex.withLock {
-                    pendingAcknowledgements.remove(envelope.envelopeId)
-                }
-            }
+    override suspend fun sendEnvelopeAndAwaitServerAcceptance(
+        envelope: TransportEnvelope,
+        timeoutMilliseconds: Long
+    ): Result<GatewayEnvelopeAcceptance> =
+        awaitEnvelopeAcceptance(envelope.envelopeId, timeoutMilliseconds) {
+            sendEnvelopeFrame(envelope)
         }
 
     override suspend fun sendFederatedEnvelopeAndAwaitAcceptance(
         envelope: FederatedEnvelope,
         timeoutMilliseconds: Long
     ): Result<Unit> =
+        sendFederatedEnvelopeAndAwaitServerAcceptance(envelope, timeoutMilliseconds).map { Unit }
+
+    override suspend fun sendFederatedEnvelopeAndAwaitServerAcceptance(
+        envelope: FederatedEnvelope,
+        timeoutMilliseconds: Long
+    ): Result<GatewayEnvelopeAcceptance> =
         awaitEnvelopeAcceptance(envelope.envelopeId, timeoutMilliseconds) {
             sendFederatedEnvelopeFrame(envelope)
         }
@@ -481,13 +466,13 @@ class DefaultWebSocketTransportClient internal constructor(
         envelopeId: String,
         timeoutMilliseconds: Long,
         send: suspend () -> Unit
-    ): Result<Unit> =
+    ): Result<GatewayEnvelopeAcceptance> =
         runCatching {
             require(timeoutMilliseconds > 0L) { "Acknowledgement timeout must be positive" }
             check(connectionState.value is TransportConnectionState.Connected) {
                 "WebSocket transport is not connected"
             }
-            val acknowledgement = CompletableDeferred<Unit>()
+            val acknowledgement = CompletableDeferred<GatewayEnvelopeAcceptance>()
             acknowledgementsMutex.withLock {
                 check(!pendingAcknowledgements.containsKey(envelopeId)) {
                     "Envelope is already awaiting acknowledgement"
@@ -570,7 +555,12 @@ class DefaultWebSocketTransportClient internal constructor(
                         pendingAcknowledgements[message.envelopeId]
                     }
 
-                acknowledgement?.complete(Unit)
+                acknowledgement?.complete(
+                    GatewayEnvelopeAcceptance(
+                        envelopeId = message.envelopeId,
+                        expiresAtEpochMilliseconds = message.expiresAtEpochMilliseconds
+                    )
+                )
             }
 
             is GatewayServerMessage.Error -> {

@@ -83,7 +83,6 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.direct.GetOrCreateDirectCon
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.MarkDirectConversationReadUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectTypingUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.direct.RefreshDirectDeliveryStateUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.RetryDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SendDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SetDirectTypingUseCase
@@ -102,7 +101,6 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupConversat
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupMemberTypingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupVerificationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.PromoteGroupMemberUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.RefreshGroupDeliveryStateUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.RemoveGroupAvatarUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.RemoveGroupMemberUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.RetryGroupMessageUseCase
@@ -256,7 +254,6 @@ private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::ObserveDirectConversationUseCase)
     singleOf(::SendDirectMessageUseCase)
     singleOf(::RetryDirectMessageUseCase)
-    singleOf(::RefreshDirectDeliveryStateUseCase)
     singleOf(::MarkDirectConversationReadUseCase)
     singleOf(::DeleteDirectConversationUseCase)
     singleOf(::ObserveDirectTypingUseCase)
@@ -266,7 +263,6 @@ private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::ObserveGroupConversationUseCase)
     singleOf(::SendGroupMessageUseCase)
     singleOf(::RetryGroupMessageUseCase)
-    singleOf(::RefreshGroupDeliveryStateUseCase)
     singleOf(::MarkGroupConversationReadUseCase)
     singleOf(::DeleteGroupConversationUseCase)
     singleOf(::AcceptGroupInvitationUseCase)
@@ -327,7 +323,6 @@ private fun org.koin.core.module.Module.registerViewModels() {
             sendMessage = get(),
             markConversationRead = get(),
             retryMessage = get(),
-            refreshDeliveryState = get(),
             acceptInvitation = get(),
             declineInvitation = get(),
             observeContacts = get<ObserveContactsUseCase>(),
@@ -380,7 +375,6 @@ private fun org.koin.core.module.Module.registerViewModels() {
             sendMessage = get(),
             markConversationRead = get(),
             retryMessage = get(),
-            refreshDeliveryState = get(),
             observeIdentitySetupMode = get<ObserveIdentitySetupModeUseCase>(),
             ensureIdentityExchangeStarted = get<EnsureIdentityExchangeStartedUseCase>(),
             observeIdentityHandshakeState = get<ObserveIdentityHandshakeStateUseCase>(),

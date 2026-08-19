@@ -80,10 +80,8 @@ class DirectOutgoingMessageProcessor(
                 .getOrThrow()
 
             val packetId = message.packetId?.takeIf(String::isNotBlank) ?: error("Message has no linked protocol packet")
-            val outboxItem = protocolOutbox.findByPacketId(packetId).getOrThrow()
-                ?: error("Linked outbox item was not found")
 
-            protocolOutbox.retry(outboxItem.id).getOrThrow()
+            protocolOutbox.resend(packetId).getOrThrow()
             deliveryCoordinator.applyRetryEvent(messageId)
         }
 

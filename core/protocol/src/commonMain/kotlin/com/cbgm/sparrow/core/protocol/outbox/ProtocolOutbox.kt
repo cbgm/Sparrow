@@ -22,6 +22,16 @@ interface ProtocolOutbox {
 
     suspend fun markSent(itemId: String): Result<Unit>
 
+    suspend fun markSent(
+        itemId: String,
+        expiresAtEpochMilliseconds: Long
+    ): Result<Unit> = markSent(itemId)
+
+    fun observeNextSentExpiry(): Flow<Long?> = kotlinx.coroutines.flow.flowOf(null)
+
+    suspend fun expireSent(nowEpochMilliseconds: Long): Result<List<ProtocolOutboxItem>> =
+        Result.success(emptyList())
+
     suspend fun markFailed(
         itemId: String,
         errorMessage: String

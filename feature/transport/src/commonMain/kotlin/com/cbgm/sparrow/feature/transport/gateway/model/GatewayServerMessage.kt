@@ -43,7 +43,8 @@ sealed interface GatewayServerMessage {
     @Serializable
     @SerialName("envelope_accepted")
     data class EnvelopeAccepted(
-        val envelopeId: String
+        val envelopeId: String,
+        val expiresAtEpochMilliseconds: Long
     ) : GatewayServerMessage
 
     @Serializable

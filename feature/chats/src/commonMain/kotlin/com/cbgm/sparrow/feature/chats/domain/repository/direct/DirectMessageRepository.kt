@@ -8,7 +8,5 @@ interface DirectMessageRepository {
 
     suspend fun retry(messageId: String): Result<Unit>
 
-    suspend fun refreshDeliveryState(conversationId: String): Result<Unit>
-
     suspend fun markConversationRead(conversationId: String): Result<Unit>
 }

@@ -1,34 +1,26 @@
 package com.cbgm.sparrow.core.protocol.outbox
 
 object OutboxStateMachine {
-    /**
-     * Returns null when an event is not valid for the current persisted state.
-     */
+    /** Returns null when an event is not valid for the current persisted state. */
     fun transition(
         current: OutboxStatus,
         event: OutboxEvent
     ): OutboxStatus? =
-        when (event) {
-            OutboxEvent.PROCESSING_STARTED ->
-                when (current) {
-                    OutboxStatus.PENDING,
-                    OutboxStatus.FAILED -> OutboxStatus.PROCESSING
+        when (current to event) {
+            OutboxStatus.PENDING to OutboxEvent.PROCESSING_STARTED,
+            OutboxStatus.FAILED to OutboxEvent.PROCESSING_STARTED -> OutboxStatus.PROCESSING
 
-                    OutboxStatus.PROCESSING,
-                    OutboxStatus.SENT -> null
-                }
+            OutboxStatus.PROCESSING to OutboxEvent.SEND_SUCCEEDED -> OutboxStatus.SENT
+            OutboxStatus.PROCESSING to OutboxEvent.SEND_FAILED -> OutboxStatus.FAILED
 
-            OutboxEvent.SEND_SUCCEEDED ->
-                if (current == OutboxStatus.PROCESSING) OutboxStatus.SENT else null
+            OutboxStatus.SENT to OutboxEvent.DELIVERY_EXPIRED -> OutboxStatus.EXPIRED
 
-            OutboxEvent.SEND_FAILED ->
-                if (current == OutboxStatus.PROCESSING) OutboxStatus.FAILED else null
+            OutboxStatus.FAILED to OutboxEvent.RETRY_REQUESTED,
+            OutboxStatus.EXPIRED to OutboxEvent.RETRY_REQUESTED -> OutboxStatus.PENDING
 
-            OutboxEvent.RETRY_REQUESTED ->
-                if (current == OutboxStatus.FAILED) OutboxStatus.PENDING else null
+            OutboxStatus.PROCESSING to OutboxEvent.RECOVERY_REQUESTED -> OutboxStatus.PENDING
 
-            OutboxEvent.RECOVERY_REQUESTED ->
-                if (current == OutboxStatus.PROCESSING) OutboxStatus.PENDING else null
+            else -> null
         }
 
     fun requireTransition(
