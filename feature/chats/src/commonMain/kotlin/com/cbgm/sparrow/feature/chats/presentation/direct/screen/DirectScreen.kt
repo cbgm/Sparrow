@@ -63,7 +63,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageBubble
-import com.cbgm.sparrow.feature.chats.presentation.component.MessageInput
+import com.cbgm.sparrow.feature.chats.presentation.component.MessageControl
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectComposerState
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiEvent
@@ -75,7 +75,6 @@ import com.cbgm.sparrow.resources.feature_chats_chat_key_exchange_incomplete_des
 import com.cbgm.sparrow.resources.feature_chats_chat_key_exchange_incomplete_title
 import com.cbgm.sparrow.resources.feature_chats_chat_no_keys_description
 import com.cbgm.sparrow.resources.feature_chats_chat_one_way_keys_description
-import com.cbgm.sparrow.resources.feature_chats_chat_typing
 import com.cbgm.sparrow.resources.feature_chats_chat_unencrypted_description
 import com.cbgm.sparrow.resources.feature_chats_chat_unencrypted_title
 import com.cbgm.sparrow.resources.feature_chats_chat_unverified_description
@@ -276,42 +275,17 @@ private fun BottomBar(
     containerColor: Color,
     onUiEvent: (DirectUiEvent) -> Unit
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = containerColor
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text =
-                    if (uiState.isContactTyping) {
-                        stringResource(
-                            Res.string.feature_chats_chat_typing,
-                            uiState.contactName
-                        )
-                    } else {
-                        ""
-                    },
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            horizontal = MaterialTheme.spacing.large,
-                            vertical = MaterialTheme.spacing.base / 2
-                        ),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            MessageInput(
-                value = uiState.messageText,
-                onValueChange = { onUiEvent(DirectUiEvent.MessageTextChanged(it)) },
-                onSendClick = { onUiEvent(DirectUiEvent.SendClicked) },
-                inputEnabled = !uiState.isLoading && uiState.composerState.isInputEnabled,
-                sendEnabled = !uiState.isLoading && uiState.composerState.isSendActionEnabled
-            )
-        }
-    }
+    MessageControl(
+        containerColor = containerColor,
+        isTyping = uiState.isContactTyping,
+        messageText = uiState.messageText,
+        contactName = uiState.contactName,
+        onValueChange = { onUiEvent(DirectUiEvent.MessageTextChanged(it)) },
+        onSendClick = { onUiEvent(DirectUiEvent.SendClicked) },
+        isInputEnabled = !uiState.isLoading && uiState.composerState.isInputEnabled,
+        isSendEnabled = !uiState.isLoading && uiState.composerState.isSendActionEnabled,
+        onAttachmentButtonClick = {}
+    )
 }
 
 @Composable

@@ -53,13 +53,12 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMemberInvitationStatus
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageBubble
-import com.cbgm.sparrow.feature.chats.presentation.component.MessageInput
+import com.cbgm.sparrow.feature.chats.presentation.component.MessageControl
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMessageUiModel
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState
 import com.cbgm.sparrow.resources.Res
-import com.cbgm.sparrow.resources.feature_chats_chat_typing
 import com.cbgm.sparrow.resources.feature_chats_group_accept
 import com.cbgm.sparrow.resources.feature_chats_group_decline
 import com.cbgm.sparrow.resources.feature_chats_group_deleted_description
@@ -205,43 +204,17 @@ private fun BottomBar(
     containerColor: Color,
     onUiEvent: (GroupUiEvent) -> Unit
 ) {
-    Surface(color = containerColor) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = MaterialTheme.spacing.base)
-        ) {
-            Text(
-                text =
-                    if (uiState.isSomeoneTyping) {
-                        stringResource(
-                            Res.string.feature_chats_chat_typing,
-                            uiState.typingDisplayName.ifBlank { uiState.title }
-                        )
-                    } else {
-                        ""
-                    },
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            horizontal = MaterialTheme.spacing.large,
-                            vertical = MaterialTheme.spacing.base / 2
-                        ),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            MessageInput(
-                value = uiState.messageText,
-                onValueChange = { onUiEvent(GroupUiEvent.MessageTextChanged(it)) },
-                onSendClick = { onUiEvent(GroupUiEvent.SendClicked) },
-                inputEnabled = !uiState.isLoading && uiState.isMessageInputEnabled,
-                sendEnabled = !uiState.isLoading && uiState.isMessageInputEnabled
-            )
-        }
-    }
+    MessageControl(
+        containerColor = containerColor,
+        isTyping = uiState.isSomeoneTyping,
+        messageText = uiState.messageText,
+        contactName = uiState.typingDisplayName,
+        onValueChange = { onUiEvent(GroupUiEvent.MessageTextChanged(it)) },
+        onSendClick = { onUiEvent(GroupUiEvent.SendClicked) },
+        isInputEnabled = !uiState.isLoading && uiState.isMessageInputEnabled,
+        isSendEnabled = !uiState.isLoading && uiState.isMessageInputEnabled,
+        onAttachmentButtonClick = {}
+    )
 }
 
 @Composable
