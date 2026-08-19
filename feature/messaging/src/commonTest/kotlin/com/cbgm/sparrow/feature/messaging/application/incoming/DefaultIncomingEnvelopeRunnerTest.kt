@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.messaging.application.incoming
 
 import com.cbgm.sparrow.core.protocol.handler.IncomingMessageHandler
+import com.cbgm.sparrow.core.protocol.handler.IncomingMessageRejectedException
 import com.cbgm.sparrow.core.protocol.identity.LocalEncryptionKeyPair
 import com.cbgm.sparrow.core.protocol.identity.LocalEncryptionKeyPairProvider
 import com.cbgm.sparrow.feature.messaging.application.routing.ContactByRoutingIdResolver
@@ -16,6 +17,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.time.Duration.Companion.milliseconds
 
 class DefaultIncomingEnvelopeRunnerTest {
     @Test
@@ -51,6 +53,39 @@ class DefaultIncomingEnvelopeRunnerTest {
         }
 
     @Test
+    fun permanentlyRejectedHandlingAcknowledgesEnvelope() =
+        runTest {
+            val envelopeGateway = FakeIncomingEnvelopeGateway()
+            val handlerCalled = CompletableDeferred<Unit>()
+            val incomingHandler =
+                RecordingIncomingMessageHandler(
+                    result = {
+                        handlerCalled.complete(Unit)
+                        throw IncomingMessageRejectedException("invalid signature")
+                    }
+                )
+            val runner =
+                createRunner(
+                    envelopeGateway = envelopeGateway,
+                    incomingHandler = incomingHandler
+                )
+
+            try {
+                runner.start()
+                envelopeGateway.emitEnvelope(createEnvelope())
+                handlerCalled.await()
+
+                assertEquals(
+                    "envelope-1",
+                    envelopeGateway.acknowledgedEnvelopeIds.receive()
+                )
+                assertEquals(1, incomingHandler.callCount)
+            } finally {
+                runner.stop()
+            }
+        }
+
+    @Test
     fun failedHandlingDoesNotAcknowledgeEnvelope() =
         runTest {
             val envelopeGateway = FakeIncomingEnvelopeGateway()
@@ -74,7 +109,7 @@ class DefaultIncomingEnvelopeRunnerTest {
                 handlerCalled.await()
 
                 val acknowledgement =
-                    withTimeoutOrNull(SHORT_TIMEOUT_MILLISECONDS) {
+                    withTimeoutOrNull(SHORT_TIMEOUT_MILLISECONDS.milliseconds) {
                         envelopeGateway.acknowledgedEnvelopeIds.receive()
                     }
 
@@ -112,7 +147,7 @@ class DefaultIncomingEnvelopeRunnerTest {
                 resolverCalled.await()
 
                 val acknowledgement =
-                    withTimeoutOrNull(SHORT_TIMEOUT_MILLISECONDS) {
+                    withTimeoutOrNull(SHORT_TIMEOUT_MILLISECONDS.milliseconds) {
                         envelopeGateway.acknowledgedEnvelopeIds.receive()
                     }
 

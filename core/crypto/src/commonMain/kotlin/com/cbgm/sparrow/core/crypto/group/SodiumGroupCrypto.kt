@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.core.crypto.group
 
 import com.cbgm.sparrow.core.crypto.SodiumRuntime
+import com.cbgm.sparrow.core.crypto.error.SignatureVerificationException
 import com.ionspin.kotlin.crypto.aead.AuthenticatedEncryptionWithAssociatedData
 import com.ionspin.kotlin.crypto.box.Box
 import com.ionspin.kotlin.crypto.signature.Signature
@@ -141,11 +142,15 @@ class SodiumGroupCrypto : GroupCrypto {
             require(signingPublicKey.isNotEmpty()) { "Signing public key must not be empty" }
             SodiumRuntime.initialize().getOrThrow()
 
-            Signature.verifyDetached(
-                signature = signature.toUByteArray(),
-                message = payload.toUByteArray(),
-                publicKey = signingPublicKey.toUByteArray()
-            )
+            try {
+                Signature.verifyDetached(
+                    signature = signature.toUByteArray(),
+                    message = payload.toUByteArray(),
+                    publicKey = signingPublicKey.toUByteArray()
+                )
+            } catch (error: Throwable) {
+                throw SignatureVerificationException(error)
+            }
         }
 
     private fun requireGroupKey(groupKey: ByteArray) {

@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.core.crypto.signature
 
 import com.cbgm.sparrow.core.crypto.SodiumRuntime
+import com.cbgm.sparrow.core.crypto.error.SignatureVerificationException
 import com.ionspin.kotlin.crypto.signature.Signature
 
 class SodiumDetachedSignatureCrypto : DetachedSignatureCrypto {
@@ -45,10 +46,14 @@ class SodiumDetachedSignatureCrypto : DetachedSignatureCrypto {
 
             SodiumRuntime.initialize().getOrThrow()
 
-            Signature.verifyDetached(
-                signature = signature.toUByteArray(),
-                message = payload.toUByteArray(),
-                publicKey = signingPublicKey.toUByteArray()
-            )
+            try {
+                Signature.verifyDetached(
+                    signature = signature.toUByteArray(),
+                    message = payload.toUByteArray(),
+                    publicKey = signingPublicKey.toUByteArray()
+                )
+            } catch (error: Throwable) {
+                throw SignatureVerificationException(error)
+            }
         }
 }
