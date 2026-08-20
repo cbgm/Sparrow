@@ -99,7 +99,7 @@ private fun SearchList(
 ) {
     LazyColumn(
         modifier = Modifier
-            .padding(MaterialTheme.spacing.screenPadding)
+            .padding(vertical = MaterialTheme.spacing.screenPadding)
             .fillMaxSize(),
         state = listState,
         contentPadding = innerPadding
@@ -237,6 +237,7 @@ private fun SearchResultItem(
 ) {
     Row(
         modifier = modifier
+            .padding(horizontal = MaterialTheme.spacing.screenPadding)
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(vertical = MaterialTheme.spacing.base),
