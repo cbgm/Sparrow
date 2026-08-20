@@ -1,3 +1,4 @@
+@file:Suppress("UnstableApiUsage")
 rootProject.name = "Sparrow"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 

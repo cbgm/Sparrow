@@ -187,7 +187,6 @@ object Dimens {
     }
 
     object ControlPlaneSettingsScreen {
-        val progressSize = 20.dp
         val statusIndicatorSize = 12.dp
     }
 
