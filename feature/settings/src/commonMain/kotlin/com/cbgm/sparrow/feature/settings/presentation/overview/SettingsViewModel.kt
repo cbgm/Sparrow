@@ -5,7 +5,6 @@ import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
-import com.cbgm.sparrow.feature.search.domain.usecase.InitializeSemanticSearchUseCase
 import com.cbgm.sparrow.feature.search.domain.usecase.ObserveSemanticSearchStateUseCase
 import com.cbgm.sparrow.feature.search.domain.usecase.SetSemanticSearchEnabledUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetAppLanguageUseCase
@@ -45,7 +44,6 @@ class SettingsViewModel(
     private val setBlockUnknownContactInvites: SetBlockUnknownContactInvitesUseCase,
     observeBlockedContactIds: ObserveBlockedContactIdsUseCase,
     observeSemanticSearchState: ObserveSemanticSearchStateUseCase,
-    private val initializeSemanticSearch: InitializeSemanticSearchUseCase,
     private val setSemanticSearchEnabled: SetSemanticSearchEnabledUseCase
 ) : BaseViewModel() {
     private val buildInfo = getBuildInfoUseCase()
@@ -80,7 +78,6 @@ class SettingsViewModel(
 
     init {
         loadLocalSettings()
-        viewModelScope.launch { initializeSemanticSearch() }
     }
 
     fun onUiEvent(event: SettingsUiEvent) {

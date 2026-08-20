@@ -35,11 +35,29 @@ class SemanticSearchRepositoryImpl(
     private var preparationJob: kotlinx.coroutines.Job? = null
 
     override suspend fun initialize() {
-        preparationJob?.cancelAndJoin()
-        if (!settingsStorage.isEnabled()) {
+        val enabled =
+            try {
+                settingsStorage.isEnabled()
+            } catch (throwable: Throwable) {
+                if (throwable is kotlinx.coroutines.CancellationException) throw throwable
+                mutableState.value =
+                    SemanticSearchState.Failed(
+                        throwable.message ?: "Semantic search initialization failed"
+                    )
+                return
+            }
+
+        if (!enabled) {
+            preparationJob?.cancelAndJoin()
+            preparationJob = null
             mutableState.value = SemanticSearchState.Disabled
             return
         }
+
+        if (mutableState.value is SemanticSearchState.Ready || preparationJob?.isActive == true) {
+            return
+        }
+
         preparationJob = applicationScope.launch { prepare() }
     }
 

@@ -124,7 +124,6 @@ val settingsModule =
                 setBlockUnknownContactInvites = get(),
                 observeBlockedContactIds = get(),
                 observeSemanticSearchState = get(),
-                initializeSemanticSearch = get(),
                 setSemanticSearchEnabled = get()
             )
         }
