@@ -70,6 +70,7 @@ internal fun GroupMessage.toUiModel(
                     )
             ),
         type = type,
+        senderContactId = senderContactId,
         senderProfilePictureBytes = senderProfilePictureBytes
     )
 

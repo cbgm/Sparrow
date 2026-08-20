@@ -22,6 +22,7 @@ kotlin {
             implementation(projects.feature.contactimport)
             implementation(projects.feature.contacts)
             implementation(projects.feature.identity)
+            implementation(projects.feature.safety)
 
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)

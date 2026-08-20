@@ -59,6 +59,7 @@ import com.cbgm.sparrow.feature.chats.presentation.component.rememberMessageSear
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMessageUiModel
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState
+import com.cbgm.sparrow.feature.safety.presentation.model.MessageSafetyWarningUiModel
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_chat_typing
 import com.cbgm.sparrow.resources.feature_chats_group_accept
@@ -142,6 +143,15 @@ fun GroupScreen(
             targetMessageId = targetMessageId,
             onRetryMessage = { messageId ->
                 onUiEvent(GroupUiEvent.RetryMessage(messageId))
+            },
+            onSafetyWarningClick = { messageId, contactId, warning ->
+                onUiEvent(
+                    GroupUiEvent.SafetyWarningClicked(
+                        messageId = messageId,
+                        contactId = contactId,
+                        warning = warning
+                    )
+                )
             }
         )
     }
@@ -257,7 +267,8 @@ private fun Content(
     listState: LazyListState,
     innerPadding: PaddingValues,
     targetMessageId: String?,
-    onRetryMessage: (String) -> Unit
+    onRetryMessage: (String) -> Unit,
+    onSafetyWarningClick: (String, String?, MessageSafetyWarningUiModel) -> Unit
 ) {
     when {
         uiState.isLoading -> LoadingContent(
@@ -274,6 +285,7 @@ private fun Content(
             listState = listState,
             targetMessageId = targetMessageId,
             onRetryMessage = onRetryMessage,
+            onSafetyWarningClick = onSafetyWarningClick,
             contentPadding = innerPadding
         )
     }
@@ -285,6 +297,7 @@ private fun MessageList(
     listState: LazyListState,
     targetMessageId: String?,
     onRetryMessage: (String) -> Unit,
+    onSafetyWarningClick: (String, String?, MessageSafetyWarningUiModel) -> Unit,
     contentPadding: PaddingValues
 ) {
     val searchTargetState =
@@ -318,6 +331,7 @@ private fun MessageList(
                 GroupMessageBubble(
                     message = message,
                     onRetryMessage = onRetryMessage,
+                    onSafetyWarningClick = onSafetyWarningClick,
                     isSearchHighlighted = message.id == searchTargetState.highlightedMessageId
                 )
             } else {
@@ -334,6 +348,7 @@ private fun MessageList(
 private fun GroupMessageBubble(
     message: GroupMessageUiModel,
     onRetryMessage: (String) -> Unit,
+    onSafetyWarningClick: (String, String?, MessageSafetyWarningUiModel) -> Unit,
     modifier: Modifier = Modifier,
     isSearchHighlighted: Boolean = false
 ) {
@@ -341,6 +356,9 @@ private fun GroupMessageBubble(
         MessageBubble(
             message = message.bubble,
             onRetryClick = { onRetryMessage(message.id) },
+            onSafetyDetailsClick = { warning ->
+                onSafetyWarningClick(message.id, message.senderContactId, warning)
+            },
             modifier = modifier,
             isSearchHighlighted = isSearchHighlighted
         )
@@ -360,6 +378,9 @@ private fun GroupMessageBubble(
         MessageBubble(
             message = message.bubble,
             onRetryClick = { onRetryMessage(message.id) },
+            onSafetyDetailsClick = { warning ->
+                onSafetyWarningClick(message.id, message.senderContactId, warning)
+            },
             modifier = Modifier.weight(1f),
             isSearchHighlighted = isSearchHighlighted
         )

@@ -24,6 +24,7 @@ import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
+import com.cbgm.sparrow.feature.safety.presentation.model.toDetailsRoute
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -156,6 +157,8 @@ class GroupViewModel(
             GroupUiEvent.SendClicked -> sendCurrentMessage()
             GroupUiEvent.HeaderClicked -> navigator.navigateTo(AppRoute.GroupDetails(groupId))
             is GroupUiEvent.RetryMessage -> retryFailedMessage(event.messageId)
+            is GroupUiEvent.SafetyWarningClicked ->
+                navigator.navigateTo(event.warning.toDetailsRoute(event.messageId, event.contactId))
             GroupUiEvent.BackClicked ->
                 if (targetMessageId != null) {
                     navigator.popBackStack()

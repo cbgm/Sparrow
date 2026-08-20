@@ -501,4 +501,39 @@
     <string name="feature_search_exact_only_hint">Nur exakte Textsuche. Aktiviere die semantische Nachrichtensuche in den Einstellungen, um nach Bedeutung zu suchen.</string>
     <string name="feature_search_preparing_hint">Die semantische Suche wird vorbereitet. Die exakte Textsuche ist bereits verfügbar.</string>
     <string name="feature_search_semantic_unavailable_hint">Die semantische Suche ist nicht verfügbar. Die exakte Textsuche funktioniert weiterhin.</string>
+
+    <string name="feature_safety_suspicious_message">Verdächtige Nachricht</string>
+    <string name="feature_safety_high_risk_message">Nachricht mit hohem Risiko</string>
+    <string name="feature_safety_suspicious_summary">Möglicher Betrugs- oder Phishing-Versuch.</string>
+    <string name="feature_safety_high_risk_summary">Deutliche Anzeichen für Betrug oder Phishing.</string>
+    <string name="feature_safety_why">Warum wird mir das angezeigt?</string>
+    <string name="feature_safety_reason_suspicious_link">Verdächtiger Link</string>
+    <string name="feature_safety_reason_lookalike_domain">Webadresse könnte eine andere Domain nachahmen</string>
+    <string name="feature_safety_reason_mixed_script_domain">Webadresse mischt unterschiedliche Zeichensätze</string>
+    <string name="feature_safety_reason_ip_address_link">Link verwendet eine IP-Adresse statt einer Domain</string>
+    <string name="feature_safety_reason_url_shortener">Verkürzter Link verbirgt das Ziel</string>
+    <string name="feature_safety_reason_urgent_action_request">Verwendet dringliche oder drängende Sprache</string>
+    <string name="feature_safety_reason_credential_request">Fordert Anmelde- oder Kontodaten an</string>
+    <string name="feature_safety_reason_payment_request">Fordert Geld oder eine Zahlung an</string>
+    <string name="feature_safety_reason_private_key_request">Fordert einen privaten Schlüssel oder eine Wiederherstellungsphrase an</string>
+    <string name="feature_safety_details_title">Nachrichtensicherheit</string>
+    <string name="feature_safety_details_why_flagged">Diese Warnung basiert auf Merkmalen, die lokal auf deinem Gerät erkannt wurden. Sie beweist nicht, dass der Absender böswillig ist, ist aber ein Grund, die Anfrage zu überprüfen, bevor du handelst.</string>
+    <string name="feature_safety_details_detected_reasons">Erkannte Gründe</string>
+    <string name="feature_safety_details_learn_more">Sicherheitsmerkmale, die Sparrow erkennen kann</string>
+    <string name="feature_safety_reason_suspicious_link_explanation">Links können zu gefälschten Anmelde-, Zahlungs- oder Downloadseiten führen. Sparrow kann einen Link markieren, wenn sein Ziel oder Aufbau ungewöhnlich oder irreführend wirkt. Prüfe vor dem Öffnen den Absender und das Ziel sorgfältig. Wenn die Nachricht eine Anmeldung, Zahlung oder Bestätigung sensibler Daten verlangt, öffne den Dienst stattdessen über die offizielle App oder ein vertrauenswürdiges Lesezeichen.</string>
+    <string name="feature_safety_reason_lookalike_domain_explanation">Eine nachgeahmte Domain ist so geschrieben, dass sie einer vertrauenswürdigen Website ähnelt, tatsächlich aber zu einem anderen Ziel führt. Angreifer können Buchstaben durch ähnliche Zeichen ersetzen, zusätzliche Wörter oder Bindestriche einfügen oder einen bekannten Markennamen in einer fremden Domain verwenden. Prüfe die eigentliche registrierte Domain und nicht nur den Teil der Adresse, der vertraut aussieht.</string>
+    <string name="feature_safety_reason_mixed_script_domain_explanation">Einige Zeichen aus kyrillischen, griechischen und anderen Schriftsystemen sehen lateinischen Buchstaben fast identisch. Eine bösartige Adresse kann diese Zeichensätze mischen, damit eine gefälschte Domain wie eine bekannte Domain aussieht. Sei bei unerwarteten Zeichenkombinationen vorsichtig und öffne den Dienst lieber über einen vertrauenswürdigen Weg.</string>
+    <string name="feature_safety_reason_ip_address_link_explanation">Dieser Link verweist direkt auf eine numerische IP-Adresse statt auf einen erkennbaren Domainnamen. Das kann in technischen Umgebungen legitim sein, erschwert in unerwarteten Nachrichten aber die Erkennung des tatsächlichen Betreibers. Gib dort keine Anmelde- oder Zahlungsdaten ein, sofern du die Adresse nicht unabhängig kennst und ihr vertraust.</string>
+    <string name="feature_safety_reason_url_shortener_explanation">URL-Kürzer ersetzen das eigentliche Ziel durch einen kurzen Weiterleitungslink. Das kann praktisch sein, verhindert aber, dass du vor dem Öffnen siehst, wohin der Link tatsächlich führt. Sei besonders vorsichtig, wenn ein verkürzter Link mit Zeitdruck, einer Anmeldeaufforderung oder einer Zahlungsforderung kombiniert wird.</string>
+    <string name="feature_safety_reason_urgent_action_request_explanation">Die Nachricht verwendet Zeitdruck, Drohungen, Fristen oder andere Formen von Druck, damit du handelst, bevor du die Situation prüfen kannst. Typische Beispiele sind angeblich bevorstehende Kontosperren, sofort fällige Zahlungen oder vermeintlich zeitlich begrenzte Angebote. Nimm dir Zeit und bestätige die Anfrage unabhängig, bevor du Anweisungen befolgst.</string>
+    <string name="feature_safety_reason_credential_request_explanation">Die Nachricht fordert Informationen an, mit denen jemand Zugriff auf ein Konto erhalten könnte, zum Beispiel Passwort, PIN, Authentifizierungs- oder Bestätigungscode. Seriöse Dienste sollten nicht verlangen, dass du solche Geheimnisse in einem Chat sendest. Teile sie nicht und verwende die offizielle App oder Website des Dienstes, wenn du dein Konto prüfen möchtest.</string>
+    <string name="feature_safety_reason_payment_request_explanation">Die Nachricht fordert dich auf, Geld zu überweisen, Geschenkkarten zu kaufen, Kryptowährung zu senden oder eine andere Zahlung vorzunehmen. Zahlungsaufforderungen sind besonders verdächtig, wenn sie unerwartet oder dringend sind oder neue Kontodaten verwenden. Bestätige ungewöhnliche Anfragen über einen separaten vertrauenswürdigen Kanal, bevor du zahlst.</string>
+    <string name="feature_safety_reason_private_key_request_explanation">Private Schlüssel, Wiederherstellungs- oder Seed-Phrasen und ähnliche Geheimnisse können vollständigen Zugriff auf ein Konto, eine Identität oder eine Wallet ermöglichen. Ein seriöser Support oder Kontakt sollte diese Daten niemals per Nachricht benötigen. Teile sie niemals. Wurde ein solches Geheimnis bereits weitergegeben, behandle es als kompromittiert und ersetze oder widerrufe es, soweit möglich.</string>
+    <string name="feature_safety_block_this_user">Diesen Nutzer blockieren</string>
+    <string name="feature_safety_blocking_user">Wird blockiert…</string>
+    <string name="feature_safety_user_blocked">Nutzer blockiert</string>
+    <string name="feature_safety_block_confirm">Diesen Nutzer blockieren?</string>
+    <string name="feature_safety_block_confirm_description">Dieser Nutzer wird blockiert und seine Berechtigung für Direktchats wird widerrufen. Du kannst ihn später in den Einstellungen wieder entsperren.</string>
+    <string name="feature_safety_block_error">Der Nutzer konnte nicht vollständig blockiert werden. Bitte versuche es erneut.</string>
+
 </resources>

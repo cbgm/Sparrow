@@ -6,6 +6,7 @@ import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubble
 data class GroupMessageUiModel(
     val bubble: MessageBubbleModel,
     val type: ChatMessageType,
+    val senderContactId: String? = null,
     val senderProfilePictureBytes: ByteArray? = null
 ) {
     val id: String

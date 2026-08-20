@@ -29,6 +29,7 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveIdentityHandshakeStateUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveIdentitySetupModeUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
+import com.cbgm.sparrow.feature.safety.presentation.model.toDetailsRoute
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -138,6 +139,8 @@ class DirectViewModel(
             DirectUiEvent.SendClicked -> sendCurrentMessage()
             DirectUiEvent.HeaderClicked -> openContactDetails()
             is DirectUiEvent.RetryMessage -> retryFailedMessage(event.messageId)
+            is DirectUiEvent.SafetyWarningClicked ->
+                navigator.navigateTo(event.warning.toDetailsRoute(event.messageId, contactId))
             DirectUiEvent.VerifyIdentityClicked -> verifyIdentity()
             DirectUiEvent.ShareIdentityClicked -> navigator.navigateTo(AppRoute.ShareIdentity)
             DirectUiEvent.ImportIdentityClicked -> navigator.navigateTo(AppRoute.ImportContact(contactId))
