@@ -52,6 +52,7 @@ import com.cbgm.sparrow.resources.feature_safety_block_confirm
 import com.cbgm.sparrow.resources.feature_safety_block_confirm_description
 import com.cbgm.sparrow.resources.feature_safety_block_error
 import com.cbgm.sparrow.resources.feature_safety_block_this_user
+import com.cbgm.sparrow.resources.feature_safety_block_this_user_button
 import com.cbgm.sparrow.resources.feature_safety_blocking_user
 import com.cbgm.sparrow.resources.feature_safety_details_detected_reasons
 import com.cbgm.sparrow.resources.feature_safety_details_learn_more
@@ -160,18 +161,14 @@ fun MessageSafetyDetailsScreen(
         }
 
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().padding(MaterialTheme.spacing.screenPadding),
             state = listState,
             contentPadding = innerPadding
         ) {
             item(key = "summary") {
                 SafetySummary(
                     level = level,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = MaterialTheme.spacing.medium)
-                            .padding(top = MaterialTheme.spacing.small)
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
 
@@ -229,7 +226,7 @@ fun MessageSafetyDetailsScreen(
                         showBlockConfirmation = false
                         onBlockUserClick()
                     },
-                    text = stringResource(Res.string.feature_safety_block_this_user),
+                    text = stringResource(Res.string.feature_safety_block_this_user_button),
                     fillMaxWidth = false
                 )
             },
@@ -315,7 +312,6 @@ private fun SectionTitle(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = MaterialTheme.spacing.medium)
                 .padding(bottom = MaterialTheme.spacing.base),
         style = MaterialTheme.typography.bodyMedium,
         fontWeight = FontWeight.Bold,
@@ -336,7 +332,6 @@ private fun ReasonLink(
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
                 .padding(
-                    horizontal = MaterialTheme.spacing.medium,
                     vertical = MaterialTheme.spacing.base
                 ),
         style = MaterialTheme.typography.bodySmall,
@@ -344,10 +339,7 @@ private fun ReasonLink(
         color = MaterialTheme.colorScheme.secondary
     )
     HorizontalDivider(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(start = MaterialTheme.spacing.medium),
+        modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
     )
 }
@@ -369,7 +361,6 @@ private fun ReasonExplanation(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = MaterialTheme.spacing.medium)
                 .padding(bottom = MaterialTheme.spacing.medium),
         shape = MaterialTheme.shapes.small,
         color = backgroundColor

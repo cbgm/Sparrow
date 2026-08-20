@@ -529,6 +529,7 @@
     <string name="feature_safety_reason_payment_request_explanation">The message asks you to transfer money, buy gift cards, send cryptocurrency, or complete another payment. Payment requests become more suspicious when they are unexpected, urgent, or use new account details. Verify unusual requests with the sender through a separate trusted channel before paying.</string>
     <string name="feature_safety_reason_private_key_request_explanation">Private keys, recovery phrases, seed phrases, and similar secrets can provide complete control over an account, identity, or wallet. A legitimate support agent or contact should never need you to send them in a message. Never share these secrets. If one has already been disclosed, treat it as compromised and replace or revoke it where possible.</string>
     <string name="feature_safety_block_this_user">Block this user</string>
+    <string name="feature_safety_block_this_user_button">Block</string>
     <string name="feature_safety_blocking_user">Blocking…</string>
     <string name="feature_safety_user_blocked">User blocked</string>
     <string name="feature_safety_block_confirm">Block this user?</string>

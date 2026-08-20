@@ -530,6 +530,7 @@
     <string name="feature_safety_reason_payment_request_explanation">Die Nachricht fordert dich auf, Geld zu überweisen, Geschenkkarten zu kaufen, Kryptowährung zu senden oder eine andere Zahlung vorzunehmen. Zahlungsaufforderungen sind besonders verdächtig, wenn sie unerwartet oder dringend sind oder neue Kontodaten verwenden. Bestätige ungewöhnliche Anfragen über einen separaten vertrauenswürdigen Kanal, bevor du zahlst.</string>
     <string name="feature_safety_reason_private_key_request_explanation">Private Schlüssel, Wiederherstellungs- oder Seed-Phrasen und ähnliche Geheimnisse können vollständigen Zugriff auf ein Konto, eine Identität oder eine Wallet ermöglichen. Ein seriöser Support oder Kontakt sollte diese Daten niemals per Nachricht benötigen. Teile sie niemals. Wurde ein solches Geheimnis bereits weitergegeben, behandle es als kompromittiert und ersetze oder widerrufe es, soweit möglich.</string>
     <string name="feature_safety_block_this_user">Diesen Nutzer blockieren</string>
+    <string name="feature_safety_block_this_user_button">Blockieren</string>
     <string name="feature_safety_blocking_user">Wird blockiert…</string>
     <string name="feature_safety_user_blocked">Nutzer blockiert</string>
     <string name="feature_safety_block_confirm">Diesen Nutzer blockieren?</string>
