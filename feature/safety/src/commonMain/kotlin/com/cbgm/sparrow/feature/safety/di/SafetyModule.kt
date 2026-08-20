@@ -1,9 +1,10 @@
 package com.cbgm.sparrow.feature.safety.di
 
+import com.cbgm.sparrow.feature.safety.data.classifier.EmbeddingMessageSafetyClassifier
 import com.cbgm.sparrow.feature.safety.data.index.MessageSafetyIndexer
 import com.cbgm.sparrow.feature.safety.data.repository.MessageSafetyRepositoryImpl
 import com.cbgm.sparrow.feature.safety.domain.analyzer.MessageSafetyStructuralAnalyzer
-import com.cbgm.sparrow.feature.safety.domain.classifier.EmbeddingMessageSafetyClassifier
+import com.cbgm.sparrow.feature.safety.domain.classifier.MessageSafetyClassifier
 import com.cbgm.sparrow.feature.safety.domain.repository.MessageSafetyRepository
 import com.cbgm.sparrow.feature.safety.domain.resolver.MessageSafetyRiskResolver
 import com.cbgm.sparrow.feature.safety.domain.usecase.AnalyzeMessageSafetyUseCase
@@ -16,6 +17,7 @@ val safetyModule =
     module {
         single { MessageSafetyStructuralAnalyzer() }
         single { EmbeddingMessageSafetyClassifier(embedder = get()) }
+        single<MessageSafetyClassifier> { get<EmbeddingMessageSafetyClassifier>() }
         single { MessageSafetyRiskResolver() }
         factory {
             AnalyzeMessageSafetyUseCase(

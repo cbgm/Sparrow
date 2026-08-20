@@ -5,10 +5,10 @@ import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingModelState
 import com.cbgm.sparrow.core.embedding.domain.repository.LocalEmbeddingRepository
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.data.database.dao.MessageSafetyDao
+import com.cbgm.sparrow.feature.safety.data.classifier.EmbeddingMessageSafetyClassifier
+import com.cbgm.sparrow.feature.safety.data.config.MessageSafetyProcessingConfig
 import com.cbgm.sparrow.feature.safety.data.index.MessageSafetyIndexer
 import com.cbgm.sparrow.feature.safety.data.mapper.toDomain
-import com.cbgm.sparrow.feature.safety.data.model.MessageSafetyAnalyzer
-import com.cbgm.sparrow.feature.safety.domain.classifier.EmbeddingMessageSafetyClassifier
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyAssessment
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyState
 import com.cbgm.sparrow.feature.safety.domain.repository.MessageSafetyRepository
@@ -28,7 +28,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.milliseconds
 
 class MessageSafetyRepositoryImpl(
     private val dao: MessageSafetyDao,
@@ -43,7 +42,7 @@ class MessageSafetyRepositoryImpl(
 
     override val assessments: StateFlow<Map<String, MessageSafetyAssessment>> =
         combine(
-            dao.observeVisibleAssessments(MessageSafetyAnalyzer.VERSION),
+            dao.observeVisibleAssessments(MessageSafetyProcessingConfig.ANALYZER_VERSION),
             localEmbeddingRepository.state.map { state -> state.messageSafetyEnabled }.distinctUntilChanged()
         ) { stored, enabled ->
             if (!enabled) {
@@ -96,13 +95,13 @@ class MessageSafetyRepositoryImpl(
     }
 
     private suspend fun processMessages() {
-        dao.deleteAssessmentsForOtherAnalyzers(MessageSafetyAnalyzer.VERSION)
+        dao.deleteAssessmentsForOtherAnalyzers(MessageSafetyProcessingConfig.ANALYZER_VERSION)
 
         while (currentCoroutineContext().isActive) {
-            val pendingCount = dao.getUnassessedMessageCount(MessageSafetyAnalyzer.VERSION)
+            val pendingCount = dao.getUnassessedMessageCount(MessageSafetyProcessingConfig.ANALYZER_VERSION)
             if (pendingCount == 0) {
                 mutableState.value = MessageSafetyState.Ready
-                dao.observeUnassessedMessageCount(MessageSafetyAnalyzer.VERSION).first { it > 0 }
+                dao.observeUnassessedMessageCount(MessageSafetyProcessingConfig.ANALYZER_VERSION).first { it > 0 }
                 continue
             }
 
@@ -117,7 +116,7 @@ class MessageSafetyRepositoryImpl(
                 logger.warn { "Local message safety analysis failed; retrying" }
                 mutableState.value =
                     MessageSafetyState.Failed("Local message safety analysis failed")
-                delay(MessageSafetyAnalyzer.RETRY_DELAY_MILLISECONDS.milliseconds)
+                delay(MessageSafetyProcessingConfig.RETRY_DELAY_MILLISECONDS)
                 currentCoroutineContext().ensureActive()
             }
         }

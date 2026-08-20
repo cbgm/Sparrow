@@ -30,7 +30,7 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveIdentityHandshake
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveIdentitySetupModeUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
-import com.cbgm.sparrow.feature.safety.presentation.model.toDetailsRoute
+import com.cbgm.sparrow.feature.safety.presentation.mapper.toDetailsRoute
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow

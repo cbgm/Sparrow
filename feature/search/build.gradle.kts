@@ -18,10 +18,6 @@ kotlin {
             implementation(libs.bundles.koin.compose)
         }
 
-        androidMain.dependencies {
-            implementation(libs.androidx.work.runtime)
-        }
-
         commonTest.dependencies {
             implementation(libs.bundles.kmp.testing)
         }

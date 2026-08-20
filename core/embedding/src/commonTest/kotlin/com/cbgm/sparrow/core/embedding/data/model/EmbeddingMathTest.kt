@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.search.data.embedding
+package com.cbgm.sparrow.core.embedding.data.model
 
 import kotlin.test.Test
 import kotlin.test.assertEquals

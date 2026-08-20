@@ -7,27 +7,27 @@ import com.cbgm.sparrow.data.database.dao.MessageSearchDao
 import com.cbgm.sparrow.data.database.entity.MessageSearchEmbeddingEntity
 import com.cbgm.sparrow.feature.search.data.embedding.EmbeddingCodec
 import com.cbgm.sparrow.feature.search.data.mapper.toEmbeddingText
-import com.cbgm.sparrow.feature.search.data.model.SemanticSearchModel
+import com.cbgm.sparrow.feature.search.data.model.SemanticSearchIndexConfig
 
 class MessageSearchIndexer(
     private val dao: MessageSearchDao,
     private val embedder: LocalTextEmbedder
 ) {
     suspend fun rebuild(onProgress: (processed: Int, total: Int) -> Unit) {
-        dao.deleteEmbeddingsForOtherModels(SemanticSearchModel.VERSION)
+        dao.deleteEmbeddingsForOtherModels(SemanticSearchIndexConfig.VERSION)
         indexMissing(onProgress)
     }
 
     suspend fun indexMissing(onProgress: (processed: Int, total: Int) -> Unit = { _, _ -> }) {
         val total = dao.getSearchableMessageCount()
-        var processed = dao.getIndexedMessageCount(SemanticSearchModel.VERSION).coerceAtMost(total)
+        var processed = dao.getIndexedMessageCount(SemanticSearchIndexConfig.VERSION).coerceAtMost(total)
         onProgress(processed, total)
 
         while (true) {
             val messages =
                 dao.getMessagesMissingEmbedding(
-                    modelVersion = SemanticSearchModel.VERSION,
-                    limit = SemanticSearchModel.INDEX_BATCH_SIZE
+                    modelVersion = SemanticSearchIndexConfig.VERSION,
+                    limit = SemanticSearchIndexConfig.BATCH_SIZE
                 )
             if (messages.isEmpty()) break
 
@@ -35,11 +35,11 @@ class MessageSearchIndexer(
                 val embedding =
                     embedder
                         .embed(message.toEmbeddingText(), EmbeddingInputType.DOCUMENT)
-                        .normalizedPrefix(SemanticSearchModel.OUTPUT_DIMENSIONS)
+                        .normalizedPrefix(SemanticSearchIndexConfig.EMBEDDING_DIMENSIONS)
                 dao.upsertEmbedding(
                     MessageSearchEmbeddingEntity(
                         messageId = message.messageId,
-                        modelVersion = SemanticSearchModel.VERSION,
+                        modelVersion = SemanticSearchIndexConfig.VERSION,
                         embedding = EmbeddingCodec.encode(embedding)
                     )
                 )

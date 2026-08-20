@@ -1,15 +1,15 @@
-package com.cbgm.sparrow.feature.search.data.repository
+package com.cbgm.sparrow.feature.search.data.mapper
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
-class MessageSearchRepositoryImplTest {
+class MessageSearchEmbeddingTextMapperTest {
     @Test
     fun conversationTitleIsPreferred() {
         assertEquals(
             "Group chat",
-            conversationDisplayName(
+            messageSearchConversationName(
                 conversationTitle = " Group chat ",
                 contactName = "Contact"
             )
@@ -20,7 +20,7 @@ class MessageSearchRepositoryImplTest {
     fun contactNameIsUsedForDirectConversation() {
         assertEquals(
             "Contact",
-            conversationDisplayName(
+            messageSearchConversationName(
                 conversationTitle = null,
                 contactName = " Contact "
             )
@@ -30,7 +30,7 @@ class MessageSearchRepositoryImplTest {
     @Test
     fun blankNamesProduceNoDisplayName() {
         assertNull(
-            conversationDisplayName(
+            messageSearchConversationName(
                 conversationTitle = " ",
                 contactName = ""
             )

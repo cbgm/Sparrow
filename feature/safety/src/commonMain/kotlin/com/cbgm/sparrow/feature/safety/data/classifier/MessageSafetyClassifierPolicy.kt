@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.safety.domain.classifier
+package com.cbgm.sparrow.feature.safety.data.classifier
 
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyReason
 

@@ -11,7 +11,8 @@ import com.cbgm.sparrow.core.embedding.domain.repository.LocalEmbeddingRepositor
 import com.cbgm.sparrow.data.database.dao.MessageSearchDao
 import com.cbgm.sparrow.feature.search.data.embedding.EmbeddingCodec
 import com.cbgm.sparrow.feature.search.data.index.MessageSearchIndexer
-import com.cbgm.sparrow.feature.search.data.model.SemanticSearchModel
+import com.cbgm.sparrow.feature.search.data.mapper.messageSearchConversationName
+import com.cbgm.sparrow.feature.search.data.model.SemanticSearchIndexConfig
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchConversationType
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchMatchType
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchResult
@@ -75,9 +76,9 @@ class SemanticSearchRepositoryImpl(
         val queryEmbedding =
             embedder
                 .embed(query.trim(), EmbeddingInputType.QUERY)
-                .normalizedPrefix(SemanticSearchModel.OUTPUT_DIMENSIONS)
+                .normalizedPrefix(SemanticSearchIndexConfig.EMBEDDING_DIMENSIONS)
 
-        val indexedMessages = dao.getIndexedMessages(SemanticSearchModel.VERSION)
+        val indexedMessages = dao.getIndexedMessages(SemanticSearchIndexConfig.VERSION)
         return withContext(Dispatchers.Default) {
             indexedMessages
                 .asSequence()
@@ -100,7 +101,7 @@ class SemanticSearchRepositoryImpl(
                         conversationId = message.conversationId,
                         conversationType = MessageSearchConversationType.valueOf(message.conversationType),
                         contactId = message.contactId,
-                        conversationName = semanticConversationDisplayName(message.conversationTitle, message.contactName),
+                        conversationName = messageSearchConversationName(message.conversationTitle, message.contactName),
                         text = message.text,
                         createdAtEpochMilliseconds = message.createdAtEpochMilliseconds,
                         matchType = MessageSearchMatchType.SEMANTIC,
@@ -186,8 +187,3 @@ class SemanticSearchRepositoryImpl(
         const val MAX_SEMANTIC_RESULTS = 10
     }
 }
-
-private fun semanticConversationDisplayName(
-    conversationTitle: String?,
-    contactName: String?
-): String = conversationTitle?.takeIf(String::isNotBlank) ?: contactName.orEmpty()
