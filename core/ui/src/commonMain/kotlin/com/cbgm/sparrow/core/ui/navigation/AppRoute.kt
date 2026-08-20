@@ -10,15 +10,20 @@ sealed interface AppRoute {
     data object Main : AppRoute
 
     @Serializable
+    data object MessageSearch : AppRoute
+
+    @Serializable
     data class Chat(
         val conversationId: String,
         val contactId: String,
-        val contactName: String
+        val contactName: String,
+        val targetMessageId: String? = null
     ) : AppRoute
 
     @Serializable
     data class GroupConversation(
-        val conversationId: String
+        val conversationId: String,
+        val targetMessageId: String? = null
     ) : AppRoute
 
     @Serializable

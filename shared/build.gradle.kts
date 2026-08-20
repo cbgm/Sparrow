@@ -60,6 +60,7 @@ kotlin {
             implementation(projects.feature.messaging)
             implementation(projects.feature.onboarding)
             implementation(projects.feature.settings)
+            implementation(projects.feature.search)
             implementation(projects.feature.transport)
             implementation(projects.notification)
             implementation(projects.startup)

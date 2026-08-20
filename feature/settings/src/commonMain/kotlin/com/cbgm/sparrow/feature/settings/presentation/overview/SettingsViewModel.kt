@@ -5,6 +5,8 @@ import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.feature.search.domain.usecase.ObserveSemanticSearchStateUseCase
+import com.cbgm.sparrow.feature.search.domain.usecase.SetSemanticSearchEnabledUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetAppLanguageUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetBuildInfoUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetDeveloperEnabledUseCase
@@ -40,7 +42,9 @@ class SettingsViewModel(
     private val setDirectIdentitySetupMode: SetDirectIdentitySetupModeUseCase,
     observeBlockUnknownContactInvites: ObserveBlockUnknownContactInvitesUseCase,
     private val setBlockUnknownContactInvites: SetBlockUnknownContactInvitesUseCase,
-    observeBlockedContactIds: ObserveBlockedContactIdsUseCase
+    observeBlockedContactIds: ObserveBlockedContactIdsUseCase,
+    observeSemanticSearchState: ObserveSemanticSearchStateUseCase,
+    private val setSemanticSearchEnabled: SetSemanticSearchEnabledUseCase
 ) : BaseViewModel() {
     private val buildInfo = getBuildInfoUseCase()
     private val localState = MutableStateFlow(SettingsLocalState())
@@ -50,13 +54,15 @@ class SettingsViewModel(
             observeDirectIdentitySetupMode(),
             observeBlockUnknownContactInvites(),
             observeBlockedContactIds(),
+            observeSemanticSearchState(),
             localState
-        ) { identitySetupMode, blockUnknownInvites, blockedContactIds, local ->
+        ) { identitySetupMode, blockUnknownInvites, blockedContactIds, semanticSearchState, local ->
             buildInfo.toUiState(
                 currentLanguage = local.currentLanguage,
                 identitySetupMode = identitySetupMode,
                 blockUnknownContactInvites = blockUnknownInvites,
                 blockedContactCount = blockedContactIds.size,
+                semanticSearchState = semanticSearchState,
                 isDeveloperModeEnabled = local.isDeveloperModeEnabled,
                 developerModeTapCount = local.developerModeTapCount,
                 showLanguagePicker = local.showLanguagePicker
@@ -83,6 +89,7 @@ class SettingsViewModel(
             is SettingsUiEvent.LanguageSelected -> selectLanguage(event.language)
             is SettingsUiEvent.DirectIdentitySetupModeChanged -> changeDirectIdentitySetupMode(event.mode)
             is SettingsUiEvent.BlockUnknownContactInvitesChanged -> changeBlockUnknownContactInvites(event.enabled)
+            is SettingsUiEvent.SemanticSearchEnabledChanged -> setSemanticSearchEnabled(event.enabled)
             SettingsUiEvent.PrivacyPolicyClicked -> navigator.navigateTo(AppRoute.PrivacyPolicy)
             SettingsUiEvent.DataDisclaimerClicked -> navigator.navigateTo(AppRoute.DataDisclaimer)
             SettingsUiEvent.LicensesClicked -> navigator.navigateTo(AppRoute.Licenses)

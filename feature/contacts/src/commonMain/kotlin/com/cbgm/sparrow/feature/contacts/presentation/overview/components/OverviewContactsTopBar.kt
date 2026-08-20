@@ -17,9 +17,11 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.cbgm.sparrow.core.ui.component.SparrowSearchField
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_contacts
+import com.cbgm.sparrow.resources.feature_contacts_search_placholder
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,9 +64,11 @@ fun OverviewContactsTopBar(
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.background)
         ) {
-            SearchField(
+            SparrowSearchField(
                 searchQuery = searchQuery,
-                onSearchQueryChanged = onSearchQueryChanged
+                onSearchQueryChanged = onSearchQueryChanged,
+                placeholder = stringResource(Res.string.feature_contacts_search_placholder),
+                onClear = { onSearchQueryChanged("") }
             )
         }
     }

@@ -13,6 +13,7 @@ val startupModule =
             AppInitializer(
                 getIdentityStatus = get(),
                 recoverIncompleteIdentity = get(),
+                initializeSemanticSearch = get(),
                 transportConnectionManager = get()
             )
         }

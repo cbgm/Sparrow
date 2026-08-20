@@ -28,6 +28,14 @@ class SparrowDataStore internal constructor(
             .map { preferences -> preferences[longPreferencesKey(key)] ?: defaultValue }
             .distinctUntilChanged()
 
+    fun observeBoolean(
+        key: String,
+        defaultValue: Boolean = false
+    ): Flow<Boolean> =
+        dataStore.data
+            .map { preferences -> preferences[booleanPreferencesKey(key)] ?: defaultValue }
+            .distinctUntilChanged()
+
     suspend fun getString(key: String): String? =
         dataStore.data.first()[stringPreferencesKey(key)]
 

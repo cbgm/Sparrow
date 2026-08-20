@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonOff
 import androidx.compose.material.icons.filled.PrivacyTip
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +47,7 @@ import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
 import com.cbgm.sparrow.feature.settings.presentation.overview.components.LanguagePickerDialog
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsUiEvent
@@ -79,6 +81,12 @@ import com.cbgm.sparrow.resources.feature_settings_profile
 import com.cbgm.sparrow.resources.feature_settings_profile_picture
 import com.cbgm.sparrow.resources.feature_settings_profile_subtitle
 import com.cbgm.sparrow.resources.feature_settings_security
+import com.cbgm.sparrow.resources.feature_settings_semantic_search
+import com.cbgm.sparrow.resources.feature_settings_semantic_search_building
+import com.cbgm.sparrow.resources.feature_settings_semantic_search_downloading
+import com.cbgm.sparrow.resources.feature_settings_semantic_search_failed
+import com.cbgm.sparrow.resources.feature_settings_semantic_search_ready
+import com.cbgm.sparrow.resources.feature_settings_semantic_search_subtitle
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -182,6 +190,18 @@ fun SettingsScreen(
         }
 
         SettingsSection(title = stringResource(Res.string.feature_settings_privacy_and_data)) {
+            SettingsSwitchRow(
+                icon = Icons.Default.Search,
+                title = stringResource(Res.string.feature_settings_semantic_search),
+                subtitle = semanticSearchSubtitle(uiState.semanticSearchState),
+                checked = uiState.semanticSearchState !is SemanticSearchState.Disabled,
+                onCheckedChange = { enabled ->
+                    onUiEvent(SettingsUiEvent.SemanticSearchEnabledChanged(enabled))
+                }
+            )
+
+            SettingsDivider()
+
             SettingsRow(
                 icon = Icons.Default.PrivacyTip,
                 title = stringResource(Res.string.feature_settings_privacy_policy),
@@ -243,6 +263,29 @@ fun SettingsScreen(
         )
     }
 }
+
+@Composable
+private fun semanticSearchSubtitle(state: SemanticSearchState): String =
+    when (state) {
+        SemanticSearchState.Disabled,
+        SemanticSearchState.Preparing -> stringResource(Res.string.feature_settings_semantic_search_subtitle)
+        is SemanticSearchState.DownloadingModel -> {
+            val percent = state.progress?.let { (it * 100).toInt().coerceIn(0, 100) }
+            if (percent == null) {
+                stringResource(Res.string.feature_settings_semantic_search_downloading)
+            } else {
+                stringResource(Res.string.feature_settings_semantic_search_downloading) + " $percent%"
+            }
+        }
+        is SemanticSearchState.BuildingIndex ->
+            stringResource(
+                Res.string.feature_settings_semantic_search_building,
+                state.processed,
+                state.total
+            )
+        SemanticSearchState.Ready -> stringResource(Res.string.feature_settings_semantic_search_ready)
+        is SemanticSearchState.Failed -> stringResource(Res.string.feature_settings_semantic_search_failed)
+    }
 
 @Composable
 private fun SettingsSection(

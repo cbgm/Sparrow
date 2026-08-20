@@ -1,5 +1,9 @@
 package com.cbgm.sparrow.feature.chats.presentation.component
 
+import androidx.compose.animation.Animatable
+import androidx.compose.animation.VectorConverter
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,6 +26,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -55,11 +61,14 @@ import com.cbgm.sparrow.resources.feature_chats_unable_read_plaintext
 import com.cbgm.sparrow.resources.feature_chats_waiting_for_invitation_acceptance
 import org.jetbrains.compose.resources.stringResource
 
+private const val HIGHLIGHT_DURATION = 1_500
+
 @Composable
 internal fun MessageBubble(
     message: MessageBubbleModel,
     onRetryClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSearchHighlighted: Boolean = false
 ) {
     val bubbleState = bubbleState(message)
 
@@ -72,7 +81,11 @@ internal fun MessageBubble(
             horizontalAlignment = if (message.isMine) Alignment.End else Alignment.Start
         ) {
             SenderLabel(message = message)
-            BubbleBody(message = message, state = bubbleState)
+            BubbleBody(
+                message = message,
+                state = bubbleState,
+                isSearchHighlighted = isSearchHighlighted
+            )
             Metadata(
                 message = message,
                 onRetryClick = onRetryClick,
@@ -115,12 +128,33 @@ private fun SenderLabel(message: MessageBubbleModel) {
 @Composable
 private fun BubbleBody(
     message: MessageBubbleModel,
-    state: BubbleState
+    state: BubbleState,
+    isSearchHighlighted: Boolean = false
 ) {
     val bubbleShapes = MaterialTheme.shapes.messageBubble
+    val bubbleColor = state.bubbleColor
+    val highlightColor = MaterialTheme.colorScheme.error
+
+    val animatedBubbleColor = remember {
+        Animatable(initialValue = bubbleColor)
+    }
+
+    LaunchedEffect(isSearchHighlighted) {
+        if (isSearchHighlighted) {
+            animatedBubbleColor.snapTo(highlightColor)
+
+            animatedBubbleColor.animateTo(
+                targetValue = bubbleColor,
+                animationSpec = tween(
+                    durationMillis = HIGHLIGHT_DURATION,
+                    easing = FastOutSlowInEasing
+                )
+            )
+        }
+    }
 
     Surface(
-        color = state.bubbleColor,
+        color = animatedBubbleColor.value,
         contentColor = state.contentColor,
         shape =
             MessageBubbleShape(
@@ -203,6 +237,7 @@ private fun SecurityIndicator(message: MessageBubbleModel) {
             MessageContentStatus.INVALID_PLAINTEXT_PACKET -> stringResource(Res.string.feature_chats_invalid_plaintext)
             MessageContentStatus.TRANSPORT_DECRYPTION_FAILED ->
                 stringResource(Res.string.feature_chats_decryption_failed)
+
             MessageContentStatus.READABLE ->
                 when (message.security) {
                     MessageSecurity.INSECURE -> stringResource(Res.string.feature_chats_not_encrypted)
@@ -251,6 +286,7 @@ private fun DeliveryIndicator(
                     )
                 }
             )
+
         MessageDeliveryStatus.QUEUED ->
             DeliveryLabel(
                 text = stringResource(Res.string.feature_chats_queued),
@@ -262,6 +298,7 @@ private fun DeliveryIndicator(
                     )
                 }
             )
+
         MessageDeliveryStatus.SENDING ->
             DeliveryLabel(
                 text = stringResource(Res.string.feature_chats_sending),
@@ -272,17 +309,20 @@ private fun DeliveryIndicator(
                     )
                 }
             )
+
         MessageDeliveryStatus.SENT -> CheckDeliveryLabel(stringResource(Res.string.feature_chats_sent))
         MessageDeliveryStatus.DELIVERED ->
             DoubleCheckDeliveryLabel(
                 text = stringResource(Res.string.feature_chats_delivered),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
         MessageDeliveryStatus.READ ->
             DoubleCheckDeliveryLabel(
                 text = stringResource(Res.string.feature_chats_read),
                 color = MaterialTheme.colorScheme.primary
             )
+
         MessageDeliveryStatus.FAILED -> FailedDelivery(onRetryClick = onRetryClick)
     }
 }
@@ -320,7 +360,8 @@ private fun DoubleCheckDeliveryLabel(
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
-                    modifier = Modifier.size(Dimens.MessageBubble.iconSize).padding(start = MaterialTheme.spacing.messageBubble.stackedCheckStartPadding),
+                    modifier = Modifier.size(Dimens.MessageBubble.iconSize)
+                        .padding(start = MaterialTheme.spacing.messageBubble.stackedCheckStartPadding),
                     tint = color
                 )
             }
@@ -393,10 +434,13 @@ private fun bubbleState(message: MessageBubbleModel): BubbleState =
                     MaterialTheme.colorScheme.onSurface
                 }
             )
+
         MessageContentStatus.INVALID_PACKET ->
             failedBubbleState(stringResource(Res.string.feature_chats_invalid_message_packet))
+
         MessageContentStatus.INVALID_PLAINTEXT_PACKET ->
             failedBubbleState(stringResource(Res.string.feature_chats_unable_read_plaintext))
+
         MessageContentStatus.TRANSPORT_DECRYPTION_FAILED ->
             failedBubbleState(stringResource(Res.string.feature_chats_unable_decrypt_secure_message))
     }

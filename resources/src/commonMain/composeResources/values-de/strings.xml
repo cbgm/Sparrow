@@ -339,6 +339,12 @@
     <string name="feature_settings_licenses_subtitle">In dieser App verwendete Bibliotheken</string>
     <string name="feature_settings_open_source_licenses">Open-Source-Lizenzen</string>
     <string name="feature_settings_privacy_and_data">Datenschutz &amp; Daten</string>
+    <string name="feature_settings_semantic_search">Semantische Nachrichtensuche</string>
+    <string name="feature_settings_semantic_search_subtitle">Nach Bedeutung statt nur nach exakten Wörtern suchen. Verarbeitung bleibt auf diesem Gerät.</string>
+    <string name="feature_settings_semantic_search_downloading">Lokales Suchmodell wird heruntergeladen…</string>
+    <string name="feature_settings_semantic_search_building">Suchindex wird erstellt: %1$d / %2$d Nachrichten</string>
+    <string name="feature_settings_semantic_search_ready">Bereit. Nachrichten und Suchanfragen verlassen dieses Gerät nicht.</string>
+    <string name="feature_settings_semantic_search_failed">Semantische Suche konnte nicht vorbereitet werden. Zum Wiederholen aus- und einschalten.</string>
     <string name="feature_settings_privacy_policy">Datenschutzerklärung</string>
     <string name="feature_settings_privacy_policy_subtitle">Wie deine Daten verarbeitet werden</string>
     <string name="feature_settings_version_value">%1$s (%2$s)</string>
@@ -454,6 +460,15 @@
     <string name="feature_settings_control_plane_error_keep_one">Mindestens eine Control Plane muss erhalten bleiben.</string>
     <string name="feature_settings_control_plane_error_save_failed">Die Control-Plane-Liste konnte nicht gespeichert werden.</string>
     <string name="feature_settings_control_planes_settings_subtitle">Adressen, Verzeichnis und Erreichbarkeit verwalten</string>
+    <string name="feature_settings_control_plane_directory_title">Control-Plane-Verzeichnis</string>
+    <string name="feature_settings_control_plane_directory_description">Optionale URL, die die aktuelle Control-Plane-Liste bereitstellt. Sparrow synchronisiert sie automatisch und behält bei einem Ausfall die letzte erfolgreiche Liste.</string>
+    <string name="feature_settings_control_plane_directory_url">Verzeichnis-URL</string>
+    <string name="feature_settings_control_plane_directory_apply">Speichern und synchronisieren</string>
+    <string name="feature_settings_control_plane_directory_disabled">Kein Verzeichnis konfiguriert</string>
+    <string name="feature_settings_control_plane_directory_synced_count">%1$d Adressen vom Verzeichnis empfangen</string>
+    <string name="feature_settings_control_plane_directory_sync_failed">Verzeichnis nicht erreichbar. Die letzte erfolgreiche Liste wird weiter verwendet.</string>
+    <string name="feature_settings_control_plane_directory_error_invalid_url">Gib eine gültige http://- oder https://Verzeichnis-URL ein.</string>
+    <string name="feature_settings_control_plane_directory_error_save_failed">Die Verzeichnis-URL konnte nicht gespeichert werden.</string>
     <string name="feature_settings_control_plane_source_manual">Manuell</string>
     <string name="feature_settings_control_plane_source_directory">Verzeichnis</string>
     <string name="feature_settings_control_plane_source_manual_and_directory">Manuell + Verzeichnis</string>
@@ -475,4 +490,15 @@
     <string name="feature_chats_group_avatar_choose_gallery">Aus Galerie wählen</string>
     <string name="app_connection_offline_hint">Offline. Sparrow verbindet sich automatisch erneut.</string>
     <string name="app_connection_reconnected_hint">Wieder online.</string>
+
+    <string name="feature_search_title">Nachrichten durchsuchen</string>
+    <string name="feature_search_open">Nachrichten durchsuchen</string>
+    <string name="feature_search_placeholder">Nachrichten durchsuchen</string>
+    <string name="feature_search_clear">Suche löschen</string>
+    <string name="feature_search_start_hint">Durchsuche deinen Nachrichtenverlauf.</string>
+    <string name="feature_search_no_results">Keine passenden Nachrichten</string>
+    <string name="feature_search_failed">Suche fehlgeschlagen. Versuche es erneut.</string>
+    <string name="feature_search_exact_only_hint">Nur exakte Textsuche. Aktiviere die semantische Nachrichtensuche in den Einstellungen, um nach Bedeutung zu suchen.</string>
+    <string name="feature_search_preparing_hint">Die semantische Suche wird vorbereitet. Die exakte Textsuche ist bereits verfügbar.</string>
+    <string name="feature_search_semantic_unavailable_hint">Die semantische Suche ist nicht verfügbar. Die exakte Textsuche funktioniert weiterhin.</string>
 </resources>

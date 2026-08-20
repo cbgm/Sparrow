@@ -12,6 +12,7 @@ import org.koin.compose.viewmodel.koinViewModel
 fun GroupRoute(
     conversationId: String,
     modifier: Modifier = Modifier,
+    targetMessageId: String? = null,
     viewModel: GroupViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -28,6 +29,7 @@ fun GroupRoute(
     GroupScreen(
         uiState = uiState,
         onUiEvent = viewModel::onUiEvent,
+        targetMessageId = targetMessageId,
         modifier = modifier
     )
 }

@@ -58,6 +58,8 @@ class GroupViewModel(
 ) : BaseViewModel() {
     private val groupId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.GroupConversation::conversationId.name)
+    private val targetMessageId =
+        savedStateHandle.get<String>(AppRoute.GroupConversation::targetMessageId.name)
     private val logger = SparrowLog.withTag("GroupViewModel")
     private val messageText = savedStateHandle.getMutableStateFlow(MESSAGE_TEXT_KEY, "")
     private val errorMessage = MutableStateFlow<String?>(null)
@@ -154,7 +156,12 @@ class GroupViewModel(
             GroupUiEvent.SendClicked -> sendCurrentMessage()
             GroupUiEvent.HeaderClicked -> navigator.navigateTo(AppRoute.GroupDetails(groupId))
             is GroupUiEvent.RetryMessage -> retryFailedMessage(event.messageId)
-            GroupUiEvent.BackClicked -> navigator.popBackStackTo(AppRoute.Main)
+            GroupUiEvent.BackClicked ->
+                if (targetMessageId != null) {
+                    navigator.popBackStack()
+                } else {
+                    navigator.popBackStackTo(AppRoute.Main)
+                }
             GroupUiEvent.AcceptInvitation -> acceptCurrentInvitation()
             GroupUiEvent.DeclineInvitation -> declineCurrentInvitation()
         }

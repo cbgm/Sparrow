@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.settings.presentation.overview.mapper
 
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
+import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsUiState
 
@@ -10,6 +11,7 @@ internal fun BuildInfo.toUiState(
     identitySetupMode: DirectIdentitySetupMode,
     blockUnknownContactInvites: Boolean,
     blockedContactCount: Int,
+    semanticSearchState: SemanticSearchState,
     isDeveloperModeEnabled: Boolean,
     developerModeTapCount: Int,
     showLanguagePicker: Boolean
@@ -19,6 +21,7 @@ internal fun BuildInfo.toUiState(
         directIdentitySetupMode = identitySetupMode,
         blockUnknownContactInvites = blockUnknownContactInvites,
         blockedContactCount = blockedContactCount,
+        semanticSearchState = semanticSearchState,
         buildInfo = this,
         isDeveloperModeEnabled = isDeveloperModeEnabled,
         developerModeTapCount = developerModeTapCount,
