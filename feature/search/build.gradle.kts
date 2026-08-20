@@ -1,6 +1,5 @@
 plugins {
-    alias(libs.plugins.sparrow.kmp.library)
-    alias(libs.plugins.sparrow.kmp.testing)
+    alias(libs.plugins.sparrow.kmp.compose.feature)
 }
 
 kotlin {
@@ -12,9 +11,11 @@ kotlin {
         commonMain.dependencies {
             implementation(projects.core)
             implementation(projects.core.datastore)
+            implementation(projects.core.ui)
             implementation(projects.data.database)
+            implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)
-            implementation(libs.bundles.koin.core)
+            implementation(libs.bundles.koin.compose)
         }
 
         androidMain.dependencies {

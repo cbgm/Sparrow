@@ -8,6 +8,12 @@ object Dimens {
         val progressIndicatorStrokeWidth = 2.dp
     }
 
+    object SearchField {
+        val searchHeight = 44.dp
+        val searchIconSize = 18.dp
+        val searchClearButtonSize = 32.dp
+    }
+
     object Avatar {
         val defaultSize = 48.dp
     }
@@ -134,9 +140,6 @@ object Dimens {
 
     object ContactsScreen {
         val selectionProgressSize = 20.dp
-        val searchHeight = 44.dp
-        val searchIconSize = 18.dp
-        val searchClearButtonSize = 32.dp
         val contactStatusSize = 24.dp
         val contactStatusStroke = 2.dp
         val contactStatusIconSize = 16.dp

@@ -19,6 +19,10 @@ class MainViewModel(
                 initialValue = 0
             )
 
+    fun openMessageSearch() {
+        navigator.navigateTo(AppRoute.MessageSearch)
+    }
+
     fun openContactInvitations() {
         navigator.navigateTo(AppRoute.ContactInvitations())
     }

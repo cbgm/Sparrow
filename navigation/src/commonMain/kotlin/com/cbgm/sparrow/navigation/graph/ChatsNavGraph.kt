@@ -9,12 +9,20 @@ import com.cbgm.sparrow.feature.chats.presentation.details.screen.DetailsRoute
 import com.cbgm.sparrow.feature.chats.presentation.direct.screen.DirectRoute
 import com.cbgm.sparrow.feature.chats.presentation.group.screen.GroupRoute
 import com.cbgm.sparrow.feature.chats.presentation.verification.VerificationRoute
+import com.cbgm.sparrow.feature.search.presentation.screen.MessageSearchRoute
 import com.cbgm.sparrow.navigation.slideInFromLeft
 import com.cbgm.sparrow.navigation.slideInFromRight
 import com.cbgm.sparrow.navigation.slideOutToLeft
 import com.cbgm.sparrow.navigation.slideOutToRight
 
 fun NavGraphBuilder.chatsNavGraph() {
+    composable<AppRoute.MessageSearch>(
+        enterTransition = { slideInFromRight() },
+        exitTransition = { slideOutToRight() }
+    ) {
+        MessageSearchRoute()
+    }
+
     composable<AppRoute.Chat>(
         enterTransition = { slideInFromRight() },
         exitTransition = { slideOutToRight() }

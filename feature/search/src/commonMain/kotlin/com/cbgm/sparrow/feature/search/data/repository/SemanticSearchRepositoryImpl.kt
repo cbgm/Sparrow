@@ -11,6 +11,7 @@ import com.cbgm.sparrow.feature.search.data.platform.EmbeddingInputType
 import com.cbgm.sparrow.feature.search.data.platform.LocalTextEmbedder
 import com.cbgm.sparrow.feature.search.data.platform.SemanticSearchModelManager
 import com.cbgm.sparrow.feature.search.data.storage.SemanticSearchSettingsStorage
+import com.cbgm.sparrow.feature.search.domain.model.MessageSearchMatchType
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchResult
 import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
 import com.cbgm.sparrow.feature.search.domain.repository.SemanticSearchRepository
@@ -78,11 +79,15 @@ class SemanticSearchRepositoryImpl(
                     MessageSearchResult(
                         messageId = message.messageId,
                         conversationId = message.conversationId,
+                        conversationName = conversationDisplayName(message.conversationTitle, message.contactName),
                         text = message.text,
                         createdAtEpochMilliseconds = message.createdAtEpochMilliseconds,
+                        matchType = MessageSearchMatchType.SEMANTIC,
                         score = cosineSimilarity(queryEmbedding, EmbeddingCodec.decode(message.embedding))
                     )
-                }.sortedByDescending { it.score }
+                }.filter { result ->
+                    (result.score ?: Float.NEGATIVE_INFINITY) >= SemanticSearchModel.MIN_SIMILARITY
+                }.sortedByDescending { it.score ?: Float.NEGATIVE_INFINITY }
                 .take(limit.coerceAtLeast(1))
                 .toList()
         }

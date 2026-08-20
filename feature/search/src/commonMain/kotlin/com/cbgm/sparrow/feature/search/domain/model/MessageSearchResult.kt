@@ -3,7 +3,9 @@ package com.cbgm.sparrow.feature.search.domain.model
 data class MessageSearchResult(
     val messageId: String,
     val conversationId: String,
+    val conversationName: String?,
     val text: String,
     val createdAtEpochMilliseconds: Long,
-    val score: Float
+    val matchType: MessageSearchMatchType,
+    val score: Float? = null
 )

@@ -6,6 +6,7 @@ import androidx.room.Upsert
 import com.cbgm.sparrow.data.database.entity.MessageSearchEmbeddingEntity
 import com.cbgm.sparrow.data.database.model.MessageSearchSource
 import com.cbgm.sparrow.data.database.model.StoredMessageEmbedding
+import com.cbgm.sparrow.data.database.model.StoredMessageSearchMatch
 
 @Dao
 interface MessageSearchDao {
@@ -65,11 +66,39 @@ interface MessageSearchDao {
         SELECT
             messages.id AS messageId,
             messages.conversationId AS conversationId,
+            conversations.title AS conversationTitle,
+            contacts.displayName AS contactName,
+            messages.text AS text,
+            messages.createdAtEpochMilliseconds AS createdAtEpochMilliseconds
+        FROM messages
+        INNER JOIN conversations ON conversations.id = messages.conversationId
+        LEFT JOIN contacts ON contacts.id = conversations.contactId
+        WHERE messages.contentStatus = 'READABLE'
+          AND TRIM(messages.text) != ''
+          AND INSTR(LOWER(messages.text), LOWER(:query)) > 0
+        ORDER BY messages.createdAtEpochMilliseconds DESC
+        LIMIT :limit
+        """
+    )
+    suspend fun searchExactMessages(
+        query: String,
+        limit: Int
+    ): List<StoredMessageSearchMatch>
+
+    @Query(
+        """
+        SELECT
+            messages.id AS messageId,
+            messages.conversationId AS conversationId,
+            conversations.title AS conversationTitle,
+            contacts.displayName AS contactName,
             messages.text AS text,
             messages.createdAtEpochMilliseconds AS createdAtEpochMilliseconds,
             message_search_embeddings.embedding AS embedding
         FROM message_search_embeddings
         INNER JOIN messages ON messages.id = message_search_embeddings.messageId
+        INNER JOIN conversations ON conversations.id = messages.conversationId
+        LEFT JOIN contacts ON contacts.id = conversations.contactId
         WHERE message_search_embeddings.modelVersion = :modelVersion
           AND messages.contentStatus = 'READABLE'
           AND TRIM(messages.text) != ''

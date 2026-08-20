@@ -9,6 +9,7 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.MarkEmailUnread
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -30,6 +31,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.component.SparrowScrollStateType
@@ -45,6 +47,7 @@ import com.cbgm.sparrow.feature.settings.presentation.overview.SettingsRoute
 import com.cbgm.sparrow.presentation.model.MainTab
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_contacts_open_invitations
+import com.cbgm.sparrow.resources.feature_search_open
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -54,6 +57,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun MainScreen(
     invitationCount: Int,
+    onOpenSearch: () -> Unit,
     onOpenInvitations: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -86,6 +90,7 @@ fun MainScreen(
                     selectedTab = selectedTab,
                     containerColor = containerColor,
                     invitationCount = invitationCount,
+                    onOpenSearch = onOpenSearch,
                     onOpenInvitations = onOpenInvitations,
                     onAddChat = { showContactsOverlay = true }
                 )
@@ -129,6 +134,7 @@ private fun MainTopBar(
     selectedTab: MainTab,
     containerColor: Color,
     invitationCount: Int,
+    onOpenSearch: () -> Unit,
     onOpenInvitations: () -> Unit,
     onAddChat: () -> Unit
 ) {
@@ -136,12 +142,22 @@ private fun MainTopBar(
         title = {
             Text(
                 text = stringResource(selectedTab.label),
-                style = MaterialTheme.typography.titleSmall
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
             )
         },
         actions = {
             if (selectedTab == MainTab.Chats) {
-                IconButton(onClick = onOpenInvitations) {
+                IconButton(onClick = onOpenSearch) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = stringResource(Res.string.feature_search_open)
+                    )
+                }
+                IconButton(
+                    onClick = onOpenInvitations,
+                    enabled = invitationCount > 0
+                ) {
                     BadgedBox(
                         badge = {
                             if (invitationCount > 0) {
@@ -262,6 +278,7 @@ private fun MainScreenPreview() {
     SparrowTheme {
         MainScreen(
             invitationCount = 0,
+            onOpenSearch = {},
             onOpenInvitations = {},
             modifier = Modifier.fillMaxSize()
         )

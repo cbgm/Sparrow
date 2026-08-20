@@ -1,11 +1,10 @@
 package com.cbgm.sparrow.data.database.model
 
-data class StoredMessageEmbedding(
+data class StoredMessageSearchMatch(
     val messageId: String,
     val conversationId: String,
     val conversationTitle: String?,
     val contactName: String?,
     val text: String,
-    val createdAtEpochMilliseconds: Long,
-    val embedding: ByteArray
+    val createdAtEpochMilliseconds: Long
 )

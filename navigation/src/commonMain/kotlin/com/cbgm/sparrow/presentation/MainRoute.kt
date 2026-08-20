@@ -15,6 +15,7 @@ fun MainRoute(
 
     MainScreen(
         invitationCount = invitationCount,
+        onOpenSearch = viewModel::openMessageSearch,
         onOpenInvitations = viewModel::openContactInvitations
     )
 }
