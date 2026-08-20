@@ -4,7 +4,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
@@ -34,6 +33,7 @@ fun SparrowSearchField(
     onSearchQueryChanged: (String) -> Unit,
     onClear: () -> Unit,
     placeholder: String,
+    modifier: Modifier = Modifier,
     focusRequester: FocusRequester? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -41,15 +41,10 @@ fun SparrowSearchField(
     BasicTextField(
         value = searchQuery,
         onValueChange = onSearchQueryChanged,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(
-                    bottom = MaterialTheme.spacing.small,
-                    start = MaterialTheme.spacing.medium,
-                    end = MaterialTheme.spacing.medium
-                ).height(Dimens.SearchField.searchHeight)
-                .focusRequester(focusRequester ?: FocusRequester.Cancel),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(Dimens.SearchField.searchHeight)
+            .focusRequester(focusRequester ?: FocusRequester.Cancel),
         textStyle =
             MaterialTheme.typography.bodySmall.copy(
                 color = MaterialTheme.colorScheme.onSurface
