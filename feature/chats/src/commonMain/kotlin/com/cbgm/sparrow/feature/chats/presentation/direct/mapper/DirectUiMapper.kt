@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.chats.presentation.direct.mapper
 
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
+import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessage
@@ -11,6 +12,8 @@ import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.IdentityHandshakeState
 import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
+import com.cbgm.sparrow.feature.safety.domain.usecase.AnalyzeMessageSafetyUseCase
+import com.cbgm.sparrow.feature.safety.presentation.mapper.toWarningUiModel
 
 internal fun resolveContactName(
     contact: Contact?,
@@ -22,14 +25,22 @@ internal fun resolveContactName(
         ?: fallbackContactName.takeIf(String::isNotBlank)
         ?: "Unknown contact"
 
-internal fun DirectMessage.toUiModel(): MessageBubbleModel =
+internal fun DirectMessage.toUiModel(
+    analyzeMessageSafety: AnalyzeMessageSafetyUseCase
+): MessageBubbleModel =
     MessageBubbleModel(
         id = id,
         text = text,
         isMine = isMine,
         security = security,
         contentStatus = contentStatus,
-        deliveryStatus = deliveryStatus
+        deliveryStatus = deliveryStatus,
+        safetyWarning =
+            if (isMine || contentStatus != MessageContentStatus.READABLE) {
+                null
+            } else {
+                analyzeMessageSafety(text).toWarningUiModel()
+            }
     )
 
 internal fun Contact?.toSecurityState(): ContactSecurityState {
@@ -73,7 +84,8 @@ internal fun toDirectUiState(
     setupMode: DirectIdentitySetupMode,
     currentText: String,
     currentError: String?,
-    contactTyping: Boolean
+    contactTyping: Boolean,
+    analyzeMessageSafety: AnalyzeMessageSafetyUseCase
 ): DirectUiState {
     val isChatAuthorized = isDirectChatAuthorized(contact, handshake, setupMode)
     val composerState =
@@ -87,7 +99,12 @@ internal fun toDirectUiState(
     return DirectUiState(
         contactId = contactId,
         contactName = resolveContactName(contact, fallbackContactName),
-        messages = conversation?.messages.orEmpty().asReversed().map { it.toUiModel() },
+        messages =
+            conversation
+                ?.messages
+                .orEmpty()
+                .asReversed()
+                .map { message -> message.toUiModel(analyzeMessageSafety) },
         messageText = currentText,
         isContactTyping = contactTyping,
         contactSecurityState = contact.toSecurityState(),

@@ -38,8 +38,6 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
 import com.cbgm.sparrow.feature.safety.presentation.component.MessageSafetyWarning
-import com.cbgm.sparrow.feature.safety.presentation.model.MessageSafetyWarningLevel
-import com.cbgm.sparrow.feature.safety.presentation.model.MessageSafetyWarningReason
 import com.cbgm.sparrow.feature.safety.presentation.model.MessageSafetyWarningUiModel
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_decryption_failed
@@ -60,9 +58,6 @@ import com.cbgm.sparrow.resources.feature_chats_unable_read_plaintext
 import com.cbgm.sparrow.resources.feature_chats_waiting_for_invitation_acceptance
 import org.jetbrains.compose.resources.stringResource
 
-private const val SAFETY_SUSPICIOUS_TEST_MARKER = "/safety suspicious"
-private const val SAFETY_HIGH_TEST_MARKER = "/safety high"
-
 @Composable
 internal fun MessageBubble(
     message: MessageBubbleModel,
@@ -72,7 +67,7 @@ internal fun MessageBubble(
     isSearchHighlighted: Boolean = false
 ) {
     val bubbleState = bubbleState(message)
-    val safetyWarning = presentationSafetyWarning(message)
+    val safetyWarning = message.safetyWarning
 
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -104,36 +99,6 @@ internal fun MessageBubble(
                     )
             )
         }
-    }
-}
-
-private fun presentationSafetyWarning(
-    message: MessageBubbleModel
-): MessageSafetyWarningUiModel? {
-    if (message.isMine) return null
-
-    return when {
-        message.text.contains(SAFETY_HIGH_TEST_MARKER, ignoreCase = true) ->
-            MessageSafetyWarningUiModel(
-                level = MessageSafetyWarningLevel.HIGH,
-                reasons =
-                    listOf(
-                        MessageSafetyWarningReason.CREDENTIAL_REQUEST,
-                        MessageSafetyWarningReason.PAYMENT_REQUEST
-                    )
-            )
-
-        message.text.contains(SAFETY_SUSPICIOUS_TEST_MARKER, ignoreCase = true) ->
-            MessageSafetyWarningUiModel(
-                level = MessageSafetyWarningLevel.SUSPICIOUS,
-                reasons =
-                    listOf(
-                        MessageSafetyWarningReason.SUSPICIOUS_LINK,
-                        MessageSafetyWarningReason.URGENT_ACTION_REQUEST
-                    )
-            )
-
-        else -> null
     }
 }
 

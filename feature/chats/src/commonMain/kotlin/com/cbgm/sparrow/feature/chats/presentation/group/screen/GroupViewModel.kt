@@ -24,6 +24,7 @@ import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
+import com.cbgm.sparrow.feature.safety.domain.usecase.AnalyzeMessageSafetyUseCase
 import com.cbgm.sparrow.feature.safety.presentation.model.toDetailsRoute
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -56,7 +57,8 @@ class GroupViewModel(
     private val observeProfilePictures: ObserveRemoteProfilePicturesUseCase,
     observeGroupAvatar: ObserveGroupAvatarUseCase,
     private val observeMemberTyping: ObserveGroupMemberTypingUseCase,
-    private val setGroupTyping: SetGroupTypingUseCase
+    private val setGroupTyping: SetGroupTypingUseCase,
+    private val analyzeMessageSafety: AnalyzeMessageSafetyUseCase
 ) : BaseViewModel() {
     private val groupId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.GroupConversation::conversationId.name)
@@ -141,7 +143,8 @@ class GroupViewModel(
                 currentError = error,
                 observationError = presentation.context.observation.errorMessage,
                 isLoading = presentation.context.observation is GroupConversationObservation.Loading,
-                typingContactIds = typingIds
+                typingContactIds = typingIds,
+                analyzeMessageSafety = analyzeMessageSafety
             )
         }.stateIn(
             scope = viewModelScope,

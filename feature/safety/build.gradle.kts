@@ -17,5 +17,9 @@ kotlin {
             implementation(libs.bundles.coroutines)
             implementation(libs.bundles.koin.compose)
         }
+
+        commonTest.dependencies {
+            implementation(libs.bundles.kmp.testing)
+        }
     }
 }
