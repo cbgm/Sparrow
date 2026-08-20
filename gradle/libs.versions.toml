@@ -52,6 +52,7 @@ hikari = "7.1.0"
 postgresql = "42.7.13"
 jedis = "5.2.0"
 material-icons = "1.7.3"
+mediapipe = "latest.release"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -146,6 +147,7 @@ firebase-messaging = { module = "com.google.firebase:firebase-messaging", versio
 firebase-analytics = { module = "com.google.firebase:firebase-analytics", version.ref = "firebase-analytics" }
 firebase-admin = { module = "com.google.firebase:firebase-admin", version.ref = "firebase-admin" }
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
+mediapipe-tasks-text = { module = "com.google.mediapipe:tasks-text", version.ref = "mediapipe" }
 hikari = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
 jedis = { module = "redis.clients:jedis", version.ref = "jedis" }

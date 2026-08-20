@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.messaging.application.mailbox
 
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.core.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.core.protocol.mailbox.MailboxCapabilityLifecycle
@@ -34,6 +35,8 @@ class DefaultMailboxCoordinator(
     private val protocolOutbox: ProtocolOutbox,
     private val incomingEnvelopeProcessor: IncomingEnvelopeProcessor
 ) : MailboxCoordinator {
+    private val logger = SparrowLog.withTag("DefaultMailboxCoordinator")
+
     override suspend fun provisionRoutes(): Result<Int> =
         runCatching {
             val now = SystemClock.nowEpochMilliseconds()
@@ -128,6 +131,12 @@ class DefaultMailboxCoordinator(
                             IncomingEnvelopeProcessingResult.Processed -> {
                                 mailboxGateway.acknowledge(credential, envelope.envelopeId).getOrThrow()
                                 processed += 1
+                            }
+                            IncomingEnvelopeProcessingResult.Rejected -> {
+                                mailboxGateway.acknowledge(credential, envelope.envelopeId).getOrThrow()
+                                logger.warn {
+                                    "Rejected mailbox envelope acknowledged and discarded: envelopeId=${envelope.envelopeId}"
+                                }
                             }
                             IncomingEnvelopeProcessingResult.UnknownSender -> Unit
                         }

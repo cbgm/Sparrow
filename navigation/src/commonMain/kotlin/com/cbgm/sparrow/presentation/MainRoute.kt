@@ -12,9 +12,12 @@ fun MainRoute(
     viewModel: MainViewModel = koinViewModel()
 ) {
     val invitationCount by viewModel.invitationCount.collectAsStateWithLifecycle()
+    val isMessageSearchAvailable by viewModel.isMessageSearchAvailable.collectAsStateWithLifecycle()
 
     MainScreen(
         invitationCount = invitationCount,
+        isMessageSearchAvailable = isMessageSearchAvailable,
+        onOpenSearch = viewModel::openMessageSearch,
         onOpenInvitations = viewModel::openContactInvitations
     )
 }

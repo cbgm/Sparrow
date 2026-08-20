@@ -280,7 +280,7 @@ private fun ManualInputDivider() {
 
         HorizontalDivider(
             modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.divider)
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.divider)
         )
     }
 }

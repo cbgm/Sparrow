@@ -55,6 +55,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMemberInvitationSt
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageBubble
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageControl
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
+import com.cbgm.sparrow.feature.chats.presentation.component.rememberMessageSearchTargetState
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMessageUiModel
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState
@@ -105,7 +106,8 @@ import org.jetbrains.compose.resources.stringResource
 fun GroupScreen(
     uiState: GroupUiState,
     onUiEvent: (GroupUiEvent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    targetMessageId: String? = null
 ) {
     SparrowLazyScaffold(
         modifier = modifier,
@@ -136,6 +138,7 @@ fun GroupScreen(
             uiState = uiState,
             listState = listState,
             innerPadding = innerPadding,
+            targetMessageId = targetMessageId,
             onRetryMessage = { messageId ->
                 onUiEvent(GroupUiEvent.RetryMessage(messageId))
             }
@@ -164,7 +167,11 @@ private fun TopBar(
                     modifier = Modifier.clickable { onUiEvent(GroupUiEvent.HeaderClicked) },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SparrowAvatar(name = uiState.title, pictureBytes = uiState.avatarBytes, size = Dimens.GroupScreen.topBarAvatarSize)
+                    SparrowAvatar(
+                        name = uiState.title,
+                        pictureBytes = uiState.avatarBytes,
+                        size = Dimens.GroupScreen.topBarAvatarSize
+                    )
                     Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
                     Column {
                         Text(
@@ -222,19 +229,23 @@ private fun Content(
     uiState: GroupUiState,
     listState: LazyListState,
     innerPadding: PaddingValues,
+    targetMessageId: String?,
     onRetryMessage: (String) -> Unit
 ) {
     when {
         uiState.isLoading -> LoadingContent(
             modifier = Modifier.fillMaxSize().padding(innerPadding)
         )
+
         uiState.messages.isEmpty() -> EmptyContent(
             title = uiState.title,
             modifier = Modifier.fillMaxSize().padding(innerPadding)
         )
+
         else -> MessageList(
             messages = uiState.messages,
             listState = listState,
+            targetMessageId = targetMessageId,
             onRetryMessage = onRetryMessage,
             contentPadding = innerPadding
         )
@@ -245,12 +256,19 @@ private fun Content(
 private fun MessageList(
     messages: List<GroupMessageUiModel>,
     listState: LazyListState,
+    targetMessageId: String?,
     onRetryMessage: (String) -> Unit,
     contentPadding: PaddingValues
 ) {
+    val searchTargetState =
+        rememberMessageSearchTargetState(
+            targetMessageId = targetMessageId,
+            messageIds = messages.map(GroupMessageUiModel::id),
+            listState = listState
+        )
     val newestMessage = messages.firstOrNull()
     LaunchedEffect(newestMessage?.id) {
-        if (newestMessage?.bubble?.isMine == true) {
+        if (searchTargetState.isHandled && newestMessage?.bubble?.isMine == true) {
             listState.animateScrollToItem(index = 0)
         }
     }
@@ -272,7 +290,8 @@ private fun MessageList(
             if (message.type == ChatMessageType.USER) {
                 GroupMessageBubble(
                     message = message,
-                    onRetryMessage = onRetryMessage
+                    onRetryMessage = onRetryMessage,
+                    isSearchHighlighted = message.id == searchTargetState.highlightedMessageId
                 )
             } else {
                 MembershipSystemMessage(
@@ -287,18 +306,22 @@ private fun MessageList(
 @Composable
 private fun GroupMessageBubble(
     message: GroupMessageUiModel,
-    onRetryMessage: (String) -> Unit
+    onRetryMessage: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    isSearchHighlighted: Boolean = false
 ) {
     if (message.bubble.isMine) {
         MessageBubble(
             message = message.bubble,
-            onRetryClick = { onRetryMessage(message.id) }
+            onRetryClick = { onRetryMessage(message.id) },
+            modifier = modifier,
+            isSearchHighlighted = isSearchHighlighted
         )
         return
     }
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Bottom
     ) {
         SparrowAvatar(
@@ -310,7 +333,8 @@ private fun GroupMessageBubble(
         MessageBubble(
             message = message.bubble,
             onRetryClick = { onRetryMessage(message.id) },
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            isSearchHighlighted = isSearchHighlighted
         )
     }
 }
@@ -326,10 +350,12 @@ private fun StatusHint(
                 onAccept = { onUiEvent(GroupUiEvent.AcceptInvitation) },
                 onDecline = { onUiEvent(GroupUiEvent.DeclineInvitation) }
             )
+
         uiState.state == GroupConversationState.DELETED -> ConversationDeletedHint()
         uiState.state == GroupConversationState.REMOVED ||
             (uiState.state == GroupConversationState.DECLINED && uiState.messages.isNotEmpty()) ->
             MembershipRemovedHint()
+
         uiState.state == GroupConversationState.LEAVING -> MembershipLeavingHint()
         uiState.state != GroupConversationState.READY && uiState.isMessageInputEnabled ->
             PendingMessageHint(uiState = uiState)
@@ -370,6 +396,7 @@ private fun subtitle(uiState: GroupUiState): String =
     when (uiState.state) {
         GroupConversationState.READY ->
             stringResource(Res.string.feature_chats_group_member_count, uiState.memberCount)
+
         GroupConversationState.INVITED -> stringResource(Res.string.feature_chats_group_status_invited)
         GroupConversationState.JOINING -> stringResource(Res.string.feature_chats_group_status_joining)
         GroupConversationState.WAITING_FOR_MEMBERS ->
@@ -378,12 +405,14 @@ private fun subtitle(uiState: GroupUiState): String =
                 pendingCount = uiState.pendingMemberCount,
                 waitingResource = Res.string.feature_chats_group_status_waiting
             )
+
         GroupConversationState.DISTRIBUTING_KEYS ->
             pendingSubtitle(
                 readyCount = uiState.readyMemberCount,
                 pendingCount = uiState.pendingMemberCount,
                 waitingResource = Res.string.feature_chats_group_status_distributing
             )
+
         GroupConversationState.LEAVING -> stringResource(Res.string.feature_chats_group_status_leaving)
         GroupConversationState.REMOVED -> stringResource(Res.string.feature_chats_group_status_removed)
         GroupConversationState.DELETED -> stringResource(Res.string.feature_chats_group_deleted_status)

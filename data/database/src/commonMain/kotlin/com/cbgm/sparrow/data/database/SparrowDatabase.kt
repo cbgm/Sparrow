@@ -14,6 +14,7 @@ import com.cbgm.sparrow.data.database.dao.IdentityInvitationDao
 import com.cbgm.sparrow.data.database.dao.MailboxRouteDao
 import com.cbgm.sparrow.data.database.dao.MessageDeliveryStatusDao
 import com.cbgm.sparrow.data.database.dao.MessageRecipientStateDao
+import com.cbgm.sparrow.data.database.dao.MessageSearchDao
 import com.cbgm.sparrow.data.database.dao.ProtocolOutboxDao
 import com.cbgm.sparrow.data.database.entity.ContactEntity
 import com.cbgm.sparrow.data.database.entity.ContactPhoneNumberEntity
@@ -29,6 +30,7 @@ import com.cbgm.sparrow.data.database.entity.IdentityInvitationEntity
 import com.cbgm.sparrow.data.database.entity.LocalMailboxCredentialEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
+import com.cbgm.sparrow.data.database.entity.MessageSearchEmbeddingEntity
 import com.cbgm.sparrow.data.database.entity.ProtocolOutboxEntity
 import com.cbgm.sparrow.data.database.entity.RemoteMailboxRouteEntity
 
@@ -46,12 +48,13 @@ import com.cbgm.sparrow.data.database.entity.RemoteMailboxRouteEntity
         GroupVerificationPairEntity::class,
         IdentityInvitationEntity::class,
         MessageEntity::class,
+        MessageSearchEmbeddingEntity::class,
         MessageRecipientStateEntity::class,
         ProtocolOutboxEntity::class,
         LocalMailboxCredentialEntity::class,
         RemoteMailboxRouteEntity::class
     ],
-    version = 28,
+    version = 29,
     autoMigrations = [
         AutoMigration(from = 26, to = 27),
         AutoMigration(from = 27, to = 28)
@@ -79,6 +82,8 @@ abstract class SparrowDatabase : RoomDatabase() {
     abstract fun messageDeliveryStatusDao(): MessageDeliveryStatusDao
 
     abstract fun messageRecipientStateDao(): MessageRecipientStateDao
+
+    abstract fun messageSearchDao(): MessageSearchDao
 
     abstract fun mailboxRouteDao(): MailboxRouteDao
 }

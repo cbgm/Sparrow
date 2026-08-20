@@ -16,6 +16,7 @@ kotlin {
             implementation(projects.core.ui)
             implementation(projects.feature.identity)
             implementation(projects.feature.onboarding)
+            implementation(projects.feature.search)
             implementation(projects.feature.transport)
 
             implementation(libs.bundles.compose)

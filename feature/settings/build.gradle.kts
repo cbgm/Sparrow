@@ -18,6 +18,7 @@ kotlin {
             implementation(projects.core.datastore)
             implementation(projects.core.ui)
             implementation(projects.feature.identity)
+            implementation(projects.feature.search)
 
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)

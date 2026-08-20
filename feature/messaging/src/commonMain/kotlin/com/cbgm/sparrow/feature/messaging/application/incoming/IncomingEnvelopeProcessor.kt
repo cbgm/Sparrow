@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.messaging.application.incoming
 
 enum class IncomingEnvelopeProcessingResult {
     Processed,
+    Rejected,
     UnknownSender
 }
 

@@ -299,7 +299,10 @@ private fun IdentityOptionsContent(
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        HorizontalDivider(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.divider)
+        )
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 

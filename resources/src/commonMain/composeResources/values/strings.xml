@@ -338,6 +338,12 @@
     <string name="feature_settings_licenses_subtitle">Libraries used in this app</string>
     <string name="feature_settings_open_source_licenses">Open source licenses</string>
     <string name="feature_settings_privacy_and_data">Privacy &amp; data</string>
+    <string name="feature_settings_semantic_search">Semantic message search</string>
+    <string name="feature_settings_semantic_search_subtitle">Find messages by meaning, not just exact words. Processing stays on this device.</string>
+    <string name="feature_settings_semantic_search_downloading">Downloading local search model…</string>
+    <string name="feature_settings_semantic_search_building">Building search index: %1$d / %2$d messages</string>
+    <string name="feature_settings_semantic_search_ready">Ready. Messages and search queries never leave this device.</string>
+    <string name="feature_settings_semantic_search_failed">Semantic search could not be prepared. Turn it off and on to retry.</string>
     <string name="feature_settings_privacy_policy">Privacy policy</string>
     <string name="feature_settings_privacy_policy_subtitle">How your data is handled</string>
     <string name="feature_settings_version_value">%1$s (%2$s)</string>
@@ -455,6 +461,15 @@
     <string name="feature_settings_control_plane_error_keep_one">At least one control plane must remain.</string>
     <string name="feature_settings_control_plane_error_save_failed">The control-plane list could not be saved.</string>
     <string name="feature_settings_control_planes_settings_subtitle">Manage addresses, discovery and availability</string>
+    <string name="feature_settings_control_plane_directory_title">Control-plane directory</string>
+    <string name="feature_settings_control_plane_directory_description">Optional URL that publishes the current control-plane list. Sparrow syncs it automatically and keeps the last successful list if the directory is unavailable.</string>
+    <string name="feature_settings_control_plane_directory_url">Directory URL</string>
+    <string name="feature_settings_control_plane_directory_apply">Save and sync</string>
+    <string name="feature_settings_control_plane_directory_disabled">No directory configured</string>
+    <string name="feature_settings_control_plane_directory_synced_count">%1$d addresses received from directory</string>
+    <string name="feature_settings_control_plane_directory_sync_failed">Directory unavailable. Using the last successful list.</string>
+    <string name="feature_settings_control_plane_directory_error_invalid_url">Enter a valid http:// or https:// directory URL.</string>
+    <string name="feature_settings_control_plane_directory_error_save_failed">The directory URL could not be saved.</string>
     <string name="feature_settings_control_plane_source_manual">Manual</string>
     <string name="feature_settings_control_plane_source_directory">Directory</string>
     <string name="feature_settings_control_plane_source_manual_and_directory">Manual + directory</string>
@@ -474,4 +489,15 @@
     <string name="feature_chats_group_avatar_crop">Crop group avatar</string>
     <string name="feature_chats_group_avatar_take_photo">Take photo</string>
     <string name="feature_chats_group_avatar_choose_gallery">Choose from gallery</string>
+
+    <string name="feature_search_title">Search messages</string>
+    <string name="feature_search_open">Search messages</string>
+    <string name="feature_search_placeholder">Search messages</string>
+    <string name="feature_search_clear">Clear search</string>
+    <string name="feature_search_start_hint">Search your message history.</string>
+    <string name="feature_search_no_results">No matching messages</string>
+    <string name="feature_search_failed">Search failed. Try again.</string>
+    <string name="feature_search_exact_only_hint">Exact text search only. Enable Semantic message search in Settings to search by meaning.</string>
+    <string name="feature_search_preparing_hint">Semantic search is being prepared. Exact text search is available now.</string>
+    <string name="feature_search_semantic_unavailable_hint">Semantic search is unavailable. Exact text search is still available.</string>
 </resources>

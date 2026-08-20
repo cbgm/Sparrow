@@ -3,6 +3,7 @@ package com.cbgm.sparrow.startup
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityStatus
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityStatusUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecoverIncompleteIdentityUseCase
+import com.cbgm.sparrow.feature.search.domain.usecase.InitializeSemanticSearchUseCase
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionManager
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
 import kotlinx.coroutines.flow.first
@@ -10,6 +11,7 @@ import kotlinx.coroutines.flow.first
 class AppInitializer(
     private val getIdentityStatus: GetIdentityStatusUseCase,
     private val recoverIncompleteIdentity: RecoverIncompleteIdentityUseCase,
+    private val initializeSemanticSearch: InitializeSemanticSearchUseCase,
     private val transportConnectionManager: TransportConnectionManager
 ) {
     suspend fun initialize(): Result<AppInitializationResult> =
@@ -18,6 +20,8 @@ class AppInitializer(
             if (identityStatus != IdentityStatus.READY) {
                 return@runCatching AppInitializationResult.IdentityRequired
             }
+
+            initializeSemanticSearch()
 
             when (awaitInitialConnectionResult()) {
                 is TransportConnectionState.Connected -> AppInitializationResult.ReadyOnline
