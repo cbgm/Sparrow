@@ -10,6 +10,4 @@ internal object SemanticSearchModel {
     const val VERSION = 2
     const val OUTPUT_DIMENSIONS = LocalEmbeddingModel.OUTPUT_DIMENSIONS
     const val INDEX_BATCH_SIZE = 32
-    const val MODEL_FILE_NAME = LocalEmbeddingModel.MODEL_FILE_NAME
-    const val MODEL_URL = LocalEmbeddingModel.MODEL_URL
 }

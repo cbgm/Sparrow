@@ -7,7 +7,7 @@ Select a module to open its generated detail page with source sets, file counts,
 | Module | Group | Kotlin | Tests | Resources | Dependencies | Dependents |
 |---|---|---:|---:|---:|---:|---:|
 | [`:androidApp`](modules/androidApp.md) | `androidApp` | 2 | 0 | 11 | 1 | 0 |
-| [`:core`](modules/core.md) | `core` | 13 | 0 | 1 | 0 | 15 |
+| [`:core`](modules/core.md) | `core` | 16 | 0 | 1 | 0 | 15 |
 | [`:core:crypto`](modules/core-crypto.md) | `core` | 38 | 5 | 1 | 0 | 7 |
 | [`:core:datastore`](modules/core-datastore.md) | `core` | 4 | 0 | 1 | 0 | 6 |
 | [`:core:embedding`](modules/core-embedding.md) | `core` | 20 | 0 | 0 | 2 | 5 |
@@ -16,14 +16,14 @@ Select a module to open its generated detail page with source sets, file counts,
 | [`:data`](modules/data.md) | `data` | 0 | 0 | 0 | 0 | 0 |
 | [`:data:database`](modules/data-database.md) | `data` | 49 | 0 | 1 | 2 | 6 |
 | [`:feature`](modules/feature.md) | `feature` | 0 | 0 | 0 | 0 | 0 |
-| [`:feature:chats`](modules/feature-chats.md) | `feature` | 239 | 18 | 1 | 10 | 4 |
+| [`:feature:chats`](modules/feature-chats.md) | `feature` | 236 | 18 | 1 | 10 | 4 |
 | [`:feature:contactimport`](modules/feature-contactimport.md) | `feature` | 26 | 1 | 1 | 4 | 3 |
 | [`:feature:contacts`](modules/feature-contacts.md) | `feature` | 137 | 4 | 1 | 5 | 6 |
 | [`:feature:identity`](modules/feature-identity.md) | `feature` | 67 | 5 | 1 | 5 | 7 |
 | [`:feature:messaging`](modules/feature-messaging.md) | `feature` | 33 | 7 | 1 | 7 | 2 |
 | [`:feature:onboarding`](modules/feature-onboarding.md) | `feature` | 14 | 0 | 1 | 2 | 3 |
-| [`:feature:safety`](modules/feature-safety.md) | `feature` | 27 | 1 | 0 | 5 | 5 |
-| [`:feature:search`](modules/feature-search.md) | `feature` | 41 | 3 | 0 | 4 | 4 |
+| [`:feature:safety`](modules/feature-safety.md) | `feature` | 28 | 1 | 0 | 5 | 5 |
+| [`:feature:search`](modules/feature-search.md) | `feature` | 29 | 3 | 0 | 4 | 4 |
 | [`:feature:settings`](modules/feature-settings.md) | `feature` | 65 | 0 | 2 | 7 | 2 |
 | [`:feature:transport`](modules/feature-transport.md) | `feature` | 67 | 13 | 1 | 4 | 4 |
 | [`:navigation`](modules/navigation.md) | `navigation` | 14 | 0 | 1 | 12 | 1 |
