@@ -339,6 +339,13 @@
     <string name="feature_settings_licenses_subtitle">In dieser App verwendete Bibliotheken</string>
     <string name="feature_settings_open_source_licenses">Open-Source-Lizenzen</string>
     <string name="feature_settings_privacy_and_data">Datenschutz &amp; Daten</string>
+    <string name="feature_settings_local_intelligence">Lokale Intelligenz</string>
+    <string name="feature_settings_message_safety">Betrugs- &amp; Phishing-Schutz</string>
+    <string name="feature_settings_message_safety_subtitle">Warnt mit lokaler Analyse auf dem Gerät vor verdächtigen Nachrichten.</string>
+    <string name="feature_settings_message_safety_downloading">Lokales Intelligenzmodell wird heruntergeladen…</string>
+    <string name="feature_settings_message_safety_analyzing">Nachrichten werden lokal analysiert…</string>
+    <string name="feature_settings_message_safety_ready">Schutz bereit. Die Nachrichtenanalyse bleibt auf diesem Gerät.</string>
+    <string name="feature_settings_message_safety_failed">Lokaler Schutz konnte nicht vorbereitet werden. Zum Wiederholen aus- und einschalten.</string>
     <string name="feature_settings_semantic_search">Semantische Nachrichtensuche</string>
     <string name="feature_settings_semantic_search_subtitle">Nach Bedeutung statt nur nach exakten Wörtern suchen. Verarbeitung bleibt auf diesem Gerät.</string>
     <string name="feature_settings_semantic_search_downloading">Lokales Suchmodell wird heruntergeladen…</string>
@@ -530,7 +537,6 @@
     <string name="feature_safety_reason_payment_request_explanation">Die Nachricht fordert dich auf, Geld zu überweisen, Geschenkkarten zu kaufen, Kryptowährung zu senden oder eine andere Zahlung vorzunehmen. Zahlungsaufforderungen sind besonders verdächtig, wenn sie unerwartet oder dringend sind oder neue Kontodaten verwenden. Bestätige ungewöhnliche Anfragen über einen separaten vertrauenswürdigen Kanal, bevor du zahlst.</string>
     <string name="feature_safety_reason_private_key_request_explanation">Private Schlüssel, Wiederherstellungs- oder Seed-Phrasen und ähnliche Geheimnisse können vollständigen Zugriff auf ein Konto, eine Identität oder eine Wallet ermöglichen. Ein seriöser Support oder Kontakt sollte diese Daten niemals per Nachricht benötigen. Teile sie niemals. Wurde ein solches Geheimnis bereits weitergegeben, behandle es als kompromittiert und ersetze oder widerrufe es, soweit möglich.</string>
     <string name="feature_safety_block_this_user">Diesen Nutzer blockieren</string>
-    <string name="feature_safety_block_this_user_button">Blockieren</string>
     <string name="feature_safety_blocking_user">Wird blockiert…</string>
     <string name="feature_safety_user_blocked">Nutzer blockiert</string>
     <string name="feature_safety_block_confirm">Diesen Nutzer blockieren?</string>

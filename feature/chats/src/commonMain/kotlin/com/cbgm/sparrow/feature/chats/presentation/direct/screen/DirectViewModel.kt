@@ -29,7 +29,7 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveIdentityHandshakeStateUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveIdentitySetupModeUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
-import com.cbgm.sparrow.feature.safety.domain.usecase.AnalyzeMessageSafetyUseCase
+import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.model.toDetailsRoute
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -57,7 +57,7 @@ class DirectViewModel(
     observeProfilePictures: ObserveRemoteProfilePicturesUseCase,
     private val observeTyping: ObserveDirectTypingUseCase,
     private val setTyping: SetDirectTypingUseCase,
-    private val analyzeMessageSafety: AnalyzeMessageSafetyUseCase
+    observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase
 ) : BaseViewModel() {
     private val conversationId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.Chat::conversationId.name)
@@ -102,8 +102,9 @@ class DirectViewModel(
             conversationContext,
             messageText,
             errorMessage,
-            isContactTyping
-        ) { context, text, error, contactTyping ->
+            isContactTyping,
+            observeMessageSafetyAssessments()
+        ) { context, text, error, contactTyping, safetyAssessments ->
             toDirectUiState(
                 contactId = contactId,
                 fallbackContactName = fallbackContactName,
@@ -114,7 +115,7 @@ class DirectViewModel(
                 currentText = text,
                 currentError = error,
                 contactTyping = contactTyping,
-                analyzeMessageSafety = analyzeMessageSafety
+                safetyAssessments = safetyAssessments
             )
         }
 

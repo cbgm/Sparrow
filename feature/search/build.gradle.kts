@@ -10,7 +10,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(projects.core)
-            implementation(projects.core.datastore)
+            implementation(projects.core.embedding)
             implementation(projects.core.ui)
             implementation(projects.data.database)
             implementation(libs.bundles.compose)
@@ -20,8 +20,6 @@ kotlin {
 
         androidMain.dependencies {
             implementation(libs.androidx.work.runtime)
-            implementation(libs.koin.android)
-            implementation(libs.mediapipe.tasks.text)
         }
 
         commonTest.dependencies {

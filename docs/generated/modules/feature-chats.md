@@ -10,11 +10,11 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/chats` |
 | Build file | `feature/chats/build.gradle.kts` |
-| Kotlin files | 231 |
-| Production Kotlin files | 215 |
-| Test Kotlin files | 16 |
+| Kotlin files | 239 |
+| Production Kotlin files | 221 |
+| Test Kotlin files | 18 |
 | Resource files | 1 |
-| Direct dependencies | 9 |
+| Direct dependencies | 10 |
 | Direct dependents | 4 |
 
 ## Source sets
@@ -36,6 +36,7 @@ Generated automatically by `./gradlew architectureReport`.
 - [`:feature:contactimport`](../modules/feature-contactimport.md)
 - [`:feature:contacts`](../modules/feature-contacts.md)
 - [`:feature:identity`](../modules/feature-identity.md)
+- [`:feature:safety`](../modules/feature-safety.md)
 
 ## Dependents
 

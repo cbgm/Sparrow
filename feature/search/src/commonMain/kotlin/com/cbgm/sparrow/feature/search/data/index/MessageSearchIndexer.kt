@@ -1,13 +1,13 @@
 package com.cbgm.sparrow.feature.search.data.index
 
+import com.cbgm.sparrow.core.embedding.data.model.normalizedPrefix
+import com.cbgm.sparrow.core.embedding.data.platform.EmbeddingInputType
+import com.cbgm.sparrow.core.embedding.data.platform.LocalTextEmbedder
 import com.cbgm.sparrow.data.database.dao.MessageSearchDao
 import com.cbgm.sparrow.data.database.entity.MessageSearchEmbeddingEntity
 import com.cbgm.sparrow.feature.search.data.embedding.EmbeddingCodec
-import com.cbgm.sparrow.feature.search.data.embedding.normalizedPrefix
 import com.cbgm.sparrow.feature.search.data.mapper.toEmbeddingText
 import com.cbgm.sparrow.feature.search.data.model.SemanticSearchModel
-import com.cbgm.sparrow.feature.search.data.platform.EmbeddingInputType
-import com.cbgm.sparrow.feature.search.data.platform.LocalTextEmbedder
 
 class MessageSearchIndexer(
     private val dao: MessageSearchDao,

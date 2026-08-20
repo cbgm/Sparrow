@@ -49,6 +49,7 @@ kotlin {
         commonMain.dependencies {
             implementation(projects.core)
             implementation(projects.core.datastore)
+            implementation(projects.core.embedding)
             implementation(projects.core.crypto)
             implementation(projects.core.protocol)
             implementation(projects.core.ui)

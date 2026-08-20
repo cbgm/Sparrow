@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.di
 
 import com.cbgm.sparrow.core.crypto.di.cryptoModule
+import com.cbgm.sparrow.core.embedding.di.embeddingModule
 import com.cbgm.sparrow.core.protocol.di.protocolModule
 import com.cbgm.sparrow.core.ui.di.coreUiModule
 import com.cbgm.sparrow.feature.chats.di.chatsModule
@@ -21,6 +22,7 @@ import org.koin.core.module.Module
 internal val commonApplicationModules: List<Module> =
     listOf(
         cryptoModule,
+        embeddingModule,
         protocolModule,
         coreUiModule,
         identityModule,

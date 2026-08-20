@@ -338,6 +338,13 @@
     <string name="feature_settings_licenses_subtitle">Libraries used in this app</string>
     <string name="feature_settings_open_source_licenses">Open source licenses</string>
     <string name="feature_settings_privacy_and_data">Privacy &amp; data</string>
+    <string name="feature_settings_local_intelligence">Local intelligence</string>
+    <string name="feature_settings_message_safety">Scam &amp; phishing protection</string>
+    <string name="feature_settings_message_safety_subtitle">Warn about suspicious messages using local on-device analysis.</string>
+    <string name="feature_settings_message_safety_downloading">Downloading local intelligence model…</string>
+    <string name="feature_settings_message_safety_analyzing">Analyzing messages locally…</string>
+    <string name="feature_settings_message_safety_ready">Protection ready. Message analysis stays on this device.</string>
+    <string name="feature_settings_message_safety_failed">Local protection could not be prepared. Turn it off and on to retry.</string>
     <string name="feature_settings_semantic_search">Semantic message search</string>
     <string name="feature_settings_semantic_search_subtitle">Find messages by meaning, not just exact words. Processing stays on this device.</string>
     <string name="feature_settings_semantic_search_downloading">Downloading local search model…</string>
@@ -529,7 +536,6 @@
     <string name="feature_safety_reason_payment_request_explanation">The message asks you to transfer money, buy gift cards, send cryptocurrency, or complete another payment. Payment requests become more suspicious when they are unexpected, urgent, or use new account details. Verify unusual requests with the sender through a separate trusted channel before paying.</string>
     <string name="feature_safety_reason_private_key_request_explanation">Private keys, recovery phrases, seed phrases, and similar secrets can provide complete control over an account, identity, or wallet. A legitimate support agent or contact should never need you to send them in a message. Never share these secrets. If one has already been disclosed, treat it as compromised and replace or revoke it where possible.</string>
     <string name="feature_safety_block_this_user">Block this user</string>
-    <string name="feature_safety_block_this_user_button">Block</string>
     <string name="feature_safety_blocking_user">Blocking…</string>
     <string name="feature_safety_user_blocked">User blocked</string>
     <string name="feature_safety_block_confirm">Block this user?</string>

@@ -6,12 +6,12 @@ Generated automatically by `./gradlew architectureReport`.
 
 | Metric | Count |
 |---|---:|
-| Modules | 35 |
+| Modules | 38 |
 | Module groups | 11 |
-| Project dependencies | 107 |
-| Kotlin files | 1037 |
-| Test Kotlin files | 94 |
-| Resource files | 49 |
+| Project dependencies | 131 |
+| Kotlin files | 1152 |
+| Test Kotlin files | 99 |
+| Resource files | 51 |
 
 ## Module groups
 
@@ -24,6 +24,7 @@ Generated automatically by `./gradlew architectureReport`.
 - [**core** (`:core`)](modules/core.md)
 - [**crypto** (`:core:crypto`)](modules/core-crypto.md)
 - [**datastore** (`:core:datastore`)](modules/core-datastore.md)
+- [**embedding** (`:core:embedding`)](modules/core-embedding.md)
 - [**protocol** (`:core:protocol`)](modules/core-protocol.md)
 - [**ui** (`:core:ui`)](modules/core-ui.md)
 
@@ -41,6 +42,8 @@ Generated automatically by `./gradlew architectureReport`.
 - [**identity** (`:feature:identity`)](modules/feature-identity.md)
 - [**messaging** (`:feature:messaging`)](modules/feature-messaging.md)
 - [**onboarding** (`:feature:onboarding`)](modules/feature-onboarding.md)
+- [**safety** (`:feature:safety`)](modules/feature-safety.md)
+- [**search** (`:feature:search`)](modules/feature-search.md)
 - [**settings** (`:feature:settings`)](modules/feature-settings.md)
 - [**transport** (`:feature:transport`)](modules/feature-transport.md)
 
@@ -96,6 +99,7 @@ graph TD
         module_core[":core"]
         module_core_crypto[":core:crypto"]
         module_core_datastore[":core:datastore"]
+        module_core_embedding[":core:embedding"]
         module_core_protocol[":core:protocol"]
         module_core_ui[":core:ui"]
     end
@@ -113,6 +117,8 @@ graph TD
         module_feature_identity[":feature:identity"]
         module_feature_messaging[":feature:messaging"]
         module_feature_onboarding[":feature:onboarding"]
+        module_feature_safety[":feature:safety"]
+        module_feature_search[":feature:search"]
         module_feature_settings[":feature:settings"]
         module_feature_transport[":feature:transport"]
     end
@@ -157,6 +163,8 @@ graph TD
     end
 
     module_androidApp --> module_shared
+    module_core_embedding --> module_core
+    module_core_embedding --> module_core_datastore
     module_core_protocol --> module_core
     module_core_ui --> module_resources
     module_data_database --> module_core
@@ -170,6 +178,7 @@ graph TD
     module_feature_chats --> module_feature_contactimport
     module_feature_chats --> module_feature_contacts
     module_feature_chats --> module_feature_identity
+    module_feature_chats --> module_feature_safety
     module_feature_contactimport --> module_core
     module_feature_contactimport --> module_core_ui
     module_feature_contactimport --> module_feature_contacts
@@ -193,10 +202,22 @@ graph TD
     module_feature_messaging --> module_feature_transport
     module_feature_onboarding --> module_core_ui
     module_feature_onboarding --> module_feature_identity
+    module_feature_safety --> module_core
+    module_feature_safety --> module_core_embedding
+    module_feature_safety --> module_core_ui
+    module_feature_safety --> module_data_database
+    module_feature_safety --> module_feature_contacts
+    module_feature_search --> module_core
+    module_feature_search --> module_core_embedding
+    module_feature_search --> module_core_ui
+    module_feature_search --> module_data_database
     module_feature_settings --> module_core
     module_feature_settings --> module_core_datastore
+    module_feature_settings --> module_core_embedding
     module_feature_settings --> module_core_ui
     module_feature_settings --> module_feature_identity
+    module_feature_settings --> module_feature_safety
+    module_feature_settings --> module_feature_search
     module_feature_transport --> module_core
     module_feature_transport --> module_core_crypto
     module_feature_transport --> module_core_datastore
@@ -208,6 +229,8 @@ graph TD
     module_navigation --> module_feature_contacts
     module_navigation --> module_feature_identity
     module_navigation --> module_feature_onboarding
+    module_navigation --> module_feature_safety
+    module_navigation --> module_feature_search
     module_navigation --> module_feature_settings
     module_navigation --> module_notification
     module_navigation --> module_startup
@@ -246,6 +269,7 @@ graph TD
     module_shared --> module_core
     module_shared --> module_core_crypto
     module_shared --> module_core_datastore
+    module_shared --> module_core_embedding
     module_shared --> module_core_protocol
     module_shared --> module_core_ui
     module_shared --> module_data_database
@@ -255,12 +279,18 @@ graph TD
     module_shared --> module_feature_identity
     module_shared --> module_feature_messaging
     module_shared --> module_feature_onboarding
+    module_shared --> module_feature_safety
+    module_shared --> module_feature_search
     module_shared --> module_feature_settings
     module_shared --> module_feature_transport
     module_shared --> module_navigation
     module_shared --> module_notification
     module_shared --> module_startup
+    module_startup --> module_core_embedding
     module_startup --> module_core_ui
     module_startup --> module_feature_identity
     module_startup --> module_feature_onboarding
+    module_startup --> module_feature_safety
+    module_startup --> module_feature_search
+    module_startup --> module_feature_transport
 ```

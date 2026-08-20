@@ -12,7 +12,7 @@ import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.IdentityHandshakeState
 import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
-import com.cbgm.sparrow.feature.safety.domain.usecase.AnalyzeMessageSafetyUseCase
+import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyAssessment
 import com.cbgm.sparrow.feature.safety.presentation.mapper.toWarningUiModel
 
 internal fun resolveContactName(
@@ -26,7 +26,7 @@ internal fun resolveContactName(
         ?: "Unknown contact"
 
 internal fun DirectMessage.toUiModel(
-    analyzeMessageSafety: AnalyzeMessageSafetyUseCase
+    safetyAssessments: Map<String, MessageSafetyAssessment>
 ): MessageBubbleModel =
     MessageBubbleModel(
         id = id,
@@ -39,7 +39,7 @@ internal fun DirectMessage.toUiModel(
             if (isMine || contentStatus != MessageContentStatus.READABLE) {
                 null
             } else {
-                analyzeMessageSafety(text).toWarningUiModel()
+                safetyAssessments[id]?.toWarningUiModel()
             }
     )
 
@@ -85,7 +85,7 @@ internal fun toDirectUiState(
     currentText: String,
     currentError: String?,
     contactTyping: Boolean,
-    analyzeMessageSafety: AnalyzeMessageSafetyUseCase
+    safetyAssessments: Map<String, MessageSafetyAssessment>
 ): DirectUiState {
     val isChatAuthorized = isDirectChatAuthorized(contact, handshake, setupMode)
     val composerState =
@@ -100,11 +100,11 @@ internal fun toDirectUiState(
         contactId = contactId,
         contactName = resolveContactName(contact, fallbackContactName),
         messages =
-            conversation
-                ?.messages
-                .orEmpty()
-                .asReversed()
-                .map { message -> message.toUiModel(analyzeMessageSafety) },
+            buildList {
+                for (message in conversation?.messages.orEmpty().asReversed()) {
+                    add(message.toUiModel(safetyAssessments))
+                }
+            },
         messageText = currentText,
         isContactTyping = contactTyping,
         contactSecurityState = contact.toSecurityState(),

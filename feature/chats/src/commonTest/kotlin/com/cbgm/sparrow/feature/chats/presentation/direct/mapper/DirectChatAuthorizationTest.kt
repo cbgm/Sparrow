@@ -93,6 +93,7 @@ class DirectChatAuthorizationTest {
             setupMode = DirectIdentitySetupMode.AUTOMATIC_INVITATION,
             currentText = "",
             currentError = null,
-            contactTyping = false
+            contactTyping = false,
+            safetyAssessments = emptyMap()
         )
 }

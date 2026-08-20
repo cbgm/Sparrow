@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonOff
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +41,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingModelState
+import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingState
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
@@ -47,6 +50,7 @@ import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyState
 import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
 import com.cbgm.sparrow.feature.settings.presentation.overview.components.LanguagePickerDialog
@@ -72,6 +76,13 @@ import com.cbgm.sparrow.resources.feature_settings_developer_menu
 import com.cbgm.sparrow.resources.feature_settings_developer_menu_subtitle
 import com.cbgm.sparrow.resources.feature_settings_general
 import com.cbgm.sparrow.resources.feature_settings_licenses_subtitle
+import com.cbgm.sparrow.resources.feature_settings_local_intelligence
+import com.cbgm.sparrow.resources.feature_settings_message_safety
+import com.cbgm.sparrow.resources.feature_settings_message_safety_analyzing
+import com.cbgm.sparrow.resources.feature_settings_message_safety_downloading
+import com.cbgm.sparrow.resources.feature_settings_message_safety_failed
+import com.cbgm.sparrow.resources.feature_settings_message_safety_ready
+import com.cbgm.sparrow.resources.feature_settings_message_safety_subtitle
 import com.cbgm.sparrow.resources.feature_settings_network
 import com.cbgm.sparrow.resources.feature_settings_open_source_licenses
 import com.cbgm.sparrow.resources.feature_settings_privacy_and_data
@@ -189,12 +200,12 @@ fun SettingsScreen(
             )
         }
 
-        SettingsSection(title = stringResource(Res.string.feature_settings_privacy_and_data)) {
+        SettingsSection(title = stringResource(Res.string.feature_settings_local_intelligence)) {
             SettingsSwitchRow(
                 icon = Icons.Default.Search,
                 title = stringResource(Res.string.feature_settings_semantic_search),
                 subtitle = semanticSearchSubtitle(uiState.semanticSearchState),
-                checked = uiState.semanticSearchState !is SemanticSearchState.Disabled,
+                checked = uiState.localEmbeddingState.semanticSearchEnabled,
                 onCheckedChange = { enabled ->
                     onUiEvent(SettingsUiEvent.SemanticSearchEnabledChanged(enabled))
                 }
@@ -202,6 +213,18 @@ fun SettingsScreen(
 
             SettingsDivider()
 
+            SettingsSwitchRow(
+                icon = Icons.Default.Security,
+                title = stringResource(Res.string.feature_settings_message_safety),
+                subtitle = messageSafetySubtitle(uiState.localEmbeddingState, uiState.messageSafetyState),
+                checked = uiState.localEmbeddingState.messageSafetyEnabled,
+                onCheckedChange = { enabled ->
+                    onUiEvent(SettingsUiEvent.MessageSafetyEnabledChanged(enabled))
+                }
+            )
+        }
+
+        SettingsSection(title = stringResource(Res.string.feature_settings_privacy_and_data)) {
             SettingsRow(
                 icon = Icons.Default.PrivacyTip,
                 title = stringResource(Res.string.feature_settings_privacy_policy),
@@ -286,6 +309,38 @@ private fun semanticSearchSubtitle(state: SemanticSearchState): String =
         SemanticSearchState.Ready -> stringResource(Res.string.feature_settings_semantic_search_ready)
         is SemanticSearchState.Failed -> stringResource(Res.string.feature_settings_semantic_search_failed)
     }
+
+@Composable
+private fun messageSafetySubtitle(
+    localEmbeddingState: LocalEmbeddingState,
+    messageSafetyState: MessageSafetyState
+): String {
+    if (!localEmbeddingState.messageSafetyEnabled) {
+        return stringResource(Res.string.feature_settings_message_safety_subtitle)
+    }
+
+    return when (val modelState = localEmbeddingState.modelState) {
+        LocalEmbeddingModelState.NotNeeded,
+        LocalEmbeddingModelState.Preparing -> stringResource(Res.string.feature_settings_message_safety_subtitle)
+        is LocalEmbeddingModelState.Downloading -> {
+            val percent = modelState.progress?.let { (it * 100).toInt().coerceIn(0, 100) }
+            if (percent == null) {
+                stringResource(Res.string.feature_settings_message_safety_downloading)
+            } else {
+                stringResource(Res.string.feature_settings_message_safety_downloading) + " $percent%"
+            }
+        }
+        is LocalEmbeddingModelState.Failed -> stringResource(Res.string.feature_settings_message_safety_failed)
+        LocalEmbeddingModelState.Ready ->
+            when (messageSafetyState) {
+                MessageSafetyState.Disabled,
+                MessageSafetyState.Preparing -> stringResource(Res.string.feature_settings_message_safety_subtitle)
+                MessageSafetyState.Analyzing -> stringResource(Res.string.feature_settings_message_safety_analyzing)
+                MessageSafetyState.Ready -> stringResource(Res.string.feature_settings_message_safety_ready)
+                is MessageSafetyState.Failed -> stringResource(Res.string.feature_settings_message_safety_failed)
+            }
+    }
+}
 
 @Composable
 private fun SettingsSection(

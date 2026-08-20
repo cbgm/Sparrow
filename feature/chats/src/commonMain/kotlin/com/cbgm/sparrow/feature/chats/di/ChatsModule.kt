@@ -340,7 +340,7 @@ private fun org.koin.core.module.Module.registerViewModels() {
             observeGroupAvatar = get(),
             observeMemberTyping = get(),
             setGroupTyping = get(),
-            analyzeMessageSafety = get()
+            observeMessageSafetyAssessments = get()
         )
     }
 
@@ -392,7 +392,7 @@ private fun org.koin.core.module.Module.registerViewModels() {
             observeProfilePictures = get(),
             observeTyping = get(),
             setTyping = get(),
-            analyzeMessageSafety = get()
+            observeMessageSafetyAssessments = get()
         )
     }
 }
