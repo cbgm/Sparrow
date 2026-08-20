@@ -4,6 +4,7 @@ import com.cbgm.sparrow.data.database.dao.MessageSearchDao
 import com.cbgm.sparrow.data.database.entity.MessageSearchEmbeddingEntity
 import com.cbgm.sparrow.feature.search.data.embedding.EmbeddingCodec
 import com.cbgm.sparrow.feature.search.data.embedding.normalizedPrefix
+import com.cbgm.sparrow.feature.search.data.mapper.toEmbeddingText
 import com.cbgm.sparrow.feature.search.data.model.SemanticSearchModel
 import com.cbgm.sparrow.feature.search.data.platform.EmbeddingInputType
 import com.cbgm.sparrow.feature.search.data.platform.LocalTextEmbedder
@@ -33,7 +34,7 @@ class MessageSearchIndexer(
             messages.forEach { message ->
                 val embedding =
                     embedder
-                        .embed(message.text, EmbeddingInputType.DOCUMENT)
+                        .embed(message.toEmbeddingText(), EmbeddingInputType.DOCUMENT)
                         .normalizedPrefix(SemanticSearchModel.OUTPUT_DIMENSIONS)
                 dao.upsertEmbedding(
                     MessageSearchEmbeddingEntity(

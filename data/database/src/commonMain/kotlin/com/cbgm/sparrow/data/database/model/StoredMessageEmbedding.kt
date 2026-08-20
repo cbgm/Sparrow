@@ -3,6 +3,7 @@ package com.cbgm.sparrow.data.database.model
 data class StoredMessageEmbedding(
     val messageId: String,
     val conversationId: String,
+    val senderName: String?,
     val conversationTitle: String?,
     val contactName: String?,
     val text: String,

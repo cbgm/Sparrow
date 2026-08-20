@@ -1,20 +1,18 @@
 package com.cbgm.sparrow.feature.search.data.platform
 
 import android.content.Context
+import android.os.ParcelFileDescriptor
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.text.textembedder.TextEmbedder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.FileInputStream
-import java.nio.MappedByteBuffer
-import java.nio.channels.FileChannel
 
 class MediaPipeLocalTextEmbedder(
     private val context: Context,
     private val modelManager: AndroidSemanticSearchModelManager
 ) : LocalTextEmbedder {
     private var textEmbedder: TextEmbedder? = null
-    private var mappedModel: MappedByteBuffer? = null
+    private var modelFileDescriptor: ParcelFileDescriptor? = null
 
     override suspend fun embed(
         text: String,
@@ -33,23 +31,39 @@ class MediaPipeLocalTextEmbedder(
     override fun close() {
         textEmbedder?.close()
         textEmbedder = null
-        mappedModel = null
+        modelFileDescriptor?.close()
+        modelFileDescriptor = null
     }
 
     private fun requireEmbedder(): TextEmbedder {
         textEmbedder?.let { return it }
+
         val modelFile = modelManager.requireVerifiedModelFile()
-        val mapped =
-            FileInputStream(modelFile).channel.use { channel ->
-                channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size())
+        val descriptor =
+            ParcelFileDescriptor.open(
+                modelFile,
+                ParcelFileDescriptor.MODE_READ_ONLY
+            )
+
+        return try {
+            val baseOptions =
+                BaseOptions
+                    .builder()
+                    .setModelAssetFileDescriptor(descriptor.fd)
+                    .build()
+            val options =
+                TextEmbedder.TextEmbedderOptions
+                    .builder()
+                    .setBaseOptions(baseOptions)
+                    .build()
+
+            TextEmbedder.createFromOptions(context, options).also { embedder ->
+                modelFileDescriptor = descriptor
+                textEmbedder = embedder
             }
-        mappedModel = mapped
-        val baseOptions = BaseOptions.builder().setModelAssetBuffer(mapped).build()
-        val options =
-            TextEmbedder.TextEmbedderOptions
-                .builder()
-                .setBaseOptions(baseOptions)
-                .build()
-        return TextEmbedder.createFromOptions(context, options).also { textEmbedder = it }
+        } catch (throwable: Throwable) {
+            descriptor.close()
+            throw throwable
+        }
     }
 }

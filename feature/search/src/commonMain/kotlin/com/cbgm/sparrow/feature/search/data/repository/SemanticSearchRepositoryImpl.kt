@@ -94,6 +94,19 @@ class SemanticSearchRepositoryImpl(
             indexedMessages
                 .asSequence()
                 .map { message ->
+                    val semanticScore =
+                        cosineSimilarity(
+                            queryEmbedding,
+                            EmbeddingCodec.decode(message.embedding)
+                        )
+                    val metadataBoost =
+                        metadataMatchBoost(
+                            query = query,
+                            senderName = message.senderName,
+                            conversationTitle = message.conversationTitle,
+                            contactName = message.contactName
+                        )
+
                     MessageSearchResult(
                         messageId = message.messageId,
                         conversationId = message.conversationId,
@@ -101,11 +114,94 @@ class SemanticSearchRepositoryImpl(
                         text = message.text,
                         createdAtEpochMilliseconds = message.createdAtEpochMilliseconds,
                         matchType = MessageSearchMatchType.SEMANTIC,
-                        score = cosineSimilarity(queryEmbedding, EmbeddingCodec.decode(message.embedding))
+                        score = (semanticScore + metadataBoost).coerceAtMost(1f)
                     )
+                }.filter { result ->
+                    (result.score ?: Float.NEGATIVE_INFINITY) >= MIN_SEMANTIC_SIMILARITY
                 }.sortedByDescending { it.score ?: Float.NEGATIVE_INFINITY }
-                .take(limit.coerceAtLeast(1))
+                .take(minOf(limit.coerceAtLeast(1), MAX_SEMANTIC_RESULTS))
                 .toList()
+        }
+    }
+
+    private companion object {
+        const val MIN_SEMANTIC_SIMILARITY = 0.60f
+        const val METADATA_MATCH_BOOST = 0.12f
+        const val MIN_METADATA_TOKEN_LENGTH = 3
+        const val MAX_SEMANTIC_RESULTS = 10
+    }
+
+    private fun metadataMatchBoost(
+        query: String,
+        senderName: String?,
+        conversationTitle: String?,
+        contactName: String?
+    ): Float {
+        val queryTokens = searchTokens(query)
+        if (queryTokens.isEmpty()) return 0f
+
+        val metadataTokens =
+            buildSet {
+                senderName?.let { addAll(searchTokens(it)) }
+                conversationTitle?.let { addAll(searchTokens(it)) }
+                contactName?.let { addAll(searchTokens(it)) }
+            }
+
+        return if (queryTokens.any(metadataTokens::contains)) {
+            METADATA_MATCH_BOOST
+        } else {
+            0f
+        }
+    }
+
+    private fun searchTokens(value: String): Set<String> =
+        value
+            .lowercase()
+            .split(
+                ' ',
+                '\n',
+                '\t',
+                ',',
+                '.',
+                ':',
+                ';',
+                '-',
+                '_',
+                '/',
+                '\\',
+                '(',
+                ')',
+                '[',
+                ']',
+                '{',
+                '}',
+                '?',
+                '!',
+                '"',
+                '\''
+            )
+            .asSequence()
+            .map(String::trim)
+            .filter { it.length >= MIN_METADATA_TOKEN_LENGTH }
+            .toSet()
+
+    private suspend fun validateEmbedder() {
+        val embedding =
+            embedder.embed(
+                text = "semantic search readiness check",
+                inputType = EmbeddingInputType.QUERY
+            )
+
+        check(embedding.size >= SemanticSearchModel.OUTPUT_DIMENSIONS) {
+            "Semantic search model returned ${embedding.size} dimensions; expected at least ${SemanticSearchModel.OUTPUT_DIMENSIONS}"
+        }
+        check(embedding.all { it.isFinite() }) {
+            "Semantic search model returned a non-finite embedding"
+        }
+
+        val normalized = embedding.normalizedPrefix(SemanticSearchModel.OUTPUT_DIMENSIONS)
+        check(normalized.any { it != 0f }) {
+            "Semantic search model returned an empty embedding"
         }
     }
 
@@ -117,6 +213,7 @@ class SemanticSearchRepositoryImpl(
                     mutableState.value = SemanticSearchState.DownloadingModel(progress)
                 }
             }
+            validateEmbedder()
             indexer.rebuild { processed, total ->
                 mutableState.value = SemanticSearchState.BuildingIndex(processed, total)
             }

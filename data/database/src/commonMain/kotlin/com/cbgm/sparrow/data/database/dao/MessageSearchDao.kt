@@ -15,9 +15,21 @@ interface MessageSearchDao {
         SELECT
             messages.id AS messageId,
             messages.conversationId AS conversationId,
+            CASE
+                WHEN messages.isMine = 0
+                    THEN COALESCE(sender_contacts.displayName, conversation_contacts.displayName)
+                ELSE NULL
+            END AS senderName,
+            conversations.title AS conversationTitle,
+            conversation_contacts.displayName AS contactName,
             messages.text AS text,
             messages.createdAtEpochMilliseconds AS createdAtEpochMilliseconds
         FROM messages
+        INNER JOIN conversations ON conversations.id = messages.conversationId
+        LEFT JOIN contacts AS conversation_contacts
+            ON conversation_contacts.id = conversations.contactId
+        LEFT JOIN contacts AS sender_contacts
+            ON sender_contacts.id = messages.senderContactId
         LEFT JOIN message_search_embeddings
             ON message_search_embeddings.messageId = messages.id
             AND message_search_embeddings.modelVersion = :modelVersion
@@ -67,12 +79,13 @@ interface MessageSearchDao {
             messages.id AS messageId,
             messages.conversationId AS conversationId,
             conversations.title AS conversationTitle,
-            contacts.displayName AS contactName,
+            conversation_contacts.displayName AS contactName,
             messages.text AS text,
             messages.createdAtEpochMilliseconds AS createdAtEpochMilliseconds
         FROM messages
         INNER JOIN conversations ON conversations.id = messages.conversationId
-        LEFT JOIN contacts ON contacts.id = conversations.contactId
+        LEFT JOIN contacts AS conversation_contacts
+            ON conversation_contacts.id = conversations.contactId
         WHERE messages.contentStatus = 'READABLE'
           AND TRIM(messages.text) != ''
           AND INSTR(LOWER(messages.text), LOWER(:query)) > 0
@@ -90,15 +103,23 @@ interface MessageSearchDao {
         SELECT
             messages.id AS messageId,
             messages.conversationId AS conversationId,
+            CASE
+                WHEN messages.isMine = 0
+                    THEN COALESCE(sender_contacts.displayName, conversation_contacts.displayName)
+                ELSE NULL
+            END AS senderName,
             conversations.title AS conversationTitle,
-            contacts.displayName AS contactName,
+            conversation_contacts.displayName AS contactName,
             messages.text AS text,
             messages.createdAtEpochMilliseconds AS createdAtEpochMilliseconds,
             message_search_embeddings.embedding AS embedding
         FROM message_search_embeddings
         INNER JOIN messages ON messages.id = message_search_embeddings.messageId
         INNER JOIN conversations ON conversations.id = messages.conversationId
-        LEFT JOIN contacts ON contacts.id = conversations.contactId
+        LEFT JOIN contacts AS conversation_contacts
+            ON conversation_contacts.id = conversations.contactId
+        LEFT JOIN contacts AS sender_contacts
+            ON sender_contacts.id = messages.senderContactId
         WHERE message_search_embeddings.modelVersion = :modelVersion
           AND messages.contentStatus = 'READABLE'
           AND TRIM(messages.text) != ''

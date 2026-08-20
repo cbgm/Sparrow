@@ -1,7 +1,11 @@
 package com.cbgm.sparrow.feature.search.data.model
 
 internal object SemanticSearchModel {
-    const val VERSION = 1
+    /**
+     * Version 2 embeds message metadata (sender and conversation) together with message text.
+     * Changing the embedding representation must bump this version so the derived index rebuilds.
+     */
+    const val VERSION = 2
     const val OUTPUT_DIMENSIONS = 128
     const val INDEX_BATCH_SIZE = 32
     const val MODEL_FILE_NAME = "embedding_gemma.task"
