@@ -57,6 +57,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun MainScreen(
     invitationCount: Int,
+    isMessageSearchAvailable: Boolean,
     onOpenSearch: () -> Unit,
     onOpenInvitations: () -> Unit,
     modifier: Modifier = Modifier
@@ -90,6 +91,7 @@ fun MainScreen(
                     selectedTab = selectedTab,
                     containerColor = containerColor,
                     invitationCount = invitationCount,
+                    isMessageSearchAvailable = isMessageSearchAvailable,
                     onOpenSearch = onOpenSearch,
                     onOpenInvitations = onOpenInvitations,
                     onAddChat = { showContactsOverlay = true }
@@ -134,6 +136,7 @@ private fun MainTopBar(
     selectedTab: MainTab,
     containerColor: Color,
     invitationCount: Int,
+    isMessageSearchAvailable: Boolean,
     onOpenSearch: () -> Unit,
     onOpenInvitations: () -> Unit,
     onAddChat: () -> Unit
@@ -148,11 +151,13 @@ private fun MainTopBar(
         },
         actions = {
             if (selectedTab == MainTab.Chats) {
-                IconButton(onClick = onOpenSearch) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = stringResource(Res.string.feature_search_open)
-                    )
+                if (isMessageSearchAvailable) {
+                    IconButton(onClick = onOpenSearch) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = stringResource(Res.string.feature_search_open)
+                        )
+                    }
                 }
                 IconButton(
                     onClick = onOpenInvitations,
@@ -278,6 +283,7 @@ private fun MainScreenPreview() {
     SparrowTheme {
         MainScreen(
             invitationCount = 0,
+            isMessageSearchAvailable = true,
             onOpenSearch = {},
             onOpenInvitations = {},
             modifier = Modifier.fillMaxSize()
