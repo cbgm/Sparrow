@@ -673,10 +673,9 @@ private fun MemberRow(
 
         if (showDivider) {
             HorizontalDivider(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(start = MaterialTheme.spacing.listDividerStart),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = MaterialTheme.spacing.listDividerStart),
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
             )
         }

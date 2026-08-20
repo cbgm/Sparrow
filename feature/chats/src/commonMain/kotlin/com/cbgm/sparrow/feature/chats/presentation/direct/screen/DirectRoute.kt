@@ -12,6 +12,7 @@ import org.koin.compose.viewmodel.koinViewModel
 fun DirectRoute(
     contactId: String,
     modifier: Modifier = Modifier,
+    targetMessageId: String? = null,
     viewModel: DirectViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -40,6 +41,7 @@ fun DirectRoute(
     DirectScreen(
         uiState = uiState,
         onUiEvent = viewModel::onUiEvent,
+        targetMessageId = targetMessageId,
         modifier = modifier
     )
 }

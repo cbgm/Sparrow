@@ -62,6 +62,8 @@ class DirectViewModel(
         savedStateHandle.requireRouteArgument<String>(AppRoute.Chat::contactId.name)
     private val fallbackContactName =
         savedStateHandle.requireRouteArgument<String>(AppRoute.Chat::contactName.name)
+    private val targetMessageId =
+        savedStateHandle.get<String>(AppRoute.Chat::targetMessageId.name)
     private val logger = SparrowLog.withTag("DirectViewModel")
     private val messageText = savedStateHandle.getMutableStateFlow(MESSAGE_TEXT_KEY, "")
     private val errorMessage = MutableStateFlow<String?>(null)
@@ -139,7 +141,12 @@ class DirectViewModel(
             DirectUiEvent.VerifyIdentityClicked -> verifyIdentity()
             DirectUiEvent.ShareIdentityClicked -> navigator.navigateTo(AppRoute.ShareIdentity)
             DirectUiEvent.ImportIdentityClicked -> navigator.navigateTo(AppRoute.ImportContact(contactId))
-            DirectUiEvent.BackClicked -> navigator.popBackStackTo(AppRoute.Main)
+            DirectUiEvent.BackClicked ->
+                if (targetMessageId != null) {
+                    navigator.popBackStack()
+                } else {
+                    navigator.popBackStackTo(AppRoute.Main)
+                }
         }
     }
 

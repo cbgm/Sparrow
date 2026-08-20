@@ -15,6 +15,8 @@ interface MessageSearchDao {
         SELECT
             messages.id AS messageId,
             messages.conversationId AS conversationId,
+            conversations.type AS conversationType,
+            conversations.contactId AS contactId,
             CASE
                 WHEN messages.isMine = 0
                     THEN COALESCE(sender_contacts.displayName, conversation_contacts.displayName)
@@ -78,6 +80,8 @@ interface MessageSearchDao {
         SELECT
             messages.id AS messageId,
             messages.conversationId AS conversationId,
+            conversations.type AS conversationType,
+            conversations.contactId AS contactId,
             conversations.title AS conversationTitle,
             conversation_contacts.displayName AS contactName,
             messages.text AS text,
@@ -103,6 +107,8 @@ interface MessageSearchDao {
         SELECT
             messages.id AS messageId,
             messages.conversationId AS conversationId,
+            conversations.type AS conversationType,
+            conversations.contactId AS contactId,
             CASE
                 WHEN messages.isMine = 0
                     THEN COALESCE(sender_contacts.displayName, conversation_contacts.displayName)

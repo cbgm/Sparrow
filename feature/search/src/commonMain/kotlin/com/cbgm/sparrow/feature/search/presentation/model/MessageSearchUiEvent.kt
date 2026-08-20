@@ -7,5 +7,9 @@ sealed interface MessageSearchUiEvent {
 
     data object ClearQueryClicked : MessageSearchUiEvent
 
+    data class ResultClicked(
+        val messageId: String
+    ) : MessageSearchUiEvent
+
     data object BackClicked : MessageSearchUiEvent
 }

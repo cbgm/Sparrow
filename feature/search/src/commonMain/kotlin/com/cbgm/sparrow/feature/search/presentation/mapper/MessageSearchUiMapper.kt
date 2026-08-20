@@ -10,6 +10,8 @@ internal fun MessageSearchResult.toUiModel(): MessageSearchResultUiModel =
     MessageSearchResultUiModel(
         messageId = messageId,
         conversationId = conversationId,
+        conversationType = conversationType,
+        contactId = contactId,
         conversationName = conversationName,
         text = text,
         timestamp = formatMessageSearchTimestamp(createdAtEpochMilliseconds)

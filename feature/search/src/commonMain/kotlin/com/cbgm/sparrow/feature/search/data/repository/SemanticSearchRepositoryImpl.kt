@@ -11,6 +11,7 @@ import com.cbgm.sparrow.feature.search.data.platform.EmbeddingInputType
 import com.cbgm.sparrow.feature.search.data.platform.LocalTextEmbedder
 import com.cbgm.sparrow.feature.search.data.platform.SemanticSearchModelManager
 import com.cbgm.sparrow.feature.search.data.storage.SemanticSearchSettingsStorage
+import com.cbgm.sparrow.feature.search.domain.model.MessageSearchConversationType
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchMatchType
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchResult
 import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
@@ -110,6 +111,8 @@ class SemanticSearchRepositoryImpl(
                     MessageSearchResult(
                         messageId = message.messageId,
                         conversationId = message.conversationId,
+                        conversationType = MessageSearchConversationType.valueOf(message.conversationType),
+                        contactId = message.contactId,
                         conversationName = conversationDisplayName(message.conversationTitle, message.contactName),
                         text = message.text,
                         createdAtEpochMilliseconds = message.createdAtEpochMilliseconds,

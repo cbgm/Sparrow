@@ -127,9 +127,10 @@ private fun Content(
                     }
 
                     HorizontalDivider(
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
                             .padding(start = MaterialTheme.spacing.listDividerStart),
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.itemDivider)
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
                     )
                 }
             }

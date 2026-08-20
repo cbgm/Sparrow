@@ -9,7 +9,7 @@ object Alpha {
     const val OpaqueBar = 0.97f
     const val OpaqueText = 0.6F
     const val divider = 0.2f
-    const val itemDivider = 0.05f
+    const val itemDivider = 0.20f
 
     object PatternBackground {
         const val default = 0.06f

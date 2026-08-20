@@ -65,6 +65,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageBubble
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageInput
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
+import com.cbgm.sparrow.feature.chats.presentation.component.rememberMessageSearchTargetState
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectComposerState
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiState
@@ -107,7 +108,8 @@ import org.jetbrains.compose.resources.stringResource
 fun DirectScreen(
     uiState: DirectUiState,
     onUiEvent: (DirectUiEvent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    targetMessageId: String? = null
 ) {
     var showIdentitySetupDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -141,6 +143,7 @@ fun DirectScreen(
             uiState = uiState,
             listState = listState,
             innerPadding = innerPadding,
+            targetMessageId = targetMessageId,
             onRetryMessage = { messageId ->
                 onUiEvent(DirectUiEvent.RetryMessage(messageId))
             }
@@ -319,20 +322,24 @@ private fun Content(
     uiState: DirectUiState,
     listState: LazyListState,
     innerPadding: PaddingValues,
+    targetMessageId: String?,
     onRetryMessage: (String) -> Unit
 ) {
     when {
         uiState.isLoading -> LoadingContent(
             modifier = Modifier.fillMaxSize().padding(innerPadding)
         )
+
         uiState.messages.isEmpty() -> EmptyContent(
             contactName = uiState.contactName,
             securityState = uiState.contactSecurityState,
             modifier = Modifier.fillMaxSize().padding(innerPadding)
         )
+
         else -> MessageList(
             messages = uiState.messages,
             listState = listState,
+            targetMessageId = targetMessageId,
             onRetryMessage = onRetryMessage,
             contentPadding = innerPadding
         )
@@ -343,12 +350,19 @@ private fun Content(
 private fun MessageList(
     messages: List<MessageBubbleModel>,
     listState: LazyListState,
+    targetMessageId: String?,
     onRetryMessage: (String) -> Unit,
     contentPadding: PaddingValues
 ) {
+    val searchTargetState =
+        rememberMessageSearchTargetState(
+            targetMessageId = targetMessageId,
+            messageIds = messages.map(MessageBubbleModel::id),
+            listState = listState
+        )
     val newestMessage = messages.firstOrNull()
     LaunchedEffect(newestMessage?.id) {
-        if (newestMessage?.isMine == true) {
+        if (searchTargetState.isHandled && newestMessage?.isMine == true) {
             listState.animateScrollToItem(index = 0)
         }
     }
@@ -369,7 +383,8 @@ private fun MessageList(
         items(items = messages, key = MessageBubbleModel::id) { message ->
             MessageBubble(
                 message = message,
-                onRetryClick = { onRetryMessage(message.id) }
+                onRetryClick = { onRetryMessage(message.id) },
+                isSearchHighlighted = message.id == searchTargetState.highlightedMessageId
             )
         }
     }
@@ -387,7 +402,10 @@ private fun EmptyContent(
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = stringResource(Res.string.feature_chats_start_conversation_with, contactName),
+                text = stringResource(
+                    Res.string.feature_chats_start_conversation_with,
+                    contactName
+                ),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -537,6 +555,7 @@ private fun SecurityAction(
                 )
             }
         }
+
         securityState == ContactSecurityState.MUTUAL_KEYS_UNVERIFIED ||
             securityState == ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_CONTACT -> {
             TextButton(onClick = onVerifyIdentity) {
@@ -573,6 +592,7 @@ private fun securityState(
                         stringResource(Res.string.feature_chats_chat_unencrypted_description)
                     }
             )
+
         ContactSecurityState.ONE_WAY_KEYS ->
             errorBanner(
                 icon = Icons.Default.LockOpen,
@@ -589,11 +609,13 @@ private fun securityState(
                         stringResource(Res.string.feature_chats_chat_key_exchange_incomplete_description)
                     }
             )
+
         ContactSecurityState.MUTUAL_KEYS_UNVERIFIED ->
             errorBanner(
                 title = stringResource(Res.string.feature_chats_chat_unverified_title),
                 description = stringResource(Res.string.feature_chats_chat_unverified_description)
             )
+
         ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_ME ->
             SecurityBannerState(
                 icon = Icons.Default.Schedule,
@@ -602,6 +624,7 @@ private fun securityState(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer
             )
+
         ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_CONTACT ->
             SecurityBannerState(
                 icon = Icons.Default.Security,
@@ -610,6 +633,7 @@ private fun securityState(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer
             )
+
         ContactSecurityState.MUTUAL_KEYS_VERIFIED -> null
     }
 

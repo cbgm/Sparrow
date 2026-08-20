@@ -30,6 +30,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowDialogListItem
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -341,7 +342,10 @@ private fun PromoteBeforeLeaveDialog(
                         onClick = { onSelect(contactId) }
                     )
                     if (index < members.lastIndex) {
-                        HorizontalDivider()
+                        HorizontalDivider(
+                            modifier = Modifier.weight(1f),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.divider)
+                        )
                     }
                 }
                 errorMessage?.let { message ->

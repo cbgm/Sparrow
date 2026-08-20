@@ -1,7 +1,9 @@
 package com.cbgm.sparrow.feature.search.presentation.screen
 
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.feature.search.domain.model.MessageSearchConversationType
 import com.cbgm.sparrow.feature.search.domain.usecase.ObserveSemanticSearchStateUseCase
 import com.cbgm.sparrow.feature.search.domain.usecase.SearchMessagesUseCase
 import com.cbgm.sparrow.feature.search.presentation.mapper.toMessageSearchMode
@@ -40,7 +42,35 @@ class MessageSearchViewModel(
         when (event) {
             is MessageSearchUiEvent.QueryChanged -> updateQuery(event.query)
             MessageSearchUiEvent.ClearQueryClicked -> updateQuery("")
+            is MessageSearchUiEvent.ResultClicked -> openResult(event.messageId)
             MessageSearchUiEvent.BackClicked -> navigator.popBackStack()
+        }
+    }
+
+    private fun openResult(messageId: String) {
+        val result = mutableUiState.value.results.firstOrNull { it.messageId == messageId } ?: return
+
+        when (result.conversationType) {
+            MessageSearchConversationType.DIRECT -> {
+                val contactId = result.contactId ?: return
+                val contactName = result.conversationName ?: return
+                navigator.navigateTo(
+                    AppRoute.Chat(
+                        conversationId = result.conversationId,
+                        contactId = contactId,
+                        contactName = contactName,
+                        targetMessageId = result.messageId
+                    )
+                )
+            }
+
+            MessageSearchConversationType.GROUP ->
+                navigator.navigateTo(
+                    AppRoute.GroupConversation(
+                        conversationId = result.conversationId,
+                        targetMessageId = result.messageId
+                    )
+                )
         }
     }
 

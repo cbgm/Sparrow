@@ -30,7 +30,8 @@ fun NavGraphBuilder.chatsNavGraph() {
         val destination = backStackEntry.toRoute<AppRoute.Chat>()
 
         DirectRoute(
-            contactId = destination.contactId
+            contactId = destination.contactId,
+            targetMessageId = destination.targetMessageId
         )
     }
 
@@ -39,7 +40,10 @@ fun NavGraphBuilder.chatsNavGraph() {
         exitTransition = { slideOutToRight() }
     ) { backStackEntry ->
         val destination = backStackEntry.toRoute<AppRoute.GroupConversation>()
-        GroupRoute(conversationId = destination.conversationId)
+        GroupRoute(
+            conversationId = destination.conversationId,
+            targetMessageId = destination.targetMessageId
+        )
     }
 
     composable<AppRoute.ContactDetails>(

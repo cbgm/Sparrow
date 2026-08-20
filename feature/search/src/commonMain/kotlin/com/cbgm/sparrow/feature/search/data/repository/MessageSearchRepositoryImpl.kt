@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.search.data.repository
 
 import com.cbgm.sparrow.data.database.dao.MessageSearchDao
 import com.cbgm.sparrow.data.database.model.StoredMessageSearchMatch
+import com.cbgm.sparrow.feature.search.domain.model.MessageSearchConversationType
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchMatchType
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchResult
 import com.cbgm.sparrow.feature.search.domain.repository.MessageSearchRepository
@@ -54,6 +55,8 @@ private fun StoredMessageSearchMatch.toDomain(): MessageSearchResult =
     MessageSearchResult(
         messageId = messageId,
         conversationId = conversationId,
+        conversationType = MessageSearchConversationType.valueOf(conversationType),
+        contactId = contactId,
         conversationName = conversationDisplayName(conversationTitle, contactName),
         text = text,
         createdAtEpochMilliseconds = createdAtEpochMilliseconds,
