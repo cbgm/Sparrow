@@ -85,8 +85,6 @@ class SemanticSearchRepositoryImpl(
                         matchType = MessageSearchMatchType.SEMANTIC,
                         score = cosineSimilarity(queryEmbedding, EmbeddingCodec.decode(message.embedding))
                     )
-                }.filter { result ->
-                    (result.score ?: Float.NEGATIVE_INFINITY) >= SemanticSearchModel.MIN_SIMILARITY
                 }.sortedByDescending { it.score ?: Float.NEGATIVE_INFINITY }
                 .take(limit.coerceAtLeast(1))
                 .toList()

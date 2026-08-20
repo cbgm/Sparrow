@@ -6,6 +6,7 @@ import com.cbgm.sparrow.feature.search.domain.model.MessageSearchMatchType
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchResult
 import com.cbgm.sparrow.feature.search.domain.repository.MessageSearchRepository
 import com.cbgm.sparrow.feature.search.domain.repository.SemanticSearchRepository
+import kotlinx.coroutines.CancellationException
 
 class MessageSearchRepositoryImpl(
     private val dao: MessageSearchDao,
@@ -27,18 +28,25 @@ class MessageSearchRepositoryImpl(
 
         if (exactResults.size >= resultLimit) return exactResults
 
-        val exactMessageIds = exactResults.mapTo(mutableSetOf()) { it.messageId }
         val semanticResults =
-            semanticSearchRepository
-                .search(
+            try {
+                semanticSearchRepository.search(
                     query = normalizedQuery,
                     limit = resultLimit
-                ).asSequence()
+                )
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Throwable) {
+                return exactResults
+            }
+
+        val exactMessageIds = exactResults.mapTo(mutableSetOf()) { it.messageId }
+        return exactResults +
+            semanticResults
+                .asSequence()
                 .filterNot { it.messageId in exactMessageIds }
                 .take(resultLimit - exactResults.size)
                 .toList()
-
-        return exactResults + semanticResults
     }
 }
 
