@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sparrow-safety-training"
+version = "0.5.0"
+description = "Automatic local-teacher dataset and linear-classifier pipeline for Sparrow Safety"
+requires-python = ">=3.11"
+dependencies = [
+  "datasets>=3.0,<5",
+  "huggingface-hub>=0.34,<2",
+  "mediapipe==1.0.0",
+  "numpy>=1.26,<3",
+  "pandas>=2.2,<3",
+  "scikit-learn>=1.5,<2",
+  "tqdm>=4.66,<5",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10"]
+hf-embedding = ["sentence-transformers>=5.0,<6"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["sparrow_safety_training*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
