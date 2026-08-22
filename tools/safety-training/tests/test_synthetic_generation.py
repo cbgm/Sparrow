@@ -196,7 +196,7 @@ def test_generator_splits_batch_after_structured_retries_fail(monkeypatch: pytes
     generator = OllamaContrastiveGenerator(model="fake", max_retries=2)
     attempted_sizes: list[int] = []
 
-    def fake_batch(*, target_label, language, global_indices):
+    def fake_batch(*, target_label, language, global_indices, extra_guidance=None):
         attempted_sizes.append(len(global_indices))
         if len(global_indices) > 1:
             raise RuntimeError("invalid structured generation")

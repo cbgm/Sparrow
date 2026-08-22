@@ -48,3 +48,41 @@ def test_threshold_enforces_false_positive_rate_constraint() -> None:
     )
     assert details["constraints_satisfied"] is True
     assert details["validation_false_positive_rate"] == 0.0
+
+
+def test_threshold_can_require_behavioral_contract_exactness() -> None:
+    truth = np.asarray([1, 1, 0, 0], dtype=np.int32)
+    probabilities = np.asarray([0.95, 0.80, 0.20, 0.10], dtype=np.float64)
+    contract_truth = np.asarray([1, 0], dtype=np.int32)
+    contract_probabilities = np.asarray([0.75, 0.60], dtype=np.float64)
+    threshold, details = choose_threshold(
+        truth,
+        probabilities,
+        min_precision=0.80,
+        min_recall=0.50,
+        max_false_positive_rate=0.50,
+        behavioral_contract_truth=contract_truth,
+        behavioral_contract_probabilities=contract_probabilities,
+    )
+    assert 0.60 < threshold <= 0.75
+    assert details["constraints_satisfied"] is True
+    assert details["behavioral_contract_satisfied"] is True
+    assert details["behavioral_contract_errors"] == 0
+
+
+def test_threshold_rejects_validation_candidate_that_breaks_behavioral_contract() -> None:
+    truth = np.asarray([1, 1, 0, 0], dtype=np.int32)
+    probabilities = np.asarray([0.95, 0.80, 0.20, 0.10], dtype=np.float64)
+    contract_truth = np.asarray([1, 0], dtype=np.int32)
+    contract_probabilities = np.asarray([0.55, 0.70], dtype=np.float64)
+    _, details = choose_threshold(
+        truth,
+        probabilities,
+        min_precision=0.80,
+        min_recall=0.50,
+        max_false_positive_rate=0.50,
+        behavioral_contract_truth=contract_truth,
+        behavioral_contract_probabilities=contract_probabilities,
+    )
+    assert details["constraints_satisfied"] is False
+    assert details["behavioral_contract_satisfied"] is False

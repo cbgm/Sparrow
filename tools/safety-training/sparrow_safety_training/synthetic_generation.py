@@ -69,8 +69,9 @@ def _generation_schema(pair_count: int) -> dict[str, Any]:
     }
 
 
-def _generation_system_prompt(target_label: str, language: str) -> str:
+def _generation_system_prompt(target_label: str, language: str, extra_guidance: str | None = None) -> str:
     language_name = _LANGUAGE_NAME.get(language, language)
+    focus = f"\nAdditional behavioral focus:\n{extra_guidance.strip()}\n" if extra_guidance else ""
     return f"""You generate diverse contrastive training pairs for Sparrow, a messaging safety classifier.
 Generate natural {language_name} chat/SMS-style messages only.
 
@@ -89,7 +90,7 @@ For EVERY pair:
 - Do not quote or explain the labels in the generated message text.
 - Do not make the negative a trivial unrelated sentence.
 - Never include an actual usable secret, real account number, or real private key.
-
+{focus}
 Return only data matching the supplied JSON schema.
 """
 
@@ -130,6 +131,7 @@ class OllamaContrastiveGenerator:
         target_label: str,
         language: str,
         global_indices: list[int],
+        extra_guidance: str | None = None,
     ) -> list[GeneratedPair]:
         if not global_indices:
             return []
@@ -139,6 +141,7 @@ class OllamaContrastiveGenerator:
                 target_label=target_label,
                 language=language,
                 global_indices=global_indices,
+                extra_guidance=extra_guidance,
             )
         except RuntimeError as exc:
             # Local LLMs occasionally violate even a strict JSON schema for larger batches.
@@ -164,11 +167,13 @@ class OllamaContrastiveGenerator:
                     target_label=target_label,
                     language=language,
                     global_indices=left,
+                    extra_guidance=extra_guidance,
                 ),
                 *self.generate(
                     target_label=target_label,
                     language=language,
                     global_indices=right,
+                    extra_guidance=extra_guidance,
                 ),
             ]
 
@@ -178,6 +183,7 @@ class OllamaContrastiveGenerator:
         target_label: str,
         language: str,
         global_indices: list[int],
+        extra_guidance: str | None = None,
     ) -> list[GeneratedPair]:
         last_error: Exception | None = None
         temperatures = (0.85, 0.55, 0.20)
@@ -187,7 +193,7 @@ class OllamaContrastiveGenerator:
             body = {
                 "model": self.model,
                 "messages": [
-                    {"role": "system", "content": _generation_system_prompt(target_label, language)},
+                    {"role": "system", "content": _generation_system_prompt(target_label, language, extra_guidance)},
                     {"role": "user", "content": _generation_user_prompt(global_indices)},
                 ],
                 "stream": False,

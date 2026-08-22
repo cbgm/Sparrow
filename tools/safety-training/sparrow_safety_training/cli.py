@@ -6,6 +6,8 @@ from pathlib import Path
 
 from . import DEFAULT_EMBEDDING_BACKEND, DEFAULT_INPUT_MODE, DEFAULT_MODEL_ID, EMBEDDING_DIMENSIONS, LABELS
 from .annotation import merge_reviewed_annotations, prepare_annotation_csv
+from .behavioral_augmentation import generate_behavioral_augmentation
+from .behavioral_gate import enforce_behavioral_contract
 from .teacher_labeling import DEFAULT_OLLAMA_ENDPOINT, auto_label_dataset
 from .clustering import assign_near_duplicate_clusters
 from .embedding import embed_dataset
@@ -20,7 +22,7 @@ from .splitting import split_by_cluster
 from .support import assess_cluster_support
 from .synthetic_generation import generate_and_validate_targeted_data
 from .quality_gate import enforce_quality_gate
-from .training import train_linear_heads
+from .training import train_mlp_heads
 
 
 def _parse_pair_overrides(values: list[str]) -> dict[str, int]:
@@ -114,6 +116,30 @@ def main(argv: list[str] | None = None) -> None:
     generate.add_argument("--timeout-seconds", type=float, default=240.0)
     generate.add_argument("--max-retries", type=int, default=3)
 
+
+    behavioral = subparsers.add_parser(
+        "generate-behavioral",
+        help="Generate focused behavioral contrastive augmentation while holding product-contract messages out of training",
+    )
+    behavioral.add_argument("--base-input", type=Path, required=True)
+    behavioral.add_argument("--contract", type=Path, required=True)
+    behavioral.add_argument("--output", type=Path, required=True)
+    behavioral.add_argument("--generated-output", type=Path, required=True)
+    behavioral.add_argument("--rejected-output", type=Path, required=True)
+    behavioral.add_argument("--report", type=Path, required=True)
+    behavioral.add_argument("--generation-cache", type=Path, required=True)
+    behavioral.add_argument("--validation-cache", type=Path, required=True)
+    behavioral.add_argument("--generator-model", default="qwen3:8b")
+    behavioral.add_argument("--validator-model-a", default="qwen3:8b")
+    behavioral.add_argument("--validator-model-b", default="gemma3:12b")
+    behavioral.add_argument("--endpoint", default=DEFAULT_OLLAMA_ENDPOINT)
+    behavioral.add_argument("--pairs-per-focus", type=int, default=150)
+    behavioral.add_argument("--generation-batch-size", type=int, default=8)
+    behavioral.add_argument("--validation-batch-size", type=int, default=16)
+    behavioral.add_argument("--min-confidence", type=float, default=0.90)
+    behavioral.add_argument("--timeout-seconds", type=float, default=240.0)
+    behavioral.add_argument("--max-retries", type=int, default=3)
+
     embed = subparsers.add_parser("embed", help="Embed reviewed messages with EmbeddingGemma")
     embed.add_argument("--input", type=Path, required=True)
     embed.add_argument("--output", type=Path, required=True)
@@ -152,10 +178,18 @@ def main(argv: list[str] | None = None) -> None:
     train.add_argument("--min-validation-precision", type=float, default=0.80)
     train.add_argument("--min-validation-recall", type=float, default=0.50)
     train.add_argument("--max-validation-fpr", type=float, default=0.02)
+    train.add_argument("--behavioral-contract", type=Path, default=None)
+    train.add_argument("--behavioral-contract-embeddings", type=Path, default=None)
 
     evaluate = subparsers.add_parser("evaluate", help="Render the JSON training report as Markdown")
     evaluate.add_argument("--report", type=Path, required=True)
     evaluate.add_argument("--output", type=Path, required=True)
+
+    behavioral_gate = subparsers.add_parser("behavioral-gate", help="Require every frozen Sparrow behavioral contract example to classify exactly as intended")
+    behavioral_gate.add_argument("--model", type=Path, required=True)
+    behavioral_gate.add_argument("--contract", type=Path, required=True)
+    behavioral_gate.add_argument("--embeddings", type=Path, required=True)
+    behavioral_gate.add_argument("--output", type=Path, required=True)
 
     gate = subparsers.add_parser("quality-gate", help="Refuse export when test support/metrics are still too weak")
     gate.add_argument("--report", type=Path, required=True)
@@ -231,6 +265,27 @@ def main(argv: list[str] | None = None) -> None:
             timeout_seconds=args.timeout_seconds,
             max_retries=args.max_retries,
         )
+    elif args.command == "generate-behavioral":
+        result = generate_behavioral_augmentation(
+            args.base_input,
+            args.contract,
+            args.output,
+            args.generated_output,
+            args.rejected_output,
+            args.report,
+            args.generation_cache,
+            args.validation_cache,
+            generator_model=args.generator_model,
+            validator_model_a=args.validator_model_a,
+            validator_model_b=args.validator_model_b,
+            endpoint=args.endpoint,
+            pairs_per_focus=args.pairs_per_focus,
+            generation_batch_size=args.generation_batch_size,
+            validation_batch_size=args.validation_batch_size,
+            min_confidence=args.min_confidence,
+            timeout_seconds=args.timeout_seconds,
+            max_retries=args.max_retries,
+        )
     elif args.command == "embed":
         result = embed_dataset(
             args.input,
@@ -258,12 +313,14 @@ def main(argv: list[str] | None = None) -> None:
     elif args.command == "split":
         result = split_by_cluster(args.input, args.output, seed=args.seed)
     elif args.command == "train":
-        result = train_linear_heads(
+        result = train_mlp_heads(
             args.input,
             args.embeddings,
             args.embedding_metadata,
             args.output_model,
             args.output_report,
+            behavioral_contract_path=args.behavioral_contract,
+            behavioral_contract_embeddings_path=args.behavioral_contract_embeddings,
             min_validation_precision=args.min_validation_precision,
             min_validation_recall=args.min_validation_recall,
             max_validation_false_positive_rate=args.max_validation_fpr,
@@ -271,6 +328,13 @@ def main(argv: list[str] | None = None) -> None:
     elif args.command == "evaluate":
         text = render_markdown_report(args.report, args.output)
         result = {"output": str(args.output), "characters": len(text)}
+    elif args.command == "behavioral-gate":
+        result = enforce_behavioral_contract(
+            args.model,
+            args.contract,
+            args.embeddings,
+            args.output,
+        )
     elif args.command == "quality-gate":
         result = enforce_quality_gate(
             args.report,

@@ -1,5 +1,8 @@
 # Sparrow Safety Training — Balanced Automatic Pipeline (Windows)
 
+> **v10 note:** Aggregate precision/recall alone was not sufficient for Sparrow Safety. A deployed v9 linear model could pass the held-out gate while still confusing a received verification code with a credential request and missing natural German urgency/payment requests. v10 therefore adds focused EN/DE behavioral augmentation, a tiny nonlinear MLP classifier, and a strict product behavioral contract gate before Kotlin export.
+
+
 This project builds Sparrow's four semantic Safety classifiers without manually labeling thousands of messages.
 
 The normal workflow is now:
@@ -367,18 +370,26 @@ and matching negative support.
 
 If this stage fails, add/diversify data. Do not weaken the guard simply to make training pass.
 
-## 9/12 — Train four linear heads + choose thresholds from validation only
+## v10 — Focused behavioral augmentation + tiny nonlinear MLP heads
 
-Creates:
+v10 adds a focused behavioral augmentation stage for the failure modes that a single linear hyperplane underfit:
+
+- credential request vs. credential notification/status (for example, a message that merely contains a verification code),
+- coercive urgency vs. ordinary deadlines/status,
+- payment request vs. completed/payment-status discussion,
+- each in English and German.
+
+It then creates:
 
 ```text
-artifacts\message-safety-linear-model.json
+artifacts\message-safety-mlp-model.json
 artifacts\evaluation.json
+artifacts\behavioral-gate.json
 ```
 
-EmbeddingGemma stays frozen. Only four tiny logistic-regression heads are trained.
+EmbeddingGemma stays frozen. Each Safety reason gets a tiny one-hidden-layer MLP (`128 -> 16/32 -> 1`). The trainer balances the binary training rows, tries a small hidden-size/regularization grid, and chooses a threshold using validation constraints plus the explicit product behavioral contract. The statistical test split is still held out from model fitting and is evaluated only after selection.
 
-For each label the trainer tries several logistic-regression regularization values (`C = 0.1, 0.3, 1, 3, 10`) and threshold candidates using the **validation split only**. The selected combination must satisfy the same deployment constraints used by the development gate:
+The selected combination must satisfy:
 
 ```text
 validation precision >= 0.80
@@ -386,18 +397,17 @@ validation recall >= 0.50
 validation FPR <= 0.02
 ```
 
-Among valid combinations, the trainer chooses the best validation F1. The test split is never used to choose `C` or the threshold. If validation itself cannot satisfy these constraints, training stops and tells you to add/diversify data or change the model family rather than tuning against the test set.
+Among valid combinations, the trainer chooses the best validation F1. The test split is never used for fitting or threshold selection. The behavioral contract is a strict product acceptance suite, not a statistical benchmark; it prevents exporting models that repeat known intent failures even when aggregate metrics look acceptable.
 
+## Resume from the completed v9 dataset
 
-## Resume after a stage-11 quality-gate failure
-
-If stages 1-8 already completed and the previous run only failed at the quality gate, v9 does **not** require Ollama generation or EmbeddingGemma to run again. Use:
+If the v9 public labeling, original generated dataset, and embeddings already exist, do **not** rerun them. Use:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\resume_from_training.ps1
+powershell -ExecutionPolicy Bypass -File .\resume_behavioral_retraining.ps1
 ```
 
-This reuses `split.jsonl` and the existing embeddings, retrains the linear heads with validation-only constraint selection, reevaluates the untouched test split, and exports only if the gate passes.
+This reuses `data\processed\labeled.jsonl`, the existing generation caches, and compatible embeddings. It generates only the six focused behavioral packs, embeds only new accepted rows, retrains the MLP heads, runs both gates, and exports only when both pass.
 
 ## 10/12 — Evaluation Markdown
 
@@ -435,7 +445,7 @@ This automated gate still does not replace a future frozen human-reviewed real-w
 Creates:
 
 ```text
-artifacts\GeneratedMessageSafetyLinearModel.kt
+artifacts\GeneratedMessageSafetyMlpModel.kt
 artifacts\embedding-parity.json
 ```
 
@@ -498,10 +508,13 @@ Send these files:
 ```text
 artifacts\evaluation.md
 artifacts\quality-gate.json
+artifacts\behavioral-gate.json
 data\labels\auto_label_report.json
 data\generated\report.json
+data\generated\behavioral-report.json
 models\embedding_gemma.metadata.json
-artifacts\message-safety-linear-model.json
+artifacts\message-safety-mlp-model.json
+artifacts\GeneratedMessageSafetyMlpModel.kt
 artifacts\embedding-parity.json
 ```
 

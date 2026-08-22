@@ -10,6 +10,7 @@ param(
     [int]$PairsPerLabelLanguage = 200,
     [int]$RefillPairsPerLabelLanguage = 200,
     [int]$MaxRefillRounds = 4,
+    [int]$BehavioralPairsPerFocus = 150,
     [int]$GenerationBatchSize = 8,
     [int]$ValidationBatchSize = 16,
     [int]$MinTestPositives = 20,
@@ -44,7 +45,7 @@ function Ensure-OllamaModel {
     }
 }
 
-Write-Host "== Sparrow Safety Training: balanced automatic run =="
+Write-Host "== Sparrow Safety Training v10: balanced + behavioral automatic run =="
 Write-Host "Public teacher A:       $PublicTeacherModelA"
 Write-Host "Public teacher B:       $PublicTeacherModelB"
 Write-Host "Generator:              $GeneratorModel"
@@ -241,67 +242,21 @@ if (-not $supportReady) {
     throw "Automatic targeted refilling exhausted $MaxRefillRounds refill round(s) without enough post-clustering label support. See data\generated\support.json and data\generated\report.json. Increase -MaxRefillRounds or -RefillPairsPerLabelLanguage; do not lower the split requirements."
 }
 
-Write-Host "[8/12] Creating leakage-safe train/validation/test splits with stronger per-label support..."
-Run-Python @(
-    ".\split.py",
-    "--input", ".\data\processed\clustered.jsonl",
-    "--output", ".\data\processed\split.jsonl"
-)
-
-Write-Host "[9/12] Training/choosing thresholds from validation-only deployment constraints..."
-Run-Python @(
-    ".\train.py",
-    "--input", ".\data\processed\split.jsonl",
-    "--embeddings", ".\data\embeddings\labeled-128.npz",
-    "--embedding-metadata", ".\data\embeddings\metadata.json",
-    "--output-model", ".\artifacts\message-safety-linear-model.json",
-    "--output-report", ".\artifacts\evaluation.json",
-    "--min-validation-precision", $MinTestPrecision.ToString([System.Globalization.CultureInfo]::InvariantCulture),
-    "--min-validation-recall", $MinTestRecall.ToString([System.Globalization.CultureInfo]::InvariantCulture),
-    "--max-validation-fpr", $MaxTestFpr.ToString([System.Globalization.CultureInfo]::InvariantCulture)
-)
-
-Write-Host "[10/12] Rendering evaluation report..."
-Run-Python @(
-    ".\evaluate.py",
-    "--report", ".\artifacts\evaluation.json",
-    "--output", ".\artifacts\evaluation.md"
-)
-
-Write-Host "[11/12] Enforcing classifier quality gate BEFORE Kotlin export..."
-Run-Python @(
-    ".\quality_gate.py",
-    "--report", ".\artifacts\evaluation.json",
-    "--output", ".\artifacts\quality-gate.json",
-    "--min-test-positives", $MinTestPositives.ToString(),
-    "--min-test-precision", $MinTestPrecision.ToString([System.Globalization.CultureInfo]::InvariantCulture),
-    "--min-test-recall", $MinTestRecall.ToString([System.Globalization.CultureInfo]::InvariantCulture),
-    "--max-test-fpr", $MaxTestFpr.ToString([System.Globalization.CultureInfo]::InvariantCulture)
-)
-
-Write-Host "[12/12] Quality gate passed. Exporting Kotlin model and Android parity samples..."
-Run-Python @(
-    ".\export_kotlin.py",
-    "--model", ".\artifacts\message-safety-linear-model.json",
-    "--output", ".\artifacts\GeneratedMessageSafetyLinearModel.kt"
-)
-Run-Python @(
-    ".\export_parity.py",
-    "--input", ".\data\processed\split.jsonl",
-    "--embeddings", ".\data\embeddings\labeled-128.npz",
-    "--output", ".\artifacts\embedding-parity.json"
-)
-
 Write-Host ""
-Write-Host "BALANCED AUTOMATIC TRAINING RUN COMPLETE"
-Write-Host ""
-Write-Host "Send these files back for review:"
-Write-Host "  artifacts\evaluation.md"
-Write-Host "  artifacts\quality-gate.json"
-Write-Host "  data\labels\auto_label_report.json"
-Write-Host "  data\generated\report.json"
-Write-Host "  models\embedding_gemma.metadata.json"
-Write-Host "  artifacts\message-safety-linear-model.json"
-Write-Host "  artifacts\embedding-parity.json"
-Write-Host ""
-Write-Host "No manual labeling is required. Rejected public/generated rows are excluded automatically."
+Write-Host "Base v9-style dataset has sufficient post-clustering support."
+Write-Host "Continuing with v10 focused behavioral augmentation + nonlinear retraining..."
+& .\resume_behavioral_retraining.ps1 `
+    -GeneratorModel $GeneratorModel `
+    -ValidatorModelA $ValidatorModelA `
+    -ValidatorModelB $ValidatorModelB `
+    -PairsPerFocus $BehavioralPairsPerFocus `
+    -GenerationBatchSize $GenerationBatchSize `
+    -ValidationBatchSize $ValidationBatchSize `
+    -MinConfidence $MinConfidence `
+    -MinTestPositives $MinTestPositives `
+    -MinTestPrecision $MinTestPrecision `
+    -MinTestRecall $MinTestRecall `
+    -MaxTestFpr $MaxTestFpr
+if ($LASTEXITCODE -ne 0) {
+    throw "v10 behavioral retraining failed"
+}
