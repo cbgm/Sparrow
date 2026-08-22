@@ -1,81 +1,103 @@
 package com.cbgm.sparrow.feature.safety.data.classifier
 
+import com.cbgm.sparrow.core.embedding.data.model.LocalEmbeddingModel
+import com.cbgm.sparrow.core.embedding.data.model.normalizedPrefix
 import com.cbgm.sparrow.core.embedding.data.platform.EmbeddingInputType
 import com.cbgm.sparrow.core.embedding.data.platform.LocalTextEmbedder
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyReason
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class EmbeddingMessageSafetyClassifierTest {
     @Test
-    fun usesSemanticSimilarityInsteadOfLiteralPhrases() = runTest {
-        val classifier = EmbeddingMessageSafetyClassifier(FakeSemanticEmbedder())
+    fun blankTextDoesNotRunEmbeddingInference() = runTest {
+        val embedder = RecordingEmbedder(FloatArray(LocalEmbeddingModel.OUTPUT_DIMENSIONS))
+        val classifier = EmbeddingMessageSafetyClassifier(embedder)
 
-        val credentialReasons = classifier.classify("Could you confirm the secret used to access your account?")
-        val paymentReasons = classifier.classify("I need you to settle an unusual financial request.")
-
-        assertTrue(MessageSafetyReason.CREDENTIAL_REQUEST in credentialReasons)
-        assertTrue(MessageSafetyReason.PAYMENT_REQUEST in paymentReasons)
+        assertTrue(classifier.classify("   ").isEmpty())
+        assertEquals(0, embedder.calls)
     }
 
     @Test
-    fun securityAdviceDoesNotBecomeCredentialOrPrivateKeyRequest() = runTest {
-        val classifier = EmbeddingMessageSafetyClassifier(FakeSemanticEmbedder())
+    fun usesSemanticSimilarityEmbeddingInput() = runTest {
+        val embedder = RecordingEmbedder(FloatArray(LocalEmbeddingModel.OUTPUT_DIMENSIONS))
+        val classifier = EmbeddingMessageSafetyClassifier(embedder)
 
-        val credentialAdvice = classifier.classify("Never share your password or verification code with anyone.")
-        val walletAdvice = classifier.classify("Keep your recovery phrase private and never send it in a chat.")
+        classifier.classify("ordinary message")
 
-        assertFalse(MessageSafetyReason.CREDENTIAL_REQUEST in credentialAdvice)
-        assertFalse(MessageSafetyReason.PRIVATE_KEY_REQUEST in walletAdvice)
+        assertEquals(EmbeddingInputType.SEMANTIC_SIMILARITY, embedder.lastInputType)
+        assertEquals("ordinary message", embedder.lastText)
     }
 
     @Test
-    fun normalPaymentAndDeadlineDiscussionDoesNotBecomeFraudIntent() = runTest {
-        val classifier = EmbeddingMessageSafetyClassifier(FakeSemanticEmbedder())
+    fun trainedHeadCanActivateEachSemanticReason() = runTest {
+        GeneratedMessageSafetyLinearModel.byReason.forEach { (reason, head) ->
+            val classifier = EmbeddingMessageSafetyClassifier(RecordingEmbedder(head.weights.normalized()))
 
-        val paymentDiscussion = classifier.classify("I already paid the invoice yesterday and kept the receipt.")
-        val deadlineReminder = classifier.classify("Reminder: our appointment is tomorrow at ten.")
+            val reasons = classifier.classify("test message")
 
-        assertFalse(MessageSafetyReason.PAYMENT_REQUEST in paymentDiscussion)
-        assertFalse(MessageSafetyReason.URGENT_ACTION_REQUEST in deadlineReminder)
+            assertTrue(reason in reasons, "Expected trained head for $reason to activate")
+        }
+    }
+
+    @Test
+    fun zeroEmbeddingDoesNotEmitSemanticReasons() = runTest {
+        val classifier =
+            EmbeddingMessageSafetyClassifier(
+                RecordingEmbedder(FloatArray(LocalEmbeddingModel.OUTPUT_DIMENSIONS))
+            )
+
+        assertTrue(classifier.classify("ordinary message").isEmpty())
+    }
+
+    @Test
+    fun semanticClassifierNeverEmitsStructuralReasons() {
+        val structuralReasons =
+            setOf(
+                MessageSafetyReason.SUSPICIOUS_LINK,
+                MessageSafetyReason.LOOKALIKE_DOMAIN,
+                MessageSafetyReason.MIXED_SCRIPT_DOMAIN,
+                MessageSafetyReason.IP_ADDRESS_LINK,
+                MessageSafetyReason.URL_SHORTENER
+            )
+
+        assertTrue(GeneratedMessageSafetyLinearModel.byReason.keys.none(structuralReasons::contains))
+    }
+
+    @Test
+    fun generatedModelMatchesPinnedEmbeddingRuntime() {
+        assertEquals(LocalEmbeddingModel.OUTPUT_DIMENSIONS, GeneratedMessageSafetyLinearModel.EMBEDDING_DIMENSIONS)
+        assertEquals(LocalEmbeddingModel.MODEL_FILE_NAME, GeneratedMessageSafetyLinearModel.EMBEDDING_MODEL_ID)
+        assertEquals(LocalEmbeddingModel.MODEL_SHA256, GeneratedMessageSafetyLinearModel.EMBEDDING_MODEL_SHA256)
+        assertEquals("sentence_similarity", GeneratedMessageSafetyLinearModel.EMBEDDING_INPUT_MODE)
+        assertFalse(GeneratedMessageSafetyLinearModel.TRAINING_DATASET_SHA256.isBlank())
     }
 }
 
-private class FakeSemanticEmbedder : LocalTextEmbedder {
+private class RecordingEmbedder(
+    private val result: FloatArray
+) : LocalTextEmbedder {
+    var calls: Int = 0
+        private set
+    var lastText: String? = null
+        private set
+    var lastInputType: EmbeddingInputType? = null
+        private set
+
     override suspend fun embed(
         text: String,
         inputType: EmbeddingInputType
     ): FloatArray {
-        val normalized = text.lowercase()
-        return when {
-            "security or account conversation" in normalized ||
-                "sicherheits- oder kontounterhaltung" in normalized -> vector(4)
-            "security or educational conversation" in normalized ||
-                "sicherheits- oder lernunterhaltung" in normalized -> vector(6)
-            "normal conversation about a price" in normalized ||
-                "normale unterhaltung über preis" in normalized -> vector(5)
-            "normal reminder or conversation" in normalized ||
-                "normale erinnerung oder unterhaltung" in normalized -> vector(7)
-            "never share your password" in normalized || "verification code with anyone" in normalized -> vector(4)
-            "recovery phrase private" in normalized || "never send it in a chat" in normalized -> vector(6)
-            "already paid the invoice" in normalized || "kept the receipt" in normalized -> vector(5)
-            "appointment is tomorrow" in normalized || "reminder:" in normalized -> vector(7)
-            "password" in normalized || "pin" in normalized || "account credential" in normalized ||
-                "secret used to access your account" in normalized -> vector(0)
-            "send or transfer money" in normalized || "gift cards" in normalized ||
-                "financial request" in normalized || "unusual financial transaction" in normalized -> vector(1)
-            "private key" in normalized || "recovery phrase" in normalized ||
-                "cryptographic secret" in normalized || "wallet seed" in normalized -> vector(2)
-            "act immediately" in normalized || "severe deadline" in normalized ||
-                "under pressure" in normalized || "something bad will happen" in normalized -> vector(3)
-            else -> vector(8)
-        }
+        calls += 1
+        lastText = text
+        lastInputType = inputType
+        return result.copyOf()
     }
 
     override fun close() = Unit
-
-    private fun vector(index: Int): FloatArray =
-        FloatArray(128).also { values -> values[index] = 1f }
 }
+
+private fun FloatArray.normalized(): FloatArray = normalizedPrefix(size)

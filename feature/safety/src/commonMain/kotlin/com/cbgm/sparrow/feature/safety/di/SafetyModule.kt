@@ -16,8 +16,7 @@ import org.koin.dsl.module
 val safetyModule =
     module {
         single { MessageSafetyStructuralAnalyzer() }
-        single { EmbeddingMessageSafetyClassifier(embedder = get()) }
-        single<MessageSafetyClassifier> { get<EmbeddingMessageSafetyClassifier>() }
+        single<MessageSafetyClassifier> { EmbeddingMessageSafetyClassifier(embedder = get()) }
         single { MessageSafetyRiskResolver() }
         factory {
             AnalyzeMessageSafetyUseCase(
@@ -36,7 +35,6 @@ val safetyModule =
             MessageSafetyRepositoryImpl(
                 dao = get(),
                 indexer = get(),
-                classifier = get(),
                 localEmbeddingRepository = get(),
                 applicationScope = get()
             )

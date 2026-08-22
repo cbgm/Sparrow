@@ -5,6 +5,10 @@ plugins {
 kotlin {
     android {
         namespace = "com.cbgm.sparrow.feature.safety"
+
+        androidResources {
+            enable = true
+        }
     }
 
     sourceSets {
@@ -22,6 +26,10 @@ kotlin {
 
         commonTest.dependencies {
             implementation(libs.bundles.kmp.testing)
+        }
+
+        androidDeviceTest.dependencies {
+            implementation(libs.bundles.android.device.testing)
         }
     }
 }

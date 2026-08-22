@@ -5,7 +5,6 @@ import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingModelState
 import com.cbgm.sparrow.core.embedding.domain.repository.LocalEmbeddingRepository
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.data.database.dao.MessageSafetyDao
-import com.cbgm.sparrow.feature.safety.data.classifier.EmbeddingMessageSafetyClassifier
 import com.cbgm.sparrow.feature.safety.data.config.MessageSafetyProcessingConfig
 import com.cbgm.sparrow.feature.safety.data.index.MessageSafetyIndexer
 import com.cbgm.sparrow.feature.safety.data.mapper.toDomain
@@ -32,7 +31,6 @@ import kotlinx.coroutines.launch
 class MessageSafetyRepositoryImpl(
     private val dao: MessageSafetyDao,
     private val indexer: MessageSafetyIndexer,
-    private val classifier: EmbeddingMessageSafetyClassifier,
     private val localEmbeddingRepository: LocalEmbeddingRepository,
     private val applicationScope: ApplicationCoroutineScope
 ) : MessageSafetyRepository {
@@ -77,7 +75,6 @@ class MessageSafetyRepositoryImpl(
     private suspend fun handleRuntimeState(runtimeState: SafetyRuntimeState) {
         if (!runtimeState.enabled) {
             mutableState.value = MessageSafetyState.Disabled
-            classifier.clear()
             dao.deleteAllAssessments()
             return
         }

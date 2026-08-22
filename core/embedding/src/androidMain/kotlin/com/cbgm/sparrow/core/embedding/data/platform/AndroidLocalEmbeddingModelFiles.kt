@@ -37,6 +37,9 @@ class AndroidLocalEmbeddingModelFiles(
     }
 
     fun promoteVerifiedDownload(sha256: String) {
+        require(sha256 == LocalEmbeddingModel.MODEL_SHA256) {
+            "Downloaded local embedding model SHA-256 does not match the pinned model"
+        }
         ensureDirectory()
         check(partialFile.isFile && partialFile.length() > 0L) {
             "Downloaded local embedding model is empty"
@@ -81,6 +84,7 @@ class AndroidLocalEmbeddingModelFiles(
     private fun verifyStoredHash(): Boolean {
         val expected = hashFile.takeIf { it.isFile }?.readText()?.trim().orEmpty()
         if (expected.length != SHA256_HEX_LENGTH || !modelFile.isFile) return false
+        if (expected != LocalEmbeddingModel.MODEL_SHA256) return false
         val actual = sha256(modelFile)
         return MessageDigest.isEqual(expected.encodeToByteArray(), actual.encodeToByteArray())
     }
