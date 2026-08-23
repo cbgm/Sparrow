@@ -13,7 +13,9 @@ val startupModule =
             AppInitializer(
                 getIdentityStatus = get(),
                 recoverIncompleteIdentity = get(),
+                initializeLocalEmbedding = get(),
                 initializeSemanticSearch = get(),
+                initializeMessageSafety = get(),
                 transportConnectionManager = get()
             )
         }

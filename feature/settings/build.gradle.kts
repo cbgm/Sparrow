@@ -16,9 +16,11 @@ kotlin {
         commonMain.dependencies {
             implementation(projects.core)
             implementation(projects.core.datastore)
+            implementation(projects.core.embedding)
             implementation(projects.core.ui)
             implementation(projects.feature.identity)
             implementation(projects.feature.search)
+            implementation(projects.feature.safety)
 
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)

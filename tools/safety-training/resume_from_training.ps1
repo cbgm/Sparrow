@@ -1,0 +1,1 @@
+throw "resume_from_training.ps1 was for the v9 linear model. Use .\resume_behavioral_retraining.ps1 for v10; it reuses the completed v9 dataset/caches and adds only focused behavioral augmentation before MLP retraining."

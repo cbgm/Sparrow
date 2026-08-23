@@ -1,0 +1,64 @@
+{
+  "clusters": 6377,
+  "labels": {
+    "credential_request": {
+      "negative_clusters": 6208,
+      "negative_shortage": 0,
+      "negatives": 6280,
+      "positive_clusters": 169,
+      "positive_shortage": 0,
+      "positives": 171,
+      "required_negatives": 140,
+      "required_positives": 140,
+      "sufficient": true
+    },
+    "payment_request": {
+      "negative_clusters": 6016,
+      "negative_shortage": 0,
+      "negatives": 6072,
+      "positive_clusters": 364,
+      "positive_shortage": 0,
+      "positives": 379,
+      "required_negatives": 140,
+      "required_positives": 140,
+      "sufficient": true
+    },
+    "private_key_request": {
+      "negative_clusters": 6207,
+      "negative_shortage": 0,
+      "negatives": 6281,
+      "positive_clusters": 170,
+      "positive_shortage": 0,
+      "positives": 170,
+      "required_negatives": 140,
+      "required_positives": 140,
+      "sufficient": true
+    },
+    "urgent_action_request": {
+      "negative_clusters": 6080,
+      "negative_shortage": 0,
+      "negatives": 6152,
+      "positive_clusters": 298,
+      "positive_shortage": 0,
+      "positives": 299,
+      "required_negatives": 140,
+      "required_positives": 140,
+      "sufficient": true
+    }
+  },
+  "missing_labels": [],
+  "required_negative_support_by_split": {
+    "test": 20,
+    "train": 100,
+    "validation": 20
+  },
+  "required_positive_support_by_split": {
+    "test": 20,
+    "train": 100,
+    "validation": 20
+  },
+  "required_total_negatives": 140,
+  "required_total_positives": 140,
+  "rows": 6451,
+  "satisfied": true
+}

@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.contacts.presentation.overview
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -114,13 +115,18 @@ fun ContactsScreen(
             }
         }
     ) { innerPadding, listState ->
-        ContactsContent(
-            uiState = uiState,
-            mode = mode,
-            innerPadding = innerPadding,
-            listState = listState,
-            onUiEvent = onUiEvent
-        )
+
+        Box(
+            modifier = modifier.padding(MaterialTheme.spacing.screenPadding)
+        ) {
+            ContactsContent(
+                uiState = uiState,
+                mode = mode,
+                innerPadding = innerPadding,
+                listState = listState,
+                onUiEvent = onUiEvent
+            )
+        }
     }
 
     if (showImportSheet && mode is ContactsScreenMode.Overview) {
@@ -219,9 +225,7 @@ private fun ContactsList(
         state = listState,
         contentPadding =
             PaddingValues(
-                start = MaterialTheme.spacing.medium,
                 top = innerPadding.calculateTopPadding(),
-                end = MaterialTheme.spacing.medium,
                 bottom = innerPadding.calculateBottomPadding()
             ),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)

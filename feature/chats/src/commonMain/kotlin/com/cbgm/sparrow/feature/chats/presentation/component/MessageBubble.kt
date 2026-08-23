@@ -1,9 +1,5 @@
 package com.cbgm.sparrow.feature.chats.presentation.component
 
-import androidx.compose.animation.Animatable
-import androidx.compose.animation.VectorConverter
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,13 +22,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.animation.rememberHighlightColor
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -42,6 +37,8 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
+import com.cbgm.sparrow.feature.safety.presentation.component.MessageSafetyWarning
+import com.cbgm.sparrow.feature.safety.presentation.model.MessageSafetyWarningUiModel
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_decryption_failed
 import com.cbgm.sparrow.resources.feature_chats_delivered
@@ -61,16 +58,16 @@ import com.cbgm.sparrow.resources.feature_chats_unable_read_plaintext
 import com.cbgm.sparrow.resources.feature_chats_waiting_for_invitation_acceptance
 import org.jetbrains.compose.resources.stringResource
 
-private const val HIGHLIGHT_DURATION = 1_500
-
 @Composable
 internal fun MessageBubble(
     message: MessageBubbleModel,
     onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onSafetyDetailsClick: (MessageSafetyWarningUiModel) -> Unit = {},
     isSearchHighlighted: Boolean = false
 ) {
     val bubbleState = bubbleState(message)
+    val safetyWarning = message.safetyWarning
 
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -81,19 +78,25 @@ internal fun MessageBubble(
             horizontalAlignment = if (message.isMine) Alignment.End else Alignment.Start
         ) {
             SenderLabel(message = message)
+
             BubbleBody(
                 message = message,
                 state = bubbleState,
-                isSearchHighlighted = isSearchHighlighted
+                isSearchHighlighted = isSearchHighlighted,
+                safetyWarning = safetyWarning,
+                onSafetyDetailsClick = {
+                    if (safetyWarning != null) onSafetyDetailsClick(safetyWarning)
+                }
             )
             Metadata(
                 message = message,
                 onRetryClick = onRetryClick,
-                modifier = Modifier.padding(
-                    top = MaterialTheme.spacing.messageBubble.metadataTopPadding,
-                    start = MaterialTheme.spacing.micro,
-                    end = MaterialTheme.spacing.micro
-                )
+                modifier =
+                    Modifier.padding(
+                        top = MaterialTheme.spacing.messageBubble.metadataTopPadding,
+                        start = MaterialTheme.spacing.micro,
+                        end = MaterialTheme.spacing.micro
+                    )
             )
         }
     }
@@ -129,32 +132,20 @@ private fun SenderLabel(message: MessageBubbleModel) {
 private fun BubbleBody(
     message: MessageBubbleModel,
     state: BubbleState,
-    isSearchHighlighted: Boolean = false
+    isSearchHighlighted: Boolean = false,
+    safetyWarning: MessageSafetyWarningUiModel? = null,
+    onSafetyDetailsClick: () -> Unit = {}
 ) {
     val bubbleShapes = MaterialTheme.shapes.messageBubble
-    val bubbleColor = state.bubbleColor
-    val highlightColor = MaterialTheme.colorScheme.error
-
-    val animatedBubbleColor = remember {
-        Animatable(initialValue = bubbleColor)
-    }
-
-    LaunchedEffect(isSearchHighlighted) {
-        if (isSearchHighlighted) {
-            animatedBubbleColor.snapTo(highlightColor)
-
-            animatedBubbleColor.animateTo(
-                targetValue = bubbleColor,
-                animationSpec = tween(
-                    durationMillis = HIGHLIGHT_DURATION,
-                    easing = FastOutSlowInEasing
-                )
-            )
-        }
-    }
+    val bubbleColor =
+        rememberHighlightColor(
+            isHighlighted = isSearchHighlighted,
+            baseColor = state.bubbleColor,
+            highlightColor = MaterialTheme.colorScheme.primary.copy(alpha = Alpha.Subtle)
+        )
 
     Surface(
-        color = animatedBubbleColor.value,
+        color = bubbleColor,
         contentColor = state.contentColor,
         shape =
             MessageBubbleShape(
@@ -165,24 +156,48 @@ private fun BubbleBody(
                 tailReturnOffset = bubbleShapes.tailReturnOffset
             )
     ) {
-        Row(
-            modifier =
-                Modifier.padding(
-                    horizontal = MaterialTheme.spacing.small,
-                    vertical = MaterialTheme.spacing.base
-                ),
-            verticalAlignment = Alignment.Top
-        ) {
-            if (state.isContentFailed) {
-                Icon(imageVector = Icons.Default.ErrorOutline, contentDescription = null)
-                Spacer(modifier = Modifier.width(MaterialTheme.spacing.base))
+        Column {
+            Row(
+                modifier =
+                    Modifier.padding(
+                        horizontal = MaterialTheme.spacing.small,
+                        vertical = MaterialTheme.spacing.base
+                    ),
+                verticalAlignment = Alignment.Top
+            ) {
+                if (state.isContentFailed) {
+                    Icon(imageVector = Icons.Default.ErrorOutline, contentDescription = null)
+                    Spacer(modifier = Modifier.width(MaterialTheme.spacing.base))
+                }
+
+                Text(
+                    text = state.text,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
 
-            Text(
-                text = state.text,
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.bodyMedium
-            )
+            safetyWarning?.let { warning ->
+                MessageSafetyWarning(
+                    warning = warning,
+                    onClick = onSafetyDetailsClick,
+                    modifier =
+                        Modifier.padding(
+                            start =
+                                if (message.isMine) {
+                                    MaterialTheme.spacing.zero
+                                } else {
+                                    bubbleShapes.tailWidth
+                                },
+                            end =
+                                if (message.isMine) {
+                                    bubbleShapes.tailWidth
+                                } else {
+                                    MaterialTheme.spacing.zero
+                                }
+                        )
+                )
+            }
         }
     }
 }

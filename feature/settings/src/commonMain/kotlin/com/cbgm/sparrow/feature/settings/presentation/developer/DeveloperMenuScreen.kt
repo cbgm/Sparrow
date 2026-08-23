@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -34,6 +32,7 @@ import com.cbgm.sparrow.core.transport.TransportDiagnostics
 import com.cbgm.sparrow.core.transport.TransportNodeDiagnostic
 import com.cbgm.sparrow.core.transport.TransportNodeDiagnosticState
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
+import com.cbgm.sparrow.core.ui.component.SparrowDestructiveButton
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -195,30 +194,25 @@ private fun DangerZoneCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Button(
+            SparrowDestructiveButton(
                 onClick = onClearLocalData,
                 enabled = !isClearingLocalData,
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraSmall,
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer
-                    )
-            ) {
-                if (isClearingLocalData) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(Dimens.DeveloperMenuScreen.progressSize),
-                        strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
-                        color = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                } else {
-                    Text(
-                        text = stringResource(Res.string.base_clear_local_data),
-                        fontWeight = FontWeight.SemiBold
-                    )
+                content = {
+                    if (isClearingLocalData) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(Dimens.DeveloperMenuScreen.progressSize),
+                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(Res.string.base_clear_local_data),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
-            }
+            )
 
             Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
 

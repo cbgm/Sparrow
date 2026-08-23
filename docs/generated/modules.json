@@ -24,8 +24,8 @@
     "group": "core",
     "directory": "core",
     "buildFile": "core/build.gradle.kts",
-    "kotlinSourceFileCount": 12,
-    "productionKotlinFileCount": 12,
+    "kotlinSourceFileCount": 16,
+    "productionKotlinFileCount": 16,
     "testKotlinFileCount": 0,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -36,6 +36,7 @@
     "dependencies": [
     ],
     "dependents": [
+      ":core:embedding",
       ":core:protocol",
       ":data:database",
       ":feature:chats",
@@ -43,6 +44,8 @@
       ":feature:contacts",
       ":feature:identity",
       ":feature:messaging",
+      ":feature:safety",
+      ":feature:search",
       ":feature:settings",
       ":feature:transport",
       ":navigation",
@@ -56,8 +59,8 @@
     "group": "core",
     "directory": "core/crypto",
     "buildFile": "core/crypto/build.gradle.kts",
-    "kotlinSourceFileCount": 37,
-    "productionKotlinFileCount": 32,
+    "kotlinSourceFileCount": 38,
+    "productionKotlinFileCount": 33,
     "testKotlinFileCount": 5,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -96,6 +99,7 @@
     "dependencies": [
     ],
     "dependents": [
+      ":core:embedding",
       ":feature:chats",
       ":feature:identity",
       ":feature:settings",
@@ -104,13 +108,39 @@
     ]
   },
   {
+    "name": "embedding",
+    "path": ":core:embedding",
+    "group": "core",
+    "directory": "core/embedding",
+    "buildFile": "core/embedding/build.gradle.kts",
+    "kotlinSourceFileCount": 20,
+    "productionKotlinFileCount": 20,
+    "testKotlinFileCount": 0,
+    "resourceFileCount": 0,
+    "sourceSets": [
+      "androidMain",
+      "commonMain"
+    ],
+    "dependencies": [
+      ":core",
+      ":core:datastore"
+    ],
+    "dependents": [
+      ":feature:safety",
+      ":feature:search",
+      ":feature:settings",
+      ":shared",
+      ":startup"
+    ]
+  },
+  {
     "name": "protocol",
     "path": ":core:protocol",
     "group": "core",
     "directory": "core/protocol",
     "buildFile": "core/protocol/build.gradle.kts",
-    "kotlinSourceFileCount": 71,
-    "productionKotlinFileCount": 60,
+    "kotlinSourceFileCount": 72,
+    "productionKotlinFileCount": 61,
     "testKotlinFileCount": 11,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -137,8 +167,8 @@
     "group": "core",
     "directory": "core/ui",
     "buildFile": "core/ui/build.gradle.kts",
-    "kotlinSourceFileCount": 49,
-    "productionKotlinFileCount": 48,
+    "kotlinSourceFileCount": 52,
+    "productionKotlinFileCount": 51,
     "testKotlinFileCount": 1,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -156,6 +186,8 @@
       ":feature:contacts",
       ":feature:identity",
       ":feature:onboarding",
+      ":feature:safety",
+      ":feature:search",
       ":feature:settings",
       ":navigation",
       ":shared",
@@ -185,8 +217,8 @@
     "group": "data",
     "directory": "data/database",
     "buildFile": "data/database/build.gradle.kts",
-    "kotlinSourceFileCount": 41,
-    "productionKotlinFileCount": 41,
+    "kotlinSourceFileCount": 49,
+    "productionKotlinFileCount": 49,
     "testKotlinFileCount": 0,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -201,6 +233,8 @@
       ":feature:chats",
       ":feature:contacts",
       ":feature:messaging",
+      ":feature:safety",
+      ":feature:search",
       ":shared"
     ]
   },
@@ -227,9 +261,9 @@
     "group": "feature",
     "directory": "feature/chats",
     "buildFile": "feature/chats/build.gradle.kts",
-    "kotlinSourceFileCount": 231,
-    "productionKotlinFileCount": 215,
-    "testKotlinFileCount": 16,
+    "kotlinSourceFileCount": 236,
+    "productionKotlinFileCount": 218,
+    "testKotlinFileCount": 18,
     "resourceFileCount": 1,
     "sourceSets": [
       "androidDeviceTest",
@@ -247,7 +281,8 @@
       ":data:database",
       ":feature:contactimport",
       ":feature:contacts",
-      ":feature:identity"
+      ":feature:identity",
+      ":feature:safety"
     ],
     "dependents": [
       ":feature:messaging",
@@ -289,8 +324,8 @@
     "group": "feature",
     "directory": "feature/contacts",
     "buildFile": "feature/contacts/build.gradle.kts",
-    "kotlinSourceFileCount": 134,
-    "productionKotlinFileCount": 130,
+    "kotlinSourceFileCount": 137,
+    "productionKotlinFileCount": 133,
     "testKotlinFileCount": 4,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -310,6 +345,7 @@
       ":feature:chats",
       ":feature:contactimport",
       ":feature:messaging",
+      ":feature:safety",
       ":navigation",
       ":shared"
     ]
@@ -403,6 +439,64 @@
     ]
   },
   {
+    "name": "safety",
+    "path": ":feature:safety",
+    "group": "feature",
+    "directory": "feature/safety",
+    "buildFile": "feature/safety/build.gradle.kts",
+    "kotlinSourceFileCount": 28,
+    "productionKotlinFileCount": 27,
+    "testKotlinFileCount": 1,
+    "resourceFileCount": 0,
+    "sourceSets": [
+      "commonMain",
+      "commonTest"
+    ],
+    "dependencies": [
+      ":core",
+      ":core:embedding",
+      ":core:ui",
+      ":data:database",
+      ":feature:contacts"
+    ],
+    "dependents": [
+      ":feature:chats",
+      ":feature:settings",
+      ":navigation",
+      ":shared",
+      ":startup"
+    ]
+  },
+  {
+    "name": "search",
+    "path": ":feature:search",
+    "group": "feature",
+    "directory": "feature/search",
+    "buildFile": "feature/search/build.gradle.kts",
+    "kotlinSourceFileCount": 29,
+    "productionKotlinFileCount": 26,
+    "testKotlinFileCount": 3,
+    "resourceFileCount": 0,
+    "sourceSets": [
+      "androidMain",
+      "commonMain",
+      "commonTest",
+      "iosMain"
+    ],
+    "dependencies": [
+      ":core",
+      ":core:embedding",
+      ":core:ui",
+      ":data:database"
+    ],
+    "dependents": [
+      ":feature:settings",
+      ":navigation",
+      ":shared",
+      ":startup"
+    ]
+  },
+  {
     "name": "settings",
     "path": ":feature:settings",
     "group": "feature",
@@ -414,14 +508,16 @@
     "resourceFileCount": 2,
     "sourceSets": [
       "androidMain",
-      "commonMain",
-      "iosMain"
+      "commonMain"
     ],
     "dependencies": [
       ":core",
       ":core:datastore",
+      ":core:embedding",
       ":core:ui",
-      ":feature:identity"
+      ":feature:identity",
+      ":feature:safety",
+      ":feature:search"
     ],
     "dependents": [
       ":navigation",
@@ -434,9 +530,9 @@
     "group": "feature",
     "directory": "feature/transport",
     "buildFile": "feature/transport/build.gradle.kts",
-    "kotlinSourceFileCount": 66,
-    "productionKotlinFileCount": 52,
-    "testKotlinFileCount": 14,
+    "kotlinSourceFileCount": 67,
+    "productionKotlinFileCount": 54,
+    "testKotlinFileCount": 13,
     "resourceFileCount": 1,
     "sourceSets": [
       "androidMain",
@@ -453,7 +549,8 @@
     "dependents": [
       ":feature:messaging",
       ":notification",
-      ":shared"
+      ":shared",
+      ":startup"
     ]
   },
   {
@@ -478,6 +575,8 @@
       ":feature:contacts",
       ":feature:identity",
       ":feature:onboarding",
+      ":feature:safety",
+      ":feature:search",
       ":feature:settings",
       ":notification",
       ":startup"
@@ -558,7 +657,7 @@
     "kotlinSourceFileCount": 0,
     "productionKotlinFileCount": 0,
     "testKotlinFileCount": 0,
-    "resourceFileCount": 19,
+    "resourceFileCount": 21,
     "sourceSets": [
       "androidMain",
       "commonMain"
@@ -850,6 +949,7 @@
       ":core",
       ":core:crypto",
       ":core:datastore",
+      ":core:embedding",
       ":core:protocol",
       ":core:ui",
       ":data:database",
@@ -859,6 +959,8 @@
       ":feature:identity",
       ":feature:messaging",
       ":feature:onboarding",
+      ":feature:safety",
+      ":feature:search",
       ":feature:settings",
       ":feature:transport",
       ":navigation",
@@ -875,8 +977,8 @@
     "group": "startup",
     "directory": "startup",
     "buildFile": "startup/build.gradle.kts",
-    "kotlinSourceFileCount": 9,
-    "productionKotlinFileCount": 9,
+    "kotlinSourceFileCount": 10,
+    "productionKotlinFileCount": 10,
     "testKotlinFileCount": 0,
     "resourceFileCount": 1,
     "sourceSets": [
@@ -884,9 +986,13 @@
       "commonMain"
     ],
     "dependencies": [
+      ":core:embedding",
       ":core:ui",
       ":feature:identity",
-      ":feature:onboarding"
+      ":feature:onboarding",
+      ":feature:safety",
+      ":feature:search",
+      ":feature:transport"
     ],
     "dependents": [
       ":navigation",

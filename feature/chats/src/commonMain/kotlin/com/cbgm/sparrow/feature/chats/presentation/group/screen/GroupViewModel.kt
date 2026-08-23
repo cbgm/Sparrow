@@ -24,6 +24,9 @@ import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
+import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
+import com.cbgm.sparrow.feature.safety.presentation.mapper.toDetailsRoute
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -54,7 +57,8 @@ class GroupViewModel(
     private val observeProfilePictures: ObserveRemoteProfilePicturesUseCase,
     observeGroupAvatar: ObserveGroupAvatarUseCase,
     private val observeMemberTyping: ObserveGroupMemberTypingUseCase,
-    private val setGroupTyping: SetGroupTypingUseCase
+    private val setGroupTyping: SetGroupTypingUseCase,
+    observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase
 ) : BaseViewModel() {
     private val groupId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.GroupConversation::conversationId.name)
@@ -93,6 +97,7 @@ class GroupViewModel(
     private val groupAvatarFlow: Flow<ByteArray?> =
         observeGroupAvatar(groupId).map { avatar -> avatar.bytes }
 
+    @OptIn(ExperimentalCoroutinesApi::class, ExperimentalCoroutinesApi::class)
     private val profilePicturesFlow: Flow<Map<String, ByteArray?>> =
         conversationFlow
             .map { observation ->
@@ -126,8 +131,9 @@ class GroupViewModel(
             presentationContext,
             messageText,
             errorMessage,
-            typingContactIds
-        ) { presentation, text, error, typingIds ->
+            typingContactIds,
+            observeMessageSafetyAssessments()
+        ) { presentation, text, error, typingIds, safetyAssessments ->
             toGroupUiState(
                 conversation = presentation.context.observation.conversation,
                 administration = presentation.context.administration,
@@ -138,7 +144,8 @@ class GroupViewModel(
                 currentError = error,
                 observationError = presentation.context.observation.errorMessage,
                 isLoading = presentation.context.observation is GroupConversationObservation.Loading,
-                typingContactIds = typingIds
+                typingContactIds = typingIds,
+                safetyAssessments = safetyAssessments
             )
         }.stateIn(
             scope = viewModelScope,
@@ -156,6 +163,8 @@ class GroupViewModel(
             GroupUiEvent.SendClicked -> sendCurrentMessage()
             GroupUiEvent.HeaderClicked -> navigator.navigateTo(AppRoute.GroupDetails(groupId))
             is GroupUiEvent.RetryMessage -> retryFailedMessage(event.messageId)
+            is GroupUiEvent.SafetyWarningClicked ->
+                navigator.navigateTo(event.warning.toDetailsRoute(event.messageId, event.contactId))
             GroupUiEvent.BackClicked ->
                 if (targetMessageId != null) {
                     navigator.popBackStack()
@@ -333,7 +342,29 @@ class GroupViewModel(
         val contacts: List<Contact>,
         val profilePictures: Map<String, ByteArray?>,
         val avatarBytes: ByteArray?
-    )
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as GroupPresentationContext
+
+            if (context != other.context) return false
+            if (contacts != other.contacts) return false
+            if (profilePictures != other.profilePictures) return false
+            if (!avatarBytes.contentEquals(other.avatarBytes)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = context.hashCode()
+            result = 31 * result + contacts.hashCode()
+            result = 31 * result + profilePictures.hashCode()
+            result = 31 * result + (avatarBytes?.contentHashCode() ?: 0)
+            return result
+        }
+    }
 
     private companion object {
         const val MESSAGE_TEXT_KEY = "messageText"

@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.chats.presentation.overview.mapper
 
+import com.cbgm.sparrow.core.time.formatMessageTimestamp
 import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverview
 import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverviewType
-import com.cbgm.sparrow.feature.chats.presentation.overview.formatter.formatConversationTimestamp
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.ConversationListItem
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiState
 
@@ -49,7 +49,7 @@ internal fun ConversationOverview.toConversationListItem(
         contactName = displayName,
         avatarBytes = avatarBytes,
         lastMessage = lastMessageText.orEmpty(),
-        timestamp = lastMessageTimestamp?.let(::formatConversationTimestamp).orEmpty(),
+        timestamp = lastMessageTimestamp?.let(::formatMessageTimestamp).orEmpty(),
         unreadCount = unreadCount,
         isGroup = type == ConversationOverviewType.GROUP
     )

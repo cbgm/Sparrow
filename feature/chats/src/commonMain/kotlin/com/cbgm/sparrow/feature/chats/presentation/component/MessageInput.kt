@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Attachment
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -56,6 +57,8 @@ internal fun MessageInput(
     onSendClick: () -> Unit,
     inputEnabled: Boolean,
     sendEnabled: Boolean,
+    isAttachmentVisible: Boolean,
+    onAttachmentClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var textLineCount by remember { mutableIntStateOf(1) }
@@ -78,9 +81,16 @@ internal fun MessageInput(
             .imePadding(),
         verticalAlignment = Alignment.Bottom
     ) {
-        IconButton(onClick = {}, modifier = Modifier.height(buttonHeight).align(Alignment.Bottom)) {
+        IconButton(
+            onClick = onAttachmentClick,
+            modifier = Modifier.height(buttonHeight).align(Alignment.Bottom)
+        ) {
             Icon(
-                imageVector = Icons.Filled.AttachFile,
+                imageVector = if (!isAttachmentVisible) {
+                    Icons.Filled.AttachFile
+                } else {
+                    Icons.Filled.Attachment
+                },
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(Dimens.MessageInput.attachmentIconSize)
@@ -324,7 +334,9 @@ private fun MessageInputPreview() {
             onValueChange = {},
             onSendClick = {},
             inputEnabled = true,
-            sendEnabled = true
+            sendEnabled = true,
+            onAttachmentClick = {},
+            isAttachmentVisible = false
         )
     }
 }
@@ -339,6 +351,8 @@ private fun MultilineMessageInputPreview() {
                     "onto a second line.",
             onValueChange = {},
             onSendClick = {},
+            onAttachmentClick = {},
+            isAttachmentVisible = true,
             inputEnabled = true,
             sendEnabled = true
         )
