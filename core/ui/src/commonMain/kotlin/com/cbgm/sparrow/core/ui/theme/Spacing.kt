@@ -30,16 +30,16 @@ data class Spacing(
     val messageBubble: MessageBubbleSpacing = MessageBubbleSpacing(),
     val identityScreen: IdentityScreenSpacing = IdentityScreenSpacing(),
     val contactsScreen: ContactsScreenSpacing = ContactsScreenSpacing(),
-    val searchField: SearchFieldSpacing = SearchFieldSpacing()
+    val textField: FieldSpacing = FieldSpacing()
 ) {
     operator fun times(multiplier: Int): Dp = base * multiplier
 
     operator fun times(multiplier: Float): Dp = base * multiplier.toInt()
 }
 
-data class SearchFieldSpacing(
-    val searchHorizontalPadding: Dp = 12.dp,
-    val searchVerticalPadding: Dp = 6.dp
+data class FieldSpacing(
+    val horizontalPadding: Dp = 12.dp,
+    val verticalPadding: Dp = 6.dp
 )
 
 data class ProfilePictureCameraScreenSpacing(

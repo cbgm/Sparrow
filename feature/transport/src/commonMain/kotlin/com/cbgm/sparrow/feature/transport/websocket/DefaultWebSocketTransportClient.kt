@@ -5,6 +5,8 @@ import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
+import com.cbgm.sparrow.feature.transport.gateway.model.GatewayBlobUploadTicket
+import com.cbgm.sparrow.feature.transport.gateway.model.GatewayBlobUploadTicketRequest
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayClientMessage
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayEnvelopeAcceptance
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayServerMessage
@@ -38,9 +40,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlin.time.Duration.Companion.milliseconds
 
+@OptIn(InternalSerializationApi::class)
 class DefaultWebSocketTransportClient internal constructor(
     private val httpClient: HttpClient,
     private val json: Json,
@@ -75,11 +79,15 @@ class DefaultWebSocketTransportClient internal constructor(
 
     private val acknowledgementsMutex = Mutex()
 
+    private val blobTicketsMutex = Mutex()
+
     private var session: DefaultClientWebSocketSession? = null
 
     private var connectionJob: Job? = null
 
     private val pendingAcknowledgements = mutableMapOf<String, CompletableDeferred<GatewayEnvelopeAcceptance>>()
+
+    private val pendingBlobTickets = mutableMapOf<String, CompletableDeferred<GatewayBlobUploadTicket>>()
 
     override fun connect(
         serverUrl: String,
@@ -130,6 +138,47 @@ class DefaultWebSocketTransportClient internal constructor(
     ): Result<GatewayEnvelopeAcceptance> =
         awaitEnvelopeAcceptance(envelope.envelopeId, timeoutMilliseconds) {
             sendFederatedEnvelopeFrame(envelope)
+        }
+
+    override suspend fun requestBlobUploadTicket(
+        request: GatewayBlobUploadTicketRequest,
+        timeoutMilliseconds: Long
+    ): Result<GatewayBlobUploadTicket> =
+        runCatching {
+            require(timeoutMilliseconds > 0L) { "Blob upload ticket timeout must be positive" }
+            check(connectionState.value is TransportConnectionState.Connected) {
+                "WebSocket transport is not connected"
+            }
+
+            val deferred = CompletableDeferred<GatewayBlobUploadTicket>()
+            blobTicketsMutex.withLock {
+                check(pendingBlobTickets.put(request.requestId, deferred) == null) {
+                    "Blob upload ticket request is already pending"
+                }
+            }
+            try {
+                sendMutex.withLock {
+                    val activeSession = sessionMutex.withLock { session }
+                        ?: error("WebSocket session is not available")
+                    activeSession.send(
+                        Frame.Text(
+                            json.encodeToString<GatewayClientMessage>(
+                                GatewayClientMessage.RequestBlobUploadTicket(
+                                    requestId = request.requestId,
+                                    blobId = request.blobId,
+                                    maximumBytes = request.maximumBytes,
+                                    readCapabilitySha256 = request.readCapabilitySha256,
+                                    deleteCapabilitySha256 = request.deleteCapabilitySha256,
+                                    blobExpiresAtEpochMilliseconds = request.blobExpiresAtEpochMilliseconds
+                                )
+                            )
+                        )
+                    )
+                }
+                withTimeout(timeoutMilliseconds.milliseconds) { deferred.await() }
+            } finally {
+                blobTicketsMutex.withLock { pendingBlobTickets.remove(request.requestId) }
+            }
         }
 
     override suspend fun awaitRoutingAlias(
@@ -237,6 +286,7 @@ class DefaultWebSocketTransportClient internal constructor(
         activeConnectionJob?.cancelAndJoin()
 
         failPendingAcknowledgements(error = IllegalStateException("WebSocket disconnected"))
+        failPendingBlobTickets(error = IllegalStateException("WebSocket disconnected"))
 
         mutableRegisteredRoutingAliases.value = emptySet()
         mutableConnectionState.value = TransportConnectionState.Disconnected
@@ -555,6 +605,25 @@ class DefaultWebSocketTransportClient internal constructor(
                 )
             }
 
+            is GatewayServerMessage.BlobUploadTicketIssued -> {
+                val pending = blobTicketsMutex.withLock { pendingBlobTickets[message.requestId] }
+                pending?.complete(
+                    GatewayBlobUploadTicket(
+                        requestId = message.requestId,
+                        nodeId = message.nodeId,
+                        uploadToken = message.uploadToken,
+                        blobExpiresAtEpochMilliseconds = message.blobExpiresAtEpochMilliseconds
+                    )
+                )
+            }
+
+            is GatewayServerMessage.BlobUploadTicketRejected -> {
+                val pending = blobTicketsMutex.withLock { pendingBlobTickets[message.requestId] }
+                pending?.completeExceptionally(
+                    IllegalStateException("${message.code}: ${message.message}")
+                )
+            }
+
             is GatewayServerMessage.Error -> {
                 logger.warn { "Gateway error ${message.code}: ${message.message}" }
 
@@ -599,6 +668,16 @@ class DefaultWebSocketTransportClient internal constructor(
 
             acknowledgement.completeExceptionally(error)
         }
+    }
+
+    private suspend fun failPendingBlobTickets(error: Throwable) {
+        val pending =
+            blobTicketsMutex.withLock {
+                val values = pendingBlobTickets.values.toList()
+                pendingBlobTickets.clear()
+                values
+            }
+        pending.forEach { ticket -> ticket.completeExceptionally(error) }
     }
 
     private companion object {

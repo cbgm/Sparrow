@@ -15,7 +15,8 @@ data class MessageBubbleModel(
     val senderName: String? = null,
     val senderIsInContacts: Boolean = true,
     val deliveryProgress: DeliveryProgressModel = DeliveryProgressModel(),
-    val safetyWarning: MessageSafetyWarningUiModel? = null
+    val safetyWarning: MessageSafetyWarningUiModel? = null,
+    val mediaAttachments: List<MessageMediaAttachmentModel> = emptyList()
 )
 
 data class DeliveryProgressModel(

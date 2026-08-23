@@ -7,24 +7,26 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Attachment
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -57,6 +59,7 @@ internal fun MessageInput(
     onSendClick: () -> Unit,
     inputEnabled: Boolean,
     sendEnabled: Boolean,
+    hasAttachments: Boolean,
     isAttachmentVisible: Boolean,
     onAttachmentClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -70,7 +73,6 @@ internal fun MessageInput(
      */
     val buttonWidth = Dimens.MessageInput.buttonWidth
     val buttonHeight = Dimens.MessageInput.buttonHeight
-    val overlap = Dimens.MessageInput.overlap
 
     Row(
         modifier = modifier
@@ -81,9 +83,16 @@ internal fun MessageInput(
             .imePadding(),
         verticalAlignment = Alignment.Bottom
     ) {
-        IconButton(
+        FilledIconButton(
             onClick = onAttachmentClick,
-            modifier = Modifier.height(buttonHeight).align(Alignment.Bottom)
+            modifier = Modifier
+                .padding(end = MaterialTheme.spacing.base)
+                .requiredSize(buttonHeight)
+                .align(Alignment.Bottom),
+            shape = CircleShape,
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
+            )
         ) {
             Icon(
                 imageVector = if (!isAttachmentVisible) {
@@ -96,62 +105,77 @@ internal fun MessageInput(
                 modifier = Modifier.size(Dimens.MessageInput.attachmentIconSize)
             )
         }
-
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = Modifier
-                .weight(1f)
-                .background(
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                    shape = MaterialTheme.shapes.messageInput.field
-                )
-                .padding(
-                    horizontal = MaterialTheme.spacing.base,
-                    vertical = MaterialTheme.spacing.micro
-                ),
-            enabled = inputEnabled,
-            minLines = 1,
-            maxLines = 5,
-            textStyle =
-                MaterialTheme.typography.bodyMedium.copy(
-                    color =
-                        MaterialTheme.colorScheme.onSurface
-                ),
-            cursorBrush =
-                SolidColor(
-                    MaterialTheme.colorScheme.primary
-                ),
-            keyboardOptions =
-                KeyboardOptions(
-                    imeAction = ImeAction.Default
-                ),
-            onTextLayout = { result ->
-                textLineCount = result.lineCount
-            },
-            decorationBox = { innerTextField ->
-                innerTextField()
-            }
+        MessageField(
+            messageText = value,
+            onMessageTextChanged = onValueChange,
+            isInputEnabled = inputEnabled,
+            onTextLineCountChanged = { count -> textLineCount = count },
+            modifier = Modifier.weight(1F)
         )
+
         SendButton(
             buttonWidth = buttonWidth,
             buttonHeight = buttonHeight,
-            overlap = overlap,
             isRound = isMultiline,
             onSendClick = onSendClick,
-            enabled = sendEnabled && value.isNotBlank()
+            enabled = sendEnabled && (value.isNotBlank() || hasAttachments),
+            modifier = Modifier.align(
+                if (isMultiline) {
+                    Alignment.Bottom
+                } else {
+                    Alignment.CenterVertically
+                }
+            )
         )
     }
 }
 
 @Composable
-private fun RowScope.SendButton(
+private fun MessageField(
+    messageText: String,
+    onMessageTextChanged: (String) -> Unit,
+    isInputEnabled: Boolean,
+    onTextLineCountChanged: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    BasicTextField(
+        value = messageText,
+        onValueChange = onMessageTextChanged,
+        modifier = modifier
+            .background(
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                shape = MaterialTheme.shapes.extraSmall
+            )
+            .padding(
+                horizontal = MaterialTheme.spacing.base,
+                vertical = MaterialTheme.spacing.micro
+            ),
+        enabled = isInputEnabled,
+        minLines = 1,
+        maxLines = 5,
+        textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        keyboardOptions =
+            KeyboardOptions(
+                imeAction = ImeAction.Default
+            ),
+        onTextLayout = { result ->
+            onTextLineCountChanged(result.lineCount)
+        },
+        decorationBox = { innerTextField ->
+            innerTextField()
+        }
+    )
+}
+
+@Composable
+private fun SendButton(
     buttonWidth: Dp,
     buttonHeight: Dp,
-    overlap: Dp,
     isRound: Boolean,
     onSendClick: () -> Unit,
-    enabled: Boolean
+    enabled: Boolean,
+    modifier: Modifier = Modifier
 ) {
     /*
      * Single-line icon:
@@ -199,14 +223,7 @@ private fun RowScope.SendButton(
     SendButtonSlot(
         buttonWidth = buttonWidth,
         buttonHeight = buttonHeight,
-        overlap = overlap,
-        modifier = Modifier.align(
-            if (isRound) {
-                Alignment.Bottom
-            } else {
-                Alignment.CenterVertically
-            }
-        )
+        modifier = modifier
     ) {
         /*
          * ALWAYS exactly:
@@ -217,7 +234,7 @@ private fun RowScope.SendButton(
          */
         Box(
             modifier = Modifier
-                .width(buttonWidth + overlap)
+                .width(buttonWidth)
                 .height(buttonHeight)
                 .clip(
                     MorphingSendButtonShape(
@@ -280,7 +297,6 @@ private fun RowScope.SendButton(
 private fun SendButtonSlot(
     buttonWidth: Dp,
     buttonHeight: Dp,
-    overlap: Dp,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
@@ -291,9 +307,7 @@ private fun SendButtonSlot(
             .height(buttonHeight)
     ) { measurables, constraints ->
 
-        val overlapPx = overlap.roundToPx()
-
-        val canvasWidthPx = (buttonWidth + overlap).roundToPx()
+        val canvasWidthPx = (buttonWidth).roundToPx()
 
         val buttonHeightPx = buttonHeight.roundToPx()
 
@@ -320,7 +334,7 @@ private fun SendButtonSlot(
              *
              * therefore exactly 8dp remains on the right.
              */
-            placeable.place(x = -overlapPx, y = 0)
+            placeable.place(x = 0, y = 0)
         }
     }
 }
@@ -335,6 +349,7 @@ private fun MessageInputPreview() {
             onSendClick = {},
             inputEnabled = true,
             sendEnabled = true,
+            hasAttachments = false,
             onAttachmentClick = {},
             isAttachmentVisible = false
         )
@@ -354,7 +369,8 @@ private fun MultilineMessageInputPreview() {
             onAttachmentClick = {},
             isAttachmentVisible = true,
             inputEnabled = true,
-            sendEnabled = true
+            sendEnabled = true,
+            hasAttachments = false
         )
     }
 }

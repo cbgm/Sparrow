@@ -145,6 +145,9 @@ services:
     environment:
       PORT: 8094
       NODE_IDENTITY_PATH: /data/node.identity
+      BLOB_STORAGE_PATH: /var/lib/sparrow/blobs
+      BLOB_MAXIMUM_BYTES: ${BLOB_MAXIMUM_BYTES:-134217728}
+      BLOB_MAXIMUM_STORAGE_BYTES: ${BLOB_MAXIMUM_STORAGE_BYTES:-10737418240}
       FEDERATION_INTERNAL_URL: http://federation:8093
       CONTROL_PLANE_URLS: ${CONTROL_PLANE_URLS:-}
       ADVERTISED_CONTROL_PLANE_URLS: ${ADVERTISED_CONTROL_PLANE_URLS:-}
@@ -158,6 +161,7 @@ services:
       - "127.0.0.1:${GATEWAY_DIAGNOSTIC_PORT:-8494}:8094"
     volumes:
       - node-identity:/data
+      - gateway-blob-data:/var/lib/sparrow/blobs
     depends_on:
       federation:
         condition: service_healthy
@@ -168,3 +172,4 @@ volumes:
   node-identity:
   mailbox-database-data:
   federation-database-data:
+  gateway-blob-data:

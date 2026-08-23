@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.chats.data.direct.outgoing
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.ChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.ReadReceiptPacket
@@ -12,11 +13,15 @@ import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.entity.MessageEntity
+import com.cbgm.sparrow.feature.chats.data.attachment.MessageAttachmentTransfer
+import com.cbgm.sparrow.feature.chats.data.attachment.PreparedMessageAttachment
 import com.cbgm.sparrow.feature.chats.data.direct.delivery.DirectMessageDeliveryCoordinator
 import com.cbgm.sparrow.feature.chats.data.direct.mapper.toDirectDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.feature.chats.domain.model.attachment.MessageAttachmentPolicy
+import com.cbgm.sparrow.feature.chats.domain.model.attachment.OutgoingMediaAttachment
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessageDeliveryStateMachine
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectPendingAuthorizationMessagePolicy
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
@@ -37,56 +42,70 @@ class DirectOutgoingMessageProcessor(
     private val protocolOutbox: ProtocolOutbox,
     private val identityInvitationRepository: IdentityInvitationRepository,
     private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
-    private val deliveryCoordinator: DirectMessageDeliveryCoordinator
+    private val deliveryCoordinator: DirectMessageDeliveryCoordinator,
+    private val attachmentTransfer: MessageAttachmentTransfer
 ) {
     private val logger = SparrowLog.withTag("DirectOutgoingMessageProcessor")
 
     suspend fun send(
         conversationId: String,
-        text: String
+        text: String,
+        media: List<OutgoingMediaAttachment> = emptyList()
     ): Result<Unit> =
         runCatching {
-            val normalizedText = requireMessageText(text)
+            val normalizedText = requireMessageContent(text, media)
             val target = loadTarget(conversationId)
             identityInvitationRepository
                 .requireDirectChatAuthorization(target.contactId)
                 .getOrThrow()
 
             val contact = getContact(target.contactId).getOrThrow() ?: error("Contact was not found")
-            val packet = createPacket(
-                messageId = IdGenerator.generate(prefix = "message"),
-                text = normalizedText
+            val messageId = IdGenerator.generate(prefix = "message")
+            val prepared = attachmentTransfer.prepareMedia(media).getOrThrow()
+            persistPreparedMessage(
+                target = target,
+                contact = contact,
+                messageId = messageId,
+                text = normalizedText,
+                prepared = prepared,
+                deliveryStatus = MessageDeliveryStatus.QUEUED
             )
-            storeQueuedMessage(target, normalizedText, packet, contact)
+            val packet =
+                try {
+                    createPacket(
+                        messageId = messageId,
+                        text = normalizedText,
+                        attachments = prepared.map(PreparedMessageAttachment::attachment)
+                    ).also { packet ->
+                        linkPacket(messageId = messageId, packet = packet, contact = contact)
+                    }
+                } catch (error: Throwable) {
+                    chatDao.findMessageById(messageId)?.let { storedMessage ->
+                        discardMessages(listOf(storedMessage))
+                    }
+                    throw error
+                }
             enqueue(target.contactId, packet)
         }
 
     suspend fun queueUntilAuthorized(
         conversationId: String,
-        text: String
+        text: String,
+        media: List<OutgoingMediaAttachment> = emptyList()
     ): Result<Unit> =
         runCatching {
-            val normalizedText = requireMessageText(text)
+            val normalizedText = requireMessageContent(text, media)
             val target = loadTarget(conversationId)
             val contact = getContact(target.contactId).getOrThrow() ?: error("Contact was not found")
-            val createdAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
-
-            chatDao.upsertMessage(
-                MessageEntity(
-                    id = IdGenerator.generate(prefix = "message"),
-                    conversationId = target.conversationId,
-                    packetId = null,
-                    text = normalizedText,
-                    transportPayload = null,
-                    transportMode = contact.plannedTransportMode().name,
-                    contentStatus = MessageContentStatus.READABLE.name,
-                    deliveryStatus = MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION.name,
-                    senderContactId = null,
-                    isMine = true,
-                    createdAtEpochMilliseconds = createdAtEpochMilliseconds
-                )
+            val prepared = attachmentTransfer.prepareMedia(media).getOrThrow()
+            persistPreparedMessage(
+                target = target,
+                contact = contact,
+                messageId = IdGenerator.generate(prefix = "message"),
+                text = normalizedText,
+                prepared = prepared,
+                deliveryStatus = MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION
             )
-            chatDao.updateConversationTimestamp(target.conversationId, createdAtEpochMilliseconds)
         }
 
     suspend fun releaseWaitingForAuthorization(contactId: String): Result<Unit> =
@@ -103,7 +122,7 @@ class DirectOutgoingMessageProcessor(
                     )
                 }
 
-            chatDao.deleteMessagesAndRefreshConversations(expiredMessages)
+            discardMessages(expiredMessages)
             val expiredMessageIds = expiredMessages.mapTo(mutableSetOf(), MessageEntity::id)
 
             waitingMessages
@@ -113,7 +132,7 @@ class DirectOutgoingMessageProcessor(
 
     suspend fun discardWaitingForAuthorization(contactId: String): Result<Unit> =
         runCatching {
-            chatDao.deleteMessagesAndRefreshConversations(findWaitingMessages(contactId))
+            discardMessages(findWaitingMessages(contactId))
         }
 
     suspend fun retry(messageId: String): Result<Unit> =
@@ -172,7 +191,12 @@ class DirectOutgoingMessageProcessor(
             "Direct message is not waiting for authorization"
         }
 
-        val packet = createPacket(messageId = message.id, text = message.text)
+        val packet =
+            createPacket(
+                messageId = message.id,
+                text = message.text,
+                attachments = attachmentTransfer.protocolAttachments(message.id)
+            )
         chatDao.upsertMessage(
             message.copy(
                 packetId = packet.packetId,
@@ -187,6 +211,61 @@ class DirectOutgoingMessageProcessor(
                     "Queued direct message could not be released after authorization: messageId=${message.id}"
                 }
             }
+    }
+
+    private suspend fun persistPreparedMessage(
+        target: DirectTarget,
+        contact: Contact,
+        messageId: String,
+        text: String,
+        prepared: List<PreparedMessageAttachment>,
+        deliveryStatus: MessageDeliveryStatus
+    ) {
+        val createdAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+        val message =
+            MessageEntity(
+                id = messageId,
+                conversationId = target.conversationId,
+                packetId = null,
+                text = text,
+                transportPayload = null,
+                transportMode = contact.plannedTransportMode().name,
+                contentStatus = MessageContentStatus.READABLE.name,
+                deliveryStatus = deliveryStatus.name,
+                senderContactId = null,
+                isMine = true,
+                createdAtEpochMilliseconds = createdAtEpochMilliseconds
+            )
+
+        try {
+            chatDao.upsertMessage(message)
+            attachmentTransfer.persistOutgoing(messageId, prepared)
+            chatDao.updateConversationTimestamp(target.conversationId, createdAtEpochMilliseconds)
+        } catch (error: Throwable) {
+            runCatching { chatDao.deleteMessagesAndRefreshConversations(listOf(message)) }
+            attachmentTransfer.cleanupPrepared(prepared)
+            throw error
+        }
+    }
+
+    private suspend fun linkPacket(
+        messageId: String,
+        packet: ChatMessagePacket,
+        contact: Contact
+    ) {
+        val message = chatDao.findMessageById(messageId) ?: error("Stored direct message was not found")
+        chatDao.upsertMessage(
+            message.copy(
+                packetId = packet.packetId,
+                transportMode = contact.plannedTransportMode().name
+            )
+        )
+    }
+
+    private suspend fun discardMessages(messages: List<MessageEntity>) {
+        if (messages.isEmpty()) return
+        attachmentTransfer.deleteForMessages(messages.map(MessageEntity::id))
+        chatDao.deleteMessagesAndRefreshConversations(messages)
     }
 
     private suspend fun findWaitingMessages(contactId: String): List<MessageEntity> =
@@ -205,40 +284,18 @@ class DirectOutgoingMessageProcessor(
 
     private suspend fun createPacket(
         messageId: String,
-        text: String
+        text: String,
+        attachments: List<MessageAttachment>
     ): ChatMessagePacket =
         ChatMessagePacket(
             packetId = IdGenerator.generate(prefix = "packet"),
             messageId = messageId,
             sentAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
             text = text,
+            attachments = attachments,
             senderPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow(),
             profilePicture = localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
         )
-
-    private suspend fun storeQueuedMessage(
-        target: DirectTarget,
-        text: String,
-        packet: ChatMessagePacket,
-        contact: Contact
-    ) {
-        chatDao.upsertMessage(
-            MessageEntity(
-                id = packet.messageId,
-                conversationId = target.conversationId,
-                packetId = packet.packetId,
-                text = text,
-                transportPayload = null,
-                transportMode = contact.plannedTransportMode().name,
-                contentStatus = MessageContentStatus.READABLE.name,
-                deliveryStatus = MessageDeliveryStatus.QUEUED.name,
-                senderContactId = null,
-                isMine = true,
-                createdAtEpochMilliseconds = packet.sentAtEpochMilliseconds
-            )
-        )
-        chatDao.updateConversationTimestamp(target.conversationId, packet.sentAtEpochMilliseconds)
-    }
 
     private suspend fun enqueue(
         contactId: String,
@@ -269,10 +326,17 @@ class DirectOutgoingMessageProcessor(
         ).getOrThrow()
     }
 
-    private fun requireMessageText(text: String): String =
-        text.trim().also { normalizedText ->
-            require(normalizedText.isNotEmpty()) { "Message text must not be blank" }
+    private fun requireMessageContent(
+        text: String,
+        media: List<OutgoingMediaAttachment>
+    ): String {
+        MessageAttachmentPolicy.requireValid(media)
+        return text.trim().also { normalizedText ->
+            require(normalizedText.isNotEmpty() || media.isNotEmpty()) {
+                "Message must contain text or attachments"
+            }
         }
+    }
 
     private fun Contact.plannedTransportMode(): TransportEncryptionMode {
         val identity = sparrowIdentity

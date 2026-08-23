@@ -55,6 +55,7 @@ kotlin {
             implementation(projects.core.ui)
             implementation(projects.navigation)
             implementation(projects.feature.chats)
+            implementation(projects.feature.attachments)
             implementation(projects.feature.contactimport)
             implementation(projects.feature.contacts)
             implementation(projects.feature.identity)

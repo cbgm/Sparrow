@@ -11,6 +11,7 @@ import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_END_TO_END_ENCRY
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
+import com.cbgm.sparrow.feature.chats.domain.model.attachment.MessageMediaAttachment
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessage
@@ -20,7 +21,8 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.MessageDeliveryProgress
 internal fun ConversationWithMessages.toGroupConversation(
     participantContactIds: List<String>,
     recipientStates: List<MessageRecipientStateEntity>,
-    invitations: List<GroupInvitationEntity>
+    invitations: List<GroupInvitationEntity>,
+    attachmentsByMessageId: Map<String, List<MessageMediaAttachment>> = emptyMap()
 ): GroupConversation {
     val timeline = buildGroupLocalMembershipTimeline(messages, invitations)
     val visibleMessages = timeline.visibleMessages
@@ -37,7 +39,10 @@ internal fun ConversationWithMessages.toGroupConversation(
         messages =
             visibleMessages
                 .map { message ->
-                    message.toGroupMessage(statesByMessageId[message.id].orEmpty())
+                    message.toGroupMessage(
+                        recipientStates = statesByMessageId[message.id].orEmpty(),
+                        attachments = attachmentsByMessageId[message.id].orEmpty()
+                    )
                 },
         unreadCount =
             visibleMessages.count { message ->
@@ -55,7 +60,8 @@ internal fun ConversationWithMessages.toGroupConversation(
 }
 
 private fun MessageEntity.toGroupMessage(
-    recipientStates: List<MessageRecipientStateEntity>
+    recipientStates: List<MessageRecipientStateEntity>,
+    attachments: List<MessageMediaAttachment>
 ): GroupMessage {
     val deliveryStatus =
         if (recipientStates.isEmpty()) {
@@ -76,7 +82,8 @@ private fun MessageEntity.toGroupMessage(
         deliveryStatus = if (isMine) deliveryStatus else MessageDeliveryStatus.NOT_APPLICABLE,
         type = GroupMembershipMessageFactory.typeOf(transportMode),
         senderContactId = senderContactId,
-        deliveryProgress = recipientStates.toDeliveryProgress()
+        deliveryProgress = recipientStates.toDeliveryProgress(),
+        attachments = attachments
     )
 }
 

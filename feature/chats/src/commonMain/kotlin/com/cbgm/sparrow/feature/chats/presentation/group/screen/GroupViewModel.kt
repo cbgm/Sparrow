@@ -6,8 +6,10 @@ import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.feature.chats.domain.model.attachment.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
+import com.cbgm.sparrow.feature.chats.domain.usecase.attachment.LoadMessageAttachmentUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.AcceptGroupInvitationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeclineGroupInvitationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.MarkGroupConversationReadUseCase
@@ -19,6 +21,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.RetryGroupMessageUseC
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SendGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupTypingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.profile.ObserveRemoteProfilePicturesUseCase
+import com.cbgm.sparrow.feature.chats.presentation.attachment.model.GalleryMediaSelection
 import com.cbgm.sparrow.feature.chats.presentation.group.mapper.toGroupUiState
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState
@@ -58,7 +61,8 @@ class GroupViewModel(
     observeGroupAvatar: ObserveGroupAvatarUseCase,
     private val observeMemberTyping: ObserveGroupMemberTypingUseCase,
     private val setGroupTyping: SetGroupTypingUseCase,
-    observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase
+    observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase,
+    private val loadMessageAttachment: LoadMessageAttachmentUseCase
 ) : BaseViewModel() {
     private val groupId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.GroupConversation::conversationId.name)
@@ -68,6 +72,10 @@ class GroupViewModel(
     private val messageText = savedStateHandle.getMutableStateFlow(MESSAGE_TEXT_KEY, "")
     private val errorMessage = MutableStateFlow<String?>(null)
     private val typingContactIds = MutableStateFlow<Set<String>>(emptySet())
+    private val selectedGalleryMedia = MutableStateFlow<List<GalleryMediaSelection>>(emptyList())
+    private val attachmentBytes = MutableStateFlow<Map<String, ByteArray>>(emptyMap())
+    private val isSending = MutableStateFlow(false)
+    private val loadingAttachmentIds = mutableSetOf<String>()
     private val typingObserverJobs = mutableMapOf<String, Job>()
     private val typingTimeoutJobs = mutableMapOf<String, Job>()
     private var localTypingStopJob: Job? = null
@@ -97,7 +105,7 @@ class GroupViewModel(
     private val groupAvatarFlow: Flow<ByteArray?> =
         observeGroupAvatar(groupId).map { avatar -> avatar.bytes }
 
-    @OptIn(ExperimentalCoroutinesApi::class, ExperimentalCoroutinesApi::class)
+    @OptIn(ExperimentalCoroutinesApi::class)
     private val profilePicturesFlow: Flow<Map<String, ByteArray?>> =
         conversationFlow
             .map { observation ->
@@ -126,26 +134,40 @@ class GroupViewModel(
             )
         }
 
-    val uiState: StateFlow<GroupUiState> =
+    private val composerContext =
         combine(
-            presentationContext,
             messageText,
             errorMessage,
             typingContactIds,
+            selectedGalleryMedia,
+            isSending
+        ) { text, error, typingIds, selectedMedia, sending ->
+            GroupComposerContext(text, error, typingIds, selectedMedia, sending)
+        }
+
+    val uiState: StateFlow<GroupUiState> =
+        combine(
+            presentationContext,
+            composerContext,
+            attachmentBytes,
             observeMessageSafetyAssessments()
-        ) { presentation, text, error, typingIds, safetyAssessments ->
+        ) { presentation, composer, loadedAttachmentBytes, safetyAssessments ->
             toGroupUiState(
                 conversation = presentation.context.observation.conversation,
                 administration = presentation.context.administration,
                 contacts = presentation.contacts,
                 profilePictures = presentation.profilePictures,
                 avatarBytes = presentation.avatarBytes,
-                currentText = text,
-                currentError = error,
+                currentText = composer.text,
+                currentError = composer.error,
                 observationError = presentation.context.observation.errorMessage,
                 isLoading = presentation.context.observation is GroupConversationObservation.Loading,
-                typingContactIds = typingIds,
-                safetyAssessments = safetyAssessments
+                typingContactIds = composer.typingIds,
+                safetyAssessments = safetyAssessments,
+                attachmentBytes = loadedAttachmentBytes
+            ).copy(
+                selectedGalleryMedia = composer.selectedMedia,
+                isSending = composer.isSending
             )
         }.stateIn(
             scope = viewModelScope,
@@ -161,6 +183,9 @@ class GroupViewModel(
         when (event) {
             is GroupUiEvent.MessageTextChanged -> onMessageTextChanged(event.text)
             GroupUiEvent.SendClicked -> sendCurrentMessage()
+            is GroupUiEvent.GalleryMediaSelected -> onGalleryMediaSelected(event.media)
+            is GroupUiEvent.MediaAttachmentVisible -> loadAttachment(event.attachmentId)
+            is GroupUiEvent.AttachmentError -> errorMessage.value = event.message
             GroupUiEvent.HeaderClicked -> navigator.navigateTo(AppRoute.GroupDetails(groupId))
             is GroupUiEvent.RetryMessage -> retryFailedMessage(event.messageId)
             is GroupUiEvent.SafetyWarningClicked ->
@@ -257,18 +282,52 @@ class GroupViewModel(
     }
 
     private fun sendCurrentMessage() {
-        if (!uiState.value.isMessageInputEnabled) return
+        if (!uiState.value.isMessageInputEnabled || isSending.value) return
         val text = messageText.value.trim()
-        if (text.isEmpty()) return
+        val selectedMedia = selectedGalleryMedia.value
+        if (text.isEmpty() && selectedMedia.isEmpty()) return
 
-        messageText.value = ""
-        stopTyping()
         viewModelScope.launch {
-            sendMessage(groupId, text)
-                .onFailure { error ->
-                    messageText.value = text
-                    errorMessage.value = error.message ?: "Message could not be sent"
-                }
+            isSending.value = true
+            try {
+                val media = selectedMedia.map(GalleryMediaSelection::toOutgoingMediaAttachment)
+                sendMessage(groupId, text, media)
+                    .onSuccess {
+                        messageText.value = ""
+                        selectedGalleryMedia.value = emptyList()
+                        stopTypingNow()
+                    }
+                    .onFailure { error ->
+                        errorMessage.value = error.message ?: "Message could not be sent"
+                    }
+            } finally {
+                isSending.value = false
+            }
+        }
+    }
+
+    private fun onGalleryMediaSelected(media: List<GalleryMediaSelection>) {
+        runCatching {
+            val outgoing = media.map(GalleryMediaSelection::toOutgoingMediaAttachment)
+            MessageAttachmentPolicy.requireValid(outgoing)
+        }
+            .onSuccess {
+                selectedGalleryMedia.value = media
+                errorMessage.value = null
+            }.onFailure { error ->
+                errorMessage.value = error.message ?: "Selected gallery media could not be attached"
+            }
+    }
+
+    private fun loadAttachment(attachmentId: String) {
+        if (attachmentId.isBlank() || attachmentBytes.value.containsKey(attachmentId)) return
+        if (!loadingAttachmentIds.add(attachmentId)) return
+
+        viewModelScope.launch {
+            loadMessageAttachment(attachmentId)
+                .onSuccess { bytes -> attachmentBytes.value = attachmentBytes.value + (attachmentId to bytes) }
+                .onFailure { error -> logger.warn(error) { "Could not load message attachment $attachmentId" } }
+            loadingAttachmentIds.remove(attachmentId)
         }
     }
 
@@ -365,6 +424,14 @@ class GroupViewModel(
             return result
         }
     }
+
+    private data class GroupComposerContext(
+        val text: String,
+        val error: String?,
+        val typingIds: Set<String>,
+        val selectedMedia: List<GalleryMediaSelection>,
+        val isSending: Boolean
+    )
 
     private companion object {
         const val MESSAGE_TEXT_KEY = "messageText"

@@ -61,7 +61,10 @@ import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
+import com.cbgm.sparrow.feature.chats.domain.model.attachment.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
+import com.cbgm.sparrow.feature.chats.presentation.attachment.platform.rememberGalleryPickerLauncher
+import com.cbgm.sparrow.feature.chats.presentation.component.AttachmentClick
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageBubble
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageControl
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
@@ -154,6 +157,9 @@ fun DirectScreen(
                         warning = warning
                     )
                 )
+            },
+            onAttachmentVisible = { attachmentId ->
+                onUiEvent(DirectUiEvent.MediaAttachmentVisible(attachmentId))
             }
         )
     }
@@ -287,6 +293,15 @@ private fun BottomBar(
     containerColor: Color,
     onUiEvent: (DirectUiEvent) -> Unit
 ) {
+    val galleryPicker =
+        rememberGalleryPickerLauncher(
+            maxItems = MessageAttachmentPolicy.MAX_ATTACHMENTS_PER_MESSAGE,
+            selectedMedia = uiState.selectedGalleryMedia,
+            onMediaSelected = { onUiEvent(DirectUiEvent.GalleryMediaSelected(it)) },
+            onDismissed = {},
+            onError = { onUiEvent(DirectUiEvent.AttachmentError(it)) }
+        )
+
     MessageControl(
         containerColor = containerColor,
         isTyping = uiState.isContactTyping,
@@ -294,9 +309,19 @@ private fun BottomBar(
         contactName = uiState.contactName,
         onValueChange = { onUiEvent(DirectUiEvent.MessageTextChanged(it)) },
         onSendClick = { onUiEvent(DirectUiEvent.SendClicked) },
-        isInputEnabled = !uiState.isLoading && uiState.composerState.isInputEnabled,
-        isSendEnabled = !uiState.isLoading && uiState.composerState.isSendActionEnabled,
-        onAttachmentButtonClick = {}
+        isInputEnabled = !uiState.isLoading && !uiState.isSending && uiState.composerState.isInputEnabled,
+        isSendEnabled = !uiState.isLoading && !uiState.isSending && uiState.composerState.isSendActionEnabled,
+        selectedGalleryMedia = uiState.selectedGalleryMedia,
+        onGallerySelectionClick = { galleryPicker.launch() },
+        isGalleryEnabled = !uiState.isLoading && !uiState.isSending && uiState.composerState.isInputEnabled,
+        onAttachmentButtonClick = { attachmentClick ->
+            when (attachmentClick) {
+                AttachmentClick.OpenGallery -> galleryPicker.launch()
+                AttachmentClick.OpenCamera,
+                AttachmentClick.OpenContacts,
+                AttachmentClick.OpenFile -> Unit
+            }
+        }
     )
 }
 
@@ -307,7 +332,8 @@ private fun Content(
     innerPadding: PaddingValues,
     targetMessageId: String?,
     onRetryMessage: (String) -> Unit,
-    onSafetyWarningClick: (String, MessageSafetyWarningUiModel) -> Unit
+    onSafetyWarningClick: (String, MessageSafetyWarningUiModel) -> Unit,
+    onAttachmentVisible: (String) -> Unit
 ) {
     when {
         uiState.isLoading -> LoadingContent(
@@ -326,6 +352,7 @@ private fun Content(
             targetMessageId = targetMessageId,
             onRetryMessage = onRetryMessage,
             onSafetyWarningClick = onSafetyWarningClick,
+            onAttachmentVisible = onAttachmentVisible,
             contentPadding = innerPadding
         )
     }
@@ -338,6 +365,7 @@ private fun MessageList(
     targetMessageId: String?,
     onRetryMessage: (String) -> Unit,
     onSafetyWarningClick: (String, MessageSafetyWarningUiModel) -> Unit,
+    onAttachmentVisible: (String) -> Unit,
     contentPadding: PaddingValues
 ) {
     val searchTargetState =
@@ -373,6 +401,7 @@ private fun MessageList(
                 onSafetyDetailsClick = { warning ->
                     onSafetyWarningClick(message.id, warning)
                 },
+                onAttachmentVisible = onAttachmentVisible,
                 isSearchHighlighted = message.id == searchTargetState.highlightedMessageId
             )
         }

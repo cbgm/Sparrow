@@ -22,8 +22,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -36,6 +34,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.PatternBackground
+import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
@@ -146,33 +145,15 @@ fun ImportIdentityScreen(
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
             )
 
-            OutlinedTextField(
+            SparrowInputField(
                 value = uiState.encodedIdentity,
                 onValueChange = { value ->
                     onUiEvent(ImportIdentityUiEvent.EncodedIdentityChanged(value))
                 },
                 modifier = Modifier.fillMaxWidth(),
-                label = {
-                    Text(text = stringResource(Res.string.feature_contactimport_shared_identity))
-                },
+                label = stringResource(Res.string.feature_contactimport_shared_identity),
                 minLines = 4,
-                enabled = !uiState.isImporting,
-                textStyle =
-                    MaterialTheme.typography.bodySmall.copy(
-                        color = MaterialTheme.colorScheme.onBackground
-                    ),
-                colors =
-                    OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.TextField.unfocusedBorder),
-                        focusedLabelColor = MaterialTheme.colorScheme.primary,
-                        unfocusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
-                        cursorColor = MaterialTheme.colorScheme.primary
-                    )
+                isEnabled = !uiState.isImporting
             )
 
             ImportButton(
@@ -192,11 +173,17 @@ fun ImportIdentityScreen(
                 val statusText =
                     when (uiState.importedIdentityTrust) {
                         IdentityImportTrust.VERIFIED_IN_PERSON -> {
-                            stringResource(Res.string.feature_contactimport_imported_verified_name, name)
+                            stringResource(
+                                Res.string.feature_contactimport_imported_verified_name,
+                                name
+                            )
                         }
 
                         IdentityImportTrust.UNVERIFIED -> {
-                            stringResource(Res.string.feature_contactimport_imported_unverified_name, name)
+                            stringResource(
+                                Res.string.feature_contactimport_imported_unverified_name,
+                                name
+                            )
                         }
 
                         null -> {

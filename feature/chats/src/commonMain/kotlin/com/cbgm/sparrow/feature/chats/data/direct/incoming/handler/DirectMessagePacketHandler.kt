@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.data.direct.incoming.handler
 
+import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
@@ -12,6 +13,8 @@ import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.ConversationType
 import com.cbgm.sparrow.data.database.entity.MessageEntity
+import com.cbgm.sparrow.feature.chats.data.attachment.MessageAttachmentCacheCoordinator
+import com.cbgm.sparrow.feature.chats.data.attachment.MessageAttachmentTransfer
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 
@@ -20,7 +23,9 @@ class DirectMessagePacketHandler(
     private val chatDao: ChatDao,
     private val contactDao: ContactDao,
     private val protocolOutbox: ProtocolOutbox,
-    private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor
+    private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor,
+    private val attachmentTransfer: MessageAttachmentTransfer,
+    private val attachmentCacheCoordinator: MessageAttachmentCacheCoordinator
 ) {
     private val logger = SparrowLog.withTag("DirectMessagePacketHandler")
 
@@ -29,7 +34,7 @@ class DirectMessagePacketHandler(
         packet: ChatMessagePacket
     ): Result<Unit> =
         runCatching {
-            validateMessage(packet)
+            validateMessage(context, packet)
             remoteProfilePictureMetadataProcessor
                 .apply(context.contactId, packet.profilePicture)
                 .onFailure { error ->
@@ -39,11 +44,24 @@ class DirectMessagePacketHandler(
 
             val conversation = getOrCreateConversation(context)
             storeMessage(conversation, context, packet)
+            attachmentTransfer.persistIncoming(packet.messageId, packet.attachments)
             sendDeliveryReceipt(context.contactId, packet.messageId)
+            attachmentCacheCoordinator.cache(packet.messageId)
         }
 
-    private fun validateMessage(packet: ChatMessagePacket) {
-        require(packet.text.isNotBlank()) { "Incoming chat message must not be blank" }
+    private fun validateMessage(
+        context: IncomingPacketContext,
+        packet: ChatMessagePacket
+    ) {
+        require(packet.text.isNotBlank() || packet.attachments.isNotEmpty()) {
+            "Incoming chat message must contain text or attachments"
+        }
+        require(
+            packet.attachments.isEmpty() ||
+                context.transportMode == TransportEncryptionMode.SEALED_BOX.name
+        ) {
+            "Direct message attachments require an encrypted Sparrow transport"
+        }
     }
 
     private suspend fun updateSenderDisplayName(

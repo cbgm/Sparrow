@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.FilePresent
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoAlbum
 import androidx.compose.material3.FilledIconButton
@@ -20,7 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.attachmentColors
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -30,7 +31,8 @@ fun AttachmentBar(
     onClickGallery: () -> Unit,
     onClickCamera: () -> Unit,
     onClickFile: () -> Unit,
-    onClickContact: () -> Unit
+    onClickContact: () -> Unit,
+    isGalleryEnabled: Boolean = true
 ) {
     Row(
         modifier = Modifier
@@ -43,7 +45,8 @@ fun AttachmentBar(
         FilledButton(
             onClick = onClickGallery,
             imageVector = Icons.Filled.PhotoAlbum,
-            tint = MaterialTheme.attachmentColors.gallery
+            tint = MaterialTheme.attachmentColors.gallery,
+            enabled = isGalleryEnabled
         )
 
         FilledButton(
@@ -61,6 +64,11 @@ fun AttachmentBar(
             imageVector = Icons.Filled.Person,
             tint = MaterialTheme.attachmentColors.contact
         )
+        FilledButton(
+            onClick = onClickContact,
+            imageVector = Icons.Filled.MyLocation,
+            tint = MaterialTheme.attachmentColors.location
+        )
     }
 }
 
@@ -68,11 +76,13 @@ fun AttachmentBar(
 private fun FilledButton(
     imageVector: ImageVector,
     onClick: () -> Unit,
-    tint: Color = MaterialTheme.colorScheme.secondary
+    tint: Color = MaterialTheme.colorScheme.secondary,
+    enabled: Boolean = true
 ) {
     FilledIconButton(
         onClick = onClick,
-        modifier = Modifier.size(60.dp),
+        enabled = enabled,
+        modifier = Modifier.size(Dimens.AttachmentBar.buttonSize),
         shape = CircleShape,
         colors = IconButtonDefaults.filledIconButtonColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
@@ -82,7 +92,7 @@ private fun FilledButton(
             imageVector = imageVector,
             contentDescription = null,
             tint = tint,
-            modifier = Modifier.size(30.dp)
+            modifier = Modifier.size(Dimens.AttachmentBar.iconSize)
         )
     }
 }
@@ -95,7 +105,8 @@ private fun AttachmentBarPreview() {
             onClickGallery = {},
             onClickContact = {},
             onClickFile = {},
-            onClickCamera = {}
+            onClickCamera = {},
+            isGalleryEnabled = true
         )
     }
 }

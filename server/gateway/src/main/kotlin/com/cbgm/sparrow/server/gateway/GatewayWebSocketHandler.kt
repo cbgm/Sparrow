@@ -11,10 +11,10 @@ class GatewayWebSocketHandler(
     private val nodeId: String,
     private val connections: ConnectionRegistry,
     private val federation: FederationClient,
-    private val presence: PresenceClient,
+    presence: PresenceClient,
     private val legacyPush: LegacyPushClient,
     private val routeLifetimeMilliseconds: Long,
-    private val routeRefreshIntervalMilliseconds: Long
+    private val blobUploadTicketIssuer: GatewayBlobUploadTicketIssuer
 ) {
     private val bestEffortPresence = BestEffortPresenceClient(presence)
     private val pushDispatcher =
@@ -48,6 +48,9 @@ class GatewayWebSocketHandler(
                             recipientId = message.recipientId,
                             isTyping = message.isTyping
                         )
+                    },
+                    issueBlobUploadTicket = { connection, message ->
+                        connection.send(blobUploadTicketIssuer.issue(message))
                     }
                 )
         ).handle(session)

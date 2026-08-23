@@ -3,6 +3,8 @@ package com.cbgm.sparrow.feature.chats.data.group.outgoing
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.core.protocol.message.GroupMessageContent
+import com.cbgm.sparrow.core.protocol.message.GroupMessageContentCodec
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.GroupChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.ReadReceiptPacket
@@ -16,9 +18,10 @@ import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
+import com.cbgm.sparrow.feature.chats.data.attachment.MessageAttachmentTransfer
+import com.cbgm.sparrow.feature.chats.data.attachment.PreparedMessageAttachment
 import com.cbgm.sparrow.feature.chats.data.group.delivery.GroupMessageDeliveryCoordinator
 import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
-import com.cbgm.sparrow.feature.chats.data.group.invitation.canSendToActiveGroupMembers
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
 import com.cbgm.sparrow.feature.chats.data.group.mapper.toGroupDeliveryStatus
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_END_TO_END_ENCRYPTED_MODE
@@ -26,6 +29,8 @@ import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.feature.chats.domain.model.attachment.MessageAttachmentPolicy
+import com.cbgm.sparrow.feature.chats.domain.model.attachment.OutgoingMediaAttachment
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessageDeliveryStateMachine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -34,7 +39,7 @@ import kotlinx.coroutines.sync.withLock
  * Owns every outgoing group-message operation.
  *
  * Red line:
- * Group use case -> GroupConversationRepositoryImpl -> this processor -> ProtocolOutbox.
+ * Group use case -> GroupMessageRepositoryImpl -> this processor -> ProtocolOutbox.
  */
 class GroupOutgoingMessageProcessor(
     private val chatDao: ChatDao,
@@ -44,7 +49,9 @@ class GroupOutgoingMessageProcessor(
     private val protocolOutbox: ProtocolOutbox,
     private val groupSecurityManager: GroupSecurityManager,
     private val deliveryCoordinator: GroupMessageDeliveryCoordinator,
-    private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider
+    private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
+    private val groupMessageContentCodec: GroupMessageContentCodec,
+    private val attachmentTransfer: MessageAttachmentTransfer
 ) {
     private val sendMutex = Mutex()
     private val logger = SparrowLog.withTag("GroupOutgoingMessageProcessor")
@@ -52,21 +59,26 @@ class GroupOutgoingMessageProcessor(
     suspend fun send(
         groupId: String,
         text: String,
+        media: List<OutgoingMediaAttachment> = emptyList(),
         invitations: List<GroupInvitationEntity>
     ): Result<Unit> =
         runCatching {
             sendMutex.withLock {
-                val normalizedText = text.trim()
-                require(normalizedText.isNotEmpty()) { "Message text must not be blank" }
-
+                val normalizedText = requireMessageContent(text, media)
                 requireActiveMembership(groupId, invitations)
-                val message = createQueuedMessage(groupId, normalizedText)
                 val recipients = findCurrentEpochRecipients(groupId)
+                check(recipients.isNotEmpty()) { "Group has no active recipients" }
 
-                if (canSendToActiveGroupMembers(recipients.size)) {
-                    encryptAndEnqueue(message, recipients)
-                } else {
-                    storeFailedLocalMessage(message)
+                val message = createQueuedMessage(groupId, normalizedText)
+                val prepared = attachmentTransfer.prepareMedia(media).getOrThrow()
+                try {
+                    encryptAndEnqueue(message, recipients, prepared)
+                } catch (error: Throwable) {
+                    val stored = chatDao.findMessageById(message.id) != null
+                    if (!stored) {
+                        attachmentTransfer.cleanupPrepared(prepared)
+                    }
+                    throw error
                 }
             }
         }
@@ -107,8 +119,7 @@ class GroupOutgoingMessageProcessor(
 
             val failures = mutableListOf<String>()
             chatDao.findMessagesAwaitingReadReceipt(groupId).forEach { message ->
-                val enqueueError =
-                    enqueueReadReceipt(message.messageId, message.contactId).exceptionOrNull()
+                val enqueueError = enqueueReadReceipt(message.messageId, message.contactId).exceptionOrNull()
                 if (enqueueError != null) {
                     failures += message.contactId.toFailureDescription(enqueueError)
                     return@forEach
@@ -196,33 +207,20 @@ class GroupOutgoingMessageProcessor(
             createdAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
         )
 
-    private suspend fun findCurrentEpochRecipients(
-        groupId: String
-    ): List<GroupMemberKeyEntity> {
-        val state =
-            groupSecurityDao.findState(groupId)
-                ?: error("Group security state was not found")
+    private suspend fun findCurrentEpochRecipients(groupId: String): List<GroupMemberKeyEntity> {
+        val state = groupSecurityDao.findState(groupId) ?: error("Group security state was not found")
         return groupSecurityDao.findMemberKeys(
             groupId = groupId,
             epoch = state.currentEpoch
         )
     }
 
-    private suspend fun storeFailedLocalMessage(message: MessageEntity) {
-        chatDao.upsertMessage(message.copy(deliveryStatus = MessageDeliveryStatus.FAILED.name))
-        chatDao.updateConversationTimestamp(
-            conversationId = message.conversationId,
-            timestamp = message.createdAtEpochMilliseconds
-        )
-    }
-
     private suspend fun encryptAndEnqueue(
         message: MessageEntity,
-        recipients: List<GroupMemberKeyEntity>
+        recipients: List<GroupMemberKeyEntity>,
+        prepared: List<PreparedMessageAttachment>
     ) {
-        check(recipients.isNotEmpty()) { "Group has no active recipients" }
-
-        val packets = createPackets(message, recipients)
+        val packets = createPackets(message, recipients, prepared)
         val recipientStates = packets.map { (recipient, packet) -> packet.toRecipientState(recipient) }
 
         chatDao.upsertOutgoingGroupMessage(
@@ -230,6 +228,14 @@ class GroupOutgoingMessageProcessor(
             recipientStates = recipientStates,
             timestamp = message.createdAtEpochMilliseconds
         )
+        try {
+            attachmentTransfer.persistOutgoing(message.id, prepared)
+        } catch (error: Throwable) {
+            chatDao.deleteMessagesAndRefreshConversations(listOf(message))
+            attachmentTransfer.cleanupPrepared(prepared)
+            throw error
+        }
+
         val failures = mutableListOf<String>()
         packets.forEach { (recipient, packet) ->
             val error = protocolOutbox.enqueue(recipient.contactId, packet).exceptionOrNull()
@@ -253,18 +259,26 @@ class GroupOutgoingMessageProcessor(
 
     private suspend fun createPackets(
         message: MessageEntity,
-        recipients: List<GroupMemberKeyEntity>
+        recipients: List<GroupMemberKeyEntity>,
+        prepared: List<PreparedMessageAttachment>
     ): Map<GroupMemberKeyEntity, GroupChatMessagePacket> {
         val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
         val profilePicture =
             localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
+        val plaintext =
+            groupMessageContentCodec.encode(
+                GroupMessageContent(
+                    text = message.text,
+                    attachments = prepared.map(PreparedMessageAttachment::attachment)
+                )
+            )
         val securedMessage =
             groupSecurityManager
                 .encryptMessage(
                     groupId = message.conversationId,
                     messageId = message.id,
                     sentAtEpochMilliseconds = message.createdAtEpochMilliseconds,
-                    plaintext = message.text,
+                    plaintext = plaintext,
                     localSigningKeyPair = localSigningKeyPair,
                     profilePicture = profilePicture
                 ).getOrThrow()
@@ -332,6 +346,18 @@ class GroupOutgoingMessageProcessor(
                         readAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
                     )
             ).map { Unit }
+
+    private fun requireMessageContent(
+        text: String,
+        media: List<OutgoingMediaAttachment>
+    ): String {
+        MessageAttachmentPolicy.requireValid(media)
+        return text.trim().also { normalizedText ->
+            require(normalizedText.isNotEmpty() || media.isNotEmpty()) {
+                "Message must contain text or attachments"
+            }
+        }
+    }
 
     private fun String.toFailureDescription(error: Throwable): String =
         "$this: ${error.message ?: error::class.simpleName.orEmpty()}"

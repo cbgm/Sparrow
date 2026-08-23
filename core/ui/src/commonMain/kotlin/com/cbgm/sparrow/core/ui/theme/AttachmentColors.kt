@@ -12,7 +12,8 @@ data class AttachmentColors(
     val gallery: Color,
     val camera: Color,
     val file: Color,
-    val contact: Color
+    val contact: Color,
+    val location: Color
 )
 
 internal val SparrowAttachmentColors =
@@ -20,7 +21,8 @@ internal val SparrowAttachmentColors =
         gallery = Color(0xFF569EEC),
         camera = Color(0xFFE85D7F),
         file = Color(0xFF63BB6A),
-        contact = Color(0xFFB78CF5)
+        contact = Color(0xFFB78CF5),
+        location = Color(0xFFBBB268)
     )
 
 internal val LocalAttachmentColors =

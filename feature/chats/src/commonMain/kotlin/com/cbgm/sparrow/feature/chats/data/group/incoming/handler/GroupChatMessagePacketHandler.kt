@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.chats.data.group.incoming.handler
 
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.core.protocol.message.GroupMessageContentCodec
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.DeliveryReceiptPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupChatMessagePacket
@@ -10,6 +11,8 @@ import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProces
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.entity.MessageEntity
+import com.cbgm.sparrow.feature.chats.data.attachment.MessageAttachmentCacheCoordinator
+import com.cbgm.sparrow.feature.chats.data.attachment.MessageAttachmentTransfer
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_END_TO_END_ENCRYPTED_MODE
 import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
@@ -19,7 +22,10 @@ class GroupChatMessagePacketHandler(
     private val chatDao: ChatDao,
     private val protocolOutbox: ProtocolOutbox,
     private val groupSecurityManager: GroupSecurityManager,
-    private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor
+    private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor,
+    private val groupMessageContentCodec: GroupMessageContentCodec,
+    private val attachmentTransfer: MessageAttachmentTransfer,
+    private val attachmentCacheCoordinator: MessageAttachmentCacheCoordinator
 ) : GroupPacketHandler {
     private val logger = SparrowLog.withTag("GroupChatMessagePacketHandler")
 
@@ -38,7 +44,6 @@ class GroupChatMessagePacketHandler(
                     ?: error("Group conversation was not found")
             check(conversation.type == GROUP_CONVERSATION_TYPE) { "Conversation is not a group" }
             val existingMessage = chatDao.findMessageById(groupPacket.messageId)
-
             if (existingMessage != null) {
                 check(
                     existingMessage.conversationId == groupPacket.groupId &&
@@ -47,9 +52,6 @@ class GroupChatMessagePacketHandler(
                 ) {
                     "Group message ID conflicts with an existing message"
                 }
-
-                queueDeliveryReceipt(groupPacket, context.contactId)
-                return@runCatching
             }
 
             val plaintext =
@@ -58,6 +60,14 @@ class GroupChatMessagePacketHandler(
                         packet = groupPacket,
                         senderContactId = context.contactId
                     ).getOrThrow()
+            val content = groupMessageContentCodec.decode(plaintext)
+
+            if (existingMessage != null) {
+                attachmentTransfer.persistIncoming(groupPacket.messageId, content.attachments)
+                queueDeliveryReceipt(groupPacket, context.contactId)
+                attachmentCacheCoordinator.cache(groupPacket.messageId)
+                return@runCatching
+            }
 
             remoteProfilePictureMetadataProcessor
                 .apply(context.contactId, groupPacket.profilePicture)
@@ -70,7 +80,7 @@ class GroupChatMessagePacketHandler(
                     id = groupPacket.messageId,
                     conversationId = groupPacket.groupId,
                     packetId = groupPacket.packetId,
-                    text = plaintext,
+                    text = content.text,
                     transportPayload = context.encodedTransportPayload,
                     transportMode = GROUP_END_TO_END_ENCRYPTED_MODE,
                     contentStatus = MessageContentStatus.READABLE.name,
@@ -80,9 +90,11 @@ class GroupChatMessagePacketHandler(
                     createdAtEpochMilliseconds = groupPacket.sentAtEpochMilliseconds
                 )
             )
+            attachmentTransfer.persistIncoming(groupPacket.messageId, content.attachments)
             chatDao.updateConversationTimestamp(groupPacket.groupId, context.receivedAtEpochMilliseconds)
 
             queueDeliveryReceipt(groupPacket, context.contactId)
+            attachmentCacheCoordinator.cache(groupPacket.messageId)
         }
 
     private suspend fun queueDeliveryReceipt(

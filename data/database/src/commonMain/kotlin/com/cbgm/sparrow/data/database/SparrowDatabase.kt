@@ -12,6 +12,7 @@ import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.data.database.dao.IdentityInvitationDao
 import com.cbgm.sparrow.data.database.dao.MailboxRouteDao
+import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
 import com.cbgm.sparrow.data.database.dao.MessageDeliveryStatusDao
 import com.cbgm.sparrow.data.database.dao.MessageRecipientStateDao
 import com.cbgm.sparrow.data.database.dao.MessageSafetyDao
@@ -29,6 +30,7 @@ import com.cbgm.sparrow.data.database.entity.GroupSecurityStateEntity
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.data.database.entity.IdentityInvitationEntity
 import com.cbgm.sparrow.data.database.entity.LocalMailboxCredentialEntity
+import com.cbgm.sparrow.data.database.entity.MessageAttachmentEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.data.database.entity.MessageSafetyAssessmentEntity
@@ -50,6 +52,7 @@ import com.cbgm.sparrow.data.database.entity.RemoteMailboxRouteEntity
         GroupVerificationPairEntity::class,
         IdentityInvitationEntity::class,
         MessageEntity::class,
+        MessageAttachmentEntity::class,
         MessageSearchEmbeddingEntity::class,
         MessageSafetyAssessmentEntity::class,
         MessageRecipientStateEntity::class,
@@ -57,12 +60,13 @@ import com.cbgm.sparrow.data.database.entity.RemoteMailboxRouteEntity
         LocalMailboxCredentialEntity::class,
         RemoteMailboxRouteEntity::class
     ],
-    version = 30,
+    version = 31,
     autoMigrations = [
         AutoMigration(from = 26, to = 27),
         AutoMigration(from = 27, to = 28),
         AutoMigration(from = 28, to = 29),
-        AutoMigration(from = 29, to = 30)
+        AutoMigration(from = 29, to = 30),
+        AutoMigration(from = 30, to = 31)
     ],
     exportSchema = true
 )
@@ -85,6 +89,8 @@ abstract class SparrowDatabase : RoomDatabase() {
     abstract fun protocolOutboxDao(): ProtocolOutboxDao
 
     abstract fun messageDeliveryStatusDao(): MessageDeliveryStatusDao
+
+    abstract fun messageAttachmentDao(): MessageAttachmentDao
 
     abstract fun messageRecipientStateDao(): MessageRecipientStateDao
 

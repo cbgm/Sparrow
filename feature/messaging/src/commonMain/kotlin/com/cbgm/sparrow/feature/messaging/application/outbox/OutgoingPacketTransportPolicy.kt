@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.messaging.application.outbox
 
+import com.cbgm.sparrow.core.protocol.packet.ChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.ContactInviteAcceptedPacket
 import com.cbgm.sparrow.core.protocol.packet.ContactInviteDeclinedPacket
 import com.cbgm.sparrow.core.protocol.packet.ContactInvitePacket
@@ -72,6 +73,13 @@ class DefaultOutgoingPacketTransportPolicy : OutgoingPacketTransportPolicy {
                             "Contact verification receipt requires an encrypted Sparrow transport"
                     )
                 }
+
+                is ChatMessagePacket ->
+                    OutgoingTransportRequirement(
+                        requiresEncryption = packet.attachments.isNotEmpty(),
+                        encryptionUnavailableMessage =
+                            "Direct message attachments require an encrypted Sparrow transport"
+                    )
 
                 is GroupAvatarUpdatedPacket,
                 is GroupCreatedPacket,

@@ -29,7 +29,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class ControlPlaneSettingsViewModel(
     private val savedStateHandle: SavedStateHandle,
     private val configuration: ControlPlaneConfiguration,
-    private val statusStore: ControlPlaneStatusStore,
+    statusStore: ControlPlaneStatusStore,
     private val healthMonitor: ControlPlaneHealthMonitor,
     private val directorySynchronizer: ControlPlaneDirectorySynchronizer
 ) : BaseViewModel() {
@@ -279,12 +279,20 @@ private data class ConfigurationSnapshot(
 
 private fun String.normalizeHttpUrl(): String? {
     val trimmed = trim().trimEnd('/')
-    if (trimmed.isBlank() || trimmed.any(Char::isWhitespace)) return null
-    val normalized =
-        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-            trimmed
-        } else {
-            "https://$trimmed"
-        }
+    if (trimmed.isBlank() || trimmed.any { it.isWhitespace() }) return null
+
+    val normalized = when {
+        trimmed.startsWith("http://", true) || trimmed.startsWith("https://", true) -> trimmed
+        else -> "https://$trimmed"
+    }
+
+    val host = normalized.substringAfter("://").substringBefore('/').substringBefore(':')
+    if (host.isBlank()) return null
+
+    val looksValid = host == "localhost" || host.contains('.') || host.matches(IPV4_REGEX)
+    if (!looksValid) return null
+
     return runCatching { ControlPlaneEndpoint(normalized).baseUrl }.getOrNull()
 }
+
+private val IPV4_REGEX = Regex("""\d{1,3}(\.\d{1,3}){3}""")

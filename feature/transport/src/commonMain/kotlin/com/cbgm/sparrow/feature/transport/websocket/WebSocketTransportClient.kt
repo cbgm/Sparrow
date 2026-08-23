@@ -2,6 +2,8 @@ package com.cbgm.sparrow.feature.transport.websocket
 
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
+import com.cbgm.sparrow.feature.transport.gateway.model.GatewayBlobUploadTicket
+import com.cbgm.sparrow.feature.transport.gateway.model.GatewayBlobUploadTicketRequest
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayEnvelopeAcceptance
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayTypingEvent
 import com.cbgm.sparrow.feature.transport.gateway.model.TransportEnvelope
@@ -55,6 +57,12 @@ interface WebSocketTransportClient {
                 expiresAtEpochMilliseconds = envelope.expiresAtEpochMilliseconds
             )
         }
+
+    suspend fun requestBlobUploadTicket(
+        request: GatewayBlobUploadTicketRequest,
+        timeoutMilliseconds: Long
+    ): Result<GatewayBlobUploadTicket> =
+        Result.failure(UnsupportedOperationException("Blob upload tickets are not supported"))
 
     suspend fun acknowledgeIncomingEnvelope(envelopeId: String): Result<Unit>
 

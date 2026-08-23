@@ -7,7 +7,10 @@ import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.feature.chats.domain.model.attachment.MessageAttachmentPolicy
+import com.cbgm.sparrow.feature.chats.domain.model.attachment.OutgoingMediaAttachment
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
+import com.cbgm.sparrow.feature.chats.domain.usecase.attachment.LoadMessageAttachmentUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.MarkDirectConversationReadUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectTypingUseCase
@@ -16,6 +19,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.direct.RetryDirectMessageUs
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SendDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SetDirectTypingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.profile.ObserveRemoteProfilePicturesUseCase
+import com.cbgm.sparrow.feature.chats.presentation.attachment.model.GalleryMediaSelection
 import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.toDirectUiState
 import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.withProfilePicture
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectComposerState
@@ -57,7 +61,8 @@ class DirectViewModel(
     observeProfilePictures: ObserveRemoteProfilePicturesUseCase,
     private val observeTyping: ObserveDirectTypingUseCase,
     private val setTyping: SetDirectTypingUseCase,
-    observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase
+    observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase,
+    private val loadMessageAttachment: LoadMessageAttachmentUseCase
 ) : BaseViewModel() {
     private val conversationId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.Chat::conversationId.name)
@@ -71,6 +76,10 @@ class DirectViewModel(
     private val messageText = savedStateHandle.getMutableStateFlow(MESSAGE_TEXT_KEY, "")
     private val errorMessage = MutableStateFlow<String?>(null)
     private val isContactTyping = MutableStateFlow(false)
+    private val selectedGalleryMedia = MutableStateFlow<List<GalleryMediaSelection>>(emptyList())
+    private val attachmentBytes = MutableStateFlow<Map<String, ByteArray>>(emptyMap())
+    private val isSending = MutableStateFlow(false)
+    private val loadingAttachmentIds = mutableSetOf<String>()
     private var localTypingStopJob: Job? = null
     private var remoteTypingTimeoutJob: Job? = null
     private var isLocalTyping = false
@@ -97,14 +106,24 @@ class DirectViewModel(
             ConversationContext(conversation, contact, handshake, setupMode)
         }
 
-    private val functionalUiState: Flow<DirectUiState> =
+    private val composerContext =
         combine(
-            conversationContext,
             messageText,
             errorMessage,
             isContactTyping,
+            selectedGalleryMedia,
+            isSending
+        ) { text, error, contactTyping, selectedMedia, sending ->
+            ComposerContext(text, error, contactTyping, selectedMedia, sending)
+        }
+
+    private val functionalUiState: Flow<DirectUiState> =
+        combine(
+            conversationContext,
+            composerContext,
+            attachmentBytes,
             observeMessageSafetyAssessments()
-        ) { context, text, error, contactTyping, safetyAssessments ->
+        ) { context, composer, loadedAttachmentBytes, safetyAssessments ->
             toDirectUiState(
                 contactId = contactId,
                 fallbackContactName = fallbackContactName,
@@ -112,10 +131,14 @@ class DirectViewModel(
                 contact = context.contact,
                 handshake = context.handshake,
                 setupMode = context.setupMode,
-                currentText = text,
-                currentError = error,
-                contactTyping = contactTyping,
-                safetyAssessments = safetyAssessments
+                currentText = composer.text,
+                currentError = composer.error,
+                contactTyping = composer.contactTyping,
+                safetyAssessments = safetyAssessments,
+                attachmentBytes = loadedAttachmentBytes
+            ).copy(
+                selectedGalleryMedia = composer.selectedMedia,
+                isSending = composer.isSending
             )
         }
 
@@ -141,6 +164,9 @@ class DirectViewModel(
         when (event) {
             is DirectUiEvent.MessageTextChanged -> onMessageTextChanged(event.text)
             DirectUiEvent.SendClicked -> sendCurrentMessage()
+            is DirectUiEvent.GalleryMediaSelected -> onGalleryMediaSelected(event.media)
+            is DirectUiEvent.MediaAttachmentVisible -> loadAttachment(event.attachmentId)
+            is DirectUiEvent.AttachmentError -> errorMessage.value = event.message
             DirectUiEvent.HeaderClicked -> openContactDetails()
             is DirectUiEvent.RetryMessage -> retryFailedMessage(event.messageId)
             is DirectUiEvent.SafetyWarningClicked ->
@@ -225,71 +251,107 @@ class DirectViewModel(
 
     private fun sendCurrentMessage() {
         val composerState = uiState.value.composerState
-        if (!composerState.isSendActionEnabled) return
+        if (!composerState.isSendActionEnabled || isSending.value) return
 
         val text = messageText.value.trim()
-        if (text.isEmpty()) return
+        val selectedMedia = selectedGalleryMedia.value
+        if (text.isEmpty() && selectedMedia.isEmpty()) return
 
         errorMessage.value = null
-        when (composerState) {
-            DirectComposerState.REINVITE_REQUIRED -> queueMessageAndStartReinvite(text)
-            DirectComposerState.REINVITE_PENDING -> queueMessageForPendingReinvite(text)
-            DirectComposerState.READY -> sendAuthorizedMessage(text)
-            DirectComposerState.DISABLED -> Unit
-        }
-    }
-
-    private fun queueMessageAndStartReinvite(text: String) {
         viewModelScope.launch {
-            queueMessageUntilAuthorized(conversationId, text)
-                .onSuccess {
-                    messageText.value = ""
-                    stopTyping()
-                    ensureIdentityExchangeStarted(contactId)
-                        .onFailure { error ->
-                            errorMessage.value = error.message ?: "Contact invitation could not be started"
-                        }
-                }.onFailure { error ->
-                    errorMessage.value = error.message ?: "Message could not be queued"
+            isSending.value = true
+            val media = selectedMedia.map(GalleryMediaSelection::toOutgoingMediaAttachment)
+            try {
+                when (composerState) {
+                    DirectComposerState.REINVITE_REQUIRED -> queueMessageAndStartReinvite(text, media)
+                    DirectComposerState.REINVITE_PENDING -> queueMessageForPendingReinvite(text, media)
+                    DirectComposerState.READY -> sendAuthorizedMessage(text, media)
+                    DirectComposerState.DISABLED -> Unit
                 }
-        }
-    }
-
-    private fun queueMessageForPendingReinvite(text: String) {
-        viewModelScope.launch {
-            queueMessageUntilAuthorized(conversationId, text)
-                .onSuccess {
-                    messageText.value = ""
-                    stopTyping()
-                }.onFailure { error ->
-                    errorMessage.value = error.message ?: "Message could not be queued"
-                }
-        }
-    }
-
-    private fun sendAuthorizedMessage(text: String) {
-        viewModelScope.launch {
-            val authorizationError = requireDirectChatAuthorization(contactId).exceptionOrNull()
-            if (authorizationError != null) {
-                if (
-                    identitySetupModeFlow.value == DirectIdentitySetupMode.AUTOMATIC_INVITATION &&
-                    authorizationError is DirectChatAuthorizationRequiredException
-                ) {
-                    queueMessageAndStartReinvite(text)
-                } else {
-                    errorMessage.value = authorizationError.message ?: "Message could not be sent"
-                }
-                return@launch
+            } finally {
+                isSending.value = false
             }
-
-            messageText.value = ""
-            stopTyping()
-            sendMessage(conversationId, text)
-                .onFailure { error ->
-                    messageText.value = text
-                    errorMessage.value = error.message ?: "Message could not be sent"
-                }
         }
+    }
+
+    private suspend fun queueMessageAndStartReinvite(
+        text: String,
+        media: List<OutgoingMediaAttachment>
+    ) {
+        queueMessageUntilAuthorized(conversationId, text, media)
+            .onSuccess {
+                clearComposer()
+                ensureIdentityExchangeStarted(contactId)
+                    .onFailure { error ->
+                        errorMessage.value = error.message ?: "Contact invitation could not be started"
+                    }
+            }.onFailure { error ->
+                errorMessage.value = error.message ?: "Message could not be queued"
+            }
+    }
+
+    private suspend fun queueMessageForPendingReinvite(
+        text: String,
+        media: List<OutgoingMediaAttachment>
+    ) {
+        queueMessageUntilAuthorized(conversationId, text, media)
+            .onSuccess { clearComposer() }
+            .onFailure { error ->
+                errorMessage.value = error.message ?: "Message could not be queued"
+            }
+    }
+
+    private suspend fun sendAuthorizedMessage(
+        text: String,
+        media: List<OutgoingMediaAttachment>
+    ) {
+        val authorizationError = requireDirectChatAuthorization(contactId).exceptionOrNull()
+        if (authorizationError != null) {
+            if (
+                identitySetupModeFlow.value == DirectIdentitySetupMode.AUTOMATIC_INVITATION &&
+                authorizationError is DirectChatAuthorizationRequiredException
+            ) {
+                queueMessageAndStartReinvite(text, media)
+            } else {
+                errorMessage.value = authorizationError.message ?: "Message could not be sent"
+            }
+            return
+        }
+
+        sendMessage(conversationId, text, media)
+            .onSuccess { clearComposer() }
+            .onFailure { error -> errorMessage.value = error.message ?: "Message could not be sent" }
+    }
+
+    private fun onGalleryMediaSelected(media: List<GalleryMediaSelection>) {
+        runCatching {
+            val outgoing = media.map(GalleryMediaSelection::toOutgoingMediaAttachment)
+            MessageAttachmentPolicy.requireValid(outgoing)
+        }
+            .onSuccess {
+                selectedGalleryMedia.value = media
+                errorMessage.value = null
+            }.onFailure { error ->
+                errorMessage.value = error.message ?: "Selected gallery media could not be attached"
+            }
+    }
+
+    private fun loadAttachment(attachmentId: String) {
+        if (attachmentId.isBlank() || attachmentBytes.value.containsKey(attachmentId)) return
+        if (!loadingAttachmentIds.add(attachmentId)) return
+
+        viewModelScope.launch {
+            loadMessageAttachment(attachmentId)
+                .onSuccess { bytes -> attachmentBytes.value = attachmentBytes.value + (attachmentId to bytes) }
+                .onFailure { error -> logger.warn(error) { "Could not load message attachment $attachmentId" } }
+            loadingAttachmentIds.remove(attachmentId)
+        }
+    }
+
+    private suspend fun clearComposer() {
+        messageText.value = ""
+        selectedGalleryMedia.value = emptyList()
+        stopTypingNow()
     }
 
     private fun retryFailedMessage(messageId: String) {
@@ -329,6 +391,14 @@ class DirectViewModel(
         val contact: Contact?,
         val handshake: IdentityHandshakeState?,
         val setupMode: DirectIdentitySetupMode
+    )
+
+    private data class ComposerContext(
+        val text: String,
+        val error: String?,
+        val contactTyping: Boolean,
+        val selectedMedia: List<GalleryMediaSelection>,
+        val isSending: Boolean
     )
 
     private companion object {

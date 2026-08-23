@@ -64,6 +64,7 @@ internal fun MessageBubble(
     onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
     onSafetyDetailsClick: (MessageSafetyWarningUiModel) -> Unit = {},
+    onAttachmentVisible: (String) -> Unit = {},
     isSearchHighlighted: Boolean = false
 ) {
     val bubbleState = bubbleState(message)
@@ -84,6 +85,7 @@ internal fun MessageBubble(
                 state = bubbleState,
                 isSearchHighlighted = isSearchHighlighted,
                 safetyWarning = safetyWarning,
+                onAttachmentVisible = onAttachmentVisible,
                 onSafetyDetailsClick = {
                     if (safetyWarning != null) onSafetyDetailsClick(safetyWarning)
                 }
@@ -134,6 +136,7 @@ private fun BubbleBody(
     state: BubbleState,
     isSearchHighlighted: Boolean = false,
     safetyWarning: MessageSafetyWarningUiModel? = null,
+    onAttachmentVisible: (String) -> Unit = {},
     onSafetyDetailsClick: () -> Unit = {}
 ) {
     val bubbleShapes = MaterialTheme.shapes.messageBubble
@@ -157,24 +160,40 @@ private fun BubbleBody(
             )
     ) {
         Column {
-            Row(
-                modifier =
-                    Modifier.padding(
-                        horizontal = MaterialTheme.spacing.small,
-                        vertical = MaterialTheme.spacing.base
-                    ),
-                verticalAlignment = Alignment.Top
-            ) {
-                if (state.isContentFailed) {
-                    Icon(imageVector = Icons.Default.ErrorOutline, contentDescription = null)
-                    Spacer(modifier = Modifier.width(MaterialTheme.spacing.base))
-                }
-
-                Text(
-                    text = state.text,
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium
+            if (message.mediaAttachments.isNotEmpty()) {
+                MessageMediaAttachments(
+                    attachments = message.mediaAttachments,
+                    onAttachmentVisible = onAttachmentVisible,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                horizontal = MaterialTheme.spacing.small,
+                                vertical = MaterialTheme.spacing.base
+                            )
                 )
+            }
+
+            if (state.text.isNotBlank() || state.isContentFailed) {
+                Row(
+                    modifier =
+                        Modifier.padding(
+                            horizontal = MaterialTheme.spacing.small,
+                            vertical = MaterialTheme.spacing.base
+                        ),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    if (state.isContentFailed) {
+                        Icon(imageVector = Icons.Default.ErrorOutline, contentDescription = null)
+                        Spacer(modifier = Modifier.width(MaterialTheme.spacing.base))
+                    }
+
+                    Text(
+                        text = state.text,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
 
             safetyWarning?.let { warning ->

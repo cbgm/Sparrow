@@ -68,8 +68,8 @@ private val messageBubbleShapeValues =
 private val messageInputShapeValues =
     MessageInputShapes(
         field = RoundedCornerShape(20.dp),
-        buttonNotchRadius = 14.dp,
-        buttonRightCornerRadius = 28.dp
+        buttonNotchRadius = 5.dp,
+        buttonRightCornerRadius = 12.dp
     )
 
 private val contactsScreenShapeValues =

@@ -21,6 +21,7 @@ kotlin {
             implementation(projects.data.database)
             implementation(projects.feature.contactimport)
             implementation(projects.feature.contacts)
+            implementation(projects.feature.attachments)
             implementation(projects.feature.identity)
             implementation(projects.feature.safety)
 
@@ -28,6 +29,11 @@ kotlin {
             implementation(libs.bundles.coroutines)
             implementation(libs.bundles.koin.compose)
             implementation(libs.okio)
+        }
+
+        androidMain.dependencies {
+            implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.photopicker.compose)
         }
 
         commonTest.dependencies {

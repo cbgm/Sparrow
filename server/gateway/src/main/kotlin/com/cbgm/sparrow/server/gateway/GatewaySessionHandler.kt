@@ -116,6 +116,11 @@ internal class GatewaySessionHandler(
 
             is GatewayClientMessage.RefreshRoute ->
                 refreshRoute(state.connection, message.registration)
+
+            is GatewayClientMessage.RequestBlobUploadTicket ->
+                state.connection?.let { connection ->
+                    actions.issueBlobUploadTicket(connection, message)
+                } ?: session.sendNotRegistered()
         }
     }
 
@@ -261,7 +266,9 @@ internal data class GatewayMessageActions(
     val sendEnvelope: suspend (GatewayConnection, GatewayClientMessage.SendEnvelope) -> Unit,
     val sendFederatedEnvelope:
         suspend (GatewayConnection, GatewayClientMessage.SendFederatedEnvelope) -> Unit,
-    val deliverTyping: suspend (GatewayConnection, GatewayClientMessage.TypingState) -> Unit
+    val deliverTyping: suspend (GatewayConnection, GatewayClientMessage.TypingState) -> Unit,
+    val issueBlobUploadTicket:
+        suspend (GatewayConnection, GatewayClientMessage.RequestBlobUploadTicket) -> Unit
 )
 
 private data class GatewaySessionState(

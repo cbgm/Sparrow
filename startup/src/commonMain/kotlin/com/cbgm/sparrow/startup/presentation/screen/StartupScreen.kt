@@ -17,24 +17,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowCard
+import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -213,60 +210,20 @@ private fun StartupIdentityContent(
                     modifier = Modifier.height(MaterialTheme.spacing.medium)
                 )
 
-                OutlinedTextField(
+                SparrowInputField(
                     value = identityUiState.phoneNumber,
                     onValueChange = onPhoneNumberChanged,
                     modifier = Modifier.fillMaxWidth(),
-                    label = {
-                        Text(text = stringResource(Res.string.base_phone_number))
-                    },
-                    placeholder = {
-                        Text(text = "+491701234567", style = MaterialTheme.typography.bodyMedium)
-                    },
-                    supportingText = {
-                        Text(
-                            text =
-                                identityUiState.phoneNumberError
-                                    ?: if (identityUiState.phoneNumber.isBlank()) {
-                                        stringResource(Res.string.feature_startup_choose_number_or_enter)
-                                    } else {
-                                        stringResource(Res.string.feature_startup_detected_edit_or_choose)
-                                    }
-                        )
-                    },
+                    label = stringResource(Res.string.base_phone_number),
+                    placeholderText = "+491701234567",
+                    errorText = identityUiState.phoneNumberError
+                        ?: if (identityUiState.phoneNumber.isBlank()) {
+                            stringResource(Res.string.feature_startup_choose_number_or_enter)
+                        } else {
+                            stringResource(Res.string.feature_startup_detected_edit_or_choose)
+                        },
                     isError = identityUiState.phoneNumberError != null,
-                    singleLine = true,
-                    textStyle =
-                        MaterialTheme.typography.bodyMedium.copy(
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.SemiBold
-                        ),
-                    colors =
-                        OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            disabledTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                            errorContainerColor = MaterialTheme.colorScheme.surface,
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.TextField.unfocusedBorder),
-                            errorBorderColor = MaterialTheme.colorScheme.error,
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
-                            errorLabelColor = MaterialTheme.colorScheme.error,
-                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.TextField.placeholder),
-                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.TextField.placeholder),
-                            focusedSupportingTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
-                            unfocusedSupportingTextColor =
-                                MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                    alpha = Alpha.OpaqueText
-                                ),
-                            errorSupportingTextColor = MaterialTheme.colorScheme.error,
-                            cursorColor = MaterialTheme.colorScheme.primary,
-                            errorCursorColor = MaterialTheme.colorScheme.error
-                        ),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+                    isSingleLine = true
                 )
 
                 Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))

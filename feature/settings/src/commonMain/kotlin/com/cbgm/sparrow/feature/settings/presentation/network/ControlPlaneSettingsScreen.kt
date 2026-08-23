@@ -17,20 +17,17 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
+import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
-import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.settings.presentation.network.components.ControlPlaneListItem
@@ -75,7 +72,9 @@ fun ControlPlaneSettingsScreen(
                 contentPadding =
                     PaddingValues(
                         top = innerPadding.calculateTopPadding(),
-                        bottom = innerPadding.calculateBottomPadding() + MaterialTheme.spacing.times(10)
+                        bottom = innerPadding.calculateBottomPadding() + MaterialTheme.spacing.times(
+                            10
+                        )
                     )
             ) {
                 item {
@@ -172,7 +171,7 @@ private fun AddControlPlaneDialog(
         onDismissRequest = onDismiss,
         title = stringResource(Res.string.feature_settings_control_plane_add),
         text = {
-            OutlinedTextField(
+            SparrowInputField(
                 value = value,
                 onValueChange = onValueChanged,
                 modifier =
@@ -180,49 +179,10 @@ private fun AddControlPlaneDialog(
                         top = MaterialTheme.spacing.small,
                         bottom = MaterialTheme.spacing.base
                     ),
-                label = { Text(stringResource(Res.string.feature_settings_control_plane_address)) },
+                label = stringResource(Res.string.feature_settings_control_plane_address),
                 isError = error != null,
-                singleLine = true,
-                supportingText = error?.let { { Text(addErrorText(it)) } },
-                textStyle =
-                    MaterialTheme.typography.bodyMedium.copy(
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.SemiBold
-                    ),
-                colors =
-                    OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        disabledTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        errorContainerColor = MaterialTheme.colorScheme.surface,
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.TextField.unfocusedBorder),
-                        errorBorderColor = MaterialTheme.colorScheme.error,
-                        focusedLabelColor = MaterialTheme.colorScheme.primary,
-                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
-                        errorLabelColor = MaterialTheme.colorScheme.error,
-                        focusedPlaceholderColor =
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                alpha = Alpha.TextField.placeholder
-                            ),
-                        unfocusedPlaceholderColor =
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                alpha = Alpha.TextField.placeholder
-                            ),
-                        focusedSupportingTextColor =
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                alpha = Alpha.OpaqueText
-                            ),
-                        unfocusedSupportingTextColor =
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                alpha = Alpha.OpaqueText
-                            ),
-                        errorSupportingTextColor = MaterialTheme.colorScheme.error,
-                        cursorColor = MaterialTheme.colorScheme.primary,
-                        errorCursorColor = MaterialTheme.colorScheme.error
-                    )
+                isSingleLine = true,
+                errorText = error?.let { addErrorText(it) } ?: ""
             )
         },
         confirmButton = {

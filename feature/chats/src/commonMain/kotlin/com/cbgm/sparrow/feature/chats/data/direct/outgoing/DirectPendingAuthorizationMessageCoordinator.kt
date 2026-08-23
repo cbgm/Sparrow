@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.chats.data.direct.outgoing
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.entity.MessageEntity
+import com.cbgm.sparrow.feature.chats.data.attachment.MessageAttachmentTransfer
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectPendingAuthorizationMessagePolicy
 import kotlinx.coroutines.delay
@@ -16,7 +17,8 @@ import kotlin.time.Duration.Companion.milliseconds
  * There is no periodic polling interval.
  */
 class DirectPendingAuthorizationMessageCoordinator(
-    private val chatDao: ChatDao
+    private val chatDao: ChatDao,
+    private val attachmentTransfer: MessageAttachmentTransfer
 ) {
     suspend fun run() {
         chatDao
@@ -55,6 +57,8 @@ class DirectPendingAuthorizationMessageCoordinator(
                     nowEpochMilliseconds = nowEpochMilliseconds
                 )
             }
+        if (expired.isEmpty()) return
+        attachmentTransfer.deleteForMessages(expired.map(MessageEntity::id))
         chatDao.deleteMessagesAndRefreshConversations(expired)
     }
 }
