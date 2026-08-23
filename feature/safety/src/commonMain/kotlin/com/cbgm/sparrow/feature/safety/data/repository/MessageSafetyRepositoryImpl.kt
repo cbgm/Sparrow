@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 class MessageSafetyRepositoryImpl(
     private val dao: MessageSafetyDao,
@@ -113,7 +114,7 @@ class MessageSafetyRepositoryImpl(
                 logger.warn { "Local message safety analysis failed; retrying" }
                 mutableState.value =
                     MessageSafetyState.Failed("Local message safety analysis failed")
-                delay(MessageSafetyProcessingConfig.RETRY_DELAY_MILLISECONDS)
+                delay(MessageSafetyProcessingConfig.RETRY_DELAY_MILLISECONDS.milliseconds)
                 currentCoroutineContext().ensureActive()
             }
         }

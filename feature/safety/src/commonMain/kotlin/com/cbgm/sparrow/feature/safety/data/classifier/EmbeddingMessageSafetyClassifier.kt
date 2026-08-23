@@ -4,34 +4,34 @@ import com.cbgm.sparrow.core.embedding.data.model.LocalEmbeddingModel
 import com.cbgm.sparrow.core.embedding.data.model.normalizedPrefix
 import com.cbgm.sparrow.core.embedding.data.platform.EmbeddingInputType
 import com.cbgm.sparrow.core.embedding.data.platform.LocalTextEmbedder
-import com.cbgm.sparrow.feature.safety.domain.classifier.MessageSafetyClassifier
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyReason
 import kotlin.math.exp
 
 class EmbeddingMessageSafetyClassifier(
     private val embedder: LocalTextEmbedder
-) : MessageSafetyClassifier {
+) {
     init {
-        check(GeneratedMessageSafetyLinearModel.EMBEDDING_DIMENSIONS == LocalEmbeddingModel.OUTPUT_DIMENSIONS) {
-            "Safety classifier expects ${GeneratedMessageSafetyLinearModel.EMBEDDING_DIMENSIONS} embedding dimensions, " +
+        check(GeneratedMessageSafetyMlpModel.EMBEDDING_DIMENSIONS == LocalEmbeddingModel.OUTPUT_DIMENSIONS) {
+            "Safety classifier expects ${GeneratedMessageSafetyMlpModel.EMBEDDING_DIMENSIONS} embedding dimensions, " +
                 "but the local embedding runtime is configured for ${LocalEmbeddingModel.OUTPUT_DIMENSIONS}"
         }
-        check(GeneratedMessageSafetyLinearModel.EMBEDDING_MODEL_SHA256 == LocalEmbeddingModel.MODEL_SHA256) {
+        check(GeneratedMessageSafetyMlpModel.EMBEDDING_MODEL_SHA256 == LocalEmbeddingModel.MODEL_SHA256) {
             "Safety classifier was trained against a different EmbeddingGemma model"
         }
+        GeneratedMessageSafetyMlpModel.byReason.values.forEach(::validateHead)
     }
 
-    override suspend fun classify(text: String): Set<MessageSafetyReason> {
+    suspend fun classify(text: String): Set<MessageSafetyReason> {
         val normalizedText = text.trim()
         if (normalizedText.isEmpty()) return emptySet()
 
         val embedding =
             embedder
                 .embed(normalizedText, EmbeddingInputType.SEMANTIC_SIMILARITY)
-                .normalizedPrefix(GeneratedMessageSafetyLinearModel.EMBEDDING_DIMENSIONS)
+                .normalizedPrefix(GeneratedMessageSafetyMlpModel.EMBEDDING_DIMENSIONS)
 
         val reasons = linkedSetOf<MessageSafetyReason>()
-        GeneratedMessageSafetyLinearModel.byReason.forEach { (reason, head) ->
+        GeneratedMessageSafetyMlpModel.byReason.forEach { (reason, head) ->
             if (probability(embedding, head) >= head.threshold) {
                 reasons += reason
             }
@@ -41,24 +41,45 @@ class EmbeddingMessageSafetyClassifier(
 
     private fun probability(
         embedding: FloatArray,
-        head: GeneratedMessageSafetyLinearModel.Head
+        head: GeneratedMessageSafetyMlpModel.Head
     ): Float {
-        require(embedding.size == head.weights.size) {
-            "Embedding has ${embedding.size} dimensions, expected ${head.weights.size}"
+        require(embedding.size == GeneratedMessageSafetyMlpModel.EMBEDDING_DIMENSIONS) {
+            "Embedding has ${embedding.size} dimensions, expected ${GeneratedMessageSafetyMlpModel.EMBEDDING_DIMENSIONS}"
         }
 
-        var logit = head.bias
-        for (index in embedding.indices) {
-            logit += embedding[index] * head.weights[index]
+        var outputLogit = head.outputBias.toDouble()
+        for (hiddenIndex in 0 until head.hiddenSize) {
+            var hiddenLogit = head.hiddenBias[hiddenIndex].toDouble()
+            for (inputIndex in embedding.indices) {
+                hiddenLogit +=
+                    embedding[inputIndex].toDouble() *
+                    head.hiddenWeights[inputIndex * head.hiddenSize + hiddenIndex].toDouble()
+            }
+            if (hiddenLogit > 0.0) {
+                outputLogit += hiddenLogit * head.outputWeights[hiddenIndex].toDouble()
+            }
         }
-        return sigmoid(logit)
+        return sigmoid(outputLogit).toFloat()
     }
 
-    private fun sigmoid(value: Float): Float =
-        if (value >= 0f) {
-            1f / (1f + exp(-value.toDouble()).toFloat())
+    private fun validateHead(head: GeneratedMessageSafetyMlpModel.Head) {
+        check(head.hiddenSize > 0) { "Safety classifier hidden size must be positive" }
+        check(head.hiddenWeights.size == GeneratedMessageSafetyMlpModel.EMBEDDING_DIMENSIONS * head.hiddenSize) {
+            "Safety classifier hidden weight count does not match embedding/hidden dimensions"
+        }
+        check(head.hiddenBias.size == head.hiddenSize) {
+            "Safety classifier hidden bias count does not match hidden size"
+        }
+        check(head.outputWeights.size == head.hiddenSize) {
+            "Safety classifier output weight count does not match hidden size"
+        }
+    }
+
+    private fun sigmoid(value: Double): Double =
+        if (value >= 0.0) {
+            1.0 / (1.0 + exp(-value))
         } else {
-            val exponential = exp(value.toDouble()).toFloat()
-            exponential / (1f + exponential)
+            val exponential = exp(value)
+            exponential / (1.0 + exponential)
         }
 }

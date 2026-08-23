@@ -9,7 +9,7 @@ from typing import Any, Iterable
 from . import LABELS
 from .io import ensure_parent, normalize_text, normalized_text_key, read_jsonl, stable_id, write_jsonl
 from .synthetic_generation import GeneratedPair, OllamaContrastiveGenerator
-from .teacher_labeling import DEFAULT_OLLAMA_ENDPOINT, collect_dual_teacher_decisions
+from .teacher_labeling import DEFAULT_OLLAMA_ENDPOINT, collect_expected_teacher_decisions
 
 BEHAVIORAL_PROMPT_VERSION = "sparrow-safety-behavioral-v1"
 
@@ -272,11 +272,12 @@ def generate_behavioral_augmentation(
     )
     candidates = [row for row in candidates if normalized_text_key(str(row["text"])) not in contract_keys]
 
-    decisions = collect_dual_teacher_decisions(
+    decisions, pass_a_rejections = collect_expected_teacher_decisions(
         candidates,
         validation_cache_path,
         model_a=validator_model_a,
         model_b=validator_model_b,
+        min_confidence=min_confidence,
         endpoint=endpoint,
         batch_size=validation_batch_size,
         timeout_seconds=timeout_seconds,
@@ -291,23 +292,30 @@ def generate_behavioral_augmentation(
     for row in candidates:
         record_id = str(row["id"])
         left = decisions[(record_id, "A")]
-        right = decisions[(record_id, "B")]
         expected = {label: bool(row["expected_labels"][label]) for label in LABELS}
-        agreement = all(left.labels[label] == right.labels[label] for label in LABELS)
-        matches = all(left.labels[label] == expected[label] for label in LABELS) and all(
-            right.labels[label] == expected[label] for label in LABELS
-        )
-        minimum_confidence = min(
-            *(left.confidences[label] for label in LABELS),
-            *(right.confidences[label] for label in LABELS),
-        )
-        reasons: list[str] = []
-        if not agreement:
-            reasons.append("validator_disagreement")
-        if not matches:
-            reasons.append("does_not_match_intended_labels")
-        if minimum_confidence < min_confidence:
-            reasons.append("below_confidence_threshold")
+        reasons = list(pass_a_rejections.get(record_id, ()))
+        right = decisions.get((record_id, "B"))
+        minimum_confidence = min(left.confidences[label] for label in LABELS)
+
+        if right is not None:
+            agreement = all(left.labels[label] == right.labels[label] for label in LABELS)
+            matches = all(left.labels[label] == expected[label] for label in LABELS) and all(
+                right.labels[label] == expected[label] for label in LABELS
+            )
+            minimum_confidence = min(
+                minimum_confidence,
+                *(right.confidences[label] for label in LABELS),
+            )
+            if not agreement:
+                reasons.append("validator_disagreement")
+            if not matches:
+                reasons.append("does_not_match_intended_labels")
+            if minimum_confidence < min_confidence:
+                reasons.append("below_confidence_threshold")
+
+        # Keep rejection reasons unique when both pass-A prefiltering and pass-B
+        # evaluation identify the same failure.
+        reasons = list(dict.fromkeys(reasons))
 
         if reasons:
             for reason in reasons:
@@ -316,7 +324,7 @@ def generate_behavioral_augmentation(
                 {
                     **row,
                     "validator_pass_a": left.to_dict(),
-                    "validator_pass_b": right.to_dict(),
+                    "validator_pass_b": right.to_dict() if right is not None else None,
                     "validator_min_confidence": minimum_confidence,
                     "rejection_reasons": reasons,
                 }
@@ -393,6 +401,8 @@ def generate_behavioral_augmentation(
         "combined_rows": len(combined),
         "contract": str(contract_path),
         "generation_cache": str(generation_cache_path),
+        "validation_pass_a_rejected_rows": len(pass_a_rejections),
+        "validation_pass_b_rows": len(candidates) - len(pass_a_rejections),
         "validation_cache": str(validation_cache_path),
         "generated_output": str(generated_output_path),
         "rejected_output": str(rejected_output_path),

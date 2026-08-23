@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import warnings
 from pathlib import Path
 from typing import Iterable
 
 import numpy as np
+from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics import precision_recall_fscore_support
 from sklearn.neural_network import MLPClassifier
 
@@ -17,7 +19,10 @@ from .training_requirements import MIN_POSITIVES_BY_SPLIT
 MIN_POSITIVES_PER_TRAIN_LABEL = MIN_POSITIVES_BY_SPLIT["train"]
 MIN_VALIDATION_POSITIVES_PER_LABEL = MIN_POSITIVES_BY_SPLIT["validation"]
 DEFAULT_HIDDEN_SIZES = (16, 32)
-DEFAULT_ALPHA_VALUES = (0.0001, 0.001)
+DEFAULT_ALPHA_VALUES = (0.0001, 0.001, 0.01)
+DEFAULT_POSITIVE_FRACTIONS = (0.10, 0.20, 0.35, 0.50)
+DEFAULT_SOLVERS = ("lbfgs", "adam")
+DEFAULT_VALIDATION_PRECISION_MARGIN = 0.05
 
 
 def sigmoid(logit: np.ndarray | float) -> np.ndarray | float:
@@ -38,7 +43,10 @@ def train_mlp_heads(
     max_validation_false_positive_rate: float = 0.02,
     hidden_sizes: Iterable[int] = DEFAULT_HIDDEN_SIZES,
     alpha_values: Iterable[float] = DEFAULT_ALPHA_VALUES,
-    max_iter: int = 1000,
+    positive_fractions: Iterable[float] = DEFAULT_POSITIVE_FRACTIONS,
+    solvers: Iterable[str] = DEFAULT_SOLVERS,
+    validation_precision_margin: float = DEFAULT_VALIDATION_PRECISION_MARGIN,
+    max_iter: int = 2000,
 ) -> dict[str, object]:
     rows = list(read_jsonl(dataset_path))
     ids, embeddings = load_embeddings(embeddings_path)
@@ -57,8 +65,13 @@ def train_mlp_heads(
         dimension=dimension,
     )
 
+    if validation_precision_margin < 0.0 or validation_precision_margin >= 0.20:
+        raise ValueError("validation_precision_margin must be in [0.0, 0.20)")
+    selection_min_precision = min(0.999, float(min_validation_precision) + float(validation_precision_margin))
     constraints = {
-        "min_validation_precision": float(min_validation_precision),
+        "deployment_min_precision": float(min_validation_precision),
+        "validation_precision_margin": float(validation_precision_margin),
+        "min_validation_precision": selection_min_precision,
         "min_validation_recall": float(min_validation_recall),
         "max_validation_false_positive_rate": float(max_validation_false_positive_rate),
         "behavioral_contract_required": bool(contract_rows),
@@ -91,10 +104,16 @@ def train_mlp_heads(
     matrix = np.vstack([by_embedding_id[str(row["id"])] for row in rows]).astype(np.float64)
     hidden_candidates = tuple(int(value) for value in hidden_sizes)
     alpha_candidates = tuple(float(value) for value in alpha_values)
+    positive_fraction_candidates = tuple(float(value) for value in positive_fractions)
+    solver_candidates = tuple(str(value) for value in solvers)
     if not hidden_candidates or any(value < 2 for value in hidden_candidates):
         raise ValueError("hidden_sizes must contain values >= 2")
     if not alpha_candidates or any(value <= 0.0 for value in alpha_candidates):
         raise ValueError("alpha_values must contain positive values")
+    if not positive_fraction_candidates or any(not 0.0 < value <= 0.50 for value in positive_fraction_candidates):
+        raise ValueError("positive_fractions must contain values in (0.0, 0.50]")
+    if not solver_candidates or any(value not in {"lbfgs", "adam"} for value in solver_candidates):
+        raise ValueError("solvers must contain only lbfgs and/or adam")
 
     train_idx = np.asarray(split_indices["train"], dtype=np.int64)
     validation_idx = np.asarray(split_indices["validation"], dtype=np.int64)
@@ -115,11 +134,6 @@ def train_mlp_heads(
                 f"need at least {MIN_VALIDATION_POSITIVES_PER_LABEL}"
             )
 
-        fit_matrix, fit_truth = _balanced_binary_training_data(
-            matrix[train_idx],
-            y[train_idx],
-            seed=20260822 + label_number,
-        )
         contract_truth = (
             np.asarray([1 if row[label] else 0 for row in contract_rows], dtype=np.int32)
             if contract_rows
@@ -127,57 +141,82 @@ def train_mlp_heads(
         )
 
         candidate_models: list[dict[str, object]] = []
-        for hidden_size in hidden_candidates:
-            for alpha in alpha_candidates:
-                classifier = MLPClassifier(
-                    hidden_layer_sizes=(hidden_size,),
-                    activation="relu",
-                    solver="adam",
-                    alpha=alpha,
-                    batch_size=128,
-                    learning_rate_init=0.001,
-                    max_iter=max_iter,
-                    shuffle=True,
-                    random_state=0,
-                    tol=1e-5,
-                    n_iter_no_change=40,
-                    early_stopping=False,
-                )
-                classifier.fit(fit_matrix, fit_truth)
-                validation_probability = classifier.predict_proba(matrix[validation_idx])[:, 1]
-                contract_probability = (
-                    classifier.predict_proba(contract_matrix)[:, 1]
-                    if contract_matrix is not None
-                    else None
-                )
-                threshold, selection = choose_threshold(
-                    y[validation_idx],
-                    validation_probability,
-                    min_precision=min_validation_precision,
-                    min_recall=min_validation_recall,
-                    max_false_positive_rate=max_validation_false_positive_rate,
-                    behavioral_contract_truth=contract_truth,
-                    behavioral_contract_probabilities=contract_probability,
-                )
-                hidden_weights = classifier.coefs_[0].astype(np.float64)
-                hidden_bias = classifier.intercepts_[0].astype(np.float64)
-                output_weights = classifier.coefs_[1][:, 0].astype(np.float64)
-                output_bias = float(classifier.intercepts_[1][0])
-                candidate_models.append(
-                    {
-                        "hidden_size": hidden_size,
-                        "alpha": alpha,
-                        "hidden_weights": hidden_weights,
-                        "hidden_bias": hidden_bias,
-                        "output_weights": output_weights,
-                        "output_bias": output_bias,
-                        "threshold": threshold,
-                        "selection": selection,
-                        "iterations": int(classifier.n_iter_),
-                    }
-                )
+        for positive_fraction in positive_fraction_candidates:
+            fit_matrix, fit_truth = _resampled_binary_training_data(
+                matrix[train_idx],
+                y[train_idx],
+                target_positive_fraction=positive_fraction,
+                seed=20260822 + label_number,
+            )
+            for hidden_size in hidden_candidates:
+                for alpha in alpha_candidates:
+                    for solver in solver_candidates:
+                        classifier_kwargs = dict(
+                            hidden_layer_sizes=(hidden_size,),
+                            activation="relu",
+                            solver=solver,
+                            alpha=alpha,
+                            max_iter=max_iter,
+                            shuffle=True,
+                            random_state=0,
+                            tol=1e-4,
+                        )
+                        if solver == "adam":
+                            classifier_kwargs.update(
+                                batch_size=128,
+                                learning_rate_init=0.001,
+                                n_iter_no_change=60,
+                                early_stopping=False,
+                            )
+                        classifier = MLPClassifier(**classifier_kwargs)
+                        with warnings.catch_warnings(record=True) as caught_warnings:
+                            warnings.simplefilter("always", ConvergenceWarning)
+                            classifier.fit(fit_matrix, fit_truth)
+                        converged = not any(
+                            issubclass(item.category, ConvergenceWarning)
+                            for item in caught_warnings
+                        )
+                        validation_probability = classifier.predict_proba(matrix[validation_idx])[:, 1]
+                        contract_probability = (
+                            classifier.predict_proba(contract_matrix)[:, 1]
+                            if contract_matrix is not None
+                            else None
+                        )
+                        threshold, selection = choose_threshold(
+                            y[validation_idx],
+                            validation_probability,
+                            min_precision=selection_min_precision,
+                            min_recall=min_validation_recall,
+                            max_false_positive_rate=max_validation_false_positive_rate,
+                            behavioral_contract_truth=contract_truth,
+                            behavioral_contract_probabilities=contract_probability,
+                        )
+                        hidden_weights = classifier.coefs_[0].astype(np.float64)
+                        hidden_bias = classifier.intercepts_[0].astype(np.float64)
+                        output_weights = classifier.coefs_[1][:, 0].astype(np.float64)
+                        output_bias = float(classifier.intercepts_[1][0])
+                        candidate_models.append(
+                            {
+                                "hidden_size": hidden_size,
+                                "alpha": alpha,
+                                "positive_fraction": positive_fraction,
+                                "solver": solver,
+                                "converged": converged,
+                                "hidden_weights": hidden_weights,
+                                "hidden_bias": hidden_bias,
+                                "output_weights": output_weights,
+                                "output_bias": output_bias,
+                                "threshold": threshold,
+                                "selection": selection,
+                                "iterations": int(classifier.n_iter_),
+                            }
+                        )
 
-        feasible = [candidate for candidate in candidate_models if candidate["selection"]["constraints_satisfied"]]
+        feasible = [
+            candidate
+            for candidate in candidate_models
+            if candidate["converged"] and candidate["selection"]["constraints_satisfied"]
+        ]
         if not feasible:
             best = max(candidate_models, key=_candidate_rank)
             selection = best["selection"]
@@ -188,9 +227,9 @@ def train_mlp_heads(
             )
             raise ValueError(
                 f"{label} has no validation-only MLP/threshold combination that satisfies "
-                f"precision>={min_validation_precision:.3f}, recall>={min_validation_recall:.3f}, "
+                f"precision>={selection_min_precision:.3f} (deployment floor {min_validation_precision:.3f} + margin {validation_precision_margin:.3f}), recall>={min_validation_recall:.3f}, "
                 f"FPR<={max_validation_false_positive_rate:.4f}{contract_note}. Best candidate: "
-                f"hidden={best['hidden_size']}, alpha={best['alpha']}, threshold={best['threshold']:.6f}, "
+                f"hidden={best['hidden_size']}, alpha={best['alpha']}, positive_fraction={best['positive_fraction']}, solver={best['solver']}, converged={best['converged']}, threshold={best['threshold']:.6f}, "
                 f"precision={selection['validation_precision']:.3f}, "
                 f"recall={selection['validation_recall']:.3f}, "
                 f"FPR={selection['validation_false_positive_rate']:.4f}. "
@@ -202,8 +241,15 @@ def train_mlp_heads(
         selection = dict(selected["selection"])
         selection["selected_hidden_size"] = int(selected["hidden_size"])
         selection["selected_alpha"] = float(selected["alpha"])
+        selection["selected_positive_fraction"] = float(selected["positive_fraction"])
+        selection["selected_solver"] = str(selected["solver"])
+        selection["converged"] = bool(selected["converged"])
         selection["hidden_size_candidates"] = list(hidden_candidates)
         selection["alpha_candidates"] = list(alpha_candidates)
+        selection["positive_fraction_candidates"] = list(positive_fraction_candidates)
+        selection["solver_candidates"] = list(solver_candidates)
+        selection["deployment_min_precision"] = float(min_validation_precision)
+        selection["validation_precision_margin"] = float(validation_precision_margin)
         selection["training_iterations"] = int(selected["iterations"])
 
         label_model = {
@@ -214,6 +260,8 @@ def train_mlp_heads(
             "output_bias": float(selected["output_bias"]),
             "threshold": threshold,
             "regularization_alpha": float(selected["alpha"]),
+            "training_positive_fraction": float(selected["positive_fraction"]),
+            "training_solver": str(selected["solver"]),
             "threshold_selection": selection,
         }
         model["labels"][label] = label_model
@@ -228,6 +276,8 @@ def train_mlp_heads(
             "threshold": threshold,
             "hidden_size": int(selected["hidden_size"]),
             "regularization_alpha": float(selected["alpha"]),
+            "training_positive_fraction": float(selected["positive_fraction"]),
+            "training_solver": str(selected["solver"]),
             "threshold_selection": selection,
         }
         if contract_rows and contract_matrix is not None and contract_truth is not None:
@@ -269,10 +319,11 @@ def _load_behavioral_contract(
     return rows, matrix
 
 
-def _balanced_binary_training_data(
+def _resampled_binary_training_data(
     matrix: np.ndarray,
     truth: np.ndarray,
     *,
+    target_positive_fraction: float,
     seed: int,
 ) -> tuple[np.ndarray, np.ndarray]:
     truth = np.asarray(truth, dtype=np.int32)
@@ -280,9 +331,22 @@ def _balanced_binary_training_data(
     negative = np.flatnonzero(truth == 0)
     if len(positive) == 0 or len(negative) == 0:
         raise ValueError("Binary training data must contain both classes")
+    if not 0.0 < target_positive_fraction <= 0.50:
+        raise ValueError("target_positive_fraction must be in (0.0, 0.50]")
+
+    # Preserve every negative example so hard-negative diversity is never thrown away.
+    # Only oversample positives enough to reach the requested effective class prior.
+    target_positive_count = int(
+        np.ceil((target_positive_fraction / (1.0 - target_positive_fraction)) * len(negative))
+    )
+    target_positive_count = max(len(positive), target_positive_count)
     rng = np.random.default_rng(seed)
-    positive_balanced = rng.choice(positive, size=len(negative), replace=True)
-    combined = np.concatenate([negative, positive_balanced])
+    if target_positive_count == len(positive):
+        sampled_positive = positive.copy()
+    else:
+        extra = rng.choice(positive, size=target_positive_count - len(positive), replace=True)
+        sampled_positive = np.concatenate([positive, extra])
+    combined = np.concatenate([negative, sampled_positive])
     rng.shuffle(combined)
     return matrix[combined], truth[combined]
 
@@ -352,9 +416,9 @@ def choose_threshold(
     if feasible:
         selected = max(feasible, key=_threshold_rank)
         strategy = (
-            "best_f1_within_validation_and_behavioral_constraints"
+            "precision_first_within_validation_and_behavioral_constraints"
             if contract_truth is not None
-            else "best_f1_within_validation_constraints"
+            else "precision_first_within_validation_constraints"
         )
         warning = None
     else:
@@ -398,11 +462,15 @@ def choose_threshold(
 
 
 def _threshold_rank(item: dict[str, float | bool | int]) -> tuple[float, float, float, float, float]:
+    # Product behavior is intentionally precision-first. Once a threshold clears
+    # the minimum recall requirement, prefer fewer false warnings over marginal
+    # F1/recall gains. This gives deployment margin instead of sitting on the
+    # validation precision/FPR boundary.
     return (
-        float(item["f1"]),
-        float(item["recall"]),
         float(item["precision"]),
         -float(item["false_positive_rate"]),
+        float(item["recall"]),
+        float(item["f1"]),
         float(item["threshold"]),
     )
 
@@ -428,15 +496,16 @@ def _constraint_fallback_rank(
     )
 
 
-def _candidate_rank(candidate: dict[str, object]) -> tuple[float, float, float, float, float, float]:
+def _candidate_rank(candidate: dict[str, object]) -> tuple[float, float, float, float, float, float, float]:
     selection = candidate["selection"]
     return (
+        1.0 if bool(candidate.get("converged", True)) else 0.0,
         1.0 if selection["constraints_satisfied"] else 0.0,
         -float(selection.get("behavioral_contract_errors", 0)),
-        float(selection["validation_f1"]),
-        float(selection["validation_recall"]),
         float(selection["validation_precision"]),
         -float(selection["validation_false_positive_rate"]),
+        float(selection["validation_recall"]),
+        float(selection["validation_f1"]),
     )
 
 

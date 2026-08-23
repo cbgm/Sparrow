@@ -555,3 +555,28 @@ After targeted generation, embedding, and near-duplicate clustering it measures 
 those labels, reuses all generation/validation/embedding caches, reclusters, and checks again. By default it adds 200 pairs
 per language for each insufficient label per refill round, for up to 4 refill rounds. These can be changed with
 `-RefillPairsPerLabelLanguage` and `-MaxRefillRounds`. The split requirements themselves are never lowered automatically.
+
+
+## v11 behavioral-labeling performance
+
+The behavioral retraining path is optimized for local Ollama GPUs without weakening the acceptance rule:
+
+- focused contrastive generation defaults to 16 pairs per Qwen request instead of 8; malformed large structured responses still use the existing retry + recursive split fallback,
+- validator A (`qwen3:8b` by default) runs across all candidates before validator B is loaded, avoiding A/B model swapping on GPUs that cannot keep both models resident,
+- generated rows that already disagree with their intended four-label vector in pass A, or fall below the minimum confidence in pass A, are rejected immediately because they cannot possibly satisfy final dual-teacher acceptance,
+- validator B (`gemma3:12b` by default) only processes pass-A survivors,
+- generation and validation caches remain compatible, so an interrupted v10/v11 behavioral run can be resumed without deleting cache files.
+
+For behavioral retraining, stop an older run with Ctrl+C and rerun `resume_behavioral_retraining.ps1`; completed generation/validation cache entries are reused.
+
+## v12 conservative model reselection
+
+If behavioral v11 reaches the held-out gate but a head (especially `payment_request`) misses the precision floor, do **not** lower the gate and do not rerun Ollama first. v12 model selection searches several effective positive training priors (`10%`, `20%`, `35%`, `50%`) while retaining every negative example, tries stronger regularization, and requires a validation precision margin above the deployment floor. This reduces the distribution shift caused by the old hard-coded 50/50 oversampling.
+
+After a completed v11 run has reached at least stage 7, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\resume_model_selection.ps1
+```
+
+This does not run generation, labeling, embedding, clustering, or splitting.

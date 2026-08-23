@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import struct
 from pathlib import Path
 
 from . import LABELS
@@ -13,6 +14,15 @@ _REASON = {
     "payment_request": "PAYMENT_REQUEST",
     "private_key_request": "PRIVATE_KEY_REQUEST",
 }
+
+_KOTLIN_NAME = {
+    "urgent_action_request": "urgentActionRequest",
+    "credential_request": "credentialRequest",
+    "payment_request": "paymentRequest",
+    "private_key_request": "privateKeyRequest",
+}
+
+_FLOAT_CHUNK_SIZE = 256
 
 
 def export_kotlin(model_path: Path, output_path: Path) -> None:
@@ -34,8 +44,8 @@ def export_kotlin(model_path: Path, output_path: Path) -> None:
         f"    const val EMBEDDING_INPUT_MODE = \"{_escape(str(embedding['input_mode']))}\"",
         f"    const val MODEL_ARTIFACT_SHA256 = \"{file_sha256(model_path)}\"",
         f"    const val TRAINING_DATASET_SHA256 = \"{_escape(str(model.get('dataset_sha256', '')))}\"",
-        *([f"    const val EMBEDDING_MODEL_SHA256 = \"{_escape(str(embedding.get('model_sha256')))}\""] if embedding.get("model_sha256") else []),
-        *([f"    const val EMBEDDING_MODEL_REVISION = \"{_escape(str(embedding.get('model_revision')))}\""] if embedding.get("model_revision") else []),
+        *([f'    const val EMBEDDING_MODEL_SHA256 = "{_escape(str(embedding.get("model_sha256")))}"'] if embedding.get("model_sha256") else []),
+        *([f'    const val EMBEDDING_MODEL_REVISION = "{_escape(str(embedding.get("model_revision")))}"'] if embedding.get("model_revision") else []),
         "",
         "    data class Head(",
         "        val hiddenSize: Int,",
@@ -50,12 +60,15 @@ def export_kotlin(model_path: Path, output_path: Path) -> None:
         "        mapOf(",
     ]
 
+    prepared: dict[str, tuple[int, list[float], list[float], list[float], float, float]] = {}
     for label in LABELS:
         entry = model["labels"][label]
         hidden_size = int(entry["hidden_size"])
         hidden_weights = [float(value) for value in entry["hidden_weights"]]
         hidden_bias = [float(value) for value in entry["hidden_bias"]]
         output_weights = [float(value) for value in entry["output_weights"]]
+        output_bias = float(entry["output_bias"])
+        threshold = float(entry["threshold"])
         if len(hidden_weights) != dimensions * hidden_size:
             raise ValueError(
                 f"{label} has {len(hidden_weights)} hidden weights; expected {dimensions * hidden_size}"
@@ -64,45 +77,100 @@ def export_kotlin(model_path: Path, output_path: Path) -> None:
             raise ValueError(f"{label} has {len(hidden_bias)} hidden biases; expected {hidden_size}")
         if len(output_weights) != hidden_size:
             raise ValueError(f"{label} has {len(output_weights)} output weights; expected {hidden_size}")
-
-        lines.extend(
-            [
-                f"            MessageSafetyReason.{_REASON[label]} to",
-                "                Head(",
-                f"                    hiddenSize = {hidden_size},",
-                "                    hiddenWeights =",
-                "                        floatArrayOf(",
-            ]
+        prepared[label] = (
+            hidden_size,
+            hidden_weights,
+            hidden_bias,
+            output_weights,
+            output_bias,
+            threshold,
         )
-        _append_float_array(lines, hidden_weights, indent="                            ")
         lines.extend(
             [
-                "                        ),",
-                "                    hiddenBias =",
-                "                        floatArrayOf(",
-            ]
-        )
-        _append_float_array(lines, hidden_bias, indent="                            ")
-        lines.extend(
-            [
-                "                        ),",
-                "                    outputWeights =",
-                "                        floatArrayOf(",
-            ]
-        )
-        _append_float_array(lines, output_weights, indent="                            ")
-        lines.extend(
-            [
-                "                        ),",
-                f"                    outputBias = {_float(float(entry['output_bias']))},",
-                f"                    threshold = {_float(float(entry['threshold']))}",
-                "                ),",
+                f"            MessageSafetyReason.{_REASON[label]} to {_KOTLIN_NAME[label]}Head(),",
             ]
         )
 
-    lines.extend(["        )", "}", ""])
+    lines.extend(["        )", ""])
+
+    for label in LABELS:
+        hidden_size, hidden_weights, hidden_bias, output_weights, output_bias, threshold = prepared[label]
+        name = _KOTLIN_NAME[label]
+        lines.extend(
+            [
+                f"    private fun {name}Head(): Head =",
+                "        Head(",
+                f"            hiddenSize = {hidden_size},",
+                f"            hiddenWeights = {name}HiddenWeights(),",
+                f"            hiddenBias = {name}HiddenBias(),",
+                f"            outputWeights = {name}OutputWeights(),",
+                f"            outputBias = {_float(output_bias)},",
+                f"            threshold = {_float(threshold)}",
+                "        )",
+                "",
+            ]
+        )
+        _append_chunked_array_function(lines, f"{name}HiddenWeights", hidden_weights)
+        _append_chunked_array_function(lines, f"{name}HiddenBias", hidden_bias)
+        _append_chunked_array_function(lines, f"{name}OutputWeights", output_weights)
+
+    lines.extend(
+        [
+            "    private fun combineFloatArrays(vararg chunks: FloatArray): FloatArray {",
+            "        var totalSize = 0",
+            "        chunks.forEach { totalSize += it.size }",
+            "        val result = FloatArray(totalSize)",
+            "        var offset = 0",
+            "        chunks.forEach { chunk ->",
+            "            chunk.copyInto(result, destinationOffset = offset)",
+            "            offset += chunk.size",
+            "        }",
+            "        return result",
+            "    }",
+            "}",
+            "",
+        ]
+    )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def _append_chunked_array_function(lines: list[str], function_name: str, values: list[float]) -> None:
+    if len(values) <= _FLOAT_CHUNK_SIZE:
+        lines.extend(
+            [
+                f"    private fun {function_name}(): FloatArray =",
+                "        floatArrayOf(",
+            ]
+        )
+        _append_float_array(lines, values, indent="            ")
+        lines.extend(["        )", ""])
+        return
+
+    chunks = [
+        values[start : start + _FLOAT_CHUNK_SIZE]
+        for start in range(0, len(values), _FLOAT_CHUNK_SIZE)
+    ]
+    lines.extend(
+        [
+            f"    private fun {function_name}(): FloatArray =",
+            "        combineFloatArrays(",
+        ]
+    )
+    for index in range(len(chunks)):
+        suffix = "," if index + 1 < len(chunks) else ""
+        lines.append(f"            {function_name}Chunk{index}(){suffix}")
+    lines.extend(["        )", ""])
+
+    for index, chunk in enumerate(chunks):
+        lines.extend(
+            [
+                f"    private fun {function_name}Chunk{index}(): FloatArray =",
+                "        floatArrayOf(",
+            ]
+        )
+        _append_float_array(lines, chunk, indent="            ")
+        lines.extend(["        )", ""])
 
 
 def _append_float_array(lines: list[str], values: list[float], *, indent: str) -> None:
@@ -113,7 +181,13 @@ def _append_float_array(lines: list[str], values: list[float], *, indent: str) -
 
 
 def _float(value: float) -> str:
-    return f"{value:.9g}f"
+    try:
+        float32_value = struct.unpack("!f", struct.pack("!f", value))[0]
+    except OverflowError as error:
+        raise ValueError(f"Value cannot be represented as Kotlin Float: {value!r}") from error
+    if float32_value == 0.0:
+        float32_value = 0.0
+    return f"{float32_value:.9g}f"
 
 
 def _escape(value: str) -> str:

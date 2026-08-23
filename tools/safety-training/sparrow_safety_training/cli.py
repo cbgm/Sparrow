@@ -134,7 +134,7 @@ def main(argv: list[str] | None = None) -> None:
     behavioral.add_argument("--validator-model-b", default="gemma3:12b")
     behavioral.add_argument("--endpoint", default=DEFAULT_OLLAMA_ENDPOINT)
     behavioral.add_argument("--pairs-per-focus", type=int, default=150)
-    behavioral.add_argument("--generation-batch-size", type=int, default=8)
+    behavioral.add_argument("--generation-batch-size", type=int, default=16)
     behavioral.add_argument("--validation-batch-size", type=int, default=16)
     behavioral.add_argument("--min-confidence", type=float, default=0.90)
     behavioral.add_argument("--timeout-seconds", type=float, default=240.0)
@@ -169,7 +169,7 @@ def main(argv: list[str] | None = None) -> None:
     split.add_argument("--output", type=Path, required=True)
     split.add_argument("--seed", type=int, default=20260820)
 
-    train = subparsers.add_parser("train", help="Train four one-vs-rest logistic-regression heads")
+    train = subparsers.add_parser("train", help="Train four one-vs-rest compact MLP heads")
     train.add_argument("--input", type=Path, required=True)
     train.add_argument("--embeddings", type=Path, required=True)
     train.add_argument("--embedding-metadata", type=Path, required=True)
@@ -178,6 +178,7 @@ def main(argv: list[str] | None = None) -> None:
     train.add_argument("--min-validation-precision", type=float, default=0.80)
     train.add_argument("--min-validation-recall", type=float, default=0.50)
     train.add_argument("--max-validation-fpr", type=float, default=0.02)
+    train.add_argument("--validation-precision-margin", type=float, default=0.05)
     train.add_argument("--behavioral-contract", type=Path, default=None)
     train.add_argument("--behavioral-contract-embeddings", type=Path, default=None)
 
@@ -324,6 +325,7 @@ def main(argv: list[str] | None = None) -> None:
             min_validation_precision=args.min_validation_precision,
             min_validation_recall=args.min_validation_recall,
             max_validation_false_positive_rate=args.max_validation_fpr,
+            validation_precision_margin=args.validation_precision_margin,
         )
     elif args.command == "evaluate":
         text = render_markdown_report(args.report, args.output)

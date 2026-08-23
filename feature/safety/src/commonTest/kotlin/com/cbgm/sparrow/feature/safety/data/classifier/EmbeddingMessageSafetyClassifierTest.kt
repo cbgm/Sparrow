@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.feature.safety.data.classifier
 
 import com.cbgm.sparrow.core.embedding.data.model.LocalEmbeddingModel
-import com.cbgm.sparrow.core.embedding.data.model.normalizedPrefix
 import com.cbgm.sparrow.core.embedding.data.platform.EmbeddingInputType
 import com.cbgm.sparrow.core.embedding.data.platform.LocalTextEmbedder
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyReason
@@ -33,17 +32,6 @@ class EmbeddingMessageSafetyClassifierTest {
     }
 
     @Test
-    fun trainedHeadCanActivateEachSemanticReason() = runTest {
-        GeneratedMessageSafetyLinearModel.byReason.forEach { (reason, head) ->
-            val classifier = EmbeddingMessageSafetyClassifier(RecordingEmbedder(head.weights.normalized()))
-
-            val reasons = classifier.classify("test message")
-
-            assertTrue(reason in reasons, "Expected trained head for $reason to activate")
-        }
-    }
-
-    @Test
     fun zeroEmbeddingDoesNotEmitSemanticReasons() = runTest {
         val classifier =
             EmbeddingMessageSafetyClassifier(
@@ -64,16 +52,34 @@ class EmbeddingMessageSafetyClassifierTest {
                 MessageSafetyReason.URL_SHORTENER
             )
 
-        assertTrue(GeneratedMessageSafetyLinearModel.byReason.keys.none(structuralReasons::contains))
+        assertTrue(GeneratedMessageSafetyMlpModel.byReason.keys.none(structuralReasons::contains))
     }
 
     @Test
     fun generatedModelMatchesPinnedEmbeddingRuntime() {
-        assertEquals(LocalEmbeddingModel.OUTPUT_DIMENSIONS, GeneratedMessageSafetyLinearModel.EMBEDDING_DIMENSIONS)
-        assertEquals(LocalEmbeddingModel.MODEL_FILE_NAME, GeneratedMessageSafetyLinearModel.EMBEDDING_MODEL_ID)
-        assertEquals(LocalEmbeddingModel.MODEL_SHA256, GeneratedMessageSafetyLinearModel.EMBEDDING_MODEL_SHA256)
-        assertEquals("sentence_similarity", GeneratedMessageSafetyLinearModel.EMBEDDING_INPUT_MODE)
-        assertFalse(GeneratedMessageSafetyLinearModel.TRAINING_DATASET_SHA256.isBlank())
+        assertEquals(LocalEmbeddingModel.OUTPUT_DIMENSIONS, GeneratedMessageSafetyMlpModel.EMBEDDING_DIMENSIONS)
+        assertEquals(LocalEmbeddingModel.MODEL_FILE_NAME, GeneratedMessageSafetyMlpModel.EMBEDDING_MODEL_ID)
+        assertEquals(LocalEmbeddingModel.MODEL_SHA256, GeneratedMessageSafetyMlpModel.EMBEDDING_MODEL_SHA256)
+        assertEquals("sentence_similarity", GeneratedMessageSafetyMlpModel.EMBEDDING_INPUT_MODE)
+        assertFalse(GeneratedMessageSafetyMlpModel.TRAINING_DATASET_SHA256.isBlank())
+    }
+
+    @Test
+    fun generatedHeadsHaveValidMlpShapesAndFiniteValues() {
+        GeneratedMessageSafetyMlpModel.byReason.values.forEach { head ->
+            assertTrue(head.hiddenSize > 0)
+            assertEquals(
+                GeneratedMessageSafetyMlpModel.EMBEDDING_DIMENSIONS * head.hiddenSize,
+                head.hiddenWeights.size
+            )
+            assertEquals(head.hiddenSize, head.hiddenBias.size)
+            assertEquals(head.hiddenSize, head.outputWeights.size)
+            assertTrue(head.hiddenWeights.all { it.isFinite() })
+            assertTrue(head.hiddenBias.all { it.isFinite() })
+            assertTrue(head.outputWeights.all { it.isFinite() })
+            assertTrue(head.outputBias.isFinite())
+            assertTrue(head.threshold.isFinite())
+        }
     }
 }
 
@@ -99,5 +105,3 @@ private class RecordingEmbedder(
 
     override fun close() = Unit
 }
-
-private fun FloatArray.normalized(): FloatArray = normalizedPrefix(size)

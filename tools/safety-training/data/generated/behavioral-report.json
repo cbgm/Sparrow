@@ -1,0 +1,48 @@
+{
+  "accepted_by_focus": {
+    "credential-intent-de": 79,
+    "credential-intent-en": 79,
+    "payment-intent-de": 105,
+    "payment-intent-en": 105,
+    "urgent-pressure-de": 126,
+    "urgent-pressure-en": 119
+  },
+  "accepted_generated_rows": 613,
+  "base_contract_collisions_removed": 5,
+  "base_rows": 6451,
+  "behavioral_prompt_version": "sparrow-safety-behavioral-v1",
+  "candidate_rows_after_generation": 1781,
+  "combined_output": "data\\processed\\labeled-behavioral.jsonl",
+  "combined_rows": 7058,
+  "contract": "data\\challenge\\runtime_contract.jsonl",
+  "focuses": [
+    "credential-intent-en",
+    "credential-intent-de",
+    "urgent-pressure-en",
+    "urgent-pressure-de",
+    "payment-intent-en",
+    "payment-intent-de"
+  ],
+  "generated_acceptance_rate": 0.34418865805727117,
+  "generated_collisions_with_base": 1,
+  "generated_contract_collisions_removed": 0,
+  "generated_output": "data\\generated\\behavioral-validated.jsonl",
+  "generation_cache": "data\\generated\\behavioral-generation-cache.jsonl",
+  "generation_conflicting_duplicate_groups_removed": 0,
+  "generation_exact_duplicates_removed": 19,
+  "generator_model": "qwen3:8b",
+  "min_confidence": 0.9,
+  "pairs_per_focus": 150,
+  "rejected_generated_rows": 1168,
+  "rejected_output": "data\\generated\\behavioral-rejected.jsonl",
+  "rejection_reasons": {
+    "below_confidence_threshold": 932,
+    "does_not_match_intended_labels": 438,
+    "validator_disagreement": 48
+  },
+  "validation_cache": "data\\generated\\behavioral-validation-cache.jsonl",
+  "validation_pass_a_rejected_rows": 1019,
+  "validation_pass_b_rows": 762,
+  "validator_model_a": "qwen3:8b",
+  "validator_model_b": "gemma3:12b"
+}

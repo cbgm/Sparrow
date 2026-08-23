@@ -366,6 +366,114 @@ def collect_dual_teacher_decisions(
                 decisions[(record_id, pass_name)] = cache[key]
     return decisions
 
+
+def collect_expected_teacher_decisions(
+    rows: list[dict[str, Any]],
+    cache_path: Path,
+    *,
+    model_a: str,
+    model_b: str,
+    min_confidence: float,
+    endpoint: str = DEFAULT_OLLAMA_ENDPOINT,
+    batch_size: int = 16,
+    timeout_seconds: float = 180.0,
+    max_retries: int = 3,
+    progress_prefix: str = "teacher",
+) -> tuple[dict[tuple[str, str], TeacherDecision], dict[str, tuple[str, ...]]]:
+    """Validate generated rows without wasting pass B on impossible candidates.
+
+    Generated contrastive rows already carry an exact intended four-label vector. A row
+    whose pass-A decision disagrees with that vector, or whose pass-A confidence is below
+    the final minimum, can never satisfy the dual-teacher acceptance rule. Running pass B
+    for such a row is therefore pure waste.
+
+    All pass-A batches are completed before any pass-B work. This also avoids repeatedly
+    swapping model A and model B in and out of GPU memory on machines where both do not fit.
+    The accepted set is identical to full dual validation.
+    """
+    if not rows:
+        return {}, {}
+    if not 1 <= batch_size <= 32:
+        raise ValueError("batch_size must be between 1 and 32")
+    if not 0.5 <= min_confidence <= 1.0:
+        raise ValueError("min_confidence must be between 0.5 and 1.0")
+
+    cache = _load_cache(cache_path)
+    decisions: dict[tuple[str, str], TeacherDecision] = {}
+
+    def collect_pass(pass_rows: list[dict[str, Any]], *, pass_name: str, model: str) -> None:
+        if not pass_rows:
+            return
+        teacher = OllamaTeacher(
+            model=model,
+            endpoint=endpoint,
+            timeout_seconds=timeout_seconds,
+            max_retries=max_retries,
+        )
+        batches = list(_batch(pass_rows, batch_size))
+        for batch_index, batch_rows in enumerate(batches, start=1):
+            missing = [
+                row
+                for row in batch_rows
+                if _cache_key(str(row["id"]), pass_name, model) not in cache
+            ]
+            if missing:
+                print(
+                    f"{progress_prefix} pass {pass_name}: batch {batch_index}/{len(batches)}, "
+                    f"labeling {len(missing)} row(s) with {model}",
+                    flush=True,
+                )
+                fresh = teacher.classify(missing, pass_name=pass_name)
+                entries = []
+                for decision in fresh:
+                    key = _cache_key(decision.record_id, pass_name, model)
+                    cache[key] = decision
+                    entries.append(
+                        {
+                            "prompt_version": PROMPT_VERSION,
+                            "model": model,
+                            "pass": pass_name,
+                            "id": decision.record_id,
+                            "decision": decision.to_dict(),
+                        }
+                    )
+                _append_cache(cache_path, entries)
+            for row in batch_rows:
+                record_id = str(row["id"])
+                decisions[(record_id, pass_name)] = cache[_cache_key(record_id, pass_name, model)]
+
+    # Keep model A resident and finish all cheap validation first.
+    collect_pass(rows, pass_name="A", model=model_a)
+
+    pass_a_rejections: dict[str, tuple[str, ...]] = {}
+    survivors: list[dict[str, Any]] = []
+    for row in rows:
+        record_id = str(row["id"])
+        decision = decisions[(record_id, "A")]
+        expected_raw = row.get("expected_labels")
+        if not isinstance(expected_raw, dict):
+            raise ValueError(f"Generated row {record_id} is missing expected_labels")
+        expected = {label: bool(expected_raw[label]) for label in LABELS}
+        reasons: list[str] = []
+        if not all(decision.labels[label] == expected[label] for label in LABELS):
+            reasons.append("does_not_match_intended_labels")
+        if min(decision.confidences[label] for label in LABELS) < min_confidence:
+            reasons.append("below_confidence_threshold")
+        if reasons:
+            pass_a_rejections[record_id] = tuple(reasons)
+        else:
+            survivors.append(row)
+
+    print(
+        f"{progress_prefix}: pass A retained {len(survivors)}/{len(rows)} row(s); "
+        f"skipping pass B for {len(pass_a_rejections)} impossible candidate(s)",
+        flush=True,
+    )
+
+    # Only now load/switch to model B, and only for rows that can still be accepted.
+    collect_pass(survivors, pass_name="B", model=model_b)
+    return decisions, pass_a_rejections
+
 def auto_label_dataset(
     input_path: Path,
     output_path: Path,

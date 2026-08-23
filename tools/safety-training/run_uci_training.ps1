@@ -11,7 +11,7 @@ param(
     [int]$RefillPairsPerLabelLanguage = 200,
     [int]$MaxRefillRounds = 4,
     [int]$BehavioralPairsPerFocus = 150,
-    [int]$GenerationBatchSize = 8,
+    [int]$GenerationBatchSize = 16,
     [int]$ValidationBatchSize = 16,
     [int]$MinTestPositives = 20,
     [double]$MinTestPrecision = 0.80,

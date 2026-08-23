@@ -43,6 +43,7 @@ def render_markdown_report(report_path: Path, output_path: Path) -> str:
         selection = entry["threshold_selection"]
         model_note = (
             f"hidden={entry.get('hidden_size', 'n/a')}, alpha={entry.get('regularization_alpha', 'n/a')}, "
+            f"solver={entry.get('training_solver', 'n/a')}, converged={selection.get('converged', 'n/a')}, "
             f"contract={'pass' if selection.get('behavioral_contract_satisfied', True) else 'FAIL'}"
         )
         lines.append(

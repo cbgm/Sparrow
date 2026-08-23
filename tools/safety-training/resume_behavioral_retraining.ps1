@@ -4,7 +4,7 @@ param(
     [string]$ValidatorModelA = "qwen3:8b",
     [string]$ValidatorModelB = "gemma3:12b",
     [int]$PairsPerFocus = 150,
-    [int]$GenerationBatchSize = 8,
+    [int]$GenerationBatchSize = 16,
     [int]$ValidationBatchSize = 16,
     [double]$MinConfidence = 0.90,
     [int]$MinTestPositives = 20,

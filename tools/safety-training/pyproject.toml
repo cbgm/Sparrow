@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sparrow-safety-training"
-version = "0.6.0"
+version = "0.7.0"
 description = "Automatic local-teacher dataset and compact MLP classifier pipeline for Sparrow Safety"
 requires-python = ">=3.11"
 dependencies = [

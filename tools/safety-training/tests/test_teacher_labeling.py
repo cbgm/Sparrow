@@ -331,3 +331,79 @@ def test_teacher_schema_requires_exact_batch_result_count() -> None:
     results = schema["properties"]["results"]
     assert results["minItems"] == 8
     assert results["maxItems"] == 8
+
+
+def test_expected_validation_runs_all_pass_a_before_b_and_skips_impossible_rows(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import sparrow_safety_training.teacher_labeling as module
+
+    calls: list[tuple[str, str, tuple[str, ...]]] = []
+
+    class OrderedFakeTeacher:
+        def __init__(self, *, model: str, endpoint: str, timeout_seconds: float, max_retries: int) -> None:
+            self.model = model
+
+        def classify(self, rows, *, pass_name: str):
+            ids = tuple(str(row["id"]) for row in rows)
+            calls.append((self.model, pass_name, ids))
+            result = []
+            for row in rows:
+                # pass A deliberately mislabels reject-a, making pass B useless for it.
+                payment = bool(row["expected_labels"]["payment_request"])
+                if row["id"] == "reject-a" and pass_name == "A":
+                    payment = not payment
+                result.append(
+                    TeacherDecision(
+                        record_id=str(row["id"]),
+                        labels={
+                            "urgent_action_request": False,
+                            "credential_request": False,
+                            "payment_request": payment,
+                            "private_key_request": False,
+                        },
+                        confidences={label: 0.99 for label in LABELS},
+                        reason="fake",
+                    )
+                )
+            return result
+
+    monkeypatch.setattr(module, "OllamaTeacher", OrderedFakeTeacher)
+    rows = [
+        {
+            "id": "keep-1",
+            "text": "pay me",
+            "expected_labels": {label: label == "payment_request" for label in LABELS},
+        },
+        {
+            "id": "reject-a",
+            "text": "please pay",
+            "expected_labels": {label: label == "payment_request" for label in LABELS},
+        },
+        {
+            "id": "keep-2",
+            "text": "hello",
+            "expected_labels": {label: False for label in LABELS},
+        },
+    ]
+
+    decisions, rejected = module.collect_expected_teacher_decisions(
+        rows,
+        tmp_path / "cache.jsonl",
+        model_a="fake-a",
+        model_b="fake-b",
+        min_confidence=0.9,
+        batch_size=2,
+        progress_prefix="test",
+    )
+
+    assert rejected == {"reject-a": ("does_not_match_intended_labels",)}
+    assert ("reject-a", "A") in decisions
+    assert ("reject-a", "B") not in decisions
+    assert ("keep-1", "B") in decisions
+    assert ("keep-2", "B") in decisions
+
+    first_b = next(index for index, call in enumerate(calls) if call[1] == "B")
+    assert all(call[1] == "A" for call in calls[:first_b])
+    assert all("reject-a" not in call[2] for call in calls[first_b:])
