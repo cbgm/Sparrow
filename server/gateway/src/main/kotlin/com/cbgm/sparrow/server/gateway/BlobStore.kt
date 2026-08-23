@@ -10,7 +10,6 @@ import kotlinx.coroutines.withContext
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardOpenOption
 import java.security.MessageDigest
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
@@ -48,80 +47,128 @@ class BlobStore(
         reserveCapacity(allowedBytes)
 
         val paths = paths(claims.blobId)
-        paths.directory.createDirectories()
-        var written = 0L
-        var createdData = false
-        var createdMetadata = false
+        withContext(Dispatchers.IO) {
+            paths.directory.createDirectories()
+        }
         var reservationCommitted = false
         try {
+            val written = writeBlobData(paths.data, channel, allowedBytes)
             try {
-                withContext(Dispatchers.IO) {
-                    Files.newOutputStream(
-                        paths.data,
-                        StandardOpenOption.CREATE_NEW,
-                        StandardOpenOption.WRITE
-                    )
-                }.also { createdData = true }.use { output ->
-                    val buffer = ByteArray(BUFFER_BYTES)
-                    while (true) {
-                        val read = channel.readAvailable(buffer)
-                        if (read == -1) break
-                        if (read == 0) continue
-                        written += read
-                        if (written > allowedBytes) {
-                            throw BlobTooLargeException()
-                        }
-                        output.write(buffer, 0, read)
-                    }
-                }
-            } catch (_: java.nio.file.FileAlreadyExistsException) {
-                throw BlobAlreadyExistsException()
-            }
-
-            require(written > 0L) { "Blob must not be empty" }
-            require(written == claims.maximumBytes) {
-                "Blob byte size does not match the upload ticket"
-            }
-            val metadata =
-                BlobMetadata(
-                    blobId = claims.blobId,
-                    byteSize = written,
-                    readCapabilitySha256 = claims.readCapabilitySha256,
-                    deleteCapabilitySha256 = claims.deleteCapabilitySha256,
-                    expiresAtEpochMilliseconds = claims.blobExpiresAtEpochMilliseconds
+                validateBlobSize(written, claims.maximumBytes)
+                val metadata = claims.toMetadata(written)
+                writeMetadataAndCommit(
+                    metadataPath = paths.metadata,
+                    metadata = metadata,
+                    reservedBytes = allowedBytes,
+                    storedBytes = written
                 )
-            synchronized(capacityLock) {
-                try {
-                    Files.writeString(
-                        paths.metadata,
-                        serverJson.encodeToString(metadata),
-                        StandardOpenOption.CREATE_NEW,
-                        StandardOpenOption.WRITE
-                    )
-                    createdMetadata = true
-                } catch (_: java.nio.file.FileAlreadyExistsException) {
-                    throw BlobAlreadyExistsException()
-                }
-                commitCapacity(reservedBytes = allowedBytes, storedBytes = written)
                 reservationCommitted = true
-            }
-            return metadata
-        } catch (error: Exception) {
-            if (createdData) {
+                return metadata
+            } catch (error: Exception) {
                 withContext(Dispatchers.IO) {
                     Files.deleteIfExists(paths.data)
                 }
+                throw error
             }
-            if (createdMetadata) {
-                withContext(Dispatchers.IO) {
-                    Files.deleteIfExists(paths.metadata)
-                }
-            }
-            throw error
         } finally {
             if (!reservationCommitted) {
                 releaseCapacity(allowedBytes)
             }
+        }
+    }
+
+    private suspend fun writeBlobData(
+        dataPath: Path,
+        channel: ByteReadChannel,
+        allowedBytes: Long
+    ): Long =
+        withContext(Dispatchers.IO) {
+            var created = false
+            try {
+                Files.newOutputStream(
+                    dataPath,
+                    java.nio.file.StandardOpenOption.CREATE_NEW,
+                    java.nio.file.StandardOpenOption.WRITE
+                ).also { created = true }.use { output ->
+                    copyBlobData(channel, output, allowedBytes)
+                }
+            } catch (_: java.nio.file.FileAlreadyExistsException) {
+                throw BlobAlreadyExistsException()
+            } catch (error: Exception) {
+                if (created) {
+                    Files.deleteIfExists(dataPath)
+                }
+                throw error
+            }
+        }
+
+    private suspend fun copyBlobData(
+        channel: ByteReadChannel,
+        output: java.io.OutputStream,
+        allowedBytes: Long
+    ): Long =
+        withContext(Dispatchers.IO) {
+            val buffer = ByteArray(BUFFER_BYTES)
+            var written = 0L
+            var read = channel.readAvailable(buffer)
+            while (read >= 0) {
+                if (read > 0) {
+                    written += read
+                    if (written > allowedBytes) {
+                        throw BlobTooLargeException()
+                    }
+                    output.write(buffer, 0, read)
+                }
+                read = channel.readAvailable(buffer)
+            }
+            written
+        }
+
+    private fun validateBlobSize(
+        written: Long,
+        expectedBytes: Long
+    ) {
+        require(written > 0L) { "Blob must not be empty" }
+        require(written == expectedBytes) {
+            "Blob byte size does not match the upload ticket"
+        }
+    }
+
+    private fun BlobUploadTicketClaims.toMetadata(written: Long): BlobMetadata =
+        BlobMetadata(
+            blobId = blobId,
+            byteSize = written,
+            readCapabilitySha256 = readCapabilitySha256,
+            deleteCapabilitySha256 = deleteCapabilitySha256,
+            expiresAtEpochMilliseconds = blobExpiresAtEpochMilliseconds
+        )
+
+    private suspend fun writeMetadataAndCommit(
+        metadataPath: Path,
+        metadata: BlobMetadata,
+        reservedBytes: Long,
+        storedBytes: Long
+    ) =
+        withContext(Dispatchers.IO) {
+            synchronized(capacityLock) {
+                writeMetadata(metadataPath, metadata)
+                commitCapacity(reservedBytes = reservedBytes, storedBytes = storedBytes)
+            }
+        }
+
+    private fun writeMetadata(
+        metadataPath: Path,
+        metadata: BlobMetadata
+    ) {
+        try {
+            Files.writeString(
+                metadataPath,
+                serverJson.encodeToString(metadata),
+                java.nio.file.StandardOpenOption.CREATE_NEW,
+                java.nio.file.StandardOpenOption.WRITE
+            )
+        } catch (_: java.nio.file.FileAlreadyExistsException) {
+            throw BlobAlreadyExistsException()
         }
     }
 
