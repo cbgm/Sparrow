@@ -177,7 +177,7 @@ jobs:
           owner="${GITHUB_REPOSITORY_OWNER,,}"
           image_prefix="ghcr.io/${owner}/sparrow"
 
-          image_tags=("sha-${SOURCE_SHA}")
+          image_tags=("sha-${SOURCE_SHA}" "latest")
 
           if [[ -n "${PR_NUMBER}" ]]; then
             image_tags+=("pr-${PR_NUMBER}")
@@ -260,18 +260,11 @@ jobs:
 
       - name: Create control-plane bundle
         shell: pwsh
-        env:
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           $owner = "${{ github.repository_owner }}".ToLowerInvariant()
           $imagePrefix = "ghcr.io/$owner/sparrow"
 
-          if (-not [string]::IsNullOrWhiteSpace($env:PR_NUMBER)) {
-              $imageTag = "pr-$($env:PR_NUMBER)"
-          } else {
-              $imageTag = "sha-$($env:SOURCE_SHA)"
-          }
+          $imageTag = "latest"
 
           ./server/scripts/New-ControlPlaneBundle.ps1 `
               -OutputDirectory dist-control-plane `
@@ -333,18 +326,11 @@ jobs:
 
       - name: Create community-node bundle
         shell: pwsh
-        env:
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           $owner = "${{ github.repository_owner }}".ToLowerInvariant()
           $imagePrefix = "ghcr.io/$owner/sparrow"
 
-          if (-not [string]::IsNullOrWhiteSpace($env:PR_NUMBER)) {
-              $imageTag = "pr-$($env:PR_NUMBER)"
-          } else {
-              $imageTag = "sha-$($env:SOURCE_SHA)"
-          }
+          $imageTag = "latest"
 
           ./server/scripts/New-CommunityNodeBundle.ps1 `
               -OutputDirectory dist-community `
