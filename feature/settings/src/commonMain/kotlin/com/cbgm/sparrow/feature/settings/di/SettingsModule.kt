@@ -18,7 +18,9 @@ import com.cbgm.sparrow.feature.settings.domain.usecase.GetLicensesUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.InitAppLanguageUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveBlockUnknownContactInvitesUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveBlockedContactIdsUseCase
+import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveControlPlaneSettingsContextUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveDirectIdentitySetupModeUseCase
+import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveSettingsDomainContextUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetAppLanguageUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetBlockUnknownContactInvitesUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetDeveloperEnabledUseCase
@@ -102,6 +104,24 @@ val settingsModule =
         }
 
         factory {
+            ObserveSettingsDomainContextUseCase(
+                observeDirectIdentitySetupMode = get(),
+                observeBlockUnknownContactInvites = get(),
+                observeBlockedContactIds = get(),
+                observeLocalEmbeddingState = get(),
+                observeSemanticSearchState = get(),
+                observeMessageSafetyState = get()
+            )
+        }
+
+        factory {
+            ObserveControlPlaneSettingsContextUseCase(
+                configuration = get(),
+                statusStore = get()
+            )
+        }
+
+        factory {
             ClearLocalDataUseCase(settingsRepository = get())
         }
 
@@ -118,14 +138,9 @@ val settingsModule =
                 getDeveloperEnabledUseCase = get(),
                 getBuildInfoUseCase = get(),
                 setDeveloperModeEnabledUseCase = get(),
-                observeDirectIdentitySetupMode = get(),
+                observeSettingsDomainContext = get(),
                 setDirectIdentitySetupMode = get(),
-                observeBlockUnknownContactInvites = get(),
                 setBlockUnknownContactInvites = get(),
-                observeBlockedContactIds = get(),
-                observeLocalEmbeddingState = get(),
-                observeSemanticSearchState = get(),
-                observeMessageSafetyState = get(),
                 setSemanticSearchEnabled = get(),
                 setLocalEmbeddingFeatureEnabled = get()
             )
@@ -143,7 +158,7 @@ val settingsModule =
             ControlPlaneSettingsViewModel(
                 savedStateHandle = get(),
                 configuration = get(),
-                statusStore = get(),
+                observeControlPlaneSettingsContext = get(),
                 healthMonitor = get(),
                 directorySynchronizer = get()
             )

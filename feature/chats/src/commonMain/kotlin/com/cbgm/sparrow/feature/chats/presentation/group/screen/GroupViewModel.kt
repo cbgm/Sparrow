@@ -8,28 +8,22 @@ import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.chats.domain.model.attachment.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationState
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
+import com.cbgm.sparrow.feature.chats.domain.model.group.GroupChatContext
 import com.cbgm.sparrow.feature.chats.domain.usecase.attachment.LoadMessageAttachmentUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.AcceptGroupInvitationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeclineGroupInvitationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.MarkGroupConversationReadUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupAdministrationUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupAvatarUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupConversationUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupChatContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupMemberTypingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.RetryGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SendGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupTypingUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.profile.ObserveRemoteProfilePicturesUseCase
 import com.cbgm.sparrow.feature.chats.presentation.attachment.model.GalleryMediaSelection
 import com.cbgm.sparrow.feature.chats.presentation.group.mapper.toGroupUiState
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
-import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.mapper.toDetailsRoute
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -39,7 +33,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
@@ -49,16 +42,12 @@ import kotlin.time.Duration.Companion.milliseconds
 
 class GroupViewModel(
     savedStateHandle: SavedStateHandle,
-    observeConversation: ObserveGroupConversationUseCase,
-    observeAdministration: ObserveGroupAdministrationUseCase,
+    observeChatContext: ObserveGroupChatContextUseCase,
     private val sendMessage: SendGroupMessageUseCase,
     private val markConversationRead: MarkGroupConversationReadUseCase,
     private val retryMessage: RetryGroupMessageUseCase,
     private val acceptInvitation: AcceptGroupInvitationUseCase,
     private val declineInvitation: DeclineGroupInvitationUseCase,
-    observeContacts: ObserveContactsUseCase,
-    private val observeProfilePictures: ObserveRemoteProfilePicturesUseCase,
-    observeGroupAvatar: ObserveGroupAvatarUseCase,
     private val observeMemberTyping: ObserveGroupMemberTypingUseCase,
     private val setGroupTyping: SetGroupTypingUseCase,
     observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase,
@@ -81,58 +70,16 @@ class GroupViewModel(
     private var localTypingStopJob: Job? = null
     private var isLocalTyping = false
 
-    private val conversationFlow: Flow<GroupConversationObservation> =
-        observeConversation(groupId)
-            .map<GroupConversation?, GroupConversationObservation> { GroupConversationObservation.Loaded(it) }
-            .onStart { emit(GroupConversationObservation.Loading) }
+    private val groupContext = observeChatContext(groupId)
+
+    private val presentationContext: Flow<GroupContextObservation> =
+        groupContext
+            .map<GroupChatContext, GroupContextObservation> { context ->
+                GroupContextObservation.Loaded(context)
+            }.onStart { emit(GroupContextObservation.Loading) }
             .catch { error ->
-                emit(GroupConversationObservation.Failed(error.message ?: "Group conversation could not be loaded"))
+                emit(GroupContextObservation.Failed(error.message ?: "Group conversation could not be loaded"))
             }
-
-    private val contactsFlow: Flow<List<Contact>> =
-        observeContacts()
-            .onStart { emit(emptyList()) }
-            .catch { emit(emptyList()) }
-
-    private val contextFlow =
-        combine(
-            conversationFlow,
-            observeAdministration(groupId).onStart { emit(GroupAdministrationState()) }
-        ) { observation, administration ->
-            GroupContext(observation, administration)
-        }
-
-    private val groupAvatarFlow: Flow<ByteArray?> =
-        observeGroupAvatar(groupId).map { avatar -> avatar.bytes }
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val profilePicturesFlow: Flow<Map<String, ByteArray?>> =
-        conversationFlow
-            .map { observation ->
-                observation.conversation
-                    ?.messages
-                    .orEmpty()
-                    .asSequence()
-                    .mapNotNull { message -> message.senderContactId }
-                    .filter(String::isNotBlank)
-                    .toSet()
-            }.distinctUntilChanged()
-            .flatMapLatest { contactIds -> observeProfilePictures(contactIds) }
-
-    private val presentationContext =
-        combine(
-            contextFlow,
-            contactsFlow,
-            profilePicturesFlow,
-            groupAvatarFlow
-        ) { context, contacts, profilePictures, avatarBytes ->
-            GroupPresentationContext(
-                context = context,
-                contacts = contacts,
-                profilePictures = profilePictures,
-                avatarBytes = avatarBytes
-            )
-        }
 
     private val composerContext =
         combine(
@@ -153,15 +100,15 @@ class GroupViewModel(
             observeMessageSafetyAssessments()
         ) { presentation, composer, loadedAttachmentBytes, safetyAssessments ->
             toGroupUiState(
-                conversation = presentation.context.observation.conversation,
-                administration = presentation.context.administration,
-                contacts = presentation.contacts,
-                profilePictures = presentation.profilePictures,
-                avatarBytes = presentation.avatarBytes,
+                conversation = presentation.context?.conversation,
+                administration = presentation.context?.administration ?: GroupAdministrationState(),
+                contacts = presentation.context?.contacts.orEmpty(),
+                profilePictures = presentation.context?.profilePictures.orEmpty(),
+                avatarBytes = presentation.context?.avatarBytes,
                 currentText = composer.text,
                 currentError = composer.error,
-                observationError = presentation.context.observation.errorMessage,
-                isLoading = presentation.context.observation is GroupConversationObservation.Loading,
+                observationError = presentation.errorMessage,
+                isLoading = presentation is GroupContextObservation.Loading,
                 typingContactIds = composer.typingIds,
                 safetyAssessments = safetyAssessments,
                 attachmentBytes = loadedAttachmentBytes
@@ -219,7 +166,7 @@ class GroupViewModel(
 
     private fun observeParticipants() {
         viewModelScope.launch {
-            contextFlow
+            groupContext
                 .map { context -> context.administration.currentMemberContactIds }
                 .distinctUntilChanged()
                 .collect(::updateTypingObservers)
@@ -368,60 +315,27 @@ class GroupViewModel(
         sendTypingStateNow(isTyping = false)
     }
 
-    private sealed interface GroupConversationObservation {
-        val conversation: GroupConversation?
+    private sealed interface GroupContextObservation {
+        val context: GroupChatContext?
         val errorMessage: String?
 
-        data object Loading : GroupConversationObservation {
-            override val conversation: GroupConversation? = null
+        data object Loading : GroupContextObservation {
+            override val context: GroupChatContext? = null
             override val errorMessage: String? = null
         }
 
         data class Loaded(
-            override val conversation: GroupConversation?
-        ) : GroupConversationObservation {
+            override val context: GroupChatContext
+        ) : GroupContextObservation {
             override val errorMessage: String? =
-                if (conversation == null) "Group conversation was not found" else null
+                context.conversationError?.message
+                    ?: if (context.conversation == null) "Group conversation was not found" else null
         }
 
         data class Failed(
             override val errorMessage: String
-        ) : GroupConversationObservation {
-            override val conversation: GroupConversation? = null
-        }
-    }
-
-    private data class GroupContext(
-        val observation: GroupConversationObservation,
-        val administration: GroupAdministrationState
-    )
-
-    private data class GroupPresentationContext(
-        val context: GroupContext,
-        val contacts: List<Contact>,
-        val profilePictures: Map<String, ByteArray?>,
-        val avatarBytes: ByteArray?
-    ) {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as GroupPresentationContext
-
-            if (context != other.context) return false
-            if (contacts != other.contacts) return false
-            if (profilePictures != other.profilePictures) return false
-            if (!avatarBytes.contentEquals(other.avatarBytes)) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            var result = context.hashCode()
-            result = 31 * result + contacts.hashCode()
-            result = 31 * result + profilePictures.hashCode()
-            result = 31 * result + (avatarBytes?.contentHashCode() ?: 0)
-            return result
+        ) : GroupContextObservation {
+            override val context: GroupChatContext? = null
         }
     }
 

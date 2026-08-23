@@ -88,6 +88,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.attachment.LoadMessageAttac
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.DeleteDirectConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.GetOrCreateDirectConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.MarkDirectConversationReadUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectChatContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectTypingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.QueueDirectMessageUntilAuthorizedUseCase
@@ -105,7 +106,9 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.MarkGroupConversation
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupAdministrationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupAvatarUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupAvatarsUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupChatContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupConversationUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupDetailsContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupMemberTypingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupVerificationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.PromoteGroupMemberUseCase
@@ -118,6 +121,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupTypingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SynchronizeGroupVerificationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.TransferGroupAdminAndLeaveUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.VerifyGroupMemberUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.overview.ObserveConversationOverviewContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.overview.ObserveConversationOverviewsUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.profile.ObserveRemoteProfilePicturesUseCase
 import com.cbgm.sparrow.feature.chats.presentation.ContactsFlowViewModel
@@ -129,10 +133,6 @@ import com.cbgm.sparrow.feature.chats.presentation.overview.OverviewViewModel
 import com.cbgm.sparrow.feature.chats.presentation.verification.GroupMemberQrVerificationViewModel
 import com.cbgm.sparrow.feature.contacts.domain.usecase.EnsureIdentityExchangeStartedUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveIdentityHandshakeStateUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveIdentitySetupModeUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
@@ -269,6 +269,7 @@ private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::LoadMessageAttachmentUseCase)
     singleOf(::GetOrCreateDirectConversationUseCase)
     singleOf(::ObserveDirectConversationUseCase)
+    singleOf(::ObserveDirectChatContextUseCase)
     singleOf(::SendDirectMessageUseCase)
     singleOf(::QueueDirectMessageUntilAuthorizedUseCase)
     singleOf(::RetryDirectMessageUseCase)
@@ -279,6 +280,8 @@ private fun org.koin.core.module.Module.registerUseCases() {
 
     singleOf(::CreateGroupConversationUseCase)
     singleOf(::ObserveGroupConversationUseCase)
+    singleOf(::ObserveGroupChatContextUseCase)
+    singleOf(::ObserveGroupDetailsContextUseCase)
     singleOf(::SendGroupMessageUseCase)
     singleOf(::RetryGroupMessageUseCase)
     singleOf(::MarkGroupConversationReadUseCase)
@@ -303,6 +306,7 @@ private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::VerifyGroupMemberUseCase)
 
     singleOf(::ObserveConversationOverviewsUseCase)
+    singleOf(::ObserveConversationOverviewContextUseCase)
     singleOf(::ObserveRemoteProfilePicturesUseCase)
 }
 
@@ -318,9 +322,7 @@ private fun org.koin.core.module.Module.registerViewModels() {
 
     viewModel {
         OverviewViewModel(
-            observeConversations = get(),
-            observeProfilePictures = get(),
-            observeGroupAvatars = get(),
+            observeConversationContext = get(),
             deleteDirectConversation = get(),
             deleteGroupConversation = get(),
             getGroupLeaveRequirement = get()
@@ -330,8 +332,7 @@ private fun org.koin.core.module.Module.registerViewModels() {
     viewModel {
         CreateGroupViewModel(
             savedStateHandle = get(),
-            observeContacts = get(),
-            observeProfilePictures = get(),
+            observeContactsWithProfilePictures = get(),
             createGroupConversation = get()
         )
     }
@@ -339,16 +340,12 @@ private fun org.koin.core.module.Module.registerViewModels() {
     viewModel {
         GroupViewModel(
             savedStateHandle = get(),
-            observeConversation = get(),
-            observeAdministration = get(),
+            observeChatContext = get(),
             sendMessage = get(),
             markConversationRead = get(),
             retryMessage = get(),
             acceptInvitation = get(),
             declineInvitation = get(),
-            observeContacts = get<ObserveContactsUseCase>(),
-            observeProfilePictures = get(),
-            observeGroupAvatar = get(),
             observeMemberTyping = get(),
             setGroupTyping = get(),
             observeMessageSafetyAssessments = get(),
@@ -359,19 +356,15 @@ private fun org.koin.core.module.Module.registerViewModels() {
     viewModel {
         GroupVerificationViewModel(
             savedStateHandle = get(),
-            observeGroupVerification = get(),
+            observeGroupDetailsContext = get(),
             synchronizeGroupVerification = get(),
             verifyGroupMember = get(),
             getContactSafetyNumber = get<GetContactSafetyNumberUseCase>(),
-            observeContacts = get(),
-            observeProfilePictures = get(),
+            observeContactsWithProfilePictures = get(),
             addGroupMembers = get(),
             removeGroupMember = get(),
             promoteGroupMember = get(),
             transferGroupAdminAndLeave = get(),
-            observeGroupAdministration = get(),
-            observeGroupConversation = get(),
-            observeGroupAvatar = get(),
             setGroupAvatar = get(),
             removeGroupAvatar = get(),
             getGroupLeaveRequirement = get(),
@@ -391,17 +384,13 @@ private fun org.koin.core.module.Module.registerViewModels() {
     viewModel {
         DirectViewModel(
             savedStateHandle = get(),
-            observeConversation = get(),
+            observeChatContext = get(),
             sendMessage = get(),
             queueMessageUntilAuthorized = get(),
             markConversationRead = get(),
             retryMessage = get(),
-            observeIdentitySetupMode = get<ObserveIdentitySetupModeUseCase>(),
             ensureIdentityExchangeStarted = get<EnsureIdentityExchangeStartedUseCase>(),
             requireDirectChatAuthorization = get<RequireDirectChatAuthorizationUseCase>(),
-            observeIdentityHandshakeState = get<ObserveIdentityHandshakeStateUseCase>(),
-            observeContact = get<ObserveContactUseCase>(),
-            observeProfilePictures = get(),
             observeTyping = get(),
             setTyping = get(),
             observeMessageSafetyAssessments = get(),

@@ -6,20 +6,18 @@ import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactInvitation
-import com.cbgm.sparrow.feature.contacts.domain.model.IdentityInvitationDirection
+import com.cbgm.sparrow.feature.contacts.domain.model.ContactInvitationsContext
 import com.cbgm.sparrow.feature.contacts.domain.usecase.AcceptContactInvitationUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.DeclineAndBlockContactInvitationUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.DeclineContactInvitationUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.DeleteDeclinedOutgoingInvitationUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.MarkContactInvitationsViewedUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactInvitationsUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactProfilePicturesUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactInvitationsContextUseCase
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.mapper.toUiState
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationEffect
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationTab
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiState
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,21 +25,18 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class ContactInvitationViewModel(
     savedStateHandle: SavedStateHandle,
-    observeContactInvitations: ObserveContactInvitationsUseCase,
+    observeInvitationsContext: ObserveContactInvitationsContextUseCase,
     private val acceptContactInvitation: AcceptContactInvitationUseCase,
     private val declineContactInvitation: DeclineContactInvitationUseCase,
     private val declineAndBlockContactInvitation: DeclineAndBlockContactInvitationUseCase,
     private val deleteDeclinedOutgoingInvitation: DeleteDeclinedOutgoingInvitationUseCase,
-    private val markInvitationsViewed: MarkContactInvitationsViewedUseCase,
-    observeProfilePictures: ObserveContactProfilePicturesUseCase
+    private val markInvitationsViewed: MarkContactInvitationsViewedUseCase
 ) : BaseViewModel() {
     private val initialTab =
         if (savedStateHandle.requireRouteArgument<Boolean>(AppRoute.ContactInvitations::showOutgoing.name)) {
@@ -52,47 +47,27 @@ class ContactInvitationViewModel(
 
     private val selectedTab = MutableStateFlow(initialTab)
 
-    private val incomingInvitations =
-        observeContactInvitations(IdentityInvitationDirection.INCOMING)
+    private val invitationsContext =
+        observeInvitationsContext()
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-                initialValue = emptyList()
+                initialValue = ContactInvitationsContext()
             )
-
-    private val outgoingInvitations =
-        observeContactInvitations(IdentityInvitationDirection.OUTGOING)
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-                initialValue = emptyList()
-            )
-
-    private val allInvitations =
-        combine(incomingInvitations, outgoingInvitations) { incoming, outgoing ->
-            incoming + outgoing
-        }
-
-    private val profilePictures =
-        allInvitations.flatMapLatest { invitations ->
-            observeProfilePictures(invitations.map(ContactInvitation::contactId).toSet())
-        }
 
     private val processingInvitationId = MutableStateFlow<String?>(null)
 
     val uiState: StateFlow<ContactInvitationUiState> =
         combine(
             selectedTab,
-            incomingInvitations,
-            outgoingInvitations,
-            profilePictures,
+            invitationsContext,
             processingInvitationId
-        ) { tab, incoming, outgoing, pictures, processingId ->
+        ) { tab, context, processingId ->
             toUiState(
                 selectedTab = tab,
-                incomingInvitations = incoming,
-                outgoingInvitations = outgoing,
-                profilePictures = pictures,
+                incomingInvitations = context.incoming,
+                outgoingInvitations = context.outgoing,
+                profilePictures = context.profilePictures,
                 processingInvitationId = processingId
             )
         }.stateIn(
@@ -123,13 +98,12 @@ class ContactInvitationViewModel(
         viewModelScope.launch {
             combine(
                 selectedTab,
-                incomingInvitations,
-                outgoingInvitations
-            ) { tab, incoming, outgoing ->
+                invitationsContext
+            ) { tab, context ->
                 val selected =
                     when (tab) {
-                        ContactInvitationTab.INCOMING -> incoming
-                        ContactInvitationTab.OUTGOING -> outgoing
+                        ContactInvitationTab.INCOMING -> context.incoming
+                        ContactInvitationTab.OUTGOING -> context.outgoing
                     }
                 tab to selected.any(ContactInvitation::hasUnreadUpdate)
             }.distinctUntilChanged()
@@ -209,14 +183,12 @@ class ContactInvitationViewModel(
     }
 
     private suspend fun isScreenEmptyAfter(invitationId: String): Boolean {
-        val (incoming, outgoing) =
-            combine(incomingInvitations, outgoingInvitations) { incoming, outgoing ->
-                incoming to outgoing
-            }.first { (incoming, outgoing) ->
-                incoming.none { invitation -> invitation.invitationId == invitationId } &&
-                    outgoing.none { invitation -> invitation.invitationId == invitationId }
+        val context =
+            invitationsContext.first { context ->
+                context.incoming.none { invitation -> invitation.invitationId == invitationId } &&
+                    context.outgoing.none { invitation -> invitation.invitationId == invitationId }
             }
 
-        return incoming.isEmpty() && outgoing.isEmpty()
+        return context.incoming.isEmpty() && context.outgoing.isEmpty()
     }
 }

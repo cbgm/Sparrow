@@ -6,15 +6,14 @@ import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
 import com.cbgm.sparrow.core.transport.ControlPlaneDirectorySynchronizer
 import com.cbgm.sparrow.core.transport.ControlPlaneEndpoint
 import com.cbgm.sparrow.core.transport.ControlPlaneHealthMonitor
-import com.cbgm.sparrow.core.transport.ControlPlaneStatusStore
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveControlPlaneSettingsContextUseCase
 import com.cbgm.sparrow.feature.settings.presentation.network.mapper.toUiModels
 import com.cbgm.sparrow.feature.settings.presentation.network.mapper.toUiState
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneDirectoryError
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsError
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsUiState
-import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,7 +28,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class ControlPlaneSettingsViewModel(
     private val savedStateHandle: SavedStateHandle,
     private val configuration: ControlPlaneConfiguration,
-    statusStore: ControlPlaneStatusStore,
+    observeControlPlaneSettingsContext: ObserveControlPlaneSettingsContextUseCase,
     private val healthMonitor: ControlPlaneHealthMonitor,
     private val directorySynchronizer: ControlPlaneDirectorySynchronizer
 ) : BaseViewModel() {
@@ -49,36 +48,27 @@ class ControlPlaneSettingsViewModel(
             )
         }
 
-    private val configurationSnapshot =
-        combine(
-            statusStore.statuses,
-            configuration.manualBaseUrls,
-            configuration.directoryBaseUrls,
-            configuration.directoryUrl
-        ) { statuses, manual, directory, directoryUrl ->
-            ConfigurationSnapshot(
-                entries = statuses.toUiModels(manual, directory),
-                directoryUrl = directoryUrl.orEmpty()
-            )
-        }
+    private val configurationContext = observeControlPlaneSettingsContext()
 
     val uiState: StateFlow<ControlPlaneSettingsUiState> =
         combine(
-            configurationSnapshot,
+            configurationContext,
             formState,
             actionState
         ) { configuration, form, action ->
-            configuration.entries.toUiState(
-                showAddDialog = form.showAddDialog,
-                newUrl = form.newUrl,
-                addError = action.addError,
-                directoryUrl = configuration.directoryUrl,
-                directoryDraft = form.directoryDraft ?: configuration.directoryUrl,
-                directoryError = action.directoryError,
-                isRefreshing = action.isRefreshing,
-                isDirectorySyncing = action.isDirectorySyncing,
-                lastDirectoryCount = action.lastDirectoryCount
-            )
+            configuration.statuses
+                .toUiModels(configuration.manualBaseUrls, configuration.directoryBaseUrls)
+                .toUiState(
+                    showAddDialog = form.showAddDialog,
+                    newUrl = form.newUrl,
+                    addError = action.addError,
+                    directoryUrl = configuration.directoryUrl,
+                    directoryDraft = form.directoryDraft ?: configuration.directoryUrl,
+                    directoryError = action.directoryError,
+                    isRefreshing = action.isRefreshing,
+                    isDirectorySyncing = action.isDirectorySyncing,
+                    lastDirectoryCount = action.lastDirectoryCount
+                )
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
@@ -272,27 +262,14 @@ class ControlPlaneSettingsViewModel(
     }
 }
 
-private data class ConfigurationSnapshot(
-    val entries: List<ControlPlaneUiModel>,
-    val directoryUrl: String
-)
-
 private fun String.normalizeHttpUrl(): String? {
     val trimmed = trim().trimEnd('/')
-    if (trimmed.isBlank() || trimmed.any { it.isWhitespace() }) return null
-
-    val normalized = when {
-        trimmed.startsWith("http://", true) || trimmed.startsWith("https://", true) -> trimmed
-        else -> "https://$trimmed"
-    }
-
-    val host = normalized.substringAfter("://").substringBefore('/').substringBefore(':')
-    if (host.isBlank()) return null
-
-    val looksValid = host == "localhost" || host.contains('.') || host.matches(IPV4_REGEX)
-    if (!looksValid) return null
-
+    if (trimmed.isBlank() || trimmed.any(Char::isWhitespace)) return null
+    val normalized =
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+            trimmed
+        } else {
+            "https://$trimmed"
+        }
     return runCatching { ControlPlaneEndpoint(normalized).baseUrl }.getOrNull()
 }
-
-private val IPV4_REGEX = Regex("""\d{1,3}(\.\d{1,3}){3}""")

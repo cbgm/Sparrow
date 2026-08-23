@@ -9,29 +9,22 @@ import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.chats.domain.model.attachment.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.chats.domain.model.attachment.OutgoingMediaAttachment
-import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.sparrow.feature.chats.domain.usecase.attachment.LoadMessageAttachmentUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.MarkDirectConversationReadUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectConversationUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectChatContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectTypingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.QueueDirectMessageUntilAuthorizedUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.RetryDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SendDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SetDirectTypingUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.profile.ObserveRemoteProfilePicturesUseCase
 import com.cbgm.sparrow.feature.chats.presentation.attachment.model.GalleryMediaSelection
 import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.toDirectUiState
 import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.withProfilePicture
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectComposerState
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiState
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.DirectChatAuthorizationRequiredException
-import com.cbgm.sparrow.feature.contacts.domain.model.IdentityHandshakeState
 import com.cbgm.sparrow.feature.contacts.domain.usecase.EnsureIdentityExchangeStartedUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveIdentityHandshakeStateUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveIdentitySetupModeUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.mapper.toDetailsRoute
@@ -48,17 +41,13 @@ import kotlin.time.Duration.Companion.milliseconds
 
 class DirectViewModel(
     savedStateHandle: SavedStateHandle,
-    observeConversation: ObserveDirectConversationUseCase,
+    observeChatContext: ObserveDirectChatContextUseCase,
     private val sendMessage: SendDirectMessageUseCase,
     private val queueMessageUntilAuthorized: QueueDirectMessageUntilAuthorizedUseCase,
     private val markConversationRead: MarkDirectConversationReadUseCase,
     private val retryMessage: RetryDirectMessageUseCase,
-    observeIdentitySetupMode: ObserveIdentitySetupModeUseCase,
     private val ensureIdentityExchangeStarted: EnsureIdentityExchangeStartedUseCase,
     private val requireDirectChatAuthorization: RequireDirectChatAuthorizationUseCase,
-    observeIdentityHandshakeState: ObserveIdentityHandshakeStateUseCase,
-    observeContact: ObserveContactUseCase,
-    observeProfilePictures: ObserveRemoteProfilePicturesUseCase,
     private val observeTyping: ObserveDirectTypingUseCase,
     private val setTyping: SetDirectTypingUseCase,
     observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase,
@@ -84,27 +73,7 @@ class DirectViewModel(
     private var remoteTypingTimeoutJob: Job? = null
     private var isLocalTyping = false
 
-    private val conversationFlow: Flow<DirectConversation?> = observeConversation(conversationId)
-    private val contactFlow: Flow<Contact?> = observeContact(contactId = contactId)
-    private val identityHandshakeFlow: Flow<IdentityHandshakeState?> = observeIdentityHandshakeState(contactId)
-    private val profilePictureFlow: Flow<ByteArray?> = observeProfilePictures(contactId)
-    private val identitySetupModeFlow: StateFlow<DirectIdentitySetupMode> =
-        observeIdentitySetupMode()
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.Eagerly,
-                initialValue = DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING
-            )
-
-    private val conversationContext =
-        combine(
-            conversationFlow,
-            contactFlow,
-            identityHandshakeFlow,
-            identitySetupModeFlow
-        ) { conversation, contact, handshake, setupMode ->
-            ConversationContext(conversation, contact, handshake, setupMode)
-        }
+    private val conversationContext = observeChatContext(conversationId, contactId)
 
     private val composerContext =
         combine(
@@ -136,16 +105,15 @@ class DirectViewModel(
                 contactTyping = composer.contactTyping,
                 safetyAssessments = safetyAssessments,
                 attachmentBytes = loadedAttachmentBytes
-            ).copy(
-                selectedGalleryMedia = composer.selectedMedia,
-                isSending = composer.isSending
-            )
+            ).withProfilePicture(context.profilePictureBytes)
+                .copy(
+                    selectedGalleryMedia = composer.selectedMedia,
+                    isSending = composer.isSending
+                )
         }
 
     val uiState: StateFlow<DirectUiState> =
-        combine(functionalUiState, profilePictureFlow) { state, profilePictureBytes ->
-            state.withProfilePicture(profilePictureBytes)
-        }.stateIn(
+        functionalUiState.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000L),
             initialValue =
@@ -308,7 +276,7 @@ class DirectViewModel(
         val authorizationError = requireDirectChatAuthorization(contactId).exceptionOrNull()
         if (authorizationError != null) {
             if (
-                identitySetupModeFlow.value == DirectIdentitySetupMode.AUTOMATIC_INVITATION &&
+                uiState.value.identitySetupMode == DirectIdentitySetupMode.AUTOMATIC_INVITATION &&
                 authorizationError is DirectChatAuthorizationRequiredException
             ) {
                 queueMessageAndStartReinvite(text, media)
@@ -385,13 +353,6 @@ class DirectViewModel(
     private fun verifyIdentity() {
         navigator.navigateTo(AppRoute.ContactDetails(conversationId, contactId, openVerification = true))
     }
-
-    private data class ConversationContext(
-        val conversation: DirectConversation?,
-        val contact: Contact?,
-        val handshake: IdentityHandshakeState?,
-        val setupMode: DirectIdentitySetupMode
-    )
 
     private data class ComposerContext(
         val text: String,

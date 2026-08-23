@@ -125,6 +125,7 @@ class KotlinxPacketCodecTest {
                 ).getOrThrow()
 
         val encodedJson = encoded.decodeToString()
+
         assertFalse("\"attachments\"" in encodedJson)
     }
 

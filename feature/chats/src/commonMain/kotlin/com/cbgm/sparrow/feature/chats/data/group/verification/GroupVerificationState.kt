@@ -10,7 +10,6 @@ import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationDirec
 import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
 import com.cbgm.sparrow.feature.chats.data.group.security.isGroupAdminRole
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
-import com.cbgm.sparrow.feature.contacts.domain.model.SparrowIdentity
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
 
 internal class GroupVerificationState(
@@ -123,7 +122,19 @@ internal class GroupVerificationState(
                     )
                 }
 
-        groupVerificationDao.replaceGroup(groupId = groupId, rows = activeRows + pendingRows)
+        val authoritativeInvitationIds =
+            (activeRows + pendingRows).mapTo(mutableSetOf()) { row -> row.invitationId }
+        val remotePendingRows =
+            existingRows.filter { row ->
+                row.contactId == null &&
+                    row.membershipStatus == GroupVerificationPairEntity.PENDING_STATUS &&
+                    row.invitationId !in authoritativeInvitationIds
+            }
+
+        groupVerificationDao.replaceGroup(
+            groupId = groupId,
+            rows = activeRows + pendingRows + remotePendingRows
+        )
     }
 
     suspend fun requireContact(contactId: String): Contact =
@@ -140,30 +151,13 @@ internal class GroupVerificationState(
             signingPublicKey.contentEquals(memberKey.signingPublicKey)
     }
 
-    private fun GroupVerificationPairEntity?.matches(
-        identity: SparrowIdentity?
-    ): Boolean {
-        val previous = this ?: return false
-        val encryptionPublicKey = previous.participantEncryptionPublicKey ?: return false
-        val signingPublicKey = previous.participantSigningPublicKey ?: return false
-        val currentIdentity = identity ?: return false
-        return encryptionPublicKey.contentEquals(currentIdentity.encryptionPublicKey) &&
-            signingPublicKey.contentEquals(currentIdentity.signingPublicKey)
-    }
-
     private fun Contact.verificationDisplayName(): String =
         displayName?.trim()?.takeIf(String::isNotBlank) ?: "Unknown member"
 
     private fun String.isVisiblePendingStatus(): Boolean =
-        this == GroupInvitationStatus.INVITE_RECEIVED.name ||
+        this == GroupInvitationStatus.INVITE_SENT.name ||
+            this == GroupInvitationStatus.INVITE_RECEIVED.name ||
             this == GroupInvitationStatus.WAITING_FOR_IDENTITY.name ||
             this == GroupInvitationStatus.IDENTITY_READY.name ||
             this == GroupInvitationStatus.WELCOME_SENT.name
-
-    private fun String.isTerminalStatus(): Boolean =
-        this == GroupInvitationStatus.DECLINED.name ||
-            this == GroupInvitationStatus.EXPIRED.name ||
-            this == GroupInvitationStatus.FAILED.name ||
-            this == GroupInvitationStatus.REMOVED.name ||
-            this == GroupInvitationStatus.GROUP_DELETED.name
 }

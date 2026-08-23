@@ -216,7 +216,18 @@ class GroupMembershipStateMachineTest {
     }
 
     @Test
-    fun outgoingInviteIsPendingOnlyAfterRecipientReceipt() {
+    fun outgoingInviteIsVisibleImmediatelyAsInvitedMember() {
+        val states =
+            GroupMembershipStateMachine.memberStates(
+                listOf(invitation(GroupInvitationStatus.INVITE_SENT))
+            )
+
+        assertEquals(1, states.size)
+        assertEquals(GroupMemberInvitationStatus.INVITED, states.single().status)
+    }
+
+    @Test
+    fun outgoingInviteReceiptAdvancesPersistedState() {
         val received =
             GroupMembershipStateMachine.transition(
                 GroupInvitationStatus.INVITE_SENT.name,

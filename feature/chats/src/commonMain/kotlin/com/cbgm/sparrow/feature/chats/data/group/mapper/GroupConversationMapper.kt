@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.chats.data.group.mapper
 
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
+import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessages
@@ -22,6 +23,7 @@ internal fun ConversationWithMessages.toGroupConversation(
     participantContactIds: List<String>,
     recipientStates: List<MessageRecipientStateEntity>,
     invitations: List<GroupInvitationEntity>,
+    verificationRows: List<GroupVerificationPairEntity> = emptyList(),
     attachmentsByMessageId: Map<String, List<MessageMediaAttachment>> = emptyMap()
 ): GroupConversation {
     val timeline = buildGroupLocalMembershipTimeline(messages, invitations)
@@ -51,7 +53,14 @@ internal fun ConversationWithMessages.toGroupConversation(
                     message.contentStatus == MessageContentStatus.READABLE.name
             },
         participantContactIds = participantContactIds,
-        pendingParticipantCount = timeline.currentInvitations.count { it.status.isPendingMembershipStatus() },
+        pendingParticipantCount =
+            if (verificationRows.isNotEmpty()) {
+                verificationRows.count { row ->
+                    row.membershipStatus == GroupVerificationPairEntity.PENDING_STATUS
+                }
+            } else {
+                timeline.currentInvitations.count { it.status.isPendingMembershipStatus() }
+            },
         isReady = groupState == GroupConversationState.READY,
         state = groupState,
         isIncomingInvitation = GroupMembershipStateMachine.isIncoming(timeline.currentInvitations),
@@ -110,7 +119,8 @@ internal fun String.toGroupDeliveryStatus(): MessageDeliveryStatus =
         ?: MessageDeliveryStatus.NOT_APPLICABLE
 
 private fun String.isPendingMembershipStatus(): Boolean =
-    this == GroupInvitationStatus.INVITE_RECEIVED.name ||
+    this == GroupInvitationStatus.INVITE_SENT.name ||
+        this == GroupInvitationStatus.INVITE_RECEIVED.name ||
         this == GroupInvitationStatus.WAITING_FOR_IDENTITY.name ||
         this == GroupInvitationStatus.IDENTITY_READY.name ||
         this == GroupInvitationStatus.WELCOME_SENT.name

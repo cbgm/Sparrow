@@ -3,33 +3,25 @@ package com.cbgm.sparrow.feature.contacts.presentation.overview
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportDeviceContactsUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactProfilePicturesUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsWithProfilePicturesUseCase
 import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.toUiState
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsEffect
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsUiState
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class ContactsViewModel(
     savedStateHandle: SavedStateHandle,
-    private val observeContacts: ObserveContactsUseCase,
-    private val importDeviceContacts: ImportDeviceContactsUseCase,
-    private val observeProfilePictures: ObserveContactProfilePicturesUseCase
+    observeContactsWithProfilePictures: ObserveContactsWithProfilePicturesUseCase,
+    private val importDeviceContacts: ImportDeviceContactsUseCase
 ) : BaseViewModel() {
     private val searchQuery = savedStateHandle.getMutableStateFlow(SEARCH_QUERY_KEY, "")
 
@@ -72,18 +64,6 @@ class ContactsViewModel(
         }
     }
 
-    private fun observeContactsWithProfilePictures(): Flow<ContactsSnapshot> =
-        observeContacts()
-            .flatMapLatest { contacts ->
-                observeProfilePictures(contacts.mapTo(mutableSetOf(), Contact::id))
-                    .map { profilePictures ->
-                        ContactsSnapshot(
-                            contacts = contacts,
-                            profilePictures = profilePictures
-                        )
-                    }
-            }
-
     private fun importContacts() {
         viewModelScope.launch {
             importDeviceContacts()
@@ -106,11 +86,6 @@ class ContactsViewModel(
     private fun emitEffect(effect: ContactsEffect) {
         _effects.trySend(effect)
     }
-
-    private data class ContactsSnapshot(
-        val contacts: List<Contact>,
-        val profilePictures: Map<String, ByteArray?>
-    )
 
     private companion object {
         const val SEARCH_QUERY_KEY = "searchQuery"

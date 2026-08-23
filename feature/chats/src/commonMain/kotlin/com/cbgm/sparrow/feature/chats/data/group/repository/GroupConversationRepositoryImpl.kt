@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.chats.data.group.repository
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
+import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
 import com.cbgm.sparrow.data.database.dao.MessageRecipientStateDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
@@ -21,7 +22,8 @@ class GroupConversationRepositoryImpl(
     private val messageAttachmentDao: MessageAttachmentDao,
     private val messageRecipientStateDao: MessageRecipientStateDao,
     private val groupInvitationDao: GroupInvitationDao,
-    private val groupSecurityDao: GroupSecurityDao
+    private val groupSecurityDao: GroupSecurityDao,
+    private val groupVerificationDao: GroupVerificationDao
 ) : GroupConversationRepository {
     override fun observe(groupId: String): Flow<GroupConversation?> {
         val messageSnapshot =
@@ -41,8 +43,9 @@ class GroupConversationRepositoryImpl(
             messageSnapshot,
             groupSecurityDao.observeCurrentMemberKeys(groupId),
             messageRecipientStateDao.observeByConversationId(groupId),
-            groupInvitationDao.observeByGroupId(groupId)
-        ) { snapshot, memberKeys, recipientStates, invitations ->
+            groupInvitationDao.observeByGroupId(groupId),
+            groupVerificationDao.observeByGroupId(groupId)
+        ) { snapshot, memberKeys, recipientStates, invitations, verificationRows ->
             snapshot.conversation
                 ?.takeIf { it.type == GROUP_CONVERSATION_TYPE }
                 ?.let { ConversationWithMessages(it, snapshot.messages) }
@@ -50,6 +53,7 @@ class GroupConversationRepositoryImpl(
                     participantContactIds = memberKeys.map { memberKey -> memberKey.contactId },
                     recipientStates = recipientStates,
                     invitations = invitations,
+                    verificationRows = verificationRows,
                     attachmentsByMessageId = snapshot.attachments.toDomainAttachmentsByMessageId()
                 )
         }

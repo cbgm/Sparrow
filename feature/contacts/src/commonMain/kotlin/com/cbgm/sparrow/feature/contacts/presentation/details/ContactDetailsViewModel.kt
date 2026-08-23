@@ -5,11 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
-import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactProfilePictureUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactDetailsContextUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.VerifyContactUseCase
 import com.cbgm.sparrow.feature.contacts.presentation.details.mapper.toUiState
 import com.cbgm.sparrow.feature.contacts.presentation.details.mapper.withVerificationState
@@ -23,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -31,10 +29,8 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalCoroutinesApi::class)
 class ContactDetailsViewModel(
     savedStateHandle: SavedStateHandle,
-    private val observeContact: ObserveContactUseCase,
-    private val getContactSafetyNumber: GetContactSafetyNumberUseCase,
-    private val verifyContact: VerifyContactUseCase,
-    private val observeProfilePicture: ObserveContactProfilePictureUseCase
+    private val observeContactDetailsContext: ObserveContactDetailsContextUseCase,
+    private val verifyContact: VerifyContactUseCase
 ) : BaseViewModel() {
     private val contactId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.ContactDetails::contactId.name)
@@ -70,45 +66,22 @@ class ContactDetailsViewModel(
 
     private fun observeContactDetails(): Flow<ContactDetailsUiState> =
         reloadRevision.flatMapLatest {
-            combine(
-                observeContact(contactId),
-                observeProfilePicture(contactId)
-            ) { contact, profilePictureBytes ->
-                loadContactDetailsState(contact, profilePictureBytes)
-            }.onStart {
-                emit(ContactDetailsUiState.Loading)
-            }.catch { error ->
-                emit(
-                    ContactDetailsUiState.Error(
-                        message = error.message ?: "Failed to load contact"
-                    )
-                )
-            }
-        }
-
-    private suspend fun loadContactDetailsState(
-        contact: Contact?,
-        profilePictureBytes: ByteArray?
-    ): ContactDetailsUiState {
-        contact ?: return ContactDetailsUiState.NotFound
-
-        val safetyNumber =
-            if (contact.sparrowIdentity == null) {
-                null
-            } else {
-                getContactSafetyNumber.invoke(contactId)
-                    .getOrElse { error ->
-                        return ContactDetailsUiState.Error(
-                            message = error.message ?: "Failed to generate safety number"
+            observeContactDetailsContext(contactId)
+                .map { context ->
+                    context.contact?.toUiState(
+                        safetyNumber = context.safetyNumber,
+                        profilePictureBytes = context.profilePictureBytes
+                    ) ?: ContactDetailsUiState.NotFound
+                }.onStart {
+                    emit(ContactDetailsUiState.Loading)
+                }.catch { error ->
+                    emit(
+                        ContactDetailsUiState.Error(
+                            message = error.message ?: "Failed to load contact"
                         )
-                    }
-            }
-
-        return contact.toUiState(
-            safetyNumber = safetyNumber,
-            profilePictureBytes = profilePictureBytes
-        )
-    }
+                    )
+                }
+        }
 
     private fun reload() {
         verificationState.value = VerificationActionState()

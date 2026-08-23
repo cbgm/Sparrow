@@ -43,12 +43,16 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportDeviceContactsUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.MarkContactInvitationsViewedUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveBlockedContactsContextUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactBlocklistUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactDetailsContextUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactInvitationsContextUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactInvitationsUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactProfilePictureUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactProfilePicturesUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsWithProfilePicturesUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveIdentityHandshakeStateUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveIdentitySetupModeUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObservePendingContactInvitationCountUseCase
@@ -286,47 +290,57 @@ val contactsModule =
         factory { ObserveIdentitySetupModeUseCase(repository = get()) }
         factory { ObserveContactProfilePictureUseCase(provider = get()) }
         factory { ObserveContactProfilePicturesUseCase(provider = get()) }
+        factory {
+            ObserveContactDetailsContextUseCase(
+                observeContact = get(),
+                observeProfilePicture = get(),
+                getContactSafetyNumber = get()
+            )
+        }
+        factory {
+            ObserveBlockedContactsContextUseCase(
+                observeContactBlocklist = get(),
+                observeProfilePictures = get()
+            )
+        }
+        factory { ObserveContactsWithProfilePicturesUseCase(observeContacts = get(), observeProfilePictures = get()) }
+        factory { ObserveContactInvitationsContextUseCase(observeContactInvitations = get(), observeProfilePictures = get()) }
         factory { EnsureIdentityExchangeStartedUseCase(identityExchangeRepository = get()) }
 
         viewModel {
             ContactInvitationViewModel(
                 savedStateHandle = get(),
-                observeContactInvitations = get(),
+                observeInvitationsContext = get(),
                 acceptContactInvitation = get(),
                 declineContactInvitation = get(),
                 declineAndBlockContactInvitation = get(),
                 deleteDeclinedOutgoingInvitation = get(),
-                markInvitationsViewed = get(),
-                observeProfilePictures = get()
+                markInvitationsViewed = get()
             )
         }
 
         viewModel {
             BlockedContactsViewModel(
                 savedStateHandle = get(),
-                observeContactBlocklist = get(),
+                observeBlockedContactsContext = get(),
                 blockContact = get(),
-                unblockContact = get(),
-                observeProfilePictures = get()
+                unblockContact = get()
             )
         }
 
         viewModel {
             ContactsViewModel(
                 savedStateHandle = get(),
-                observeContacts = get(),
-                importDeviceContacts = get(),
-                observeProfilePictures = get()
+                observeContactsWithProfilePictures = get(),
+                importDeviceContacts = get()
             )
         }
 
         viewModel {
             ContactDetailsViewModel(
                 savedStateHandle = get(),
-                observeContact = get(),
-                getContactSafetyNumber = get(),
-                verifyContact = get(),
-                observeProfilePicture = get()
+                observeContactDetailsContext = get(),
+                verifyContact = get()
             )
         }
     }
