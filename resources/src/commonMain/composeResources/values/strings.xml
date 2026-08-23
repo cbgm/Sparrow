@@ -338,6 +338,13 @@
     <string name="feature_settings_licenses_subtitle">Libraries used in this app</string>
     <string name="feature_settings_open_source_licenses">Open source licenses</string>
     <string name="feature_settings_privacy_and_data">Privacy &amp; data</string>
+    <string name="feature_settings_local_intelligence">Local intelligence</string>
+    <string name="feature_settings_message_safety">Scam &amp; phishing protection</string>
+    <string name="feature_settings_message_safety_subtitle">Warn about suspicious messages using local on-device analysis.</string>
+    <string name="feature_settings_message_safety_downloading">Downloading local intelligence model…</string>
+    <string name="feature_settings_message_safety_analyzing">Analyzing messages locally…</string>
+    <string name="feature_settings_message_safety_ready">Protection ready. Message analysis stays on this device.</string>
+    <string name="feature_settings_message_safety_failed">Local protection could not be prepared. Turn it off and on to retry.</string>
     <string name="feature_settings_semantic_search">Semantic message search</string>
     <string name="feature_settings_semantic_search_subtitle">Find messages by meaning, not just exact words. Processing stays on this device.</string>
     <string name="feature_settings_semantic_search_downloading">Downloading local search model…</string>
@@ -500,4 +507,39 @@
     <string name="feature_search_exact_only_hint">Exact text search only. Enable Semantic message search in Settings to search by meaning.</string>
     <string name="feature_search_preparing_hint">Semantic search is being prepared. Exact text search is available now.</string>
     <string name="feature_search_semantic_unavailable_hint">Semantic search is unavailable. Exact text search is still available.</string>
+
+    <string name="feature_safety_suspicious_message">Suspicious message</string>
+    <string name="feature_safety_high_risk_message">High-risk message</string>
+    <string name="feature_safety_suspicious_summary">May be a scam or phishing attempt.</string>
+    <string name="feature_safety_high_risk_summary">Strong signs of a scam or phishing attempt.</string>
+    <string name="feature_safety_why">Why am I seeing this?</string>
+    <string name="feature_safety_reason_suspicious_link">Suspicious link</string>
+    <string name="feature_safety_reason_lookalike_domain">Website address may imitate another domain</string>
+    <string name="feature_safety_reason_mixed_script_domain">Website address mixes different character sets</string>
+    <string name="feature_safety_reason_ip_address_link">Link uses an IP address instead of a domain</string>
+    <string name="feature_safety_reason_url_shortener">Shortened link hides the destination</string>
+    <string name="feature_safety_reason_urgent_action_request">Uses urgent or pressuring language</string>
+    <string name="feature_safety_reason_credential_request">Asks for login or account information</string>
+    <string name="feature_safety_reason_payment_request">Asks for money or payment</string>
+    <string name="feature_safety_reason_private_key_request">Asks for a private key or recovery phrase</string>
+    <string name="feature_safety_details_title">Message safety</string>
+    <string name="feature_safety_details_why_flagged">This warning is based on signals found locally on your device. It does not prove that the sender is malicious, but it is a reason to verify the request before you act.</string>
+    <string name="feature_safety_details_detected_reasons">Detected reasons</string>
+    <string name="feature_safety_details_learn_more">Safety signals Sparrow can detect</string>
+    <string name="feature_safety_reason_suspicious_link_explanation">Links can lead to fake sign-in, payment, or download pages. Sparrow may flag a link when its destination or structure looks unusual or deceptive. Before opening it, verify the sender and inspect the destination carefully. If the message asks you to sign in, pay, or confirm sensitive information, open the service from its official app or a trusted bookmark instead of using the link in the message.</string>
+    <string name="feature_safety_reason_lookalike_domain_explanation">A lookalike domain is written to resemble a trusted website while actually pointing somewhere else. Attackers may replace letters with similar characters, add extra words or hyphens, or place a familiar brand name inside an unrelated domain. Check the registered domain itself, not only the part of the address that looks familiar.</string>
+    <string name="feature_safety_reason_mixed_script_domain_explanation">Some characters from Cyrillic, Greek, and other writing systems can look almost identical to Latin letters. A malicious address can mix these character sets so that a fake domain appears to be a familiar one. Treat links with unexpected character combinations cautiously and open the service through a trusted route instead.</string>
+    <string name="feature_safety_reason_ip_address_link_explanation">This link points directly to a numeric IP address instead of a recognizable domain name. That is legitimate in some technical environments, but in unsolicited messages it can hide which organization actually operates the destination. Avoid entering credentials or payment information unless you independently know and trust the address.</string>
+    <string name="feature_safety_reason_url_shortener_explanation">URL shorteners replace the real destination with a short redirect link. This can be convenient, but it also prevents you from seeing where the link will ultimately take you before you open it. Be especially careful when a shortened link is combined with an urgent request, a login request, or a payment request.</string>
+    <string name="feature_safety_reason_urgent_action_request_explanation">The message uses urgency, threats, deadlines, or pressure to make you act before you can verify the situation. Common examples include claims that an account will be locked, a payment must be made immediately, or an opportunity will disappear. Slow down and confirm the request independently before following instructions.</string>
+    <string name="feature_safety_reason_credential_request_explanation">The message asks for information that could give someone access to an account, such as a password, PIN, authentication code, verification code, or other login data. Legitimate services should not require you to send these secrets in a chat. Do not share them, and use the service's official app or website if you need to check your account.</string>
+    <string name="feature_safety_reason_payment_request_explanation">The message asks you to transfer money, buy gift cards, send cryptocurrency, or complete another payment. Payment requests become more suspicious when they are unexpected, urgent, or use new account details. Verify unusual requests with the sender through a separate trusted channel before paying.</string>
+    <string name="feature_safety_reason_private_key_request_explanation">Private keys, recovery phrases, seed phrases, and similar secrets can provide complete control over an account, identity, or wallet. A legitimate support agent or contact should never need you to send them in a message. Never share these secrets. If one has already been disclosed, treat it as compromised and replace or revoke it where possible.</string>
+    <string name="feature_safety_block_this_user">Block this user</string>
+    <string name="feature_safety_blocking_user">Blocking…</string>
+    <string name="feature_safety_user_blocked">User blocked</string>
+    <string name="feature_safety_block_confirm">Block this user?</string>
+    <string name="feature_safety_block_confirm_description">This user will be blocked and their direct-chat authorization will be revoked. You can unblock them later in Settings.</string>
+    <string name="feature_safety_block_error">The user could not be blocked completely. Please try again.</string>
+
 </resources>

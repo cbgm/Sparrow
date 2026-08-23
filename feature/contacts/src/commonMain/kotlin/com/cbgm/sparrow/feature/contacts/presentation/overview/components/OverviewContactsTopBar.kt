@@ -1,10 +1,8 @@
 package com.cbgm.sparrow.feature.contacts.presentation.overview.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -58,18 +56,12 @@ fun OverviewContactsTopBar(
             }
         )
 
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
-        ) {
-            SparrowSearchField(
-                searchQuery = searchQuery,
-                onSearchQueryChanged = onSearchQueryChanged,
-                placeholder = stringResource(Res.string.feature_contacts_search_placholder),
-                onClear = { onSearchQueryChanged("") }
-            )
-        }
+        SparrowSearchField(
+            searchQuery = searchQuery,
+            onSearchQueryChanged = onSearchQueryChanged,
+            placeholder = stringResource(Res.string.feature_contacts_search_placholder),
+            onClear = { onSearchQueryChanged("") },
+            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.screenPadding)
+        )
     }
 }

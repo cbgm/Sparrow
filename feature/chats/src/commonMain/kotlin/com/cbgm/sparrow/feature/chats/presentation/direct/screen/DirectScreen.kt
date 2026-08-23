@@ -69,6 +69,7 @@ import com.cbgm.sparrow.feature.chats.presentation.component.rememberMessageSear
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectComposerState
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiState
+import com.cbgm.sparrow.feature.safety.presentation.model.MessageSafetyWarningUiModel
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.base_verify
@@ -145,6 +146,14 @@ fun DirectScreen(
             targetMessageId = targetMessageId,
             onRetryMessage = { messageId ->
                 onUiEvent(DirectUiEvent.RetryMessage(messageId))
+            },
+            onSafetyWarningClick = { messageId, warning ->
+                onUiEvent(
+                    DirectUiEvent.SafetyWarningClicked(
+                        messageId = messageId,
+                        warning = warning
+                    )
+                )
             }
         )
     }
@@ -297,7 +306,8 @@ private fun Content(
     listState: LazyListState,
     innerPadding: PaddingValues,
     targetMessageId: String?,
-    onRetryMessage: (String) -> Unit
+    onRetryMessage: (String) -> Unit,
+    onSafetyWarningClick: (String, MessageSafetyWarningUiModel) -> Unit
 ) {
     when {
         uiState.isLoading -> LoadingContent(
@@ -315,6 +325,7 @@ private fun Content(
             listState = listState,
             targetMessageId = targetMessageId,
             onRetryMessage = onRetryMessage,
+            onSafetyWarningClick = onSafetyWarningClick,
             contentPadding = innerPadding
         )
     }
@@ -326,6 +337,7 @@ private fun MessageList(
     listState: LazyListState,
     targetMessageId: String?,
     onRetryMessage: (String) -> Unit,
+    onSafetyWarningClick: (String, MessageSafetyWarningUiModel) -> Unit,
     contentPadding: PaddingValues
 ) {
     val searchTargetState =
@@ -358,6 +370,9 @@ private fun MessageList(
             MessageBubble(
                 message = message,
                 onRetryClick = { onRetryMessage(message.id) },
+                onSafetyDetailsClick = { warning ->
+                    onSafetyWarningClick(message.id, warning)
+                },
                 isSearchHighlighted = message.id == searchTargetState.highlightedMessageId
             )
         }

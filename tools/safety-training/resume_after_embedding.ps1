@@ -1,0 +1,1 @@
+throw "resume_after_embedding.ps1 is obsolete in pipeline v6. Run .\run_uci_training.ps1 instead; it now reuses cached public labels, generated/validated data, and compatible existing EmbeddingGemma vectors automatically."

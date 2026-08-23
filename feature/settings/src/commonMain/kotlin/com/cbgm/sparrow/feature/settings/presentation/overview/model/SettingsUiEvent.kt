@@ -24,6 +24,10 @@ sealed interface SettingsUiEvent {
         val enabled: Boolean
     ) : SettingsUiEvent
 
+    data class MessageSafetyEnabledChanged(
+        val enabled: Boolean
+    ) : SettingsUiEvent
+
     data object PrivacyPolicyClicked : SettingsUiEvent
 
     data object DataDisclaimerClicked : SettingsUiEvent

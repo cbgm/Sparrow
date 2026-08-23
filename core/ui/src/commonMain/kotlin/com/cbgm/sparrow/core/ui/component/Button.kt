@@ -66,6 +66,45 @@ fun SparrowApprovalButton(
 }
 
 @Composable
+fun SparrowDestructiveButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    text: String = "",
+    fillMaxWidth: Boolean = true,
+    content: @Composable () -> Unit = {},
+    enabled: Boolean = true
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.errorContainer,
+                contentColor = MaterialTheme.colorScheme.onErrorContainer
+            ),
+        modifier =
+            modifier.then(
+                if (fillMaxWidth) {
+                    Modifier.fillMaxWidth()
+                } else {
+                    Modifier
+                }
+            )
+    ) {
+        if (text.isNotBlank()) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+        if (content != {}) {
+            content()
+        }
+    }
+}
+
+@Composable
 fun SparrowBannerButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -221,6 +260,10 @@ private fun SparrowButtonPreview() {
             SparrowSecondaryButton(
                 onClick = {},
                 text = "Continue"
+            )
+            SparrowDestructiveButton(
+                onClick = {},
+                text = "Delete"
             )
             SparrowOutlinedButton(
                 onClick = {},

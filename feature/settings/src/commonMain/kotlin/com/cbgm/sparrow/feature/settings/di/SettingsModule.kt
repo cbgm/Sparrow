@@ -123,8 +123,11 @@ val settingsModule =
                 observeBlockUnknownContactInvites = get(),
                 setBlockUnknownContactInvites = get(),
                 observeBlockedContactIds = get(),
+                observeLocalEmbeddingState = get(),
                 observeSemanticSearchState = get(),
-                setSemanticSearchEnabled = get()
+                observeMessageSafetyState = get(),
+                setSemanticSearchEnabled = get(),
+                setLocalEmbeddingFeatureEnabled = get()
             )
         }
 

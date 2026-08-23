@@ -1,0 +1,8 @@
+{
+  "backend": "mediapipe",
+  "model_file": "embedding_gemma.task",
+  "model_sha256": "913b7a1edc7c7c3d1da3979ec1d0648ed9e0a370f181bb59ab177ca4b97707ad",
+  "model_url": "https://storage.googleapis.com/mediapipe-models/text_embedder/embedding_gemma/int4int8/latest/embedding_gemma.task",
+  "size_bytes": 183816181,
+  "warning": "The Sparrow app URL currently uses a 'latest' path. Preserve this SHA-256 and the model file for reproducible classifier training; a future download may contain different bytes."
+}

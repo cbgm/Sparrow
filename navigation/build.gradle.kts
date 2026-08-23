@@ -23,6 +23,7 @@ kotlin {
             implementation(projects.feature.onboarding)
             implementation(projects.feature.settings)
             implementation(projects.feature.search)
+            implementation(projects.feature.safety)
             implementation(projects.notification)
             implementation(projects.startup)
 

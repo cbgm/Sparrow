@@ -1,5 +1,7 @@
 package com.cbgm.sparrow.feature.chats.presentation.group.mapper
 
+import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
+import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversationState
@@ -11,6 +13,8 @@ import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMessageUiMod
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
+import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyAssessment
+import com.cbgm.sparrow.feature.safety.presentation.mapper.toWarningUiModel
 
 internal fun toGroupUiState(
     conversation: GroupConversation?,
@@ -22,7 +26,8 @@ internal fun toGroupUiState(
     currentError: String?,
     observationError: String?,
     isLoading: Boolean,
-    typingContactIds: Set<String>
+    typingContactIds: Set<String>,
+    safetyAssessments: Map<String, MessageSafetyAssessment>
 ): GroupUiState {
     val contactsById = contacts.associateBy(Contact::id)
     val groupState = conversation?.state ?: GroupConversationState.READY
@@ -30,7 +35,12 @@ internal fun toGroupUiState(
     return GroupUiState(
         title = conversation?.title.orEmpty(),
         avatarBytes = avatarBytes,
-        messages = conversation.toMessageUiModels(contactsById, profilePictures),
+        messages =
+            conversation.toMessageUiModels(
+                contactsById = contactsById,
+                profilePictures = profilePictures,
+                safetyAssessments = safetyAssessments
+            ),
         messageText = currentText,
         isSomeoneTyping = typingContactIds.isNotEmpty(),
         typingDisplayName = typingContactIds.toTypingDisplayName(contactsById),
@@ -49,7 +59,8 @@ internal fun toGroupUiState(
 internal fun GroupMessage.toUiModel(
     senderName: String?,
     senderIsInContacts: Boolean,
-    senderProfilePictureBytes: ByteArray?
+    senderProfilePictureBytes: ByteArray?,
+    safetyAssessments: Map<String, MessageSafetyAssessment>
 ): GroupMessageUiModel =
     GroupMessageUiModel(
         bubble =
@@ -67,9 +78,20 @@ internal fun GroupMessage.toUiModel(
                         recipientCount = deliveryProgress.recipientCount,
                         deliveredCount = deliveryProgress.deliveredCount,
                         readCount = deliveryProgress.readCount
-                    )
+                    ),
+                safetyWarning =
+                    if (
+                        isMine ||
+                        type != ChatMessageType.USER ||
+                        contentStatus != MessageContentStatus.READABLE
+                    ) {
+                        null
+                    } else {
+                        safetyAssessments[id]?.toWarningUiModel()
+                    }
             ),
         type = type,
+        senderContactId = senderContactId,
         senderProfilePictureBytes = senderProfilePictureBytes
     )
 
@@ -89,22 +111,24 @@ internal fun Contact?.displayNameForChat(isInContacts: Boolean): String {
 
 private fun GroupConversation?.toMessageUiModels(
     contactsById: Map<String, Contact>,
-    profilePictures: Map<String, ByteArray?>
+    profilePictures: Map<String, ByteArray?>,
+    safetyAssessments: Map<String, MessageSafetyAssessment>
 ): List<GroupMessageUiModel> =
-    this
-        ?.messages
-        .orEmpty()
-        .asReversed()
-        .map { message ->
+    buildList {
+        for (message in this@toMessageUiModels?.messages.orEmpty().asReversed()) {
             val senderContactId = message.senderContactId
             val sender = senderContactId?.let(contactsById::get)
             val senderIsInContacts = sender?.deviceContactLinkStatus == DeviceContactLinkStatus.LINKED
-            message.toUiModel(
-                senderName = sender.displayNameForChat(senderIsInContacts),
-                senderIsInContacts = senderIsInContacts,
-                senderProfilePictureBytes = senderContactId?.let(profilePictures::get)
+            add(
+                message.toUiModel(
+                    senderName = sender.displayNameForChat(senderIsInContacts),
+                    senderIsInContacts = senderIsInContacts,
+                    senderProfilePictureBytes = senderContactId?.let(profilePictures::get),
+                    safetyAssessments = safetyAssessments
+                )
             )
         }
+    }
 
 private fun GroupConversation?.toMemberProgress(
     contactsById: Map<String, Contact>

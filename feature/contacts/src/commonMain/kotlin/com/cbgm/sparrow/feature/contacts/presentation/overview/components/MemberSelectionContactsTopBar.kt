@@ -1,9 +1,7 @@
 package com.cbgm.sparrow.feature.contacts.presentation.overview.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -23,6 +21,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowSearchField
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_contacts_search_placholder
 import org.jetbrains.compose.resources.stringResource
@@ -83,19 +82,13 @@ fun MemberSelectionContactsTopBar(
             }
         )
 
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
-        ) {
-            SparrowSearchField(
-                searchQuery = searchQuery,
-                onSearchQueryChanged = onSearchQueryChanged,
-                placeholder = stringResource(Res.string.feature_contacts_search_placholder),
-                onClear = { onSearchQueryChanged("") }
-            )
-        }
+        SparrowSearchField(
+            searchQuery = searchQuery,
+            onSearchQueryChanged = onSearchQueryChanged,
+            placeholder = stringResource(Res.string.feature_contacts_search_placholder),
+            onClear = { onSearchQueryChanged("") },
+            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.screenPadding)
+        )
     }
 }
 

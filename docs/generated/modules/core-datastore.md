@@ -15,7 +15,7 @@ Generated automatically by `./gradlew architectureReport`.
 | Test Kotlin files | 0 |
 | Resource files | 1 |
 | Direct dependencies | 0 |
-| Direct dependents | 5 |
+| Direct dependents | 6 |
 
 ## Source sets
 
@@ -29,6 +29,7 @@ None.
 
 ## Dependents
 
+- [`:core:embedding`](../modules/core-embedding.md)
 - [`:feature:chats`](../modules/feature-chats.md)
 - [`:feature:identity`](../modules/feature-identity.md)
 - [`:feature:settings`](../modules/feature-settings.md)

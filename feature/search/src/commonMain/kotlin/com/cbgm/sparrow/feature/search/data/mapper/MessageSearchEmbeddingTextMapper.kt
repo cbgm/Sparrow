@@ -5,12 +5,14 @@ import com.cbgm.sparrow.data.database.model.MessageSearchSource
 internal fun MessageSearchSource.toEmbeddingText(): String =
     buildList {
         senderName.cleanOrNull()?.let { add("Sender: $it") }
-        conversationDisplayName()?.let { add("Conversation: $it") }
+        messageSearchConversationName(conversationTitle, contactName)?.let { add("Conversation: $it") }
         add("Message: ${text.trim()}")
     }.joinToString(separator = "\n")
 
-private fun MessageSearchSource.conversationDisplayName(): String? =
-    conversationTitle.cleanOrNull() ?: contactName.cleanOrNull()
+internal fun messageSearchConversationName(
+    conversationTitle: String?,
+    contactName: String?
+): String? = conversationTitle.cleanOrNull() ?: contactName.cleanOrNull()
 
 private fun String?.cleanOrNull(): String? =
     this

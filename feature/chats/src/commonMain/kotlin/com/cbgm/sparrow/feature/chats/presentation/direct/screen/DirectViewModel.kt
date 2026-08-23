@@ -29,6 +29,8 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveIdentityHandshakeStateUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveIdentitySetupModeUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
+import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
+import com.cbgm.sparrow.feature.safety.presentation.mapper.toDetailsRoute
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -54,7 +56,8 @@ class DirectViewModel(
     observeContact: ObserveContactUseCase,
     observeProfilePictures: ObserveRemoteProfilePicturesUseCase,
     private val observeTyping: ObserveDirectTypingUseCase,
-    private val setTyping: SetDirectTypingUseCase
+    private val setTyping: SetDirectTypingUseCase,
+    observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase
 ) : BaseViewModel() {
     private val conversationId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.Chat::conversationId.name)
@@ -99,8 +102,9 @@ class DirectViewModel(
             conversationContext,
             messageText,
             errorMessage,
-            isContactTyping
-        ) { context, text, error, contactTyping ->
+            isContactTyping,
+            observeMessageSafetyAssessments()
+        ) { context, text, error, contactTyping, safetyAssessments ->
             toDirectUiState(
                 contactId = contactId,
                 fallbackContactName = fallbackContactName,
@@ -110,7 +114,8 @@ class DirectViewModel(
                 setupMode = context.setupMode,
                 currentText = text,
                 currentError = error,
-                contactTyping = contactTyping
+                contactTyping = contactTyping,
+                safetyAssessments = safetyAssessments
             )
         }
 
@@ -138,6 +143,8 @@ class DirectViewModel(
             DirectUiEvent.SendClicked -> sendCurrentMessage()
             DirectUiEvent.HeaderClicked -> openContactDetails()
             is DirectUiEvent.RetryMessage -> retryFailedMessage(event.messageId)
+            is DirectUiEvent.SafetyWarningClicked ->
+                navigator.navigateTo(event.warning.toDetailsRoute(event.messageId, contactId))
             DirectUiEvent.VerifyIdentityClicked -> verifyIdentity()
             DirectUiEvent.ShareIdentityClicked -> navigator.navigateTo(AppRoute.ShareIdentity)
             DirectUiEvent.ImportIdentityClicked -> navigator.navigateTo(AppRoute.ImportContact(contactId))

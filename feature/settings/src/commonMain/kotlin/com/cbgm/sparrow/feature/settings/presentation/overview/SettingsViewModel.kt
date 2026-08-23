@@ -1,10 +1,14 @@
 package com.cbgm.sparrow.feature.settings.presentation.overview
 
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingFeature
+import com.cbgm.sparrow.core.embedding.domain.usecase.ObserveLocalEmbeddingStateUseCase
+import com.cbgm.sparrow.core.embedding.domain.usecase.SetLocalEmbeddingFeatureEnabledUseCase
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyStateUseCase
 import com.cbgm.sparrow.feature.search.domain.usecase.ObserveSemanticSearchStateUseCase
 import com.cbgm.sparrow.feature.search.domain.usecase.SetSemanticSearchEnabledUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetAppLanguageUseCase
@@ -43,26 +47,44 @@ class SettingsViewModel(
     observeBlockUnknownContactInvites: ObserveBlockUnknownContactInvitesUseCase,
     private val setBlockUnknownContactInvites: SetBlockUnknownContactInvitesUseCase,
     observeBlockedContactIds: ObserveBlockedContactIdsUseCase,
+    observeLocalEmbeddingState: ObserveLocalEmbeddingStateUseCase,
     observeSemanticSearchState: ObserveSemanticSearchStateUseCase,
-    private val setSemanticSearchEnabled: SetSemanticSearchEnabledUseCase
+    observeMessageSafetyState: ObserveMessageSafetyStateUseCase,
+    private val setSemanticSearchEnabled: SetSemanticSearchEnabledUseCase,
+    private val setLocalEmbeddingFeatureEnabled: SetLocalEmbeddingFeatureEnabledUseCase
 ) : BaseViewModel() {
     private val buildInfo = getBuildInfoUseCase()
     private val localState = MutableStateFlow(SettingsLocalState())
 
-    val uiState: StateFlow<SettingsUiState> =
+    private val settingsDomainState =
         combine(
             observeDirectIdentitySetupMode(),
             observeBlockUnknownContactInvites(),
-            observeBlockedContactIds(),
-            observeSemanticSearchState(),
-            localState
-        ) { identitySetupMode, blockUnknownInvites, blockedContactIds, semanticSearchState, local ->
-            buildInfo.toUiState(
-                currentLanguage = local.currentLanguage,
+            observeBlockedContactIds()
+        ) { identitySetupMode, blockUnknownInvites, blockedContactIds ->
+            SettingsDomainState(
                 identitySetupMode = identitySetupMode,
                 blockUnknownContactInvites = blockUnknownInvites,
-                blockedContactCount = blockedContactIds.size,
+                blockedContactCount = blockedContactIds.size
+            )
+        }
+
+    val uiState: StateFlow<SettingsUiState> =
+        combine(
+            settingsDomainState,
+            observeLocalEmbeddingState(),
+            observeSemanticSearchState(),
+            observeMessageSafetyState(),
+            localState
+        ) { domain, localEmbeddingState, semanticSearchState, messageSafetyState, local ->
+            buildInfo.toUiState(
+                currentLanguage = local.currentLanguage,
+                identitySetupMode = domain.identitySetupMode,
+                blockUnknownContactInvites = domain.blockUnknownContactInvites,
+                blockedContactCount = domain.blockedContactCount,
+                localEmbeddingState = localEmbeddingState,
                 semanticSearchState = semanticSearchState,
+                messageSafetyState = messageSafetyState,
                 isDeveloperModeEnabled = local.isDeveloperModeEnabled,
                 developerModeTapCount = local.developerModeTapCount,
                 showLanguagePicker = local.showLanguagePicker
@@ -90,6 +112,7 @@ class SettingsViewModel(
             is SettingsUiEvent.DirectIdentitySetupModeChanged -> changeDirectIdentitySetupMode(event.mode)
             is SettingsUiEvent.BlockUnknownContactInvitesChanged -> changeBlockUnknownContactInvites(event.enabled)
             is SettingsUiEvent.SemanticSearchEnabledChanged -> setSemanticSearchEnabled(event.enabled)
+            is SettingsUiEvent.MessageSafetyEnabledChanged -> changeMessageSafetyEnabled(event.enabled)
             SettingsUiEvent.PrivacyPolicyClicked -> navigator.navigateTo(AppRoute.PrivacyPolicy)
             SettingsUiEvent.DataDisclaimerClicked -> navigator.navigateTo(AppRoute.DataDisclaimer)
             SettingsUiEvent.LicensesClicked -> navigator.navigateTo(AppRoute.Licenses)
@@ -109,6 +132,12 @@ class SettingsViewModel(
                     isDeveloperModeEnabled = getDeveloperEnabledUseCase()
                 )
             }
+        }
+    }
+
+    private fun changeMessageSafetyEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            setLocalEmbeddingFeatureEnabled(LocalEmbeddingFeature.MESSAGE_SAFETY, enabled)
         }
     }
 
@@ -176,6 +205,12 @@ class SettingsViewModel(
             _effects.trySend(SettingsEffect.ShowSnackbar("$remaining more taps to enable developer mode"))
         }
     }
+
+    private data class SettingsDomainState(
+        val identitySetupMode: DirectIdentitySetupMode,
+        val blockUnknownContactInvites: Boolean,
+        val blockedContactCount: Int
+    )
 
     private data class SettingsLocalState(
         val currentLanguage: AppLanguage = AppLanguage.ENGLISH,

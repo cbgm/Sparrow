@@ -13,6 +13,15 @@ sealed interface AppRoute {
     data object MessageSearch : AppRoute
 
     @Serializable
+    data class MessageSafetyDetails(
+        val messageId: String,
+        val levelId: String,
+        val reasonIds: String,
+        val focusReasonId: String? = null,
+        val contactId: String? = null
+    ) : AppRoute
+
+    @Serializable
     data class Chat(
         val conversationId: String,
         val contactId: String,

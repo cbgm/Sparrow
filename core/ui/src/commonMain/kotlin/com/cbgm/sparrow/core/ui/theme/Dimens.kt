@@ -33,6 +33,10 @@ object Dimens {
         val shadowElevation = 1.dp
     }
 
+    object MessageSafetyWarning {
+        val iconSize = 14.dp
+    }
+
     object MessageBubble {
         val iconSize = 14.dp
         val progressSize = 12.dp
@@ -183,7 +187,6 @@ object Dimens {
     }
 
     object ControlPlaneSettingsScreen {
-        val progressSize = 20.dp
         val statusIndicatorSize = 12.dp
     }
 

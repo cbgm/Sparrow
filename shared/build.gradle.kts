@@ -49,6 +49,7 @@ kotlin {
         commonMain.dependencies {
             implementation(projects.core)
             implementation(projects.core.datastore)
+            implementation(projects.core.embedding)
             implementation(projects.core.crypto)
             implementation(projects.core.protocol)
             implementation(projects.core.ui)
@@ -61,6 +62,7 @@ kotlin {
             implementation(projects.feature.onboarding)
             implementation(projects.feature.settings)
             implementation(projects.feature.search)
+            implementation(projects.feature.safety)
             implementation(projects.feature.transport)
             implementation(projects.notification)
             implementation(projects.startup)
