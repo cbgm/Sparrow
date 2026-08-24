@@ -1,12 +1,12 @@
-package com.cbgm.sparrow.feature.identity.data.datasource.storage
+package com.cbgm.sparrow.feature.identity.data.datasource
 
 import com.cbgm.sparrow.core.datastore.SparrowDataStore
 import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
 import kotlin.io.encoding.Base64
 
-class PublicIdentityStorageImpl(
+class SparrowDataStorePublicIdentityDataSource(
     private val dataStore: SparrowDataStore
-) : PublicIdentityStorage {
+) : PublicIdentityDataSource {
     override suspend fun save(identity: PublicIdentity): Result<Unit> =
         runCatching {
             dataStore.edit {

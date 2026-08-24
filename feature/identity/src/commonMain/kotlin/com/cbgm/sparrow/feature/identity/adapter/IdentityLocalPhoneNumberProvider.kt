@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.identity.data.datasource.provider
+package com.cbgm.sparrow.feature.identity.adapter
 
 import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer

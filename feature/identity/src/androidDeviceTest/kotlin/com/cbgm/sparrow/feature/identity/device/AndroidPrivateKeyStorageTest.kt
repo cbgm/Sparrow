@@ -1,11 +1,10 @@
-package com.cbgm.sparrow.feature.identity.data.crypto
+package com.cbgm.sparrow.feature.identity.device
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.cbgm.sparrow.core.crypto.SodiumRuntime
 import com.cbgm.sparrow.core.crypto.identity.SodiumIdentityKeyGenerator
 import com.cbgm.sparrow.core.datastore.createSparrowDataStore
-import com.cbgm.sparrow.feature.identity.data.datasource.AndroidPrivateKeyStorage
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertContentEquals

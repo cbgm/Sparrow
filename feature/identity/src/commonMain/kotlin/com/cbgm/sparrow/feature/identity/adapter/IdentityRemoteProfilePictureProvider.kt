@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.identity.data.datasource.provider
+package com.cbgm.sparrow.feature.identity.adapter
 
 import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureProvider
 import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureSnapshot

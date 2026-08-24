@@ -9,16 +9,19 @@ import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
 import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
 import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProcessor
 import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureProvider
-import com.cbgm.sparrow.feature.identity.data.datasource.profile.IdentityRemoteProfilePictureMetadataProcessor
-import com.cbgm.sparrow.feature.identity.data.datasource.provider.IdentityLocalEncryptionKeyPairProvider
-import com.cbgm.sparrow.feature.identity.data.datasource.provider.IdentityLocalPhoneNumberProvider
-import com.cbgm.sparrow.feature.identity.data.datasource.provider.IdentityLocalProfilePictureMetadataProvider
-import com.cbgm.sparrow.feature.identity.data.datasource.provider.IdentityLocalPublicIdentityProvider
-import com.cbgm.sparrow.feature.identity.data.datasource.provider.IdentityLocalSigningKeyPairProvider
-import com.cbgm.sparrow.feature.identity.data.datasource.provider.IdentityLocalSigningPublicKeyProvider
-import com.cbgm.sparrow.feature.identity.data.datasource.provider.IdentityRemoteProfilePictureProvider
-import com.cbgm.sparrow.feature.identity.data.datasource.storage.PublicIdentityStorage
-import com.cbgm.sparrow.feature.identity.data.datasource.storage.PublicIdentityStorageImpl
+import com.cbgm.sparrow.feature.identity.adapter.IdentityLocalEncryptionKeyPairProvider
+import com.cbgm.sparrow.feature.identity.adapter.IdentityLocalPhoneNumberProvider
+import com.cbgm.sparrow.feature.identity.adapter.IdentityLocalProfilePictureMetadataProvider
+import com.cbgm.sparrow.feature.identity.adapter.IdentityLocalPublicIdentityProvider
+import com.cbgm.sparrow.feature.identity.adapter.IdentityLocalSigningKeyPairProvider
+import com.cbgm.sparrow.feature.identity.adapter.IdentityLocalSigningPublicKeyProvider
+import com.cbgm.sparrow.feature.identity.adapter.IdentityRemoteProfilePictureMetadataProcessor
+import com.cbgm.sparrow.feature.identity.adapter.IdentityRemoteProfilePictureProvider
+import com.cbgm.sparrow.feature.identity.data.datasource.LocalIdentityProfileDataSource
+import com.cbgm.sparrow.feature.identity.data.datasource.LocalProfilePictureDataSource
+import com.cbgm.sparrow.feature.identity.data.datasource.PublicIdentityDataSource
+import com.cbgm.sparrow.feature.identity.data.datasource.RemoteProfilePictureDataSource
+import com.cbgm.sparrow.feature.identity.data.datasource.SparrowDataStorePublicIdentityDataSource
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityShareRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.LocalIdentityProfileRepositoryImpl
@@ -49,27 +52,39 @@ import org.koin.dsl.module
 
 val identityModule =
     module {
-        single<PublicIdentityStorage> {
-            PublicIdentityStorageImpl(dataStore = get())
+        single<PublicIdentityDataSource> {
+            SparrowDataStorePublicIdentityDataSource(dataStore = get())
+        }
+
+        single {
+            LocalIdentityProfileDataSource(dataStore = get())
+        }
+
+        single {
+            LocalProfilePictureDataSource(
+                dataStore = get(),
+                fileDataSource = get()
+            )
+        }
+
+        single {
+            RemoteProfilePictureDataSource(
+                dataStore = get(),
+                fileDataSource = get(),
+                cryptoHash = get()
+            )
         }
 
         single<LocalIdentityProfileRepository> {
-            LocalIdentityProfileRepositoryImpl(dataStore = get())
+            LocalIdentityProfileRepositoryImpl(dataSource = get())
         }
 
         single<LocalProfilePictureRepository> {
-            LocalProfilePictureRepositoryImpl(
-                dataStore = get(),
-                fileStorage = get()
-            )
+            LocalProfilePictureRepositoryImpl(dataSource = get())
         }
 
         single<RemoteProfilePictureRepository> {
-            RemoteProfilePictureRepositoryImpl(
-                dataStore = get(),
-                fileStorage = get(),
-                cryptoHash = get()
-            )
+            RemoteProfilePictureRepositoryImpl(dataSource = get())
         }
 
         single<IdentityRepository> {
@@ -77,7 +92,7 @@ val identityModule =
                 identityKeyGenerator = get(),
                 signatureCrypto = get(),
                 privateKeyStorage = get(),
-                publicIdentityStorage = get()
+                publicIdentityDataSource = get()
             )
         }
 

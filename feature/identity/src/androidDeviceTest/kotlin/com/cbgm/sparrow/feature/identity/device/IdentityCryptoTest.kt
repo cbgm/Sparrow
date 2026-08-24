@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.identity.data.crypto
+package com.cbgm.sparrow.feature.identity.device
 
 import com.cbgm.sparrow.core.crypto.SodiumRuntime
 import com.cbgm.sparrow.core.crypto.identity.SodiumIdentityKeyGenerator

@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.identity.data.datasource.profile
+package com.cbgm.sparrow.feature.identity.adapter
 
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProcessor

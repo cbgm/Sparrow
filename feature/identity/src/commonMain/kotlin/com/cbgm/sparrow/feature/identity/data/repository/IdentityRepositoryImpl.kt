@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.identity.data.repository
 
 import com.cbgm.sparrow.core.crypto.identity.IdentityKeyGenerator
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
-import com.cbgm.sparrow.feature.identity.data.datasource.storage.PublicIdentityStorage
+import com.cbgm.sparrow.feature.identity.data.datasource.PublicIdentityDataSource
 import com.cbgm.sparrow.feature.identity.device.PrivateKeyStorage
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityStatus
 import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
@@ -16,7 +16,7 @@ class IdentityRepositoryImpl(
     private val identityKeyGenerator: IdentityKeyGenerator,
     private val signatureCrypto: DetachedSignatureCrypto,
     private val privateKeyStorage: PrivateKeyStorage,
-    private val publicIdentityStorage: PublicIdentityStorage
+    private val publicIdentityDataSource: PublicIdentityDataSource
 ) : IdentityRepository {
     private val identityUpdates =
         MutableSharedFlow<PublicIdentity?>(
@@ -26,13 +26,13 @@ class IdentityRepositoryImpl(
 
     override fun observeIdentity(): Flow<PublicIdentity?> =
         flow {
-            emit(publicIdentityStorage.load().getOrThrow())
+            emit(publicIdentityDataSource.load().getOrThrow())
             emitAll(identityUpdates)
         }
 
     override suspend fun getStatus(): Result<IdentityStatus> =
         runCatching {
-            val publicIdentityExists = publicIdentityStorage.exists().getOrThrow()
+            val publicIdentityExists = publicIdentityDataSource.exists().getOrThrow()
             val privateKeysExist = privateKeyStorage.hasIdentityPrivateKeys().getOrThrow()
 
             when {
@@ -45,7 +45,7 @@ class IdentityRepositoryImpl(
 
     @OptIn(ExperimentalUnsignedTypes::class)
     private suspend fun hasConsistentSigningIdentity(): Boolean {
-        val publicIdentity = publicIdentityStorage.load().getOrNull() ?: return false
+        val publicIdentity = publicIdentityDataSource.load().getOrNull() ?: return false
         val signingPrivateKey =
             privateKeyStorage
                 .loadSigningPrivateKey()
@@ -77,7 +77,7 @@ class IdentityRepositoryImpl(
         var publicIdentityWritten = false
 
         return try {
-            val publicIdentityExists = publicIdentityStorage.exists().getOrThrow()
+            val publicIdentityExists = publicIdentityDataSource.exists().getOrThrow()
 
             val privateKeysExist = privateKeyStorage.hasIdentityPrivateKeys().getOrThrow()
 
@@ -101,7 +101,7 @@ class IdentityRepositoryImpl(
                     signingPublicKey = keyPair.signingPublicKey.toByteArray()
                 )
 
-            publicIdentityStorage.save(identity = publicIdentity).getOrThrow()
+            publicIdentityDataSource.save(identity = publicIdentity).getOrThrow()
 
             publicIdentityWritten = true
 
@@ -113,7 +113,7 @@ class IdentityRepositoryImpl(
         ) {
             val publicRollback =
                 if (publicIdentityWritten) {
-                    publicIdentityStorage.delete()
+                    publicIdentityDataSource.delete()
                 } else {
                     Result.success(Unit)
                 }
@@ -142,11 +142,11 @@ class IdentityRepositoryImpl(
     override suspend fun resetIdentity(): Result<Unit> =
         runCatching {
             privateKeyStorage.deleteIdentityPrivateKeys().getOrThrow()
-            publicIdentityStorage.delete().getOrThrow()
+            publicIdentityDataSource.delete().getOrThrow()
             identityUpdates.emit(null)
         }
 
-    override suspend fun getIdentity(): Result<PublicIdentity?> = publicIdentityStorage.load()
+    override suspend fun getIdentity(): Result<PublicIdentity?> = publicIdentityDataSource.load()
 
     @OptIn(ExperimentalUnsignedTypes::class)
     override suspend fun getEncryptionPrivateKey(): Result<ByteArray> =

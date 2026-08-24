@@ -1,10 +1,10 @@
-package com.cbgm.sparrow.feature.identity.data.datasource.storage
+package com.cbgm.sparrow.feature.identity.data.datasource
 
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
 
-class ProfilePictureFileStorage(
+class ProfilePictureFileDataSource(
     rootDirectory: String,
     private val fileSystem: FileSystem = FileSystem.SYSTEM
 ) {

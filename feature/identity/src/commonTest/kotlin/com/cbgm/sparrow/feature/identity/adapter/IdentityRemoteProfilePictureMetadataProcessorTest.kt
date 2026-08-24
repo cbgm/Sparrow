@@ -1,8 +1,7 @@
-package com.cbgm.sparrow.feature.identity.data.profile
+package com.cbgm.sparrow.feature.identity.adapter
 
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.protocol.profile.ProfilePicturePayload
-import com.cbgm.sparrow.feature.identity.data.datasource.profile.IdentityRemoteProfilePictureMetadataProcessor
 import com.cbgm.sparrow.feature.identity.domain.model.RemoteProfilePicture
 import com.cbgm.sparrow.feature.identity.domain.repository.RemoteProfilePictureRepository
 import kotlinx.coroutines.flow.Flow
