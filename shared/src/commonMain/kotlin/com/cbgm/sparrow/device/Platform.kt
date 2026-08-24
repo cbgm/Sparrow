@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.platform
+package com.cbgm.sparrow.device
 
 interface Platform {
     val name: String

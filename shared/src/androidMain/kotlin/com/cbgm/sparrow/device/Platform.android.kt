@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.platform
+package com.cbgm.sparrow.device
 
 import android.os.Build
 

@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.presentation.runtime
+package com.cbgm.sparrow.presentation.model
 
 import com.cbgm.sparrow.core.crypto.InitializeCryptoRuntime
 import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration

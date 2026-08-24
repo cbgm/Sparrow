@@ -1,13 +1,14 @@
-package com.cbgm.sparrow
+package com.cbgm.sparrow.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.BuildKonfig
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.transport.ControlPlaneReachability
 import com.cbgm.sparrow.feature.settings.domain.usecase.InitAppLanguageUseCase
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
-import com.cbgm.sparrow.presentation.runtime.AppInitializationDependencies
-import com.cbgm.sparrow.presentation.runtime.ForegroundRuntimeDependencies
+import com.cbgm.sparrow.presentation.model.AppInitializationDependencies
+import com.cbgm.sparrow.presentation.model.ForegroundRuntimeDependencies
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope

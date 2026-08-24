@@ -1,4 +1,4 @@
-package com.cbgm.sparrow
+package com.cbgm.sparrow.presentation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
