@@ -285,7 +285,8 @@ internal class GroupInvitationCoordinator(
             }
 
             val replacedInvitation = findReplaceableInvitation(ownerContactId, packet)
-            if (replacedInvitation != null &&
+            if (
+                replacedInvitation != null &&
                 !replacedInvitation.status.isTerminalStatus() &&
                 packet.createdAtEpochMilliseconds <= replacedInvitation.createdAtEpochMilliseconds
             ) {
