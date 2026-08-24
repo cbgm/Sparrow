@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.core.ui.component
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
@@ -8,7 +7,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -18,7 +16,6 @@ import androidx.compose.ui.unit.Dp
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.circle
-import org.jetbrains.compose.resources.decodeToImageBitmap
 
 @Composable
 fun SparrowAvatar(
@@ -27,21 +24,14 @@ fun SparrowAvatar(
     pictureBytes: ByteArray? = null,
     size: Dp = Dimens.Avatar.defaultSize
 ) {
-    val picture =
-        remember(pictureBytes) {
-            pictureBytes
-                ?.takeIf(ByteArray::isNotEmpty)
-                ?.let { bytes -> runCatching { bytes.decodeToImageBitmap() }.getOrNull() }
-        }
-
     Surface(
         modifier = modifier.size(size),
         shape = MaterialTheme.shapes.circle,
         color = MaterialTheme.colorScheme.secondaryContainer
     ) {
-        if (picture != null) {
-            Image(
-                bitmap = picture,
+        if (pictureBytes != null && pictureBytes.isNotEmpty()) {
+            SparrowImage(
+                model = pictureBytes,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()

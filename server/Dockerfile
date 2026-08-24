@@ -30,7 +30,11 @@ WORKDIR /app
 COPY --from=build "/workspace/server/${SERVICE}/build/install/${SERVICE}/" /app/
 
 RUN mkdir -p /data && \
-    chown -R 65532:65532 /app /data
+    chown -R 65532:65532 /app /data && \
+    if [ "$SERVICE" = "gateway" ]; then \
+        mkdir -p /var/lib/sparrow/blobs && \
+        chown -R 65532:65532 /var/lib/sparrow; \
+    fi
 
 USER 65532:65532
 

@@ -21,7 +21,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -34,13 +33,15 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.core.graphics.scale
 import androidx.photopicker.compose.EmbeddedPhotoPicker
 import androidx.photopicker.compose.ExperimentalPhotoPickerComposeApi
 import androidx.photopicker.compose.rememberEmbeddedPhotoPickerState
 import com.cbgm.sparrow.core.id.IdGenerator
+import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
+import com.cbgm.sparrow.core.ui.component.SparrowStaticScaffold
+import com.cbgm.sparrow.core.ui.theme.rectangle
+import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.domain.model.attachment.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.chats.domain.model.attachment.MessageMediaType
 import com.cbgm.sparrow.feature.chats.presentation.attachment.model.GalleryMediaSelection
@@ -217,11 +218,15 @@ private fun EmbeddedGalleryPickerDialog(
         }
     }
 
-    Dialog(
+    SparrowOverlayHost(
+        visible = true,
         onDismissRequest = closePicker,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        horizontalPadding = MaterialTheme.spacing.zero,
+        topPadding = MaterialTheme.spacing.zero,
+        shape = MaterialTheme.shapes.rectangle
+    ) { dismissOverlay ->
+        SparrowStaticScaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = MaterialTheme.colorScheme.background,
             topBar = {
@@ -233,7 +238,15 @@ private fun EmbeddedGalleryPickerDialog(
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = closePicker) {
+                        IconButton(
+                            onClick = {
+                                if (currentSelection.isEmpty()) {
+                                    onSelectionComplete(emptyList())
+                                } else {
+                                    dismissOverlay()
+                                }
+                            }
+                        ) {
                             Icon(
                                 imageVector = Icons.Filled.Close,
                                 contentDescription = stringResource(Res.string.base_close)

@@ -10,7 +10,9 @@ import org.koin.dsl.module
 val androidChatsModule =
     module {
         single {
-            MessageAttachmentFileStorage(rootDirectory = androidContext().filesDir.absolutePath)
+            MessageAttachmentFileStorage(
+                rootDirectory = androidContext().filesDir.absolutePath
+            )
         }
 
         single {

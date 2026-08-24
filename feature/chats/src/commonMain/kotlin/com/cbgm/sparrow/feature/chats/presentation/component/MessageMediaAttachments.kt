@@ -1,14 +1,12 @@
 package com.cbgm.sparrow.feature.chats.presentation.component
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
@@ -16,44 +14,64 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.theme.FunctionalColors
+import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.domain.model.attachment.MessageMediaType
+import com.cbgm.sparrow.feature.chats.presentation.attachment.mapper.toMediaItem
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageMediaAttachmentModel
-import org.jetbrains.compose.resources.decodeToImageBitmap
+import com.cbgm.sparrow.feature.media.presentation.component.MediaThumbnail
 
 @Composable
 internal fun MessageMediaAttachments(
     attachments: List<MessageMediaAttachmentModel>,
     onAttachmentVisible: (String) -> Unit,
+    onAttachmentClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (attachments.isEmpty()) return
 
-    androidx.compose.foundation.layout.Column(
+    val previewAttachments = attachments.take(MAX_PREVIEW_ATTACHMENTS)
+    val hiddenCount = (attachments.size - MAX_PREVIEW_ATTACHMENTS).coerceAtLeast(0)
+
+    Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
     ) {
-        attachments.chunked(2).forEach { rowAttachments ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
-            ) {
-                rowAttachments.forEach { attachment ->
+        Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)) {
+            previewAttachments.take(ATTACHMENTS_PER_ROW).forEach { attachment ->
+                MessageMediaAttachment(
+                    attachment = attachment,
+                    onAttachmentVisible = onAttachmentVisible,
+                    onAttachmentClick = onAttachmentClick
+                )
+            }
+        }
+
+        if (previewAttachments.size > ATTACHMENTS_PER_ROW || hiddenCount > 0) {
+            Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)) {
+                previewAttachments.drop(ATTACHMENTS_PER_ROW).forEach { attachment ->
                     MessageMediaAttachment(
                         attachment = attachment,
                         onAttachmentVisible = onAttachmentVisible,
-                        modifier = Modifier.weight(1f)
+                        onAttachmentClick = onAttachmentClick
                     )
                 }
-                if (rowAttachments.size == 1 && attachments.size > 1) {
-                    Spacer(modifier = Modifier.weight(1f))
+
+                if (hiddenCount > 0) {
+                    MoreMediaAttachment(
+                        additionalCount = hiddenCount,
+                        onClick = { onAttachmentClick(attachments[MAX_PREVIEW_ATTACHMENTS].id) }
+                    )
                 }
             }
         }
@@ -64,74 +82,116 @@ internal fun MessageMediaAttachments(
 private fun MessageMediaAttachment(
     attachment: MessageMediaAttachmentModel,
     onAttachmentVisible: (String) -> Unit,
-    modifier: Modifier = Modifier
+    onAttachmentClick: (String) -> Unit
 ) {
-    if (attachment.type == MessageMediaType.IMAGE) {
-        LaunchedEffect(attachment.id, attachment.bytes) {
-            if (attachment.bytes == null) onAttachmentVisible(attachment.id)
-        }
+    LaunchedEffect(attachment.id, attachment.bytes) {
+        if (attachment.bytes == null) onAttachmentVisible(attachment.id)
     }
-
-    val bitmap =
-        remember(attachment.id, attachment.bytes, attachment.type) {
-            if (attachment.type == MessageMediaType.IMAGE) {
-                attachment.bytes?.let { bytes -> runCatching { bytes.decodeToImageBitmap() }.getOrNull() }
-            } else {
-                null
-            }
-        }
-    val width = attachment.width
-    val height = attachment.height
-    val aspectRatio =
-        if (width != null && height != null && width > 0 && height > 0) {
-            (width.toFloat() / height.toFloat()).coerceIn(MIN_ASPECT_RATIO, MAX_ASPECT_RATIO)
-        } else {
-            DEFAULT_ASPECT_RATIO
-        }
 
     Surface(
         modifier =
-            modifier
-                .aspectRatio(aspectRatio)
-                .then(
-                    if (attachment.type == MessageMediaType.VIDEO) {
-                        Modifier.clickable { onAttachmentVisible(attachment.id) }
-                    } else {
-                        Modifier
-                    }
-                ),
-        shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.surfaceContainerHighest
+            Modifier
+                .size(Dimens.MessageAttachment.previewSize)
+                .clickable { onAttachmentClick(attachment.id) },
+        shape = MaterialTheme.shapes.extraSmall,
+        color = FunctionalColors.MediaBackground
     ) {
-        when {
-            bitmap != null ->
-                Image(
-                    bitmap = bitmap,
-                    contentDescription = null,
+        Box(modifier = Modifier.fillMaxSize()) {
+            MediaThumbnail(
+                media = attachment.toMediaItem(),
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+
+            if (attachment.bytes == null) {
+                Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-
-            attachment.type == MessageMediaType.VIDEO ->
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = null,
-                        modifier = Modifier.size(Dimens.MessageAttachment.loadingIndicatorSize)
-                    )
-                }
-
-            else ->
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    contentAlignment = Alignment.Center
+                ) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(Dimens.MessageAttachment.loadingIndicatorSize),
                         strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
                     )
                 }
+            }
+
+            if (attachment.type == MessageMediaType.VIDEO) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(Dimens.MessageAttachment.previewPlayIconSize)
+                )
+            }
         }
     }
 }
 
-private const val DEFAULT_ASPECT_RATIO = 1f
-private const val MIN_ASPECT_RATIO = 0.75f
-private const val MAX_ASPECT_RATIO = 1.5f
+@Composable
+private fun MoreMediaAttachment(
+    additionalCount: Int,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .size(Dimens.MessageAttachment.previewSize)
+            .clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.extraSmall,
+        color = FunctionalColors.MediaBackground
+    ) {
+        Box(
+            contentAlignment = Alignment.BottomEnd,
+            modifier = Modifier.padding(MaterialTheme.spacing.micro)
+        ) {
+            Text(
+                text = "+$additionalCount",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+private const val MAX_PREVIEW_ATTACHMENTS = 3
+private const val ATTACHMENTS_PER_ROW = 2
+
+@Preview
+@Composable
+private fun MessageMediaAttachmentsPreview() {
+    SparrowTheme {
+        MessageMediaAttachments(
+            attachments =
+                listOf(
+                    MessageMediaAttachmentModel(
+                        id = "preview-image-1",
+                        type = MessageMediaType.IMAGE,
+                        mimeType = "image/jpeg",
+                        bytes = byteArrayOf()
+                    ),
+                    MessageMediaAttachmentModel(
+                        id = "preview-image-2",
+                        type = MessageMediaType.IMAGE,
+                        mimeType = "image/png",
+                        bytes = byteArrayOf()
+                    ),
+                    MessageMediaAttachmentModel(
+                        id = "preview-video",
+                        type = MessageMediaType.VIDEO,
+                        mimeType = "video/mp4",
+                        bytes = byteArrayOf()
+                    ),
+                    MessageMediaAttachmentModel(
+                        id = "preview-image-3",
+                        type = MessageMediaType.IMAGE,
+                        mimeType = "image/jpeg",
+                        bytes = byteArrayOf()
+                    )
+                ),
+            onAttachmentVisible = {},
+            onAttachmentClick = {}
+        )
+    }
+}

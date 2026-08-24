@@ -54,9 +54,13 @@ object Dimens {
     }
 
     object MessageAttachment {
-        val previewSize = 40.dp
         val previewPlayIconSize = 16.dp
+        val previewSize = 50.dp
         val loadingIndicatorSize = 24.dp
+    }
+
+    object Media {
+        val playIconSize = 40.dp
     }
 
     object PatternBackground {

@@ -4,6 +4,8 @@ import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.attachment.EncryptedBlobReference
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
+import com.cbgm.sparrow.data.database.dao.ChatDao
+import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
 import com.cbgm.sparrow.data.database.entity.MessageAttachmentEntity
 import com.cbgm.sparrow.feature.attachments.domain.model.UploadedBlob
@@ -18,6 +20,8 @@ import com.cbgm.sparrow.feature.chats.domain.model.attachment.OutgoingMediaAttac
 
 class MessageAttachmentTransfer(
     private val attachmentDao: MessageAttachmentDao,
+    private val chatDao: ChatDao,
+    private val contactDao: ContactDao,
     private val fileStorage: MessageAttachmentFileStorage,
     private val uploadBlob: UploadBlobUseCase,
     private val downloadBlob: DownloadBlobUseCase,
@@ -100,7 +104,6 @@ class MessageAttachmentTransfer(
 
     suspend fun cacheIncoming(messageId: String) {
         attachmentDao.findByMessageId(messageId)
-            .filter { it.localFileName == null }
             .forEach { entity ->
                 loadBytes(entity.id)
                     .onFailure { error ->
@@ -112,15 +115,52 @@ class MessageAttachmentTransfer(
     suspend fun loadBytes(attachmentId: String): Result<ByteArray> =
         runCatching {
             val entity = attachmentDao.findById(attachmentId) ?: error("Message attachment was not found")
-            entity.localFileName?.let(fileStorage::read)?.let { return@runCatching it }
-
-            val bytes = downloadBlob(entity.toBlobReference()).getOrThrow()
-            val localFileName = fileStorage.write(bytes)
-            check(attachmentDao.updateLocalFileName(entity.id, localFileName) == 1) {
-                "Message attachment disappeared while it was cached"
-            }
+            val bytes =
+                entity.localFileName
+                    ?.let(fileStorage::read)
+                    ?: downloadAndCache(entity)
+            persistSparrowContactCopy(entity, bytes)
             bytes
         }
+
+    private suspend fun downloadAndCache(entity: MessageAttachmentEntity): ByteArray {
+        val bytes = downloadBlob(entity.toBlobReference()).getOrThrow()
+        val localFileName = fileStorage.write(bytes)
+        check(attachmentDao.updateLocalFileName(entity.id, localFileName) == 1) {
+            "Message attachment disappeared while it was cached"
+        }
+        return bytes
+    }
+
+    private suspend fun persistSparrowContactCopy(
+        entity: MessageAttachmentEntity,
+        bytes: ByteArray
+    ) {
+        runCatching {
+            val message = chatDao.findMessageById(entity.messageId) ?: return
+            if (message.isMine) return
+
+            val conversation = chatDao.findConversationById(message.conversationId) ?: return
+            val contactId = message.senderContactId ?: conversation.contactId ?: return
+            val contact = contactDao.findById(contactId)
+            val contactName =
+                contact?.contact?.displayName
+                    ?.takeIf(String::isNotBlank)
+                    ?: contact?.phoneNumbers?.firstOrNull()?.value
+                    ?: contactId
+            fileStorage.saveForContact(
+                contactId = contactId,
+                contactName = contactName,
+                attachmentId = entity.id,
+                type = MessageAttachmentType.valueOf(entity.type),
+                mimeType = entity.mimeType,
+                originalFileName = entity.fileName,
+                bytes = bytes
+            )
+        }.onFailure { error ->
+            logger.warn(error) { "Could not save Sparrow contact copy for attachment ${entity.id}" }
+        }
+    }
 
     suspend fun deleteLocalFilesForConversation(conversationId: String) {
         require(conversationId.isNotBlank()) { "Conversation ID must not be blank" }

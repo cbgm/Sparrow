@@ -65,6 +65,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.attachment.MessageAttachmentP
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
 import com.cbgm.sparrow.feature.chats.presentation.attachment.platform.rememberGalleryPickerLauncher
 import com.cbgm.sparrow.feature.chats.presentation.component.AttachmentClick
+import com.cbgm.sparrow.feature.chats.presentation.component.MessageAttachmentViewer
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageBubble
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageControl
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
@@ -115,6 +116,8 @@ fun DirectScreen(
     targetMessageId: String? = null
 ) {
     var showIdentitySetupDialog by rememberSaveable { mutableStateOf(false) }
+    var viewerMessageId by rememberSaveable { mutableStateOf<String?>(null) }
+    var viewerAttachmentId by rememberSaveable { mutableStateOf<String?>(null) }
 
     SparrowLazyScaffold(
         modifier = modifier,
@@ -160,6 +163,11 @@ fun DirectScreen(
             },
             onAttachmentVisible = { attachmentId ->
                 onUiEvent(DirectUiEvent.MediaAttachmentVisible(attachmentId))
+            },
+            onAttachmentClick = { messageId, attachmentId ->
+                viewerMessageId = messageId
+                viewerAttachmentId = attachmentId
+                onUiEvent(DirectUiEvent.MediaAttachmentVisible(attachmentId))
             }
         )
     }
@@ -175,6 +183,23 @@ fun DirectScreen(
                 onUiEvent(DirectUiEvent.ImportIdentityClicked)
             },
             onDismiss = { showIdentitySetupDialog = false }
+        )
+    }
+
+    val currentViewerMessage = viewerMessageId?.let { messageId -> uiState.messages.firstOrNull { it.id == messageId } }
+    val currentViewerAttachmentId = viewerAttachmentId
+    if (currentViewerMessage != null && currentViewerAttachmentId != null) {
+        MessageAttachmentViewer(
+            message = currentViewerMessage,
+            selectedAttachmentId = currentViewerAttachmentId,
+            onDismiss = {
+                viewerMessageId = null
+                viewerAttachmentId = null
+            },
+            onEnsureAttachmentLoaded = { attachmentId ->
+                onUiEvent(DirectUiEvent.MediaAttachmentVisible(attachmentId))
+            },
+            onError = { error -> onUiEvent(DirectUiEvent.AttachmentError(error)) }
         )
     }
 }
@@ -333,7 +358,8 @@ private fun Content(
     targetMessageId: String?,
     onRetryMessage: (String) -> Unit,
     onSafetyWarningClick: (String, MessageSafetyWarningUiModel) -> Unit,
-    onAttachmentVisible: (String) -> Unit
+    onAttachmentVisible: (String) -> Unit,
+    onAttachmentClick: (String, String) -> Unit
 ) {
     when {
         uiState.isLoading -> LoadingContent(
@@ -353,6 +379,7 @@ private fun Content(
             onRetryMessage = onRetryMessage,
             onSafetyWarningClick = onSafetyWarningClick,
             onAttachmentVisible = onAttachmentVisible,
+            onAttachmentClick = onAttachmentClick,
             contentPadding = innerPadding
         )
     }
@@ -366,6 +393,7 @@ private fun MessageList(
     onRetryMessage: (String) -> Unit,
     onSafetyWarningClick: (String, MessageSafetyWarningUiModel) -> Unit,
     onAttachmentVisible: (String) -> Unit,
+    onAttachmentClick: (String, String) -> Unit,
     contentPadding: PaddingValues
 ) {
     val searchTargetState =
@@ -402,6 +430,7 @@ private fun MessageList(
                     onSafetyWarningClick(message.id, warning)
                 },
                 onAttachmentVisible = onAttachmentVisible,
+                onAttachmentClick = { attachmentId -> onAttachmentClick(message.id, attachmentId) },
                 isSearchHighlighted = message.id == searchTargetState.highlightedMessageId
             )
         }

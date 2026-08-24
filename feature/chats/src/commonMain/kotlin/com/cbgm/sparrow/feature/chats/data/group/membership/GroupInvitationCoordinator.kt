@@ -532,7 +532,7 @@ internal class GroupInvitationCoordinator(
         runCatching {
             val invitation =
                 groupInvitationDao.findByInvitationId(packet.invitationId)
-                    ?: error("Group invitation was not found")
+                    ?: return@runCatching
             check(invitation.direction == GroupInvitationDirection.OUTGOING.name) {
                 "Invite receipt does not belong to an outgoing invitation"
             }

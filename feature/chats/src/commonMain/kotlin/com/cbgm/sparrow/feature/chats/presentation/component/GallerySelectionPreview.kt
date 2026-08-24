@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.feature.chats.presentation.component
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,7 +13,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -24,8 +22,9 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.domain.model.attachment.MessageMediaType
+import com.cbgm.sparrow.feature.chats.presentation.attachment.mapper.toMediaItem
 import com.cbgm.sparrow.feature.chats.presentation.attachment.model.GalleryMediaSelection
-import org.jetbrains.compose.resources.decodeToImageBitmap
+import com.cbgm.sparrow.feature.media.presentation.component.MediaThumbnail
 
 @Composable
 internal fun GallerySelectionPreview(
@@ -41,48 +40,34 @@ internal fun GallerySelectionPreview(
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
         items(media, key = GalleryMediaSelection::id) { item ->
-            GallerySelectionItem(
-                media = item
-            )
+            GallerySelectionItem(media = item)
         }
     }
 }
 
 @Composable
-private fun GallerySelectionItem(
-    media: GalleryMediaSelection
-) {
-    val previewBytes =
-        when (media.type) {
-            MessageMediaType.IMAGE -> media.bytes
-            MessageMediaType.VIDEO -> media.previewBytes
-        }
-    val bitmap =
-        remember(media.id, previewBytes) {
-            previewBytes?.let { runCatching { it.decodeToImageBitmap() }.getOrNull() }
-        }
-
+private fun GallerySelectionItem(media: GalleryMediaSelection) {
     Box(modifier = Modifier.size(Dimens.MessageAttachment.previewSize)) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.surfaceContainerHigh
         ) {
-            if (bitmap != null) {
-                Image(
-                    bitmap = bitmap,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            }
+            MediaThumbnail(
+                media = media.toMediaItem(),
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
         }
 
         if (media.type == MessageMediaType.VIDEO) {
             Surface(
                 modifier = Modifier.align(Alignment.Center),
                 shape = MaterialTheme.shapes.extraLarge,
-                color = MaterialTheme.colorScheme.scrim.copy(alpha = Alpha.MessageAttachment.removeButtonBackground)
+                color =
+                    MaterialTheme.colorScheme.scrim.copy(
+                        alpha = Alpha.MessageAttachment.removeButtonBackground
+                    )
             ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,

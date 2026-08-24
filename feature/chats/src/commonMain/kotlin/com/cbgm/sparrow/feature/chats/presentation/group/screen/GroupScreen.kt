@@ -31,6 +31,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -55,6 +59,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMemberInvitationStatus
 import com.cbgm.sparrow.feature.chats.presentation.attachment.platform.rememberGalleryPickerLauncher
 import com.cbgm.sparrow.feature.chats.presentation.component.AttachmentClick
+import com.cbgm.sparrow.feature.chats.presentation.component.MessageAttachmentViewer
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageBubble
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageControl
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
@@ -113,6 +118,9 @@ fun GroupScreen(
     modifier: Modifier = Modifier,
     targetMessageId: String? = null
 ) {
+    var viewerMessageId by rememberSaveable { mutableStateOf<String?>(null) }
+    var viewerAttachmentId by rememberSaveable { mutableStateOf<String?>(null) }
+
     SparrowLazyScaffold(
         modifier = modifier,
         barColor = MaterialTheme.colorScheme.background,
@@ -157,7 +165,32 @@ fun GroupScreen(
             },
             onAttachmentVisible = { attachmentId ->
                 onUiEvent(GroupUiEvent.MediaAttachmentVisible(attachmentId))
+            },
+            onAttachmentClick = { messageId, attachmentId ->
+                viewerMessageId = messageId
+                viewerAttachmentId = attachmentId
+                onUiEvent(GroupUiEvent.MediaAttachmentVisible(attachmentId))
             }
+        )
+    }
+
+    val currentViewerMessage =
+        viewerMessageId
+            ?.let { messageId -> uiState.messages.firstOrNull { it.id == messageId } }
+            ?.bubble
+    val currentViewerAttachmentId = viewerAttachmentId
+    if (currentViewerMessage != null && currentViewerAttachmentId != null) {
+        MessageAttachmentViewer(
+            message = currentViewerMessage,
+            selectedAttachmentId = currentViewerAttachmentId,
+            onDismiss = {
+                viewerMessageId = null
+                viewerAttachmentId = null
+            },
+            onEnsureAttachmentLoaded = { attachmentId ->
+                onUiEvent(GroupUiEvent.MediaAttachmentVisible(attachmentId))
+            },
+            onError = { error -> onUiEvent(GroupUiEvent.AttachmentError(error)) }
         )
     }
 }
@@ -267,7 +300,8 @@ private fun Content(
     targetMessageId: String?,
     onRetryMessage: (String) -> Unit,
     onSafetyWarningClick: (String, String?, MessageSafetyWarningUiModel) -> Unit,
-    onAttachmentVisible: (String) -> Unit
+    onAttachmentVisible: (String) -> Unit,
+    onAttachmentClick: (String, String) -> Unit
 ) {
     when {
         uiState.isLoading -> LoadingContent(
@@ -286,6 +320,7 @@ private fun Content(
             onRetryMessage = onRetryMessage,
             onSafetyWarningClick = onSafetyWarningClick,
             onAttachmentVisible = onAttachmentVisible,
+            onAttachmentClick = onAttachmentClick,
             contentPadding = innerPadding
         )
     }
@@ -299,6 +334,7 @@ private fun MessageList(
     onRetryMessage: (String) -> Unit,
     onSafetyWarningClick: (String, String?, MessageSafetyWarningUiModel) -> Unit,
     onAttachmentVisible: (String) -> Unit,
+    onAttachmentClick: (String, String) -> Unit,
     contentPadding: PaddingValues
 ) {
     val searchTargetState =
@@ -334,6 +370,7 @@ private fun MessageList(
                     onRetryMessage = onRetryMessage,
                     onSafetyWarningClick = onSafetyWarningClick,
                     onAttachmentVisible = onAttachmentVisible,
+                    onAttachmentClick = onAttachmentClick,
                     isSearchHighlighted = message.id == searchTargetState.highlightedMessageId
                 )
             } else {
@@ -352,6 +389,7 @@ private fun GroupMessageBubble(
     onRetryMessage: (String) -> Unit,
     onSafetyWarningClick: (String, String?, MessageSafetyWarningUiModel) -> Unit,
     onAttachmentVisible: (String) -> Unit,
+    onAttachmentClick: (String, String) -> Unit,
     modifier: Modifier = Modifier,
     isSearchHighlighted: Boolean = false
 ) {
@@ -363,6 +401,7 @@ private fun GroupMessageBubble(
                 onSafetyWarningClick(message.id, message.senderContactId, warning)
             },
             onAttachmentVisible = onAttachmentVisible,
+            onAttachmentClick = { attachmentId -> onAttachmentClick(message.id, attachmentId) },
             modifier = modifier,
             isSearchHighlighted = isSearchHighlighted
         )
@@ -386,6 +425,7 @@ private fun GroupMessageBubble(
                 onSafetyWarningClick(message.id, message.senderContactId, warning)
             },
             onAttachmentVisible = onAttachmentVisible,
+            onAttachmentClick = { attachmentId -> onAttachmentClick(message.id, attachmentId) },
             modifier = Modifier.weight(1f),
             isSearchHighlighted = isSearchHighlighted
         )

@@ -98,6 +98,7 @@ internal fun GroupMessage.toUiModel(
                         MessageMediaAttachmentModel(
                             id = attachment.id,
                             type = attachment.type,
+                            mimeType = attachment.mimeType,
                             width = attachment.width,
                             height = attachment.height,
                             durationMilliseconds = attachment.durationMilliseconds,

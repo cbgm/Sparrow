@@ -83,6 +83,7 @@ class DirectViewModel(
             selectedGalleryMedia,
             isSending
         ) { text, error, contactTyping, selectedMedia, sending ->
+            if (!error.isNullOrEmpty()) logger.error { error }
             ComposerContext(text, error, contactTyping, selectedMedia, sending)
         }
 
