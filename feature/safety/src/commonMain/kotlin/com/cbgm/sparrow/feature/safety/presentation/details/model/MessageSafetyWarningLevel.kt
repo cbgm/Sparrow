@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.safety.presentation.model
+package com.cbgm.sparrow.feature.safety.presentation.details.model
 
 enum class MessageSafetyWarningLevel(
     val id: String

@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.safety.data.analyzer
+package com.cbgm.sparrow.feature.safety.util
 
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyReason
 import kotlin.test.Test

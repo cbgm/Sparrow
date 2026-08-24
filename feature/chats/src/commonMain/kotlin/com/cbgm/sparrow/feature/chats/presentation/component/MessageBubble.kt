@@ -40,7 +40,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.attachment.MessageMediaType
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageMediaAttachmentModel
 import com.cbgm.sparrow.feature.safety.presentation.component.MessageSafetyWarning
-import com.cbgm.sparrow.feature.safety.presentation.model.MessageSafetyWarningUiModel
+import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_decryption_failed
 import com.cbgm.sparrow.resources.feature_chats_delivered

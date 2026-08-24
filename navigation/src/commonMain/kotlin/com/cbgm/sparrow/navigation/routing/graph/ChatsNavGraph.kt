@@ -9,7 +9,7 @@ import com.cbgm.sparrow.feature.chats.presentation.details.screen.DetailsRoute
 import com.cbgm.sparrow.feature.chats.presentation.direct.screen.DirectRoute
 import com.cbgm.sparrow.feature.chats.presentation.group.screen.GroupRoute
 import com.cbgm.sparrow.feature.chats.presentation.verification.VerificationRoute
-import com.cbgm.sparrow.feature.safety.presentation.screen.MessageSafetyDetailsRoute
+import com.cbgm.sparrow.feature.safety.presentation.details.MessageSafetyDetailsRoute
 import com.cbgm.sparrow.feature.search.presentation.overview.MessageSearchRoute
 import com.cbgm.sparrow.navigation.routing.slideInFromLeft
 import com.cbgm.sparrow.navigation.routing.slideInFromRight
@@ -27,15 +27,8 @@ fun NavGraphBuilder.chatsNavGraph() {
     composable<AppRoute.MessageSafetyDetails>(
         enterTransition = { slideInFromRight() },
         exitTransition = { slideOutToRight() }
-    ) { backStackEntry ->
-        val destination = backStackEntry.toRoute<AppRoute.MessageSafetyDetails>()
-
-        MessageSafetyDetailsRoute(
-            levelId = destination.levelId,
-            reasonIds = destination.reasonIds,
-            focusReasonId = destination.focusReasonId,
-            contactId = destination.contactId
-        )
+    ) {
+        MessageSafetyDetailsRoute()
     }
 
     composable<AppRoute.Chat>(

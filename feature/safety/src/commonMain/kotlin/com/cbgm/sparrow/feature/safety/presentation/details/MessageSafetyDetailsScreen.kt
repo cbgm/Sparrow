@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.safety.presentation.screen
+package com.cbgm.sparrow.feature.safety.presentation.details
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -43,8 +43,10 @@ import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.safety.presentation.model.MessageSafetyWarningLevel
-import com.cbgm.sparrow.feature.safety.presentation.model.MessageSafetyWarningReason
+import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyDetailsUiEvent
+import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyDetailsUiState
+import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningLevel
+import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningReason
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_back
 import com.cbgm.sparrow.resources.base_cancel
@@ -91,21 +93,14 @@ private const val SAFETY_HIGHLIGHT_DURATION = 2_00
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessageSafetyDetailsScreen(
-    level: MessageSafetyWarningLevel,
-    reasons: List<MessageSafetyWarningReason>,
-    focusReason: MessageSafetyWarningReason?,
-    canBlockUser: Boolean,
-    isUserBlocked: Boolean,
-    isBlockingUser: Boolean,
-    blockError: String?,
-    onBackClick: () -> Unit,
-    onBlockUserClick: () -> Unit,
+    uiState: MessageSafetyDetailsUiState,
+    onUiEvent: (MessageSafetyDetailsUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val detectedReasons = reasons.distinct()
+    val detectedReasons = uiState.reasons.distinct()
     val allReasons = MessageSafetyWarningReason.entries
     val explanationStartIndex = detectedReasons.size + 3
-    var highlightedReason by remember(focusReason) { mutableStateOf(focusReason) }
+    var highlightedReason by remember(uiState.focusReason) { mutableStateOf(uiState.focusReason) }
     var showBlockConfirmation by remember { mutableStateOf(false) }
 
     SparrowLazyScaffold(
@@ -120,7 +115,7 @@ fun MessageSafetyDetailsScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(onClick = { onUiEvent(MessageSafetyDetailsUiEvent.BackClicked) }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(Res.string.base_back)
@@ -137,11 +132,11 @@ fun MessageSafetyDetailsScreen(
             )
         },
         bottomBar = { containerColor ->
-            if (canBlockUser) {
+            if (uiState.canBlockUser) {
                 BlockUserBottomBar(
-                    isBlocked = isUserBlocked,
-                    isBlocking = isBlockingUser,
-                    error = blockError,
+                    isBlocked = uiState.isUserBlocked,
+                    isBlocking = uiState.isBlockingUser,
+                    error = uiState.blockError,
                     onClick = { showBlockConfirmation = true },
                     containerColor = containerColor
                 )
@@ -167,7 +162,7 @@ fun MessageSafetyDetailsScreen(
         ) {
             item(key = "summary") {
                 SafetySummary(
-                    level = level,
+                    level = uiState.level,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -224,7 +219,7 @@ fun MessageSafetyDetailsScreen(
                 SparrowDestructiveButton(
                     onClick = {
                         showBlockConfirmation = false
-                        onBlockUserClick()
+                        onUiEvent(MessageSafetyDetailsUiEvent.BlockUserClicked)
                     },
                     text = stringResource(Res.string.feature_safety_block_this_user_button),
                     fillMaxWidth = false
@@ -467,19 +462,18 @@ private fun reasonExplanation(reason: MessageSafetyWarningReason): StringResourc
 private fun MessageSafetyDetailsScreenPreview() {
     SparrowTheme {
         MessageSafetyDetailsScreen(
-            level = MessageSafetyWarningLevel.HIGH,
-            reasons =
-                listOf(
-                    MessageSafetyWarningReason.CREDENTIAL_REQUEST,
-                    MessageSafetyWarningReason.URGENT_ACTION_REQUEST
+            uiState =
+                MessageSafetyDetailsUiState(
+                    level = MessageSafetyWarningLevel.HIGH,
+                    reasons =
+                        listOf(
+                            MessageSafetyWarningReason.CREDENTIAL_REQUEST,
+                            MessageSafetyWarningReason.URGENT_ACTION_REQUEST
+                        ),
+                    focusReason = MessageSafetyWarningReason.CREDENTIAL_REQUEST,
+                    canBlockUser = true
                 ),
-            focusReason = MessageSafetyWarningReason.CREDENTIAL_REQUEST,
-            canBlockUser = true,
-            isUserBlocked = false,
-            isBlockingUser = false,
-            blockError = null,
-            onBackClick = {},
-            onBlockUserClick = {}
+            onUiEvent = {}
         )
     }
 }

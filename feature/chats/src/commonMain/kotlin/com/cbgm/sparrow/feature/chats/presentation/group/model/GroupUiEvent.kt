@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.chats.presentation.group.model
 
 import com.cbgm.sparrow.feature.chats.presentation.attachment.model.GalleryMediaSelection
-import com.cbgm.sparrow.feature.safety.presentation.model.MessageSafetyWarningUiModel
+import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
 
 sealed interface GroupUiEvent {
     data class MessageTextChanged(

@@ -1,34 +1,18 @@
-package com.cbgm.sparrow.feature.safety.data.classifier
+package com.cbgm.sparrow.feature.safety.util
 
-import com.cbgm.sparrow.core.embedding.data.model.LocalEmbeddingModel
-import com.cbgm.sparrow.core.embedding.data.model.normalizedPrefix
-import com.cbgm.sparrow.core.embedding.data.platform.EmbeddingInputType
-import com.cbgm.sparrow.core.embedding.data.platform.LocalTextEmbedder
+import com.cbgm.sparrow.feature.safety.data.model.GeneratedMessageSafetyMlpModel
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyReason
 import kotlin.math.exp
 
-class EmbeddingMessageSafetyClassifier(
-    private val embedder: LocalTextEmbedder
-) {
+class MessageSafetyClassifier {
     init {
-        check(GeneratedMessageSafetyMlpModel.EMBEDDING_DIMENSIONS == LocalEmbeddingModel.OUTPUT_DIMENSIONS) {
-            "Safety classifier expects ${GeneratedMessageSafetyMlpModel.EMBEDDING_DIMENSIONS} embedding dimensions, " +
-                "but the local embedding runtime is configured for ${LocalEmbeddingModel.OUTPUT_DIMENSIONS}"
-        }
-        check(GeneratedMessageSafetyMlpModel.EMBEDDING_MODEL_SHA256 == LocalEmbeddingModel.MODEL_SHA256) {
-            "Safety classifier was trained against a different EmbeddingGemma model"
-        }
         GeneratedMessageSafetyMlpModel.byReason.values.forEach(::validateHead)
     }
 
-    suspend fun classify(text: String): Set<MessageSafetyReason> {
-        val normalizedText = text.trim()
-        if (normalizedText.isEmpty()) return emptySet()
-
-        val embedding =
-            embedder
-                .embed(normalizedText, EmbeddingInputType.SEMANTIC_SIMILARITY)
-                .normalizedPrefix(GeneratedMessageSafetyMlpModel.EMBEDDING_DIMENSIONS)
+    fun classify(embedding: FloatArray): Set<MessageSafetyReason> {
+        require(embedding.size == GeneratedMessageSafetyMlpModel.EMBEDDING_DIMENSIONS) {
+            "Embedding has ${embedding.size} dimensions, expected ${GeneratedMessageSafetyMlpModel.EMBEDDING_DIMENSIONS}"
+        }
 
         val reasons = linkedSetOf<MessageSafetyReason>()
         GeneratedMessageSafetyMlpModel.byReason.forEach { (reason, head) ->
@@ -43,10 +27,6 @@ class EmbeddingMessageSafetyClassifier(
         embedding: FloatArray,
         head: GeneratedMessageSafetyMlpModel.Head
     ): Float {
-        require(embedding.size == GeneratedMessageSafetyMlpModel.EMBEDDING_DIMENSIONS) {
-            "Embedding has ${embedding.size} dimensions, expected ${GeneratedMessageSafetyMlpModel.EMBEDDING_DIMENSIONS}"
-        }
-
         var outputLogit = head.outputBias.toDouble()
         for (hiddenIndex in 0 until head.hiddenSize) {
             var hiddenLogit = head.hiddenBias[hiddenIndex].toDouble()

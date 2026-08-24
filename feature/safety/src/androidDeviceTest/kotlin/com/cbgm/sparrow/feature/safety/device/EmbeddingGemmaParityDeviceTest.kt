@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.safety.data.classifier
+package com.cbgm.sparrow.feature.safety.device
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
@@ -10,7 +10,9 @@ import com.cbgm.sparrow.core.embedding.data.platform.AndroidLocalEmbeddingModelF
 import com.cbgm.sparrow.core.embedding.data.platform.AndroidLocalEmbeddingModelManager
 import com.cbgm.sparrow.core.embedding.data.platform.EmbeddingInputType
 import com.cbgm.sparrow.core.embedding.data.platform.MediaPipeLocalTextEmbedder
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.math.abs
@@ -69,14 +71,20 @@ class EmbeddingGemmaParityDeviceTest {
 
         modelFiles.ensureDirectory()
         val connection =
-            (URL(LocalEmbeddingModel.MODEL_URL).openConnection() as HttpURLConnection).apply {
+            (
+                withContext(Dispatchers.IO) {
+                    URL(LocalEmbeddingModel.MODEL_URL).openConnection()
+                } as HttpURLConnection
+            ).apply {
                 connectTimeout = DOWNLOAD_CONNECT_TIMEOUT_MILLISECONDS
                 readTimeout = DOWNLOAD_READ_TIMEOUT_MILLISECONDS
                 instanceFollowRedirects = true
             }
 
         try {
-            connection.connect()
+            withContext(Dispatchers.IO) {
+                connection.connect()
+            }
             check(connection.responseCode in 200..299) {
                 "EmbeddingGemma download failed with HTTP ${connection.responseCode}"
             }
@@ -102,7 +110,27 @@ class EmbeddingGemmaParityDeviceTest {
         val id: String,
         val text: String,
         val embedding: FloatArray
-    )
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Reference
+
+            if (id != other.id) return false
+            if (text != other.text) return false
+            if (!embedding.contentEquals(other.embedding)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = id.hashCode()
+            result = 31 * result + text.hashCode()
+            result = 31 * result + embedding.contentHashCode()
+            return result
+        }
+    }
 
     private companion object {
         const val ARGUMENT_RUN_PARITY = "sparrowEmbeddingParity"

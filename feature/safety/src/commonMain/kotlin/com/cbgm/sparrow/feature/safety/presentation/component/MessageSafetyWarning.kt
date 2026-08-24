@@ -21,9 +21,9 @@ import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.safety.presentation.model.MessageSafetyWarningLevel
-import com.cbgm.sparrow.feature.safety.presentation.model.MessageSafetyWarningReason
-import com.cbgm.sparrow.feature.safety.presentation.model.MessageSafetyWarningUiModel
+import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningLevel
+import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningReason
+import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_safety_high_risk_message
 import com.cbgm.sparrow.resources.feature_safety_suspicious_message

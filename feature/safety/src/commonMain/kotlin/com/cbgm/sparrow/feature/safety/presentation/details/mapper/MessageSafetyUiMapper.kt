@@ -1,10 +1,10 @@
-package com.cbgm.sparrow.feature.safety.presentation.mapper
+package com.cbgm.sparrow.feature.safety.presentation.details.mapper
 
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyAssessment
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyReason
-import com.cbgm.sparrow.feature.safety.presentation.model.MessageSafetyWarningLevel
-import com.cbgm.sparrow.feature.safety.presentation.model.MessageSafetyWarningReason
-import com.cbgm.sparrow.feature.safety.presentation.model.MessageSafetyWarningUiModel
+import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningLevel
+import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningReason
+import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
 
 fun MessageSafetyAssessment.toWarningUiModel(): MessageSafetyWarningUiModel? {
     if (reasons.isEmpty()) return null
