@@ -35,10 +35,10 @@ import com.cbgm.sparrow.core.ui.theme.FunctionalColors
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.rectangle
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.media.device.MediaImage
+import com.cbgm.sparrow.feature.media.device.VideoPlayer
 import com.cbgm.sparrow.feature.media.presentation.model.MediaItem
 import com.cbgm.sparrow.feature.media.presentation.model.MediaType
-import com.cbgm.sparrow.feature.media.presentation.platform.PlatformMediaImage
-import com.cbgm.sparrow.feature.media.presentation.platform.PlatformVideoPlayer
 
 /**
  * Reusable full-screen media viewer. A one-item list is the single-photo case.
@@ -165,7 +165,7 @@ private fun MediaViewerPage(
 
     when (media.type) {
         MediaType.IMAGE ->
-            PlatformMediaImage(
+            MediaImage(
                 data = media.bytes,
                 cacheKey = "media-full:${media.id}",
                 contentDescription = null,
@@ -174,7 +174,7 @@ private fun MediaViewerPage(
             )
 
         MediaType.VIDEO ->
-            MediaVideoPage(
+            VideoPage(
                 media = media,
                 isActive = isActive,
                 modifier = modifier
@@ -183,7 +183,7 @@ private fun MediaViewerPage(
 }
 
 @Composable
-private fun MediaVideoPage(
+private fun VideoPage(
     media: MediaItem,
     isActive: Boolean,
     modifier: Modifier = Modifier
@@ -195,7 +195,7 @@ private fun MediaVideoPage(
     }
 
     if (isActive && playRequested) {
-        PlatformVideoPlayer(
+        VideoPlayer(
             media = media,
             isActive = true,
             modifier = modifier

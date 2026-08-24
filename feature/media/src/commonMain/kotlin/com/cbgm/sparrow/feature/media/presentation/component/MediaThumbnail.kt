@@ -9,10 +9,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.feature.media.device.MediaImage
+import com.cbgm.sparrow.feature.media.device.VideoThumbnail
 import com.cbgm.sparrow.feature.media.presentation.model.MediaItem
 import com.cbgm.sparrow.feature.media.presentation.model.MediaType
-import com.cbgm.sparrow.feature.media.presentation.platform.PlatformMediaImage
-import com.cbgm.sparrow.feature.media.presentation.platform.PlatformVideoThumbnail
 
 /**
  * Loads media thumbnail content only.
@@ -31,7 +31,7 @@ fun MediaThumbnail(
 
     when (media.type) {
         MediaType.IMAGE ->
-            PlatformMediaImage(
+            MediaImage(
                 data = media.thumbnailBytes ?: media.bytes,
                 cacheKey = thumbnailCacheKey,
                 contentDescription = contentDescription,
@@ -42,7 +42,7 @@ fun MediaThumbnail(
         MediaType.VIDEO -> {
             val explicitThumbnail = media.thumbnailBytes
             if (explicitThumbnail != null) {
-                PlatformMediaImage(
+                MediaImage(
                     data = explicitThumbnail,
                     cacheKey = thumbnailCacheKey,
                     contentDescription = contentDescription,
@@ -50,7 +50,7 @@ fun MediaThumbnail(
                     contentScale = contentScale
                 )
             } else {
-                PlatformVideoThumbnail(
+                VideoThumbnail(
                     media = media,
                     modifier = modifier,
                     contentScale = contentScale

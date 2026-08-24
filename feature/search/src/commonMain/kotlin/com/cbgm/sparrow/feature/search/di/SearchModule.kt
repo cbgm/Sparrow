@@ -9,7 +9,7 @@ import com.cbgm.sparrow.feature.search.domain.usecase.InitializeSemanticSearchUs
 import com.cbgm.sparrow.feature.search.domain.usecase.ObserveSemanticSearchStateUseCase
 import com.cbgm.sparrow.feature.search.domain.usecase.SearchMessagesUseCase
 import com.cbgm.sparrow.feature.search.domain.usecase.SetSemanticSearchEnabledUseCase
-import com.cbgm.sparrow.feature.search.presentation.screen.MessageSearchViewModel
+import com.cbgm.sparrow.feature.search.presentation.overview.MessageSearchViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 

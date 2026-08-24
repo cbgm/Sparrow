@@ -5,7 +5,7 @@ import com.cbgm.sparrow.core.embedding.data.platform.EmbeddingInputType
 import com.cbgm.sparrow.core.embedding.data.platform.LocalTextEmbedder
 import com.cbgm.sparrow.data.database.dao.MessageSearchDao
 import com.cbgm.sparrow.data.database.entity.MessageSearchEmbeddingEntity
-import com.cbgm.sparrow.feature.search.data.embedding.EmbeddingCodec
+import com.cbgm.sparrow.feature.search.data.mapper.EmbeddingCodecMapper
 import com.cbgm.sparrow.feature.search.data.mapper.toEmbeddingText
 import com.cbgm.sparrow.feature.search.data.model.SemanticSearchIndexConfig
 
@@ -40,7 +40,7 @@ class MessageSearchIndexer(
                     MessageSearchEmbeddingEntity(
                         messageId = message.messageId,
                         modelVersion = SemanticSearchIndexConfig.VERSION,
-                        embedding = EmbeddingCodec.encode(embedding)
+                        embedding = EmbeddingCodecMapper.encode(embedding)
                     )
                 )
                 processed++

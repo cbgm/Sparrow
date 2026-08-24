@@ -3,7 +3,7 @@ package com.cbgm.sparrow.feature.attachments.di
 import com.cbgm.sparrow.core.crypto.blob.BlobCipher
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.crypto.random.SecureRandomGenerator
-import com.cbgm.sparrow.feature.attachments.data.BlobTransferRepositoryImpl
+import com.cbgm.sparrow.feature.attachments.data.repository.BlobTransferRepositoryImpl
 import com.cbgm.sparrow.feature.attachments.domain.repository.BlobTransferRepository
 import com.cbgm.sparrow.feature.attachments.domain.usecase.DeleteBlobUseCase
 import com.cbgm.sparrow.feature.attachments.domain.usecase.DownloadBlobUseCase

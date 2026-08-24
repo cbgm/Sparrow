@@ -6,8 +6,8 @@ import com.cbgm.sparrow.core.crypto.SodiumRuntime
 import com.cbgm.sparrow.core.crypto.identity.SodiumIdentityKeyGenerator
 import com.cbgm.sparrow.core.crypto.signature.SodiumDetachedSignatureCrypto
 import com.cbgm.sparrow.core.datastore.createSparrowDataStore
-import com.cbgm.sparrow.feature.identity.data.datasource.AndroidPrivateKeyStorage
-import com.cbgm.sparrow.feature.identity.data.datasource.PublicIdentityStorageImpl
+import com.cbgm.sparrow.feature.identity.data.datasource.storage.PublicIdentityStorageImpl
+import com.cbgm.sparrow.feature.identity.device.AndroidPrivateKeyStorage
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityStatus
 import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
 import kotlinx.coroutines.runBlocking

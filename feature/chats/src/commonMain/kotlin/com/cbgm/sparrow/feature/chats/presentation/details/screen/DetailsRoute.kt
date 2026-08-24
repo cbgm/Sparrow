@@ -10,10 +10,10 @@ import com.cbgm.sparrow.feature.chats.presentation.details.GroupDetailsFlow
 import com.cbgm.sparrow.feature.chats.presentation.details.model.DetailsTarget
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.presentation.details.ContactDetailsRoute
+import com.cbgm.sparrow.feature.identity.device.rememberIdentityShareLauncher
 import com.cbgm.sparrow.feature.identity.domain.model.SharedContactDetails
 import com.cbgm.sparrow.feature.identity.domain.model.SharedIdentityPayload
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityShareRepository
-import com.cbgm.sparrow.feature.identity.presentation.platform.rememberIdentityShareLauncher
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_share_contact
 import org.jetbrains.compose.resources.stringResource

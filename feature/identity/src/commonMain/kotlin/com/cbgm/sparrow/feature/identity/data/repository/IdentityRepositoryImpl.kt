@@ -2,8 +2,8 @@ package com.cbgm.sparrow.feature.identity.data.repository
 
 import com.cbgm.sparrow.core.crypto.identity.IdentityKeyGenerator
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
-import com.cbgm.sparrow.feature.identity.data.datasource.PrivateKeyStorage
-import com.cbgm.sparrow.feature.identity.data.datasource.PublicIdentityStorage
+import com.cbgm.sparrow.feature.identity.data.datasource.storage.PublicIdentityStorage
+import com.cbgm.sparrow.feature.identity.device.PrivateKeyStorage
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityStatus
 import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityRepository

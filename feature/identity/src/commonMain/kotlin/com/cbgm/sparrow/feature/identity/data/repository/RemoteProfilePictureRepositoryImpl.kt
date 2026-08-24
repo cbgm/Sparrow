@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.identity.data.repository
 
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.datastore.SparrowDataStore
-import com.cbgm.sparrow.feature.identity.data.storage.ProfilePictureFileStorage
+import com.cbgm.sparrow.feature.identity.data.datasource.storage.ProfilePictureFileStorage
 import com.cbgm.sparrow.feature.identity.domain.model.RemoteProfilePicture
 import com.cbgm.sparrow.feature.identity.domain.repository.RemoteProfilePictureRepository
 import kotlinx.coroutines.flow.Flow

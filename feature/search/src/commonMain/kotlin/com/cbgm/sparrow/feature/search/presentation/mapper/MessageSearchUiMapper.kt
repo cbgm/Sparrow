@@ -4,10 +4,10 @@ import com.cbgm.sparrow.core.time.formatMessageTimestamp
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchResult
 import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
 import com.cbgm.sparrow.feature.search.presentation.model.MessageSearchMode
-import com.cbgm.sparrow.feature.search.presentation.model.MessageSearchResultUiModel
+import com.cbgm.sparrow.feature.search.presentation.model.MessageSearchResultUi
 
-internal fun MessageSearchResult.toUiModel(): MessageSearchResultUiModel =
-    MessageSearchResultUiModel(
+internal fun MessageSearchResult.toUiModel(): MessageSearchResultUi =
+    MessageSearchResultUi(
         messageId = messageId,
         conversationId = conversationId,
         conversationType = conversationType,

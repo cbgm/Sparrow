@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.identity.data.repository
 
 import com.cbgm.sparrow.core.datastore.SparrowDataStore
-import com.cbgm.sparrow.feature.identity.data.storage.ProfilePictureFileStorage
+import com.cbgm.sparrow.feature.identity.data.datasource.storage.ProfilePictureFileStorage
 import com.cbgm.sparrow.feature.identity.domain.model.LocalProfilePicture
 import com.cbgm.sparrow.feature.identity.domain.repository.LocalProfilePictureRepository
 import kotlinx.coroutines.flow.Flow

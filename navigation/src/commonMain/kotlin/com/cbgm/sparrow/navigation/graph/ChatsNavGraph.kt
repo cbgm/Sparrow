@@ -10,7 +10,7 @@ import com.cbgm.sparrow.feature.chats.presentation.direct.screen.DirectRoute
 import com.cbgm.sparrow.feature.chats.presentation.group.screen.GroupRoute
 import com.cbgm.sparrow.feature.chats.presentation.verification.VerificationRoute
 import com.cbgm.sparrow.feature.safety.presentation.screen.MessageSafetyDetailsRoute
-import com.cbgm.sparrow.feature.search.presentation.screen.MessageSearchRoute
+import com.cbgm.sparrow.feature.search.presentation.overview.MessageSearchRoute
 import com.cbgm.sparrow.navigation.slideInFromLeft
 import com.cbgm.sparrow.navigation.slideInFromRight
 import com.cbgm.sparrow.navigation.slideOutToLeft

@@ -9,8 +9,8 @@ import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingFeature
 import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingModelState
 import com.cbgm.sparrow.core.embedding.domain.repository.LocalEmbeddingRepository
 import com.cbgm.sparrow.data.database.dao.MessageSearchDao
-import com.cbgm.sparrow.feature.search.data.embedding.EmbeddingCodec
 import com.cbgm.sparrow.feature.search.data.index.MessageSearchIndexer
+import com.cbgm.sparrow.feature.search.data.mapper.EmbeddingCodecMapper
 import com.cbgm.sparrow.feature.search.data.mapper.messageSearchConversationName
 import com.cbgm.sparrow.feature.search.data.model.SemanticSearchIndexConfig
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchConversationType
@@ -86,7 +86,7 @@ class SemanticSearchRepositoryImpl(
                     val semanticScore =
                         cosineSimilarity(
                             queryEmbedding,
-                            EmbeddingCodec.decode(message.embedding)
+                            EmbeddingCodecMapper.decode(message.embedding)
                         )
                     val metadataBoost =
                         metadataMatchBoost(
