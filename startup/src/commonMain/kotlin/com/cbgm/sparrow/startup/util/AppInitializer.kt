@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.startup
+package com.cbgm.sparrow.startup.util
 
 import com.cbgm.sparrow.core.embedding.domain.usecase.InitializeLocalEmbeddingUseCase
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityStatus
@@ -8,6 +8,7 @@ import com.cbgm.sparrow.feature.safety.domain.usecase.InitializeMessageSafetyUse
 import com.cbgm.sparrow.feature.search.domain.usecase.InitializeSemanticSearchUseCase
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionManager
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
+import com.cbgm.sparrow.startup.presentation.start.model.AppInitializationResult
 import kotlinx.coroutines.flow.first
 
 class AppInitializer(

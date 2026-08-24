@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.startup.presentation
+package com.cbgm.sparrow.startup.presentation.start
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -6,11 +6,9 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiState
 import com.cbgm.sparrow.feature.onboarding.presentation.OnboardingRoute
-import com.cbgm.sparrow.startup.presentation.model.StartupConnection
-import com.cbgm.sparrow.startup.presentation.model.StartupUiEvent
-import com.cbgm.sparrow.startup.presentation.model.StartupUiState
-import com.cbgm.sparrow.startup.presentation.screen.StartupScreen
-import com.cbgm.sparrow.startup.presentation.screen.StartupViewModel
+import com.cbgm.sparrow.startup.presentation.start.model.StartupConnection
+import com.cbgm.sparrow.startup.presentation.start.model.StartupUiEvent
+import com.cbgm.sparrow.startup.presentation.start.model.StartupUiState
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable

@@ -36,7 +36,7 @@ import com.cbgm.sparrow.resources.app_connection_offline_hint
 import com.cbgm.sparrow.resources.app_connection_reconnected_hint
 import com.cbgm.sparrow.startup.domain.model.AppConnectionAvailability
 import com.cbgm.sparrow.startup.domain.usecase.ObserveAppConnectionAvailabilityUseCase
-import com.cbgm.sparrow.startup.presentation.model.StartupConnection
+import com.cbgm.sparrow.startup.presentation.start.model.StartupConnection
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource

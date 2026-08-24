@@ -3,8 +3,8 @@ package com.cbgm.sparrow.navigation.graph
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
-import com.cbgm.sparrow.startup.presentation.StartupRoute
-import com.cbgm.sparrow.startup.presentation.model.StartupConnection
+import com.cbgm.sparrow.startup.presentation.start.StartupRoute
+import com.cbgm.sparrow.startup.presentation.start.model.StartupConnection
 
 fun NavGraphBuilder.startupNavGraph(
     onStartupReady: (StartupConnection) -> Unit

@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.startup
+package com.cbgm.sparrow.startup.presentation.start.model
 
 sealed interface AppInitializationResult {
     data object IdentityRequired : AppInitializationResult

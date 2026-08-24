@@ -1,13 +1,13 @@
-package com.cbgm.sparrow.startup.presentation.screen
+package com.cbgm.sparrow.startup.presentation.start
 
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
-import com.cbgm.sparrow.startup.AppInitializationResult
-import com.cbgm.sparrow.startup.AppInitializer
-import com.cbgm.sparrow.startup.presentation.model.StartupConnection
-import com.cbgm.sparrow.startup.presentation.model.StartupUiEvent
-import com.cbgm.sparrow.startup.presentation.model.StartupUiState
+import com.cbgm.sparrow.startup.presentation.start.model.AppInitializationResult
+import com.cbgm.sparrow.startup.presentation.start.model.StartupConnection
+import com.cbgm.sparrow.startup.presentation.start.model.StartupUiEvent
+import com.cbgm.sparrow.startup.presentation.start.model.StartupUiState
+import com.cbgm.sparrow.startup.util.AppInitializer
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

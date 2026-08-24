@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.startup.presentation.screen
+package com.cbgm.sparrow.startup.presentation.start
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -56,8 +56,8 @@ import com.cbgm.sparrow.resources.feature_startup_partial_identity_no_replacemen
 import com.cbgm.sparrow.resources.feature_startup_preparing_sparrow
 import com.cbgm.sparrow.resources.feature_startup_setup_failed
 import com.cbgm.sparrow.resources.feature_startup_verify_phone_number
-import com.cbgm.sparrow.startup.presentation.model.StartupUiEvent
-import com.cbgm.sparrow.startup.presentation.model.StartupUiState
+import com.cbgm.sparrow.startup.presentation.start.model.StartupUiEvent
+import com.cbgm.sparrow.startup.presentation.start.model.StartupUiState
 import org.jetbrains.compose.resources.stringResource
 
 @Composable

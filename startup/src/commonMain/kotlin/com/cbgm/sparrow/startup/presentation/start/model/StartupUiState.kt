@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.startup.presentation.model
+package com.cbgm.sparrow.startup.presentation.start.model
 
 sealed interface StartupUiState {
     data object Loading : StartupUiState
