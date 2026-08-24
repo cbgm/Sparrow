@@ -1350,9 +1350,16 @@ try {
 
         Set-ProgressValue -Value 65
         Set-Status "Starting node databases..."
+        # Always recreate the database containers here. Docker Desktop implements
+        # Compose file-based secrets as host bind mounts. If a secret file was
+        # temporarily unavailable, a stopped container can retain a stale mount
+        # and `docker compose start`/`up` may keep failing even after the file is
+        # present again. Recreating the containers refreshes those mounts while
+        # preserving the named database volumes.
         Invoke-Compose -Arguments @(
             "up",
             "-d",
+            "--force-recreate",
             "mailbox-database",
             "federation-database"
         )
@@ -1376,10 +1383,13 @@ try {
 
         Set-ProgressValue -Value 82
         Set-Status "Starting Sparrow node services..."
+        # Refresh all secret-bearing service containers as well so their
+        # /run/secrets mounts cannot remain stale after a Docker Desktop restart.
         Invoke-Compose -Arguments @(
             "up",
             "-d",
-            "--remove-orphans"
+            "--remove-orphans",
+            "--force-recreate"
         )
 
         Set-ProgressValue -Value 90
