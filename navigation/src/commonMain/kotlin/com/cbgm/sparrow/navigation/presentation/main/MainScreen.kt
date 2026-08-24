@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.presentation.screen
+package com.cbgm.sparrow.navigation.presentation.main
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -44,7 +44,7 @@ import com.cbgm.sparrow.feature.chats.presentation.ContactsFlow
 import com.cbgm.sparrow.feature.chats.presentation.overview.OverviewRoute
 import com.cbgm.sparrow.feature.identity.presentation.setup.IdentityRoute
 import com.cbgm.sparrow.feature.settings.presentation.overview.SettingsRoute
-import com.cbgm.sparrow.presentation.model.MainTab
+import com.cbgm.sparrow.navigation.presentation.main.model.MainTab
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_contacts_open_invitations
 import com.cbgm.sparrow.resources.feature_search_open

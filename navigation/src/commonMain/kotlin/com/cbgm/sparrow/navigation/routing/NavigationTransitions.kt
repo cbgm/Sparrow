@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.navigation
+package com.cbgm.sparrow.navigation.routing
 
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition

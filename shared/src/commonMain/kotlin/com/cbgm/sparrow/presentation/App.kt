@@ -7,7 +7,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.cbgm.sparrow.core.ui.locale.AppLocaleEnvironment
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
-import com.cbgm.sparrow.navigation.AppNavigation
+import com.cbgm.sparrow.navigation.routing.AppNavigation
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable

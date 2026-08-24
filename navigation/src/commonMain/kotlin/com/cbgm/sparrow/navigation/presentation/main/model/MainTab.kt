@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.presentation.model
+package com.cbgm.sparrow.navigation.presentation.main.model
 
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.ic_chat

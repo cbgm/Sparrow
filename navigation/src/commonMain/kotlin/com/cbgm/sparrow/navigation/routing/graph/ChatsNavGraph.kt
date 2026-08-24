@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.navigation.graph
+package com.cbgm.sparrow.navigation.routing.graph
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
@@ -11,10 +11,10 @@ import com.cbgm.sparrow.feature.chats.presentation.group.screen.GroupRoute
 import com.cbgm.sparrow.feature.chats.presentation.verification.VerificationRoute
 import com.cbgm.sparrow.feature.safety.presentation.screen.MessageSafetyDetailsRoute
 import com.cbgm.sparrow.feature.search.presentation.overview.MessageSearchRoute
-import com.cbgm.sparrow.navigation.slideInFromLeft
-import com.cbgm.sparrow.navigation.slideInFromRight
-import com.cbgm.sparrow.navigation.slideOutToLeft
-import com.cbgm.sparrow.navigation.slideOutToRight
+import com.cbgm.sparrow.navigation.routing.slideInFromLeft
+import com.cbgm.sparrow.navigation.routing.slideInFromRight
+import com.cbgm.sparrow.navigation.routing.slideOutToLeft
+import com.cbgm.sparrow.navigation.routing.slideOutToRight
 
 fun NavGraphBuilder.chatsNavGraph() {
     composable<AppRoute.MessageSearch>(

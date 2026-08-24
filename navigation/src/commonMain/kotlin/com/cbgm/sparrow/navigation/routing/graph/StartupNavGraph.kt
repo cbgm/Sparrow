@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.navigation.graph
+package com.cbgm.sparrow.navigation.routing.graph
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable

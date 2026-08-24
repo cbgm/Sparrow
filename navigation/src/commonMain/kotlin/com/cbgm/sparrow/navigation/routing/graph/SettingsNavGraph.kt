@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.navigation.graph
+package com.cbgm.sparrow.navigation.routing.graph
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
@@ -9,8 +9,8 @@ import com.cbgm.sparrow.feature.settings.presentation.disclaimer.model.Disclaime
 import com.cbgm.sparrow.feature.settings.presentation.licenses.LicensesRoute
 import com.cbgm.sparrow.feature.settings.presentation.network.ControlPlaneSettingsRoute
 import com.cbgm.sparrow.feature.settings.presentation.profile.ProfileSettingsRoute
-import com.cbgm.sparrow.navigation.slideInFromRight
-import com.cbgm.sparrow.navigation.slideOutToRight
+import com.cbgm.sparrow.navigation.routing.slideInFromRight
+import com.cbgm.sparrow.navigation.routing.slideOutToRight
 
 fun NavGraphBuilder.settingsNavGraph() {
     composable<AppRoute.PrivacyPolicy>(

@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.navigation
+package com.cbgm.sparrow.navigation.routing
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -9,6 +9,7 @@ import androidx.navigation.NavHostController
 import com.cbgm.sparrow.core.ui.navigation.AppNavigationEvent
 import com.cbgm.sparrow.core.ui.navigation.AppNavigator
 
+@Suppress("ComposableNaming")
 @Composable
 fun NavHostController.bind(navigator: AppNavigator) {
     val lifecycleOwner = LocalLifecycleOwner.current

@@ -34,13 +34,5 @@ kotlin {
 
             implementation(libs.jetbrains.navigation.compose)
         }
-
-        commonTest.dependencies {
-            implementation(libs.bundles.kmp.testing)
-        }
-
-        androidDeviceTest.dependencies {
-            implementation(libs.bundles.android.device.testing)
-        }
     }
 }

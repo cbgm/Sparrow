@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.navigation
+package com.cbgm.sparrow.navigation.routing
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -21,12 +21,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import com.cbgm.sparrow.core.ui.navigation.AppNavigator
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
-import com.cbgm.sparrow.navigation.graph.chatsNavGraph
-import com.cbgm.sparrow.navigation.graph.contactsNavGraph
-import com.cbgm.sparrow.navigation.graph.identityNavGraph
-import com.cbgm.sparrow.navigation.graph.mainNavGraph
-import com.cbgm.sparrow.navigation.graph.settingsNavGraph
-import com.cbgm.sparrow.navigation.graph.startupNavGraph
+import com.cbgm.sparrow.navigation.routing.graph.chatsNavGraph
+import com.cbgm.sparrow.navigation.routing.graph.contactsNavGraph
+import com.cbgm.sparrow.navigation.routing.graph.identityNavGraph
+import com.cbgm.sparrow.navigation.routing.graph.mainNavGraph
+import com.cbgm.sparrow.navigation.routing.graph.settingsNavGraph
+import com.cbgm.sparrow.navigation.routing.graph.startupNavGraph
 import com.cbgm.sparrow.notification.application.ResolveNotificationConversation
 import com.cbgm.sparrow.notification.model.NotificationConversationTarget
 import com.cbgm.sparrow.notification.navigation.NotificationNavigationController

@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.presentation.screen
+package com.cbgm.sparrow.navigation.presentation.main
 
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.navigation.AppRoute

@@ -1,10 +1,8 @@
-package com.cbgm.sparrow.presentation
+package com.cbgm.sparrow.navigation.presentation.main
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cbgm.sparrow.presentation.screen.MainScreen
-import com.cbgm.sparrow.presentation.screen.MainViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
