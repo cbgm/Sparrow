@@ -6,10 +6,10 @@ import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchConversationType
 import com.cbgm.sparrow.feature.search.domain.usecase.ObserveSemanticSearchStateUseCase
 import com.cbgm.sparrow.feature.search.domain.usecase.SearchMessagesUseCase
-import com.cbgm.sparrow.feature.search.presentation.mapper.toMessageSearchMode
-import com.cbgm.sparrow.feature.search.presentation.mapper.toUiModel
-import com.cbgm.sparrow.feature.search.presentation.model.MessageSearchUiEvent
-import com.cbgm.sparrow.feature.search.presentation.model.MessageSearchUiState
+import com.cbgm.sparrow.feature.search.presentation.overview.mapper.toMessageSearchMode
+import com.cbgm.sparrow.feature.search.presentation.overview.mapper.toUiModel
+import com.cbgm.sparrow.feature.search.presentation.overview.model.MessageSearchUiEvent
+import com.cbgm.sparrow.feature.search.presentation.overview.model.MessageSearchUiState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

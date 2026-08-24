@@ -85,7 +85,7 @@ class SettingsViewModel(
             is SettingsUiEvent.LanguageSelected -> selectLanguage(event.language)
             is SettingsUiEvent.DirectIdentitySetupModeChanged -> changeDirectIdentitySetupMode(event.mode)
             is SettingsUiEvent.BlockUnknownContactInvitesChanged -> changeBlockUnknownContactInvites(event.enabled)
-            is SettingsUiEvent.SemanticSearchEnabledChanged -> setSemanticSearchEnabled(event.enabled)
+            is SettingsUiEvent.SemanticSearchEnabledChanged -> changeSemanticSearchEnabled(event.enabled)
             is SettingsUiEvent.MessageSafetyEnabledChanged -> changeMessageSafetyEnabled(event.enabled)
             SettingsUiEvent.PrivacyPolicyClicked -> navigator.navigateTo(AppRoute.PrivacyPolicy)
             SettingsUiEvent.DataDisclaimerClicked -> navigator.navigateTo(AppRoute.DataDisclaimer)
@@ -106,6 +106,12 @@ class SettingsViewModel(
                     isDeveloperModeEnabled = getDeveloperEnabledUseCase()
                 )
             }
+        }
+    }
+
+    private fun changeSemanticSearchEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            setSemanticSearchEnabled(enabled)
         }
     }
 

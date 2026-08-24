@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.feature.search.di
 
-import com.cbgm.sparrow.feature.search.data.index.MessageSearchIndexer
+import com.cbgm.sparrow.feature.search.data.datasource.MessageSearchIndexDataSource
+import com.cbgm.sparrow.feature.search.data.datasource.MessageSearchLocalDataSource
+import com.cbgm.sparrow.feature.search.data.datasource.SemanticSearchEmbeddingDataSource
 import com.cbgm.sparrow.feature.search.data.repository.MessageSearchRepositoryImpl
 import com.cbgm.sparrow.feature.search.data.repository.SemanticSearchRepositoryImpl
 import com.cbgm.sparrow.feature.search.domain.repository.MessageSearchRepository
@@ -15,26 +17,46 @@ import org.koin.dsl.module
 
 val searchModule =
     module {
-        single { MessageSearchIndexer(dao = get(), embedder = get()) }
+        single { MessageSearchLocalDataSource(dao = get()) }
+        single { MessageSearchIndexDataSource(dao = get(), embedder = get()) }
+        single { SemanticSearchEmbeddingDataSource(embedder = get()) }
+
+        single<MessageSearchRepository> {
+            MessageSearchRepositoryImpl(localDataSource = get())
+        }
         single<SemanticSearchRepository> {
             SemanticSearchRepositoryImpl(
+                indexDataSource = get(),
+                localDataSource = get(),
+                embeddingDataSource = get()
+            )
+        }
+
+        factory {
+            InitializeSemanticSearchUseCase(
                 localEmbeddingRepository = get(),
-                indexer = get(),
-                embedder = get(),
-                dao = get(),
+                semanticSearchRepository = get(),
                 applicationScope = get()
             )
         }
-        single<MessageSearchRepository> {
-            MessageSearchRepositoryImpl(
-                dao = get(),
+        factory {
+            ObserveSemanticSearchStateUseCase(
+                localEmbeddingRepository = get(),
                 semanticSearchRepository = get()
             )
         }
-        factory { InitializeSemanticSearchUseCase(repository = get()) }
-        factory { ObserveSemanticSearchStateUseCase(repository = get()) }
-        factory { SetSemanticSearchEnabledUseCase(repository = get()) }
-        factory { SearchMessagesUseCase(repository = get()) }
+        factory {
+            SetSemanticSearchEnabledUseCase(
+                localEmbeddingRepository = get(),
+                semanticSearchRepository = get()
+            )
+        }
+        factory {
+            SearchMessagesUseCase(
+                messageSearchRepository = get(),
+                semanticSearchRepository = get()
+            )
+        }
         viewModel {
             MessageSearchViewModel(
                 observeSemanticSearchState = get(),

@@ -40,10 +40,10 @@ import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchConversationType
-import com.cbgm.sparrow.feature.search.presentation.model.MessageSearchMode
-import com.cbgm.sparrow.feature.search.presentation.model.MessageSearchResultUi
-import com.cbgm.sparrow.feature.search.presentation.model.MessageSearchUiEvent
-import com.cbgm.sparrow.feature.search.presentation.model.MessageSearchUiState
+import com.cbgm.sparrow.feature.search.presentation.overview.model.MessageSearchMode
+import com.cbgm.sparrow.feature.search.presentation.overview.model.MessageSearchResultUi
+import com.cbgm.sparrow.feature.search.presentation.overview.model.MessageSearchUiEvent
+import com.cbgm.sparrow.feature.search.presentation.overview.model.MessageSearchUiState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_back
 import com.cbgm.sparrow.resources.base_unknown
