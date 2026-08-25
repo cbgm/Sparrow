@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.identity.data.datasource
 
-import com.cbgm.sparrow.core.datastore.SparrowDataStore
+import com.cbgm.sparrow.data.datastore.SparrowDataStore
 import kotlinx.coroutines.flow.Flow
 
 class LocalIdentityProfileDataSource(

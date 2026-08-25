@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.identity.data.datasource
 
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
-import com.cbgm.sparrow.core.datastore.SparrowDataStore
+import com.cbgm.sparrow.data.datastore.SparrowDataStore
 import com.cbgm.sparrow.feature.identity.domain.model.RemoteProfilePicture
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map

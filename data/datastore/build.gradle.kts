@@ -4,7 +4,7 @@ plugins {
 
 kotlin {
     android {
-        namespace = "com.cbgm.sparrow.core.datastore"
+        namespace = "com.cbgm.sparrow.data.datastore"
     }
 
     sourceSets {

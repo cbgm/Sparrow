@@ -5,7 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.cbgm.sparrow.core.crypto.SodiumRuntime
 import com.cbgm.sparrow.core.crypto.identity.SodiumIdentityKeyGenerator
 import com.cbgm.sparrow.core.crypto.signature.SodiumDetachedSignatureCrypto
-import com.cbgm.sparrow.core.datastore.createSparrowDataStore
+import com.cbgm.sparrow.data.datastore.createSparrowDataStore
 import com.cbgm.sparrow.feature.identity.data.datasource.SparrowDataStorePublicIdentityDataSource
 import com.cbgm.sparrow.feature.identity.device.AndroidPrivateKeyStorage
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityStatus

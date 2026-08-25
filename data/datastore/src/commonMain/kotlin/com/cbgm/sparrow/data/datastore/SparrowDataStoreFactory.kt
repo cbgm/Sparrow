@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.core.datastore
+package com.cbgm.sparrow.data.datastore
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import okio.Path.Companion.toPath

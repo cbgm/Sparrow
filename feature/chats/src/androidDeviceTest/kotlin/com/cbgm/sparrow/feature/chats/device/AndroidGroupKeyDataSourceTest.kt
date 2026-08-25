@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.chats.device
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import com.cbgm.sparrow.core.datastore.createSparrowDataStore
+import com.cbgm.sparrow.data.datastore.createSparrowDataStore
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals

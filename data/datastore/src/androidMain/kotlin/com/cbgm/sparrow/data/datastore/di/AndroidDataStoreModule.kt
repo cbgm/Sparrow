@@ -1,7 +1,7 @@
-package com.cbgm.sparrow.core.datastore.di
+package com.cbgm.sparrow.data.datastore.di
 
-import com.cbgm.sparrow.core.datastore.SPARROW_DATA_STORE_FILE_NAME
-import com.cbgm.sparrow.core.datastore.createSparrowDataStore
+import com.cbgm.sparrow.data.datastore.SPARROW_DATA_STORE_FILE_NAME
+import com.cbgm.sparrow.data.datastore.createSparrowDataStore
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 

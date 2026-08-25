@@ -34,7 +34,7 @@ dependencyResolutionManagement {
 include(":androidApp")
 include(":shared")
 include(":core")
-include(":core:datastore")
+include(":data:datastore")
 include(":core:embedding")
 include(":feature:identity")
 include(":feature:contacts")

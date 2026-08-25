@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.settings.data.datasource
 
-import com.cbgm.sparrow.core.datastore.SparrowDataStore
+import com.cbgm.sparrow.data.datastore.SparrowDataStore
 
 class SettingsStorageImpl(
     private val dataStore: SparrowDataStore

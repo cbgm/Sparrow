@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.di
 
 import android.app.Application
-import com.cbgm.sparrow.core.datastore.di.androidDataStoreModule
 import com.cbgm.sparrow.core.embedding.di.androidEmbeddingModule
 import com.cbgm.sparrow.data.database.di.androidDatabaseModule
+import com.cbgm.sparrow.data.datastore.di.androidDataStoreModule
 import com.cbgm.sparrow.feature.chats.di.androidChatsModule
 import com.cbgm.sparrow.feature.contacts.di.androidContactsModule
 import com.cbgm.sparrow.feature.identity.di.androidIdentityStorageModule

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.transport.discovery
 
-import com.cbgm.sparrow.core.datastore.SparrowDataStore
+import com.cbgm.sparrow.data.datastore.SparrowDataStore
 import kotlinx.serialization.json.Json
 
 class DataStoreNodeDirectoryCache(

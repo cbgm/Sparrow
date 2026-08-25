@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.chats.data.group.datasource
 
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
-import com.cbgm.sparrow.core.datastore.SparrowDataStore
+import com.cbgm.sparrow.data.datastore.SparrowDataStore
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAvatar
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
