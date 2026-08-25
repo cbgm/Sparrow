@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.direct.model
 
-import com.cbgm.sparrow.feature.chats.presentation.attachment.model.GalleryMediaSelection
+import com.cbgm.sparrow.feature.attachments.presentation.model.GalleryMediaSelection
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
 
 sealed interface DirectUiEvent {

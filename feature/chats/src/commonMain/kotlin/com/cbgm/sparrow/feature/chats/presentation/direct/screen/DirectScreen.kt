@@ -58,14 +58,14 @@ import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.attachments.device.rememberGalleryPickerLauncher
+import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
+import com.cbgm.sparrow.feature.attachments.presentation.component.MessageAttachmentViewer
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
-import com.cbgm.sparrow.feature.chats.domain.model.attachment.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
-import com.cbgm.sparrow.feature.chats.presentation.attachment.platform.rememberGalleryPickerLauncher
 import com.cbgm.sparrow.feature.chats.presentation.component.AttachmentClick
-import com.cbgm.sparrow.feature.chats.presentation.component.MessageAttachmentViewer
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageBubble
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageControl
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
@@ -190,8 +190,9 @@ fun DirectScreen(
     val currentViewerAttachmentId = viewerAttachmentId
     if (currentViewerMessage != null && currentViewerAttachmentId != null) {
         MessageAttachmentViewer(
-            message = currentViewerMessage,
+            attachments = currentViewerMessage.mediaAttachments,
             selectedAttachmentId = currentViewerAttachmentId,
+            canSaveToCameraRoll = !currentViewerMessage.isMine,
             onDismiss = {
                 viewerMessageId = null
                 viewerAttachmentId = null

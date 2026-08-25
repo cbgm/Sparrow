@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.group.mapper
 
+import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentModel
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationState
@@ -8,7 +9,6 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessage
 import com.cbgm.sparrow.feature.chats.presentation.component.model.DeliveryProgressModel
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageMediaAttachmentModel
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMemberProgressUi
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMessageUiModel
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState

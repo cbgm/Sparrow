@@ -18,8 +18,10 @@ import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
-import com.cbgm.sparrow.feature.chats.data.attachment.MessageAttachmentTransfer
-import com.cbgm.sparrow.feature.chats.data.attachment.PreparedMessageAttachment
+import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
+import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachment
+import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
+import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMediaAttachment
 import com.cbgm.sparrow.feature.chats.data.group.delivery.GroupMessageDeliveryCoordinator
 import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
@@ -29,8 +31,6 @@ import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
-import com.cbgm.sparrow.feature.chats.domain.model.attachment.MessageAttachmentPolicy
-import com.cbgm.sparrow.feature.chats.domain.model.attachment.OutgoingMediaAttachment
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessageDeliveryStateMachine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -51,7 +51,7 @@ class GroupOutgoingMessageProcessor(
     private val deliveryCoordinator: GroupMessageDeliveryCoordinator,
     private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
     private val groupMessageContentCodec: GroupMessageContentCodec,
-    private val attachmentTransfer: MessageAttachmentTransfer
+    private val attachmentTransfer: MessageAttachmentDataSource
 ) {
     private val sendMutex = Mutex()
     private val logger = SparrowLog.withTag("GroupOutgoingMessageProcessor")

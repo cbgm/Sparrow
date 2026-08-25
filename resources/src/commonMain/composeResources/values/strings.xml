@@ -542,6 +542,7 @@
     <string name="feature_safety_block_confirm_description">This user will be blocked and their direct-chat authorization will be revoked. You can unblock them later in Settings.</string>
     <string name="feature_safety_block_error">The user could not be blocked completely. Please try again.</string>
 
-    <string name="feature_chats_media">Media</string>
-    <string name="feature_chats_save_to_camera_roll">Save to camera roll</string>
+    <string name="feature_attachments_choose_gallery">Choose from gallery</string>
+    <string name="feature_attachments_media">Media</string>
+    <string name="feature_attachments_save_to_camera_roll">Save to camera roll</string>
 </resources>

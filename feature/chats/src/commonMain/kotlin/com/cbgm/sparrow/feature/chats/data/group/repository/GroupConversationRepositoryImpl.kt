@@ -10,7 +10,7 @@ import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.MessageAttachmentEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessages
-import com.cbgm.sparrow.feature.chats.data.attachment.toDomainAttachmentsByMessageId
+import com.cbgm.sparrow.feature.attachments.data.mapper.toDomainAttachmentsByMessageId
 import com.cbgm.sparrow.feature.chats.data.group.mapper.toGroupConversation
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupConversationRepository

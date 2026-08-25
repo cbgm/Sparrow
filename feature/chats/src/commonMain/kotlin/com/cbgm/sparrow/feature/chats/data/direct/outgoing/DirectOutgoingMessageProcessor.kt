@@ -13,15 +13,15 @@ import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.entity.MessageEntity
-import com.cbgm.sparrow.feature.chats.data.attachment.MessageAttachmentTransfer
-import com.cbgm.sparrow.feature.chats.data.attachment.PreparedMessageAttachment
+import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
+import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachment
+import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
+import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMediaAttachment
 import com.cbgm.sparrow.feature.chats.data.direct.delivery.DirectMessageDeliveryCoordinator
 import com.cbgm.sparrow.feature.chats.data.direct.mapper.toDirectDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
-import com.cbgm.sparrow.feature.chats.domain.model.attachment.MessageAttachmentPolicy
-import com.cbgm.sparrow.feature.chats.domain.model.attachment.OutgoingMediaAttachment
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessageDeliveryStateMachine
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectPendingAuthorizationMessagePolicy
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
@@ -43,7 +43,7 @@ class DirectOutgoingMessageProcessor(
     private val requireDirectChatAuthorization: RequireDirectChatAuthorizationUseCase,
     private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
     private val deliveryCoordinator: DirectMessageDeliveryCoordinator,
-    private val attachmentTransfer: MessageAttachmentTransfer
+    private val attachmentTransfer: MessageAttachmentDataSource
 ) {
     private val logger = SparrowLog.withTag("DirectOutgoingMessageProcessor")
 

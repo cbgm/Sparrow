@@ -13,8 +13,8 @@ import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.ConversationType
 import com.cbgm.sparrow.data.database.entity.MessageEntity
-import com.cbgm.sparrow.feature.chats.data.attachment.MessageAttachmentCacheCoordinator
-import com.cbgm.sparrow.feature.chats.data.attachment.MessageAttachmentTransfer
+import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
+import com.cbgm.sparrow.feature.attachments.runtime.MessageAttachmentCacheCoordinator
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 
@@ -24,7 +24,7 @@ class DirectMessagePacketHandler(
     private val contactDao: ContactDao,
     private val protocolOutbox: ProtocolOutbox,
     private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor,
-    private val attachmentTransfer: MessageAttachmentTransfer,
+    private val attachmentTransfer: MessageAttachmentDataSource,
     private val attachmentCacheCoordinator: MessageAttachmentCacheCoordinator
 ) {
     private val logger = SparrowLog.withTag("DirectMessagePacketHandler")

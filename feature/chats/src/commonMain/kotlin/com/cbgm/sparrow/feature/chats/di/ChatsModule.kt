@@ -2,9 +2,6 @@ package com.cbgm.sparrow.feature.chats.di
 
 import com.cbgm.sparrow.core.protocol.handler.IncomingMessageHandler
 import com.cbgm.sparrow.core.protocol.outbox.OutboxDeliveryStateListener
-import com.cbgm.sparrow.feature.chats.data.attachment.MessageAttachmentCacheCoordinator
-import com.cbgm.sparrow.feature.chats.data.attachment.MessageAttachmentTransfer
-import com.cbgm.sparrow.feature.chats.data.attachment.repository.MessageAttachmentRepositoryImpl
 import com.cbgm.sparrow.feature.chats.data.datasource.UnreadableTransportMessageDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.delivery.DirectMessageDeliveryCoordinator
@@ -84,7 +81,6 @@ import com.cbgm.sparrow.feature.chats.data.incoming.IncomingPacketRouter
 import com.cbgm.sparrow.feature.chats.data.incoming.ReceiptIncomingPacketRouter
 import com.cbgm.sparrow.feature.chats.data.outbox.ChatOutboxDeliveryStateRouter
 import com.cbgm.sparrow.feature.chats.data.overview.repository.ConversationOverviewRepositoryImpl
-import com.cbgm.sparrow.feature.chats.domain.repository.attachment.MessageAttachmentRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectConversationRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectMessageRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupAvatarRepository
@@ -95,7 +91,6 @@ import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupMessageReposi
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationActionRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.overview.ConversationOverviewRepository
-import com.cbgm.sparrow.feature.chats.domain.usecase.attachment.LoadMessageAttachmentUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.contact.EncodeContactForSharingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.DeleteDirectConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.GetOrCreateDirectConversationUseCase
@@ -169,8 +164,6 @@ val chatsModule =
     }
 
 private fun org.koin.core.module.Module.registerDirectData() {
-    singleOf(::MessageAttachmentTransfer)
-    singleOf(::MessageAttachmentCacheCoordinator)
     singleOf(::DirectConversationDataSource)
     singleOf(::DirectMessageDeliveryCoordinator)
     singleOf(::DirectInvitationConversationCoordinator)
@@ -260,9 +253,6 @@ private fun org.koin.core.module.Module.registerIncomingRouting() {
 }
 
 private fun org.koin.core.module.Module.registerRepositories() {
-    singleOf(::MessageAttachmentRepositoryImpl) {
-        bind<MessageAttachmentRepository>()
-    }
     singleOf(::DirectConversationRepositoryImpl) {
         bind<DirectConversationRepository>()
     }
@@ -296,7 +286,6 @@ private fun org.koin.core.module.Module.registerRepositories() {
 }
 
 private fun org.koin.core.module.Module.registerUseCases() {
-    singleOf(::LoadMessageAttachmentUseCase)
     singleOf(::EncodeContactForSharingUseCase)
     singleOf(::GetOrCreateDirectConversationUseCase)
     singleOf(::ObserveDirectConversationUseCase)

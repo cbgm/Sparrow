@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.chats.data.group.repository
 
 import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
+import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMediaAttachment
 import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupOutgoingMessageProcessor
-import com.cbgm.sparrow.feature.chats.domain.model.attachment.OutgoingMediaAttachment
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupMessageRepository
 
 class GroupMessageRepositoryImpl(

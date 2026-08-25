@@ -23,7 +23,6 @@ kotlin {
             implementation(projects.feature.contacts)
             implementation(projects.feature.attachments)
             implementation(projects.feature.identity)
-            implementation(projects.feature.media)
             implementation(projects.feature.safety)
 
             implementation(libs.bundles.compose)
@@ -34,7 +33,6 @@ kotlin {
 
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
-            implementation(libs.androidx.photopicker.compose)
         }
 
         commonTest.dependencies {

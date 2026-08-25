@@ -33,12 +33,13 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.messageBubble
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaType
+import com.cbgm.sparrow.feature.attachments.presentation.component.MessageMediaAttachments
+import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentModel
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
-import com.cbgm.sparrow.feature.chats.domain.model.attachment.MessageMediaType
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageMediaAttachmentModel
 import com.cbgm.sparrow.feature.safety.presentation.component.MessageSafetyWarning
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
 import com.cbgm.sparrow.resources.Res

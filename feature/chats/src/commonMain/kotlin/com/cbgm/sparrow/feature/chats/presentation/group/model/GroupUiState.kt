@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.chats.presentation.group.model
 
+import com.cbgm.sparrow.feature.attachments.presentation.model.GalleryMediaSelection
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMemberInvitationStatus
-import com.cbgm.sparrow.feature.chats.presentation.attachment.model.GalleryMediaSelection
 
 data class GroupMemberProgressUi(
     val displayName: String,

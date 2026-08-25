@@ -3,11 +3,11 @@ package com.cbgm.sparrow.feature.chats.data.direct.repository
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
 import com.cbgm.sparrow.data.database.model.ConversationWithMessages
-import com.cbgm.sparrow.feature.chats.data.attachment.MessageAttachmentTransfer
-import com.cbgm.sparrow.feature.chats.data.attachment.toDomainAttachmentsByMessageId
+import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
+import com.cbgm.sparrow.feature.attachments.data.mapper.toDomainAttachmentsByMessageId
+import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaAttachment
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.mapper.toDirectConversation
-import com.cbgm.sparrow.feature.chats.domain.model.attachment.MessageMediaAttachment
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectConversationRepository
 import kotlinx.coroutines.flow.Flow
@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.map
 class DirectConversationRepositoryImpl(
     private val chatDao: ChatDao,
     private val messageAttachmentDao: MessageAttachmentDao,
-    private val messageAttachmentTransfer: MessageAttachmentTransfer,
+    private val messageAttachmentTransfer: MessageAttachmentDataSource,
     private val conversationDataSource: DirectConversationDataSource
 ) : DirectConversationRepository {
     override fun observe(conversationId: String): Flow<DirectConversation?> =

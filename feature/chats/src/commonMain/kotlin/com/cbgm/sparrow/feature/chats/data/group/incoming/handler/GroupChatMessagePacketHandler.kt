@@ -11,8 +11,8 @@ import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProces
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.entity.MessageEntity
-import com.cbgm.sparrow.feature.chats.data.attachment.MessageAttachmentCacheCoordinator
-import com.cbgm.sparrow.feature.chats.data.attachment.MessageAttachmentTransfer
+import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
+import com.cbgm.sparrow.feature.attachments.runtime.MessageAttachmentCacheCoordinator
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_END_TO_END_ENCRYPTED_MODE
 import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
@@ -24,7 +24,7 @@ class GroupChatMessagePacketHandler(
     private val groupSecurityManager: GroupSecurityManager,
     private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor,
     private val groupMessageContentCodec: GroupMessageContentCodec,
-    private val attachmentTransfer: MessageAttachmentTransfer,
+    private val attachmentTransfer: MessageAttachmentDataSource,
     private val attachmentCacheCoordinator: MessageAttachmentCacheCoordinator
 ) : GroupPacketHandler {
     private val logger = SparrowLog.withTag("GroupChatMessagePacketHandler")

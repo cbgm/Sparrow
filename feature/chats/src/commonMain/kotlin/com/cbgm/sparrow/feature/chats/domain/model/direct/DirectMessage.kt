@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.chats.domain.model.direct
 
+import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaAttachment
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
-import com.cbgm.sparrow.feature.chats.domain.model.attachment.MessageMediaAttachment
 
 data class DirectMessage(
     val id: String,

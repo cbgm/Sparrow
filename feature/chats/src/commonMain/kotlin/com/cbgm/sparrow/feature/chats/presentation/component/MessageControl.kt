@@ -17,7 +17,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.chats.presentation.attachment.model.GalleryMediaSelection
+import com.cbgm.sparrow.feature.attachments.presentation.component.AttachmentBar
+import com.cbgm.sparrow.feature.attachments.presentation.component.GallerySelectionPreview
+import com.cbgm.sparrow.feature.attachments.presentation.component.previewGalleryMediaSelections
+import com.cbgm.sparrow.feature.attachments.presentation.model.GalleryMediaSelection
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_chat_typing
 import org.jetbrains.compose.resources.stringResource

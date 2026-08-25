@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.chats.domain.repository.group
 
-import com.cbgm.sparrow.feature.chats.domain.model.attachment.OutgoingMediaAttachment
+import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMediaAttachment
 
 interface GroupMessageRepository {
     suspend fun send(

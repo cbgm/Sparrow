@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.chats.presentation.direct.model
 
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
+import com.cbgm.sparrow.feature.attachments.presentation.model.GalleryMediaSelection
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
-import com.cbgm.sparrow.feature.chats.presentation.attachment.model.GalleryMediaSelection
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
 
 data class DirectUiState(
