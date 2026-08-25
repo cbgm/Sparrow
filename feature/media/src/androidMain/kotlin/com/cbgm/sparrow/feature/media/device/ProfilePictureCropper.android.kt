@@ -1,8 +1,8 @@
-package com.cbgm.sparrow.core.ui.avatar.editor.platform
+package com.cbgm.sparrow.feature.media.device
 
 import android.graphics.Bitmap
 import androidx.core.graphics.scale
-import com.cbgm.sparrow.core.ui.avatar.editor.crop.ProfilePictureCropRegion
+import com.cbgm.sparrow.feature.media.domain.model.ProfilePictureCropRegion
 import java.io.ByteArrayOutputStream
 
 internal actual fun cropAndEncodeProfilePicture(

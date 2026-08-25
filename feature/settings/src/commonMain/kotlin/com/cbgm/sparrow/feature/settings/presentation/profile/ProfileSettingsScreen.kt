@@ -31,9 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.avatar.editor.AvatarEditor
-import com.cbgm.sparrow.core.ui.avatar.editor.AvatarEditorStrings
-import com.cbgm.sparrow.core.ui.avatar.editor.platform.ProfilePictureImage
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
@@ -43,6 +40,9 @@ import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.identity.domain.model.LocalProfilePicture
+import com.cbgm.sparrow.feature.media.presentation.avatar.AvatarEditor
+import com.cbgm.sparrow.feature.media.presentation.avatar.AvatarEditorStrings
+import com.cbgm.sparrow.feature.media.presentation.avatar.ProfilePictureImage
 import com.cbgm.sparrow.feature.settings.presentation.profile.model.ProfileSettingsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.profile.model.ProfileSettingsUiState
 import com.cbgm.sparrow.resources.Res

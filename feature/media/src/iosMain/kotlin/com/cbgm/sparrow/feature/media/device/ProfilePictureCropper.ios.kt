@@ -1,14 +1,14 @@
-package com.cbgm.sparrow.core.ui.avatar.editor.platform
+package com.cbgm.sparrow.feature.media.device
 
-import com.cbgm.sparrow.core.ui.avatar.editor.crop.ProfilePictureCropRegion
+import com.cbgm.sparrow.feature.media.domain.model.ProfilePictureCropRegion
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.CoreGraphics.CGRectMake
 import platform.CoreGraphics.CGSizeMake
-import platform.UIKit.UIImage
-import platform.UIKit.UIImageJPEGRepresentation
 import platform.UIKit.UIGraphicsBeginImageContextWithOptions
 import platform.UIKit.UIGraphicsEndImageContext
 import platform.UIKit.UIGraphicsGetImageFromCurrentImageContext
+import platform.UIKit.UIImage
+import platform.UIKit.UIImageJPEGRepresentation
 import kotlin.math.min
 
 @OptIn(ExperimentalForeignApi::class)

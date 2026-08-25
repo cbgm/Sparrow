@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.core.ui.avatar.editor.screen
+package com.cbgm.sparrow.feature.media.presentation.avatar
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -20,13 +20,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.text.font.FontWeight
-import com.cbgm.sparrow.core.ui.avatar.editor.crop.ProfilePictureCropCanvas
-import com.cbgm.sparrow.core.ui.avatar.editor.crop.ProfilePictureCropRegion
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowRoundApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowStaticScaffold
 import com.cbgm.sparrow.core.ui.theme.FunctionalColors
+import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.media.domain.model.ProfilePictureCropRegion
+import com.cbgm.sparrow.feature.media.presentation.avatar.crop.ProfilePictureCropCanvas
 import org.jetbrains.compose.resources.decodeToImageBitmap
 
 @Composable
@@ -36,10 +40,27 @@ internal fun ProfilePictureCropScreen(
     onConfirm: (ProfilePictureCropRegion) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val image = remember(sourceBytes) {
-        runCatching { sourceBytes.decodeToImageBitmap() }.getOrNull()
-    }
-    var cropRegion by remember(sourceBytes) {
+    val image =
+        remember(sourceBytes) {
+            runCatching { sourceBytes.decodeToImageBitmap() }.getOrNull()
+        }
+
+    ProfilePictureCropContent(
+        image = image,
+        title = title,
+        onConfirm = onConfirm,
+        onDismiss = onDismiss
+    )
+}
+
+@Composable
+private fun ProfilePictureCropContent(
+    image: ImageBitmap?,
+    title: String,
+    onConfirm: (ProfilePictureCropRegion) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var cropRegion by remember(image) {
         mutableStateOf<ProfilePictureCropRegion?>(null)
     }
 
@@ -79,10 +100,10 @@ internal fun ProfilePictureCropScreen(
                         Modifier
                             .fillMaxSize()
                             .padding(
-                                start = MaterialTheme.spacing.profilePictureCropScreen.horizontalPadding,
-                                end = MaterialTheme.spacing.profilePictureCropScreen.horizontalPadding,
-                                top = MaterialTheme.spacing.profilePictureCropScreen.topPadding,
-                                bottom = MaterialTheme.spacing.profilePictureCropScreen.bottomPadding
+                                start = PROFILE_PICTURE_CROP_HORIZONTAL_PADDING,
+                                end = PROFILE_PICTURE_CROP_HORIZONTAL_PADDING,
+                                top = PROFILE_PICTURE_CROP_TOP_PADDING,
+                                bottom = PROFILE_PICTURE_CROP_BOTTOM_PADDING
                             )
                 )
             }
@@ -99,3 +120,20 @@ internal fun ProfilePictureCropScreen(
         }
     }
 }
+
+@Preview
+@Composable
+private fun ProfilePictureCropScreenPreview() {
+    SparrowTheme {
+        ProfilePictureCropContent(
+            image = ImageBitmap(512, 512),
+            title = "Crop picture",
+            onConfirm = {},
+            onDismiss = {}
+        )
+    }
+}
+
+private val PROFILE_PICTURE_CROP_HORIZONTAL_PADDING = 20.dp
+private val PROFILE_PICTURE_CROP_TOP_PADDING = 80.dp
+private val PROFILE_PICTURE_CROP_BOTTOM_PADDING = 104.dp

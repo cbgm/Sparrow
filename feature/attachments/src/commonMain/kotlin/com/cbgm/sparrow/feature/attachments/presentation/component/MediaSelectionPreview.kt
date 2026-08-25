@@ -23,12 +23,12 @@ import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaType
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItem
-import com.cbgm.sparrow.feature.attachments.presentation.model.GalleryMediaSelection
+import com.cbgm.sparrow.feature.attachments.presentation.model.MediaSelection
 import com.cbgm.sparrow.feature.media.presentation.component.MediaThumbnail
 
 @Composable
-fun GallerySelectionPreview(
-    media: List<GalleryMediaSelection>,
+fun MediaSelectionPreview(
+    media: List<MediaSelection>,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true
@@ -39,14 +39,14 @@ fun GallerySelectionPreview(
         modifier = modifier.clickable(enabled = enabled, onClick = onClick),
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
-        items(media, key = GalleryMediaSelection::id) { item ->
-            GallerySelectionItem(media = item)
+        items(media, key = MediaSelection::id) { item ->
+            MediaSelectionItem(media = item)
         }
     }
 }
 
 @Composable
-private fun GallerySelectionItem(media: GalleryMediaSelection) {
+private fun MediaSelectionItem(media: MediaSelection) {
     Box(modifier = Modifier.size(Dimens.MessageAttachment.previewSize)) {
         Surface(
             modifier = Modifier.fillMaxSize(),
@@ -82,20 +82,20 @@ private fun GallerySelectionItem(media: GalleryMediaSelection) {
 
 @Preview
 @Composable
-private fun GallerySelectionPreviewPreview() {
+private fun MediaSelectionPreviewPreview() {
     SparrowTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
-            GallerySelectionPreview(
-                media = previewGalleryMediaSelections(),
+            MediaSelectionPreview(
+                media = previewMediaSelections(),
                 onClick = {}
             )
         }
     }
 }
 
-fun previewGalleryMediaSelections(): List<GalleryMediaSelection> =
+fun previewMediaSelections(): List<MediaSelection> =
     listOf(
-        GalleryMediaSelection(
+        MediaSelection(
             id = "preview-image",
             type = MessageMediaType.IMAGE,
             bytes = PREVIEW_IMAGE_PNG.hexToBytes(),
@@ -103,7 +103,7 @@ fun previewGalleryMediaSelections(): List<GalleryMediaSelection> =
             width = 48,
             height = 48
         ),
-        GalleryMediaSelection(
+        MediaSelection(
             id = "preview-video",
             type = MessageMediaType.VIDEO,
             bytes = PREVIEW_VIDEO_THUMBNAIL_PNG.hexToBytes(),

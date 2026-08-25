@@ -18,9 +18,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.presentation.component.AttachmentBar
-import com.cbgm.sparrow.feature.attachments.presentation.component.GallerySelectionPreview
-import com.cbgm.sparrow.feature.attachments.presentation.component.previewGalleryMediaSelections
-import com.cbgm.sparrow.feature.attachments.presentation.model.GalleryMediaSelection
+import com.cbgm.sparrow.feature.attachments.presentation.component.MediaSelectionPreview
+import com.cbgm.sparrow.feature.attachments.presentation.component.previewMediaSelections
+import com.cbgm.sparrow.feature.attachments.presentation.model.MediaSelection
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_chat_typing
 import org.jetbrains.compose.resources.stringResource
@@ -45,9 +45,10 @@ fun MessageControl(
     onSendClick: () -> Unit,
     isInputEnabled: Boolean,
     isSendEnabled: Boolean,
-    selectedGalleryMedia: List<GalleryMediaSelection> = emptyList(),
-    onGallerySelectionClick: () -> Unit = {},
+    selectedMedia: List<MediaSelection> = emptyList(),
+    onMediaSelectionClick: () -> Unit = {},
     isGalleryEnabled: Boolean = true,
+    isCameraEnabled: Boolean = true,
     onAttachmentButtonClick: (AttachmentClick) -> Unit
 ) {
     var isAttachmentBarVisible by remember { mutableStateOf(false) }
@@ -83,9 +84,9 @@ fun MessageControl(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            GallerySelectionPreview(
-                media = selectedGalleryMedia,
-                onClick = onGallerySelectionClick,
+            MediaSelectionPreview(
+                media = selectedMedia,
+                onClick = onMediaSelectionClick,
                 modifier = Modifier.padding(bottom = MaterialTheme.spacing.base)
             )
             MessageInput(
@@ -94,7 +95,7 @@ fun MessageControl(
                 onSendClick = onSendClick,
                 inputEnabled = isInputEnabled,
                 sendEnabled = isSendEnabled,
-                hasAttachments = selectedGalleryMedia.isNotEmpty(),
+                hasAttachments = selectedMedia.isNotEmpty(),
                 onAttachmentClick = { isAttachmentBarVisible = !isAttachmentBarVisible },
                 isAttachmentVisible = isAttachmentBarVisible
             )
@@ -117,7 +118,8 @@ fun MessageControl(
                         isAttachmentBarVisible = false
                         onAttachmentButtonClick(AttachmentClick.OpenContacts)
                     },
-                    isGalleryEnabled = isGalleryEnabled
+                    isGalleryEnabled = isGalleryEnabled,
+                    isCameraEnabled = isCameraEnabled
                 )
             }
         }
@@ -137,9 +139,10 @@ private fun MessageControlPreview() {
             onSendClick = {},
             isInputEnabled = true,
             isSendEnabled = true,
-            selectedGalleryMedia = previewGalleryMediaSelections(),
-            onGallerySelectionClick = {},
+            selectedMedia = previewMediaSelections(),
+            onMediaSelectionClick = {},
             isGalleryEnabled = true,
+            isCameraEnabled = true,
             onAttachmentButtonClick = {}
         )
     }

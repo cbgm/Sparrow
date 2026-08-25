@@ -7,7 +7,8 @@ import androidx.compose.ui.uikit.LocalUIViewController
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaType
-import com.cbgm.sparrow.feature.attachments.presentation.model.GalleryMediaSelection
+import com.cbgm.sparrow.feature.attachments.presentation.model.MediaSelection
+import com.cbgm.sparrow.feature.attachments.presentation.model.MediaSelectionSource
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
@@ -35,8 +36,8 @@ import kotlin.math.roundToInt
 @Composable
 actual fun rememberGalleryPickerLauncher(
     maxItems: Int,
-    selectedMedia: List<GalleryMediaSelection>,
-    onMediaSelected: (List<GalleryMediaSelection>) -> Unit,
+    selectedMedia: List<MediaSelection>,
+    onMediaSelected: (List<MediaSelection>) -> Unit,
     onDismissed: () -> Unit,
     onError: (String) -> Unit
 ): GalleryPickerLauncher {
@@ -46,21 +47,25 @@ actual fun rememberGalleryPickerLauncher(
     val currentOnMediaSelected = rememberUpdatedState(onMediaSelected)
     val currentOnDismissed = rememberUpdatedState(onDismissed)
     val currentOnError = rememberUpdatedState(onError)
+    val externalSelections = selectedMedia.filter { it.source != MediaSelectionSource.GALLERY }
+    val gallerySelectionLimit = (maxItems - externalSelections.size).coerceAtLeast(1)
     val delegate =
-        remember(maxItems) {
+        remember(gallerySelectionLimit, externalSelections) {
             GalleryPickerDelegate(
-                maxItems = maxItems,
-                onMediaSelected = { currentOnMediaSelected.value(it) },
+                maxItems = gallerySelectionLimit,
+                onMediaSelected = { gallerySelections ->
+                    currentOnMediaSelected.value(externalSelections + gallerySelections)
+                },
                 onDismissed = { currentOnDismissed.value() },
                 onError = { currentOnError.value(it) }
             )
         }
 
-    return remember(viewController, delegate, maxItems) {
+    return remember(viewController, delegate, gallerySelectionLimit) {
         GalleryPickerLauncher(
             launch = {
                 val configuration = PHPickerConfiguration()
-                configuration.selectionLimit = maxItems.toLong()
+                configuration.selectionLimit = gallerySelectionLimit.toLong()
                 configuration.filter =
                     PHPickerFilter.anyFilterMatchingSubfilters(
                         listOf(PHPickerFilter.imagesFilter, PHPickerFilter.videosFilter)
@@ -77,7 +82,7 @@ actual fun rememberGalleryPickerLauncher(
 @OptIn(ExperimentalForeignApi::class)
 private class GalleryPickerDelegate(
     private val maxItems: Int,
-    private val onMediaSelected: (List<GalleryMediaSelection>) -> Unit,
+    private val onMediaSelected: (List<MediaSelection>) -> Unit,
     private val onDismissed: () -> Unit,
     private val onError: (String) -> Unit
 ) : NSObject(), PHPickerViewControllerDelegateProtocol {
@@ -135,20 +140,20 @@ private class GalleryPickerDelegate(
 
 private class GallerySelectionCollector(
     count: Int,
-    private val onMediaSelected: (List<GalleryMediaSelection>) -> Unit,
+    private val onMediaSelected: (List<MediaSelection>) -> Unit,
     private val onError: (String) -> Unit
 ) {
     private val lock = NSLock()
-    private val results = arrayOfNulls<GalleryMediaSelection>(count)
+    private val results = arrayOfNulls<MediaSelection>(count)
     private var remaining = count
     private var firstError: String? = null
 
     fun complete(
         index: Int,
-        selection: GalleryMediaSelection?,
+        selection: MediaSelection?,
         errorMessage: String?
     ) {
-        val completed: List<GalleryMediaSelection>?
+        val completed: List<MediaSelection>?
         val error: String?
         lock.lock()
         try {
@@ -176,11 +181,11 @@ private class GallerySelectionCollector(
 }
 
 @OptIn(ExperimentalForeignApi::class)
-private fun decodeGalleryImage(data: NSData): GalleryMediaSelection {
+private fun decodeGalleryImage(data: NSData): MediaSelection {
     val image = requireNotNull(UIImage(data = data)) { "Selected image could not be decoded" }
     val normalized = image.normalizedForMessageAttachment()
     val bytes = normalized.encodeWithinLimit()
-    return GalleryMediaSelection(
+    return MediaSelection(
         id = IdGenerator.generate(prefix = "gallery-image"),
         type = MessageMediaType.IMAGE,
         bytes = bytes,
@@ -191,11 +196,11 @@ private fun decodeGalleryImage(data: NSData): GalleryMediaSelection {
 }
 
 @OptIn(ExperimentalForeignApi::class)
-private fun decodeGalleryVideo(data: NSData): GalleryMediaSelection {
+private fun decodeGalleryVideo(data: NSData): MediaSelection {
     require(data.length <= MessageAttachmentPolicy.MAX_VIDEO_BYTES.toULong()) {
         "Selected video exceeds ${MessageAttachmentPolicy.MAX_VIDEO_BYTES} bytes"
     }
-    return GalleryMediaSelection(
+    return MediaSelection(
         id = IdGenerator.generate(prefix = "gallery-video"),
         type = MessageMediaType.VIDEO,
         bytes = data.toByteArray(),

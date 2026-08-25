@@ -16,8 +16,6 @@ data class Spacing(
     val screenPadding: Dp = 24.dp,
     val zero: Dp = 0.dp,
     val listDividerStart: Dp = 80.dp,
-    val profilePictureCameraScreen: ProfilePictureCameraScreenSpacing = ProfilePictureCameraScreenSpacing(),
-    val profilePictureCropScreen: ProfilePictureCropScreenSpacing = ProfilePictureCropScreenSpacing(),
     val button: ButtonSpacing = ButtonSpacing(),
     val card: CardSpacing = CardSpacing(),
     val startupScreen: StartupScreenSpacing = StartupScreenSpacing(),
@@ -40,16 +38,6 @@ data class Spacing(
 data class FieldSpacing(
     val horizontalPadding: Dp = 12.dp,
     val verticalPadding: Dp = 6.dp
-)
-
-data class ProfilePictureCameraScreenSpacing(
-    val captureButtonBottomPadding: Dp = 36.dp
-)
-
-data class ProfilePictureCropScreenSpacing(
-    val horizontalPadding: Dp = 20.dp,
-    val topPadding: Dp = 80.dp,
-    val bottomPadding: Dp = 104.dp
 )
 
 data class ButtonSpacing(

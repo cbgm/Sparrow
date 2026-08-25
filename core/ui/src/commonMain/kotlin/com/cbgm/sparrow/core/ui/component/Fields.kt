@@ -194,7 +194,9 @@ fun SparrowInputField(
                     unfocusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(
                         alpha = Alpha.OpaqueText
                     ),
-                    cursorColor = MaterialTheme.colorScheme.primary
+                    cursorColor = MaterialTheme.colorScheme.primary,
+                    focusedPlaceholderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.TextField.placeholder),
+                    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.TextField.placeholder)
                 ),
                 contentPadding = PaddingValues(
                     horizontal = MaterialTheme.spacing.textField.horizontalPadding,

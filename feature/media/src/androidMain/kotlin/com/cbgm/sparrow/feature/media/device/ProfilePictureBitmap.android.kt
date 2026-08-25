@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.core.ui.avatar.editor.platform
+package com.cbgm.sparrow.feature.media.device
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -11,23 +11,35 @@ import kotlin.math.ceil
 
 internal fun decodeProfilePictureBitmap(
     context: Context,
-    uri: Uri
+    uri: Uri,
+    maxDimension: Int = DEFAULT_MAX_DECODE_DIMENSION
 ): Bitmap? =
     runCatching {
         decodeProfilePictureBitmap(
-            ImageDecoder.createSource(context.contentResolver, uri)
+            source = ImageDecoder.createSource(context.contentResolver, uri),
+            maxDimension = maxDimension
         )
     }.getOrNull()
 
-internal fun decodeProfilePictureBitmap(file: File): Bitmap? =
-    runCatching {
-        decodeProfilePictureBitmap(ImageDecoder.createSource(file))
-    }.getOrNull()
-
-internal fun decodeProfilePictureBitmap(bytes: ByteArray): Bitmap? =
+internal fun decodeProfilePictureBitmap(
+    file: File,
+    maxDimension: Int = DEFAULT_MAX_DECODE_DIMENSION
+): Bitmap? =
     runCatching {
         decodeProfilePictureBitmap(
-            ImageDecoder.createSource(ByteBuffer.wrap(bytes))
+            source = ImageDecoder.createSource(file),
+            maxDimension = maxDimension
+        )
+    }.getOrNull()
+
+internal fun decodeProfilePictureBitmap(
+    bytes: ByteArray,
+    maxDimension: Int = DEFAULT_MAX_DECODE_DIMENSION
+): Bitmap? =
+    runCatching {
+        decodeProfilePictureBitmap(
+            source = ImageDecoder.createSource(ByteBuffer.wrap(bytes)),
+            maxDimension = maxDimension
         )
     }.getOrNull()
 
@@ -39,17 +51,20 @@ internal fun encodeProfilePictureSource(bitmap: Bitmap): ByteArray =
         output.toByteArray()
     }
 
-private fun decodeProfilePictureBitmap(source: ImageDecoder.Source): Bitmap =
+private fun decodeProfilePictureBitmap(
+    source: ImageDecoder.Source,
+    maxDimension: Int
+): Bitmap =
     ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
         decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
         val largestDimension = maxOf(info.size.width, info.size.height)
 
-        if (largestDimension > MAX_DECODE_DIMENSION) {
+        if (largestDimension > maxDimension) {
             decoder.setTargetSampleSize(
-                ceil(largestDimension.toDouble() / MAX_DECODE_DIMENSION).toInt()
+                ceil(largestDimension.toDouble() / maxDimension.toDouble()).toInt()
             )
         }
     }
 
-private const val MAX_DECODE_DIMENSION = 2048
+private const val DEFAULT_MAX_DECODE_DIMENSION = 2048
 private const val SOURCE_JPEG_QUALITY = 92

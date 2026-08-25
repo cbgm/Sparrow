@@ -2,11 +2,17 @@ package com.cbgm.sparrow.feature.attachments.presentation.model
 
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaType
 
-data class GalleryMediaSelection(
+enum class MediaSelectionSource {
+    GALLERY,
+    CAMERA
+}
+
+data class MediaSelection(
     val id: String,
     val type: MessageMediaType,
     val bytes: ByteArray,
     val mimeType: String,
+    val source: MediaSelectionSource = MediaSelectionSource.GALLERY,
     val sourceReference: String? = null,
     val previewBytes: ByteArray? = null,
     val width: Int? = null,
@@ -17,7 +23,7 @@ data class GalleryMediaSelection(
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as GalleryMediaSelection
+        other as MediaSelection
 
         if (width != other.width) return false
         if (height != other.height) return false
@@ -26,6 +32,7 @@ data class GalleryMediaSelection(
         if (type != other.type) return false
         if (!bytes.contentEquals(other.bytes)) return false
         if (mimeType != other.mimeType) return false
+        if (source != other.source) return false
         if (sourceReference != other.sourceReference) return false
         if (!previewBytes.contentEquals(other.previewBytes)) return false
 
@@ -40,6 +47,7 @@ data class GalleryMediaSelection(
         result = 31 * result + type.hashCode()
         result = 31 * result + bytes.contentHashCode()
         result = 31 * result + mimeType.hashCode()
+        result = 31 * result + source.hashCode()
         result = 31 * result + (sourceReference?.hashCode() ?: 0)
         result = 31 * result + (previewBytes?.contentHashCode() ?: 0)
         return result

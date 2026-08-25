@@ -260,7 +260,9 @@
     <string name="feature_onboarding_approve_create_identity">Approve and create identity</string>
     <string name="feature_onboarding_approve_phone_number">Approve phone number</string>
     <string name="feature_onboarding_camera">Camera</string>
-    <string name="feature_onboarding_camera_description">Scan Sparrow identity QR codes.</string>
+    <string name="feature_onboarding_camera_description">Scan Sparrow identity QR codes and take photos/videos for attachments.</string>
+    <string name="feature_onboarding_audio">Audio</string>
+    <string name="feature_onboarding_audio_description">Record audio when taking videos.</string>
     <string name="feature_onboarding_contacts_permission_description">Find existing phone-book contacts.</string>
     <string name="feature_onboarding_contacts_stay_local">Your contacts stay local</string>
     <string name="feature_onboarding_contacts_stay_local_description">Contacts are used to match people by phone number on your device.</string>

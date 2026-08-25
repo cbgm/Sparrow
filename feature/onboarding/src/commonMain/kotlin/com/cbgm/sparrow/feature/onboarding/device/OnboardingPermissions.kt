@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 data class PermissionRequestResult(
     val contactsGranted: Boolean,
     val cameraGranted: Boolean,
+    val audioGranted: Boolean,
     val notificationsGranted: Boolean,
     val phoneNumberGranted: Boolean
 )

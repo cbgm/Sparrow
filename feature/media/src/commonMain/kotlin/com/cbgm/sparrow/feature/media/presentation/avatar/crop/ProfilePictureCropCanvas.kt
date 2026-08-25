@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.core.ui.avatar.editor.crop
+package com.cbgm.sparrow.feature.media.presentation.avatar.crop
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -24,9 +24,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import com.cbgm.sparrow.core.ui.theme.Alpha
-import com.cbgm.sparrow.core.ui.theme.Dimens
+import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.theme.FunctionalColors
+import com.cbgm.sparrow.feature.media.domain.model.ProfilePictureCropRegion
 import kotlin.math.roundToInt
 
 @Composable
@@ -136,13 +136,13 @@ internal fun ProfilePictureCropCanvas(
 
         drawPath(
             path = mask,
-            color = scrimColor.copy(alpha = Alpha.ProfilePictureCropScreen.scrim)
+            color = scrimColor.copy(alpha = PROFILE_PICTURE_CROP_SCRIM_ALPHA)
         )
         drawCircle(
             color = guideColor,
             radius = activeGeometry.cropRadius,
             center = center,
-            style = Stroke(width = Dimens.ProfilePictureCropScreen.guideStrokeWidth.toPx())
+            style = Stroke(width = PROFILE_PICTURE_CROP_GUIDE_STROKE_WIDTH.toPx())
         )
     }
 }
@@ -311,3 +311,6 @@ private fun zoomedImageOffset(
 
 private const val MIN_ZOOM = 1f
 private const val MAX_ZOOM = 6f
+
+private const val PROFILE_PICTURE_CROP_SCRIM_ALPHA = 0.58f
+private val PROFILE_PICTURE_CROP_GUIDE_STROKE_WIDTH = 3.dp

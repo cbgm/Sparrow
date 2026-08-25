@@ -1,28 +1,11 @@
-package com.cbgm.sparrow.core.ui.avatar.editor.platform
+package com.cbgm.sparrow.feature.media.presentation.avatar
 
 import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import com.cbgm.sparrow.core.ui.avatar.editor.crop.ProfilePictureCropRegion
 import org.jetbrains.compose.resources.decodeToImageBitmap
-
-internal data class ProfilePictureSourceLauncher(
-    val launchCamera: () -> Unit,
-    val launchGallery: () -> Unit
-)
-
-@Composable
-internal expect fun rememberProfilePictureSourceLauncher(
-    onPictureSelected: (ByteArray) -> Unit,
-    onSourceDismissed: () -> Unit
-): ProfilePictureSourceLauncher
-
-internal expect fun cropAndEncodeProfilePicture(
-    sourceBytes: ByteArray,
-    cropRegion: ProfilePictureCropRegion
-): ByteArray?
 
 @Composable
 fun ProfilePictureImage(

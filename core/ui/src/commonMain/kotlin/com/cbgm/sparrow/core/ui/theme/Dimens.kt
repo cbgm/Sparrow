@@ -216,14 +216,6 @@ object Dimens {
         val iconSize = 20.dp
     }
 
-    object ProfilePictureCameraScreen {
-        val buttonSize = 76.dp
-    }
-
-    object ProfilePictureCropScreen {
-        val guideStrokeWidth = 3.dp
-    }
-
     object AttachmentBar {
         val buttonSize = 50.dp
         val iconSize = 25.dp

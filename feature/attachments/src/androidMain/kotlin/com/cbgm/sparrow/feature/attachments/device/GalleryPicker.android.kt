@@ -44,7 +44,8 @@ import com.cbgm.sparrow.core.ui.theme.rectangle
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaType
-import com.cbgm.sparrow.feature.attachments.presentation.model.GalleryMediaSelection
+import com.cbgm.sparrow.feature.attachments.presentation.model.MediaSelection
+import com.cbgm.sparrow.feature.attachments.presentation.model.MediaSelectionSource
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_close
 import com.cbgm.sparrow.resources.feature_attachments_choose_gallery
@@ -59,8 +60,8 @@ import kotlin.math.roundToInt
 @Composable
 actual fun rememberGalleryPickerLauncher(
     maxItems: Int,
-    selectedMedia: List<GalleryMediaSelection>,
-    onMediaSelected: (List<GalleryMediaSelection>) -> Unit,
+    selectedMedia: List<MediaSelection>,
+    onMediaSelected: (List<MediaSelection>) -> Unit,
     onDismissed: () -> Unit,
     onError: (String) -> Unit
 ): GalleryPickerLauncher {
@@ -73,6 +74,8 @@ actual fun rememberGalleryPickerLauncher(
     val currentOnMediaSelected = rememberUpdatedState(onMediaSelected)
     val currentOnDismissed = rememberUpdatedState(onDismissed)
     val currentOnError = rememberUpdatedState(onError)
+    val externalSelectionCount = selectedMedia.count { it.source != MediaSelectionSource.GALLERY }
+    val gallerySelectionLimit = (maxItems - externalSelectionCount).coerceAtLeast(1)
     var isEmbeddedPickerVisible by remember { mutableStateOf(false) }
 
     fun handleSelection(
@@ -83,7 +86,9 @@ actual fun rememberGalleryPickerLauncher(
             if (emptyMeansDismissed) {
                 currentOnDismissed.value()
             } else {
-                currentOnMediaSelected.value(emptyList())
+                currentOnMediaSelected.value(
+                    currentSelectedMedia.value.filter { it.source != MediaSelectionSource.GALLERY }
+                )
             }
             return
         }
@@ -91,17 +96,25 @@ actual fun rememberGalleryPickerLauncher(
         scope.launch {
             runCatching {
                 withContext(Dispatchers.IO) {
+                    val currentSelections = currentSelectedMedia.value
+                    val externalSelections =
+                        currentSelections.filter { it.source != MediaSelectionSource.GALLERY }
                     val existingBySource =
-                        currentSelectedMedia.value
+                        currentSelections
+                            .filter { it.source == MediaSelectionSource.GALLERY }
                             .mapNotNull { media -> media.sourceReference?.let { it to media } }
                             .toMap()
+                    val availableGallerySlots =
+                        (currentMaxItems.value - externalSelections.size).coerceAtLeast(0)
+                    val gallerySelections =
+                        uris
+                            .distinctBy(Uri::toString)
+                            .take(availableGallerySlots)
+                            .map { uri ->
+                                existingBySource[uri.toString()] ?: decodeGalleryMedia(context, uri)
+                            }
 
-                    uris
-                        .distinctBy(Uri::toString)
-                        .take(currentMaxItems.value)
-                        .map { uri ->
-                            existingBySource[uri.toString()] ?: decodeGalleryMedia(context, uri)
-                        }
+                    externalSelections + gallerySelections
                 }
             }.onSuccess(currentOnMediaSelected.value)
                 .onFailure { error ->
@@ -119,15 +132,15 @@ actual fun rememberGalleryPickerLauncher(
 
     val multipleLauncher =
         rememberLauncherForActivityResult(
-            ActivityResultContracts.PickMultipleVisualMedia(maxItems.coerceAtLeast(2))
+            ActivityResultContracts.PickMultipleVisualMedia(gallerySelectionLimit.coerceAtLeast(2))
         ) { uris ->
             handleSelection(uris, emptyMeansDismissed = true)
         }
 
     if (isEmbeddedPickerVisible && supportsEmbeddedPhotoPicker()) {
         EmbeddedGalleryPickerDialog(
-            maxItems = maxItems,
-            selectedMedia = selectedMedia,
+            maxItems = gallerySelectionLimit,
+            selectedMedia = selectedMedia.filter { it.source == MediaSelectionSource.GALLERY },
             onSelectionComplete = { uris ->
                 isEmbeddedPickerVisible = false
                 handleSelection(uris, emptyMeansDismissed = false)
@@ -143,7 +156,7 @@ actual fun rememberGalleryPickerLauncher(
         )
     }
 
-    return remember(singleLauncher, multipleLauncher, maxItems) {
+    return remember(singleLauncher, multipleLauncher, maxItems, gallerySelectionLimit) {
         GalleryPickerLauncher(
             launch = {
                 if (supportsEmbeddedPhotoPicker()) {
@@ -151,7 +164,7 @@ actual fun rememberGalleryPickerLauncher(
                 } else {
                     val request =
                         PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-                    if (maxItems == 1) {
+                    if (gallerySelectionLimit == 1) {
                         singleLauncher.launch(request)
                     } else {
                         multipleLauncher.launch(request)
@@ -169,7 +182,7 @@ actual fun rememberGalleryPickerLauncher(
 @Composable
 private fun EmbeddedGalleryPickerDialog(
     maxItems: Int,
-    selectedMedia: List<GalleryMediaSelection>,
+    selectedMedia: List<MediaSelection>,
     onSelectionComplete: (List<Uri>) -> Unit,
     onDismissed: () -> Unit,
     onError: (String) -> Unit
@@ -177,7 +190,7 @@ private fun EmbeddedGalleryPickerDialog(
     val initialUris =
         remember(selectedMedia) {
             selectedMedia
-                .mapNotNull(GalleryMediaSelection::sourceReference)
+                .mapNotNull(MediaSelection::sourceReference)
                 .map(Uri::parse)
                 .toSet()
         }
@@ -284,7 +297,7 @@ private const val EMBEDDED_PICKER_EXTENSION = 15
 private fun decodeGalleryMedia(
     context: Context,
     uri: Uri
-): GalleryMediaSelection {
+): MediaSelection {
     val mimeType = context.contentResolver.getType(uri).orEmpty()
     return when {
         mimeType.startsWith("image/") -> decodeGalleryImage(context, uri)
@@ -296,7 +309,7 @@ private fun decodeGalleryMedia(
 private fun decodeGalleryImage(
     context: Context,
     uri: Uri
-): GalleryMediaSelection {
+): MediaSelection {
     val source = ImageDecoder.createSource(context.contentResolver, uri)
     val bitmap =
         ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
@@ -314,7 +327,7 @@ private fun decodeGalleryImage(
         }
 
     val bytes = encodeWithinLimit(bitmap)
-    return GalleryMediaSelection(
+    return MediaSelection(
         id = IdGenerator.generate(prefix = "gallery-image"),
         type = MessageMediaType.IMAGE,
         bytes = bytes,
@@ -329,7 +342,7 @@ private fun decodeGalleryVideo(
     context: Context,
     uri: Uri,
     mimeType: String
-): GalleryMediaSelection {
+): MediaSelection {
     context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { descriptor ->
         val knownLength = descriptor.length
         require(knownLength < 0L || knownLength <= MessageAttachmentPolicy.MAX_VIDEO_BYTES.toLong()) {
@@ -378,7 +391,7 @@ private fun decodeGalleryVideo(
         }
     }
 
-    return GalleryMediaSelection(
+    return MediaSelection(
         id = IdGenerator.generate(prefix = "gallery-video"),
         type = MessageMediaType.VIDEO,
         bytes = bytes,

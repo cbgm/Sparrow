@@ -264,8 +264,8 @@ private fun BottomBar(
     val galleryPicker =
         rememberGalleryPickerLauncher(
             maxItems = MessageAttachmentPolicy.MAX_ATTACHMENTS_PER_MESSAGE,
-            selectedMedia = uiState.selectedGalleryMedia,
-            onMediaSelected = { onUiEvent(GroupUiEvent.GalleryMediaSelected(it)) },
+            selectedMedia = uiState.selectedMedia,
+            onMediaSelected = { onUiEvent(GroupUiEvent.MediaSelected(it)) },
             onDismissed = {},
             onError = { onUiEvent(GroupUiEvent.AttachmentError(it)) }
         )
@@ -279,8 +279,8 @@ private fun BottomBar(
         onSendClick = { onUiEvent(GroupUiEvent.SendClicked) },
         isInputEnabled = !uiState.isLoading && !uiState.isSending && uiState.isMessageInputEnabled,
         isSendEnabled = !uiState.isLoading && !uiState.isSending && uiState.isMessageInputEnabled,
-        selectedGalleryMedia = uiState.selectedGalleryMedia,
-        onGallerySelectionClick = { galleryPicker.launch() },
+        selectedMedia = uiState.selectedMedia,
+        onMediaSelectionClick = { galleryPicker.launch() },
         isGalleryEnabled = !uiState.isLoading && !uiState.isSending && uiState.isMessageInputEnabled,
         onAttachmentButtonClick = { attachmentClick ->
             when (attachmentClick) {

@@ -25,23 +25,22 @@ actual fun OnboardingPermissionRequester(
     val permissions =
         remember {
             buildList {
-            /*
-             * READ_CONTACTS:
-             * Required for loading contacts and duplicate detection.
-             *
-             * WRITE_CONTACTS:
-             * Required for directly inserting a contact without
-             * opening the system contact editor.
-             */
+                /*
+                 * READ_CONTACTS:
+                 * Required for loading contacts and duplicate detection.
+                 *
+                 * WRITE_CONTACTS:
+                 * Required for directly inserting a contact without
+                 * opening the system contact editor.
+                 */
                 add(Manifest.permission.READ_CONTACTS)
                 add(Manifest.permission.WRITE_CONTACTS)
 
                 add(Manifest.permission.CAMERA)
+                add(Manifest.permission.RECORD_AUDIO)
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    add(Manifest.permission.READ_PHONE_NUMBERS)
-                    add(Manifest.permission.READ_PHONE_STATE)
-                }
+                add(Manifest.permission.READ_PHONE_NUMBERS)
+                add(Manifest.permission.READ_PHONE_STATE)
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     add(Manifest.permission.POST_NOTIFICATIONS)
@@ -76,6 +75,11 @@ actual fun OnboardingPermissionRequester(
                             context.isGranted(
                                 Manifest.permission.CAMERA
                             ),
+                    audioGranted =
+                        result[Manifest.permission.RECORD_AUDIO] == true ||
+                            context.isGranted(
+                                Manifest.permission.RECORD_AUDIO
+                            ),
                     notificationsGranted =
                         Build.VERSION.SDK_INT <
                             Build.VERSION_CODES.TIRAMISU ||
@@ -86,24 +90,21 @@ actual fun OnboardingPermissionRequester(
                                 Manifest.permission.POST_NOTIFICATIONS
                             ),
                     phoneNumberGranted =
-                        Build.VERSION.SDK_INT >=
-                            Build.VERSION_CODES.O &&
-                            (
-                                result[
+                        (
+                            result[
+                                Manifest.permission.READ_PHONE_NUMBERS
+                            ] == true ||
+                                context.isGranted(
                                     Manifest.permission.READ_PHONE_NUMBERS
-                                ] == true ||
-                                    context.isGranted(
-                                        Manifest.permission.READ_PHONE_NUMBERS
-                                    )
-                            ) &&
-                            (
-                                result[
+                                )
+                        ) && (
+                            result[
+                                Manifest.permission.READ_PHONE_STATE
+                            ] == true ||
+                                context.isGranted(
                                     Manifest.permission.READ_PHONE_STATE
-                                ] == true ||
-                                    context.isGranted(
-                                        Manifest.permission.READ_PHONE_STATE
-                                    )
-                            )
+                                )
+                        )
                 )
             )
         }
@@ -136,12 +137,9 @@ actual fun AutomaticPhoneNumberReader(
         }
 
         if (
-            Build.VERSION.SDK_INT <
-            Build.VERSION_CODES.O ||
             !context.isGranted(
                 Manifest.permission.READ_PHONE_NUMBERS
-            ) ||
-            !context.isGranted(
+            ) || !context.isGranted(
                 Manifest.permission.READ_PHONE_STATE
             )
         ) {
