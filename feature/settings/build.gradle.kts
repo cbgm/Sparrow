@@ -15,7 +15,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(projects.core)
-            implementation(projects.core.datastore)
+            implementation(projects.data.datastore)
             implementation(projects.core.embedding)
             implementation(projects.core.ui)
             implementation(projects.feature.identity)

@@ -144,7 +144,8 @@ function Write-NetworkConfiguration {
         [Parameter(Mandatory = $true)][hashtable]$Config,
         [Parameter(Mandatory = $true)][string]$Mode,
         [string]$PublicDomain,
-        [Parameter(Mandatory = $true)][string]$DirectoryUrl
+        [Parameter(Mandatory = $true)][string]$DirectoryUrl,
+        [Parameter(Mandatory = $true)][string]$ImageTag
     )
 
     $lines = @(
@@ -155,7 +156,7 @@ function Write-NetworkConfiguration {
         "PUBLIC_DOMAIN=$PublicDomain",
         "CONTROL_PLANE_DIRECTORY_URL=$DirectoryUrl",
         "SPARROW_IMAGE_PREFIX=$($Config['SPARROW_IMAGE_PREFIX'])",
-        "SPARROW_IMAGE_TAG=$($Config['SPARROW_IMAGE_TAG'])"
+        "SPARROW_IMAGE_TAG=$ImageTag"
     )
 
     [System.IO.File]::WriteAllLines(
@@ -234,21 +235,33 @@ function Read-LauncherConfiguration {
     $hint.Text = "The directory URL must return JSON containing a controlPlanes array. This is the only configured source of control-plane addresses."
     $panel.Controls.Add($hint)
 
+    $imageTagLabel = New-Object System.Windows.Forms.Label
+    $imageTagLabel.Location = New-Object System.Drawing.Point(0, 218)
+    $imageTagLabel.Size = New-Object System.Drawing.Size(205, 22)
+    $imageTagLabel.Text = "Image tag"
+    $panel.Controls.Add($imageTagLabel)
+
+    $imageTagText = New-Object System.Windows.Forms.TextBox
+    $imageTagText.Location = New-Object System.Drawing.Point(220, 214)
+    $imageTagText.Size = New-Object System.Drawing.Size(460, 27)
+    $imageTagText.Text = "latest"
+    $panel.Controls.Add($imageTagText)
+
     $validation = New-Object System.Windows.Forms.Label
-    $validation.Location = New-Object System.Drawing.Point(0, 218)
-    $validation.Size = New-Object System.Drawing.Size(470, 50)
+    $validation.Location = New-Object System.Drawing.Point(0, 246)
+    $validation.Size = New-Object System.Drawing.Size(470, 28)
     $validation.ForeColor = [System.Drawing.Color]::Firebrick
     $validation.Text = ""
     $panel.Controls.Add($validation)
 
     $startButton = New-Object System.Windows.Forms.Button
-    $startButton.Location = New-Object System.Drawing.Point(480, 250)
+    $startButton.Location = New-Object System.Drawing.Point(480, 278)
     $startButton.Size = New-Object System.Drawing.Size(95, 34)
     $startButton.Text = "Start"
     $panel.Controls.Add($startButton)
 
     $cancelButton = New-Object System.Windows.Forms.Button
-    $cancelButton.Location = New-Object System.Drawing.Point(585, 250)
+    $cancelButton.Location = New-Object System.Drawing.Point(585, 278)
     $cancelButton.Size = New-Object System.Drawing.Size(95, 34)
     $cancelButton.Text = "Cancel"
     $panel.Controls.Add($cancelButton)
@@ -259,6 +272,7 @@ function Read-LauncherConfiguration {
         Mode = "lan"
         PublicDomain = ""
         DirectoryUrl = ""
+        ImageTag = "latest"
     }
 
     $updatePublicControls = {
@@ -278,6 +292,7 @@ function Read-LauncherConfiguration {
         $mode = if ($modeCombo.SelectedIndex -eq 1) { "public" } else { "lan" }
         $publicDomain = ""
         $directoryUrl = $directoryText.Text.Trim()
+        $imageTag = $imageTagText.Text.Trim()
 
         if ($mode -eq "public" -and $publicModeCombo.SelectedIndex -eq 1) {
             $publicDomain = $publicAddressText.Text.Trim().TrimEnd(".")
@@ -289,6 +304,11 @@ function Read-LauncherConfiguration {
                 $validation.Text = "Enter only the public domain / host, without a scheme or path."
                 return
             }
+        }
+
+        if ($imageTag -notmatch '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$') {
+            $validation.Text = "Enter a valid Docker image tag, for example latest, pr-49, or sha-..."
+            return
         }
 
         $directoryUri = $null
@@ -304,6 +324,7 @@ function Read-LauncherConfiguration {
         $state.Mode = $mode
         $state.PublicDomain = $publicDomain
         $state.DirectoryUrl = $directoryUrl
+        $state.ImageTag = $imageTag
         $state.Done = $true
     })
 
@@ -344,6 +365,7 @@ function Read-LauncherConfiguration {
         Mode = $state.Mode
         PublicDomain = $state.PublicDomain
         DirectoryUrl = $state.DirectoryUrl
+        ImageTag = $state.ImageTag
     }
 }
 
@@ -356,7 +378,8 @@ function Initialize-NetworkConfiguration {
         -Config $Config `
         -Mode $launcherConfig.Mode `
         -PublicDomain $launcherConfig.PublicDomain `
-        -DirectoryUrl $launcherConfig.DirectoryUrl
+        -DirectoryUrl $launcherConfig.DirectoryUrl `
+        -ImageTag $launcherConfig.ImageTag
 
     return Read-EnvironmentFile -Path $networkConfigPath
 }
@@ -1327,9 +1350,16 @@ try {
 
         Set-ProgressValue -Value 65
         Set-Status "Starting node databases..."
+        # Always recreate the database containers here. Docker Desktop implements
+        # Compose file-based secrets as host bind mounts. If a secret file was
+        # temporarily unavailable, a stopped container can retain a stale mount
+        # and `docker compose start`/`up` may keep failing even after the file is
+        # present again. Recreating the containers refreshes those mounts while
+        # preserving the named database volumes.
         Invoke-Compose -Arguments @(
             "up",
             "-d",
+            "--force-recreate",
             "mailbox-database",
             "federation-database"
         )
@@ -1353,10 +1383,13 @@ try {
 
         Set-ProgressValue -Value 82
         Set-Status "Starting Sparrow node services..."
+        # Refresh all secret-bearing service containers as well so their
+        # /run/secrets mounts cannot remain stale after a Docker Desktop restart.
         Invoke-Compose -Arguments @(
             "up",
             "-d",
-            "--remove-orphans"
+            "--remove-orphans",
+            "--force-recreate"
         )
 
         Set-ProgressValue -Value 90

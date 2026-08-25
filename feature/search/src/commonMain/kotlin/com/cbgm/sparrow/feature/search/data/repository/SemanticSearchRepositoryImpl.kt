@@ -1,70 +1,52 @@
 package com.cbgm.sparrow.feature.search.data.repository
 
-import com.cbgm.sparrow.core.coroutines.ApplicationCoroutineScope
-import com.cbgm.sparrow.core.embedding.data.model.cosineSimilarity
-import com.cbgm.sparrow.core.embedding.data.model.normalizedPrefix
-import com.cbgm.sparrow.core.embedding.data.platform.EmbeddingInputType
-import com.cbgm.sparrow.core.embedding.data.platform.LocalTextEmbedder
-import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingFeature
-import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingModelState
-import com.cbgm.sparrow.core.embedding.domain.repository.LocalEmbeddingRepository
-import com.cbgm.sparrow.data.database.dao.MessageSearchDao
-import com.cbgm.sparrow.feature.search.data.embedding.EmbeddingCodec
-import com.cbgm.sparrow.feature.search.data.index.MessageSearchIndexer
-import com.cbgm.sparrow.feature.search.data.mapper.messageSearchConversationName
+import com.cbgm.sparrow.feature.search.data.datasource.MessageSearchIndexDataSource
+import com.cbgm.sparrow.feature.search.data.datasource.MessageSearchLocalDataSource
+import com.cbgm.sparrow.feature.search.data.datasource.SemanticSearchEmbeddingDataSource
+import com.cbgm.sparrow.feature.search.data.mapper.toSemanticSearchResult
 import com.cbgm.sparrow.feature.search.data.model.SemanticSearchIndexConfig
-import com.cbgm.sparrow.feature.search.domain.model.MessageSearchConversationType
-import com.cbgm.sparrow.feature.search.domain.model.MessageSearchMatchType
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchResult
 import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
 import com.cbgm.sparrow.feature.search.domain.repository.SemanticSearchRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 class SemanticSearchRepositoryImpl(
-    private val localEmbeddingRepository: LocalEmbeddingRepository,
-    private val indexer: MessageSearchIndexer,
-    private val embedder: LocalTextEmbedder,
-    private val dao: MessageSearchDao,
-    private val applicationScope: ApplicationCoroutineScope
+    private val indexDataSource: MessageSearchIndexDataSource,
+    private val localDataSource: MessageSearchLocalDataSource,
+    private val embeddingDataSource: SemanticSearchEmbeddingDataSource
 ) : SemanticSearchRepository {
     private val mutableState = MutableStateFlow<SemanticSearchState>(SemanticSearchState.Disabled)
     override val state: StateFlow<SemanticSearchState> = mutableState
-    private var preparationJob: Job? = null
+    private val lifecycleMutex = Mutex()
 
-    override suspend fun initialize() {
-        if (!localEmbeddingRepository.state.value.semanticSearchEnabled) {
-            preparationJob?.cancelAndJoin()
-            preparationJob = null
-            mutableState.value = SemanticSearchState.Disabled
-            return
+    override suspend fun prepare() = lifecycleMutex.withLock {
+        if (mutableState.value is SemanticSearchState.Ready) return@withLock
+
+        try {
+            mutableState.value = SemanticSearchState.Preparing
+            indexDataSource.rebuild { processed, total ->
+                mutableState.value = SemanticSearchState.BuildingIndex(processed, total)
+            }
+            mutableState.value = SemanticSearchState.Ready
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (throwable: Throwable) {
+            mutableState.value =
+                SemanticSearchState.Failed(
+                    throwable.message ?: "Semantic search setup failed"
+                )
         }
-
-        if (mutableState.value is SemanticSearchState.Ready || preparationJob?.isActive == true) return
-        preparationJob = applicationScope.launch { prepare() }
     }
 
-    override fun setEnabled(enabled: Boolean) {
-        applicationScope.launch {
-            preparationJob?.cancelAndJoin()
-            preparationJob = null
-
-            localEmbeddingRepository.setFeatureEnabled(LocalEmbeddingFeature.MESSAGE_SEARCH, enabled)
-            if (!enabled) {
-                indexer.clear()
-                mutableState.value = SemanticSearchState.Disabled
-                return@launch
-            }
-
-            preparationJob = applicationScope.launch { prepare() }
-        }
+    override suspend fun disable() = lifecycleMutex.withLock {
+        indexDataSource.clear()
+        mutableState.value = SemanticSearchState.Disabled
     }
 
     override suspend fun search(
@@ -72,21 +54,19 @@ class SemanticSearchRepositoryImpl(
         limit: Int
     ): List<MessageSearchResult> {
         if (query.isBlank() || state.value !is SemanticSearchState.Ready) return emptyList()
-        indexer.indexMissing()
-        val queryEmbedding =
-            embedder
-                .embed(query.trim(), EmbeddingInputType.QUERY)
-                .normalizedPrefix(SemanticSearchIndexConfig.EMBEDDING_DIMENSIONS)
 
-        val indexedMessages = dao.getIndexedMessages(SemanticSearchIndexConfig.VERSION)
+        indexDataSource.indexMissing()
+        val queryEmbedding = embeddingDataSource.embedQuery(query)
+        val indexedMessages = localDataSource.getIndexedMessages(SemanticSearchIndexConfig.VERSION)
+
         return withContext(Dispatchers.Default) {
             indexedMessages
                 .asSequence()
                 .map { message ->
                     val semanticScore =
-                        cosineSimilarity(
-                            queryEmbedding,
-                            EmbeddingCodec.decode(message.embedding)
+                        embeddingDataSource.similarity(
+                            queryEmbedding = queryEmbedding,
+                            storedEmbedding = message.embedding
                         )
                     val metadataBoost =
                         metadataMatchBoost(
@@ -95,16 +75,7 @@ class SemanticSearchRepositoryImpl(
                             conversationTitle = message.conversationTitle,
                             contactName = message.contactName
                         )
-
-                    MessageSearchResult(
-                        messageId = message.messageId,
-                        conversationId = message.conversationId,
-                        conversationType = MessageSearchConversationType.valueOf(message.conversationType),
-                        contactId = message.contactId,
-                        conversationName = messageSearchConversationName(message.conversationTitle, message.contactName),
-                        text = message.text,
-                        createdAtEpochMilliseconds = message.createdAtEpochMilliseconds,
-                        matchType = MessageSearchMatchType.SEMANTIC,
+                    message.toSemanticSearchResult(
                         score = (semanticScore + metadataBoost).coerceAtMost(1f)
                     )
                 }.filter { result ->
@@ -112,43 +83,6 @@ class SemanticSearchRepositoryImpl(
                 }.sortedByDescending { it.score ?: Float.NEGATIVE_INFINITY }
                 .take(minOf(limit.coerceAtLeast(1), MAX_SEMANTIC_RESULTS))
                 .toList()
-        }
-    }
-
-    private suspend fun prepare() {
-        try {
-            mutableState.value = SemanticSearchState.Preparing
-            awaitSharedModel()
-            indexer.rebuild { processed, total ->
-                mutableState.value = SemanticSearchState.BuildingIndex(processed, total)
-            }
-            mutableState.value = SemanticSearchState.Ready
-        } catch (cancellation: CancellationException) {
-            throw cancellation
-        } catch (throwable: Throwable) {
-            mutableState.value =
-                SemanticSearchState.Failed(throwable.message ?: "Semantic search setup failed")
-        }
-    }
-
-    private suspend fun awaitSharedModel() {
-        localEmbeddingRepository.state.first { shared ->
-            if (!shared.semanticSearchEnabled) throw CancellationException("Semantic search disabled")
-            when (val modelState = shared.modelState) {
-                LocalEmbeddingModelState.NotNeeded,
-                LocalEmbeddingModelState.Preparing -> {
-                    mutableState.value = SemanticSearchState.Preparing
-                    false
-                }
-
-                is LocalEmbeddingModelState.Downloading -> {
-                    mutableState.value = SemanticSearchState.DownloadingModel(modelState.progress)
-                    false
-                }
-
-                LocalEmbeddingModelState.Ready -> true
-                is LocalEmbeddingModelState.Failed -> error(modelState.message)
-            }
         }
     }
 

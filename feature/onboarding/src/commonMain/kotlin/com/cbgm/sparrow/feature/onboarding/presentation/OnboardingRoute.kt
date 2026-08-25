@@ -7,8 +7,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cbgm.sparrow.feature.identity.presentation.platform.PhoneNumberHintLauncher
-import com.cbgm.sparrow.feature.identity.presentation.platform.PhoneNumberHintResult
+import com.cbgm.sparrow.feature.identity.device.PhoneNumberHintLauncher
+import com.cbgm.sparrow.feature.identity.device.PhoneNumberHintResult
 import com.cbgm.sparrow.feature.identity.presentation.setup.IdentityViewModel
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiEvent
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiState

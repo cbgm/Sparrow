@@ -16,6 +16,7 @@ kotlin {
         commonMain.dependencies {
             implementation(projects.core)
             implementation(projects.core.ui)
+            implementation(projects.feature.attachments)
             implementation(projects.feature.chats)
             implementation(projects.feature.contactimport)
             implementation(projects.feature.contacts)
@@ -33,14 +34,6 @@ kotlin {
             implementation(libs.bundles.serialization)
 
             implementation(libs.jetbrains.navigation.compose)
-        }
-
-        commonTest.dependencies {
-            implementation(libs.bundles.kmp.testing)
-        }
-
-        androidDeviceTest.dependencies {
-            implementation(libs.bundles.android.device.testing)
         }
     }
 }

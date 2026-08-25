@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.core.embedding.data.storage
 
-import com.cbgm.sparrow.core.datastore.SparrowDataStore
+import com.cbgm.sparrow.data.datastore.SparrowDataStore
 
 class LocalEmbeddingSettingsStorage(
     private val dataStore: SparrowDataStore

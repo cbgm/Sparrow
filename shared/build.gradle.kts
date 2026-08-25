@@ -48,13 +48,14 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(projects.core)
-            implementation(projects.core.datastore)
+            implementation(projects.data.datastore)
             implementation(projects.core.embedding)
             implementation(projects.core.crypto)
             implementation(projects.core.protocol)
             implementation(projects.core.ui)
             implementation(projects.navigation)
             implementation(projects.feature.chats)
+            implementation(projects.feature.attachments)
             implementation(projects.feature.contactimport)
             implementation(projects.feature.contacts)
             implementation(projects.feature.identity)

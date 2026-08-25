@@ -543,4 +543,22 @@
     <string name="feature_safety_block_confirm_description">Dieser Nutzer wird blockiert und seine Berechtigung für Direktchats wird widerrufen. Du kannst ihn später in den Einstellungen wieder entsperren.</string>
     <string name="feature_safety_block_error">Der Nutzer konnte nicht vollständig blockiert werden. Bitte versuche es erneut.</string>
 
+    <string name="feature_chats_media">Medien</string>
+    <string name="feature_chats_save_to_camera_roll">In Kamerarolle speichern</string>
+    <string name="feature_attachments_choose_gallery">Aus Galerie auswählen</string>
+    <string name="feature_attachments_media">Medien</string>
+    <string name="feature_attachments_save_to_camera_roll">In Galerie speichern</string>
+    <string name="feature_attachments_media_and_files">Medien &amp; Dateien</string>
+    <string name="feature_attachments_storage">Medien &amp; Dateien</string>
+    <string name="feature_settings_storage">Speicher</string>
+    <string name="feature_attachments_storage_subtitle">Lokal gespeicherte Chat-Anhänge verwalten</string>
+    <string name="feature_attachments_storage_empty">Keine lokal gespeicherten Anhänge</string>
+    <string name="feature_attachments_files">Dateien</string>
+    <string name="feature_attachments_delete_selected">Auswahl löschen</string>
+    <string name="feature_attachments_delete_title">Lokale Anhänge löschen?</string>
+    <string name="feature_attachments_delete_description">Dadurch werden nur die ausgewählten Kopien aus Sparrow entfernt. In deiner Galerie, unter Downloads oder an anderen Orten gespeicherte Kopien bleiben erhalten.</string>
+    <string name="feature_attachments_delete_confirm">Löschen</string>
+    <string name="feature_attachments_selected_count">%1$d ausgewählt</string>
+    <string name="feature_attachments_select">Auswählen</string>
+    <string name="feature_attachments_conversation_storage_description">%1$d Medien · %2$d Dateien</string>
 </resources>

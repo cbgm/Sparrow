@@ -203,8 +203,7 @@ internal object GroupMembershipStateMachine {
             this == GroupInvitationStatus.LEAVE_SENT.name
 
     private fun GroupInvitationEntity.shouldExposeMemberState(): Boolean =
-        !status.isHiddenMemberStatus() &&
-            !(direction == "OUTGOING" && status == GroupInvitationStatus.INVITE_SENT.name)
+        !status.isHiddenMemberStatus()
 
     private fun String.isHiddenMemberStatus(): Boolean =
         this == GroupInvitationStatus.REMOVED.name ||

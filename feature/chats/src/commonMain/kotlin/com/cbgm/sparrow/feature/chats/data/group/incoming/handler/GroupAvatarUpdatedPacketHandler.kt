@@ -5,13 +5,13 @@ import com.cbgm.sparrow.core.protocol.packet.GroupAvatarUpdatedPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.feature.chats.data.group.avatar.GroupAvatarPacketProtocol
+import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupAvatarDataSource
 import com.cbgm.sparrow.feature.chats.data.group.security.isGroupAdminRole
-import com.cbgm.sparrow.feature.chats.data.group.storage.GroupAvatarStore
 
 class GroupAvatarUpdatedPacketHandler internal constructor(
     private val groupSecurityDao: GroupSecurityDao,
     private val packetProtocol: GroupAvatarPacketProtocol,
-    private val store: GroupAvatarStore
+    private val dataSource: GroupAvatarDataSource
 ) : GroupPacketHandler {
     override fun canHandle(packet: SparrowPacket): Boolean = packet is GroupAvatarUpdatedPacket
 
@@ -37,16 +37,16 @@ class GroupAvatarUpdatedPacketHandler internal constructor(
                     } ?: error("Group avatar update was not signed by an active group admin")
             check(admin.contactId == context.contactId)
 
-            val current = store.get(update.groupId)
+            val current = dataSource.get(update.groupId)
             if (update.avatar.changedAtEpochMilliseconds <= current.changedAtEpochMilliseconds) {
                 return@runCatching
             }
 
             val payload = update.avatar.payload
             if (payload == null) {
-                store.remove(update.groupId, update.avatar.changedAtEpochMilliseconds)
+                dataSource.remove(update.groupId, update.avatar.changedAtEpochMilliseconds)
             } else {
-                store.save(
+                dataSource.save(
                     groupId = update.groupId,
                     bytes = payload.bytes,
                     changedAtEpochMilliseconds = update.avatar.changedAtEpochMilliseconds

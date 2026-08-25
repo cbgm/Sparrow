@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.transport.gateway.model
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+@kotlinx.serialization.InternalSerializationApi
 @Serializable
 sealed interface GatewayServerMessage {
     @Serializable
@@ -40,6 +41,23 @@ sealed interface GatewayServerMessage {
     data class EnvelopeAccepted(
         val envelopeId: String,
         val expiresAtEpochMilliseconds: Long
+    ) : GatewayServerMessage
+
+    @Serializable
+    @SerialName("blob_upload_ticket_issued")
+    data class BlobUploadTicketIssued(
+        val requestId: String,
+        val nodeId: String,
+        val uploadToken: String,
+        val blobExpiresAtEpochMilliseconds: Long
+    ) : GatewayServerMessage
+
+    @Serializable
+    @SerialName("blob_upload_ticket_rejected")
+    data class BlobUploadTicketRejected(
+        val requestId: String,
+        val code: String,
+        val message: String
     ) : GatewayServerMessage
 
     @Serializable

@@ -2,12 +2,12 @@ package com.cbgm.sparrow.feature.settings.data.repository
 
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
 import com.cbgm.sparrow.feature.settings.data.datasource.SettingsStorage
+import com.cbgm.sparrow.feature.settings.device.BuildInfoProvider
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
-import com.cbgm.sparrow.feature.settings.domain.repository.BuildInfoProviderRepository
 import com.cbgm.sparrow.feature.settings.domain.repository.SettingsRepository
 
 class SettingsRepositoryImpl(
-    private val buildInfoProvider: BuildInfoProviderRepository,
+    private val buildInfoProvider: BuildInfoProvider,
     private val settingsStorage: SettingsStorage
 ) : SettingsRepository {
     override suspend fun getLanguage(): AppLanguage =

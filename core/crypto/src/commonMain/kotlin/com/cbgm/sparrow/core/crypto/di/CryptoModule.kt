@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.core.crypto.di
 
 import com.cbgm.sparrow.core.crypto.InitializeCryptoRuntime
+import com.cbgm.sparrow.core.crypto.blob.BlobCipher
+import com.cbgm.sparrow.core.crypto.blob.SodiumBlobCipher
 import com.cbgm.sparrow.core.crypto.group.GroupCrypto
 import com.cbgm.sparrow.core.crypto.group.SodiumGroupCrypto
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
@@ -31,6 +33,10 @@ val cryptoModule =
 
         single<CryptoHash> {
             DefaultCryptoHash()
+        }
+
+        single<BlobCipher> {
+            SodiumBlobCipher()
         }
 
         single {

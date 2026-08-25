@@ -2,9 +2,11 @@ package com.cbgm.sparrow.feature.chats.data.group.mapper
 
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
+import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessages
+import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaAttachment
 import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
 import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_END_TO_END_ENCRYPTED_MODE
@@ -20,7 +22,9 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.MessageDeliveryProgress
 internal fun ConversationWithMessages.toGroupConversation(
     participantContactIds: List<String>,
     recipientStates: List<MessageRecipientStateEntity>,
-    invitations: List<GroupInvitationEntity>
+    invitations: List<GroupInvitationEntity>,
+    verificationRows: List<GroupVerificationPairEntity> = emptyList(),
+    attachmentsByMessageId: Map<String, List<MessageMediaAttachment>> = emptyMap()
 ): GroupConversation {
     val timeline = buildGroupLocalMembershipTimeline(messages, invitations)
     val visibleMessages = timeline.visibleMessages
@@ -37,7 +41,10 @@ internal fun ConversationWithMessages.toGroupConversation(
         messages =
             visibleMessages
                 .map { message ->
-                    message.toGroupMessage(statesByMessageId[message.id].orEmpty())
+                    message.toGroupMessage(
+                        recipientStates = statesByMessageId[message.id].orEmpty(),
+                        attachments = attachmentsByMessageId[message.id].orEmpty()
+                    )
                 },
         unreadCount =
             visibleMessages.count { message ->
@@ -46,7 +53,14 @@ internal fun ConversationWithMessages.toGroupConversation(
                     message.contentStatus == MessageContentStatus.READABLE.name
             },
         participantContactIds = participantContactIds,
-        pendingParticipantCount = timeline.currentInvitations.count { it.status.isPendingMembershipStatus() },
+        pendingParticipantCount =
+            if (verificationRows.isNotEmpty()) {
+                verificationRows.count { row ->
+                    row.membershipStatus == GroupVerificationPairEntity.PENDING_STATUS
+                }
+            } else {
+                timeline.currentInvitations.count { it.status.isPendingMembershipStatus() }
+            },
         isReady = groupState == GroupConversationState.READY,
         state = groupState,
         isIncomingInvitation = GroupMembershipStateMachine.isIncoming(timeline.currentInvitations),
@@ -55,7 +69,8 @@ internal fun ConversationWithMessages.toGroupConversation(
 }
 
 private fun MessageEntity.toGroupMessage(
-    recipientStates: List<MessageRecipientStateEntity>
+    recipientStates: List<MessageRecipientStateEntity>,
+    attachments: List<MessageMediaAttachment>
 ): GroupMessage {
     val deliveryStatus =
         if (recipientStates.isEmpty()) {
@@ -76,7 +91,8 @@ private fun MessageEntity.toGroupMessage(
         deliveryStatus = if (isMine) deliveryStatus else MessageDeliveryStatus.NOT_APPLICABLE,
         type = GroupMembershipMessageFactory.typeOf(transportMode),
         senderContactId = senderContactId,
-        deliveryProgress = recipientStates.toDeliveryProgress()
+        deliveryProgress = recipientStates.toDeliveryProgress(),
+        attachments = attachments
     )
 }
 
@@ -103,7 +119,8 @@ internal fun String.toGroupDeliveryStatus(): MessageDeliveryStatus =
         ?: MessageDeliveryStatus.NOT_APPLICABLE
 
 private fun String.isPendingMembershipStatus(): Boolean =
-    this == GroupInvitationStatus.INVITE_RECEIVED.name ||
+    this == GroupInvitationStatus.INVITE_SENT.name ||
+        this == GroupInvitationStatus.INVITE_RECEIVED.name ||
         this == GroupInvitationStatus.WAITING_FOR_IDENTITY.name ||
         this == GroupInvitationStatus.IDENTITY_READY.name ||
         this == GroupInvitationStatus.WELCOME_SENT.name

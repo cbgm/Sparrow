@@ -47,10 +47,20 @@ object Dimens {
 
     object MessageInput {
         val buttonWidth = 42.dp
-        val buttonHeight = 30.dp
+        val buttonHeight = 29.dp
         val overlap = 10.dp
         val attachmentIconSize = 16.dp
         val sendIconSize = 18.dp
+    }
+
+    object MessageAttachment {
+        val previewPlayIconSize = 16.dp
+        val previewSize = 50.dp
+        val loadingIndicatorSize = 24.dp
+    }
+
+    object Media {
+        val playIconSize = 40.dp
     }
 
     object PatternBackground {
@@ -212,5 +222,10 @@ object Dimens {
 
     object ProfilePictureCropScreen {
         val guideStrokeWidth = 3.dp
+    }
+
+    object AttachmentBar {
+        val buttonSize = 50.dp
+        val iconSize = 25.dp
     }
 }

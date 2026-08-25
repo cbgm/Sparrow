@@ -35,7 +35,7 @@ class GroupMemberRemovedPacketHandler(
         runCatching {
             val removal = packet.requireRemovalPacket()
             val invitation = groupInvitationDao.findByInvitationId(removal.invitationId)
-            validateRemoval(context, removal, invitation)
+            if (!validateRemoval(context, removal, invitation)) return@runCatching
 
             val wasLocallyHidden = isLocallyHidden(removal.groupId)
             removeLocalSecurityState(context, removal)
@@ -55,7 +55,7 @@ class GroupMemberRemovedPacketHandler(
         context: IncomingPacketContext,
         packet: GroupMemberRemovedPacket,
         invitation: GroupInvitationEntity?
-    ) {
+    ): Boolean {
         if (packet.epoch == GroupMemberRemovedPacket.PENDING_INVITATION_EPOCH) {
             val authorityIdentity =
                 contactDao.findPublicIdentityByContactId(context.contactId)
@@ -65,8 +65,7 @@ class GroupMemberRemovedPacketHandler(
                     packet = packet,
                     expectedOwnerSigningPublicKey = authorityIdentity.signingPublicKey
                 ).getOrThrow()
-            validatePendingInvitationRemoval(context, packet, invitation)
-            return
+            return validatePendingInvitationRemoval(context, packet, invitation)
         }
 
         val authorityMemberKey =
@@ -85,14 +84,15 @@ class GroupMemberRemovedPacketHandler(
                 packet = packet,
                 expectedOwnerSigningPublicKey = authorityMemberKey.signingPublicKey
             ).getOrThrow()
+        return true
     }
 
     private fun validatePendingInvitationRemoval(
         context: IncomingPacketContext,
         packet: GroupMemberRemovedPacket,
         invitation: GroupInvitationEntity?
-    ) {
-        val pending = invitation ?: error("Removed group invitation was not found")
+    ): Boolean {
+        val pending = invitation ?: return false
         check(pending.groupId == packet.groupId) { "Group removal references the wrong group" }
         check(pending.contactId == context.contactId) {
             "Pending group removal came from a contact that is not the inviter"
@@ -100,12 +100,14 @@ class GroupMemberRemovedPacketHandler(
         check(pending.challenge.contentEquals(packet.challenge)) {
             "Group removal invitation challenge does not match"
         }
+        if (pending.status == GroupInvitationStatus.REMOVED.name) return false
         check(
             pending.status == GroupInvitationStatus.AWAITING_ACCEPTANCE.name ||
                 pending.status == GroupInvitationStatus.JOIN_SENT.name
         ) {
             "An installed group key requires an epoch-advancing removal"
         }
+        return true
     }
 
     private suspend fun isLocallyHidden(groupId: String): Boolean =

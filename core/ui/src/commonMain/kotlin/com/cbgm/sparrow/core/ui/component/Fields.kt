@@ -1,17 +1,20 @@
 package com.cbgm.sparrow.core.ui.component
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -21,8 +24,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -62,8 +68,8 @@ fun SparrowSearchField(
                 interactionSource = interactionSource,
                 contentPadding =
                     PaddingValues(
-                        horizontal = MaterialTheme.spacing.searchField.searchHorizontalPadding,
-                        vertical = MaterialTheme.spacing.searchField.searchVerticalPadding
+                        horizontal = MaterialTheme.spacing.textField.horizontalPadding,
+                        vertical = MaterialTheme.spacing.textField.verticalPadding
                     ),
                 leadingIcon = {
                     Icon(
@@ -113,15 +119,111 @@ fun SparrowSearchField(
     )
 }
 
+@Composable
+fun SparrowInputField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    placeholderText: String = "",
+    errorText: String = "",
+    isSingleLine: Boolean = false,
+    minLines: Int = 1,
+    maxLines: Int = if (isSingleLine) 1 else Int.MAX_VALUE,
+    isError: Boolean = false,
+    isEnabled: Boolean = true,
+    keyboardOptions: KeyboardOptions? = null
+) {
+    val defaultKeyboardOptions = KeyboardOptions(
+        keyboardType = KeyboardType.Phone,
+        imeAction = ImeAction.Done
+    )
+
+    val interactionSource = remember { MutableInteractionSource() }
+
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier.fillMaxWidth(),
+        enabled = isEnabled,
+        singleLine = isSingleLine,
+        minLines = minLines,
+        maxLines = maxLines,
+        textStyle = MaterialTheme.typography.bodySmall.copy(
+            color = MaterialTheme.colorScheme.onSurface
+        ),
+        keyboardOptions = keyboardOptions ?: defaultKeyboardOptions,
+        interactionSource = interactionSource,
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        decorationBox = { innerTextField ->
+            OutlinedTextFieldDefaults.DecorationBox(
+                value = value,
+                innerTextField = innerTextField,
+                enabled = isEnabled,
+                singleLine = isSingleLine,
+                visualTransformation = VisualTransformation.None,
+                interactionSource = interactionSource,
+                isError = isError,
+                label = {
+                    Text(text = label)
+                },
+                placeholder = {
+                    Text(text = placeholderText)
+                },
+                supportingText =
+                    if (isError) {
+                        {
+                            Text(
+                                text = errorText,
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                    } else {
+                        null
+                    },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(
+                        alpha = Alpha.TextField.unfocusedBorder
+                    ),
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(
+                        alpha = Alpha.OpaqueText
+                    ),
+                    cursorColor = MaterialTheme.colorScheme.primary
+                ),
+                contentPadding = PaddingValues(
+                    horizontal = MaterialTheme.spacing.textField.horizontalPadding,
+                    vertical = MaterialTheme.spacing.textField.verticalPadding
+                )
+            )
+        }
+    )
+}
+
 @Preview
 @Composable
 fun SearchFieldPreview() {
     SparrowTheme {
-        SparrowSearchField(
-            searchQuery = "test",
-            onSearchQueryChanged = {},
-            placeholder = "Test",
-            onClear = {}
-        )
+        Column(
+            Modifier.fillMaxWidth()
+        ) {
+            SparrowSearchField(
+                searchQuery = "test",
+                onSearchQueryChanged = {},
+                placeholder = "Test",
+                onClear = {}
+            )
+            SparrowInputField(
+                value = "Test",
+                onValueChange = {},
+                isEnabled = true,
+                label = "Test"
+            )
+        }
     }
 }

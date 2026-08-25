@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.chats.presentation.direct.model
 
-import com.cbgm.sparrow.feature.safety.presentation.model.MessageSafetyWarningUiModel
+import com.cbgm.sparrow.feature.attachments.presentation.model.GalleryMediaSelection
+import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
 
 sealed interface DirectUiEvent {
     data class MessageTextChanged(
@@ -8,6 +9,18 @@ sealed interface DirectUiEvent {
     ) : DirectUiEvent
 
     data object SendClicked : DirectUiEvent
+
+    data class GalleryMediaSelected(
+        val media: List<GalleryMediaSelection>
+    ) : DirectUiEvent
+
+    data class MediaAttachmentVisible(
+        val attachmentId: String
+    ) : DirectUiEvent
+
+    data class AttachmentError(
+        val message: String
+    ) : DirectUiEvent
 
     data object HeaderClicked : DirectUiEvent
 

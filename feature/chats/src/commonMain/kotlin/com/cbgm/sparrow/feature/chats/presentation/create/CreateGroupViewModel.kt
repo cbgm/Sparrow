@@ -4,33 +4,27 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.CreateGroupConversationUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.profile.ObserveRemoteProfilePicturesUseCase
 import com.cbgm.sparrow.feature.chats.presentation.create.mapper.toUiState
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupEffect
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupUiState
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
-import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import com.cbgm.sparrow.feature.contacts.domain.model.ContactsWithProfilePictures
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsWithProfilePicturesUseCase
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class CreateGroupViewModel(
     savedStateHandle: SavedStateHandle,
-    private val observeContacts: ObserveContactsUseCase,
-    private val observeProfilePictures: ObserveRemoteProfilePicturesUseCase,
+    private val observeContactsWithProfilePictures: ObserveContactsWithProfilePicturesUseCase,
     private val createGroupConversation: CreateGroupConversationUseCase
 ) : BaseViewModel() {
     private val title = savedStateHandle.getMutableStateFlow(TITLE_KEY, "")
@@ -49,12 +43,12 @@ class CreateGroupViewModel(
 
     val uiState: StateFlow<CreateGroupUiState> =
         combine(
-            observeContactsWithProfilePictures(),
+            contactsPresentationFlow(),
             formState,
             actionState
         ) { snapshot, form, action ->
-            snapshot.contacts.toUiState(
-                profilePictures = snapshot.profilePictures,
+            snapshot.contacts.contacts.toUiState(
+                profilePictures = snapshot.contacts.profilePictures,
                 title = form.title,
                 searchQuery = form.searchQuery,
                 selectedContactIds = form.selectedContactIds,
@@ -80,21 +74,13 @@ class CreateGroupViewModel(
         }
     }
 
-    private fun observeContactsWithProfilePictures(): Flow<ContactsSnapshot> =
-        observeContacts()
-            .flatMapLatest { contacts ->
-                observeProfilePictures(contacts.mapTo(mutableSetOf(), Contact::id))
-                    .map { profilePictures ->
-                        ContactsSnapshot(
-                            contacts = contacts,
-                            profilePictures = profilePictures
-                        )
-                    }
-            }.catch { error ->
+    private fun contactsPresentationFlow() =
+        observeContactsWithProfilePictures()
+            .map { contacts -> ContactsPresentation(contacts = contacts) }
+            .catch { error ->
                 emit(
-                    ContactsSnapshot(
-                        contacts = emptyList(),
-                        profilePictures = emptyMap(),
+                    ContactsPresentation(
+                        contacts = ContactsWithProfilePictures(emptyList(), emptyMap()),
                         errorMessage = error.message ?: "Contacts could not be loaded"
                     )
                 )
@@ -156,9 +142,8 @@ class CreateGroupViewModel(
         actionState.update { state -> state.copy(errorMessage = null) }
     }
 
-    private data class ContactsSnapshot(
-        val contacts: List<Contact>,
-        val profilePictures: Map<String, ByteArray?>,
+    private data class ContactsPresentation(
+        val contacts: ContactsWithProfilePictures,
         val errorMessage: String? = null
     )
 

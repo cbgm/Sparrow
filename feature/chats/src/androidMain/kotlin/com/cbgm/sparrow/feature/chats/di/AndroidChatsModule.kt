@@ -1,18 +1,18 @@
 package com.cbgm.sparrow.feature.chats.di
 
-import com.cbgm.sparrow.feature.chats.data.group.storage.AndroidGroupKeyStorage
-import com.cbgm.sparrow.feature.chats.data.group.storage.GroupAvatarFileStorage
-import com.cbgm.sparrow.feature.chats.data.group.storage.GroupKeyStorage
+import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupAvatarFileDataSource
+import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupKeyDataSource
+import com.cbgm.sparrow.feature.chats.device.AndroidGroupKeyDataSource
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
 val androidChatsModule =
     module {
         single {
-            GroupAvatarFileStorage(rootDirectory = androidContext().filesDir.absolutePath)
+            GroupAvatarFileDataSource(rootDirectory = androidContext().filesDir.absolutePath)
         }
 
-        single<GroupKeyStorage> {
-            AndroidGroupKeyStorage(dataStore = get())
+        single<GroupKeyDataSource> {
+            AndroidGroupKeyDataSource(dataStore = get())
         }
     }

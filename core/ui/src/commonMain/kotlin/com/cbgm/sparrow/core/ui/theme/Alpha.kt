@@ -33,6 +33,10 @@ object Alpha {
         const val buttonBackground = 0.35f
     }
 
+    object MessageAttachment {
+        const val removeButtonBackground = 0.72f
+    }
+
     object GroupDetailsScreen {
         const val adminIcon = 0.73f
     }

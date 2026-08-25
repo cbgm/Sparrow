@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.group.mapper
 
+import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationState
@@ -14,7 +15,7 @@ import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyAssessment
-import com.cbgm.sparrow.feature.safety.presentation.mapper.toWarningUiModel
+import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toWarningUiModel
 
 internal fun toGroupUiState(
     conversation: GroupConversation?,
@@ -27,7 +28,8 @@ internal fun toGroupUiState(
     observationError: String?,
     isLoading: Boolean,
     typingContactIds: Set<String>,
-    safetyAssessments: Map<String, MessageSafetyAssessment>
+    safetyAssessments: Map<String, MessageSafetyAssessment>,
+    attachmentBytes: Map<String, ByteArray> = emptyMap()
 ): GroupUiState {
     val contactsById = contacts.associateBy(Contact::id)
     val groupState = conversation?.state ?: GroupConversationState.READY
@@ -39,7 +41,8 @@ internal fun toGroupUiState(
             conversation.toMessageUiModels(
                 contactsById = contactsById,
                 profilePictures = profilePictures,
-                safetyAssessments = safetyAssessments
+                safetyAssessments = safetyAssessments,
+                attachmentBytes = attachmentBytes
             ),
         messageText = currentText,
         isSomeoneTyping = typingContactIds.isNotEmpty(),
@@ -60,7 +63,8 @@ internal fun GroupMessage.toUiModel(
     senderName: String?,
     senderIsInContacts: Boolean,
     senderProfilePictureBytes: ByteArray?,
-    safetyAssessments: Map<String, MessageSafetyAssessment>
+    safetyAssessments: Map<String, MessageSafetyAssessment>,
+    attachmentBytes: Map<String, ByteArray> = emptyMap()
 ): GroupMessageUiModel =
     GroupMessageUiModel(
         bubble =
@@ -88,6 +92,18 @@ internal fun GroupMessage.toUiModel(
                         null
                     } else {
                         safetyAssessments[id]?.toWarningUiModel()
+                    },
+                mediaAttachments =
+                    attachments.map { attachment ->
+                        MessageMediaAttachmentUi(
+                            id = attachment.id,
+                            type = attachment.type,
+                            mimeType = attachment.mimeType,
+                            width = attachment.width,
+                            height = attachment.height,
+                            durationMilliseconds = attachment.durationMilliseconds,
+                            bytes = attachmentBytes[attachment.id]
+                        )
                     }
             ),
         type = type,
@@ -112,7 +128,8 @@ internal fun Contact?.displayNameForChat(isInContacts: Boolean): String {
 private fun GroupConversation?.toMessageUiModels(
     contactsById: Map<String, Contact>,
     profilePictures: Map<String, ByteArray?>,
-    safetyAssessments: Map<String, MessageSafetyAssessment>
+    safetyAssessments: Map<String, MessageSafetyAssessment>,
+    attachmentBytes: Map<String, ByteArray>
 ): List<GroupMessageUiModel> =
     buildList {
         for (message in this@toMessageUiModels?.messages.orEmpty().asReversed()) {
@@ -124,7 +141,8 @@ private fun GroupConversation?.toMessageUiModels(
                     senderName = sender.displayNameForChat(senderIsInContacts),
                     senderIsInContacts = senderIsInContacts,
                     senderProfilePictureBytes = senderContactId?.let(profilePictures::get),
-                    safetyAssessments = safetyAssessments
+                    safetyAssessments = safetyAssessments,
+                    attachmentBytes = attachmentBytes
                 )
             )
         }

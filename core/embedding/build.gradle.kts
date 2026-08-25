@@ -10,7 +10,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(projects.core)
-            implementation(projects.core.datastore)
+            implementation(projects.data.datastore)
             implementation(libs.bundles.coroutines)
             implementation(libs.bundles.koin.core)
         }

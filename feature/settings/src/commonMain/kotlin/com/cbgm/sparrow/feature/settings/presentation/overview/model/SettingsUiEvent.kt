@@ -42,5 +42,7 @@ sealed interface SettingsUiEvent {
 
     data object ControlPlanesClicked : SettingsUiEvent
 
+    data object AttachmentStorageClicked : SettingsUiEvent
+
     data object VersionRowTapped : SettingsUiEvent
 }

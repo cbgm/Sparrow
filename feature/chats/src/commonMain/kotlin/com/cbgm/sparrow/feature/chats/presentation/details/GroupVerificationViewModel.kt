@@ -9,10 +9,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.GroupLeaveRequirement
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.AddGroupMembersUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.GetGroupLeaveRequirementUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.LeaveGroupUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupAdministrationUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupAvatarUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupConversationUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupVerificationUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupDetailsContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.PromoteGroupMemberUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.RemoveGroupAvatarUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.RemoveGroupMemberUseCase
@@ -20,7 +17,6 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupAvatarUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SynchronizeGroupVerificationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.TransferGroupAdminAndLeaveUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.VerifyGroupMemberUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.profile.ObserveRemoteProfilePicturesUseCase
 import com.cbgm.sparrow.feature.chats.presentation.details.mapper.buildGroupVerificationSummary
 import com.cbgm.sparrow.feature.chats.presentation.details.mapper.toGroupAvatarUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.mapper.toGroupVerificationUiState
@@ -31,38 +27,27 @@ import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupLeavePromp
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupLeaveUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupVerificationSummaryUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupVerificationUiState
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsWithProfilePicturesUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class GroupVerificationViewModel(
     private val savedStateHandle: SavedStateHandle,
-    observeGroupVerification: ObserveGroupVerificationUseCase,
+    observeGroupDetailsContext: ObserveGroupDetailsContextUseCase,
     private val synchronizeGroupVerification: SynchronizeGroupVerificationUseCase,
     private val verifyGroupMember: VerifyGroupMemberUseCase,
     private val getContactSafetyNumber: GetContactSafetyNumberUseCase,
-    observeContacts: ObserveContactsUseCase,
-    private val observeProfilePictures: ObserveRemoteProfilePicturesUseCase,
+    observeContactsWithProfilePictures: ObserveContactsWithProfilePicturesUseCase,
     private val addGroupMembers: AddGroupMembersUseCase,
     private val removeGroupMember: RemoveGroupMemberUseCase,
     private val promoteGroupMember: PromoteGroupMemberUseCase,
     private val transferGroupAdminAndLeave: TransferGroupAdminAndLeaveUseCase,
-    observeGroupAdministration: ObserveGroupAdministrationUseCase,
-    observeGroupConversation: ObserveGroupConversationUseCase,
-    observeGroupAvatar: ObserveGroupAvatarUseCase,
     private val setGroupAvatar: SetGroupAvatarUseCase,
     private val removeGroupAvatar: RemoveGroupAvatarUseCase,
     private val getGroupLeaveRequirement: GetGroupLeaveRequirementUseCase,
@@ -92,28 +77,15 @@ class GroupVerificationViewModel(
         )
     private val leaveState = MutableStateFlow(GroupLeaveUiState())
     private val avatarActionState = MutableStateFlow(GroupAvatarActionState())
-    private val contactsWithProfilePictures =
-        observeContacts()
-            .flatMapLatest { contacts ->
-                observeProfilePictures(contacts.mapTo(mutableSetOf(), Contact::id))
-                    .map { profilePictures ->
-                        ContactsSnapshot(
-                            contacts = contacts,
-                            profilePictures = profilePictures
-                        )
-                    }
-            }
+    private val contactsWithProfilePictures = observeContactsWithProfilePictures()
 
     private val groupOverviewFlow =
         combine(
-            observeGroupVerification(conversationId),
-            observeGroupAdministration(conversationId),
-            observeGroupConversation(conversationId)
-                .onStart { emit(null) }
-                .catch { emit(null) },
-            observeGroupAvatar(conversationId),
+            observeGroupDetailsContext(conversationId),
             avatarActionState
-        ) { groupState, administration, conversation, avatar, avatarAction ->
+        ) { context, avatarAction ->
+            val groupState = context.verification
+            val administration = context.administration
             val summary =
                 buildGroupVerificationSummary(
                     isLocalAdmin = administration.isLocalAdmin || groupState.context.isLocalAdmin,
@@ -133,8 +105,8 @@ class GroupVerificationViewModel(
                 summary = summary,
                 avatar =
                     toGroupAvatarUiState(
-                        title = conversation?.title.orEmpty(),
-                        avatarBytes = avatar.bytes,
+                        title = context.conversation?.title.orEmpty(),
+                        avatarBytes = context.avatar.bytes,
                         canEdit = summary.isLocalAdmin,
                         isSaving = avatarAction.isSaving,
                         errorMessage = avatarAction.errorMessage
@@ -204,6 +176,8 @@ class GroupVerificationViewModel(
             is GroupDetailsUiEvent.AvatarSelected -> saveGroupAvatar(event.bytes)
             GroupDetailsUiEvent.RemoveGroupAvatarClicked -> removeCurrentGroupAvatar()
             GroupDetailsUiEvent.AddMembersClicked -> Unit
+            GroupDetailsUiEvent.MediaAndFilesClicked ->
+                navigator.navigateTo(AppRoute.AttachmentManagement(conversationId))
         }
     }
 
@@ -623,11 +597,6 @@ class GroupVerificationViewModel(
     private data class GroupAvatarActionState(
         val isSaving: Boolean = false,
         val errorMessage: String? = null
-    )
-
-    private data class ContactsSnapshot(
-        val contacts: List<Contact>,
-        val profilePictures: Map<String, ByteArray?>
     )
 
     private data class GroupVerificationSelectionState(

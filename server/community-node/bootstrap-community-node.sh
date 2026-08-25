@@ -314,5 +314,7 @@ cd "$SCRIPT_DIR"
 
 if [[ "$PREPARE_ONLY" != "--prepare-only" ]]; then
   "${COMPOSE[@]}" pull
-  "${COMPOSE[@]}" up -d --remove-orphans --wait --wait-timeout 300
+  # Compose file-based secrets are bind mounts. Force recreation refreshes
+  # stale secret mounts without removing the persistent database volumes.
+  "${COMPOSE[@]}" up -d --remove-orphans --force-recreate --wait --wait-timeout 300
 fi

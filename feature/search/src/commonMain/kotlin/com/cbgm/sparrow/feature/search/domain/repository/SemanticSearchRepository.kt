@@ -7,9 +7,9 @@ import kotlinx.coroutines.flow.StateFlow
 interface SemanticSearchRepository {
     val state: StateFlow<SemanticSearchState>
 
-    suspend fun initialize()
+    suspend fun prepare()
 
-    fun setEnabled(enabled: Boolean)
+    suspend fun disable()
 
     suspend fun search(
         query: String,

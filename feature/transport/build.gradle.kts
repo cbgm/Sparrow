@@ -19,7 +19,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(projects.core)
-            implementation(projects.core.datastore)
+            implementation(projects.data.datastore)
             implementation(projects.core.crypto)
             implementation(projects.core.protocol)
 

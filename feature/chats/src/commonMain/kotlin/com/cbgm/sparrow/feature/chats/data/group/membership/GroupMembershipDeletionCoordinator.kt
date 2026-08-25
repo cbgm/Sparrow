@@ -6,13 +6,13 @@ import com.cbgm.sparrow.core.protocol.packet.GroupConversationDeletedPacket
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
 import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
+import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupLocalCleanupDataSource
 import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationDirection
 import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
 import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupPacketBroadcaster
 import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupMembershipPacketProtocol
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_LEFT_ROLE
 import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
-import com.cbgm.sparrow.feature.chats.data.group.storage.GroupLocalDataCleaner
 
 @Suppress("LongParameterList")
 internal class GroupMembershipDeletionCoordinator(
@@ -24,7 +24,7 @@ internal class GroupMembershipDeletionCoordinator(
     private val packetBroadcaster: GroupPacketBroadcaster,
     private val administration: GroupMembershipAdministrationCoordinator,
     private val membershipLock: GroupMembershipLock,
-    private val localDataCleaner: GroupLocalDataCleaner
+    private val localCleanupDataSource: GroupLocalCleanupDataSource
 ) {
     suspend fun deleteGroupConversation(groupId: String): Result<Unit> =
         runCatching {
@@ -34,7 +34,7 @@ internal class GroupMembershipDeletionCoordinator(
                 if (localRole != GROUP_LEFT_ROLE) {
                     administration.leaveGroup(groupId).getOrThrow()
                 }
-                localDataCleaner.deleteConversationHistory(
+                localCleanupDataSource.deleteConversationHistory(
                     groupId = groupId,
                     deletedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
                 )
@@ -85,7 +85,7 @@ internal class GroupMembershipDeletionCoordinator(
                     }
             packetBroadcaster.enqueueAll(packetsByContactId).getOrThrow()
 
-            localDataCleaner.delete(groupId, now)
+            localCleanupDataSource.delete(groupId, now)
         }
     }
 
@@ -122,7 +122,7 @@ internal class GroupMembershipDeletionCoordinator(
             }
         }
 
-        localDataCleaner.delete(
+        localCleanupDataSource.delete(
             groupId = groupId,
             deletedAtEpochMilliseconds =
                 maxOf(

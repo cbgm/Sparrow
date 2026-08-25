@@ -12,6 +12,7 @@ kotlin {
         commonMain.dependencies {
             api(projects.resources)
             implementation(libs.bundles.compose)
+            implementation(libs.coil.compose)
             implementation(libs.bundles.coroutines)
             implementation(libs.bundles.koin.core)
             implementation(libs.bundles.serialization)

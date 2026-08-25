@@ -1,23 +1,69 @@
 package com.cbgm.sparrow.feature.contacts.data.repository
 
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
-import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
-import com.cbgm.sparrow.feature.contacts.data.exchange.ManualIdentityExchange
+import com.cbgm.sparrow.core.id.IdGenerator
+import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentityProvider
+import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.core.protocol.packet.IdentityPacket
+import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityExchangeRepository
-import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityInvitationRepository
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class IdentityExchangeRepositoryImpl(
-    private val modeRepository: DirectIdentitySetupModeRepository,
-    private val identityInvitationRepository: IdentityInvitationRepository,
-    private val manualIdentityExchange: ManualIdentityExchange
+    private val contactDao: ContactDao,
+    private val localPublicIdentityProvider: LocalPublicIdentityProvider,
+    private val protocolOutbox: ProtocolOutbox
 ) : IdentityExchangeRepository {
-    override suspend fun ensureStarted(contactId: String): Result<Unit> =
-        when (modeRepository.getMode()) {
-            DirectIdentitySetupMode.AUTOMATIC_INVITATION ->
-                identityInvitationRepository.start(contactId)
-            DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING ->
-                startManualExchange(contactId)
-        }
+    private val mutex = Mutex()
+    private val currentlyStarting = mutableSetOf<String>()
 
-    override suspend fun startManualExchange(contactId: String): Result<Unit> = manualIdentityExchange.ensureStarted(contactId)
+    override suspend fun startManualExchange(contactId: String): Result<Unit> =
+        runCatching {
+            require(contactId.isNotBlank()) {
+                "Contact ID must not be blank"
+            }
+
+            val mayStart =
+                mutex.withLock {
+                    currentlyStarting.add(contactId)
+                }
+
+            if (!mayStart) {
+                return@runCatching
+            }
+
+            try {
+                val contact =
+                    contactDao.findById(contactId)
+                        ?: error("Contact was not found: $contactId")
+                val remoteIdentity =
+                    contact.publicIdentity
+                        ?: error("Import or scan the contact identity before starting manual setup")
+
+                check(remoteIdentity.locallyImported) {
+                    "Import or scan the contact identity before starting manual setup"
+                }
+
+                val localIdentity =
+                    localPublicIdentityProvider
+                        .getLocalPublicIdentity()
+                        .getOrThrow()
+
+                protocolOutbox
+                    .enqueue(
+                        contactId = contactId,
+                        packet =
+                            IdentityPacket(
+                                packetId = IdGenerator.generate(),
+                                displayName = null,
+                                encryptionPublicKey = localIdentity.encryptionPublicKey.copyOf(),
+                                signingPublicKey = localIdentity.signingPublicKey.copyOf()
+                            )
+                    ).getOrThrow()
+            } finally {
+                mutex.withLock {
+                    currentlyStarting.remove(contactId)
+                }
+            }
+        }
 }

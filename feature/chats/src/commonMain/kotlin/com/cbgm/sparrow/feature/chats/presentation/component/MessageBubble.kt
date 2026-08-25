@@ -33,12 +33,15 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.messageBubble
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaType
+import com.cbgm.sparrow.feature.attachments.presentation.component.MessageMediaAttachments
+import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
 import com.cbgm.sparrow.feature.safety.presentation.component.MessageSafetyWarning
-import com.cbgm.sparrow.feature.safety.presentation.model.MessageSafetyWarningUiModel
+import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_decryption_failed
 import com.cbgm.sparrow.resources.feature_chats_delivered
@@ -64,6 +67,8 @@ internal fun MessageBubble(
     onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
     onSafetyDetailsClick: (MessageSafetyWarningUiModel) -> Unit = {},
+    onAttachmentVisible: (String) -> Unit = {},
+    onAttachmentClick: (String) -> Unit = {},
     isSearchHighlighted: Boolean = false
 ) {
     val bubbleState = bubbleState(message)
@@ -84,6 +89,8 @@ internal fun MessageBubble(
                 state = bubbleState,
                 isSearchHighlighted = isSearchHighlighted,
                 safetyWarning = safetyWarning,
+                onAttachmentVisible = onAttachmentVisible,
+                onAttachmentClick = onAttachmentClick,
                 onSafetyDetailsClick = {
                     if (safetyWarning != null) onSafetyDetailsClick(safetyWarning)
                 }
@@ -119,7 +126,7 @@ private fun SenderLabel(message: MessageBubbleModel) {
     Text(
         text = senderLabel,
         modifier = Modifier.padding(
-            start = MaterialTheme.spacing.base,
+            start = MaterialTheme.spacing.small,
             bottom = MaterialTheme.spacing.messageBubble.senderBottomPadding
         ),
         style = MaterialTheme.typography.labelSmall,
@@ -134,6 +141,8 @@ private fun BubbleBody(
     state: BubbleState,
     isSearchHighlighted: Boolean = false,
     safetyWarning: MessageSafetyWarningUiModel? = null,
+    onAttachmentVisible: (String) -> Unit = {},
+    onAttachmentClick: (String) -> Unit = {},
     onSafetyDetailsClick: () -> Unit = {}
 ) {
     val bubbleShapes = MaterialTheme.shapes.messageBubble
@@ -157,24 +166,39 @@ private fun BubbleBody(
             )
     ) {
         Column {
-            Row(
-                modifier =
-                    Modifier.padding(
-                        horizontal = MaterialTheme.spacing.small,
-                        vertical = MaterialTheme.spacing.base
-                    ),
-                verticalAlignment = Alignment.Top
-            ) {
-                if (state.isContentFailed) {
-                    Icon(imageVector = Icons.Default.ErrorOutline, contentDescription = null)
-                    Spacer(modifier = Modifier.width(MaterialTheme.spacing.base))
-                }
-
-                Text(
-                    text = state.text,
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium
+            if (message.mediaAttachments.isNotEmpty()) {
+                MessageMediaAttachments(
+                    attachments = message.mediaAttachments,
+                    onAttachmentVisible = onAttachmentVisible,
+                    onAttachmentClick = onAttachmentClick,
+                    modifier =
+                        Modifier.padding(
+                            horizontal = MaterialTheme.spacing.small,
+                            vertical = MaterialTheme.spacing.base
+                        )
                 )
+            }
+
+            if (state.text.isNotBlank() || state.isContentFailed) {
+                Row(
+                    modifier =
+                        Modifier.padding(
+                            horizontal = MaterialTheme.spacing.small,
+                            vertical = MaterialTheme.spacing.base
+                        ),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    if (state.isContentFailed) {
+                        Icon(imageVector = Icons.Default.ErrorOutline, contentDescription = null)
+                        Spacer(modifier = Modifier.width(MaterialTheme.spacing.base))
+                    }
+
+                    Text(
+                        text = state.text,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
 
             safetyWarning?.let { warning ->
@@ -491,6 +515,41 @@ private fun MessageBubblePreview() {
                     deliveryStatus = MessageDeliveryStatus.DELIVERED
                 ),
             onRetryClick = {}
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun MessageBubbleWithAttachmentsPreview() {
+    SparrowTheme {
+        MessageBubble(
+            message =
+                MessageBubbleModel(
+                    id = "preview-attachments",
+                    text = "Photos from today",
+                    isMine = false,
+                    security = MessageSecurity.END_TO_END_ENCRYPTED,
+                    contentStatus = MessageContentStatus.READABLE,
+                    deliveryStatus = MessageDeliveryStatus.DELIVERED,
+                    senderName = "Chris",
+                    mediaAttachments =
+                        listOf(
+                            MessageMediaAttachmentUi(
+                                id = "preview-image-1",
+                                type = MessageMediaType.IMAGE,
+                                mimeType = "image/jpeg"
+                            ),
+                            MessageMediaAttachmentUi(
+                                id = "preview-video",
+                                type = MessageMediaType.VIDEO,
+                                mimeType = "video/mp4"
+                            )
+                        )
+                ),
+            onRetryClick = {},
+            onAttachmentVisible = {},
+            onAttachmentClick = {}
         )
     }
 }

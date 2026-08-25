@@ -58,10 +58,14 @@ import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.attachments.device.rememberGalleryPickerLauncher
+import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
+import com.cbgm.sparrow.feature.attachments.presentation.component.MessageAttachmentViewer
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
+import com.cbgm.sparrow.feature.chats.presentation.component.AttachmentClick
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageBubble
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageControl
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
@@ -69,7 +73,7 @@ import com.cbgm.sparrow.feature.chats.presentation.component.rememberMessageSear
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectComposerState
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiState
-import com.cbgm.sparrow.feature.safety.presentation.model.MessageSafetyWarningUiModel
+import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.base_verify
@@ -112,6 +116,8 @@ fun DirectScreen(
     targetMessageId: String? = null
 ) {
     var showIdentitySetupDialog by rememberSaveable { mutableStateOf(false) }
+    var viewerMessageId by rememberSaveable { mutableStateOf<String?>(null) }
+    var viewerAttachmentId by rememberSaveable { mutableStateOf<String?>(null) }
 
     SparrowLazyScaffold(
         modifier = modifier,
@@ -154,6 +160,14 @@ fun DirectScreen(
                         warning = warning
                     )
                 )
+            },
+            onAttachmentVisible = { attachmentId ->
+                onUiEvent(DirectUiEvent.MediaAttachmentVisible(attachmentId))
+            },
+            onAttachmentClick = { messageId, attachmentId ->
+                viewerMessageId = messageId
+                viewerAttachmentId = attachmentId
+                onUiEvent(DirectUiEvent.MediaAttachmentVisible(attachmentId))
             }
         )
     }
@@ -169,6 +183,24 @@ fun DirectScreen(
                 onUiEvent(DirectUiEvent.ImportIdentityClicked)
             },
             onDismiss = { showIdentitySetupDialog = false }
+        )
+    }
+
+    val currentViewerMessage = viewerMessageId?.let { messageId -> uiState.messages.firstOrNull { it.id == messageId } }
+    val currentViewerAttachmentId = viewerAttachmentId
+    if (currentViewerMessage != null && currentViewerAttachmentId != null) {
+        MessageAttachmentViewer(
+            attachments = currentViewerMessage.mediaAttachments,
+            selectedAttachmentId = currentViewerAttachmentId,
+            canSaveToCameraRoll = !currentViewerMessage.isMine,
+            onDismiss = {
+                viewerMessageId = null
+                viewerAttachmentId = null
+            },
+            onEnsureAttachmentLoaded = { attachmentId ->
+                onUiEvent(DirectUiEvent.MediaAttachmentVisible(attachmentId))
+            },
+            onError = { error -> onUiEvent(DirectUiEvent.AttachmentError(error)) }
         )
     }
 }
@@ -287,6 +319,15 @@ private fun BottomBar(
     containerColor: Color,
     onUiEvent: (DirectUiEvent) -> Unit
 ) {
+    val galleryPicker =
+        rememberGalleryPickerLauncher(
+            maxItems = MessageAttachmentPolicy.MAX_ATTACHMENTS_PER_MESSAGE,
+            selectedMedia = uiState.selectedGalleryMedia,
+            onMediaSelected = { onUiEvent(DirectUiEvent.GalleryMediaSelected(it)) },
+            onDismissed = {},
+            onError = { onUiEvent(DirectUiEvent.AttachmentError(it)) }
+        )
+
     MessageControl(
         containerColor = containerColor,
         isTyping = uiState.isContactTyping,
@@ -294,9 +335,19 @@ private fun BottomBar(
         contactName = uiState.contactName,
         onValueChange = { onUiEvent(DirectUiEvent.MessageTextChanged(it)) },
         onSendClick = { onUiEvent(DirectUiEvent.SendClicked) },
-        isInputEnabled = !uiState.isLoading && uiState.composerState.isInputEnabled,
-        isSendEnabled = !uiState.isLoading && uiState.composerState.isSendActionEnabled,
-        onAttachmentButtonClick = {}
+        isInputEnabled = !uiState.isLoading && !uiState.isSending && uiState.composerState.isInputEnabled,
+        isSendEnabled = !uiState.isLoading && !uiState.isSending && uiState.composerState.isSendActionEnabled,
+        selectedGalleryMedia = uiState.selectedGalleryMedia,
+        onGallerySelectionClick = { galleryPicker.launch() },
+        isGalleryEnabled = !uiState.isLoading && !uiState.isSending && uiState.composerState.isInputEnabled,
+        onAttachmentButtonClick = { attachmentClick ->
+            when (attachmentClick) {
+                AttachmentClick.OpenGallery -> galleryPicker.launch()
+                AttachmentClick.OpenCamera,
+                AttachmentClick.OpenContacts,
+                AttachmentClick.OpenFile -> Unit
+            }
+        }
     )
 }
 
@@ -307,7 +358,9 @@ private fun Content(
     innerPadding: PaddingValues,
     targetMessageId: String?,
     onRetryMessage: (String) -> Unit,
-    onSafetyWarningClick: (String, MessageSafetyWarningUiModel) -> Unit
+    onSafetyWarningClick: (String, MessageSafetyWarningUiModel) -> Unit,
+    onAttachmentVisible: (String) -> Unit,
+    onAttachmentClick: (String, String) -> Unit
 ) {
     when {
         uiState.isLoading -> LoadingContent(
@@ -326,6 +379,8 @@ private fun Content(
             targetMessageId = targetMessageId,
             onRetryMessage = onRetryMessage,
             onSafetyWarningClick = onSafetyWarningClick,
+            onAttachmentVisible = onAttachmentVisible,
+            onAttachmentClick = onAttachmentClick,
             contentPadding = innerPadding
         )
     }
@@ -338,6 +393,8 @@ private fun MessageList(
     targetMessageId: String?,
     onRetryMessage: (String) -> Unit,
     onSafetyWarningClick: (String, MessageSafetyWarningUiModel) -> Unit,
+    onAttachmentVisible: (String) -> Unit,
+    onAttachmentClick: (String, String) -> Unit,
     contentPadding: PaddingValues
 ) {
     val searchTargetState =
@@ -373,6 +430,8 @@ private fun MessageList(
                 onSafetyDetailsClick = { warning ->
                     onSafetyWarningClick(message.id, warning)
                 },
+                onAttachmentVisible = onAttachmentVisible,
+                onAttachmentClick = { attachmentId -> onAttachmentClick(message.id, attachmentId) },
                 isSearchHighlighted = message.id == searchTargetState.highlightedMessageId
             )
         }

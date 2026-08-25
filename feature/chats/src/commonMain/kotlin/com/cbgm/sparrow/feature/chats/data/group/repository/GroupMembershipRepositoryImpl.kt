@@ -1,21 +1,27 @@
 package com.cbgm.sparrow.feature.chats.data.group.repository
 
+import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
+import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationDirection
 import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipCoordinator
 import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_LEFT_ROLE
 import com.cbgm.sparrow.feature.chats.data.group.security.isGroupAdminRole
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationState
+import com.cbgm.sparrow.feature.chats.domain.model.group.GroupInvitationOwnerIdentity
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupLeaveRequirement
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupMembershipRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.transformLatest
 
 class GroupMembershipRepositoryImpl(
     private val groupSecurityDao: GroupSecurityDao,
+    private val groupInvitationDao: GroupInvitationDao,
     private val membershipCoordinator: GroupMembershipCoordinator
 ) : GroupMembershipRepository {
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeAdministration(groupId: String): Flow<GroupAdministrationState> =
         combine(
             groupSecurityDao.observeState(groupId),
@@ -90,6 +96,24 @@ class GroupMembershipRepositoryImpl(
 
     override suspend fun delete(groupId: String): Result<Unit> =
         membershipCoordinator.deleteGroupConversation(groupId)
+
+    override suspend fun getIncomingInvitationOwnerIdentity(
+        groupId: String
+    ): Result<GroupInvitationOwnerIdentity> =
+        runCatching {
+            val invitation =
+                groupInvitationDao
+                    .findByGroupId(groupId)
+                    .singleOrNull { invitation ->
+                        invitation.direction == GroupInvitationDirection.INCOMING.name
+                    } ?: error("Incoming group invitation was not found")
+
+            GroupInvitationOwnerIdentity(
+                contactId = invitation.contactId,
+                encryptionPublicKey = invitation.ownerEncryptionPublicKey?.copyOf(),
+                signingPublicKey = invitation.ownerSigningPublicKey?.copyOf()
+            )
+        }
 
     override suspend fun acceptInvitation(groupId: String): Result<Unit> =
         membershipCoordinator.acceptInvitation(groupId)

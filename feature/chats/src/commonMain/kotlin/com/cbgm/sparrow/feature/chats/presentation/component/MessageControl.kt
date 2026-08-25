@@ -17,6 +17,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.attachments.presentation.component.AttachmentBar
+import com.cbgm.sparrow.feature.attachments.presentation.component.GallerySelectionPreview
+import com.cbgm.sparrow.feature.attachments.presentation.component.previewGalleryMediaSelections
+import com.cbgm.sparrow.feature.attachments.presentation.model.GalleryMediaSelection
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_chat_typing
 import org.jetbrains.compose.resources.stringResource
@@ -41,6 +45,9 @@ fun MessageControl(
     onSendClick: () -> Unit,
     isInputEnabled: Boolean,
     isSendEnabled: Boolean,
+    selectedGalleryMedia: List<GalleryMediaSelection> = emptyList(),
+    onGallerySelectionClick: () -> Unit = {},
+    isGalleryEnabled: Boolean = true,
     onAttachmentButtonClick: (AttachmentClick) -> Unit
 ) {
     var isAttachmentBarVisible by remember { mutableStateOf(false) }
@@ -68,7 +75,7 @@ fun MessageControl(
                     Modifier
                         .fillMaxWidth()
                         .padding(
-                            horizontal = MaterialTheme.spacing.base.times(7),
+                            horizontal = MaterialTheme.spacing.base.times(6),
                             vertical = MaterialTheme.spacing.micro
                         ),
                 style = MaterialTheme.typography.labelMedium,
@@ -76,22 +83,41 @@ fun MessageControl(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            GallerySelectionPreview(
+                media = selectedGalleryMedia,
+                onClick = onGallerySelectionClick,
+                modifier = Modifier.padding(bottom = MaterialTheme.spacing.base)
+            )
             MessageInput(
                 value = messageText,
                 onValueChange = onValueChange,
                 onSendClick = onSendClick,
                 inputEnabled = isInputEnabled,
                 sendEnabled = isSendEnabled,
+                hasAttachments = selectedGalleryMedia.isNotEmpty(),
                 onAttachmentClick = { isAttachmentBarVisible = !isAttachmentBarVisible },
                 isAttachmentVisible = isAttachmentBarVisible
             )
 
             if (isAttachmentBarVisible) {
                 AttachmentBar(
-                    onClickCamera = { onAttachmentButtonClick(AttachmentClick.OpenCamera) },
-                    onClickFile = { onAttachmentButtonClick(AttachmentClick.OpenFile) },
-                    onClickGallery = { onAttachmentButtonClick(AttachmentClick.OpenGallery) },
-                    onClickContact = { onAttachmentButtonClick(AttachmentClick.OpenContacts) }
+                    onClickCamera = {
+                        isAttachmentBarVisible = false
+                        onAttachmentButtonClick(AttachmentClick.OpenCamera)
+                    },
+                    onClickFile = {
+                        isAttachmentBarVisible = false
+                        onAttachmentButtonClick(AttachmentClick.OpenFile)
+                    },
+                    onClickGallery = {
+                        isAttachmentBarVisible = false
+                        onAttachmentButtonClick(AttachmentClick.OpenGallery)
+                    },
+                    onClickContact = {
+                        isAttachmentBarVisible = false
+                        onAttachmentButtonClick(AttachmentClick.OpenContacts)
+                    },
+                    isGalleryEnabled = isGalleryEnabled
                 )
             }
         }
@@ -105,13 +131,16 @@ private fun MessageControlPreview() {
         MessageControl(
             containerColor = MaterialTheme.colorScheme.background,
             isTyping = false,
-            contactName = "Test",
-            messageText = "blbabl",
+            contactName = "Chris",
+            messageText = "Here are the files",
             onValueChange = {},
             onSendClick = {},
             isInputEnabled = true,
-            onAttachmentButtonClick = {},
-            isSendEnabled = true
+            isSendEnabled = true,
+            selectedGalleryMedia = previewGalleryMediaSelections(),
+            onGallerySelectionClick = {},
+            isGalleryEnabled = true,
+            onAttachmentButtonClick = {}
         )
     }
 }

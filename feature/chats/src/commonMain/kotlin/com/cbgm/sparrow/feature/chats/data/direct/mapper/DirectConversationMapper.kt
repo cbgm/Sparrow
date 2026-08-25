@@ -3,20 +3,28 @@ package com.cbgm.sparrow.feature.chats.data.direct.mapper
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessages
+import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaAttachment
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessage
 
-internal fun ConversationWithMessages.toDirectConversation(): DirectConversation =
+internal fun ConversationWithMessages.toDirectConversation(
+    attachmentsByMessageId: Map<String, List<MessageMediaAttachment>> = emptyMap()
+): DirectConversation =
     DirectConversation(
         id = conversation.id,
         contactId = requireNotNull(conversation.contactId) { "Direct conversation has no contact" },
         messages =
             messages
                 .sortedBy(MessageEntity::createdAtEpochMilliseconds)
-                .map { message -> message.toDirectMessage(requireNotNull(conversation.contactId)) },
+                .map { message ->
+                    message.toDirectMessage(
+                        contactId = requireNotNull(conversation.contactId),
+                        attachments = attachmentsByMessageId[message.id].orEmpty()
+                    )
+                },
         unreadCount =
             messages.count { message ->
                 !message.isMine &&
@@ -25,7 +33,10 @@ internal fun ConversationWithMessages.toDirectConversation(): DirectConversation
             }
     )
 
-private fun MessageEntity.toDirectMessage(contactId: String): DirectMessage =
+private fun MessageEntity.toDirectMessage(
+    contactId: String,
+    attachments: List<MessageMediaAttachment>
+): DirectMessage =
     DirectMessage(
         id = id,
         contactId = contactId,
@@ -39,7 +50,8 @@ private fun MessageEntity.toDirectMessage(contactId: String): DirectMessage =
                 deliveryStatus.toMessageDeliveryStatus()
             } else {
                 MessageDeliveryStatus.NOT_APPLICABLE
-            }
+            },
+        attachments = attachments
     )
 
 private fun String.toMessageSecurity(): MessageSecurity =

@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.transport.gateway.model
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+@kotlinx.serialization.InternalSerializationApi
 @Serializable
 sealed interface GatewayClientMessage {
     /**
@@ -42,6 +43,34 @@ sealed interface GatewayClientMessage {
                 "A signed route requires a connection ID"
             }
         }
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Register
+
+            if (generation != other.generation) return false
+            if (expiresAtEpochMilliseconds != other.expiresAtEpochMilliseconds) return false
+            if (routingId != other.routingId) return false
+            if (connectionId != other.connectionId) return false
+            if (aliases != other.aliases) return false
+            if (!clientSigningPublicKey.contentEquals(other.clientSigningPublicKey)) return false
+            if (!clientSignature.contentEquals(other.clientSignature)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = generation?.hashCode() ?: 0
+            result = 31 * result + (expiresAtEpochMilliseconds?.hashCode() ?: 0)
+            result = 31 * result + routingId.hashCode()
+            result = 31 * result + (connectionId?.hashCode() ?: 0)
+            result = 31 * result + (aliases?.hashCode() ?: 0)
+            result = 31 * result + (clientSigningPublicKey?.contentHashCode() ?: 0)
+            result = 31 * result + (clientSignature?.contentHashCode() ?: 0)
+            return result
+        }
     }
 
     @Serializable
@@ -77,6 +106,17 @@ sealed interface GatewayClientMessage {
             }
         }
     }
+
+    @Serializable
+    @SerialName("request_blob_upload_ticket")
+    data class RequestBlobUploadTicket(
+        val requestId: String,
+        val blobId: String,
+        val maximumBytes: Long,
+        val readCapabilitySha256: String,
+        val deleteCapabilitySha256: String,
+        val blobExpiresAtEpochMilliseconds: Long
+    ) : GatewayClientMessage
 
     @Serializable
     @SerialName("acknowledge_envelope")

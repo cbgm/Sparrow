@@ -14,8 +14,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -27,8 +25,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
+import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
-import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
@@ -67,39 +65,18 @@ fun AddBlockedContactDialog(
                     style = MaterialTheme.typography.bodySmall
                 )
 
-                OutlinedTextField(
+                SparrowInputField(
                     value = phoneNumber,
                     onValueChange = onPhoneNumberChanged,
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = enabled,
-                    singleLine = true,
+                    isEnabled = enabled,
+                    isSingleLine = true,
                     isError = phoneNumberError != null,
-                    label = {
-                        Text(text = stringResource(Res.string.feature_contacts_phone_number))
-                    },
-                    supportingText =
-                        phoneNumberError?.let { error ->
-                            {
-                                Text(text = error)
-                            }
-                        },
-                    keyboardOptions =
-                        KeyboardOptions(
-                            keyboardType = KeyboardType.Phone,
-                            imeAction = ImeAction.Done
-                        ),
-                    colors =
-                        OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.TextField.unfocusedBorder),
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
-                            cursorColor = MaterialTheme.colorScheme.primary
-                        )
+                    label = stringResource(Res.string.feature_contacts_phone_number),
+                    errorText = phoneNumberError ?: "",
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Phone,
+                        imeAction = ImeAction.Done
+                    )
                 )
 
                 SparrowApprovalButton(
@@ -130,7 +107,10 @@ fun AddBlockedContactDialog(
                         style = MaterialTheme.typography.bodyMedium
                     )
                 } else {
-                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = Dimens.BlockedContactsScreen.dialogListMaxHeight)) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth()
+                            .heightIn(max = Dimens.BlockedContactsScreen.dialogListMaxHeight)
+                    ) {
                         items(
                             items = contacts,
                             key = Contact::id

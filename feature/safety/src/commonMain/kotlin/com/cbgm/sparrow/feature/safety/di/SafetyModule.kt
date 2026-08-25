@@ -1,8 +1,7 @@
 package com.cbgm.sparrow.feature.safety.di
 
-import com.cbgm.sparrow.feature.safety.data.analyzer.MessageSafetyStructuralAnalyzer
-import com.cbgm.sparrow.feature.safety.data.classifier.EmbeddingMessageSafetyClassifier
-import com.cbgm.sparrow.feature.safety.data.index.MessageSafetyIndexer
+import com.cbgm.sparrow.feature.safety.data.datasource.MessageSafetyEmbeddingDataSource
+import com.cbgm.sparrow.feature.safety.data.datasource.MessageSafetyLocalDataSource
 import com.cbgm.sparrow.feature.safety.data.repository.MessageSafetyAnalysisRepositoryImpl
 import com.cbgm.sparrow.feature.safety.data.repository.MessageSafetyRepositoryImpl
 import com.cbgm.sparrow.feature.safety.domain.repository.MessageSafetyAnalysisRepository
@@ -11,34 +10,57 @@ import com.cbgm.sparrow.feature.safety.domain.usecase.AnalyzeMessageSafetyUseCas
 import com.cbgm.sparrow.feature.safety.domain.usecase.InitializeMessageSafetyUseCase
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyStateUseCase
+import com.cbgm.sparrow.feature.safety.domain.usecase.ProcessMessageSafetyBatchUseCase
+import com.cbgm.sparrow.feature.safety.presentation.details.MessageSafetyDetailsViewModel
+import com.cbgm.sparrow.feature.safety.util.MessageSafetyClassifier
+import com.cbgm.sparrow.feature.safety.util.MessageSafetyStructuralAnalyzer
+import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val safetyModule =
     module {
+        single { MessageSafetyLocalDataSource(dao = get()) }
         single { MessageSafetyStructuralAnalyzer() }
-        single { EmbeddingMessageSafetyClassifier(embedder = get()) }
+        single { MessageSafetyClassifier() }
+        single { MessageSafetyEmbeddingDataSource(embedder = get()) }
+
         single<MessageSafetyAnalysisRepository> {
             MessageSafetyAnalysisRepositoryImpl(
                 structuralAnalyzer = get(),
+                embeddingDataSource = get(),
                 classifier = get()
-            )
-        }
-        factory { AnalyzeMessageSafetyUseCase(repository = get()) }
-        single {
-            MessageSafetyIndexer(
-                dao = get(),
-                analyzeMessageSafety = get()
             )
         }
         single<MessageSafetyRepository> {
             MessageSafetyRepositoryImpl(
-                dao = get(),
-                indexer = get(),
-                localEmbeddingRepository = get(),
+                localDataSource = get(),
                 applicationScope = get()
             )
         }
-        factory { InitializeMessageSafetyUseCase(repository = get()) }
+
+        factory { AnalyzeMessageSafetyUseCase(repository = get()) }
+        factory {
+            ProcessMessageSafetyBatchUseCase(
+                repository = get(),
+                analyzeMessageSafety = get()
+            )
+        }
+        single {
+            InitializeMessageSafetyUseCase(
+                repository = get(),
+                localEmbeddingRepository = get(),
+                processMessageSafetyBatch = get(),
+                applicationScope = get()
+            )
+        }
         factory { ObserveMessageSafetyAssessmentsUseCase(repository = get()) }
         factory { ObserveMessageSafetyStateUseCase(repository = get()) }
+
+        viewModel {
+            MessageSafetyDetailsViewModel(
+                savedStateHandle = get(),
+                blockContact = get(),
+                observeContactBlocklist = get()
+            )
+        }
     }

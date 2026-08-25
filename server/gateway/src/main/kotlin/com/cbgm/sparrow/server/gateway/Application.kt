@@ -50,7 +50,13 @@ data class GatewayConfig(
     val gatewayInternalApiToken: String?,
     val maximumFrameBytes: Long,
     val routeLifetimeMilliseconds: Long,
-    val routeRefreshIntervalMilliseconds: Long
+    val routeRefreshIntervalMilliseconds: Long,
+    val blobStoragePath: String,
+    val maximumBlobBytes: Long,
+    val maximumBlobStorageBytes: Long,
+    val maximumBlobRetentionMilliseconds: Long,
+    val blobCleanupIntervalMilliseconds: Long,
+    val blobUploadTicketLifetimeMilliseconds: Long
 ) {
     init {
         require(routeLifetimeMilliseconds > 0L) {
@@ -58,6 +64,17 @@ data class GatewayConfig(
         }
         require(routeRefreshIntervalMilliseconds in 1 until routeLifetimeMilliseconds) {
             "Route refresh interval must be positive and shorter than the route lifetime"
+        }
+        require(blobStoragePath.isNotBlank()) { "Blob storage path must not be blank" }
+        require(maximumBlobBytes > 0L) { "Maximum blob size must be positive" }
+        require(maximumBlobStorageBytes >= maximumBlobBytes) {
+            "Maximum blob storage must hold at least one maximum-size blob"
+        }
+        require(maximumBlobRetentionMilliseconds > 0L) { "Maximum blob retention must be positive" }
+        require(blobCleanupIntervalMilliseconds > 0L) { "Blob cleanup interval must be positive" }
+        require(blobUploadTicketLifetimeMilliseconds > 0L) { "Blob upload ticket lifetime must be positive" }
+        require(blobUploadTicketLifetimeMilliseconds < maximumBlobRetentionMilliseconds) {
+            "Blob upload tickets must expire before maximum blob retention"
         }
     }
 
@@ -109,6 +126,27 @@ data class GatewayConfig(
                     ServiceEnvironment.long(
                         "ROUTE_REFRESH_INTERVAL_MILLISECONDS",
                         DEFAULT_ROUTE_REFRESH_INTERVAL_MILLISECONDS
+                    ),
+                blobStoragePath =
+                    ServiceEnvironment.string("BLOB_STORAGE_PATH", ".sparrow-server/blobs"),
+                maximumBlobBytes =
+                    ServiceEnvironment.long("BLOB_MAXIMUM_BYTES", DEFAULT_MAXIMUM_BLOB_BYTES),
+                maximumBlobStorageBytes =
+                    ServiceEnvironment.long("BLOB_MAXIMUM_STORAGE_BYTES", DEFAULT_MAXIMUM_BLOB_STORAGE_BYTES),
+                maximumBlobRetentionMilliseconds =
+                    ServiceEnvironment.long(
+                        "BLOB_MAXIMUM_RETENTION_MILLISECONDS",
+                        DEFAULT_MAXIMUM_BLOB_RETENTION_MILLISECONDS
+                    ),
+                blobCleanupIntervalMilliseconds =
+                    ServiceEnvironment.long(
+                        "BLOB_CLEANUP_INTERVAL_MILLISECONDS",
+                        DEFAULT_BLOB_CLEANUP_INTERVAL_MILLISECONDS
+                    ),
+                blobUploadTicketLifetimeMilliseconds =
+                    ServiceEnvironment.long(
+                        "BLOB_UPLOAD_TICKET_LIFETIME_MILLISECONDS",
+                        DEFAULT_BLOB_UPLOAD_TICKET_LIFETIME_MILLISECONDS
                     )
             )
         }
@@ -140,5 +178,10 @@ data class GatewayConfig(
         private const val DEFAULT_MAXIMUM_FRAME_BYTES = 1_048_576L
         private const val DEFAULT_ROUTE_LIFETIME_MILLISECONDS = 90_000L
         private const val DEFAULT_ROUTE_REFRESH_INTERVAL_MILLISECONDS = 30_000L
+        private const val DEFAULT_MAXIMUM_BLOB_BYTES = 128L * 1024L * 1024L
+        private const val DEFAULT_MAXIMUM_BLOB_STORAGE_BYTES = 10L * 1024L * 1024L * 1024L
+        private const val DEFAULT_MAXIMUM_BLOB_RETENTION_MILLISECONDS = 30L * 24L * 60L * 60L * 1_000L
+        private const val DEFAULT_BLOB_CLEANUP_INTERVAL_MILLISECONDS = 60L * 60L * 1_000L
+        private const val DEFAULT_BLOB_UPLOAD_TICKET_LIFETIME_MILLISECONDS = 5L * 60L * 1_000L
     }
 }

@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cbgm.sparrow.feature.identity.presentation.platform.rememberIdentityShareLauncher
+import com.cbgm.sparrow.feature.identity.device.rememberIdentityShareLauncher
 import com.cbgm.sparrow.feature.identity.presentation.share.model.ShareIdentityUiEvent
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_identity_share_identity_text

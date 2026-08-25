@@ -63,6 +63,10 @@ val androidDatabaseModule =
         }
 
         single {
+            get<SparrowDatabase>().messageAttachmentDao()
+        }
+
+        single {
             get<SparrowDatabase>().messageRecipientStateDao()
         }
 

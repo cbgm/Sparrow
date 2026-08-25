@@ -1,18 +1,12 @@
 package com.cbgm.sparrow.feature.search.data.repository
 
-import com.cbgm.sparrow.data.database.dao.MessageSearchDao
-import com.cbgm.sparrow.data.database.model.StoredMessageSearchMatch
-import com.cbgm.sparrow.feature.search.data.mapper.messageSearchConversationName
-import com.cbgm.sparrow.feature.search.domain.model.MessageSearchConversationType
-import com.cbgm.sparrow.feature.search.domain.model.MessageSearchMatchType
+import com.cbgm.sparrow.feature.search.data.datasource.MessageSearchLocalDataSource
+import com.cbgm.sparrow.feature.search.data.mapper.toExactSearchResult
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchResult
 import com.cbgm.sparrow.feature.search.domain.repository.MessageSearchRepository
-import com.cbgm.sparrow.feature.search.domain.repository.SemanticSearchRepository
-import kotlinx.coroutines.CancellationException
 
 class MessageSearchRepositoryImpl(
-    private val dao: MessageSearchDao,
-    private val semanticSearchRepository: SemanticSearchRepository
+    private val localDataSource: MessageSearchLocalDataSource
 ) : MessageSearchRepository {
     override suspend fun search(
         query: String,
@@ -21,45 +15,10 @@ class MessageSearchRepositoryImpl(
         val normalizedQuery = query.trim()
         if (normalizedQuery.isEmpty()) return emptyList()
 
-        val resultLimit = limit.coerceAtLeast(1)
-        val exactResults =
-            dao.searchExactMessages(
+        return localDataSource
+            .searchExactMessages(
                 query = normalizedQuery,
-                limit = resultLimit
-            ).map(StoredMessageSearchMatch::toDomain)
-
-        if (exactResults.size >= resultLimit) return exactResults
-
-        val semanticResults =
-            try {
-                semanticSearchRepository.search(
-                    query = normalizedQuery,
-                    limit = resultLimit
-                )
-            } catch (cancellation: CancellationException) {
-                throw cancellation
-            } catch (_: Throwable) {
-                return exactResults
-            }
-
-        val exactMessageIds = exactResults.mapTo(mutableSetOf()) { it.messageId }
-        return exactResults +
-            semanticResults
-                .asSequence()
-                .filterNot { it.messageId in exactMessageIds }
-                .take(resultLimit - exactResults.size)
-                .toList()
+                limit = limit.coerceAtLeast(1)
+            ).map { it.toExactSearchResult() }
     }
 }
-
-private fun StoredMessageSearchMatch.toDomain(): MessageSearchResult =
-    MessageSearchResult(
-        messageId = messageId,
-        conversationId = conversationId,
-        conversationType = MessageSearchConversationType.valueOf(conversationType),
-        contactId = contactId,
-        conversationName = messageSearchConversationName(conversationTitle, contactName),
-        text = text,
-        createdAtEpochMilliseconds = createdAtEpochMilliseconds,
-        matchType = MessageSearchMatchType.EXACT
-    )

@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.startup.di
 
-import com.cbgm.sparrow.startup.AppInitializer
 import com.cbgm.sparrow.startup.domain.usecase.ObserveAppConnectionAvailabilityUseCase
-import com.cbgm.sparrow.startup.presentation.screen.StartupViewModel
+import com.cbgm.sparrow.startup.presentation.start.StartupViewModel
+import com.cbgm.sparrow.startup.util.AppInitializer
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 

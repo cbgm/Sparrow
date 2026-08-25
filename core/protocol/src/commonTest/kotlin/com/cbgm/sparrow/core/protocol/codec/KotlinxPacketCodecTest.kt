@@ -1,5 +1,8 @@
 package com.cbgm.sparrow.core.protocol.codec
 
+import com.cbgm.sparrow.core.protocol.attachment.EncryptedBlobReference
+import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment
+import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.core.protocol.packet.ChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.DeliveryReceiptPacket
 import com.cbgm.sparrow.core.protocol.packet.IdentityAcknowledgementPacket
@@ -8,6 +11,7 @@ import com.cbgm.sparrow.core.protocol.packet.ReadReceiptPacket
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -55,6 +59,74 @@ class KotlinxPacketCodecTest {
             actual =
             packet
         )
+    }
+
+    @Test
+    fun chatMessageAttachmentRoundTrip() {
+        val attachment =
+            MessageAttachment(
+                attachmentId = "attachment-1",
+                type = MessageAttachmentType.IMAGE,
+                mimeType = "image/jpeg",
+                byteSize = 512L,
+                width = 1200,
+                height = 800,
+                blob =
+                    EncryptedBlobReference(
+                        nodeId = "node-a",
+                        blobId = "blob-1234567890123456",
+                        readCapability = "read-capability",
+                        ciphertextByteSize = 528L,
+                        expiresAtEpochMilliseconds = 123_456_789L,
+                        encryptionKey = ByteArray(32) { 1 },
+                        nonce = ByteArray(24) { 2 },
+                        ciphertextSha256 = ByteArray(32) { 3 }
+                    )
+            )
+        val original =
+            ChatMessagePacket(
+                packetId = "packet-attachment-1",
+                messageId = "message-attachment-1",
+                sentAtEpochMilliseconds = 123_456L,
+                text = "",
+                attachments = listOf(attachment)
+            )
+
+        val encoded = codec.encode(original).getOrThrow()
+        val decoded = codec.decode(encoded).getOrThrow()
+        val packet = assertIs<ChatMessagePacket>(decoded)
+        val decodedAttachment = packet.attachments.single()
+
+        assertEquals(attachment.attachmentId, decodedAttachment.attachmentId)
+        assertEquals(attachment.type, decodedAttachment.type)
+        assertEquals(attachment.mimeType, decodedAttachment.mimeType)
+        assertEquals(attachment.byteSize, decodedAttachment.byteSize)
+        assertEquals(attachment.width, decodedAttachment.width)
+        assertEquals(attachment.height, decodedAttachment.height)
+        assertEquals(attachment.blob.nodeId, decodedAttachment.blob.nodeId)
+        assertEquals(attachment.blob.blobId, decodedAttachment.blob.blobId)
+        assertEquals(attachment.blob.ciphertextByteSize, decodedAttachment.blob.ciphertextByteSize)
+        assertContentEquals(attachment.blob.encryptionKey, decodedAttachment.blob.encryptionKey)
+        assertContentEquals(attachment.blob.nonce, decodedAttachment.blob.nonce)
+        assertContentEquals(attachment.blob.ciphertextSha256, decodedAttachment.blob.ciphertextSha256)
+    }
+
+    @Test
+    fun emptyAttachmentListIsNotAddedToLegacyTextPacket() {
+        val encoded =
+            codec
+                .encode(
+                    ChatMessagePacket(
+                        packetId = "packet-legacy-shape",
+                        messageId = "message-legacy-shape",
+                        sentAtEpochMilliseconds = 123_456L,
+                        text = "Hello"
+                    )
+                ).getOrThrow()
+
+        val encodedJson = encoded.decodeToString()
+
+        assertFalse("\"attachments\"" in encodedJson)
     }
 
     @Test

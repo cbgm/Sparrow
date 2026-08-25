@@ -1,10 +1,15 @@
 package com.cbgm.sparrow.core.protocol.packet
 
+import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment
+import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentConstraints
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.protocol.version.ProtocolVersion
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 @SerialName("chat_message")
 data class ChatMessagePacket(
@@ -19,6 +24,8 @@ data class ChatMessagePacket(
     val messageId: String,
     val sentAtEpochMilliseconds: Long,
     val text: String,
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val attachments: List<MessageAttachment> = emptyList(),
     val senderPhoneNumber: String? = null,
     val profilePicture: ProfilePictureMetadata = ProfilePictureMetadata()
 ) : SparrowPacket {
@@ -39,8 +46,16 @@ data class ChatMessagePacket(
             "Message timestamp must not be negative"
         }
 
-        require(text.isNotBlank()) {
-            "Message text must not be blank"
+        require(text.isNotBlank() || attachments.isNotEmpty()) {
+            "Message must contain text or at least one attachment"
+        }
+
+        require(attachments.size <= MessageAttachmentConstraints.MAX_ATTACHMENTS_PER_MESSAGE) {
+            "A message can contain at most ${MessageAttachmentConstraints.MAX_ATTACHMENTS_PER_MESSAGE} attachments"
+        }
+
+        require(attachments.map(MessageAttachment::attachmentId).distinct().size == attachments.size) {
+            "Attachment IDs must be unique within a message"
         }
 
         require(senderPhoneNumber == null || senderPhoneNumber.isNotBlank()) {

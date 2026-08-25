@@ -2,12 +2,15 @@ package com.cbgm.sparrow.feature.contactimport.presentation.importing
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.extensions.toFingerprint
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.contactimport.domain.usecase.ImportSharedIdentityUseCase
 import com.cbgm.sparrow.feature.contactimport.presentation.importing.model.ImportIdentityUiEvent
 import com.cbgm.sparrow.feature.contactimport.presentation.importing.model.ImportIdentityUiState
+import com.cbgm.sparrow.feature.contactimport.presentation.scan.model.ScannedIdentityPreview
 import com.cbgm.sparrow.feature.contacts.domain.model.IdentityImportTrust
+import com.cbgm.sparrow.feature.identity.domain.usecase.DecodeSharedIdentityUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,10 +19,12 @@ import kotlinx.coroutines.launch
 
 class ImportIdentityViewModel(
     private val savedStateHandle: SavedStateHandle,
+    private val decodeSharedIdentity: DecodeSharedIdentityUseCase,
     private val importSharedIdentity: ImportSharedIdentityUseCase
 ) : BaseViewModel() {
     private val contactId = savedStateHandle.get<String>(AppRoute.ImportContact::contactId.name)
     private val scannedIdentity = savedStateHandle.get<String>(AppRoute.ImportContact::scannedIdentity.name)
+
     private val _uiState =
         MutableStateFlow(
             ImportIdentityUiState(
@@ -28,13 +33,54 @@ class ImportIdentityViewModel(
         )
     val uiState: StateFlow<ImportIdentityUiState> = _uiState.asStateFlow()
 
+    init {
+        scannedIdentity
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?.let(::prepareScannedIdentity)
+    }
+
     fun onUiEvent(event: ImportIdentityUiEvent) {
         when (event) {
             is ImportIdentityUiEvent.EncodedIdentityChanged -> updateEncodedIdentity(event.value)
-            is ImportIdentityUiEvent.ImportClicked -> importIdentity(event.contactId, event.identityImportTrust)
+            ImportIdentityUiEvent.ImportClicked -> importIdentity(IdentityImportTrust.UNVERIFIED)
+            ImportIdentityUiEvent.ScannedIdentityConfirmed -> confirmScannedIdentity()
+            ImportIdentityUiEvent.ScannedIdentityDismissed -> dismissScannedIdentity()
             ImportIdentityUiEvent.BackClicked -> navigator.popBackStack()
             ImportIdentityUiEvent.ScanQrCodeClicked -> scanQrCode()
         }
+    }
+
+    private fun prepareScannedIdentity(encodedIdentity: String) {
+        decodeSharedIdentity(encodedIdentity)
+            .onSuccess { payload ->
+                _uiState.update {
+                    it.copy(
+                        scannedIdentityPreview =
+                            ScannedIdentityPreview(
+                                encodedIdentity = encodedIdentity,
+                                displayName = payload.contactDetails.displayName,
+                                phoneNumber = payload.contactDetails.phoneNumber,
+                                signingKeyFingerprint = payload.signingPublicKey.toFingerprint(),
+                                encryptionKeyFingerprint = payload.encryptionPublicKey.toFingerprint()
+                            ),
+                        errorMessage = null
+                    )
+                }
+            }.onFailure {
+                updateEncodedIdentity(encodedIdentity)
+            }
+    }
+
+    private fun confirmScannedIdentity() {
+        val preview = _uiState.value.scannedIdentityPreview ?: return
+        updateEncodedIdentity(preview.encodedIdentity)
+        _uiState.update { it.copy(scannedIdentityPreview = null) }
+        importIdentity(IdentityImportTrust.VERIFIED_IN_PERSON)
+    }
+
+    private fun dismissScannedIdentity() {
+        _uiState.update { it.copy(scannedIdentityPreview = null) }
     }
 
     private fun scanQrCode() {
@@ -58,10 +104,7 @@ class ImportIdentityViewModel(
         }
     }
 
-    private fun importIdentity(
-        contactId: String?,
-        identityImportTrust: IdentityImportTrust
-    ) {
+    private fun importIdentity(identityImportTrust: IdentityImportTrust) {
         val encodedIdentity = _uiState.value.encodedIdentity.trim()
 
         if (encodedIdentity.isEmpty()) {
@@ -91,6 +134,7 @@ class ImportIdentityViewModel(
                 savedStateHandle[ENCODED_IDENTITY_KEY] = ""
                 _uiState.update {
                     it.copy(
+                        encodedIdentity = "",
                         isImporting = false,
                         importedContactName = contact.displayName ?: "Unnamed contact",
                         importedIdentityTrust = identityImportTrust,

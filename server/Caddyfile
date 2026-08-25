@@ -15,6 +15,11 @@
         }
     }
 
+    @gateway_blobs path /v1/blobs /v1/blobs/*
+    handle @gateway_blobs {
+        reverse_proxy gateway:8094
+    }
+
     @gateway_info path /v1/gateway/info
     handle @gateway_info {
         reverse_proxy gateway:8094

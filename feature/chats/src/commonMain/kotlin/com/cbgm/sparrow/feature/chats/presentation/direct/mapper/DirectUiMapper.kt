@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.chats.presentation.direct.mapper
 
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
+import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
@@ -13,7 +14,7 @@ import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.IdentityHandshakeState
 import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyAssessment
-import com.cbgm.sparrow.feature.safety.presentation.mapper.toWarningUiModel
+import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toWarningUiModel
 
 internal fun resolveContactName(
     contact: Contact?,
@@ -26,7 +27,8 @@ internal fun resolveContactName(
         ?: "Unknown contact"
 
 internal fun DirectMessage.toUiModel(
-    safetyAssessments: Map<String, MessageSafetyAssessment>
+    safetyAssessments: Map<String, MessageSafetyAssessment>,
+    attachmentBytes: Map<String, ByteArray> = emptyMap()
 ): MessageBubbleModel =
     MessageBubbleModel(
         id = id,
@@ -40,6 +42,18 @@ internal fun DirectMessage.toUiModel(
                 null
             } else {
                 safetyAssessments[id]?.toWarningUiModel()
+            },
+        mediaAttachments =
+            attachments.map { attachment ->
+                MessageMediaAttachmentUi(
+                    id = attachment.id,
+                    type = attachment.type,
+                    mimeType = attachment.mimeType,
+                    width = attachment.width,
+                    height = attachment.height,
+                    durationMilliseconds = attachment.durationMilliseconds,
+                    bytes = attachmentBytes[attachment.id]
+                )
             }
     )
 
@@ -85,7 +99,8 @@ internal fun toDirectUiState(
     currentText: String,
     currentError: String?,
     contactTyping: Boolean,
-    safetyAssessments: Map<String, MessageSafetyAssessment>
+    safetyAssessments: Map<String, MessageSafetyAssessment>,
+    attachmentBytes: Map<String, ByteArray> = emptyMap()
 ): DirectUiState {
     val isChatAuthorized = isDirectChatAuthorized(contact, handshake, setupMode)
     val composerState =
@@ -102,7 +117,7 @@ internal fun toDirectUiState(
         messages =
             buildList {
                 for (message in conversation?.messages.orEmpty().asReversed()) {
-                    add(message.toUiModel(safetyAssessments))
+                    add(message.toUiModel(safetyAssessments, attachmentBytes))
                 }
             },
         messageText = currentText,
