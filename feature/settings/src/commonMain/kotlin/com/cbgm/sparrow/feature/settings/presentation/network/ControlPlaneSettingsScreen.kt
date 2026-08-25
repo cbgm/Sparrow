@@ -22,6 +22,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
@@ -57,8 +58,9 @@ fun ControlPlaneSettingsScreen(
     SparrowLazyScaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
+        topBar = { color ->
             ControlPlaneTopBar(
+                containerColor = color,
                 isRefreshing = uiState.isRefreshing,
                 onBack = { onUiEvent(ControlPlaneSettingsUiEvent.BackClicked) },
                 onRefresh = { onUiEvent(ControlPlaneSettingsUiEvent.Refresh) }
@@ -123,6 +125,7 @@ fun ControlPlaneSettingsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ControlPlaneTopBar(
+    containerColor: Color,
     isRefreshing: Boolean,
     onBack: () -> Unit,
     onRefresh: () -> Unit
@@ -152,7 +155,8 @@ private fun ControlPlaneTopBar(
         },
         colors =
             TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.background,
+                containerColor = containerColor,
+                scrolledContainerColor = containerColor,
                 titleContentColor = MaterialTheme.colorScheme.onBackground,
                 navigationIconContentColor = MaterialTheme.colorScheme.onBackground
             )
