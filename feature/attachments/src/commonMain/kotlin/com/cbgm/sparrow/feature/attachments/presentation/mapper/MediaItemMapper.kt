@@ -2,11 +2,11 @@ package com.cbgm.sparrow.feature.attachments.presentation.mapper
 
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaType
 import com.cbgm.sparrow.feature.attachments.presentation.model.GalleryMediaSelection
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentModel
+import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaItem
 import com.cbgm.sparrow.feature.media.presentation.model.MediaType
 
-internal fun MessageMediaAttachmentModel.toMediaItem(): MediaItem =
+internal fun MessageMediaAttachmentUi.toMediaItem(): MediaItem =
     MediaItem(
         id = id,
         type = type.toMediaType(),

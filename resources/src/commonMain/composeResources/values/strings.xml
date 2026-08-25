@@ -545,4 +545,17 @@
     <string name="feature_attachments_choose_gallery">Choose from gallery</string>
     <string name="feature_attachments_media">Media</string>
     <string name="feature_attachments_save_to_camera_roll">Save to camera roll</string>
+    <string name="feature_attachments_media_and_files">Media &amp; files</string>
+    <string name="feature_attachments_storage">Media &amp; files</string>
+    <string name="feature_settings_storage">Storage</string>
+    <string name="feature_attachments_storage_subtitle">Manage locally stored chat attachments</string>
+    <string name="feature_attachments_storage_empty">No locally stored attachments</string>
+    <string name="feature_attachments_files">Files</string>
+    <string name="feature_attachments_delete_selected">Delete selected</string>
+    <string name="feature_attachments_delete_title">Delete local attachments?</string>
+    <string name="feature_attachments_delete_description">This removes the selected copies from Sparrow only. Copies saved to your camera roll, Downloads, or other locations are not affected.</string>
+    <string name="feature_attachments_delete_confirm">Delete</string>
+    <string name="feature_attachments_selected_count">%1$d selected</string>
+    <string name="feature_attachments_select">Select</string>
+    <string name="feature_attachments_conversation_storage_description">%1$d media · %2$d files</string>
 </resources>

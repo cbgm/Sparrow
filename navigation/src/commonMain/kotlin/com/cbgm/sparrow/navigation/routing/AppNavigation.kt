@@ -21,6 +21,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import com.cbgm.sparrow.core.ui.navigation.AppNavigator
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
+import com.cbgm.sparrow.navigation.routing.graph.attachmentsNavGraph
 import com.cbgm.sparrow.navigation.routing.graph.chatsNavGraph
 import com.cbgm.sparrow.navigation.routing.graph.contactsNavGraph
 import com.cbgm.sparrow.navigation.routing.graph.identityNavGraph
@@ -165,6 +166,7 @@ fun AppNavigation(
             )
             mainNavGraph()
             chatsNavGraph()
+            attachmentsNavGraph()
             contactsNavGraph()
             identityNavGraph()
             settingsNavGraph()

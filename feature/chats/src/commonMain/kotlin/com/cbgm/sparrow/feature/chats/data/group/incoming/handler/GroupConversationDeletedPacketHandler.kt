@@ -7,6 +7,7 @@ import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
+import com.cbgm.sparrow.feature.attachments.domain.usecase.DeleteConversationLocalAttachmentsUseCase
 import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
 import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipEvent
 import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipStateMachine
@@ -19,7 +20,8 @@ class GroupConversationDeletedPacketHandler(
     private val groupInvitationDao: GroupInvitationDao,
     private val groupVerificationDao: GroupVerificationDao,
     private val membershipPacketProtocol: GroupMembershipPacketProtocol,
-    private val groupSecurityManager: GroupSecurityManager
+    private val groupSecurityManager: GroupSecurityManager,
+    private val deleteConversationLocalAttachments: DeleteConversationLocalAttachmentsUseCase
 ) : GroupPacketHandler {
     override fun canHandle(packet: SparrowPacket): Boolean = packet is GroupConversationDeletedPacket
 
@@ -55,6 +57,7 @@ class GroupConversationDeletedPacketHandler(
                     expectedOwnerSigningPublicKey = ownerIdentity.signingPublicKey
                 ).getOrThrow()
 
+            deleteConversationLocalAttachments(deletion.groupId).getOrThrow()
             groupSecurityManager.deleteLocalGroup(deletion.groupId).getOrThrow()
             chatDao.deleteConversationParticipants(deletion.groupId)
             groupVerificationDao.deleteByGroupId(deletion.groupId)

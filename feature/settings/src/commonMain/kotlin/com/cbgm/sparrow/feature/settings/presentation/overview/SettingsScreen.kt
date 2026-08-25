@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
@@ -60,6 +61,8 @@ import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_developer
 import com.cbgm.sparrow.resources.base_language
 import com.cbgm.sparrow.resources.base_version
+import com.cbgm.sparrow.resources.feature_attachments_storage
+import com.cbgm.sparrow.resources.feature_attachments_storage_subtitle
 import com.cbgm.sparrow.resources.feature_settings_about
 import com.cbgm.sparrow.resources.feature_settings_automatic_secure_setup
 import com.cbgm.sparrow.resources.feature_settings_automatic_secure_setup_disabled_subtitle
@@ -98,6 +101,7 @@ import com.cbgm.sparrow.resources.feature_settings_semantic_search_downloading
 import com.cbgm.sparrow.resources.feature_settings_semantic_search_failed
 import com.cbgm.sparrow.resources.feature_settings_semantic_search_ready
 import com.cbgm.sparrow.resources.feature_settings_semantic_search_subtitle
+import com.cbgm.sparrow.resources.feature_settings_storage
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -221,6 +225,15 @@ fun SettingsScreen(
                 onCheckedChange = { enabled ->
                     onUiEvent(SettingsUiEvent.MessageSafetyEnabledChanged(enabled))
                 }
+            )
+        }
+
+        SettingsSection(title = stringResource(Res.string.feature_settings_storage)) {
+            SettingsRow(
+                icon = Icons.Default.Folder,
+                title = stringResource(Res.string.feature_attachments_storage),
+                subtitle = stringResource(Res.string.feature_attachments_storage_subtitle),
+                onClick = { onUiEvent(SettingsUiEvent.AttachmentStorageClicked) }
             )
         }
 

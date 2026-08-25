@@ -42,22 +42,21 @@ class MessageAttachmentFileDataSource(
         fileSystem.delete(fileName.toSafeCachePath(), mustExist = false)
     }
 
-    fun saveForContact(
-        contactId: String,
-        contactName: String,
+    fun saveForConversation(
+        conversationId: String,
+        displayName: String,
         attachmentId: String,
         type: MessageAttachmentType,
         mimeType: String,
-        originalFileName: String?,
         bytes: ByteArray
     ): String {
-        require(contactId.isNotBlank()) { "Contact ID must not be blank" }
+        require(conversationId.isNotBlank()) { "Conversation ID must not be blank" }
         require(attachmentId.isNotBlank()) { "Attachment ID must not be blank" }
         require(bytes.isNotEmpty()) { "Attachment bytes must not be empty" }
 
-        val contactDirectory = resolveContactDirectory(contactId, contactName)
+        val conversationDirectory = resolveConversationDirectory(conversationId, displayName)
         val targetDirectory =
-            contactDirectory /
+            conversationDirectory /
                 if (type == MessageAttachmentType.IMAGE || type == MessageAttachmentType.VIDEO) {
                     MEDIA_DIRECTORY_NAME
                 } else {
@@ -65,30 +64,9 @@ class MessageAttachmentFileDataSource(
                 }
         fileSystem.createDirectories(targetDirectory)
 
-        val originalName =
-            originalFileName
-                ?.substringAfterLast('/')
-                ?.substringAfterLast('\\')
-                ?.sanitizeFileName()
-                ?.takeIf(String::isNotBlank)
-        val extension =
-            originalName
-                ?.substringAfterLast('.', "")
-                ?.takeIf(String::isNotBlank)
-                ?: mimeType.defaultExtension()
-        val baseName =
-            originalName
-                ?.substringBeforeLast('.', originalName)
-                ?.takeIf(String::isNotBlank)
-                ?: attachmentId
-        val suffix =
-            attachmentId
-                .filter(Char::isLetterOrDigit)
-                .takeLast(ATTACHMENT_ID_SUFFIX_LENGTH)
-                .ifBlank { "media" }
-        val maxBaseLength = (MAX_FILE_NAME_LENGTH - suffix.length - extension.length - FILE_NAME_SEPARATOR_LENGTH)
-            .coerceAtLeast(1)
-        val fileName = "${baseName.take(maxBaseLength)}-$suffix.$extension"
+        val extension = mimeType.defaultExtension()
+        val baseName = attachmentId.sanitizeFileName().ifBlank { "attachment" }
+        val fileName = "${baseName.take(MAX_FILE_NAME_LENGTH - extension.length - 1)}.$extension"
         val target = targetDirectory / fileName
 
         if (!fileSystem.exists(target)) {
@@ -99,19 +77,64 @@ class MessageAttachmentFileDataSource(
         return target.toString()
     }
 
-    private fun resolveContactDirectory(
-        contactId: String,
-        contactName: String
-    ): Path {
-        findExistingContactDirectory(contactId)?.let { return it }
+    fun deleteSavedAttachment(
+        conversationId: String,
+        attachmentId: String
+    ) {
+        val conversationDirectory = findExistingConversationDirectory(conversationId) ?: return
+        val safeId = attachmentId.sanitizeFileName().ifBlank { return }
+        listOf(MEDIA_DIRECTORY_NAME, FILES_DIRECTORY_NAME).forEach { child ->
+            val directory = conversationDirectory / child
+            if (!fileSystem.exists(directory)) return@forEach
+            fileSystem.list(directory)
+                .filter { candidate -> candidate.name.substringBeforeLast('.', candidate.name) == safeId }
+                .forEach { candidate -> fileSystem.delete(candidate, mustExist = false) }
+        }
+    }
 
-        val baseName = contactName.sanitizeDirectoryName().ifBlank { "Contact" }
+    fun deleteSavedConversation(conversationId: String) {
+        findExistingConversationDirectory(conversationId)?.let { directory ->
+            fileSystem.deleteRecursively(directory, mustExist = false)
+        }
+    }
+
+    fun deleteLegacyContactAttachment(
+        contactId: String,
+        attachmentId: String
+    ) {
+        val contactDirectory = findLegacyContactDirectory(contactId) ?: return
+        val suffix = attachmentId.filter(Char::isLetterOrDigit).takeLast(LEGACY_ATTACHMENT_ID_SUFFIX_LENGTH)
+        if (suffix.isBlank()) return
+        listOf(MEDIA_DIRECTORY_NAME, FILES_DIRECTORY_NAME).forEach { child ->
+            val directory = contactDirectory / child
+            if (!fileSystem.exists(directory)) return@forEach
+            fileSystem.list(directory)
+                .filter { candidate ->
+                    candidate.name.substringBeforeLast('.', candidate.name).endsWith("-$suffix")
+                }.forEach { candidate -> fileSystem.delete(candidate, mustExist = false) }
+        }
+    }
+
+    private fun findLegacyContactDirectory(contactId: String): Path? =
+        fileSystem.list(savedDirectory).firstOrNull { candidate ->
+            val marker = candidate / LEGACY_CONTACT_ID_MARKER
+            fileSystem.exists(marker) &&
+                runCatching { fileSystem.read(marker) { readUtf8() } }.getOrNull() == contactId
+        }
+
+    private fun resolveConversationDirectory(
+        conversationId: String,
+        displayName: String
+    ): Path {
+        findExistingConversationDirectory(conversationId)?.let { return it }
+
+        val baseName = displayName.sanitizeDirectoryName().ifBlank { "Conversation" }
         val preferred = savedDirectory / baseName
-        val preferredMarker = preferred / CONTACT_ID_MARKER
+        val preferredMarker = preferred / CONVERSATION_ID_MARKER
 
         if (!fileSystem.exists(preferred)) {
             fileSystem.createDirectories(preferred)
-            fileSystem.write(preferredMarker) { writeUtf8(contactId) }
+            fileSystem.write(preferredMarker) { writeUtf8(conversationId) }
             return preferred
         }
 
@@ -121,28 +144,29 @@ class MessageAttachmentFileDataSource(
             } else {
                 null
             }
-        if (existingId == null || existingId == contactId) {
+        if (existingId == null || existingId == conversationId) {
             if (existingId == null) {
-                fileSystem.write(preferredMarker) { writeUtf8(contactId) }
+                fileSystem.write(preferredMarker) { writeUtf8(conversationId) }
             }
             return preferred
         }
 
-        val suffix = contactId.filter(Char::isLetterOrDigit).takeLast(CONTACT_ID_SUFFIX_LENGTH).ifBlank { "contact" }
+        val suffix = conversationId.filter(Char::isLetterOrDigit).takeLast(CONVERSATION_ID_SUFFIX_LENGTH)
+            .ifBlank { "conversation" }
         val disambiguated = savedDirectory / "$baseName-$suffix"
         fileSystem.createDirectories(disambiguated)
-        val marker = disambiguated / CONTACT_ID_MARKER
+        val marker = disambiguated / CONVERSATION_ID_MARKER
         if (!fileSystem.exists(marker)) {
-            fileSystem.write(marker) { writeUtf8(contactId) }
+            fileSystem.write(marker) { writeUtf8(conversationId) }
         }
         return disambiguated
     }
 
-    private fun findExistingContactDirectory(contactId: String): Path? =
+    private fun findExistingConversationDirectory(conversationId: String): Path? =
         fileSystem.list(savedDirectory).firstOrNull { candidate ->
-            val marker = candidate / CONTACT_ID_MARKER
+            val marker = candidate / CONVERSATION_ID_MARKER
             fileSystem.exists(marker) &&
-                runCatching { fileSystem.read(marker) { readUtf8() } }.getOrNull() == contactId
+                runCatching { fileSystem.read(marker) { readUtf8() } }.getOrNull() == conversationId
         }
 
     private fun String.toSafeCachePath(): Path {
@@ -186,12 +210,12 @@ class MessageAttachmentFileDataSource(
         const val SAVED_DIRECTORY_NAME = "Sparrow"
         const val MEDIA_DIRECTORY_NAME = "media"
         const val FILES_DIRECTORY_NAME = "files"
-        const val CONTACT_ID_MARKER = ".sparrow-contact-id"
-        const val CONTACT_ID_SUFFIX_LENGTH = 8
-        const val ATTACHMENT_ID_SUFFIX_LENGTH = 8
+        const val CONVERSATION_ID_MARKER = ".sparrow-conversation-id"
+        const val CONVERSATION_ID_SUFFIX_LENGTH = 8
+        const val LEGACY_CONTACT_ID_MARKER = ".sparrow-contact-id"
+        const val LEGACY_ATTACHMENT_ID_SUFFIX_LENGTH = 8
         const val MAX_DIRECTORY_NAME_LENGTH = 80
         const val MAX_FILE_NAME_LENGTH = 120
-        const val FILE_NAME_SEPARATOR_LENGTH = 2
         val DIRECTORY_SAFE_CHARACTERS = setOf(' ', '-', '_', '(', ')')
         val FILE_SAFE_CHARACTERS = DIRECTORY_SAFE_CHARACTERS + setOf('.')
     }

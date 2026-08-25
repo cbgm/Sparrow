@@ -28,12 +28,12 @@ import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaType
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItem
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentModel
+import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
 import com.cbgm.sparrow.feature.media.presentation.component.MediaThumbnail
 
 @Composable
 fun MessageMediaAttachments(
-    attachments: List<MessageMediaAttachmentModel>,
+    attachments: List<MessageMediaAttachmentUi>,
     onAttachmentVisible: (String) -> Unit,
     onAttachmentClick: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -80,7 +80,7 @@ fun MessageMediaAttachments(
 
 @Composable
 private fun MessageMediaAttachment(
-    attachment: MessageMediaAttachmentModel,
+    attachment: MessageMediaAttachmentUi,
     onAttachmentVisible: (String) -> Unit,
     onAttachmentClick: (String) -> Unit
 ) {
@@ -165,25 +165,25 @@ private fun MessageMediaAttachmentsPreview() {
         MessageMediaAttachments(
             attachments =
                 listOf(
-                    MessageMediaAttachmentModel(
+                    MessageMediaAttachmentUi(
                         id = "preview-image-1",
                         type = MessageMediaType.IMAGE,
                         mimeType = "image/jpeg",
                         bytes = byteArrayOf()
                     ),
-                    MessageMediaAttachmentModel(
+                    MessageMediaAttachmentUi(
                         id = "preview-image-2",
                         type = MessageMediaType.IMAGE,
                         mimeType = "image/png",
                         bytes = byteArrayOf()
                     ),
-                    MessageMediaAttachmentModel(
+                    MessageMediaAttachmentUi(
                         id = "preview-video",
                         type = MessageMediaType.VIDEO,
                         mimeType = "video/mp4",
                         bytes = byteArrayOf()
                     ),
-                    MessageMediaAttachmentModel(
+                    MessageMediaAttachmentUi(
                         id = "preview-image-3",
                         type = MessageMediaType.IMAGE,
                         mimeType = "image/jpeg",

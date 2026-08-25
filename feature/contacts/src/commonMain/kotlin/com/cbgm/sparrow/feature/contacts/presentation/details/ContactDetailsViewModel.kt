@@ -34,6 +34,8 @@ class ContactDetailsViewModel(
 ) : BaseViewModel() {
     private val contactId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.ContactDetails::contactId.name)
+    private val conversationId =
+        savedStateHandle.requireRouteArgument<String>(AppRoute.ContactDetails::conversationId.name)
     private val reloadRevision = MutableStateFlow(0)
     private val verificationState = MutableStateFlow(VerificationActionState())
 
@@ -58,6 +60,8 @@ class ContactDetailsViewModel(
             ContactDetailsUiEvent.RetryClicked -> reload()
             ContactDetailsUiEvent.ConfirmVerificationClicked -> confirmVerification()
             ContactDetailsUiEvent.ScanQrCodeClicked -> scanQrCode()
+            ContactDetailsUiEvent.MediaAndFilesClicked ->
+                navigator.navigateTo(AppRoute.AttachmentManagement(conversationId))
             ContactDetailsUiEvent.ShareContactClicked,
             ContactDetailsUiEvent.VerifyIdentityClicked,
             ContactDetailsUiEvent.VerificationBackClicked -> Unit

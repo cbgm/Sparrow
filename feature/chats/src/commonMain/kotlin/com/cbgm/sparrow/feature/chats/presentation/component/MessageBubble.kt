@@ -35,7 +35,7 @@ import com.cbgm.sparrow.core.ui.theme.messageBubble
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaType
 import com.cbgm.sparrow.feature.attachments.presentation.component.MessageMediaAttachments
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentModel
+import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
@@ -535,12 +535,12 @@ private fun MessageBubbleWithAttachmentsPreview() {
                     senderName = "Chris",
                     mediaAttachments =
                         listOf(
-                            MessageMediaAttachmentModel(
+                            MessageMediaAttachmentUi(
                                 id = "preview-image-1",
                                 type = MessageMediaType.IMAGE,
                                 mimeType = "image/jpeg"
                             ),
-                            MessageMediaAttachmentModel(
+                            MessageMediaAttachmentUi(
                                 id = "preview-video",
                                 type = MessageMediaType.VIDEO,
                                 mimeType = "video/mp4"

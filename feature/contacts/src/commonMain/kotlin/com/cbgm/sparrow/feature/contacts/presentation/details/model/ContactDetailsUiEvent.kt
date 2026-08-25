@@ -9,6 +9,8 @@ sealed interface ContactDetailsUiEvent {
 
     data object VerifyIdentityClicked : ContactDetailsUiEvent
 
+    data object MediaAndFilesClicked : ContactDetailsUiEvent
+
     data object ConfirmVerificationClicked : ContactDetailsUiEvent
 
     data object ScanQrCodeClicked : ContactDetailsUiEvent

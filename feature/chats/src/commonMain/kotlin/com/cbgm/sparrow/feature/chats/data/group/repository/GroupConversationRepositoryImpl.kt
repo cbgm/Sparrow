@@ -4,13 +4,12 @@ import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
-import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
 import com.cbgm.sparrow.data.database.dao.MessageRecipientStateDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
-import com.cbgm.sparrow.data.database.entity.MessageAttachmentEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessages
-import com.cbgm.sparrow.feature.attachments.data.mapper.toDomainAttachmentsByMessageId
+import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
+import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaAttachment
 import com.cbgm.sparrow.feature.chats.data.group.mapper.toGroupConversation
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupConversationRepository
@@ -19,7 +18,7 @@ import kotlinx.coroutines.flow.combine
 
 class GroupConversationRepositoryImpl(
     private val chatDao: ChatDao,
-    private val messageAttachmentDao: MessageAttachmentDao,
+    private val messageAttachmentDataSource: MessageAttachmentDataSource,
     private val messageRecipientStateDao: MessageRecipientStateDao,
     private val groupInvitationDao: GroupInvitationDao,
     private val groupSecurityDao: GroupSecurityDao,
@@ -30,12 +29,12 @@ class GroupConversationRepositoryImpl(
             combine(
                 chatDao.observeConversationById(groupId),
                 chatDao.observeRecentMessages(groupId, RECENT_MESSAGE_LIMIT),
-                messageAttachmentDao.observeRecentByConversation(groupId, RECENT_MESSAGE_LIMIT)
-            ) { conversation, recentMessages, attachments ->
+                messageAttachmentDataSource.observeRecentMediaByConversation(groupId, RECENT_MESSAGE_LIMIT)
+            ) { conversation, recentMessages, attachmentsByMessageId ->
                 MessageSnapshot(
                     conversation = conversation,
                     messages = recentMessages,
-                    attachments = attachments
+                    attachmentsByMessageId = attachmentsByMessageId
                 )
             }
 
@@ -54,7 +53,7 @@ class GroupConversationRepositoryImpl(
                     recipientStates = recipientStates,
                     invitations = invitations,
                     verificationRows = verificationRows,
-                    attachmentsByMessageId = snapshot.attachments.toDomainAttachmentsByMessageId()
+                    attachmentsByMessageId = snapshot.attachmentsByMessageId
                 )
         }
     }
@@ -62,7 +61,7 @@ class GroupConversationRepositoryImpl(
     private data class MessageSnapshot(
         val conversation: ConversationEntity?,
         val messages: List<MessageEntity>,
-        val attachments: List<MessageAttachmentEntity>
+        val attachmentsByMessageId: Map<String, List<MessageMediaAttachment>>
     )
 
     private companion object {

@@ -176,6 +176,8 @@ class GroupVerificationViewModel(
             is GroupDetailsUiEvent.AvatarSelected -> saveGroupAvatar(event.bytes)
             GroupDetailsUiEvent.RemoveGroupAvatarClicked -> removeCurrentGroupAvatar()
             GroupDetailsUiEvent.AddMembersClicked -> Unit
+            GroupDetailsUiEvent.MediaAndFilesClicked ->
+                navigator.navigateTo(AppRoute.AttachmentManagement(conversationId))
         }
     }
 

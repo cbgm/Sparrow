@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.feature.attachments.presentation.model
 
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaType
-import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMediaAttachment
 
 data class GalleryMediaSelection(
     val id: String,
@@ -14,17 +13,6 @@ data class GalleryMediaSelection(
     val height: Int? = null,
     val durationMilliseconds: Long? = null
 ) {
-    fun toOutgoingMediaAttachment(): OutgoingMediaAttachment =
-        OutgoingMediaAttachment(
-            id = id,
-            type = type,
-            bytes = bytes,
-            mimeType = mimeType,
-            width = width,
-            height = height,
-            durationMilliseconds = durationMilliseconds
-        )
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false

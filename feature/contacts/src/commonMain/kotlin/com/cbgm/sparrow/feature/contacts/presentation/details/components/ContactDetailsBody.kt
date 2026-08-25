@@ -21,7 +21,8 @@ internal fun ContactDetailsBody(
     onBack: () -> Unit,
     onRetry: () -> Unit,
     onShareContact: () -> Unit,
-    onVerifyIdentity: () -> Unit
+    onVerifyIdentity: () -> Unit,
+    onMediaAndFiles: () -> Unit
 ) {
     when (uiState) {
         ContactDetailsUiState.Loading ->
@@ -49,6 +50,7 @@ internal fun ContactDetailsBody(
                 profilePictureBytes = uiState.profilePictureBytes,
                 onShareContact = onShareContact,
                 onVerifyIdentity = onVerifyIdentity,
+                onMediaAndFiles = onMediaAndFiles,
                 scrollState = scrollState,
                 innerPadding = innerPadding,
                 modifier = Modifier.fillMaxSize()
@@ -78,7 +80,8 @@ private fun ContactDetailsBodyPreview() {
             onBack = {},
             onRetry = {},
             onShareContact = {},
-            onVerifyIdentity = {}
+            onVerifyIdentity = {},
+            onMediaAndFiles = {}
         )
     }
 }

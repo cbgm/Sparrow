@@ -18,6 +18,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PersonAdd
@@ -73,6 +74,7 @@ import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.base_verify
 import com.cbgm.sparrow.resources.base_verify_contact
+import com.cbgm.sparrow.resources.feature_attachments_media_and_files
 import com.cbgm.sparrow.resources.feature_chats_group_add_members
 import com.cbgm.sparrow.resources.feature_chats_group_admin
 import com.cbgm.sparrow.resources.feature_chats_group_avatar
@@ -211,6 +213,7 @@ private fun Content(
                     onUiEvent(GroupDetailsUiEvent.VerifyMemberClicked(contactId))
                 },
                 onAddMembers = { onUiEvent(GroupDetailsUiEvent.AddMembersClicked) },
+                onMediaAndFiles = { onUiEvent(GroupDetailsUiEvent.MediaAndFilesClicked) },
                 onRemoveMember = { contactId ->
                     onUiEvent(GroupDetailsUiEvent.RemoveMemberClicked(contactId))
                 },
@@ -459,6 +462,7 @@ private fun MemberList(
     groupAvatarState: GroupAvatarUiState,
     onVerifyMember: (String) -> Unit,
     onAddMembers: () -> Unit,
+    onMediaAndFiles: () -> Unit,
     onRemoveMember: (String) -> Unit,
     onPromoteMember: (String) -> Unit,
     onLeaveGroup: () -> Unit,
@@ -504,6 +508,20 @@ private fun MemberList(
             Summary(summary = summary)
         }
 
+        item(key = "media-and-files") {
+            SparrowOutlinedButton(
+                onClick = onMediaAndFiles,
+                modifier = Modifier.fillMaxWidth(),
+                content = {
+                    Icon(Icons.Default.Folder, contentDescription = null)
+                    Text(
+                        text = stringResource(Res.string.feature_attachments_media_and_files),
+                        modifier = Modifier.padding(start = MaterialTheme.spacing.small)
+                    )
+                }
+            )
+        }
+
         if (summary.isLocalAdmin) {
             item(key = "member-management") {
                 MemberManagementActions(onAddMembers = onAddMembers)
@@ -535,6 +553,7 @@ private fun MemberListPreview() {
             groupAvatarState = GroupAvatarUiState(title = "Sparrow Team", canEdit = true),
             onVerifyMember = {},
             onAddMembers = {},
+            onMediaAndFiles = {},
             onRemoveMember = {},
             onPromoteMember = {},
             onLeaveGroup = {},

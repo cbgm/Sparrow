@@ -88,6 +88,14 @@ sealed interface AppRoute {
     data object ControlPlanes : AppRoute
 
     @Serializable
+    data object AttachmentStorage : AppRoute
+
+    @Serializable
+    data class AttachmentManagement(
+        val conversationId: String
+    ) : AppRoute
+
+    @Serializable
     data object BlockedContacts : AppRoute
 
     @Serializable

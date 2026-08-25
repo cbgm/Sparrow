@@ -1,10 +1,8 @@
 package com.cbgm.sparrow.feature.chats.data.direct.repository
 
 import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
 import com.cbgm.sparrow.data.database.model.ConversationWithMessages
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
-import com.cbgm.sparrow.feature.attachments.data.mapper.toDomainAttachmentsByMessageId
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaAttachment
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.mapper.toDirectConversation
@@ -16,20 +14,19 @@ import kotlinx.coroutines.flow.map
 
 class DirectConversationRepositoryImpl(
     private val chatDao: ChatDao,
-    private val messageAttachmentDao: MessageAttachmentDao,
-    private val messageAttachmentTransfer: MessageAttachmentDataSource,
+    private val messageAttachmentDataSource: MessageAttachmentDataSource,
     private val conversationDataSource: DirectConversationDataSource
 ) : DirectConversationRepository {
     override fun observe(conversationId: String): Flow<DirectConversation?> =
         combine(
             chatDao.observeConversationById(conversationId),
             chatDao.observeRecentMessages(conversationId, RECENT_MESSAGE_LIMIT),
-            messageAttachmentDao.observeRecentByConversation(conversationId, RECENT_MESSAGE_LIMIT)
-        ) { conversation, recentMessages, attachments ->
+            messageAttachmentDataSource.observeRecentMediaByConversation(conversationId, RECENT_MESSAGE_LIMIT)
+        ) { conversation, recentMessages, attachmentsByMessageId ->
             conversation?.let {
                 DirectConversationSnapshot(
                     conversation = ConversationWithMessages(it, recentMessages),
-                    attachmentsByMessageId = attachments.toDomainAttachmentsByMessageId()
+                    attachmentsByMessageId = attachmentsByMessageId
                 )
             }
         }.map { result ->
@@ -54,7 +51,6 @@ class DirectConversationRepositoryImpl(
         runCatching {
             val conversation = chatDao.findConversationById(conversationId) ?: return@runCatching
             check(conversation.type == DIRECT_CONVERSATION_TYPE) { "Conversation is not direct" }
-            messageAttachmentTransfer.deleteLocalFilesForConversation(conversationId)
             chatDao.deleteConversation(conversationId)
         }
 

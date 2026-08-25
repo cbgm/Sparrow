@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.attachments.presentation.model
 
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaType
 
-data class MessageMediaAttachmentModel(
+data class MessageMediaAttachmentUi(
     val id: String,
     val type: MessageMediaType,
     val mimeType: String,
@@ -15,7 +15,7 @@ data class MessageMediaAttachmentModel(
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as MessageMediaAttachmentModel
+        other as MessageMediaAttachmentUi
 
         if (width != other.width) return false
         if (height != other.height) return false

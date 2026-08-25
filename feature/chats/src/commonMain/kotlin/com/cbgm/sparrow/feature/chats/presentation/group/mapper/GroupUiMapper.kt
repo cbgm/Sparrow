@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.group.mapper
 
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentModel
+import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationState
@@ -95,7 +95,7 @@ internal fun GroupMessage.toUiModel(
                     },
                 mediaAttachments =
                     attachments.map { attachment ->
-                        MessageMediaAttachmentModel(
+                        MessageMediaAttachmentUi(
                             id = attachment.id,
                             type = attachment.type,
                             mimeType = attachment.mimeType,

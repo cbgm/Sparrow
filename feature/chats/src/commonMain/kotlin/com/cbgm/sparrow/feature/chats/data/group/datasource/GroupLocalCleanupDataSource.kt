@@ -4,7 +4,6 @@ import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.data.database.entity.MessageEntity
-import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
 import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
 
@@ -13,8 +12,7 @@ internal class GroupLocalCleanupDataSource(
     private val groupInvitationDao: GroupInvitationDao,
     private val groupVerificationDao: GroupVerificationDao,
     private val groupSecurityManager: GroupSecurityManager,
-    private val groupAvatarDataSource: GroupAvatarDataSource,
-    private val attachmentTransfer: MessageAttachmentDataSource
+    private val groupAvatarDataSource: GroupAvatarDataSource
 ) {
     suspend fun endMembership(message: MessageEntity) {
         chatDao.applyLocalGroupRemoval(message)
@@ -31,7 +29,6 @@ internal class GroupLocalCleanupDataSource(
         groupId: String,
         deletedAtEpochMilliseconds: Long
     ) {
-        attachmentTransfer.deleteLocalFilesForConversation(groupId)
         chatDao.hideGroupConversation(
             GroupMembershipMessageFactory.localConversationDeletedMarker(
                 conversationId = groupId,
@@ -47,7 +44,6 @@ internal class GroupLocalCleanupDataSource(
         groupId: String,
         deletedAtEpochMilliseconds: Long
     ) {
-        attachmentTransfer.deleteLocalFilesForConversation(groupId)
         chatDao.hideGroupConversation(
             GroupMembershipMessageFactory.localConversationDeletedMarker(
                 conversationId = groupId,

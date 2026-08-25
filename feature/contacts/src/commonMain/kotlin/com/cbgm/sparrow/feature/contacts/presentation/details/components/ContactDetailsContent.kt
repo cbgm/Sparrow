@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -23,12 +24,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.crypto.safety.SafetyNumber
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
+import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_share_contact
+import com.cbgm.sparrow.resources.feature_attachments_media_and_files
 import com.cbgm.sparrow.resources.feature_contacts_share_contact_missing_keys
 import org.jetbrains.compose.resources.stringResource
 
@@ -40,6 +43,7 @@ internal fun ContactDetailsContent(
     profilePictureBytes: ByteArray? = null,
     onShareContact: () -> Unit,
     onVerifyIdentity: () -> Unit,
+    onMediaAndFiles: () -> Unit,
     scrollState: ScrollState,
     innerPadding: PaddingValues
 ) {
@@ -70,6 +74,22 @@ internal fun ContactDetailsContent(
                 Text(
                     text = stringResource(Res.string.base_share_contact),
                     color = MaterialTheme.colorScheme.onPrimary,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        )
+
+        SparrowOutlinedButton(
+            onClick = onMediaAndFiles,
+            modifier = Modifier.fillMaxWidth(),
+            content = {
+                Icon(
+                    imageVector = Icons.Default.Folder,
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
+                Text(
+                    text = stringResource(Res.string.feature_attachments_media_and_files),
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -122,6 +142,7 @@ private fun ContactDetailsContentPreview() {
             safetyNumber = ContactDetailsPreviewData.safetyNumber,
             onShareContact = {},
             onVerifyIdentity = {},
+            onMediaAndFiles = {},
             scrollState = rememberScrollState(),
             innerPadding = PaddingValues(),
             modifier = Modifier.fillMaxSize()

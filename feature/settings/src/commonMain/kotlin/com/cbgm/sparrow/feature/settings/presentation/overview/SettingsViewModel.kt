@@ -94,6 +94,7 @@ class SettingsViewModel(
             SettingsUiEvent.BlockedContactsClicked -> navigator.navigateTo(AppRoute.BlockedContacts)
             SettingsUiEvent.ProfileClicked -> navigator.navigateTo(AppRoute.ProfileSettings)
             SettingsUiEvent.ControlPlanesClicked -> navigator.navigateTo(AppRoute.ControlPlanes)
+            SettingsUiEvent.AttachmentStorageClicked -> navigator.navigateTo(AppRoute.AttachmentStorage)
             SettingsUiEvent.VersionRowTapped -> handleVersionTap()
         }
     }

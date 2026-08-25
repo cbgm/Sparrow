@@ -20,7 +20,7 @@ import com.cbgm.sparrow.feature.attachments.device.MessageMediaExportItem
 import com.cbgm.sparrow.feature.attachments.device.rememberMessageMediaExporter
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaType
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItem
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentModel
+import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
 import com.cbgm.sparrow.feature.media.presentation.component.MediaViewer
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_attachments_media
@@ -29,7 +29,7 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun MessageAttachmentViewer(
-    attachments: List<MessageMediaAttachmentModel>,
+    attachments: List<MessageMediaAttachmentUi>,
     selectedAttachmentId: String,
     canSaveToCameraRoll: Boolean,
     onDismiss: () -> Unit,
@@ -70,7 +70,7 @@ fun MessageAttachmentViewer(
     }
 
     MediaViewer(
-        media = attachments.map(MessageMediaAttachmentModel::toMediaItem),
+        media = attachments.map(MessageMediaAttachmentUi::toMediaItem),
         initialIndex = selectedIndex,
         onDismiss = onDismiss,
         onEnsureMediaLoaded = onEnsureAttachmentLoaded,
@@ -105,7 +105,7 @@ private fun MessageAttachmentViewerPreview() {
         MessageAttachmentViewer(
             attachments =
                 listOf(
-                    MessageMediaAttachmentModel(
+                    MessageMediaAttachmentUi(
                         id = "preview-image",
                         type = MessageMediaType.IMAGE,
                         mimeType = "image/jpeg"
