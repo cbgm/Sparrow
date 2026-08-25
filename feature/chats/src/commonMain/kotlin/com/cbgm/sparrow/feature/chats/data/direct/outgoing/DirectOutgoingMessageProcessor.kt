@@ -26,8 +26,8 @@ import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessageDeliveryS
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectPendingAuthorizationMessagePolicy
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
-import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityInvitationRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
 
 /**
  * Owns every outgoing direct-message operation.
@@ -40,7 +40,7 @@ class DirectOutgoingMessageProcessor(
     private val getContact: GetContactUseCase,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
     private val protocolOutbox: ProtocolOutbox,
-    private val identityInvitationRepository: IdentityInvitationRepository,
+    private val requireDirectChatAuthorization: RequireDirectChatAuthorizationUseCase,
     private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
     private val deliveryCoordinator: DirectMessageDeliveryCoordinator,
     private val attachmentTransfer: MessageAttachmentTransfer
@@ -55,9 +55,7 @@ class DirectOutgoingMessageProcessor(
         runCatching {
             val normalizedText = requireMessageContent(text, media)
             val target = loadTarget(conversationId)
-            identityInvitationRepository
-                .requireDirectChatAuthorization(target.contactId)
-                .getOrThrow()
+            requireDirectChatAuthorization(target.contactId).getOrThrow()
 
             val contact = getContact(target.contactId).getOrThrow() ?: error("Contact was not found")
             val messageId = IdGenerator.generate(prefix = "message")
@@ -110,7 +108,7 @@ class DirectOutgoingMessageProcessor(
 
     suspend fun releaseWaitingForAuthorization(contactId: String): Result<Unit> =
         runCatching {
-            identityInvitationRepository.requireDirectChatAuthorization(contactId).getOrThrow()
+            requireDirectChatAuthorization(contactId).getOrThrow()
             val contact = getContact(contactId).getOrThrow() ?: error("Contact was not found")
             val nowEpochMilliseconds = SystemClock.nowEpochMilliseconds()
             val waitingMessages = findWaitingMessages(contactId)
@@ -151,9 +149,7 @@ class DirectOutgoingMessageProcessor(
             }
 
             val target = loadTarget(message.conversationId)
-            identityInvitationRepository
-                .requireDirectChatAuthorization(target.contactId)
-                .getOrThrow()
+            requireDirectChatAuthorization(target.contactId).getOrThrow()
 
             val packetId = message.packetId?.takeIf(String::isNotBlank) ?: error("Message has no linked protocol packet")
 

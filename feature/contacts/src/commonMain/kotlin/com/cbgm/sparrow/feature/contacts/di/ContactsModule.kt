@@ -3,33 +3,25 @@ package com.cbgm.sparrow.feature.contacts.di
 import com.cbgm.sparrow.core.protocol.handler.TypedProtocolPacketHandler
 import com.cbgm.sparrow.core.protocol.identity.LocalIdentityChangeHandler
 import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
-import com.cbgm.sparrow.data.database.dao.ContactDao
-import com.cbgm.sparrow.feature.contacts.data.exchange.ManualIdentityExchange
-import com.cbgm.sparrow.feature.contacts.data.incoming.handler.ContactInviteAcceptedPacketHandler
-import com.cbgm.sparrow.feature.contacts.data.incoming.handler.ContactInviteDeclinedPacketHandler
-import com.cbgm.sparrow.feature.contacts.data.incoming.handler.ContactInvitePacketHandler
-import com.cbgm.sparrow.feature.contacts.data.incoming.handler.ContactReadyPacketHandler
-import com.cbgm.sparrow.feature.contacts.data.incoming.handler.ContactVerificationReceiptPacketHandler
-import com.cbgm.sparrow.feature.contacts.data.incoming.handler.DirectChatAuthorizationRevokedPacketHandler
-import com.cbgm.sparrow.feature.contacts.data.incoming.handler.IdentityAcknowledgementPacketHandler
-import com.cbgm.sparrow.feature.contacts.data.incoming.handler.IdentityPacketHandler
-import com.cbgm.sparrow.feature.contacts.data.invitation.IdentityInvitationPayloadEncoder
-import com.cbgm.sparrow.feature.contacts.data.merge.ContactMergeService
-import com.cbgm.sparrow.feature.contacts.data.merge.ContactMergeServiceImpl
+import com.cbgm.sparrow.feature.contacts.adapter.ContactInviteAcceptedPacketHandler
+import com.cbgm.sparrow.feature.contacts.adapter.ContactInviteDeclinedPacketHandler
+import com.cbgm.sparrow.feature.contacts.adapter.ContactInvitePacketHandler
+import com.cbgm.sparrow.feature.contacts.adapter.ContactLocalIdentityChangeHandler
+import com.cbgm.sparrow.feature.contacts.adapter.ContactReadyPacketHandler
+import com.cbgm.sparrow.feature.contacts.adapter.ContactVerificationReceiptPacketHandler
+import com.cbgm.sparrow.feature.contacts.adapter.DirectChatAuthorizationRevokedPacketHandler
+import com.cbgm.sparrow.feature.contacts.adapter.IdentityAcknowledgementPacketHandler
+import com.cbgm.sparrow.feature.contacts.adapter.IdentityPacketHandler
+import com.cbgm.sparrow.feature.contacts.data.datasource.ContactKeyExchangeDataSource
+import com.cbgm.sparrow.feature.contacts.data.datasource.ContactVerificationDataSource
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactKeyExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactVerificationRepositoryImpl
-import com.cbgm.sparrow.feature.contacts.data.repository.DeviceContactWriterRepositoryImpl
-import com.cbgm.sparrow.feature.contacts.data.repository.DeviceContactsRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.IdentityExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.IdentityInvitationRepositoryImpl
-import com.cbgm.sparrow.feature.contacts.data.verification.ContactLocalIdentityChangeHandler
-import com.cbgm.sparrow.feature.contacts.data.verification.ContactVerificationPayloadEncoder
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactKeyExchangeRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactVerificationRepository
-import com.cbgm.sparrow.feature.contacts.domain.repository.DeviceContactWriterRepository
-import com.cbgm.sparrow.feature.contacts.domain.repository.DeviceContactsRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityExchangeRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityInvitationRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.AcceptContactInvitationUseCase
@@ -40,6 +32,14 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.DeleteDeclinedOutgoingIn
 import com.cbgm.sparrow.feature.contacts.domain.usecase.EnsureIdentityExchangeStartedUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.HandleContactInviteAcceptedPacketUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.HandleContactInviteDeclinedPacketUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.HandleContactInvitePacketUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.HandleContactReadyPacketUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.HandleContactVerificationReceiptPacketUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.HandleDirectChatAuthorizationRevokedPacketUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.HandleIdentityAcknowledgementPacketUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.HandleIdentityPacketUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportDeviceContactsUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.MarkContactInvitationsViewedUseCase
@@ -64,35 +64,25 @@ import com.cbgm.sparrow.feature.contacts.presentation.blocklist.BlockedContactsV
 import com.cbgm.sparrow.feature.contacts.presentation.details.ContactDetailsViewModel
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.ContactInvitationViewModel
 import com.cbgm.sparrow.feature.contacts.presentation.overview.ContactsViewModel
+import com.cbgm.sparrow.feature.contacts.util.ContactVerificationPayloadEncoder
+import com.cbgm.sparrow.feature.contacts.util.IdentityInvitationPayloadEncoder
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
-import org.koin.dsl.bind
 import org.koin.dsl.module
 
 val contactsModule =
     module {
 
-        single<DeviceContactsRepository> {
-            DeviceContactsRepositoryImpl(dataSource = get())
-        }
-
-        single<DeviceContactWriterRepository> {
-            DeviceContactWriterRepositoryImpl(dataSource = get())
-        }
-
-        single<ContactMergeService> {
-            ContactMergeServiceImpl(
-                contactDao = get<ContactDao>(),
-                phoneNumberNormalizer = get<PhoneNumberNormalizer>()
+        single {
+            ContactKeyExchangeDataSource(
+                contactDao = get(),
+                mailboxCapabilityLifecycle = get()
             )
         }
 
         single<ContactKeyExchangeRepository> {
-            ContactKeyExchangeRepositoryImpl(
-                contactDao = get(),
-                mailboxCapabilityLifecycle = get()
-            )
+            ContactKeyExchangeRepositoryImpl(dataSource = get())
         }
 
         single<LocalIdentityChangeHandler> {
@@ -111,7 +101,7 @@ val contactsModule =
         }
 
         single {
-            ContactVerificationRepositoryImpl(
+            ContactVerificationDataSource(
                 contactDao = get(),
                 localPublicIdentityProvider = get(),
                 localSigningKeyPairProvider = get(),
@@ -122,7 +112,7 @@ val contactsModule =
         }
 
         single<ContactVerificationRepository> {
-            get<ContactVerificationRepositoryImpl>()
+            ContactVerificationRepositoryImpl(dataSource = get())
         }
 
         single {
@@ -130,7 +120,7 @@ val contactsModule =
                 invitationDao = get(),
                 contactDao = get(),
                 contactRoutingIdDao = get(),
-                contactKeyExchangeRepository = get(),
+                contactKeyExchangeDataSource = get(),
                 localPublicIdentityProvider = get(),
                 localSigningKeyPairProvider = get(),
                 detachedSignatureCrypto = get(),
@@ -139,9 +129,7 @@ val contactsModule =
                 protocolOutbox = get(),
                 localPhoneNumberProvider = get(),
                 phoneNumberNormalizer = get(),
-                contactVerificationRepository = get(),
-                modeRepository = get(),
-                contactBlocklistRepository = get(),
+                contactVerificationDataSource = get(),
                 localProfilePictureMetadataProvider = get(),
                 remoteProfilePictureMetadataProcessor = get()
             )
@@ -151,12 +139,40 @@ val contactsModule =
             get<IdentityInvitationRepositoryImpl>()
         }
 
-        single {
-            ManualIdentityExchange(
-                contactDao = get(),
-                localPublicIdentityProvider = get(),
+        factory {
+            HandleContactInvitePacketUseCase(
+                identityInvitationRepository = get(),
+                modeRepository = get(),
+                contactBlocklistRepository = get()
+            )
+        }
+        factory { HandleContactInviteAcceptedPacketUseCase(identityInvitationRepository = get()) }
+        factory { HandleContactReadyPacketUseCase(identityInvitationRepository = get()) }
+        factory { HandleContactInviteDeclinedPacketUseCase(identityInvitationRepository = get()) }
+        factory {
+            HandleDirectChatAuthorizationRevokedPacketUseCase(
+                identityInvitationRepository = get(),
+                mailboxCapabilityLifecycle = get()
+            )
+        }
+        factory { HandleContactVerificationReceiptPacketUseCase(contactVerificationRepository = get()) }
+        factory {
+            HandleIdentityPacketUseCase(
+                contactRepository = get(),
+                contactKeyExchangeRepository = get(),
+                localSigningKeyPairProvider = get(),
+                identityAcknowledgementCrypto = get(),
                 protocolOutbox = get(),
-                identityInvitationRepository = get()
+                contactVerificationRepository = get()
+            )
+        }
+        factory {
+            HandleIdentityAcknowledgementPacketUseCase(
+                contactRepository = get(),
+                contactKeyExchangeRepository = get(),
+                localPublicIdentityProvider = get(),
+                identityAcknowledgementCrypto = get(),
+                contactVerificationRepository = get()
             )
         }
 
@@ -176,12 +192,9 @@ val contactsModule =
             bind<TypedProtocolPacketHandler>()
         }
 
-        single {
-            DirectChatAuthorizationRevokedPacketHandler(
-                coordinator = get(),
-                mailboxCapabilityLifecycle = get()
-            )
-        }.bind<TypedProtocolPacketHandler>()
+        singleOf(::DirectChatAuthorizationRevokedPacketHandler) {
+            bind<TypedProtocolPacketHandler>()
+        }
 
         singleOf(::ContactVerificationReceiptPacketHandler) {
             bind<TypedProtocolPacketHandler>()
@@ -197,25 +210,27 @@ val contactsModule =
 
         single<IdentityExchangeRepository> {
             IdentityExchangeRepositoryImpl(
-                modeRepository = get(),
-                identityInvitationRepository = get(),
-                manualIdentityExchange = get()
+                contactDao = get(),
+                localPublicIdentityProvider = get(),
+                protocolOutbox = get()
             )
         }
 
         single<ContactRepository> {
             ContactRepositoryImpl(
                 contactDao = get(),
-                mergeService = get(),
-                contactKeyExchangeRepository = get(),
-                identityExchangeRepository = get(),
-                phoneNumberNormalizer = get<PhoneNumberNormalizer>(),
-                deviceContactWriterRepository = get()
+                contactKeyExchangeDataSource = get(),
+                phoneNumberNormalizer = get<PhoneNumberNormalizer>()
             )
         }
 
         factory {
-            ImportContactUseCase(repository = get())
+            ImportContactUseCase(
+                contactRepository = get(),
+                identityInvitationRepository = get(),
+                identityExchangeRepository = get(),
+                deviceContactWriterRepository = get()
+            )
         }
 
         factory {
@@ -272,17 +287,40 @@ val contactsModule =
             )
         }
 
-        factory { AcceptContactInvitationUseCase(identityInvitationRepository = get()) }
+        factory {
+            AcceptContactInvitationUseCase(
+                identityInvitationRepository = get(),
+                modeRepository = get(),
+                contactBlocklistRepository = get()
+            )
+        }
         factory { DeclineContactInvitationUseCase(identityInvitationRepository = get()) }
-        factory { DeclineAndBlockContactInvitationUseCase(identityInvitationRepository = get()) }
+        factory {
+            DeclineAndBlockContactInvitationUseCase(
+                identityInvitationRepository = get(),
+                contactBlocklistRepository = get()
+            )
+        }
         factory { DeleteDeclinedOutgoingInvitationUseCase(repository = get()) }
         factory { MarkContactInvitationsViewedUseCase(repository = get()) }
-        factory { ObserveContactInvitationsUseCase(repository = get()) }
-        factory { RequireDirectChatAuthorizationUseCase(repository = get()) }
+        factory {
+            ObserveContactInvitationsUseCase(
+                repository = get(),
+                contactBlocklistRepository = get()
+            )
+        }
+        factory {
+            RequireDirectChatAuthorizationUseCase(
+                identityInvitationRepository = get(),
+                modeRepository = get(),
+                contactBlocklistRepository = get()
+            )
+        }
         factory {
             ObservePendingContactInvitationsUseCase(
                 identityInvitationRepository = get(),
-                modeRepository = get()
+                modeRepository = get(),
+                contactBlocklistRepository = get()
             )
         }
         factory { ObservePendingContactInvitationCountUseCase(observePendingContactInvitations = get()) }
@@ -305,7 +343,14 @@ val contactsModule =
         }
         factory { ObserveContactsWithProfilePicturesUseCase(observeContacts = get(), observeProfilePictures = get()) }
         factory { ObserveContactInvitationsContextUseCase(observeContactInvitations = get(), observeProfilePictures = get()) }
-        factory { EnsureIdentityExchangeStartedUseCase(identityExchangeRepository = get()) }
+        factory {
+            EnsureIdentityExchangeStartedUseCase(
+                modeRepository = get(),
+                contactBlocklistRepository = get(),
+                identityInvitationRepository = get(),
+                identityExchangeRepository = get()
+            )
+        }
 
         viewModel {
             ContactInvitationViewModel(

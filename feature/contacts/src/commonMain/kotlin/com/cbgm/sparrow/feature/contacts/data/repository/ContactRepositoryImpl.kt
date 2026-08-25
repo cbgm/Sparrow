@@ -1,14 +1,13 @@
 package com.cbgm.sparrow.feature.contacts.data.repository
 
 import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.data.database.entity.ContactEntity
 import com.cbgm.sparrow.data.database.entity.ContactPhoneNumberEntity
+import com.cbgm.sparrow.feature.contacts.data.datasource.ContactKeyExchangeDataSource
 import com.cbgm.sparrow.feature.contacts.data.mapper.toDomain
-import com.cbgm.sparrow.feature.contacts.data.merge.ContactMergeService
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumberType
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
@@ -19,31 +18,20 @@ import com.cbgm.sparrow.feature.contacts.domain.model.ImportDeviceContactRequest
 import com.cbgm.sparrow.feature.contacts.domain.model.ImportDevicePhoneNumber
 import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.RemoteIdentityOrigin
-import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactRequest
-import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactResult
-import com.cbgm.sparrow.feature.contacts.domain.repository.ContactKeyExchangeRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
-import com.cbgm.sparrow.feature.contacts.domain.repository.DeviceContactWriterRepository
-import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityExchangeRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 class ContactRepositoryImpl(
     private val contactDao: ContactDao,
-    private val mergeService: ContactMergeService,
-    private val contactKeyExchangeRepository: ContactKeyExchangeRepository,
-    private val identityExchangeRepository: IdentityExchangeRepository,
-    private val phoneNumberNormalizer: PhoneNumberNormalizer,
-    private val deviceContactWriterRepository: DeviceContactWriterRepository
+    private val contactKeyExchangeDataSource: ContactKeyExchangeDataSource,
+    private val phoneNumberNormalizer: PhoneNumberNormalizer
 ) : ContactRepository {
-    private val logger = SparrowLog.withTag("ContactRepositoryImpl")
-
     override suspend fun importContact(request: ImportContactRequest): Result<Contact> =
         runCatching {
             require(request.encryptionPublicKey.isNotEmpty()) {
                 "Encryption public key must not be empty"
             }
-
             require(request.signingPublicKey.isNotEmpty()) {
                 "Signing public key must not be empty"
             }
@@ -52,17 +40,14 @@ class ContactRepositoryImpl(
                 request.contactId
                     ?.trim()
                     ?.takeIf { it.isNotEmpty() }
-
             val normalizedDisplayName =
                 request.displayName
                     ?.trim()
                     ?.takeIf { it.isNotEmpty() }
-
             val normalizedPhoneNumber =
                 request.phoneNumber
                     ?.trim()
                     ?.takeIf { it.isNotEmpty() }
-
             val now = SystemClock.nowEpochMilliseconds()
 
             val resolvedContact =
@@ -71,77 +56,60 @@ class ContactRepositoryImpl(
                     signingPublicKey = request.signingPublicKey,
                     normalizedPhoneNumber = normalizedPhoneNumber
                 )
-
             val contactId = resolvedContact.contactId
 
             if (resolvedContact.isNewContact) {
                 contactDao.upsertContact(
-                    contact =
-                        ContactEntity(
-                            id = contactId,
-                            displayName = normalizedDisplayName,
-                            deviceContactId = null,
-                            deviceContactLinkStatus = DeviceContactLinkStatus.NOT_LINKED.name,
-                            preferredPhoneNumberId = null,
-                            createdAtEpochMilliseconds = now,
-                            updatedAtEpochMilliseconds = now
-                        )
+                    ContactEntity(
+                        id = contactId,
+                        displayName = normalizedDisplayName,
+                        deviceContactId = null,
+                        deviceContactLinkStatus = DeviceContactLinkStatus.NOT_LINKED.name,
+                        preferredPhoneNumberId = null,
+                        createdAtEpochMilliseconds = now,
+                        updatedAtEpochMilliseconds = now
+                    )
                 )
             } else {
                 val existingContact =
-                    contactDao.findById(
-                        contactId = contactId
-                    ) ?: error("Matched contact could not be loaded")
-
+                    contactDao.findById(contactId)
+                        ?: error("Matched contact could not be loaded")
                 contactDao.upsertContact(
-                    contact =
-                        existingContact.contact.copy(
-                            displayName =
-                                normalizedDisplayName
-                                    ?: existingContact.contact.displayName,
-                            updatedAtEpochMilliseconds = now
-                        )
+                    existingContact.contact.copy(
+                        displayName = normalizedDisplayName ?: existingContact.contact.displayName,
+                        updatedAtEpochMilliseconds = now
+                    )
                 )
             }
 
             val contactBeforePhoneNumberUpdate =
-                contactDao.findById(
-                    contactId = contactId
-                ) ?: error(
-                    "Contact could not be loaded after saving"
-                )
-
+                contactDao.findById(contactId)
+                    ?: error("Contact could not be loaded after saving")
             val preferredPhoneNumberId =
                 if (normalizedPhoneNumber == null) {
                     contactBeforePhoneNumberUpdate.contact.preferredPhoneNumberId
                 } else {
                     ensurePhoneNumberExists(
                         contactId = contactId,
-                        existingPhoneNumbers =
-                            contactBeforePhoneNumberUpdate.phoneNumbers,
+                        existingPhoneNumbers = contactBeforePhoneNumberUpdate.phoneNumbers,
                         value = normalizedPhoneNumber,
                         type = ContactPhoneNumberType.MOBILE,
                         label = null,
                         now = now
                     )
                 }
-
             val contactAfterPhoneNumber =
-                contactDao.findById(
-                    contactId = contactId
-                ) ?: error(
-                    "Contact could not be loaded after saving phone number"
-                )
+                contactDao.findById(contactId)
+                    ?: error("Contact could not be loaded after saving phone number")
 
             contactDao.upsertContact(
-                contact =
-                    contactAfterPhoneNumber.contact.copy(
-                        preferredPhoneNumberId = preferredPhoneNumberId,
-                        updatedAtEpochMilliseconds = now
-                    )
+                contactAfterPhoneNumber.contact.copy(
+                    preferredPhoneNumberId = preferredPhoneNumberId,
+                    updatedAtEpochMilliseconds = now
+                )
             )
 
-            contactKeyExchangeRepository
+            contactKeyExchangeDataSource
                 .storeRemoteIdentity(
                     contactId = contactId,
                     encryptionPublicKey = request.encryptionPublicKey,
@@ -153,50 +121,10 @@ class ContactRepositoryImpl(
                         }
                 ).getOrThrow()
 
-            identityExchangeRepository
-                .startManualExchange(
-                    contactId = contactId
-                ).getOrThrow()
-
-            val importedContact =
-                loadContactOrThrow(
-                    contactId = contactId,
-                    message = "Imported contact could not be loaded"
-                )
-
-            if (normalizedPhoneNumber != null) {
-                when (
-                    val result =
-                        deviceContactWriterRepository.addIfNotExists(
-                            request =
-                                AddDeviceContactRequest(
-                                    displayName =
-                                        normalizedDisplayName
-                                            ?: importedContact.displayName,
-                                    phoneNumber = normalizedPhoneNumber
-                                )
-                        )
-                ) {
-                    AddDeviceContactResult.Added -> {
-                        logger.debug { "Device contact created for imported contact: contactId=$contactId" }
-                    }
-                    AddDeviceContactResult.AlreadyExists -> {
-                        logger.debug { "Device contact already exists for imported contact: contactId=$contactId" }
-                    }
-                    AddDeviceContactResult.PermissionDenied -> {
-                        logger.warn { "Device contact was not created because write permission is missing" }
-                    }
-                    AddDeviceContactResult.InvalidPhoneNumber -> {
-                        logger.warn { "Device contact was not created because the phone number is invalid" }
-                    }
-
-                    is AddDeviceContactResult.Failure -> {
-                        logger.error(result.throwable) { "Device contact creation failed" }
-                    }
-                }
-            }
-
-            importedContact
+            loadContactOrThrow(
+                contactId = contactId,
+                message = "Imported contact could not be loaded"
+            )
         }
 
     override suspend fun importDeviceContact(request: ImportDeviceContactRequest): Result<Contact> =
@@ -222,7 +150,7 @@ class ContactRepositoryImpl(
             val now = SystemClock.nowEpochMilliseconds()
 
             val mergeResult =
-                mergeService.findOrCreateForDeviceContact(
+                findOrCreateForDeviceContact(
                     deviceContactId = request.deviceContactId,
                     phoneNumbers = normalizedPhoneNumbers
                 )
@@ -468,22 +396,24 @@ class ContactRepositoryImpl(
             }
 
             val existing =
-                contactDao.findById(
-                    contactId = contactId
-                ) ?: error("Contact not found: $contactId")
-
+                contactDao.findById(contactId)
+                    ?: error("Contact not found: $contactId")
             val publicIdentity =
                 existing.publicIdentity
                     ?: error("Contact has no Sparrow identity")
 
-            contactKeyExchangeRepository
-                .markMutual(
+            val updatedRows =
+                contactDao.updateKeyExchangeStatusIfKeysMatch(
                     contactId = contactId,
-                    expectedRemoteEncryptionPublicKey =
-                        publicIdentity.encryptionPublicKey,
-                    expectedRemoteSigningPublicKey =
-                        publicIdentity.signingPublicKey
-                ).getOrThrow()
+                    expectedEncryptionPublicKey = publicIdentity.encryptionPublicKey,
+                    expectedSigningPublicKey = publicIdentity.signingPublicKey,
+                    keyExchangeStatus = KeyExchangeStatus.MUTUAL.name,
+                    updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+                )
+
+            check(updatedRows == 1) {
+                "Contact identity changed before acknowledgement was applied"
+            }
 
             loadContactOrThrow(
                 contactId = contactId,
@@ -580,7 +510,7 @@ class ContactRepositoryImpl(
         }
 
         val mergeResult =
-            mergeService.findOrCreateForSparrowIdentity(
+            findOrCreateForSparrowIdentity(
                 signingPublicKey = signingPublicKey,
                 phoneNumber = normalizedPhoneNumber
             )
@@ -597,6 +527,48 @@ class ContactRepositoryImpl(
             contactId = mergeResult.contactId,
             isNewContact = mergeResult.isNewContact
         )
+    }
+
+    private suspend fun findOrCreateForSparrowIdentity(
+        signingPublicKey: ByteArray,
+        phoneNumber: String?
+    ): ResolvedContactImport {
+        val normalizedPhoneNumber =
+            phoneNumber
+                ?.takeIf { it.isNotBlank() }
+                ?.let { value -> phoneNumberNormalizer.normalize(value).getOrThrow() }
+
+        if (normalizedPhoneNumber != null) {
+            contactDao.findByNormalizedPhoneNumber(normalizedPhoneNumber)?.let { contact ->
+                return ResolvedContactImport(contact.contact.id, isNewContact = false)
+            }
+        }
+
+        contactDao.findBySigningPublicKey(signingPublicKey)?.let { contact ->
+            return ResolvedContactImport(contact.contact.id, isNewContact = false)
+        }
+
+        return ResolvedContactImport(IdGenerator.generate(), isNewContact = true)
+    }
+
+    private suspend fun findOrCreateForDeviceContact(
+        deviceContactId: String,
+        phoneNumbers: List<ImportDevicePhoneNumber>
+    ): ResolvedContactImport {
+        contactDao.findByDeviceContactId(deviceContactId)?.let { contact ->
+            return ResolvedContactImport(contact.contact.id, isNewContact = false)
+        }
+
+        phoneNumbers.forEach { phoneNumber ->
+            val normalized =
+                phoneNumberNormalizer.normalize(phoneNumber.value).getOrNull()
+                    ?: return@forEach
+            contactDao.findByNormalizedPhoneNumber(normalized)?.let { contact ->
+                return ResolvedContactImport(contact.contact.id, isNewContact = false)
+            }
+        }
+
+        return ResolvedContactImport(IdGenerator.generate(), isNewContact = true)
     }
 
     private suspend fun replaceDevicePhoneNumbers(

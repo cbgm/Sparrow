@@ -7,10 +7,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cbgm.sparrow.feature.contacts.device.rememberDeviceContactsPermissionRequest
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsEffect
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsScreenMode
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsUiEvent
-import com.cbgm.sparrow.feature.contacts.presentation.platform.rememberDeviceContactsPermissionRequest
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable

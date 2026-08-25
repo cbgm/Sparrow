@@ -4,11 +4,11 @@ import android.Manifest
 import android.content.ContentResolver
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
-import com.cbgm.sparrow.feature.contacts.data.datasource.AndroidDeviceContactWriterDataSource
-import com.cbgm.sparrow.feature.contacts.data.datasource.AndroidDeviceContactsDataSource
-import com.cbgm.sparrow.feature.contacts.data.datasource.DeviceContactWriterDataSource
-import com.cbgm.sparrow.feature.contacts.data.datasource.DeviceContactsDataSource
+import com.cbgm.sparrow.feature.contacts.device.AndroidDeviceContactWriterRepository
+import com.cbgm.sparrow.feature.contacts.device.AndroidDeviceContactsRepository
+import com.cbgm.sparrow.feature.contacts.domain.repository.DeviceContactWriterRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.DeviceContactsPermissionRepository
+import com.cbgm.sparrow.feature.contacts.domain.repository.DeviceContactsRepository
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -18,12 +18,12 @@ val androidContactsModule =
             androidContext().contentResolver
         }
 
-        single<DeviceContactsDataSource> {
-            AndroidDeviceContactsDataSource(contentResolver = get())
+        single<DeviceContactsRepository> {
+            AndroidDeviceContactsRepository(contentResolver = get())
         }
 
-        single<DeviceContactWriterDataSource> {
-            AndroidDeviceContactWriterDataSource(context = androidContext())
+        single<DeviceContactWriterRepository> {
+            AndroidDeviceContactWriterRepository(context = androidContext())
         }
 
         single<DeviceContactsPermissionRepository> {

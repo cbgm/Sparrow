@@ -23,9 +23,7 @@ import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvide
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProcessor
 import com.cbgm.sparrow.core.protocol.version.ProtocolVersion
-import com.cbgm.sparrow.core.security.ContactBlocklistRepository
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
-import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.data.database.dao.ContactRoutingIdDao
@@ -33,7 +31,8 @@ import com.cbgm.sparrow.data.database.dao.IdentityInvitationDao
 import com.cbgm.sparrow.data.database.entity.ContactPhoneNumberEntity
 import com.cbgm.sparrow.data.database.entity.ContactRoutingIdEntity
 import com.cbgm.sparrow.data.database.entity.IdentityInvitationEntity
-import com.cbgm.sparrow.feature.contacts.data.invitation.IdentityInvitationPayloadEncoder
+import com.cbgm.sparrow.feature.contacts.data.datasource.ContactKeyExchangeDataSource
+import com.cbgm.sparrow.feature.contacts.data.datasource.ContactVerificationDataSource
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactInvitation
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactInvitationStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumberType
@@ -45,9 +44,8 @@ import com.cbgm.sparrow.feature.contacts.domain.model.IdentityInvitationDirectio
 import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.PendingContactInvitation
 import com.cbgm.sparrow.feature.contacts.domain.model.RemoteIdentityOrigin
-import com.cbgm.sparrow.feature.contacts.domain.repository.ContactKeyExchangeRepository
-import com.cbgm.sparrow.feature.contacts.domain.repository.ContactVerificationRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityInvitationRepository
+import com.cbgm.sparrow.feature.contacts.util.IdentityInvitationPayloadEncoder
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
@@ -66,7 +64,7 @@ class IdentityInvitationRepositoryImpl(
     private val invitationDao: IdentityInvitationDao,
     private val contactDao: ContactDao,
     private val contactRoutingIdDao: ContactRoutingIdDao,
-    private val contactKeyExchangeRepository: ContactKeyExchangeRepository,
+    private val contactKeyExchangeDataSource: ContactKeyExchangeDataSource,
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val detachedSignatureCrypto: DetachedSignatureCrypto,
@@ -75,9 +73,7 @@ class IdentityInvitationRepositoryImpl(
     private val protocolOutbox: ProtocolOutbox,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
     private val phoneNumberNormalizer: PhoneNumberNormalizer,
-    private val contactVerificationRepository: ContactVerificationRepository,
-    private val modeRepository: DirectIdentitySetupModeRepository,
-    private val contactBlocklistRepository: ContactBlocklistRepository,
+    private val contactVerificationDataSource: ContactVerificationDataSource,
     private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
     private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor
 ) : IdentityInvitationRepository {
@@ -87,13 +83,8 @@ class IdentityInvitationRepositoryImpl(
 
     override suspend fun start(contactId: String): Result<Unit> =
         runCatching {
-            requireAutomaticSetupEnabled()
-
             require(contactId.isNotBlank()) {
                 "Contact ID must not be blank"
-            }
-            check(!contactBlocklistRepository.isBlocked(contactId)) {
-                "Blocked contacts cannot be invited"
             }
 
             mutex.withLock {
@@ -226,47 +217,39 @@ class IdentityInvitationRepositoryImpl(
     override fun observeInvitations(
         direction: IdentityInvitationDirection
     ): Flow<List<ContactInvitation>> =
-        combine(
-            invitationDao.observeByDirectionAndStates(
+        invitationDao
+            .observeByDirectionAndStates(
                 direction = direction.name,
                 states = visibleInvitationStates(direction)
-            ),
-            contactBlocklistRepository.observeBlockedContactIds()
-        ) { invitations, blockedContactIds ->
-            if (direction == IdentityInvitationDirection.INCOMING) {
-                invitations.filterNot { invitation -> invitation.contactId in blockedContactIds }
-            } else {
-                invitations
-            }
-        }.transformLatest { invitations ->
-            while (true) {
-                val now = SystemClock.nowEpochMilliseconds()
-                emit(
-                    buildList {
-                        for (storedInvitation in invitations) {
-                            if (storedInvitation.hiddenAtEpochMilliseconds != null) continue
+            ).transformLatest { invitations ->
+                while (true) {
+                    val now = SystemClock.nowEpochMilliseconds()
+                    emit(
+                        buildList {
+                            for (storedInvitation in invitations) {
+                                if (storedInvitation.hiddenAtEpochMilliseconds != null) continue
 
-                            val invitation = expirePendingInvitationIfNeeded(storedInvitation, now)
-                            val status = invitation.toContactInvitationStatus() ?: continue
-                            if (
-                                direction == IdentityInvitationDirection.INCOMING &&
-                                status != ContactInvitationStatus.PENDING
-                            ) {
-                                continue
-                            }
-                            if (!isVisibleInvitationHistory(status, invitation.updatedAtEpochMilliseconds, now)) {
-                                continue
-                            }
+                                val invitation = expirePendingInvitationIfNeeded(storedInvitation, now)
+                                val status = invitation.toContactInvitationStatus() ?: continue
+                                if (
+                                    direction == IdentityInvitationDirection.INCOMING &&
+                                    status != ContactInvitationStatus.PENDING
+                                ) {
+                                    continue
+                                }
+                                if (!isVisibleInvitationHistory(status, invitation.updatedAtEpochMilliseconds, now)) {
+                                    continue
+                                }
 
-                            toContactInvitation(invitation, direction, status)?.let(::add)
+                                toContactInvitation(invitation, direction, status)?.let(::add)
+                            }
                         }
-                    }
-                )
+                    )
 
-                val nextWakeAt = nextInvitationWakeAt(invitations, now) ?: awaitCancellation()
-                delay((nextWakeAt - now).coerceAtLeast(1L).milliseconds)
+                    val nextWakeAt = nextInvitationWakeAt(invitations, now) ?: awaitCancellation()
+                    delay((nextWakeAt - now).coerceAtLeast(1L).milliseconds)
+                }
             }
-        }
 
     override fun observeAcceptedContactIds(): Flow<Set<String>> =
         invitationDao
@@ -355,17 +338,21 @@ class IdentityInvitationRepositoryImpl(
         }
     }
 
+    override suspend fun getContactId(invitationId: String): Result<String> =
+        runCatching {
+            require(invitationId.isNotBlank()) {
+                "Invitation ID must not be blank"
+            }
+            invitationDao.findById(invitationId)?.contactId
+                ?: error("Invitation was not found: $invitationId")
+        }
+
     override suspend fun accept(invitationId: String): Result<Unit> =
         runCatching {
-            requireAutomaticSetupEnabled()
-
             mutex.withLock {
                 var invitation = requireInvitation(invitationId, IdentityInvitationDirection.INCOMING)
                 ensureNotExpired(invitation)
                 invitation = rebindIncomingInvitation(invitation)
-                check(!contactBlocklistRepository.isBlocked(invitation.contactId)) {
-                    "Blocked contacts cannot be accepted"
-                }
 
                 if (
                     invitation.state == IdentityHandshakeState.ACCEPTANCE_SENT.name ||
@@ -439,7 +426,7 @@ class IdentityInvitationRepositoryImpl(
                     )
                     throw error
                 }
-                contactKeyExchangeRepository
+                contactKeyExchangeDataSource
                     .markMutual(
                         contactId = invitation.contactId,
                         expectedRemoteEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
@@ -507,13 +494,6 @@ class IdentityInvitationRepositoryImpl(
             }
         }
 
-    override suspend fun declineAndBlock(invitationId: String): Result<Unit> =
-        runCatching {
-            val invitation = requireInvitation(invitationId, IdentityInvitationDirection.INCOMING)
-            contactBlocklistRepository.block(invitation.contactId)
-            decline(invitationId).getOrThrow()
-        }
-
     override suspend fun cancelForManualSetup(contactId: String): Result<Unit> =
         runCatching {
             require(contactId.isNotBlank()) {
@@ -564,18 +544,16 @@ class IdentityInvitationRepositoryImpl(
             }
         }
 
-    override suspend fun requireDirectChatAuthorization(contactId: String): Result<Unit> =
+    override suspend fun requireDirectChatAuthorization(
+        contactId: String,
+        mode: DirectIdentitySetupMode
+    ): Result<Unit> =
         runCatching {
             require(contactId.isNotBlank()) {
                 "Contact ID must not be blank"
             }
-            if (contactBlocklistRepository.isBlocked(contactId)) {
-                throw DirectChatAuthorizationRequiredException(
-                    "Blocked contacts cannot send or receive direct messages"
-                )
-            }
 
-            when (modeRepository.getMode()) {
+            when (mode) {
                 DirectIdentitySetupMode.AUTOMATIC_INVITATION -> {
                     val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
                     if (!hasActiveDirectChatAuthorization(contactId, localIdentity)) {
@@ -643,9 +621,12 @@ class IdentityInvitationRepositoryImpl(
             }
         }
 
-    suspend fun receiveInvite(
+    override suspend fun receiveInvite(
         context: IncomingPacketContext,
-        packet: ContactInvitePacket
+        packet: ContactInvitePacket,
+        setupMode: DirectIdentitySetupMode,
+        blockedContactIds: Set<String>,
+        blockUnknownContactInvites: Boolean
     ): Result<Unit> =
         runCatching {
             mutex.withLock {
@@ -703,7 +684,13 @@ class IdentityInvitationRepositoryImpl(
                     )
                 val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
 
-                if (shouldAutomaticallyDecline(contactId)) {
+                if (
+                    shouldAutomaticallyDecline(
+                        contactId = contactId,
+                        blockedContactIds = blockedContactIds,
+                        blockUnknownContactInvites = blockUnknownContactInvites
+                    )
+                ) {
                     queueDecline(
                         contactId = contactId,
                         invitationId = packet.invitationId,
@@ -712,7 +699,7 @@ class IdentityInvitationRepositoryImpl(
                     return@withLock
                 }
 
-                if (modeRepository.getMode() == DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING) {
+                if (setupMode == DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING) {
                     queueDecline(
                         contactId = contactId,
                         invitationId = packet.invitationId,
@@ -839,7 +826,7 @@ class IdentityInvitationRepositoryImpl(
             }
         }
 
-    suspend fun receiveAccepted(
+    override suspend fun receiveAccepted(
         context: IncomingPacketContext,
         packet: ContactInviteAcceptedPacket
     ): Result<Unit> =
@@ -934,14 +921,14 @@ class IdentityInvitationRepositoryImpl(
 
                 requireState(invitation, IdentityHandshakeState.INVITE_SENT)
 
-                contactKeyExchangeRepository
+                contactKeyExchangeDataSource
                     .storeRemoteIdentity(
                         contactId = context.contactId,
                         encryptionPublicKey = packet.responderEncryptionPublicKey,
                         signingPublicKey = packet.responderSigningPublicKey,
                         origin = RemoteIdentityOrigin.CONTACT_INVITATION
                     ).getOrThrow()
-                contactKeyExchangeRepository
+                contactKeyExchangeDataSource
                     .acceptRemoteIdentityForHandshake(
                         contactId = context.contactId,
                         expectedRemoteEncryptionPublicKey = packet.responderEncryptionPublicKey,
@@ -952,7 +939,7 @@ class IdentityInvitationRepositoryImpl(
                     contactId = context.contactId,
                     packet = packet
                 )
-                contactKeyExchangeRepository
+                contactKeyExchangeDataSource
                     .markMutual(
                         contactId = context.contactId,
                         expectedRemoteEncryptionPublicKey = packet.responderEncryptionPublicKey,
@@ -972,7 +959,7 @@ class IdentityInvitationRepositoryImpl(
                     )
                 )
 
-                contactVerificationRepository
+                contactVerificationDataSource
                     .sendReceiptIfLocallyVerified(context.contactId)
                     .onFailure { error ->
                         logger.warn(error) { "Could not queue contact verification receipt" }
@@ -980,7 +967,7 @@ class IdentityInvitationRepositoryImpl(
             }
         }
 
-    suspend fun receiveReady(
+    override suspend fun receiveReady(
         context: IncomingPacketContext,
         packet: ContactReadyPacket
     ): Result<Unit> =
@@ -1055,7 +1042,7 @@ class IdentityInvitationRepositoryImpl(
                     "Ready confirmation cannot be applied from state ${invitation.state}"
                 }
 
-                contactKeyExchangeRepository
+                contactKeyExchangeDataSource
                     .markMutual(
                         contactId = invitation.contactId,
                         expectedRemoteEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
@@ -1072,7 +1059,7 @@ class IdentityInvitationRepositoryImpl(
                     )
                 )
 
-                contactVerificationRepository
+                contactVerificationDataSource
                     .sendReceiptIfLocallyVerified(invitation.contactId)
                     .onFailure { error ->
                         logger.warn(error) { "Could not queue contact verification receipt" }
@@ -1080,7 +1067,7 @@ class IdentityInvitationRepositoryImpl(
             }
         }
 
-    suspend fun receiveDeclined(
+    override suspend fun receiveDeclined(
         context: IncomingPacketContext,
         packet: ContactInviteDeclinedPacket
     ): Result<Unit> =
@@ -1164,7 +1151,7 @@ class IdentityInvitationRepositoryImpl(
             }
         }
 
-    suspend fun receiveDirectChatAuthorizationRevoked(
+    override suspend fun receiveDirectChatAuthorizationRevoked(
         context: IncomingPacketContext,
         packet: DirectChatAuthorizationRevokedPacket
     ): Result<Unit> =
@@ -1460,7 +1447,7 @@ class IdentityInvitationRepositoryImpl(
     }
 
     private suspend fun acceptInvitationIdentity(invitation: IdentityInvitationEntity) {
-        contactKeyExchangeRepository
+        contactKeyExchangeDataSource
             .acceptInvitationIdentityForHandshake(
                 contactId = invitation.contactId,
                 remoteEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
@@ -1490,7 +1477,7 @@ class IdentityInvitationRepositoryImpl(
             return
         }
 
-        contactKeyExchangeRepository
+        contactKeyExchangeDataSource
             .storeRemoteIdentity(
                 contactId = contactId,
                 encryptionPublicKey = remoteEncryptionPublicKey,
@@ -1749,7 +1736,7 @@ class IdentityInvitationRepositoryImpl(
                     signature = signature.copyOf()
                 )
         ).getOrThrow()
-        contactKeyExchangeRepository
+        contactKeyExchangeDataSource
             .markMutual(
                 contactId = invitation.contactId,
                 expectedRemoteEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
@@ -1931,11 +1918,15 @@ class IdentityInvitationRepositoryImpl(
         ).getOrThrow()
     }
 
-    private suspend fun shouldAutomaticallyDecline(contactId: String): Boolean {
-        if (contactBlocklistRepository.isBlocked(contactId)) {
+    private suspend fun shouldAutomaticallyDecline(
+        contactId: String,
+        blockedContactIds: Set<String>,
+        blockUnknownContactInvites: Boolean
+    ): Boolean {
+        if (contactId in blockedContactIds) {
             return true
         }
-        if (!contactBlocklistRepository.getBlockUnknownContactInvites()) {
+        if (!blockUnknownContactInvites) {
             return false
         }
 
@@ -1943,12 +1934,6 @@ class IdentityInvitationRepositoryImpl(
         return contact.contact.deviceContactId == null &&
             contact.phoneNumbers.isEmpty() &&
             contact.publicIdentity?.locallyImported != true
-    }
-
-    private suspend fun requireAutomaticSetupEnabled() {
-        check(modeRepository.getMode() == DirectIdentitySetupMode.AUTOMATIC_INVITATION) {
-            "Automatic identity invitations are disabled"
-        }
     }
 
     private suspend fun queueDecline(
