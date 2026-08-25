@@ -508,29 +508,14 @@ private fun MemberList(
             Summary(summary = summary)
         }
 
-        item(key = "media-and-files") {
-            SparrowOutlinedButton(
-                onClick = onMediaAndFiles,
-                modifier = Modifier.fillMaxWidth(),
-                content = {
-                    Icon(Icons.Default.Folder, contentDescription = null)
-                    Text(
-                        text = stringResource(Res.string.feature_attachments_media_and_files),
-                        modifier = Modifier.padding(start = MaterialTheme.spacing.small)
-                    )
-                }
+        item(key = "management-buttons") {
+            ManagementItem(
+                onMediaAndFiles = onMediaAndFiles,
+                isAdmin = summary.isLocalAdmin,
+                canLeaveGroup = summary.canLeaveGroup,
+                onAddMembers = onAddMembers,
+                onLeaveGroup = onLeaveGroup
             )
-        }
-
-        if (summary.isLocalAdmin) {
-            item(key = "member-management") {
-                MemberManagementActions(onAddMembers = onAddMembers)
-            }
-        }
-        if (summary.canLeaveGroup) {
-            item(key = "leave-group") {
-                LeaveAction(onLeaveGroup = onLeaveGroup)
-            }
         }
 
         item(key = "members") {
@@ -540,6 +525,28 @@ private fun MemberList(
                 onRemoveMember = onRemoveMember,
                 onPromoteMember = onPromoteMember
             )
+        }
+    }
+}
+
+@Composable
+private fun ManagementItem(
+    onMediaAndFiles: () -> Unit,
+    isAdmin: Boolean,
+    canLeaveGroup: Boolean,
+    onAddMembers: () -> Unit,
+    onLeaveGroup: () -> Unit
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
+    ) {
+        MediaFilesButton(onOpen = onMediaAndFiles)
+
+        if (isAdmin) {
+            MemberManagementActions(onAddMembers = onAddMembers)
+        }
+        if (canLeaveGroup) {
+            LeaveAction(onLeaveGroup = onLeaveGroup)
         }
     }
 }
@@ -563,6 +570,23 @@ private fun MemberListPreview() {
             listState = rememberLazyListState()
         )
     }
+}
+
+@Composable
+private fun MediaFilesButton(
+    onOpen: () -> Unit
+) {
+    SparrowOutlinedButton(
+        onClick = onOpen,
+        modifier = Modifier.fillMaxWidth(),
+        content = {
+            Icon(Icons.Default.Folder, contentDescription = null)
+            Text(
+                text = stringResource(Res.string.feature_attachments_media_and_files),
+                modifier = Modifier.padding(start = MaterialTheme.spacing.small)
+            )
+        }
+    )
 }
 
 @Composable
@@ -766,6 +790,7 @@ private fun GroupMemberVerificationUiState.verificationStatusIcon(): ImageVector
 
             GroupMemberVerificationState.UNVERIFIED,
             GroupMemberVerificationState.UNAVAILABLE -> Icons.Default.Warning
+
             GroupMemberVerificationState.INVITATION_PENDING -> Icons.Default.Schedule
             GroupMemberVerificationState.GROUP_ADMIN -> Icons.Default.Group
         }

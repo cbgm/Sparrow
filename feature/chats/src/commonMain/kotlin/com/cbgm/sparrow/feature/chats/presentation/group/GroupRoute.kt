@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.chats.presentation.group.screen
+package com.cbgm.sparrow.feature.chats.presentation.group
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect

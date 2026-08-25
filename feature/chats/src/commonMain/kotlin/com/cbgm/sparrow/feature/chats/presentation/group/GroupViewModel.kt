@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.chats.presentation.group.screen
+package com.cbgm.sparrow.feature.chats.presentation.group
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
