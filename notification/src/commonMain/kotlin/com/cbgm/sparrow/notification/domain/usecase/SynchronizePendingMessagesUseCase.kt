@@ -4,9 +4,9 @@ import com.cbgm.sparrow.core.crypto.InitializeCryptoRuntime
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverview
 import com.cbgm.sparrow.feature.chats.domain.repository.overview.ConversationOverviewRepository
-import com.cbgm.sparrow.feature.messaging.application.incoming.IncomingEnvelopeProcessingResult
-import com.cbgm.sparrow.feature.messaging.application.incoming.IncomingEnvelopeProcessor
-import com.cbgm.sparrow.feature.messaging.application.mailbox.MailboxCoordinator
+import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessingResult
+import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessor
+import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxCoordinator
 import com.cbgm.sparrow.feature.transport.push.inbox.PendingEnvelopeGateway
 import com.cbgm.sparrow.notification.domain.model.ConversationNotification
 import com.cbgm.sparrow.notification.domain.model.PendingMessageSyncResult

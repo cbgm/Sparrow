@@ -6,38 +6,37 @@ import com.cbgm.sparrow.core.protocol.outbox.OutboxProcessor
 import com.cbgm.sparrow.core.protocol.outbox.OutboxRunner
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.transport.OutgoingWireSender
-import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectTypingRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupTypingRepository
-import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
-import com.cbgm.sparrow.feature.messaging.application.incoming.DefaultIncomingEnvelopeProcessor
-import com.cbgm.sparrow.feature.messaging.application.incoming.DefaultIncomingEnvelopeRunner
-import com.cbgm.sparrow.feature.messaging.application.incoming.IncomingEnvelopeProcessor
-import com.cbgm.sparrow.feature.messaging.application.incoming.IncomingEnvelopeRunner
-import com.cbgm.sparrow.feature.messaging.application.mailbox.DefaultMailboxCapabilityLifecycle
-import com.cbgm.sparrow.feature.messaging.application.mailbox.DefaultMailboxCoordinator
-import com.cbgm.sparrow.feature.messaging.application.mailbox.MailboxCoordinator
-import com.cbgm.sparrow.feature.messaging.application.mailbox.MailboxRoutePacketHandler
-import com.cbgm.sparrow.feature.messaging.application.mailbox.MailboxRoutePayloadEncoder
-import com.cbgm.sparrow.feature.messaging.application.outbox.DefaultOutboxProcessor
-import com.cbgm.sparrow.feature.messaging.application.outbox.DefaultOutboxRunner
-import com.cbgm.sparrow.feature.messaging.application.outbox.DefaultOutgoingPacketTransportPolicy
-import com.cbgm.sparrow.feature.messaging.application.outbox.DefaultOutgoingTransportPayloadFactory
-import com.cbgm.sparrow.feature.messaging.application.outbox.OutgoingPacketTransportPolicy
-import com.cbgm.sparrow.feature.messaging.application.outbox.OutgoingTransportPayloadFactory
-import com.cbgm.sparrow.feature.messaging.application.routing.ContactByRoutingIdResolver
-import com.cbgm.sparrow.feature.messaging.application.routing.ContactRoutingIdResolver
-import com.cbgm.sparrow.feature.messaging.application.routing.GroupRoutingIdResolver
-import com.cbgm.sparrow.feature.messaging.application.routing.GroupTransportKeyResolver
-import com.cbgm.sparrow.feature.messaging.application.routing.IncomingEnvelopeGateway
-import com.cbgm.sparrow.feature.messaging.data.repository.direct.DirectTypingRepositoryImpl
-import com.cbgm.sparrow.feature.messaging.data.repository.group.GroupTypingRepositoryImpl
-import com.cbgm.sparrow.feature.messaging.data.routing.DefaultContactByRoutingIdResolver
-import com.cbgm.sparrow.feature.messaging.data.routing.DefaultContactRoutingIdResolver
-import com.cbgm.sparrow.feature.messaging.data.routing.DefaultGroupRoutingIdResolver
-import com.cbgm.sparrow.feature.messaging.data.routing.DefaultGroupTransportKeyResolver
-import com.cbgm.sparrow.feature.messaging.data.routing.WebSocketIncomingEnvelopeGateway
+import com.cbgm.sparrow.feature.messaging.data.datasource.ContactByRoutingIdDataSource
+import com.cbgm.sparrow.feature.messaging.data.datasource.ContactRoutingDataSource
+import com.cbgm.sparrow.feature.messaging.data.datasource.ContactRoutingReconciliationDataSource
+import com.cbgm.sparrow.feature.messaging.data.datasource.GroupRoutingDataSource
+import com.cbgm.sparrow.feature.messaging.data.datasource.GroupTransportKeyDataSource
+import com.cbgm.sparrow.feature.messaging.data.datasource.MailboxContactDataSource
+import com.cbgm.sparrow.feature.messaging.data.datasource.WebSocketIncomingEnvelopeGateway
+import com.cbgm.sparrow.feature.messaging.data.repository.DirectTypingRepositoryImpl
+import com.cbgm.sparrow.feature.messaging.data.repository.GroupTypingRepositoryImpl
+import com.cbgm.sparrow.feature.messaging.runtime.incoming.DefaultIncomingEnvelopeProcessor
+import com.cbgm.sparrow.feature.messaging.runtime.incoming.DefaultIncomingEnvelopeRunner
+import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeGateway
+import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessor
+import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeRunner
+import com.cbgm.sparrow.feature.messaging.runtime.mailbox.DefaultMailboxCapabilityLifecycle
+import com.cbgm.sparrow.feature.messaging.runtime.mailbox.DefaultMailboxCoordinator
+import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxCoordinator
+import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxCredentialFactory
+import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxPendingSynchronizer
+import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxRoutePacketHandler
+import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxRoutePayloadEncoder
+import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxRouteProvisioner
+import com.cbgm.sparrow.feature.messaging.runtime.outbox.DefaultOutboxProcessor
+import com.cbgm.sparrow.feature.messaging.runtime.outbox.DefaultOutboxRunner
+import com.cbgm.sparrow.feature.messaging.runtime.outbox.OutgoingPacketSender
+import com.cbgm.sparrow.feature.messaging.runtime.outbox.OutgoingPacketTransportPolicy
+import com.cbgm.sparrow.feature.messaging.runtime.outbox.OutgoingRecipientRoutingResolver
+import com.cbgm.sparrow.feature.messaging.runtime.outbox.OutgoingTransportPayloadFactory
 import com.cbgm.sparrow.feature.transport.routing.RoutingIdGenerator
 import com.cbgm.sparrow.feature.transport.websocket.WebSocketTransportClient
 import org.koin.core.module.dsl.bind
@@ -46,50 +45,58 @@ import org.koin.dsl.module
 
 val messagingModule =
     module {
-        single<ContactRoutingIdResolver> {
-            DefaultContactRoutingIdResolver(
-                getContact = get<GetContactUseCase>(),
+        single {
+            ContactRoutingDataSource(
+                contactDao = get(),
                 contactRoutingIdDao = get(),
                 routingIdGenerator = get<RoutingIdGenerator>()
             )
         }
-
-        single<ContactByRoutingIdResolver> {
-            DefaultContactByRoutingIdResolver(
-                contactRepository = get<ContactRepository>(),
-                contactDao = get<ContactDao>(),
-                contactRoutingIdDao = get(),
-                routingIdGenerator = get<RoutingIdGenerator>(),
-                groupRoutingIdResolver = get<GroupRoutingIdResolver>()
-            )
-        }
-
-        single<GroupRoutingIdResolver> {
-            DefaultGroupRoutingIdResolver(
+        single {
+            GroupRoutingDataSource(
                 chatDao = get(),
                 groupSecurityDao = get(),
                 routingIdGenerator = get<RoutingIdGenerator>()
             )
         }
-
-        single<GroupTransportKeyResolver> {
-            DefaultGroupTransportKeyResolver(
+        single {
+            ContactByRoutingIdDataSource(
+                contactDao = get(),
+                contactRoutingIdDao = get(),
+                routingIdGenerator = get<RoutingIdGenerator>(),
+                groupRoutingDataSource = get()
+            )
+        }
+        single {
+            ContactRoutingReconciliationDataSource(
+                contactDao = get(),
+                contactRoutingIdDao = get(),
+                routingIdGenerator = get<RoutingIdGenerator>()
+            )
+        }
+        single {
+            GroupTransportKeyDataSource(
                 chatDao = get(),
                 groupSecurityDao = get()
+            )
+        }
+        single {
+            MailboxContactDataSource(
+                contactDao = get(),
+                contactRoutingIdDao = get()
             )
         }
 
         single<DirectTypingRepository> {
             DirectTypingRepositoryImpl(
                 webSocketTransportClient = get<WebSocketTransportClient>(),
-                contactRoutingIdResolver = get<ContactRoutingIdResolver>()
+                contactRoutingDataSource = get()
             )
         }
-
         single<GroupTypingRepository> {
             GroupTypingRepositoryImpl(
                 webSocketTransportClient = get<WebSocketTransportClient>(),
-                groupRoutingIdResolver = get<GroupRoutingIdResolver>()
+                groupRoutingDataSource = get()
             )
         }
 
@@ -99,32 +106,38 @@ val messagingModule =
             )
         }
 
-        single<OutgoingPacketTransportPolicy> {
-            DefaultOutgoingPacketTransportPolicy()
-        }
-
-        single<OutgoingTransportPayloadFactory> {
-            DefaultOutgoingTransportPayloadFactory(
+        singleOf(::OutgoingPacketTransportPolicy)
+        single {
+            OutgoingTransportPayloadFactory(
                 transportMessageCipher = get(),
-                packetTransportPolicy = get<OutgoingPacketTransportPolicy>(),
-                groupTransportKeyResolver = get<GroupTransportKeyResolver>()
+                packetTransportPolicy = get(),
+                groupTransportKeyDataSource = get()
             )
         }
-
-        single<OutboxProcessor> {
-            DefaultOutboxProcessor(
-                protocolOutbox = get<ProtocolOutbox>(),
+        single {
+            OutgoingRecipientRoutingResolver(
+                contactRoutingDataSource = get(),
+                groupRoutingDataSource = get()
+            )
+        }
+        single {
+            OutgoingPacketSender(
                 getContact = get<GetContactUseCase>(),
-                transportPayloadFactory = get<OutgoingTransportPayloadFactory>(),
+                transportPayloadFactory = get(),
                 transportPayloadCodec = get(),
                 packetCodec = get(),
-                contactRoutingIdResolver = get<ContactRoutingIdResolver>(),
-                groupRoutingIdResolver = get<GroupRoutingIdResolver>(),
+                recipientRoutingResolver = get(),
                 outgoingWireSender = get<OutgoingWireSender>(),
                 deliveryStateListener = get()
             )
         }
-
+        single<OutboxProcessor> {
+            DefaultOutboxProcessor(
+                protocolOutbox = get<ProtocolOutbox>(),
+                packetSender = get(),
+                deliveryStateListener = get()
+            )
+        }
         single<OutboxRunner> {
             DefaultOutboxRunner(
                 protocolOutbox = get<ProtocolOutbox>(),
@@ -134,12 +147,12 @@ val messagingModule =
 
         single<IncomingEnvelopeProcessor> {
             DefaultIncomingEnvelopeProcessor(
-                contactByRoutingIdResolver = get<ContactByRoutingIdResolver>(),
+                contactByRoutingIdDataSource = get(),
+                contactRoutingReconciliationDataSource = get(),
                 localEncryptionKeyPairProvider = get(),
                 incomingMessageHandler = get()
             )
         }
-
         single<IncomingEnvelopeRunner> {
             DefaultIncomingEnvelopeRunner(
                 incomingEnvelopeGateway = get<IncomingEnvelopeGateway>(),
@@ -148,33 +161,22 @@ val messagingModule =
         }
 
         singleOf(::MailboxRoutePayloadEncoder)
-
         single<MailboxCapabilityLifecycle> {
             DefaultMailboxCapabilityLifecycle(
                 repository = get(),
                 gateway = get()
             )
         }
-
-        singleOf(::MailboxRoutePacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-
+        singleOf(::MailboxCredentialFactory)
+        singleOf(::MailboxRouteProvisioner)
+        singleOf(::MailboxPendingSynchronizer)
         single<MailboxCoordinator> {
             DefaultMailboxCoordinator(
-                contactDao = get(),
-                contactRoutingIdDao = get(),
-                localRoutingIdProvider = get(),
-                nodeEndpointResolver = get(),
-                mailboxGateway = get(),
-                mailboxRouteRepository = get(),
-                mailboxCapabilityLifecycle = get(),
-                contactBlocklistRepository = get(),
-                signingKeyPairProvider = get(),
-                signatureCrypto = get(),
-                payloadEncoder = get(),
-                protocolOutbox = get(),
-                incomingEnvelopeProcessor = get()
+                routeProvisioner = get(),
+                pendingSynchronizer = get()
             )
+        }
+        singleOf(::MailboxRoutePacketHandler) {
+            bind<TypedProtocolPacketHandler>()
         }
     }
