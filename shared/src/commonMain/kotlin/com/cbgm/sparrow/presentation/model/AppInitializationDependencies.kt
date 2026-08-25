@@ -9,8 +9,8 @@ import com.cbgm.sparrow.feature.chats.data.direct.invitation.DirectInvitationCon
 import com.cbgm.sparrow.feature.contacts.domain.repository.DeviceContactsPermissionRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportDeviceContactsUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalIdentityReadyUseCase
-import com.cbgm.sparrow.notification.application.ConversationNotificationCoordinator
-import com.cbgm.sparrow.notification.platform.PlatformNotificationRuntime
+import com.cbgm.sparrow.notification.device.PlatformNotificationRuntime
+import com.cbgm.sparrow.notification.presentation.ConversationNotificationCoordinator
 
 data class AppInitializationDependencies(
     val initializeCryptoRuntime: InitializeCryptoRuntime,

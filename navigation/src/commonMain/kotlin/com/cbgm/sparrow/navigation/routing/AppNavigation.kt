@@ -27,10 +27,10 @@ import com.cbgm.sparrow.navigation.routing.graph.identityNavGraph
 import com.cbgm.sparrow.navigation.routing.graph.mainNavGraph
 import com.cbgm.sparrow.navigation.routing.graph.settingsNavGraph
 import com.cbgm.sparrow.navigation.routing.graph.startupNavGraph
-import com.cbgm.sparrow.notification.application.ResolveNotificationConversation
-import com.cbgm.sparrow.notification.model.NotificationConversationTarget
-import com.cbgm.sparrow.notification.navigation.NotificationNavigationController
-import com.cbgm.sparrow.notification.navigation.NotificationNavigationTarget
+import com.cbgm.sparrow.notification.domain.model.NotificationConversationTarget
+import com.cbgm.sparrow.notification.domain.usecase.ResolveNotificationConversationUseCase
+import com.cbgm.sparrow.notification.presentation.navigation.NotificationNavigationController
+import com.cbgm.sparrow.notification.presentation.navigation.NotificationNavigationTarget
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.app_connection_offline_hint
 import com.cbgm.sparrow.resources.app_connection_reconnected_hint
@@ -45,7 +45,7 @@ import org.koin.compose.koinInject
 @Composable
 fun AppNavigation(
     notificationNavigationController: NotificationNavigationController = koinInject(),
-    resolveNotificationConversation: ResolveNotificationConversation = koinInject(),
+    resolveNotificationConversation: ResolveNotificationConversationUseCase = koinInject(),
     navigator: AppNavigator = koinInject(),
     observeAppConnectionAvailability: ObserveAppConnectionAvailabilityUseCase = koinInject()
 ) {
