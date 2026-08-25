@@ -33,7 +33,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.component.PatternBackground
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
 import com.cbgm.sparrow.core.ui.theme.Alpha
@@ -63,18 +62,11 @@ import org.jetbrains.compose.resources.stringResource
 fun ImportIdentityScreen(
     uiState: ImportIdentityUiState,
     onUiEvent: (ImportIdentityUiEvent) -> Unit,
-    importContactId: String?,
     modifier: Modifier = Modifier
 ) {
     SparrowScrollScaffold(
         modifier = modifier,
-        background = {
-            PatternBackground(
-                modifier = Modifier.fillMaxSize(),
-                backgroundColor = MaterialTheme.colorScheme.background,
-                alpha = Alpha.PatternBackground.conversation
-            )
-        },
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = { containerColor ->
             ImportIdentityTopBar(
                 containerColor = containerColor,
@@ -160,12 +152,7 @@ fun ImportIdentityScreen(
                 isImporting = uiState.isImporting,
                 enabled = uiState.encodedIdentity.isNotBlank(),
                 onClick = {
-                    onUiEvent(
-                        ImportIdentityUiEvent.ImportClicked(
-                            contactId = importContactId,
-                            identityImportTrust = IdentityImportTrust.UNVERIFIED
-                        )
-                    )
+                    onUiEvent(ImportIdentityUiEvent.ImportClicked)
                 }
             )
 
@@ -350,8 +337,7 @@ fun ImportIdentityScreenPreview() {
     SparrowTheme {
         ImportIdentityScreen(
             uiState = ImportIdentityUiState(),
-            onUiEvent = {},
-            importContactId = null
+            onUiEvent = {}
         )
     }
 }

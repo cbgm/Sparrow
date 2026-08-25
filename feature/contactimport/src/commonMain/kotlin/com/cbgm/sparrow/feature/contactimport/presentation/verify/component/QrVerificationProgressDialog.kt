@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.contactimport.presentation.component.verification
+package com.cbgm.sparrow.feature.contactimport.presentation.verify.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

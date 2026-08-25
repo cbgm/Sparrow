@@ -2,7 +2,6 @@ package com.cbgm.sparrow.navigation.routing.graph
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import androidx.navigation.toRoute
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.feature.contactimport.presentation.importing.ImportIdentityRoute
 import com.cbgm.sparrow.feature.contactimport.presentation.scan.ScanIdentityNavigationRoute
@@ -26,10 +25,8 @@ fun NavGraphBuilder.contactsNavGraph() {
         BlockedContactsRoute()
     }
 
-    composable<AppRoute.ImportContact> { backStackEntry ->
-        ImportIdentityRoute(
-            route = backStackEntry.toRoute<AppRoute.ImportContact>()
-        )
+    composable<AppRoute.ImportContact> {
+        ImportIdentityRoute()
     }
 
     composable<AppRoute.ScanIdentity> {

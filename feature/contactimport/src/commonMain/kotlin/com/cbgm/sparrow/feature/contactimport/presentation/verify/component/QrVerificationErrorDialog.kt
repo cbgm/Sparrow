@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.contactimport.presentation.component.verification
+package com.cbgm.sparrow.feature.contactimport.presentation.verify.component
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
