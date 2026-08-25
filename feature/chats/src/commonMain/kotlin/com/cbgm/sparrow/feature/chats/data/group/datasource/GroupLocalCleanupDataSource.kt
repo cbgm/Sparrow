@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.chats.data.group.storage
+package com.cbgm.sparrow.feature.chats.data.group.datasource
 
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
@@ -8,12 +8,12 @@ import com.cbgm.sparrow.feature.chats.data.attachment.MessageAttachmentTransfer
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
 import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
 
-internal class GroupLocalDataCleaner(
+internal class GroupLocalCleanupDataSource(
     private val chatDao: ChatDao,
     private val groupInvitationDao: GroupInvitationDao,
     private val groupVerificationDao: GroupVerificationDao,
     private val groupSecurityManager: GroupSecurityManager,
-    private val groupAvatarStore: GroupAvatarStore,
+    private val groupAvatarDataSource: GroupAvatarDataSource,
     private val attachmentTransfer: MessageAttachmentTransfer
 ) {
     suspend fun endMembership(message: MessageEntity) {
@@ -40,7 +40,7 @@ internal class GroupLocalDataCleaner(
         )
         groupVerificationDao.deleteByGroupId(groupId)
         groupInvitationDao.deleteByGroupId(groupId)
-        groupAvatarStore.deleteLocal(groupId)
+        groupAvatarDataSource.deleteLocal(groupId)
     }
 
     suspend fun delete(
@@ -57,6 +57,6 @@ internal class GroupLocalDataCleaner(
         groupSecurityManager.deleteLocalGroup(groupId).getOrThrow()
         groupVerificationDao.deleteByGroupId(groupId)
         groupInvitationDao.deleteByGroupId(groupId)
-        groupAvatarStore.deleteLocal(groupId)
+        groupAvatarDataSource.deleteLocal(groupId)
     }
 }

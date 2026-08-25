@@ -6,14 +6,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.cbgm.sparrow.feature.chats.domain.usecase.contact.EncodeContactForSharingUseCase
 import com.cbgm.sparrow.feature.chats.presentation.details.GroupDetailsFlow
 import com.cbgm.sparrow.feature.chats.presentation.details.model.DetailsTarget
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.presentation.details.ContactDetailsRoute
 import com.cbgm.sparrow.feature.identity.device.rememberIdentityShareLauncher
-import com.cbgm.sparrow.feature.identity.domain.model.SharedContactDetails
-import com.cbgm.sparrow.feature.identity.domain.model.SharedIdentityPayload
-import com.cbgm.sparrow.feature.identity.domain.repository.IdentityShareRepository
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_share_contact
 import org.jetbrains.compose.resources.stringResource
@@ -25,7 +22,7 @@ fun DetailsRoute(
     openVerification: Boolean,
     requestGroupLeave: Boolean = false
 ) {
-    val identityShareRepository = koinInject<IdentityShareRepository>()
+    val encodeContactForSharing = koinInject<EncodeContactForSharingUseCase>()
     var encodedContactToShare by remember { mutableStateOf("") }
     val launchContactShare =
         rememberIdentityShareLauncher(
@@ -47,14 +44,13 @@ fun DetailsRoute(
                 contactId = target.contactId,
                 openVerification = openVerification,
                 onShareContact = { contact ->
-                    encodeContactForSharing(
-                        contact = contact,
-                        identityShareRepository = identityShareRepository,
-                        onEncoded = { encodedIdentity ->
-                            encodedContactToShare = encodedIdentity
-                            shouldLaunchShare = true
+                    encodeContactForSharing(contact)
+                        .onSuccess { encodedIdentity ->
+                            if (!encodedIdentity.isNullOrBlank()) {
+                                encodedContactToShare = encodedIdentity
+                                shouldLaunchShare = true
+                            }
                         }
-                    )
                 }
             )
         }
@@ -64,35 +60,5 @@ fun DetailsRoute(
                 requestLeave = requestGroupLeave
             )
         }
-    }
-}
-
-private fun encodeContactForSharing(
-    contact: Contact,
-    identityShareRepository: IdentityShareRepository,
-    onEncoded: (String) -> Unit
-) {
-    val identity = contact.sparrowIdentity
-    val phoneNumber =
-        contact
-            .preferredPhoneNumber
-            ?.value
-            ?.takeIf(String::isNotBlank)
-
-    if (identity != null && phoneNumber != null) {
-        identityShareRepository
-            .encode(
-                payload =
-                    SharedIdentityPayload(
-                        version = 1,
-                        encryptionPublicKey = identity.encryptionPublicKey,
-                        signingPublicKey = identity.signingPublicKey,
-                        contactDetails =
-                            SharedContactDetails(
-                                displayName = contact.displayName,
-                                phoneNumber = phoneNumber
-                            )
-                    )
-            ).onSuccess(onEncoded)
     }
 }

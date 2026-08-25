@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.chats.data.group.storage
+package com.cbgm.sparrow.feature.chats.data.group.datasource
 
 import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.datastore.SparrowDataStore
@@ -6,9 +6,9 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAvatar
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-internal class GroupAvatarStore(
+internal class GroupAvatarDataSource(
     private val dataStore: SparrowDataStore,
-    private val fileStorage: GroupAvatarFileStorage,
+    private val fileDataSource: GroupAvatarFileDataSource,
     private val cryptoHash: CryptoHash
 ) {
     fun observe(groupId: String): Flow<GroupAvatar> {
@@ -17,7 +17,7 @@ internal class GroupAvatarStore(
             GroupAvatar(
                 groupId = groupId,
                 changedAtEpochMilliseconds = changedAt,
-                bytes = fileStorage.read(fileName(groupId))
+                bytes = fileDataSource.read(fileName(groupId))
             )
         }
     }
@@ -27,7 +27,7 @@ internal class GroupAvatarStore(
         return GroupAvatar(
             groupId = groupId,
             changedAtEpochMilliseconds = dataStore.getLong(changedAtKey(groupId)),
-            bytes = fileStorage.read(fileName(groupId))
+            bytes = fileDataSource.read(fileName(groupId))
         )
     }
 
@@ -38,7 +38,7 @@ internal class GroupAvatarStore(
     ) {
         require(groupId.isNotBlank()) { "Group ID must not be blank" }
         require(bytes.isNotEmpty()) { "Group avatar must not be empty" }
-        fileStorage.write(fileName(groupId), bytes)
+        fileDataSource.write(fileName(groupId), bytes)
         dataStore.edit { putLong(changedAtKey(groupId), changedAtEpochMilliseconds) }
     }
 
@@ -47,13 +47,13 @@ internal class GroupAvatarStore(
         changedAtEpochMilliseconds: Long
     ) {
         require(groupId.isNotBlank()) { "Group ID must not be blank" }
-        fileStorage.delete(fileName(groupId))
+        fileDataSource.delete(fileName(groupId))
         dataStore.edit { putLong(changedAtKey(groupId), changedAtEpochMilliseconds) }
     }
 
     suspend fun deleteLocal(groupId: String) {
         require(groupId.isNotBlank()) { "Group ID must not be blank" }
-        fileStorage.delete(fileName(groupId))
+        fileDataSource.delete(fileName(groupId))
         dataStore.edit { removeLong(changedAtKey(groupId)) }
     }
 

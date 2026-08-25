@@ -19,7 +19,7 @@ import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupVerificat
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupVerificationSnapshotPacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupVerificationSnapshotRequestPacketHandler
 
-class GroupPacketHandlerRegistry(
+class GroupPacketHandlerRegistry internal constructor(
     avatarUpdated: GroupAvatarUpdatedPacketHandler,
     groupCreated: GroupCreatedPacketHandler,
     conversationDeleted: GroupConversationDeletedPacketHandler,

@@ -17,5 +17,9 @@ interface DirectMessageRepository {
 
     suspend fun retry(messageId: String): Result<Unit>
 
+    suspend fun releaseWaitingForAuthorization(contactId: String): Result<Unit>
+
+    suspend fun discardWaitingForAuthorization(contactId: String): Result<Unit>
+
     suspend fun markConversationRead(conversationId: String): Result<Unit>
 }

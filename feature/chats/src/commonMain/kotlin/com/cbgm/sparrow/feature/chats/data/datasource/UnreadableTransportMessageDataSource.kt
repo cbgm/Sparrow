@@ -1,15 +1,15 @@
-package com.cbgm.sparrow.feature.chats.data.storage
+package com.cbgm.sparrow.feature.chats.data.datasource
 
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.entity.MessageEntity
-import com.cbgm.sparrow.feature.chats.data.direct.storage.DirectConversationStorage
+import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 
-class UnreadableTransportMessageStorage(
+class UnreadableTransportMessageDataSource(
     private val chatDao: ChatDao,
-    private val conversationStorage: DirectConversationStorage
+    private val conversationDataSource: DirectConversationDataSource
 ) {
     suspend fun store(
         contactId: String,
@@ -19,7 +19,7 @@ class UnreadableTransportMessageStorage(
         contentStatus: MessageContentStatus,
         receivedAtEpochMilliseconds: Long
     ) {
-        val conversation = conversationStorage.getOrCreate(contactId)
+        val conversation = conversationDataSource.getOrCreate(contactId)
         chatDao.upsertMessage(
             MessageEntity(
                 id = IdGenerator.generate(prefix = "failed-message"),

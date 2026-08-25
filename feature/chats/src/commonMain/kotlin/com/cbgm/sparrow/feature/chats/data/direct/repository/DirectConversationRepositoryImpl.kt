@@ -1,17 +1,15 @@
 package com.cbgm.sparrow.feature.chats.data.direct.repository
 
-import com.cbgm.sparrow.core.protocol.mailbox.MailboxCapabilityLifecycle
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
 import com.cbgm.sparrow.data.database.model.ConversationWithMessages
 import com.cbgm.sparrow.feature.chats.data.attachment.MessageAttachmentTransfer
 import com.cbgm.sparrow.feature.chats.data.attachment.toDomainAttachmentsByMessageId
+import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.mapper.toDirectConversation
-import com.cbgm.sparrow.feature.chats.data.direct.storage.DirectConversationStorage
 import com.cbgm.sparrow.feature.chats.domain.model.attachment.MessageMediaAttachment
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectConversationRepository
-import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityInvitationRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -20,9 +18,7 @@ class DirectConversationRepositoryImpl(
     private val chatDao: ChatDao,
     private val messageAttachmentDao: MessageAttachmentDao,
     private val messageAttachmentTransfer: MessageAttachmentTransfer,
-    private val conversationStorage: DirectConversationStorage,
-    private val identityInvitationRepository: IdentityInvitationRepository,
-    private val mailboxCapabilityLifecycle: MailboxCapabilityLifecycle
+    private val conversationDataSource: DirectConversationDataSource
 ) : DirectConversationRepository {
     override fun observe(conversationId: String): Flow<DirectConversation?> =
         combine(
@@ -45,23 +41,19 @@ class DirectConversationRepositoryImpl(
         }
 
     override suspend fun getOrCreate(contactId: String): String =
-        conversationStorage.getOrCreate(contactId).id
+        conversationDataSource.getOrCreate(contactId).id
+
+    override suspend fun findContactId(conversationId: String): Result<String?> =
+        runCatching {
+            val conversation = chatDao.findConversationById(conversationId) ?: return@runCatching null
+            check(conversation.type == DIRECT_CONVERSATION_TYPE) { "Conversation is not direct" }
+            requireNotNull(conversation.contactId) { "Direct conversation has no contact" }
+        }
 
     override suspend fun delete(conversationId: String): Result<Unit> =
         runCatching {
-            val conversation =
-                chatDao.findConversationById(conversationId)
-                    ?: return@runCatching
-            check(conversation.type == DIRECT_CONVERSATION_TYPE) {
-                "Conversation is not direct"
-            }
-
-            val contactId =
-                requireNotNull(conversation.contactId) {
-                    "Direct conversation has no contact"
-                }
-            identityInvitationRepository.revokeDirectChatAuthorization(contactId).getOrThrow()
-            mailboxCapabilityLifecycle.revokeForContact(contactId).getOrThrow()
+            val conversation = chatDao.findConversationById(conversationId) ?: return@runCatching
+            check(conversation.type == DIRECT_CONVERSATION_TYPE) { "Conversation is not direct" }
             messageAttachmentTransfer.deleteLocalFilesForConversation(conversationId)
             chatDao.deleteConversation(conversationId)
         }

@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.chats.data.direct.storage
+package com.cbgm.sparrow.feature.chats.data.direct.datasource
 
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.time.SystemClock
@@ -6,7 +6,7 @@ import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.ConversationType
 
-class DirectConversationStorage(
+class DirectConversationDataSource(
     private val chatDao: ChatDao
 ) {
     suspend fun getOrCreate(contactId: String): ConversationEntity {

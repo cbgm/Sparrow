@@ -8,5 +8,7 @@ interface DirectConversationRepository {
 
     suspend fun getOrCreate(contactId: String): String
 
+    suspend fun findContactId(conversationId: String): Result<String?>
+
     suspend fun delete(conversationId: String): Result<Unit>
 }

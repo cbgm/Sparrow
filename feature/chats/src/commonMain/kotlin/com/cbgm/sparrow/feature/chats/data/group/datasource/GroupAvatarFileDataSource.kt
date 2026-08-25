@@ -1,10 +1,10 @@
-package com.cbgm.sparrow.feature.chats.data.group.storage
+package com.cbgm.sparrow.feature.chats.data.group.datasource
 
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
 
-class GroupAvatarFileStorage(
+class GroupAvatarFileDataSource(
     rootDirectory: String,
     private val fileSystem: FileSystem = FileSystem.SYSTEM
 ) {

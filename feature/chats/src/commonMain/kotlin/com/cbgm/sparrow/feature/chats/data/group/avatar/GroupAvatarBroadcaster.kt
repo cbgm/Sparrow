@@ -4,9 +4,9 @@ import com.cbgm.sparrow.core.protocol.avatar.GroupAvatarMetadata
 import com.cbgm.sparrow.core.protocol.avatar.GroupAvatarPayload
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
+import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupAvatarDataSource
 import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupPacketBroadcaster
 import com.cbgm.sparrow.feature.chats.data.group.security.isGroupAdminRole
-import com.cbgm.sparrow.feature.chats.data.group.storage.GroupAvatarStore
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAvatar
 
 internal class GroupAvatarBroadcaster(
@@ -14,7 +14,7 @@ internal class GroupAvatarBroadcaster(
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val packetProtocol: GroupAvatarPacketProtocol,
     private val packetBroadcaster: GroupPacketBroadcaster,
-    private val store: GroupAvatarStore
+    private val dataSource: GroupAvatarDataSource
 ) {
     suspend fun requireLocalAdmin(groupId: String): Result<Unit> =
         runCatching { requireAdminContext(groupId) }
@@ -23,7 +23,7 @@ internal class GroupAvatarBroadcaster(
     suspend fun broadcast(groupId: String): Result<Unit> =
         runCatching {
             val context = requireAdminContext(groupId)
-            val avatar = store.get(groupId)
+            val avatar = dataSource.get(groupId)
             if (avatar.changedAtEpochMilliseconds == 0L) return@runCatching
             val metadata = avatar.toMetadata()
             val packets =
@@ -41,7 +41,7 @@ internal class GroupAvatarBroadcaster(
     ): Result<Unit> =
         runCatching {
             require(contactId.isNotBlank()) { "Contact ID must not be blank" }
-            val avatar = store.get(groupId)
+            val avatar = dataSource.get(groupId)
             if (avatar.changedAtEpochMilliseconds == 0L) return@runCatching
             val context = requireAdminContext(groupId)
             check(contactId in context.recipientContactIds) { "Contact is not an active group member" }

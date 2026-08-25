@@ -1,18 +1,19 @@
-package com.cbgm.sparrow.feature.chats.data.group.storage
+package com.cbgm.sparrow.feature.chats.device
 
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import com.cbgm.sparrow.core.datastore.SparrowDataStore
+import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupKeyDataSource
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-class AndroidGroupKeyStorage(
+class AndroidGroupKeyDataSource(
     private val dataStore: SparrowDataStore
-) : GroupKeyStorage {
+) : GroupKeyDataSource {
     private val keyStore =
         KeyStore.getInstance(ANDROID_KEYSTORE).apply {
             load(null)

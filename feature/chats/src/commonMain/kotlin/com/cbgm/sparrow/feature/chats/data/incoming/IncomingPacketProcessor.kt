@@ -8,8 +8,8 @@ import com.cbgm.sparrow.core.protocol.codec.PacketCodec
 import com.cbgm.sparrow.core.protocol.handler.IncomingMessageHandler
 import com.cbgm.sparrow.core.protocol.handler.IncomingMessageRejectedException
 import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.feature.chats.data.datasource.UnreadableTransportMessageDataSource
 import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacket
-import com.cbgm.sparrow.feature.chats.data.storage.UnreadableTransportMessageStorage
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 
 /**
@@ -22,7 +22,7 @@ class IncomingPacketProcessor(
     private val transportMessageDecoder: IncomingTransportMessageDecoder,
     private val packetCodec: PacketCodec,
     private val packetRouter: IncomingPacketRouter,
-    private val unreadableMessageStorage: UnreadableTransportMessageStorage
+    private val unreadableMessageDataSource: UnreadableTransportMessageDataSource
 ) : IncomingMessageHandler {
     override suspend fun handle(
         contactId: String,
@@ -125,7 +125,7 @@ class IncomingPacketProcessor(
         status: MessageContentStatus,
         receivedAt: Long
     ) {
-        unreadableMessageStorage.store(
+        unreadableMessageDataSource.store(
             contactId = contactId,
             encodedTransportPayload = payload,
             text = text,

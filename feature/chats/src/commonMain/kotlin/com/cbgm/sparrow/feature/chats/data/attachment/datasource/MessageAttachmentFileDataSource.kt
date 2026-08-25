@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.chats.data.attachment.storage
+package com.cbgm.sparrow.feature.chats.data.attachment.datasource
 
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
@@ -6,7 +6,7 @@ import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
 
-class MessageAttachmentFileStorage(
+class MessageAttachmentFileDataSource(
     rootDirectory: String,
     savedRootDirectory: String = rootDirectory,
     private val fileSystem: FileSystem = FileSystem.SYSTEM

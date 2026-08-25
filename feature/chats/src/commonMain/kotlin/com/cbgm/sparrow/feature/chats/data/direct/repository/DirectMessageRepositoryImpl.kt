@@ -22,6 +22,12 @@ class DirectMessageRepositoryImpl(
     override suspend fun retry(messageId: String): Result<Unit> =
         outgoingMessageProcessor.retry(messageId)
 
+    override suspend fun releaseWaitingForAuthorization(contactId: String): Result<Unit> =
+        outgoingMessageProcessor.releaseWaitingForAuthorization(contactId)
+
+    override suspend fun discardWaitingForAuthorization(contactId: String): Result<Unit> =
+        outgoingMessageProcessor.discardWaitingForAuthorization(contactId)
+
     override suspend fun markConversationRead(conversationId: String): Result<Unit> =
         outgoingMessageProcessor.sendReadReceipts(conversationId)
 }

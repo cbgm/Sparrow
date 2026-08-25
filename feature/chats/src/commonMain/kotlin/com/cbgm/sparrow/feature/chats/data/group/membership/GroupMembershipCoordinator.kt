@@ -1,9 +1,5 @@
 package com.cbgm.sparrow.feature.chats.data.group.membership
 
-import com.cbgm.sparrow.core.protocol.packet.GroupInviteDeclinedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupInvitePacket
-import com.cbgm.sparrow.core.protocol.packet.GroupInviteReceivedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupJoinRequestPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivationAcknowledgementPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
@@ -59,42 +55,11 @@ class GroupMembershipCoordinator internal constructor(
         packet: GroupLeaveRequestPacket
     ): Result<Unit> = administration.receiveLeaveRequest(memberContactId, packet)
 
-    suspend fun receiveInvite(
-        ownerContactId: String,
-        packet: GroupInvitePacket,
-        receivedAtEpochMilliseconds: Long
-    ): Result<Unit> = invitations.receiveInvite(ownerContactId, packet, receivedAtEpochMilliseconds)
-
     suspend fun acceptInvitation(groupId: String): Result<Unit> =
         invitations.acceptInvitation(groupId)
 
     suspend fun declineInvitation(groupId: String): Result<Unit> =
         invitations.declineInvitation(groupId)
-
-    suspend fun receiveInviteReceived(
-        memberContactId: String,
-        packet: GroupInviteReceivedPacket,
-        receivedAtEpochMilliseconds: Long
-    ): Result<Unit> =
-        invitations.receiveInviteReceived(
-            memberContactId = memberContactId,
-            packet = packet,
-            receivedAtEpochMilliseconds = receivedAtEpochMilliseconds
-        )
-
-    suspend fun receiveJoinRequest(
-        memberContactId: String,
-        packet: GroupJoinRequestPacket,
-        receivedAtEpochMilliseconds: Long
-    ): Result<Unit> =
-        invitations.receiveJoinRequest(memberContactId, packet, receivedAtEpochMilliseconds)
-
-    suspend fun receiveDecline(
-        memberContactId: String,
-        packet: GroupInviteDeclinedPacket,
-        receivedAtEpochMilliseconds: Long
-    ): Result<Unit> =
-        invitations.receiveDecline(memberContactId, packet, receivedAtEpochMilliseconds)
 
     suspend fun receiveReadyAcknowledgement(
         memberContactId: String,
@@ -106,9 +71,6 @@ class GroupMembershipCoordinator internal constructor(
             packet = packet,
             receivedAtEpochMilliseconds = receivedAtEpochMilliseconds
         )
-
-    suspend fun activateGroupIfReady(groupId: String): Result<Unit> =
-        activation.activateGroupIfReady(groupId)
 
     suspend fun receiveMemberActivationAcknowledgement(
         packet: GroupMemberActivationAcknowledgementPacket,

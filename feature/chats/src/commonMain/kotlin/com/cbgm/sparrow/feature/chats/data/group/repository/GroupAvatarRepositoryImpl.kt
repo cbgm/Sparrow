@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.chats.data.group.repository
 
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.chats.data.group.avatar.GroupAvatarBroadcaster
-import com.cbgm.sparrow.feature.chats.data.group.storage.GroupAvatarStore
+import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupAvatarDataSource
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAvatar
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupAvatarRepository
 import kotlinx.coroutines.flow.Flow
@@ -10,12 +10,12 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 internal class GroupAvatarRepositoryImpl(
-    private val store: GroupAvatarStore,
+    private val dataSource: GroupAvatarDataSource,
     private val broadcaster: GroupAvatarBroadcaster
 ) : GroupAvatarRepository {
     private val updateMutex = Mutex()
 
-    override fun observe(groupId: String): Flow<GroupAvatar> = store.observe(groupId)
+    override fun observe(groupId: String): Flow<GroupAvatar> = dataSource.observe(groupId)
 
     override suspend fun set(
         groupId: String,
@@ -41,16 +41,16 @@ internal class GroupAvatarRepositoryImpl(
 
             updateMutex.withLock {
                 broadcaster.requireLocalAdmin(groupId).getOrThrow()
-                val previous = store.get(groupId)
+                val previous = dataSource.get(groupId)
                 val changedAt =
                     maxOf(
                         SystemClock.nowEpochMilliseconds(),
                         previous.changedAtEpochMilliseconds + 1L
                     )
                 if (bytes == null) {
-                    store.remove(groupId, changedAt)
+                    dataSource.remove(groupId, changedAt)
                 } else {
-                    store.save(groupId, bytes, changedAt)
+                    dataSource.save(groupId, bytes, changedAt)
                 }
                 broadcaster.broadcast(groupId).getOrThrow()
             }

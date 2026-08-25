@@ -1,6 +1,6 @@
-package com.cbgm.sparrow.feature.chats.data.group.storage
+package com.cbgm.sparrow.feature.chats.data.group.datasource
 
-interface GroupKeyStorage {
+interface GroupKeyDataSource {
     suspend fun save(
         groupId: String,
         epoch: Int,

@@ -13,7 +13,7 @@ import com.cbgm.sparrow.feature.attachments.domain.repository.BlobTransferReposi
 import com.cbgm.sparrow.feature.attachments.domain.usecase.DeleteBlobUseCase
 import com.cbgm.sparrow.feature.attachments.domain.usecase.DownloadBlobUseCase
 import com.cbgm.sparrow.feature.attachments.domain.usecase.UploadBlobUseCase
-import com.cbgm.sparrow.feature.chats.data.attachment.storage.MessageAttachmentFileStorage
+import com.cbgm.sparrow.feature.chats.data.attachment.datasource.MessageAttachmentFileDataSource
 import com.cbgm.sparrow.feature.chats.domain.model.attachment.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.chats.domain.model.attachment.MessageMediaType
 import com.cbgm.sparrow.feature.chats.domain.model.attachment.OutgoingMediaAttachment
@@ -22,7 +22,7 @@ class MessageAttachmentTransfer(
     private val attachmentDao: MessageAttachmentDao,
     private val chatDao: ChatDao,
     private val contactDao: ContactDao,
-    private val fileStorage: MessageAttachmentFileStorage,
+    private val fileDataSource: MessageAttachmentFileDataSource,
     private val uploadBlob: UploadBlobUseCase,
     private val downloadBlob: DownloadBlobUseCase,
     private val deleteBlob: DeleteBlobUseCase
@@ -41,7 +41,7 @@ class MessageAttachmentTransfer(
                 media.forEach { item ->
                     val uploaded = uploadBlob(item.bytes, retentionMilliseconds).getOrThrow()
                     val localFileName =
-                        runCatching { fileStorage.write(item.bytes) }
+                        runCatching { fileDataSource.write(item.bytes) }
                             .getOrElse { error ->
                                 deleteBlob(uploaded)
                                 throw error
@@ -117,7 +117,7 @@ class MessageAttachmentTransfer(
             val entity = attachmentDao.findById(attachmentId) ?: error("Message attachment was not found")
             val bytes =
                 entity.localFileName
-                    ?.let(fileStorage::read)
+                    ?.let(fileDataSource::read)
                     ?: downloadAndCache(entity)
             persistSparrowContactCopy(entity, bytes)
             bytes
@@ -125,7 +125,7 @@ class MessageAttachmentTransfer(
 
     private suspend fun downloadAndCache(entity: MessageAttachmentEntity): ByteArray {
         val bytes = downloadBlob(entity.toBlobReference()).getOrThrow()
-        val localFileName = fileStorage.write(bytes)
+        val localFileName = fileDataSource.write(bytes)
         check(attachmentDao.updateLocalFileName(entity.id, localFileName) == 1) {
             "Message attachment disappeared while it was cached"
         }
@@ -148,7 +148,7 @@ class MessageAttachmentTransfer(
                     ?.takeIf(String::isNotBlank)
                     ?: contact?.phoneNumbers?.firstOrNull()?.value
                     ?: contactId
-            fileStorage.saveForContact(
+            fileDataSource.saveForContact(
                 contactId = contactId,
                 contactName = contactName,
                 attachmentId = entity.id,
@@ -166,7 +166,7 @@ class MessageAttachmentTransfer(
         require(conversationId.isNotBlank()) { "Conversation ID must not be blank" }
         attachmentDao.findByConversationId(conversationId).forEach { entity ->
             entity.localFileName?.let { fileName ->
-                runCatching { fileStorage.delete(fileName) }
+                runCatching { fileDataSource.delete(fileName) }
                     .onFailure { error ->
                         logger.warn(error) { "Could not delete local attachment file ${entity.id}" }
                     }
@@ -178,7 +178,7 @@ class MessageAttachmentTransfer(
         if (messageIds.isEmpty()) return
         val entities = attachmentDao.findByMessageIds(messageIds)
         entities.forEach { entity ->
-            entity.localFileName?.let { fileName -> runCatching { fileStorage.delete(fileName) } }
+            entity.localFileName?.let { fileName -> runCatching { fileDataSource.delete(fileName) } }
             entity.deleteCapability?.let { deleteCapability ->
                 deleteBlob(
                     UploadedBlob(
@@ -195,7 +195,7 @@ class MessageAttachmentTransfer(
 
     internal suspend fun cleanupPrepared(prepared: List<PreparedMessageAttachment>) {
         prepared.forEach { item ->
-            runCatching { fileStorage.delete(item.localFileName) }
+            runCatching { fileDataSource.delete(item.localFileName) }
             deleteBlob(
                 UploadedBlob(
                     reference = item.attachment.blob,

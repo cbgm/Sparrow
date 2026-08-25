@@ -5,10 +5,10 @@ import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.packet.GroupInvitePacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProcessor
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipCoordinator
+import com.cbgm.sparrow.feature.chats.data.group.incoming.GroupInviteIncomingProcessor
 
-class GroupInvitePacketHandler(
-    private val membershipCoordinator: GroupMembershipCoordinator,
+internal class GroupInvitePacketHandler(
+    private val inviteIncomingProcessor: GroupInviteIncomingProcessor,
     private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor
 ) : GroupPacketHandler {
     private val logger = SparrowLog.withTag("GroupInvitePacketHandler")
@@ -21,8 +21,8 @@ class GroupInvitePacketHandler(
     ): Result<Unit> =
         runCatching {
             val invite = packet as GroupInvitePacket
-            membershipCoordinator
-                .receiveInvite(
+            inviteIncomingProcessor
+                .process(
                     ownerContactId = context.contactId,
                     packet = invite,
                     receivedAtEpochMilliseconds = context.receivedAtEpochMilliseconds
