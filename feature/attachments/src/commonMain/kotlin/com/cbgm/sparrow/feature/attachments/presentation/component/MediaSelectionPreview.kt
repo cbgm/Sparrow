@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -30,24 +31,40 @@ import com.cbgm.sparrow.feature.media.presentation.component.MediaThumbnail
 fun MediaSelectionPreview(
     media: List<MediaSelection>,
     onClick: () -> Unit,
+    onRemove: (String) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
     if (media.isEmpty()) return
 
     LazyRow(
-        modifier = modifier.clickable(enabled = enabled, onClick = onClick),
+        modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
         items(media, key = MediaSelection::id) { item ->
-            MediaSelectionItem(media = item)
+            MediaSelectionItem(
+                media = item,
+                enabled = enabled,
+                onClick = onClick,
+                onRemove = { onRemove(item.id) }
+            )
         }
     }
 }
 
 @Composable
-private fun MediaSelectionItem(media: MediaSelection) {
-    Box(modifier = Modifier.size(Dimens.MessageAttachment.previewSize)) {
+private fun MediaSelectionItem(
+    media: MediaSelection,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    onRemove: () -> Unit
+) {
+    Box(
+        modifier =
+            Modifier
+                .size(Dimens.MessageAttachment.previewSize)
+                .clickable(enabled = enabled, onClick = onClick)
+    ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             shape = MaterialTheme.shapes.medium,
@@ -66,7 +83,7 @@ private fun MediaSelectionItem(media: MediaSelection) {
                 shape = MaterialTheme.shapes.extraLarge,
                 color =
                     MaterialTheme.colorScheme.scrim.copy(
-                        alpha = Alpha.MessageAttachment.removeButtonBackground
+                        alpha = Alpha.MessageAttachment.playButtonBackground
                     )
             ) {
                 Icon(
@@ -74,6 +91,25 @@ private fun MediaSelectionItem(media: MediaSelection) {
                     contentDescription = null,
                     modifier = Modifier.size(Dimens.MessageAttachment.previewPlayIconSize),
                     tint = MaterialTheme.colorScheme.secondary
+                )
+            }
+        }
+
+        Surface(
+            modifier =
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .size(Dimens.MessageAttachment.previewRemoveButtonSize)
+                    .clickable(enabled = enabled, onClick = onRemove),
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surfaceContainer
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = null,
+                    modifier = Modifier.size(Dimens.MessageAttachment.previewRemoveIconSize),
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -87,7 +123,8 @@ private fun MediaSelectionPreviewPreview() {
         Surface(color = MaterialTheme.colorScheme.background) {
             MediaSelectionPreview(
                 media = previewMediaSelections(),
-                onClick = {}
+                onClick = {},
+                onRemove = {}
             )
         }
     }

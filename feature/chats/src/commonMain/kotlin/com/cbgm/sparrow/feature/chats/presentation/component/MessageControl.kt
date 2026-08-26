@@ -47,6 +47,7 @@ fun MessageControl(
     isSendEnabled: Boolean,
     selectedMedia: List<MediaSelection> = emptyList(),
     onMediaSelectionClick: () -> Unit = {},
+    onMediaRemove: (String) -> Unit = {},
     isGalleryEnabled: Boolean = true,
     isCameraEnabled: Boolean = true,
     onAttachmentButtonClick: (AttachmentClick) -> Unit
@@ -87,6 +88,7 @@ fun MessageControl(
             MediaSelectionPreview(
                 media = selectedMedia,
                 onClick = onMediaSelectionClick,
+                onRemove = onMediaRemove,
                 modifier = Modifier.padding(bottom = MaterialTheme.spacing.base)
             )
             MessageInput(
@@ -141,6 +143,7 @@ private fun MessageControlPreview() {
             isSendEnabled = true,
             selectedMedia = previewMediaSelections(),
             onMediaSelectionClick = {},
+            onMediaRemove = {},
             isGalleryEnabled = true,
             isCameraEnabled = true,
             onAttachmentButtonClick = {}

@@ -281,6 +281,13 @@ private fun BottomBar(
         isSendEnabled = !uiState.isLoading && !uiState.isSending && uiState.isMessageInputEnabled,
         selectedMedia = uiState.selectedMedia,
         onMediaSelectionClick = { galleryPicker.launch() },
+        onMediaRemove = { attachmentId ->
+            onUiEvent(
+                GroupUiEvent.MediaSelected(
+                    uiState.selectedMedia.filterNot { media -> media.id == attachmentId }
+                )
+            )
+        },
         isGalleryEnabled = !uiState.isLoading && !uiState.isSending && uiState.isMessageInputEnabled,
         onAttachmentButtonClick = { attachmentClick ->
             when (attachmentClick) {

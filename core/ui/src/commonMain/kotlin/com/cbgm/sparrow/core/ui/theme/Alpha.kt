@@ -30,7 +30,7 @@ object Alpha {
     }
 
     object MessageAttachment {
-        const val removeButtonBackground = 0.72f
+        const val playButtonBackground = 0.9f
     }
 
     object GroupDetailsScreen {
