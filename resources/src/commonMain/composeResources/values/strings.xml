@@ -300,6 +300,14 @@
     <string name="feature_settings_data_disclaimer_subtitle">What Sparrow stores locally and in the server infrastructure</string>
     <string name="feature_settings_developer_menu">Developer menu</string>
     <string name="feature_settings_developer_menu_subtitle">Build info, feature flags, diagnostics</string>
+    <string name="feature_settings_error_log">Error log</string>
+    <string name="feature_settings_error_log_saved_count">Saved errors: %1$d</string>
+    <string name="feature_settings_error_log_empty">No saved errors.</string>
+    <string name="feature_settings_clear_saved_errors">Clear saved errors</string>
+    <string name="feature_settings_clear_saved_errors_title">Clear saved errors?</string>
+    <string name="feature_settings_clear_saved_errors_description">This permanently removes all saved developer error entries.</string>
+    <string name="feature_settings_error_details_show">Show stack trace</string>
+    <string name="feature_settings_error_details_hide">Hide stack trace</string>
     <string name="feature_settings_network_diagnostics">Network diagnostics</string>
     <string name="feature_settings_connection_status">Connection status</string>
     <string name="feature_settings_current_node">Current node</string>

@@ -38,6 +38,7 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
+import com.cbgm.sparrow.feature.settings.presentation.developer.components.DeveloperErrorLogCard
 import com.cbgm.sparrow.feature.settings.presentation.developer.components.NetworkDiagnosticsCard
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiState
@@ -87,6 +88,11 @@ fun DeveloperMenuScreen(
             BuildInfoCard(buildInfo = uiState.buildInfo)
 
             NetworkDiagnosticsCard(diagnostics = uiState.transportDiagnostics)
+
+            DeveloperErrorLogCard(
+                savedErrorCount = uiState.savedErrorCount,
+                onClick = { onUiEvent(DeveloperMenuUiEvent.ErrorLogClicked) }
+            )
 
             DangerZoneCard(
                 isClearingLocalData = uiState.isClearingLocalData,

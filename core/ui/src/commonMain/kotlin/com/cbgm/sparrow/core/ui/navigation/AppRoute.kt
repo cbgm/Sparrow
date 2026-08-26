@@ -82,6 +82,9 @@ sealed interface AppRoute {
     data object DeveloperMenu : AppRoute
 
     @Serializable
+    data object DeveloperErrorLog : AppRoute
+
+    @Serializable
     data object ProfileSettings : AppRoute
 
     @Serializable

@@ -2,9 +2,11 @@ package com.cbgm.sparrow.feature.settings.presentation.developer
 
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.transport.TransportDiagnosticsProvider
+import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.settings.domain.usecase.ClearLocalDataUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetBuildInfoUseCase
+import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveDeveloperErrorsUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetDeveloperEnabledUseCase
 import com.cbgm.sparrow.feature.settings.presentation.developer.mapper.toUiState
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiEvent
@@ -14,6 +16,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -22,19 +26,26 @@ import kotlin.time.Duration.Companion.milliseconds
 class DeveloperMenuViewModel(
     private val clearLocalDataUseCase: ClearLocalDataUseCase,
     getBuildInfoUseCase: GetBuildInfoUseCase,
+    observeDeveloperErrorsUseCase: ObserveDeveloperErrorsUseCase,
     private val setDeveloperEnabledUseCase: SetDeveloperEnabledUseCase,
     private val transportDiagnosticsProvider: TransportDiagnosticsProvider
 ) : BaseViewModel() {
     private val isClearingLocalData = MutableStateFlow(false)
     private val buildInfo = getBuildInfoUseCase()
+    private val savedErrorCount =
+        observeDeveloperErrorsUseCase()
+            .map { errors -> errors.size }
+            .distinctUntilChanged()
 
     val uiState: StateFlow<DeveloperMenuUiState> =
         combine(
             transportDiagnosticsProvider.diagnostics,
+            savedErrorCount,
             isClearingLocalData
-        ) { diagnostics, isClearing ->
+        ) { diagnostics, errorCount, isClearing ->
             diagnostics.toUiState(
                 buildInfo = buildInfo,
+                savedErrorCount = errorCount,
                 isClearingLocalData = isClearing
             )
         }.stateIn(
@@ -54,6 +65,7 @@ class DeveloperMenuViewModel(
     fun onUiEvent(event: DeveloperMenuUiEvent) {
         when (event) {
             DeveloperMenuUiEvent.BackClicked -> navigator.popBackStack()
+            DeveloperMenuUiEvent.ErrorLogClicked -> navigator.navigateTo(AppRoute.DeveloperErrorLog)
             DeveloperMenuUiEvent.ClearLocalDataClicked -> clearLocalData()
             DeveloperMenuUiEvent.DisableDeveloperModeClicked -> disableDeveloperMode()
         }

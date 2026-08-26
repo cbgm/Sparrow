@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.sparrow.kmp.compose.feature)
+    alias(libs.plugins.sparrow.kmp.serialization)
     alias(libs.plugins.about.libs)
 }
 
@@ -25,6 +26,7 @@ kotlin {
 
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)
+            implementation(libs.bundles.serialization)
             implementation(libs.bundles.koin.compose)
 
             implementation(libs.about.libs.compose)

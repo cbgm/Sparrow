@@ -6,6 +6,7 @@ import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.feature.settings.presentation.developer.DeveloperMenuRoute
 import com.cbgm.sparrow.feature.settings.presentation.disclaimer.DisclaimerRoute
 import com.cbgm.sparrow.feature.settings.presentation.disclaimer.model.DisclaimerType
+import com.cbgm.sparrow.feature.settings.presentation.errors.DeveloperErrorLogRoute
 import com.cbgm.sparrow.feature.settings.presentation.licenses.LicensesRoute
 import com.cbgm.sparrow.feature.settings.presentation.network.ControlPlaneSettingsRoute
 import com.cbgm.sparrow.feature.settings.presentation.profile.ProfileSettingsRoute
@@ -39,6 +40,13 @@ fun NavGraphBuilder.settingsNavGraph() {
         exitTransition = { slideOutToRight() }
     ) {
         DeveloperMenuRoute()
+    }
+
+    composable<AppRoute.DeveloperErrorLog>(
+        enterTransition = { slideInFromRight() },
+        exitTransition = { slideOutToRight() }
+    ) {
+        DeveloperErrorLogRoute()
     }
 
     composable<AppRoute.ProfileSettings>(
