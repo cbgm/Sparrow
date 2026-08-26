@@ -9,6 +9,7 @@ import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -38,10 +39,10 @@ actual fun OnboardingPermissionRequester(
 
                 add(Manifest.permission.CAMERA)
                 add(Manifest.permission.RECORD_AUDIO)
+                add(Manifest.permission.MANAGE_EXTERNAL_STORAGE)
 
                 add(Manifest.permission.READ_PHONE_NUMBERS)
                 add(Manifest.permission.READ_PHONE_STATE)
-
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     add(Manifest.permission.POST_NOTIFICATIONS)
                 }
@@ -79,6 +80,11 @@ actual fun OnboardingPermissionRequester(
                         result[Manifest.permission.RECORD_AUDIO] == true ||
                             context.isGranted(
                                 Manifest.permission.RECORD_AUDIO
+                            ),
+                    storageGranted =
+                        result[Manifest.permission.MANAGE_EXTERNAL_STORAGE] == true ||
+                            context.isGranted(
+                                Manifest.permission.READ_EXTERNAL_STORAGE
                             ),
                     notificationsGranted =
                         Build.VERSION.SDK_INT <

@@ -108,7 +108,7 @@ internal fun GroupMessage.toUiModel(
                     },
                 fileAttachments =
                     fileAttachments.map { attachment ->
-                        attachment.toUi()
+                        attachment.toUi(bytes = attachmentBytes[attachment.id])
                     }
             ),
         type = type,

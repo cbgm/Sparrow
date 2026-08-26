@@ -72,11 +72,8 @@ import com.cbgm.sparrow.feature.chats.presentation.component.rememberMessageSear
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectComposerState
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiState
-import com.cbgm.sparrow.feature.media.domain.model.CameraCaptureConfig
-import com.cbgm.sparrow.feature.media.domain.model.CameraCaptureType
-import com.cbgm.sparrow.feature.media.presentation.selection.rememberFileSelectionPickerLauncher
-import com.cbgm.sparrow.feature.media.presentation.selection.rememberMediaSelectionCameraLauncher
-import com.cbgm.sparrow.feature.media.presentation.selection.rememberMediaSelectionGalleryPickerLauncher
+import com.cbgm.sparrow.feature.media.presentation.model.AttachmentSelectionSource
+import com.cbgm.sparrow.feature.media.presentation.selection.rememberAttachmentSelectionLauncher
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
@@ -324,37 +321,15 @@ private fun BottomBar(
     onUiEvent: (DirectUiEvent) -> Unit
 ) {
     val maxAttachments = MessageAttachmentPolicy.MAX_ATTACHMENTS_PER_MESSAGE
-    val selectedAttachmentCount = uiState.selectedMedia.size + uiState.selectedFiles.size
-    val galleryPicker =
-        rememberMediaSelectionGalleryPickerLauncher(
-            maxItems = maxAttachments - uiState.selectedFiles.size,
-            maxImageBytes = MessageAttachmentPolicy.MAX_IMAGE_BYTES.toInt(),
+    val attachmentPicker =
+        rememberAttachmentSelectionLauncher(
+            maxItems = maxAttachments,
+            maxImageDimension = MessageAttachmentPolicy.MAX_IMAGE_DIMENSION,
+            maxImageBytes = MessageAttachmentPolicy.MAX_IMAGE_BYTES,
             maxVideoBytes = MessageAttachmentPolicy.MAX_VIDEO_BYTES,
-            selectedMedia = uiState.selectedMedia,
-            onMediaSelected = { onUiEvent(DirectUiEvent.MediaSelected(it)) },
-            onDismissed = {},
-            onError = { onUiEvent(DirectUiEvent.AttachmentError(it)) }
-        )
-    val cameraPicker =
-        rememberMediaSelectionCameraLauncher(
-            config = CameraCaptureConfig(
-                allowedTypes = setOf(CameraCaptureType.PHOTO, CameraCaptureType.VIDEO),
-                maxImageDimension = MessageAttachmentPolicy.MAX_IMAGE_DIMENSION,
-                maxImageBytes = MessageAttachmentPolicy.MAX_IMAGE_BYTES.toInt(),
-                maxVideoBytes = MessageAttachmentPolicy.MAX_VIDEO_BYTES
-            ),
-            maxItems = maxAttachments - uiState.selectedFiles.size,
-            selectedMedia = uiState.selectedMedia,
-            onMediaSelected = { onUiEvent(DirectUiEvent.MediaSelected(it)) },
-            onDismissed = {},
-            onError = { onUiEvent(DirectUiEvent.AttachmentError(it)) }
-        )
-    val filePicker =
-        rememberFileSelectionPickerLauncher(
-            maxItems = maxAttachments - uiState.selectedMedia.size,
             maxFileBytes = MessageAttachmentPolicy.MAX_FILE_BYTES,
-            selectedFiles = uiState.selectedFiles,
-            onFilesSelected = { onUiEvent(DirectUiEvent.FilesSelected(it)) },
+            selectedAttachments = uiState.selectedAttachments,
+            onAttachmentsSelected = { onUiEvent(DirectUiEvent.AttachmentsSelected(it)) },
             onDismissed = {},
             onError = { onUiEvent(DirectUiEvent.AttachmentError(it)) }
         )
@@ -362,7 +337,7 @@ private fun BottomBar(
         !uiState.isLoading &&
             !uiState.isSending &&
             uiState.composerState.isInputEnabled &&
-            selectedAttachmentCount < maxAttachments
+            uiState.selectedAttachments.size < maxAttachments
 
     MessageControl(
         containerColor = containerColor,
@@ -372,24 +347,24 @@ private fun BottomBar(
         onValueChange = { onUiEvent(DirectUiEvent.MessageTextChanged(it)) },
         onSendClick = { onUiEvent(DirectUiEvent.SendClicked) },
         isInputEnabled = !uiState.isLoading && !uiState.isSending && uiState.composerState.isInputEnabled,
-        isSendEnabled = !uiState.isLoading && !uiState.isSending && uiState.composerState.isInputEnabled && uiState.composerState.isSendActionEnabled,
-        selectedMedia = uiState.selectedMedia,
-        selectedFiles = uiState.selectedFiles,
-        onMediaSelectionClick = { galleryPicker.launch() },
-        onMediaRemove = { mediaId ->
-            onUiEvent(DirectUiEvent.MediaSelected(uiState.selectedMedia.filterNot { it.id == mediaId }))
-        },
-        onFileRemove = { fileId ->
-            onUiEvent(DirectUiEvent.FilesSelected(uiState.selectedFiles.filterNot { it.id == fileId }))
+        isSendEnabled = !uiState.isLoading && !uiState.isSending && uiState.composerState.isSendActionEnabled,
+        selectedAttachments = uiState.selectedAttachments,
+        onSelectionClick = attachmentPicker::launch,
+        onAttachmentRemove = { attachmentId ->
+            onUiEvent(
+                DirectUiEvent.AttachmentsSelected(
+                    uiState.selectedAttachments.filterNot { it.id == attachmentId }
+                )
+            )
         },
         isGalleryEnabled = canAddAttachment,
         isCameraEnabled = canAddAttachment,
         isFileEnabled = canAddAttachment,
         onAttachmentButtonClick = { attachmentClick ->
             when (attachmentClick) {
-                AttachmentClick.OpenGallery -> galleryPicker.launch()
-                AttachmentClick.OpenCamera -> cameraPicker.launch()
-                AttachmentClick.OpenFile -> filePicker.launch()
+                AttachmentClick.OpenGallery -> attachmentPicker.launch(AttachmentSelectionSource.GALLERY)
+                AttachmentClick.OpenCamera -> attachmentPicker.launch(AttachmentSelectionSource.CAMERA)
+                AttachmentClick.OpenFile -> attachmentPicker.launch(AttachmentSelectionSource.FILE_PICKER)
                 AttachmentClick.OpenContacts -> Unit
             }
         }

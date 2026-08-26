@@ -18,11 +18,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.presentation.component.AttachmentBar
-import com.cbgm.sparrow.feature.media.presentation.component.FileSelectionPreview
-import com.cbgm.sparrow.feature.media.presentation.component.MediaSelectionPreview
-import com.cbgm.sparrow.feature.media.presentation.component.previewMediaSelections
-import com.cbgm.sparrow.feature.media.presentation.model.FileSelection
-import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
+import com.cbgm.sparrow.feature.media.presentation.component.AttachmentSelectionPreview
+import com.cbgm.sparrow.feature.media.presentation.component.previewAttachmentSelections
+import com.cbgm.sparrow.feature.media.presentation.model.AttachmentSelection
+import com.cbgm.sparrow.feature.media.presentation.model.AttachmentSelectionSource
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_chat_typing
 import org.jetbrains.compose.resources.stringResource
@@ -47,11 +46,9 @@ fun MessageControl(
     onSendClick: () -> Unit,
     isInputEnabled: Boolean,
     isSendEnabled: Boolean,
-    selectedMedia: List<MediaSelection> = emptyList(),
-    selectedFiles: List<FileSelection> = emptyList(),
-    onMediaSelectionClick: () -> Unit = {},
-    onMediaRemove: (String) -> Unit = {},
-    onFileRemove: (String) -> Unit = {},
+    selectedAttachments: List<AttachmentSelection> = emptyList(),
+    onSelectionClick: (AttachmentSelectionSource) -> Unit = {},
+    onAttachmentRemove: (String) -> Unit = {},
     isGalleryEnabled: Boolean = true,
     isCameraEnabled: Boolean = true,
     isFileEnabled: Boolean = true,
@@ -64,9 +61,10 @@ fun MessageControl(
         color = containerColor
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = MaterialTheme.spacing.base)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = MaterialTheme.spacing.base)
         ) {
             Text(
                 text =
@@ -90,15 +88,10 @@ fun MessageControl(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            MediaSelectionPreview(
-                media = selectedMedia,
-                onClick = onMediaSelectionClick,
-                onRemove = onMediaRemove,
-                modifier = Modifier.padding(bottom = MaterialTheme.spacing.base)
-            )
-            FileSelectionPreview(
-                files = selectedFiles,
-                onRemove = onFileRemove,
+            AttachmentSelectionPreview(
+                attachments = selectedAttachments,
+                onClick = onSelectionClick,
+                onRemove = onAttachmentRemove,
                 modifier = Modifier.padding(bottom = MaterialTheme.spacing.base)
             )
             MessageInput(
@@ -107,7 +100,7 @@ fun MessageControl(
                 onSendClick = onSendClick,
                 inputEnabled = isInputEnabled,
                 sendEnabled = isSendEnabled,
-                hasAttachments = selectedMedia.isNotEmpty() || selectedFiles.isNotEmpty(),
+                hasAttachments = selectedAttachments.isNotEmpty(),
                 onAttachmentClick = { isAttachmentBarVisible = !isAttachmentBarVisible },
                 isAttachmentVisible = isAttachmentBarVisible
             )
@@ -152,19 +145,9 @@ private fun MessageControlPreview() {
             onSendClick = {},
             isInputEnabled = true,
             isSendEnabled = true,
-            selectedMedia = previewMediaSelections(),
-            selectedFiles =
-                listOf(
-                    FileSelection(
-                        id = "preview-file",
-                        bytes = ByteArray(1024),
-                        mimeType = "application/pdf",
-                        fileName = "document.pdf"
-                    )
-                ),
-            onMediaSelectionClick = {},
-            onMediaRemove = {},
-            onFileRemove = {},
+            selectedAttachments = previewAttachmentSelections(),
+            onSelectionClick = {},
+            onAttachmentRemove = {},
             isGalleryEnabled = true,
             isCameraEnabled = true,
             isFileEnabled = true,

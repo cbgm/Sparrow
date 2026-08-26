@@ -3,8 +3,7 @@ package com.cbgm.sparrow.feature.chats.presentation.direct.model
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
-import com.cbgm.sparrow.feature.media.presentation.model.FileSelection
-import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
+import com.cbgm.sparrow.feature.media.presentation.model.AttachmentSelection
 
 data class DirectUiState(
     val contactId: String = "",
@@ -12,8 +11,7 @@ data class DirectUiState(
     val profilePictureBytes: ByteArray? = null,
     val messages: List<MessageBubbleModel> = emptyList(),
     val messageText: String = "",
-    val selectedMedia: List<MediaSelection> = emptyList(),
-    val selectedFiles: List<FileSelection> = emptyList(),
+    val selectedAttachments: List<AttachmentSelection> = emptyList(),
     val isSending: Boolean = false,
     val isContactTyping: Boolean = false,
     val contactSecurityState: ContactSecurityState = ContactSecurityState.NO_REMOTE_PUBLIC_KEYS,
@@ -38,8 +36,7 @@ data class DirectUiState(
         if (!profilePictureBytes.contentEquals(other.profilePictureBytes)) return false
         if (messages != other.messages) return false
         if (messageText != other.messageText) return false
-        if (selectedMedia != other.selectedMedia) return false
-        if (selectedFiles != other.selectedFiles) return false
+        if (selectedAttachments != other.selectedAttachments) return false
         if (contactSecurityState != other.contactSecurityState) return false
         if (identitySetupMode != other.identitySetupMode) return false
         if (composerState != other.composerState) return false
@@ -58,8 +55,7 @@ data class DirectUiState(
         result = 31 * result + (profilePictureBytes?.contentHashCode() ?: 0)
         result = 31 * result + messages.hashCode()
         result = 31 * result + messageText.hashCode()
-        result = 31 * result + selectedMedia.hashCode()
-        result = 31 * result + selectedFiles.hashCode()
+        result = 31 * result + selectedAttachments.hashCode()
         result = 31 * result + contactSecurityState.hashCode()
         result = 31 * result + identitySetupMode.hashCode()
         result = 31 * result + composerState.hashCode()

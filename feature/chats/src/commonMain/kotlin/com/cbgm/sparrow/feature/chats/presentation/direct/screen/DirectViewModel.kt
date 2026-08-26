@@ -26,8 +26,7 @@ import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.DirectChatAuthorizationRequiredException
 import com.cbgm.sparrow.feature.contacts.domain.usecase.EnsureIdentityExchangeStartedUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
-import com.cbgm.sparrow.feature.media.presentation.model.FileSelection
-import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
+import com.cbgm.sparrow.feature.media.presentation.model.AttachmentSelection
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toDetailsRoute
 import kotlinx.coroutines.Job
@@ -67,8 +66,7 @@ class DirectViewModel(
     private val messageText = savedStateHandle.getMutableStateFlow(MESSAGE_TEXT_KEY, "")
     private val errorMessage = MutableStateFlow<String?>(null)
     private val isContactTyping = MutableStateFlow(false)
-    private val selectedMedia = MutableStateFlow<List<MediaSelection>>(emptyList())
-    private val selectedFiles = MutableStateFlow<List<FileSelection>>(emptyList())
+    private val selectedAttachments = MutableStateFlow<List<AttachmentSelection>>(emptyList())
     private val attachmentBytes = MutableStateFlow<Map<String, ByteArray>>(emptyMap())
     private val isSending = MutableStateFlow(false)
     private val loadingAttachmentIds = mutableSetOf<String>()
@@ -78,17 +76,12 @@ class DirectViewModel(
 
     private val conversationContext = observeChatContext(conversationId, contactId)
 
-    private val attachmentSelectionContext =
-        combine(selectedMedia, selectedFiles) { media, files ->
-            AttachmentSelectionContext(media = media, files = files)
-        }
-
     private val composerContext =
         combine(
             messageText,
             errorMessage,
             isContactTyping,
-            attachmentSelectionContext,
+            selectedAttachments,
             isSending
         ) { text, error, contactTyping, attachments, sending ->
             if (!error.isNullOrEmpty()) logger.error { error }
@@ -116,8 +109,7 @@ class DirectViewModel(
                 attachmentBytes = loadedAttachmentBytes
             ).withProfilePicture(context.profilePictureBytes)
                 .copy(
-                    selectedMedia = composer.attachments.media,
-                    selectedFiles = composer.attachments.files,
+                    selectedAttachments = composer.attachments,
                     isSending = composer.isSending
                 )
         }
@@ -142,8 +134,7 @@ class DirectViewModel(
         when (event) {
             is DirectUiEvent.MessageTextChanged -> onMessageTextChanged(event.text)
             DirectUiEvent.SendClicked -> sendCurrentMessage()
-            is DirectUiEvent.MediaSelected -> onMediaSelected(event.media)
-            is DirectUiEvent.FilesSelected -> onFilesSelected(event.files)
+            is DirectUiEvent.AttachmentsSelected -> updateAttachmentSelection(event.attachments)
             is DirectUiEvent.MediaAttachmentVisible -> loadAttachment(event.attachmentId)
             is DirectUiEvent.AttachmentError -> errorMessage.value = event.message
             DirectUiEvent.HeaderClicked -> openContactDetails()
@@ -233,16 +224,13 @@ class DirectViewModel(
         if (!composerState.isSendActionEnabled || isSending.value) return
 
         val text = messageText.value.trim()
-        val mediaSelections = selectedMedia.value
-        val fileSelections = selectedFiles.value
-        if (text.isEmpty() && mediaSelections.isEmpty() && fileSelections.isEmpty()) return
+        val selections = selectedAttachments.value
+        if (text.isEmpty() && selections.isEmpty()) return
 
         errorMessage.value = null
         viewModelScope.launch {
             isSending.value = true
-            val attachments =
-                mediaSelections.map(MediaSelection::toOutgoingMessageAttachment) +
-                    fileSelections.map(FileSelection::toOutgoingMessageAttachment)
+            val attachments = selections.map(AttachmentSelection::toOutgoingMessageAttachment)
             try {
                 when (composerState) {
                     DirectComposerState.REINVITE_REQUIRED -> queueMessageAndStartReinvite(text, attachments)
@@ -305,26 +293,13 @@ class DirectViewModel(
             .onFailure { error -> errorMessage.value = error.message ?: "Message could not be sent" }
     }
 
-    private fun onMediaSelected(media: List<MediaSelection>) {
-        updateAttachmentSelection(media = media, files = selectedFiles.value)
-    }
-
-    private fun onFilesSelected(files: List<FileSelection>) {
-        updateAttachmentSelection(media = selectedMedia.value, files = files)
-    }
-
-    private fun updateAttachmentSelection(
-        media: List<MediaSelection>,
-        files: List<FileSelection>
-    ) {
+    private fun updateAttachmentSelection(attachments: List<AttachmentSelection>) {
         runCatching {
             MessageAttachmentPolicy.requireValid(
-                media.map(MediaSelection::toOutgoingMessageAttachment) +
-                    files.map(FileSelection::toOutgoingMessageAttachment)
+                attachments.map(AttachmentSelection::toOutgoingMessageAttachment)
             )
         }.onSuccess {
-            selectedMedia.value = media
-            selectedFiles.value = files
+            selectedAttachments.value = attachments
             errorMessage.value = null
         }.onFailure { error ->
             errorMessage.value = error.message ?: "Selected attachments could not be attached"
@@ -345,8 +320,7 @@ class DirectViewModel(
 
     private suspend fun clearComposer() {
         messageText.value = ""
-        selectedMedia.value = emptyList()
-        selectedFiles.value = emptyList()
+        selectedAttachments.value = emptyList()
         stopTypingNow()
     }
 
@@ -382,16 +356,11 @@ class DirectViewModel(
         navigator.navigateTo(AppRoute.ContactDetails(conversationId, contactId, openVerification = true))
     }
 
-    private data class AttachmentSelectionContext(
-        val media: List<MediaSelection>,
-        val files: List<FileSelection>
-    )
-
     private data class ComposerContext(
         val text: String,
         val error: String?,
         val contactTyping: Boolean,
-        val attachments: AttachmentSelectionContext,
+        val attachments: List<AttachmentSelection>,
         val isSending: Boolean
     )
 

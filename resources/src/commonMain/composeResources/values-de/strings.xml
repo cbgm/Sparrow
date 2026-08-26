@@ -263,8 +263,10 @@
     <string name="feature_onboarding_camera">Kamera</string>
     <string name="feature_onboarding_camera_description">Scanne Sparrow-QR-Codes zur Identitätsfreigabe und nimm Fotos/Videos auf.</string>
     <string name="feature_onboarding_audio">Audio</string>
-    <string name="feature_onboarding_audio_description">Nimm den Ton bei Videos auf.</string>
-    <string name="feature_onboarding_contacts_permission_description">Vorhandene Kontakte aus deinem Adressbuch finden.</string>
+    <string name="feature_onboarding_audio_description">Nimm den Ton bei Videos und Sprachnachrichten auf.</string>
+    <string name="feature_onboarding_storage">Speicher</string>
+    <string name="feature_onboarding_storage_description">Durchsuchen Sie den Speicher, um Dateien für Anhänge auszuwählen.</string>
+    <string name="feature_onboarding_contacts_permission_description">Finde und teile vorhandene Kontakte aus deinem Adressbuch.</string>
     <string name="feature_onboarding_contacts_stay_local">Deine Kontakte bleiben lokal</string>
     <string name="feature_onboarding_contacts_stay_local_description">Kontakte werden ausschließlich auf deinem Gerät verwendet, um Personen anhand ihrer Telefonnummer zu finden.</string>
     <string name="feature_onboarding_detected_automatically_confirm">Automatisch erkannt. Bestätige die Nummer oder ändere sie.</string>
@@ -275,7 +277,7 @@
     <string name="feature_onboarding_input_your_name">Gib deinen Namen ein</string>
     <string name="feature_onboarding_local_identity_incomplete">Die lokale Identität ist unvollständig. Sparrow ersetzt vorhandene Schlüssel nicht automatisch.</string>
     <string name="feature_onboarding_no_automatic_number">Es konnte keine Telefonnummer automatisch erkannt werden. Gib sie manuell ein oder wähle eine aus.</string>
-    <string name="feature_onboarding_notifications_description">Erhalte Benachrichtigungen über neue Nachrichten.</string>
+    <string name="feature_onboarding_notifications_description">Erhalte Benachrichtigungen über neue Nachrichten, wenn die App geschlossen ist.</string>
     <string name="feature_onboarding_permissions_description">Sparrow fordert nur Berechtigungen für Funktionen an, die du verwenden möchtest.</string>
     <string name="feature_onboarding_permissions_settings_hint">Abgelehnte Berechtigungen können später in den Systemeinstellungen aktiviert werden.</string>
     <string name="feature_onboarding_phone_number_permission_description">Versucht, deine SIM-Telefonnummer automatisch zu erkennen, ohne eine Auswahl anzuzeigen.</string>

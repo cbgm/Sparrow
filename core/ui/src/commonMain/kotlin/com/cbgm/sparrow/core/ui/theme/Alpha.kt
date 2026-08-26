@@ -34,10 +34,6 @@ object Alpha {
         const val removeButtonBackground = 0.72f
     }
 
-    object MediaSelectionPreview {
-        const val overlay = 0.72f
-    }
-
     object GroupDetailsScreen {
         const val adminIcon = 0.73f
     }

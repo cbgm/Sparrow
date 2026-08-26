@@ -183,6 +183,7 @@ private fun BubbleBody(
             if (message.fileAttachments.isNotEmpty()) {
                 MessageFileAttachments(
                     files = message.fileAttachments,
+                    onAttachmentVisible = onAttachmentVisible,
                     modifier =
                         Modifier.padding(
                             horizontal = MaterialTheme.spacing.small,

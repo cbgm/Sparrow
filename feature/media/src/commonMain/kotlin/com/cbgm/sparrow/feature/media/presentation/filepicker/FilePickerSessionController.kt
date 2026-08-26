@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.media.presentation.filepicker
 
 import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.feature.media.presentation.model.FileSelection
+import com.cbgm.sparrow.feature.media.presentation.model.AttachmentSelection
 
 class FilePickerSessionController {
     private val sessions = mutableMapOf<String, FilePickerSession>()
@@ -10,7 +10,7 @@ class FilePickerSessionController {
         maxItems: Int,
         maxFileBytes: Long,
         blockedSourceReferences: Set<String>,
-        onFilesSelected: (List<FileSelection>) -> Unit,
+        onFilesSelected: (List<AttachmentSelection>) -> Unit,
         onDismissed: () -> Unit,
         onError: (String) -> Unit
     ): String {
@@ -39,7 +39,7 @@ class FilePickerSessionController {
             )
         }
 
-    fun complete(sessionId: String, files: List<FileSelection>) {
+    fun complete(sessionId: String, files: List<AttachmentSelection>) {
         val session = sessions.remove(sessionId) ?: return
         session.onFilesSelected(files)
     }
@@ -65,7 +65,7 @@ private data class FilePickerSession(
     val maxItems: Int,
     val maxFileBytes: Long,
     val blockedSourceReferences: Set<String>,
-    val onFilesSelected: (List<FileSelection>) -> Unit,
+    val onFilesSelected: (List<AttachmentSelection>) -> Unit,
     val onDismissed: () -> Unit,
     val onError: (String) -> Unit
 )

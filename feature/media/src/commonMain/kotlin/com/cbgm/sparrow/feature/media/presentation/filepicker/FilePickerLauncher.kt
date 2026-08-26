@@ -5,7 +5,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import com.cbgm.sparrow.core.ui.navigation.AppNavigator
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
-import com.cbgm.sparrow.feature.media.presentation.model.FileSelection
+import com.cbgm.sparrow.feature.media.presentation.model.AttachmentSelection
 import org.koin.compose.koinInject
 
 interface FilePickerLauncher {
@@ -17,7 +17,7 @@ fun rememberFilePickerLauncher(
     maxItems: Int,
     maxFileBytes: Long,
     blockedSourceReferences: Set<String>,
-    onFilesSelected: (List<FileSelection>) -> Unit,
+    onFilesSelected: (List<AttachmentSelection>) -> Unit,
     onDismissed: () -> Unit,
     onError: (String) -> Unit,
     navigator: AppNavigator = koinInject(),

@@ -66,11 +66,8 @@ import com.cbgm.sparrow.feature.chats.presentation.component.rememberMessageSear
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMessageUiModel
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState
-import com.cbgm.sparrow.feature.media.domain.model.CameraCaptureConfig
-import com.cbgm.sparrow.feature.media.domain.model.CameraCaptureType
-import com.cbgm.sparrow.feature.media.presentation.selection.rememberFileSelectionPickerLauncher
-import com.cbgm.sparrow.feature.media.presentation.selection.rememberMediaSelectionCameraLauncher
-import com.cbgm.sparrow.feature.media.presentation.selection.rememberMediaSelectionGalleryPickerLauncher
+import com.cbgm.sparrow.feature.media.presentation.model.AttachmentSelectionSource
+import com.cbgm.sparrow.feature.media.presentation.selection.rememberAttachmentSelectionLauncher
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_group_accept
@@ -266,37 +263,15 @@ private fun BottomBar(
     onUiEvent: (GroupUiEvent) -> Unit
 ) {
     val maxAttachments = MessageAttachmentPolicy.MAX_ATTACHMENTS_PER_MESSAGE
-    val selectedAttachmentCount = uiState.selectedMedia.size + uiState.selectedFiles.size
-    val galleryPicker =
-        rememberMediaSelectionGalleryPickerLauncher(
-            maxItems = maxAttachments - uiState.selectedFiles.size,
+    val attachmentPicker =
+        rememberAttachmentSelectionLauncher(
+            maxItems = maxAttachments,
+            maxImageDimension = MessageAttachmentPolicy.MAX_IMAGE_DIMENSION,
             maxImageBytes = MessageAttachmentPolicy.MAX_IMAGE_BYTES.toInt(),
             maxVideoBytes = MessageAttachmentPolicy.MAX_VIDEO_BYTES,
-            selectedMedia = uiState.selectedMedia,
-            onMediaSelected = { onUiEvent(GroupUiEvent.MediaSelected(it)) },
-            onDismissed = {},
-            onError = { onUiEvent(GroupUiEvent.AttachmentError(it)) }
-        )
-    val cameraPicker =
-        rememberMediaSelectionCameraLauncher(
-            config = CameraCaptureConfig(
-                allowedTypes = setOf(CameraCaptureType.PHOTO, CameraCaptureType.VIDEO),
-                maxImageDimension = MessageAttachmentPolicy.MAX_IMAGE_DIMENSION,
-                maxImageBytes = MessageAttachmentPolicy.MAX_IMAGE_BYTES.toInt(),
-                maxVideoBytes = MessageAttachmentPolicy.MAX_VIDEO_BYTES
-            ),
-            maxItems = maxAttachments - uiState.selectedFiles.size,
-            selectedMedia = uiState.selectedMedia,
-            onMediaSelected = { onUiEvent(GroupUiEvent.MediaSelected(it)) },
-            onDismissed = {},
-            onError = { onUiEvent(GroupUiEvent.AttachmentError(it)) }
-        )
-    val filePicker =
-        rememberFileSelectionPickerLauncher(
-            maxItems = maxAttachments - uiState.selectedMedia.size,
             maxFileBytes = MessageAttachmentPolicy.MAX_FILE_BYTES,
-            selectedFiles = uiState.selectedFiles,
-            onFilesSelected = { onUiEvent(GroupUiEvent.FilesSelected(it)) },
+            selectedAttachments = uiState.selectedAttachments,
+            onAttachmentsSelected = { onUiEvent(GroupUiEvent.AttachmentsSelected(it)) },
             onDismissed = {},
             onError = { onUiEvent(GroupUiEvent.AttachmentError(it)) }
         )
@@ -304,7 +279,7 @@ private fun BottomBar(
         !uiState.isLoading &&
             !uiState.isSending &&
             uiState.isMessageInputEnabled &&
-            selectedAttachmentCount < maxAttachments
+            uiState.selectedAttachments.size < maxAttachments
 
     MessageControl(
         containerColor = containerColor,
@@ -315,23 +290,23 @@ private fun BottomBar(
         onSendClick = { onUiEvent(GroupUiEvent.SendClicked) },
         isInputEnabled = !uiState.isLoading && !uiState.isSending && uiState.isMessageInputEnabled,
         isSendEnabled = !uiState.isLoading && !uiState.isSending && uiState.isMessageInputEnabled,
-        selectedMedia = uiState.selectedMedia,
-        selectedFiles = uiState.selectedFiles,
-        onMediaSelectionClick = { galleryPicker.launch() },
-        onMediaRemove = { mediaId ->
-            onUiEvent(GroupUiEvent.MediaSelected(uiState.selectedMedia.filterNot { it.id == mediaId }))
-        },
-        onFileRemove = { fileId ->
-            onUiEvent(GroupUiEvent.FilesSelected(uiState.selectedFiles.filterNot { it.id == fileId }))
+        selectedAttachments = uiState.selectedAttachments,
+        onSelectionClick = attachmentPicker::launch,
+        onAttachmentRemove = { attachmentId ->
+            onUiEvent(
+                GroupUiEvent.AttachmentsSelected(
+                    uiState.selectedAttachments.filterNot { it.id == attachmentId }
+                )
+            )
         },
         isGalleryEnabled = canAddAttachment,
         isCameraEnabled = canAddAttachment,
         isFileEnabled = canAddAttachment,
         onAttachmentButtonClick = { attachmentClick ->
             when (attachmentClick) {
-                AttachmentClick.OpenGallery -> galleryPicker.launch()
-                AttachmentClick.OpenCamera -> cameraPicker.launch()
-                AttachmentClick.OpenFile -> filePicker.launch()
+                AttachmentClick.OpenGallery -> attachmentPicker.launch(AttachmentSelectionSource.GALLERY)
+                AttachmentClick.OpenCamera -> attachmentPicker.launch(AttachmentSelectionSource.CAMERA)
+                AttachmentClick.OpenFile -> attachmentPicker.launch(AttachmentSelectionSource.FILE_PICKER)
                 AttachmentClick.OpenContacts -> Unit
             }
         }
