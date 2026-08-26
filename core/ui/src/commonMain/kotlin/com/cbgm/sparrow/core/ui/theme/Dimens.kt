@@ -14,6 +14,12 @@ object Dimens {
         val searchClearButtonSize = 32.dp
     }
 
+    object PermissionsPage {
+        val dotSelectedSize = 8.dp
+        val dotUnselectedSize = 6.dp
+        val pagerHeight = 90.dp
+    }
+
     object Avatar {
         val defaultSize = 48.dp
     }

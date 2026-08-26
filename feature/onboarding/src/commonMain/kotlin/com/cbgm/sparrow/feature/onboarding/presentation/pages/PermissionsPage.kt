@@ -21,9 +21,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.component.ListingRow
@@ -62,7 +62,7 @@ fun PermissionsPage(
         PermissionsHeader()
 
         Spacer(
-            modifier = Modifier.height(MaterialTheme.spacing.medium)
+            modifier = Modifier.height(MaterialTheme.spacing.small)
         )
 
         PermissionsPager(
@@ -122,7 +122,7 @@ private fun PermissionsPager(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .height(100.dp)
+                .height(Dimens.PermissionsPage.pagerHeight)
     ) { page ->
         PermissionPagerPage(
             permission = permissions[page]
@@ -179,9 +179,9 @@ private fun PermissionsPagerIndicatorDot(
             Modifier
                 .size(
                     if (selected) {
-                        8.dp
+                        Dimens.PermissionsPage.dotSelectedSize
                     } else {
-                        6.dp
+                        Dimens.PermissionsPage.dotUnselectedSize
                     }
                 )
                 .clip(CircleShape)
