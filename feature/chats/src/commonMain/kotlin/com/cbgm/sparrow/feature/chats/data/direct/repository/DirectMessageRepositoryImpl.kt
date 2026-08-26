@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.chats.data.direct.repository
 
-import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMediaAttachment
+import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.chats.data.direct.outgoing.DirectOutgoingMessageProcessor
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectMessageRepository
 
@@ -10,14 +10,14 @@ class DirectMessageRepositoryImpl(
     override suspend fun send(
         conversationId: String,
         text: String,
-        media: List<OutgoingMediaAttachment>
-    ): Result<Unit> = outgoingMessageProcessor.send(conversationId, text, media)
+        attachments: List<OutgoingMessageAttachment>
+    ): Result<Unit> = outgoingMessageProcessor.send(conversationId, text, attachments)
 
     override suspend fun queueUntilAuthorized(
         conversationId: String,
         text: String,
-        media: List<OutgoingMediaAttachment>
-    ): Result<Unit> = outgoingMessageProcessor.queueUntilAuthorized(conversationId, text, media)
+        attachments: List<OutgoingMessageAttachment>
+    ): Result<Unit> = outgoingMessageProcessor.queueUntilAuthorized(conversationId, text, attachments)
 
     override suspend fun retry(messageId: String): Result<Unit> =
         outgoingMessageProcessor.retry(messageId)

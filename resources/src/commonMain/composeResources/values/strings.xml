@@ -262,8 +262,10 @@
     <string name="feature_onboarding_camera">Camera</string>
     <string name="feature_onboarding_camera_description">Scan Sparrow identity QR codes and take photos/videos for attachments.</string>
     <string name="feature_onboarding_audio">Audio</string>
-    <string name="feature_onboarding_audio_description">Record audio when taking videos.</string>
-    <string name="feature_onboarding_contacts_permission_description">Find existing phone-book contacts.</string>
+    <string name="feature_onboarding_audio_description">Record audio when taking videos or sending speech messages.</string>
+    <string name="feature_onboarding_storage">Storage</string>
+    <string name="feature_onboarding_storage_description">Browse storage to choose files for attachments.</string>
+    <string name="feature_onboarding_contacts_permission_description">Find and share existing phone-book contacts.</string>
     <string name="feature_onboarding_contacts_stay_local">Your contacts stay local</string>
     <string name="feature_onboarding_contacts_stay_local_description">Contacts are used to match people by phone number on your device.</string>
     <string name="feature_onboarding_detected_automatically_confirm">Detected automatically. Confirm or change it.</string>
@@ -274,7 +276,7 @@
     <string name="feature_onboarding_input_your_name">Input your name</string>
     <string name="feature_onboarding_local_identity_incomplete">The local identity is incomplete. Sparrow will not silently replace existing keys.</string>
     <string name="feature_onboarding_no_automatic_number">No automatic number found. Enter it manually or choose one.</string>
-    <string name="feature_onboarding_notifications_description">Receive new-message alerts.</string>
+    <string name="feature_onboarding_notifications_description">Receive new-message alerts when your app is closed.</string>
     <string name="feature_onboarding_permissions_description">Sparrow asks only for features you choose to use.</string>
     <string name="feature_onboarding_permissions_settings_hint">Denied permissions can be enabled later in system settings.</string>
     <string name="feature_onboarding_phone_number_permission_description">Try to fill your SIM number automatically without opening a picker.</string>
@@ -552,7 +554,6 @@
     <string name="feature_safety_block_confirm_description">This user will be blocked and their direct-chat authorization will be revoked. You can unblock them later in Settings.</string>
     <string name="feature_safety_block_error">The user could not be blocked completely. Please try again.</string>
 
-    <string name="feature_attachments_choose_gallery">Choose from gallery</string>
     <string name="feature_attachments_media">Media</string>
     <string name="feature_attachments_save_to_camera_roll">Save to camera roll</string>
     <string name="feature_attachments_media_and_files">Media &amp; files</string>
@@ -568,4 +569,17 @@
     <string name="feature_attachments_selected_count">%1$d selected</string>
     <string name="feature_attachments_select">Select</string>
     <string name="feature_attachments_conversation_storage_description">%1$d media · %2$d files</string>
+    <string name="feature_media_choose_gallery">Choose from gallery</string>
+    <string name="feature_media_file_picker_title">Files</string>
+    <string name="feature_media_file_picker_search">Search files</string>
+    <string name="feature_media_file_picker_sort">Sort files</string>
+    <string name="feature_media_file_picker_sort_name">Name</string>
+    <string name="feature_media_file_picker_sort_size">Size</string>
+    <string name="feature_media_file_picker_sort_type">Type</string>
+    <string name="feature_media_file_picker_selected">Selected: %1$d / %2$d</string>
+    <string name="feature_media_file_picker_add_files">Add files</string>
+    <string name="feature_media_file_picker_already_selected">Already selected</string>
+    <string name="feature_media_file_picker_empty_folder">This folder is empty</string>
+    <string name="feature_media_file_picker_file_access">Allow file access</string>
+    <string name="feature_media_file_picker_file_access_body">Sparrow needs file access to show the folders and files on this device.</string>
 </resources>

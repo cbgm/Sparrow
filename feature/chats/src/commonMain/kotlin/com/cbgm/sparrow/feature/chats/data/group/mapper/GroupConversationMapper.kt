@@ -6,6 +6,7 @@ import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessages
+import com.cbgm.sparrow.feature.attachments.domain.model.MessageFileAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaAttachment
 import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
 import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipStateMachine
@@ -24,7 +25,8 @@ internal fun ConversationWithMessages.toGroupConversation(
     recipientStates: List<MessageRecipientStateEntity>,
     invitations: List<GroupInvitationEntity>,
     verificationRows: List<GroupVerificationPairEntity> = emptyList(),
-    attachmentsByMessageId: Map<String, List<MessageMediaAttachment>> = emptyMap()
+    attachmentsByMessageId: Map<String, List<MessageMediaAttachment>> = emptyMap(),
+    filesByMessageId: Map<String, List<MessageFileAttachment>> = emptyMap()
 ): GroupConversation {
     val timeline = buildGroupLocalMembershipTimeline(messages, invitations)
     val visibleMessages = timeline.visibleMessages
@@ -43,7 +45,8 @@ internal fun ConversationWithMessages.toGroupConversation(
                 .map { message ->
                     message.toGroupMessage(
                         recipientStates = statesByMessageId[message.id].orEmpty(),
-                        attachments = attachmentsByMessageId[message.id].orEmpty()
+                        attachments = attachmentsByMessageId[message.id].orEmpty(),
+                        fileAttachments = filesByMessageId[message.id].orEmpty()
                     )
                 },
         unreadCount =
@@ -70,7 +73,8 @@ internal fun ConversationWithMessages.toGroupConversation(
 
 private fun MessageEntity.toGroupMessage(
     recipientStates: List<MessageRecipientStateEntity>,
-    attachments: List<MessageMediaAttachment>
+    attachments: List<MessageMediaAttachment>,
+    fileAttachments: List<MessageFileAttachment>
 ): GroupMessage {
     val deliveryStatus =
         if (recipientStates.isEmpty()) {
@@ -92,7 +96,8 @@ private fun MessageEntity.toGroupMessage(
         type = GroupMembershipMessageFactory.typeOf(transportMode),
         senderContactId = senderContactId,
         deliveryProgress = recipientStates.toDeliveryProgress(),
-        attachments = attachments
+        attachments = attachments,
+        fileAttachments = fileAttachments
     )
 }
 

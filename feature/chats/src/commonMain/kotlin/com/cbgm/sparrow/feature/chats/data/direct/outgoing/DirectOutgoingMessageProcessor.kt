@@ -16,7 +16,7 @@ import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
 import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
-import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMediaAttachment
+import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.chats.data.direct.delivery.DirectMessageDeliveryCoordinator
 import com.cbgm.sparrow.feature.chats.data.direct.mapper.toDirectDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
@@ -50,16 +50,16 @@ class DirectOutgoingMessageProcessor(
     suspend fun send(
         conversationId: String,
         text: String,
-        media: List<OutgoingMediaAttachment> = emptyList()
+        attachments: List<OutgoingMessageAttachment> = emptyList()
     ): Result<Unit> =
         runCatching {
-            val normalizedText = requireMessageContent(text, media)
+            val normalizedText = requireMessageContent(text, attachments)
             val target = loadTarget(conversationId)
             requireDirectChatAuthorization(target.contactId).getOrThrow()
 
             val contact = getContact(target.contactId).getOrThrow() ?: error("Contact was not found")
             val messageId = IdGenerator.generate(prefix = "message")
-            val prepared = attachmentTransfer.prepareMedia(media).getOrThrow()
+            val prepared = attachmentTransfer.prepareAttachments(attachments).getOrThrow()
             persistPreparedMessage(
                 target = target,
                 contact = contact,
@@ -89,13 +89,13 @@ class DirectOutgoingMessageProcessor(
     suspend fun queueUntilAuthorized(
         conversationId: String,
         text: String,
-        media: List<OutgoingMediaAttachment> = emptyList()
+        attachments: List<OutgoingMessageAttachment> = emptyList()
     ): Result<Unit> =
         runCatching {
-            val normalizedText = requireMessageContent(text, media)
+            val normalizedText = requireMessageContent(text, attachments)
             val target = loadTarget(conversationId)
             val contact = getContact(target.contactId).getOrThrow() ?: error("Contact was not found")
-            val prepared = attachmentTransfer.prepareMedia(media).getOrThrow()
+            val prepared = attachmentTransfer.prepareAttachments(attachments).getOrThrow()
             persistPreparedMessage(
                 target = target,
                 contact = contact,
@@ -324,11 +324,11 @@ class DirectOutgoingMessageProcessor(
 
     private fun requireMessageContent(
         text: String,
-        media: List<OutgoingMediaAttachment>
+        attachments: List<OutgoingMessageAttachment>
     ): String {
-        MessageAttachmentPolicy.requireValid(media)
+        MessageAttachmentPolicy.requireValid(attachments)
         return text.trim().also { normalizedText ->
-            require(normalizedText.isNotEmpty() || media.isNotEmpty()) {
+            require(normalizedText.isNotEmpty() || attachments.isNotEmpty()) {
                 "Message must contain text or attachments"
             }
         }

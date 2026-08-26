@@ -1,12 +1,12 @@
 package com.cbgm.sparrow.feature.chats.domain.repository.group
 
-import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMediaAttachment
+import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 
 interface GroupMessageRepository {
     suspend fun send(
         groupId: String,
         text: String,
-        media: List<OutgoingMediaAttachment> = emptyList()
+        attachments: List<OutgoingMessageAttachment> = emptyList()
     ): Result<Unit>
 
     suspend fun retry(messageId: String): Result<Unit>

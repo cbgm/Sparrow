@@ -21,6 +21,7 @@ kotlin {
             implementation(projects.feature.contactimport)
             implementation(projects.feature.contacts)
             implementation(projects.feature.identity)
+            implementation(projects.feature.media)
             implementation(projects.feature.onboarding)
             implementation(projects.feature.settings)
             implementation(projects.feature.search)

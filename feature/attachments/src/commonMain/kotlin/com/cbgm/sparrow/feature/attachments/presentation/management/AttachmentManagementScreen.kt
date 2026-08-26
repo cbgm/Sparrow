@@ -53,7 +53,6 @@ import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.FunctionalColors
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaType
 import com.cbgm.sparrow.feature.attachments.presentation.component.MessageAttachmentViewer
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentFileUi
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementTab
@@ -61,6 +60,7 @@ import com.cbgm.sparrow.feature.attachments.presentation.management.model.Attach
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementUiState
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItem
 import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
+import com.cbgm.sparrow.feature.media.domain.model.MediaContentType
 import com.cbgm.sparrow.feature.media.presentation.component.MediaThumbnail
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
@@ -354,7 +354,7 @@ private fun GridItem(
                 contentScale = ContentScale.Crop
             )
 
-            if (attachment.type == MessageMediaType.VIDEO) {
+            if (attachment.type == MediaContentType.VIDEO) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = null,
@@ -482,12 +482,12 @@ private fun previewAttachmentManagementUiState(): AttachmentManagementUiState =
             listOf(
                 MessageMediaAttachmentUi(
                     id = "preview-image",
-                    type = MessageMediaType.IMAGE,
+                    type = MediaContentType.IMAGE,
                     mimeType = "image/jpeg"
                 ),
                 MessageMediaAttachmentUi(
                     id = "preview-video",
-                    type = MessageMediaType.VIDEO,
+                    type = MediaContentType.VIDEO,
                     mimeType = "video/mp4",
                     durationMilliseconds = 42_000
                 )

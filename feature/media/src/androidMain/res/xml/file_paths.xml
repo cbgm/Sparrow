@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <files-path
+        name="sparrow_attachments"
+        path="Sparrow/" />
+
+    <files-path
+        name="message_attachment_cache"
+        path="message-attachments/" />
+</paths>

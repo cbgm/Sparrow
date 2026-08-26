@@ -26,9 +26,9 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.FunctionalColors
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaType
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItem
 import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
+import com.cbgm.sparrow.feature.media.domain.model.MediaContentType
 import com.cbgm.sparrow.feature.media.presentation.component.MediaThumbnail
 
 @Composable
@@ -115,7 +115,7 @@ private fun MessageMediaAttachment(
                 }
             }
 
-            if (attachment.type == MessageMediaType.VIDEO) {
+            if (attachment.type == MediaContentType.VIDEO) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = null,
@@ -167,25 +167,25 @@ private fun MessageMediaAttachmentsPreview() {
                 listOf(
                     MessageMediaAttachmentUi(
                         id = "preview-image-1",
-                        type = MessageMediaType.IMAGE,
+                        type = MediaContentType.IMAGE,
                         mimeType = "image/jpeg",
                         bytes = byteArrayOf()
                     ),
                     MessageMediaAttachmentUi(
                         id = "preview-image-2",
-                        type = MessageMediaType.IMAGE,
+                        type = MediaContentType.IMAGE,
                         mimeType = "image/png",
                         bytes = byteArrayOf()
                     ),
                     MessageMediaAttachmentUi(
                         id = "preview-video",
-                        type = MessageMediaType.VIDEO,
+                        type = MediaContentType.VIDEO,
                         mimeType = "video/mp4",
                         bytes = byteArrayOf()
                     ),
                     MessageMediaAttachmentUi(
                         id = "preview-image-3",
-                        type = MessageMediaType.IMAGE,
+                        type = MediaContentType.IMAGE,
                         mimeType = "image/jpeg",
                         bytes = byteArrayOf()
                     )

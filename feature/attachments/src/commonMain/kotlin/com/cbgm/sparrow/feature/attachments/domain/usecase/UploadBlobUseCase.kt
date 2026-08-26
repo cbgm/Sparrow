@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.attachments.domain.usecase
 
+import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.model.UploadedBlob
 import com.cbgm.sparrow.feature.attachments.domain.repository.BlobTransferRepository
 
@@ -8,7 +9,7 @@ class UploadBlobUseCase(
 ) {
     suspend operator fun invoke(
         plaintext: ByteArray,
-        retentionMilliseconds: Long = BlobTransferRepository.DEFAULT_RETENTION_MILLISECONDS
+        retentionMilliseconds: Long = MessageAttachmentPolicy.DEFAULT_RETENTION_MILLISECONDS
     ): Result<UploadedBlob> =
         repository.upload(
             plaintext = plaintext,

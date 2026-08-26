@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.onboarding.presentation
 
+import PermissionsPage
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -34,7 +35,6 @@ import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiStat
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingPage
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiEvent
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiState
-import com.cbgm.sparrow.feature.onboarding.presentation.pages.PermissionsPage
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.PhonePage
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.PrivacyPage
 import com.cbgm.sparrow.feature.onboarding.presentation.pages.WelcomePage
