@@ -5,6 +5,10 @@ plugins {
 kotlin {
     android {
         namespace = "com.cbgm.sparrow.feature.media"
+
+        androidResources {
+            enable = true
+        }
     }
 
     sourceSets {

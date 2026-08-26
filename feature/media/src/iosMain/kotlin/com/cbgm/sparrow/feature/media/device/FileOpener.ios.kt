@@ -4,9 +4,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.uikit.LocalUIViewController
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.addressOf
-import kotlinx.cinterop.usePinned
-import platform.Foundation.NSData
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSURL
 import platform.UIKit.UIDocumentInteractionController
@@ -29,16 +26,17 @@ private class IosFileOpener(
     private var interactionController: UIDocumentInteractionController? = null
 
     override suspend fun open(
+        localFilePath: String,
         fileName: String,
-        mimeType: String,
-        bytes: ByteArray
+        mimeType: String
     ): Result<Unit> =
         runCatching {
-            require(fileName.isNotBlank()) { "File name must not be blank" }
-            require(bytes.isNotEmpty()) { "File is empty" }
+            require(localFilePath.isNotBlank()) { "File path must not be blank" }
+            require(NSFileManager.defaultManager.fileExistsAtPath(localFilePath)) {
+                "File does not exist: $localFilePath"
+            }
 
-            val url = createTemporaryFile(fileName, bytes)
-                ?: error("File could not be prepared")
+            val url = NSURL.fileURLWithPath(localFilePath)
             val controller = UIDocumentInteractionController.interactionControllerWithURL(url)
             controller.delegate = delegate
             interactionController = controller
@@ -55,32 +53,3 @@ private class FileInteractionDelegate(
         controller: UIDocumentInteractionController
     ): UIViewController = viewController
 }
-
-@OptIn(ExperimentalForeignApi::class)
-private fun createTemporaryFile(
-    fileName: String,
-    bytes: ByteArray
-): NSURL? {
-    val url =
-        NSFileManager.defaultManager.temporaryDirectory
-            .URLByAppendingPathComponent(fileName.safeFileName())
-            ?: return null
-    val data =
-        bytes.usePinned { pinned ->
-            NSData.create(
-                bytes = pinned.addressOf(0),
-                length = bytes.size.toULong()
-            )
-        }
-    return url.takeIf { data.writeToURL(it, atomically = true) }
-}
-
-private fun String.safeFileName(): String {
-    val sanitized =
-        replace(Regex("[/:]"), "_")
-            .trim()
-            .take(MAX_FILE_NAME_LENGTH)
-    return sanitized.ifBlank { "sparrow-file" }
-}
-
-private const val MAX_FILE_NAME_LENGTH = 180

@@ -16,7 +16,9 @@ fun List<MessageAttachmentEntity>.toDomainMediaByMessageId(): Map<String, List<M
                 .mapNotNull(MessageAttachmentEntity::toDomainMediaAttachment)
         }
 
-fun List<MessageAttachmentEntity>.toDomainFilesByMessageId(): Map<String, List<MessageFileAttachment>> =
+fun List<MessageAttachmentEntity>.toDomainFilesByMessageId(
+    resolveLocalFilePath: (String) -> String?
+): Map<String, List<MessageFileAttachment>> =
     filter { entity -> entity.type == MessageAttachmentType.FILE.name }
         .groupBy(MessageAttachmentEntity::messageId)
         .mapValues { (_, attachments) ->
@@ -27,7 +29,8 @@ fun List<MessageAttachmentEntity>.toDomainFilesByMessageId(): Map<String, List<M
                         id = entity.id,
                         mimeType = entity.mimeType,
                         byteSize = entity.byteSize,
-                        fileName = entity.fileName ?: entity.id
+                        fileName = entity.fileName ?: entity.id,
+                        localFilePath = entity.localFileName?.let(resolveLocalFilePath)
                     )
                 }
         }

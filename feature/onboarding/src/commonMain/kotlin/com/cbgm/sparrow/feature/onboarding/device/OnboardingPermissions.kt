@@ -7,8 +7,7 @@ data class PermissionRequestResult(
     val cameraGranted: Boolean,
     val audioGranted: Boolean,
     val notificationsGranted: Boolean,
-    val phoneNumberGranted: Boolean,
-    val storageGranted: Boolean
+    val phoneNumberGranted: Boolean
 )
 
 sealed interface AutomaticPhoneNumberResult {

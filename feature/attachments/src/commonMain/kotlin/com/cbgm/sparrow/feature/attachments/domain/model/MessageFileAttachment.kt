@@ -4,5 +4,6 @@ data class MessageFileAttachment(
     val id: String,
     val mimeType: String,
     val byteSize: Long,
-    val fileName: String
+    val fileName: String,
+    val localFilePath: String? = null
 )

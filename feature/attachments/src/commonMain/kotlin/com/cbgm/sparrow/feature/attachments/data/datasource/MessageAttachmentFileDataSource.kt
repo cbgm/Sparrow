@@ -38,6 +38,11 @@ class MessageAttachmentFileDataSource(
         }
     }
 
+    fun resolveCacheFilePath(fileName: String): String? {
+        val path = fileName.toSafeCachePath()
+        return path.toString().takeIf { fileSystem.exists(path) }
+    }
+
     fun delete(fileName: String) {
         fileSystem.delete(fileName.toSafeCachePath(), mustExist = false)
     }

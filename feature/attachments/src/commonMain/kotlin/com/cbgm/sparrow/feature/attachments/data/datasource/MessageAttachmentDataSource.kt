@@ -165,7 +165,9 @@ class MessageAttachmentDataSource(
         messageLimit: Int
     ): Flow<Map<String, List<MessageFileAttachment>>> =
         attachmentDao.observeRecentByConversation(conversationId, messageLimit)
-            .map { attachments -> attachments.toDomainFilesByMessageId() }
+            .map { attachments ->
+                attachments.toDomainFilesByMessageId(fileDataSource::resolveCacheFilePath)
+            }
 
     suspend fun deleteForMessages(messageIds: List<String>) {
         if (messageIds.isEmpty()) return

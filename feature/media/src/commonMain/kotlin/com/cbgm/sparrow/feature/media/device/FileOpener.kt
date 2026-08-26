@@ -4,9 +4,9 @@ import androidx.compose.runtime.Composable
 
 interface FileOpener {
     suspend fun open(
+        localFilePath: String,
         fileName: String,
-        mimeType: String,
-        bytes: ByteArray
+        mimeType: String
     ): Result<Unit>
 }
 

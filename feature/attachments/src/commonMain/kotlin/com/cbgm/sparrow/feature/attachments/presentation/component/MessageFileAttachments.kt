@@ -45,14 +45,14 @@ fun MessageFileAttachments(
     var pendingFileId by remember { mutableStateOf<String?>(null) }
     val pendingFile = pendingFileId?.let { id -> files.firstOrNull { it.id == id } }
 
-    LaunchedEffect(pendingFileId, pendingFile?.bytes) {
+    LaunchedEffect(pendingFileId, pendingFile?.localFilePath) {
         val file = pendingFile ?: return@LaunchedEffect
-        val bytes = file.bytes ?: return@LaunchedEffect
+        val localFilePath = file.localFilePath ?: return@LaunchedEffect
 
         opener.open(
+            localFilePath = localFilePath,
             fileName = file.fileName,
-            mimeType = file.mimeType,
-            bytes = bytes
+            mimeType = file.mimeType
         ).onFailure { error ->
             onOpenError(error.message ?: "File could not be opened")
         }
@@ -64,14 +64,16 @@ fun MessageFileAttachments(
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
         files.forEach { file ->
-            val isOpening = pendingFileId == file.id && file.bytes != null
+            val isOpening = pendingFileId == file.id
             Surface(
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .clickable(enabled = !isOpening) {
                             pendingFileId = file.id
-                            if (file.bytes == null) onAttachmentVisible(file.id)
+                            if (file.localFilePath == null) {
+                                onAttachmentVisible(file.id)
+                            }
                         },
                 shape = MaterialTheme.shapes.medium,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh
@@ -124,7 +126,7 @@ private fun MessageFileAttachmentsPreview() {
                         fileName = "project-plan.pdf",
                         mimeType = "application/pdf",
                         sizeText = "248 KB",
-                        bytes = ByteArray(8)
+                        localFilePath = "/data/user/0/com.cbgm.sparrow/files/message-attachments/preview.bin"
                     )
                 )
         )

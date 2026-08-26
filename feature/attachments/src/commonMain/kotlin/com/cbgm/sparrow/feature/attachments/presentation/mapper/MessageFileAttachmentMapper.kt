@@ -10,5 +10,6 @@ fun MessageFileAttachment.toUi(bytes: ByteArray? = null): MessageFileAttachmentU
         fileName = fileName,
         mimeType = mimeType,
         sizeText = byteSize.toReadableByteSize(),
+        localFilePath = localFilePath,
         bytes = bytes
     )
