@@ -6,10 +6,12 @@ import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperM
 
 internal fun TransportDiagnostics.toUiState(
     buildInfo: BuildInfo,
+    savedErrorCount: Int,
     isClearingLocalData: Boolean
 ): DeveloperMenuUiState =
     DeveloperMenuUiState(
         buildInfo = buildInfo,
         transportDiagnostics = this,
+        savedErrorCount = savedErrorCount,
         isClearingLocalData = isClearingLocalData
     )

@@ -301,6 +301,14 @@
     <string name="feature_settings_data_disclaimer_subtitle">Welche Daten Sparrow lokal und in der Server-Infrastruktur speichert</string>
     <string name="feature_settings_developer_menu">Entwicklermenü</string>
     <string name="feature_settings_developer_menu_subtitle">Build-Informationen, Feature-Flags und Diagnose</string>
+    <string name="feature_settings_error_log">Fehlerprotokoll</string>
+    <string name="feature_settings_error_log_saved_count">Gespeicherte Fehler: %1$d</string>
+    <string name="feature_settings_error_log_empty">Keine gespeicherten Fehler.</string>
+    <string name="feature_settings_clear_saved_errors">Gespeicherte Fehler löschen</string>
+    <string name="feature_settings_clear_saved_errors_title">Gespeicherte Fehler löschen?</string>
+    <string name="feature_settings_clear_saved_errors_description">Dadurch werden alle gespeicherten Entwickler-Fehlereinträge dauerhaft gelöscht.</string>
+    <string name="feature_settings_error_details_show">Stacktrace anzeigen</string>
+    <string name="feature_settings_error_details_hide">Stacktrace ausblenden</string>
     <string name="feature_settings_network_diagnostics">Netzwerkdiagnose</string>
     <string name="feature_settings_connection_status">Verbindungsstatus</string>
     <string name="feature_settings_current_node">Aktueller Node</string>
