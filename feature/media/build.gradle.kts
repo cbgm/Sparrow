@@ -9,8 +9,11 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
+            implementation(projects.core)
             implementation(projects.core.ui)
             implementation(libs.bundles.compose)
+            implementation(libs.bundles.coroutines)
+            implementation(libs.bundles.koin.compose)
         }
 
         androidMain.dependencies {
@@ -18,6 +21,8 @@ kotlin {
             implementation(libs.coil.video)
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.core.ktx)
+            implementation(libs.androidx.photopicker.compose)
+            implementation(libs.koin.android)
             implementation(libs.androidx.camera.core)
             implementation(libs.androidx.camera.camera2)
             implementation(libs.androidx.camera.lifecycle)

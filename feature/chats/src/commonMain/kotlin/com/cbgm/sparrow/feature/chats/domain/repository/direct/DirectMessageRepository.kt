@@ -1,18 +1,18 @@
 package com.cbgm.sparrow.feature.chats.domain.repository.direct
 
-import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMediaAttachment
+import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 
 interface DirectMessageRepository {
     suspend fun send(
         conversationId: String,
         text: String,
-        media: List<OutgoingMediaAttachment> = emptyList()
+        attachments: List<OutgoingMessageAttachment> = emptyList()
     ): Result<Unit>
 
     suspend fun queueUntilAuthorized(
         conversationId: String,
         text: String,
-        media: List<OutgoingMediaAttachment> = emptyList()
+        attachments: List<OutgoingMessageAttachment> = emptyList()
     ): Result<Unit>
 
     suspend fun retry(messageId: String): Result<Unit>

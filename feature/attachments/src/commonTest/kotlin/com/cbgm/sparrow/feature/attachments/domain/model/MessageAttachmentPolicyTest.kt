@@ -1,51 +1,51 @@
 package com.cbgm.sparrow.feature.attachments.domain.model
 
+import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 
 class MessageAttachmentPolicyTest {
     @Test
-    fun `allows up to eight mixed gallery attachments`() {
-        val media =
-            List(MessageAttachmentPolicy.MAX_ATTACHMENTS_PER_MESSAGE) { index ->
-                if (index % 2 == 0) image(index) else video(index)
-            }
-
-        MessageAttachmentPolicy.requireValid(media)
+    fun `allows up to eight mixed attachments`() {
+        MessageAttachmentPolicy.requireValid(
+            listOf(image(0), video(1), image(2)) + List(5) { index -> file(index) }
+        )
     }
 
     @Test
-    fun `rejects more than eight gallery attachments`() {
+    fun `rejects more than eight mixed attachments`() {
         assertFailsWith<IllegalArgumentException> {
             MessageAttachmentPolicy.requireValid(
-                List(MessageAttachmentPolicy.MAX_ATTACHMENTS_PER_MESSAGE + 1) { index -> image(index) }
+                List(4) { index -> image(index) } + List(5) { index -> file(index) }
             )
         }
     }
 
     @Test
-    fun `rejects duplicate attachment ids`() {
+    fun `rejects duplicate ids across media and files`() {
         assertFailsWith<IllegalArgumentException> {
-            MessageAttachmentPolicy.requireValid(listOf(image(1), image(1)))
+            MessageAttachmentPolicy.requireValid(
+                listOf(image(1, id = "same-id"), file(1, id = "same-id"))
+            )
         }
     }
 
     @Test
-    fun `video requires a video mime type`() {
+    fun `video requires video mime type`() {
         assertFailsWith<IllegalArgumentException> {
-            OutgoingMediaAttachment(
+            OutgoingMessageAttachment(
                 id = "video-1",
-                type = MessageMediaType.VIDEO,
+                type = MessageAttachmentType.VIDEO,
                 bytes = byteArrayOf(1),
                 mimeType = "image/jpeg"
             )
         }
     }
 
-    private fun image(index: Int) =
-        OutgoingMediaAttachment(
-            id = "image-$index",
-            type = MessageMediaType.IMAGE,
+    private fun image(index: Int, id: String = "image-$index") =
+        OutgoingMessageAttachment(
+            id = id,
+            type = MessageAttachmentType.IMAGE,
             bytes = byteArrayOf(index.toByte()),
             mimeType = "image/jpeg",
             width = 100,
@@ -53,13 +53,22 @@ class MessageAttachmentPolicyTest {
         )
 
     private fun video(index: Int) =
-        OutgoingMediaAttachment(
+        OutgoingMessageAttachment(
             id = "video-$index",
-            type = MessageMediaType.VIDEO,
+            type = MessageAttachmentType.VIDEO,
             bytes = byteArrayOf(index.toByte()),
             mimeType = "video/mp4",
             width = 1920,
             height = 1080,
             durationMilliseconds = 1_000L
+        )
+
+    private fun file(index: Int, id: String = "file-$index") =
+        OutgoingMessageAttachment(
+            id = id,
+            type = MessageAttachmentType.FILE,
+            bytes = byteArrayOf(index.toByte()),
+            mimeType = "application/pdf",
+            fileName = "file-$index.pdf"
         )
 }

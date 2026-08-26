@@ -31,6 +31,11 @@ object Alpha {
 
     object MessageAttachment {
         const val playButtonBackground = 0.9f
+        const val removeButtonBackground = 0.72f
+    }
+
+    object MediaSelectionPreview {
+        const val overlay = 0.72f
     }
 
     object GroupDetailsScreen {

@@ -58,11 +58,27 @@ object Dimens {
         val previewRemoveButtonSize = 22.dp
         val previewRemoveIconSize = 14.dp
         val previewSize = 50.dp
+        val filePreviewWidth = 190.dp
+        val filePreviewIconSize = 24.dp
         val loadingIndicatorSize = 24.dp
     }
 
     object Media {
         val playIconSize = 40.dp
+    }
+
+    object MediaSelectionPreview {
+        val size = 50.dp
+        val playIconSize = 16.dp
+        val removeButtonSize = 22.dp
+        val removeIconSize = 14.dp
+    }
+
+    object FileSelectionPreview {
+        val width = 190.dp
+        val fileIconSize = 24.dp
+        val removeButtonSize = 22.dp
+        val removeIconSize = 14.dp
     }
 
     object PatternBackground {

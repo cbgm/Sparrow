@@ -18,9 +18,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.presentation.component.AttachmentBar
-import com.cbgm.sparrow.feature.attachments.presentation.component.MediaSelectionPreview
-import com.cbgm.sparrow.feature.attachments.presentation.component.previewMediaSelections
-import com.cbgm.sparrow.feature.attachments.presentation.model.MediaSelection
+import com.cbgm.sparrow.feature.media.presentation.component.FileSelectionPreview
+import com.cbgm.sparrow.feature.media.presentation.component.MediaSelectionPreview
+import com.cbgm.sparrow.feature.media.presentation.component.previewMediaSelections
+import com.cbgm.sparrow.feature.media.presentation.model.FileSelection
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_chat_typing
 import org.jetbrains.compose.resources.stringResource
@@ -46,10 +48,13 @@ fun MessageControl(
     isInputEnabled: Boolean,
     isSendEnabled: Boolean,
     selectedMedia: List<MediaSelection> = emptyList(),
+    selectedFiles: List<FileSelection> = emptyList(),
     onMediaSelectionClick: () -> Unit = {},
     onMediaRemove: (String) -> Unit = {},
+    onFileRemove: (String) -> Unit = {},
     isGalleryEnabled: Boolean = true,
     isCameraEnabled: Boolean = true,
+    isFileEnabled: Boolean = true,
     onAttachmentButtonClick: (AttachmentClick) -> Unit
 ) {
     var isAttachmentBarVisible by remember { mutableStateOf(false) }
@@ -91,13 +96,18 @@ fun MessageControl(
                 onRemove = onMediaRemove,
                 modifier = Modifier.padding(bottom = MaterialTheme.spacing.base)
             )
+            FileSelectionPreview(
+                files = selectedFiles,
+                onRemove = onFileRemove,
+                modifier = Modifier.padding(bottom = MaterialTheme.spacing.base)
+            )
             MessageInput(
                 value = messageText,
                 onValueChange = onValueChange,
                 onSendClick = onSendClick,
                 inputEnabled = isInputEnabled,
                 sendEnabled = isSendEnabled,
-                hasAttachments = selectedMedia.isNotEmpty(),
+                hasAttachments = selectedMedia.isNotEmpty() || selectedFiles.isNotEmpty(),
                 onAttachmentClick = { isAttachmentBarVisible = !isAttachmentBarVisible },
                 isAttachmentVisible = isAttachmentBarVisible
             )
@@ -121,7 +131,8 @@ fun MessageControl(
                         onAttachmentButtonClick(AttachmentClick.OpenContacts)
                     },
                     isGalleryEnabled = isGalleryEnabled,
-                    isCameraEnabled = isCameraEnabled
+                    isCameraEnabled = isCameraEnabled,
+                    isFileEnabled = isFileEnabled
                 )
             }
         }
@@ -142,10 +153,21 @@ private fun MessageControlPreview() {
             isInputEnabled = true,
             isSendEnabled = true,
             selectedMedia = previewMediaSelections(),
+            selectedFiles =
+                listOf(
+                    FileSelection(
+                        id = "preview-file",
+                        bytes = ByteArray(1024),
+                        mimeType = "application/pdf",
+                        fileName = "document.pdf"
+                    )
+                ),
             onMediaSelectionClick = {},
             onMediaRemove = {},
+            onFileRemove = {},
             isGalleryEnabled = true,
             isCameraEnabled = true,
+            isFileEnabled = true,
             onAttachmentButtonClick = {}
         )
     }

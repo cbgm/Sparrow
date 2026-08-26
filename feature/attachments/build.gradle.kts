@@ -28,11 +28,6 @@ kotlin {
             implementation(libs.okio)
         }
 
-        androidMain.dependencies {
-            implementation(libs.androidx.activity.compose)
-            implementation(libs.androidx.photopicker.compose)
-        }
-
         commonTest.dependencies {
             implementation(libs.bundles.kmp.testing)
         }

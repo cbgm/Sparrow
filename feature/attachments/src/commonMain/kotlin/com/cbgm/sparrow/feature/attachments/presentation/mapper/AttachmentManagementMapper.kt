@@ -2,9 +2,10 @@ package com.cbgm.sparrow.feature.attachments.presentation.mapper
 
 import com.cbgm.sparrow.feature.attachments.domain.model.LocalAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.LocalAttachmentType
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaType
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentFileUi
 import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
+import com.cbgm.sparrow.feature.media.domain.model.MediaContentType
+import com.cbgm.sparrow.feature.media.util.toReadableByteSize
 
 internal fun List<LocalAttachment>.toAttachmentManagementMediaModels(
     loadedBytes: Map<String, ByteArray>
@@ -16,8 +17,8 @@ internal fun List<LocalAttachment>.toAttachmentManagementMediaModels(
                 id = attachment.id,
                 type =
                     when (attachment.type) {
-                        LocalAttachmentType.IMAGE -> MessageMediaType.IMAGE
-                        LocalAttachmentType.VIDEO -> MessageMediaType.VIDEO
+                        LocalAttachmentType.IMAGE -> MediaContentType.IMAGE
+                        LocalAttachmentType.VIDEO -> MediaContentType.VIDEO
                         LocalAttachmentType.FILE -> error("File attachment cannot be mapped to media")
                     },
                 mimeType = attachment.mimeType,
@@ -38,13 +39,3 @@ internal fun List<LocalAttachment>.toAttachmentManagementFileModels(): List<Atta
                 sizeText = attachment.byteSize.toReadableByteSize()
             )
         }.toList()
-
-private fun Long.toReadableByteSize(): String =
-    when {
-        this >= BYTES_PER_MEGABYTE -> "${this / BYTES_PER_MEGABYTE} MB"
-        this >= BYTES_PER_KILOBYTE -> "${this / BYTES_PER_KILOBYTE} KB"
-        else -> "$this B"
-    }
-
-private const val BYTES_PER_KILOBYTE = 1024L
-private const val BYTES_PER_MEGABYTE = BYTES_PER_KILOBYTE * 1024L

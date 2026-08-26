@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.chats.presentation.direct.model
 
-import com.cbgm.sparrow.feature.attachments.presentation.model.MediaSelection
+import com.cbgm.sparrow.feature.media.presentation.model.FileSelection
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
 
 sealed interface DirectUiEvent {
@@ -12,6 +13,10 @@ sealed interface DirectUiEvent {
 
     data class MediaSelected(
         val media: List<MediaSelection>
+    ) : DirectUiEvent
+
+    data class FilesSelected(
+        val files: List<FileSelection>
     ) : DirectUiEvent
 
     data class MediaAttachmentVisible(

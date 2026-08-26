@@ -16,11 +16,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
-import com.cbgm.sparrow.feature.attachments.device.MessageMediaExportItem
-import com.cbgm.sparrow.feature.attachments.device.rememberMessageMediaExporter
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaType
+import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaExportItem
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItem
 import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
+import com.cbgm.sparrow.feature.media.device.rememberMediaExporter
+import com.cbgm.sparrow.feature.media.domain.model.MediaContentType
 import com.cbgm.sparrow.feature.media.presentation.component.MediaViewer
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_attachments_media
@@ -39,7 +39,7 @@ fun MessageAttachmentViewer(
     val selectedIndex = attachments.indexOfFirst { it.id == selectedAttachmentId }
     if (selectedIndex < 0) return
 
-    val exporter = rememberMessageMediaExporter()
+    val exporter = rememberMediaExporter()
     val mediaLabel = stringResource(Res.string.feature_attachments_media)
     val saveContentDescription = stringResource(Res.string.feature_attachments_save_to_camera_roll)
     var savePending by remember(selectedAttachmentId) { mutableStateOf(false) }
@@ -55,14 +55,7 @@ fun MessageAttachmentViewer(
         }
 
         exporter.saveToCameraRoll(
-            attachments.map { attachment ->
-                MessageMediaExportItem(
-                    attachmentId = attachment.id,
-                    type = attachment.type,
-                    mimeType = attachment.mimeType,
-                    bytes = requireNotNull(attachment.bytes)
-                )
-            }
+            attachments.map(MessageMediaAttachmentUi::toMediaExportItem)
         ).onFailure { error ->
             onError(error.message ?: "Could not save media to camera roll")
         }
@@ -107,7 +100,7 @@ private fun MessageAttachmentViewerPreview() {
                 listOf(
                     MessageMediaAttachmentUi(
                         id = "preview-image",
-                        type = MessageMediaType.IMAGE,
+                        type = MediaContentType.IMAGE,
                         mimeType = "image/jpeg"
                     )
                 ),

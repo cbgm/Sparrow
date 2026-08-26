@@ -552,7 +552,6 @@
     <string name="feature_safety_block_confirm_description">This user will be blocked and their direct-chat authorization will be revoked. You can unblock them later in Settings.</string>
     <string name="feature_safety_block_error">The user could not be blocked completely. Please try again.</string>
 
-    <string name="feature_attachments_choose_gallery">Choose from gallery</string>
     <string name="feature_attachments_media">Media</string>
     <string name="feature_attachments_save_to_camera_roll">Save to camera roll</string>
     <string name="feature_attachments_media_and_files">Media &amp; files</string>
@@ -568,4 +567,17 @@
     <string name="feature_attachments_selected_count">%1$d selected</string>
     <string name="feature_attachments_select">Select</string>
     <string name="feature_attachments_conversation_storage_description">%1$d media · %2$d files</string>
+    <string name="feature_media_choose_gallery">Choose from gallery</string>
+    <string name="feature_media_file_picker_title">Files</string>
+    <string name="feature_media_file_picker_search">Search files</string>
+    <string name="feature_media_file_picker_sort">Sort files</string>
+    <string name="feature_media_file_picker_sort_name">Name</string>
+    <string name="feature_media_file_picker_sort_size">Size</string>
+    <string name="feature_media_file_picker_sort_type">Type</string>
+    <string name="feature_media_file_picker_selected">Selected: %1$d / %2$d</string>
+    <string name="feature_media_file_picker_add_files">Add files</string>
+    <string name="feature_media_file_picker_already_selected">Already selected</string>
+    <string name="feature_media_file_picker_empty_folder">This folder is empty</string>
+    <string name="feature_media_file_picker_file_access">Allow file access</string>
+    <string name="feature_media_file_picker_file_access_body">Sparrow needs file access to show the folders and files on this device.</string>
 </resources>

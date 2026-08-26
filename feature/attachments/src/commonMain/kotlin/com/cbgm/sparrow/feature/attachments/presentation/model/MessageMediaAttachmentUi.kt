@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.attachments.presentation.model
 
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaType
+import com.cbgm.sparrow.feature.media.domain.model.MediaContentType
 
 data class MessageMediaAttachmentUi(
     val id: String,
-    val type: MessageMediaType,
+    val type: MediaContentType,
     val mimeType: String,
     val width: Int? = null,
     val height: Int? = null,

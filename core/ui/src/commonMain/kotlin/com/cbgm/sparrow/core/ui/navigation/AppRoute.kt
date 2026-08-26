@@ -91,6 +91,11 @@ sealed interface AppRoute {
     data object ControlPlanes : AppRoute
 
     @Serializable
+    data class FilePicker(
+        val sessionId: String
+    ) : AppRoute
+
+    @Serializable
     data object AttachmentStorage : AppRoute
 
     @Serializable

@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.group.mapper
 
+import com.cbgm.sparrow.feature.attachments.presentation.mapper.toUi
 import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
@@ -104,6 +105,10 @@ internal fun GroupMessage.toUiModel(
                             durationMilliseconds = attachment.durationMilliseconds,
                             bytes = attachmentBytes[attachment.id]
                         )
+                    },
+                fileAttachments =
+                    fileAttachments.map { attachment ->
+                        attachment.toUi()
                     }
             ),
         type = type,

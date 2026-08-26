@@ -555,7 +555,6 @@
 
     <string name="feature_chats_media">Medien</string>
     <string name="feature_chats_save_to_camera_roll">In Kamerarolle speichern</string>
-    <string name="feature_attachments_choose_gallery">Aus Galerie auswählen</string>
     <string name="feature_attachments_media">Medien</string>
     <string name="feature_attachments_save_to_camera_roll">In Galerie speichern</string>
     <string name="feature_attachments_media_and_files">Medien &amp; Dateien</string>
@@ -571,4 +570,17 @@
     <string name="feature_attachments_selected_count">%1$d ausgewählt</string>
     <string name="feature_attachments_select">Auswählen</string>
     <string name="feature_attachments_conversation_storage_description">%1$d Medien · %2$d Dateien</string>
+    <string name="feature_media_choose_gallery">Aus Galerie auswählen</string>
+    <string name="feature_media_file_picker_title">Dateien</string>
+    <string name="feature_media_file_picker_search">Dateien suchen</string>
+    <string name="feature_media_file_picker_sort">Dateien sortieren</string>
+    <string name="feature_media_file_picker_sort_name">Name</string>
+    <string name="feature_media_file_picker_sort_size">Größe</string>
+    <string name="feature_media_file_picker_sort_type">Typ</string>
+    <string name="feature_media_file_picker_selected">Ausgewählt: %1$d / %2$d</string>
+    <string name="feature_media_file_picker_add_files">Dateien hinzufügen</string>
+    <string name="feature_media_file_picker_already_selected">Bereits ausgewählt</string>
+    <string name="feature_media_file_picker_empty_folder">Dieser Ordner ist leer</string>
+    <string name="feature_media_file_picker_file_access">Dateizugriff erlauben</string>
+    <string name="feature_media_file_picker_file_access_body">Sparrow benötigt Dateizugriff, um die Ordner und Dateien auf diesem Gerät anzuzeigen.</string>
 </resources>

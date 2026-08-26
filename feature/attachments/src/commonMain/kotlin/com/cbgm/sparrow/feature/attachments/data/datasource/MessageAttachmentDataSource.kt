@@ -6,14 +6,14 @@ import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
 import com.cbgm.sparrow.data.database.entity.MessageAttachmentEntity
-import com.cbgm.sparrow.feature.attachments.data.mapper.toDomainAttachmentsByMessageId
+import com.cbgm.sparrow.feature.attachments.data.mapper.toDomainFilesByMessageId
+import com.cbgm.sparrow.feature.attachments.data.mapper.toDomainMediaByMessageId
 import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
+import com.cbgm.sparrow.feature.attachments.domain.model.MessageFileAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaAttachment
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaType
-import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMediaAttachment
+import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.UploadedBlob
-import com.cbgm.sparrow.feature.attachments.domain.repository.BlobTransferRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -25,38 +25,27 @@ class MessageAttachmentDataSource(
 ) {
     private val logger = SparrowLog.withTag("MessageAttachmentDataSource")
 
-    suspend fun prepareMedia(
-        media: List<OutgoingMediaAttachment>,
-        retentionMilliseconds: Long = BlobTransferRepository.DEFAULT_RETENTION_MILLISECONDS
+    suspend fun prepareAttachments(
+        attachments: List<OutgoingMessageAttachment>,
+        retentionMilliseconds: Long = MessageAttachmentPolicy.DEFAULT_RETENTION_MILLISECONDS
     ): Result<List<PreparedMessageAttachment>> =
         runCatching {
             require(retentionMilliseconds > 0L) { "Attachment retention must be positive" }
-            MessageAttachmentPolicy.requireValid(media)
+            MessageAttachmentPolicy.requireValid(attachments)
             val prepared = mutableListOf<PreparedMessageAttachment>()
             try {
-                media.forEach { item ->
-                    val uploaded = blobTransferDataSource.upload(item.bytes, retentionMilliseconds).getOrThrow()
-                    val localFileName =
-                        runCatching { fileDataSource.write(item.bytes) }
-                            .getOrElse { error ->
-                                blobTransferDataSource.delete(uploaded)
-                                throw error
-                            }
+                attachments.forEach { item ->
                     prepared +=
-                        PreparedMessageAttachment(
-                            attachment =
-                                MessageAttachment(
-                                    attachmentId = item.id,
-                                    type = item.type.toProtocolType(),
-                                    mimeType = item.mimeType,
-                                    byteSize = item.bytes.size.toLong(),
-                                    blob = uploaded.reference,
-                                    width = item.width,
-                                    height = item.height,
-                                    durationMilliseconds = item.durationMilliseconds
-                                ),
-                            deleteCapability = uploaded.deleteCapability,
-                            localFileName = localFileName
+                        prepareAttachment(
+                            attachmentId = item.id,
+                            type = item.type,
+                            bytes = item.bytes,
+                            mimeType = item.mimeType,
+                            retentionMilliseconds = retentionMilliseconds,
+                            fileName = item.fileName,
+                            width = item.width,
+                            height = item.height,
+                            durationMilliseconds = item.durationMilliseconds
                         )
                 }
                 prepared
@@ -65,6 +54,42 @@ class MessageAttachmentDataSource(
                 throw error
             }
         }
+
+    private suspend fun prepareAttachment(
+        attachmentId: String,
+        type: MessageAttachmentType,
+        bytes: ByteArray,
+        mimeType: String,
+        retentionMilliseconds: Long,
+        fileName: String? = null,
+        width: Int? = null,
+        height: Int? = null,
+        durationMilliseconds: Long? = null
+    ): PreparedMessageAttachment {
+        val uploaded = blobTransferDataSource.upload(bytes, retentionMilliseconds).getOrThrow()
+        val localFileName =
+            runCatching { fileDataSource.write(bytes) }
+                .getOrElse { error ->
+                    blobTransferDataSource.delete(uploaded)
+                    throw error
+                }
+        return PreparedMessageAttachment(
+            attachment =
+                MessageAttachment(
+                    attachmentId = attachmentId,
+                    type = type,
+                    mimeType = mimeType,
+                    byteSize = bytes.size.toLong(),
+                    blob = uploaded.reference,
+                    fileName = fileName,
+                    width = width,
+                    height = height,
+                    durationMilliseconds = durationMilliseconds
+                ),
+            deleteCapability = uploaded.deleteCapability,
+            localFileName = localFileName
+        )
+    }
 
     suspend fun persistOutgoing(
         messageId: String,
@@ -133,7 +158,14 @@ class MessageAttachmentDataSource(
         messageLimit: Int
     ): Flow<Map<String, List<MessageMediaAttachment>>> =
         attachmentDao.observeRecentByConversation(conversationId, messageLimit)
-            .map { attachments -> attachments.toDomainAttachmentsByMessageId() }
+            .map { attachments -> attachments.toDomainMediaByMessageId() }
+
+    fun observeRecentFilesByConversation(
+        conversationId: String,
+        messageLimit: Int
+    ): Flow<Map<String, List<MessageFileAttachment>>> =
+        attachmentDao.observeRecentByConversation(conversationId, messageLimit)
+            .map { attachments -> attachments.toDomainFilesByMessageId() }
 
     suspend fun deleteForMessages(messageIds: List<String>) {
         if (messageIds.isEmpty()) return
@@ -232,10 +264,4 @@ class MessageAttachmentDataSource(
             nonce = nonce.copyOf(),
             ciphertextSha256 = ciphertextSha256.copyOf()
         )
-
-    private fun MessageMediaType.toProtocolType(): MessageAttachmentType =
-        when (this) {
-            MessageMediaType.IMAGE -> MessageAttachmentType.IMAGE
-            MessageMediaType.VIDEO -> MessageAttachmentType.VIDEO
-        }
 }

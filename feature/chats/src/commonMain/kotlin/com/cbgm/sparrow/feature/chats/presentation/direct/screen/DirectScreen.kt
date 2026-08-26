@@ -58,10 +58,8 @@ import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.attachments.device.rememberGalleryPickerLauncher
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.presentation.component.MessageAttachmentViewer
-import com.cbgm.sparrow.feature.attachments.presentation.rememberAttachmentCameraLauncher
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
@@ -74,6 +72,11 @@ import com.cbgm.sparrow.feature.chats.presentation.component.rememberMessageSear
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectComposerState
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiState
+import com.cbgm.sparrow.feature.media.domain.model.CameraCaptureConfig
+import com.cbgm.sparrow.feature.media.domain.model.CameraCaptureType
+import com.cbgm.sparrow.feature.media.presentation.selection.rememberFileSelectionPickerLauncher
+import com.cbgm.sparrow.feature.media.presentation.selection.rememberMediaSelectionCameraLauncher
+import com.cbgm.sparrow.feature.media.presentation.selection.rememberMediaSelectionGalleryPickerLauncher
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
@@ -320,26 +323,46 @@ private fun BottomBar(
     containerColor: Color,
     onUiEvent: (DirectUiEvent) -> Unit
 ) {
+    val maxAttachments = MessageAttachmentPolicy.MAX_ATTACHMENTS_PER_MESSAGE
+    val selectedAttachmentCount = uiState.selectedMedia.size + uiState.selectedFiles.size
     val galleryPicker =
-        rememberGalleryPickerLauncher(
-            maxItems = MessageAttachmentPolicy.MAX_ATTACHMENTS_PER_MESSAGE,
+        rememberMediaSelectionGalleryPickerLauncher(
+            maxItems = maxAttachments - uiState.selectedFiles.size,
+            maxImageBytes = MessageAttachmentPolicy.MAX_IMAGE_BYTES.toInt(),
+            maxVideoBytes = MessageAttachmentPolicy.MAX_VIDEO_BYTES,
             selectedMedia = uiState.selectedMedia,
             onMediaSelected = { onUiEvent(DirectUiEvent.MediaSelected(it)) },
             onDismissed = {},
             onError = { onUiEvent(DirectUiEvent.AttachmentError(it)) }
         )
     val cameraPicker =
-        rememberAttachmentCameraLauncher(
+        rememberMediaSelectionCameraLauncher(
+            config = CameraCaptureConfig(
+                allowedTypes = setOf(CameraCaptureType.PHOTO, CameraCaptureType.VIDEO),
+                maxImageDimension = MessageAttachmentPolicy.MAX_IMAGE_DIMENSION,
+                maxImageBytes = MessageAttachmentPolicy.MAX_IMAGE_BYTES.toInt(),
+                maxVideoBytes = MessageAttachmentPolicy.MAX_VIDEO_BYTES
+            ),
+            maxItems = maxAttachments - uiState.selectedFiles.size,
             selectedMedia = uiState.selectedMedia,
             onMediaSelected = { onUiEvent(DirectUiEvent.MediaSelected(it)) },
             onDismissed = {},
             onError = { onUiEvent(DirectUiEvent.AttachmentError(it)) }
         )
-    val canAddMedia =
+    val filePicker =
+        rememberFileSelectionPickerLauncher(
+            maxItems = maxAttachments - uiState.selectedMedia.size,
+            maxFileBytes = MessageAttachmentPolicy.MAX_FILE_BYTES,
+            selectedFiles = uiState.selectedFiles,
+            onFilesSelected = { onUiEvent(DirectUiEvent.FilesSelected(it)) },
+            onDismissed = {},
+            onError = { onUiEvent(DirectUiEvent.AttachmentError(it)) }
+        )
+    val canAddAttachment =
         !uiState.isLoading &&
             !uiState.isSending &&
             uiState.composerState.isInputEnabled &&
-            uiState.selectedMedia.size < MessageAttachmentPolicy.MAX_ATTACHMENTS_PER_MESSAGE
+            selectedAttachmentCount < maxAttachments
 
     MessageControl(
         containerColor = containerColor,
@@ -349,24 +372,25 @@ private fun BottomBar(
         onValueChange = { onUiEvent(DirectUiEvent.MessageTextChanged(it)) },
         onSendClick = { onUiEvent(DirectUiEvent.SendClicked) },
         isInputEnabled = !uiState.isLoading && !uiState.isSending && uiState.composerState.isInputEnabled,
-        isSendEnabled = !uiState.isLoading && !uiState.isSending && uiState.composerState.isSendActionEnabled,
+        isSendEnabled = !uiState.isLoading && !uiState.isSending && uiState.composerState.isInputEnabled && uiState.composerState.isSendActionEnabled,
         selectedMedia = uiState.selectedMedia,
+        selectedFiles = uiState.selectedFiles,
         onMediaSelectionClick = { galleryPicker.launch() },
-        onMediaRemove = { attachmentId ->
-            onUiEvent(
-                DirectUiEvent.MediaSelected(
-                    uiState.selectedMedia.filterNot { media -> media.id == attachmentId }
-                )
-            )
+        onMediaRemove = { mediaId ->
+            onUiEvent(DirectUiEvent.MediaSelected(uiState.selectedMedia.filterNot { it.id == mediaId }))
         },
-        isGalleryEnabled = canAddMedia,
-        isCameraEnabled = canAddMedia,
+        onFileRemove = { fileId ->
+            onUiEvent(DirectUiEvent.FilesSelected(uiState.selectedFiles.filterNot { it.id == fileId }))
+        },
+        isGalleryEnabled = canAddAttachment,
+        isCameraEnabled = canAddAttachment,
+        isFileEnabled = canAddAttachment,
         onAttachmentButtonClick = { attachmentClick ->
             when (attachmentClick) {
                 AttachmentClick.OpenGallery -> galleryPicker.launch()
                 AttachmentClick.OpenCamera -> cameraPicker.launch()
-                AttachmentClick.OpenContacts,
-                AttachmentClick.OpenFile -> Unit
+                AttachmentClick.OpenFile -> filePicker.launch()
+                AttachmentClick.OpenContacts -> Unit
             }
         }
     )

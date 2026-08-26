@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.chats.domain.usecase.direct
 
-import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMediaAttachment
+import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectMessageRepository
 
 class SendDirectMessageUseCase(
@@ -9,7 +9,7 @@ class SendDirectMessageUseCase(
     suspend operator fun invoke(
         conversationId: String,
         text: String,
-        media: List<OutgoingMediaAttachment> = emptyList()
+        attachments: List<OutgoingMessageAttachment> = emptyList()
     ): Result<Unit> =
-        repository.send(conversationId, text, media)
+        repository.send(conversationId, text, attachments)
 }

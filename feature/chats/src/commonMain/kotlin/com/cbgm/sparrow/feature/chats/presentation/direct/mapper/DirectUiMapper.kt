@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.chats.presentation.direct.mapper
 
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
+import com.cbgm.sparrow.feature.attachments.presentation.mapper.toUi
 import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
@@ -54,6 +55,10 @@ internal fun DirectMessage.toUiModel(
                     durationMilliseconds = attachment.durationMilliseconds,
                     bytes = attachmentBytes[attachment.id]
                 )
+            },
+        fileAttachments =
+            fileAttachments.map { attachment ->
+                attachment.toUi()
             }
     )
 

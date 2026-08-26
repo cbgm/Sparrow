@@ -21,7 +21,7 @@ import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
 import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
-import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMediaAttachment
+import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.chats.data.group.delivery.GroupMessageDeliveryCoordinator
 import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
@@ -59,18 +59,18 @@ class GroupOutgoingMessageProcessor(
     suspend fun send(
         groupId: String,
         text: String,
-        media: List<OutgoingMediaAttachment> = emptyList(),
+        attachments: List<OutgoingMessageAttachment> = emptyList(),
         invitations: List<GroupInvitationEntity>
     ): Result<Unit> =
         runCatching {
             sendMutex.withLock {
-                val normalizedText = requireMessageContent(text, media)
+                val normalizedText = requireMessageContent(text, attachments)
                 requireActiveMembership(groupId, invitations)
                 val recipients = findCurrentEpochRecipients(groupId)
                 check(recipients.isNotEmpty()) { "Group has no active recipients" }
 
                 val message = createQueuedMessage(groupId, normalizedText)
-                val prepared = attachmentTransfer.prepareMedia(media).getOrThrow()
+                val prepared = attachmentTransfer.prepareAttachments(attachments).getOrThrow()
                 try {
                     encryptAndEnqueue(message, recipients, prepared)
                 } catch (error: Throwable) {
@@ -349,11 +349,11 @@ class GroupOutgoingMessageProcessor(
 
     private fun requireMessageContent(
         text: String,
-        media: List<OutgoingMediaAttachment>
+        attachments: List<OutgoingMessageAttachment>
     ): String {
-        MessageAttachmentPolicy.requireValid(media)
+        MessageAttachmentPolicy.requireValid(attachments)
         return text.trim().also { normalizedText ->
-            require(normalizedText.isNotEmpty() || media.isNotEmpty()) {
+            require(normalizedText.isNotEmpty() || attachments.isNotEmpty()) {
                 "Message must contain text or attachments"
             }
         }
