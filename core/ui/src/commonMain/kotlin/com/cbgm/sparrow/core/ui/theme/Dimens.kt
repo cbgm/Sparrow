@@ -55,6 +55,8 @@ object Dimens {
 
     object MessageAttachment {
         val previewPlayIconSize = 16.dp
+        val previewRemoveButtonSize = 22.dp
+        val previewRemoveIconSize = 14.dp
         val previewSize = 50.dp
         val loadingIndicatorSize = 24.dp
     }
@@ -214,14 +216,6 @@ object Dimens {
 
     object IdentityVerificationScreen {
         val iconSize = 20.dp
-    }
-
-    object ProfilePictureCameraScreen {
-        val buttonSize = 76.dp
-    }
-
-    object ProfilePictureCropScreen {
-        val guideStrokeWidth = 3.dp
     }
 
     object AttachmentBar {

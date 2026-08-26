@@ -51,8 +51,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.avatar.editor.AvatarEditor
-import com.cbgm.sparrow.core.ui.avatar.editor.AvatarEditorStrings
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
@@ -70,6 +68,8 @@ import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupDetailsUiS
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupMemberVerificationState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupMemberVerificationUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupVerificationSummaryUiState
+import com.cbgm.sparrow.feature.media.presentation.avatar.AvatarEditor
+import com.cbgm.sparrow.feature.media.presentation.avatar.AvatarEditorStrings
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.base_verify

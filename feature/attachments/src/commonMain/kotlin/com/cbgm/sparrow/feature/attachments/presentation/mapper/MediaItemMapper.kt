@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.attachments.presentation.mapper
 
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaType
-import com.cbgm.sparrow.feature.attachments.presentation.model.GalleryMediaSelection
+import com.cbgm.sparrow.feature.attachments.presentation.model.MediaSelection
 import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaItem
 import com.cbgm.sparrow.feature.media.presentation.model.MediaType
@@ -17,7 +17,7 @@ internal fun MessageMediaAttachmentUi.toMediaItem(): MediaItem =
         durationMilliseconds = durationMilliseconds
     )
 
-internal fun GalleryMediaSelection.toMediaItem(): MediaItem =
+internal fun MediaSelection.toMediaItem(): MediaItem =
     MediaItem(
         id = id,
         type = type.toMediaType(),

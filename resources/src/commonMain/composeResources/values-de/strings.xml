@@ -261,7 +261,9 @@
     <string name="feature_onboarding_approve_create_identity">Bestätigen und Identität erstellen</string>
     <string name="feature_onboarding_approve_phone_number">Telefonnummer bestätigen</string>
     <string name="feature_onboarding_camera">Kamera</string>
-    <string name="feature_onboarding_camera_description">Scanne Sparrow-QR-Codes zur Identitätsfreigabe.</string>
+    <string name="feature_onboarding_camera_description">Scanne Sparrow-QR-Codes zur Identitätsfreigabe und nimm Fotos/Videos auf.</string>
+    <string name="feature_onboarding_audio">Audio</string>
+    <string name="feature_onboarding_audio_description">Nimm den Ton bei Videos auf.</string>
     <string name="feature_onboarding_contacts_permission_description">Vorhandene Kontakte aus deinem Adressbuch finden.</string>
     <string name="feature_onboarding_contacts_stay_local">Deine Kontakte bleiben lokal</string>
     <string name="feature_onboarding_contacts_stay_local_description">Kontakte werden ausschließlich auf deinem Gerät verwendet, um Personen anhand ihrer Telefonnummer zu finden.</string>

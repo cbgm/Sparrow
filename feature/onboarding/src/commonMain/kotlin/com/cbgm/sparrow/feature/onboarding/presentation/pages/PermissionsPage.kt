@@ -23,6 +23,8 @@ import com.cbgm.sparrow.resources.base_notifications
 import com.cbgm.sparrow.resources.base_permissions
 import com.cbgm.sparrow.resources.base_phone_number
 import com.cbgm.sparrow.resources.feature_onboarding_allow_and_continue
+import com.cbgm.sparrow.resources.feature_onboarding_audio
+import com.cbgm.sparrow.resources.feature_onboarding_audio_description
 import com.cbgm.sparrow.resources.feature_onboarding_camera
 import com.cbgm.sparrow.resources.feature_onboarding_camera_description
 import com.cbgm.sparrow.resources.feature_onboarding_contacts_permission_description
@@ -69,6 +71,11 @@ fun PermissionsPage(onRequestPermissions: () -> Unit) {
         )
         ListingRow(
             index = "04",
+            title = stringResource(Res.string.feature_onboarding_audio),
+            description = stringResource(Res.string.feature_onboarding_audio_description)
+        )
+        ListingRow(
+            index = "05",
             title = stringResource(Res.string.base_phone_number),
             description = stringResource(Res.string.feature_onboarding_phone_number_permission_description)
         )

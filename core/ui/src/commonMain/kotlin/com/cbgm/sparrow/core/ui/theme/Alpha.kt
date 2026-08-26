@@ -21,10 +21,6 @@ object Alpha {
         const val placeholder = 0.38f
     }
 
-    object ProfilePictureCropScreen {
-        const val scrim = 0.58f
-    }
-
     object Badge {
         const val container = 0.15f
     }
@@ -34,7 +30,7 @@ object Alpha {
     }
 
     object MessageAttachment {
-        const val removeButtonBackground = 0.72f
+        const val playButtonBackground = 0.9f
     }
 
     object GroupDetailsScreen {

@@ -11,7 +11,7 @@ import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMediaAttachment
 import com.cbgm.sparrow.feature.attachments.domain.usecase.LoadMessageAttachmentUseCase
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingMediaAttachment
-import com.cbgm.sparrow.feature.attachments.presentation.model.GalleryMediaSelection
+import com.cbgm.sparrow.feature.attachments.presentation.model.MediaSelection
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.MarkDirectConversationReadUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectChatContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectTypingUseCase
@@ -66,7 +66,7 @@ class DirectViewModel(
     private val messageText = savedStateHandle.getMutableStateFlow(MESSAGE_TEXT_KEY, "")
     private val errorMessage = MutableStateFlow<String?>(null)
     private val isContactTyping = MutableStateFlow(false)
-    private val selectedGalleryMedia = MutableStateFlow<List<GalleryMediaSelection>>(emptyList())
+    private val selectedMedia = MutableStateFlow<List<MediaSelection>>(emptyList())
     private val attachmentBytes = MutableStateFlow<Map<String, ByteArray>>(emptyMap())
     private val isSending = MutableStateFlow(false)
     private val loadingAttachmentIds = mutableSetOf<String>()
@@ -81,7 +81,7 @@ class DirectViewModel(
             messageText,
             errorMessage,
             isContactTyping,
-            selectedGalleryMedia,
+            selectedMedia,
             isSending
         ) { text, error, contactTyping, selectedMedia, sending ->
             if (!error.isNullOrEmpty()) logger.error { error }
@@ -109,7 +109,7 @@ class DirectViewModel(
                 attachmentBytes = loadedAttachmentBytes
             ).withProfilePicture(context.profilePictureBytes)
                 .copy(
-                    selectedGalleryMedia = composer.selectedMedia,
+                    selectedMedia = composer.selectedMedia,
                     isSending = composer.isSending
                 )
         }
@@ -134,7 +134,7 @@ class DirectViewModel(
         when (event) {
             is DirectUiEvent.MessageTextChanged -> onMessageTextChanged(event.text)
             DirectUiEvent.SendClicked -> sendCurrentMessage()
-            is DirectUiEvent.GalleryMediaSelected -> onGalleryMediaSelected(event.media)
+            is DirectUiEvent.MediaSelected -> onMediaSelected(event.media)
             is DirectUiEvent.MediaAttachmentVisible -> loadAttachment(event.attachmentId)
             is DirectUiEvent.AttachmentError -> errorMessage.value = event.message
             DirectUiEvent.HeaderClicked -> openContactDetails()
@@ -224,13 +224,13 @@ class DirectViewModel(
         if (!composerState.isSendActionEnabled || isSending.value) return
 
         val text = messageText.value.trim()
-        val selectedMedia = selectedGalleryMedia.value
+        val selectedMedia = selectedMedia.value
         if (text.isEmpty() && selectedMedia.isEmpty()) return
 
         errorMessage.value = null
         viewModelScope.launch {
             isSending.value = true
-            val media = selectedMedia.map(GalleryMediaSelection::toOutgoingMediaAttachment)
+            val media = selectedMedia.map(MediaSelection::toOutgoingMediaAttachment)
             try {
                 when (composerState) {
                     DirectComposerState.REINVITE_REQUIRED -> queueMessageAndStartReinvite(text, media)
@@ -293,16 +293,16 @@ class DirectViewModel(
             .onFailure { error -> errorMessage.value = error.message ?: "Message could not be sent" }
     }
 
-    private fun onGalleryMediaSelected(media: List<GalleryMediaSelection>) {
+    private fun onMediaSelected(media: List<MediaSelection>) {
         runCatching {
-            val outgoing = media.map(GalleryMediaSelection::toOutgoingMediaAttachment)
+            val outgoing = media.map(MediaSelection::toOutgoingMediaAttachment)
             MessageAttachmentPolicy.requireValid(outgoing)
         }
             .onSuccess {
-                selectedGalleryMedia.value = media
+                selectedMedia.value = media
                 errorMessage.value = null
             }.onFailure { error ->
-                errorMessage.value = error.message ?: "Selected gallery media could not be attached"
+                errorMessage.value = error.message ?: "Selected media could not be attached"
             }
     }
 
@@ -320,7 +320,7 @@ class DirectViewModel(
 
     private suspend fun clearComposer() {
         messageText.value = ""
-        selectedGalleryMedia.value = emptyList()
+        selectedMedia.value = emptyList()
         stopTypingNow()
     }
 
@@ -360,7 +360,7 @@ class DirectViewModel(
         val text: String,
         val error: String?,
         val contactTyping: Boolean,
-        val selectedMedia: List<GalleryMediaSelection>,
+        val selectedMedia: List<MediaSelection>,
         val isSending: Boolean
     )
 

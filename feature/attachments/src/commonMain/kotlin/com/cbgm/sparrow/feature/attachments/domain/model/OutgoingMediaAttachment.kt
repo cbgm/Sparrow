@@ -81,13 +81,13 @@ object MessageAttachmentPolicy {
 
     fun requireValid(media: List<OutgoingMediaAttachment>) {
         require(media.size <= MAX_ATTACHMENTS_PER_MESSAGE) {
-            "A message can contain at most $MAX_ATTACHMENTS_PER_MESSAGE gallery attachments"
+            "A message can contain at most $MAX_ATTACHMENTS_PER_MESSAGE media attachments"
         }
         require(media.map(OutgoingMediaAttachment::id).distinct().size == media.size) {
             "Attachment IDs must be unique"
         }
         require(media.sumOf { it.bytes.size.toLong() } <= MAX_TOTAL_MEDIA_BYTES) {
-            "Selected gallery media exceeds the total attachment size limit"
+            "Selected media exceeds the total attachment size limit"
         }
     }
 }

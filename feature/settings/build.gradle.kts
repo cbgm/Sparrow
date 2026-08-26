@@ -19,6 +19,7 @@ kotlin {
             implementation(projects.core.embedding)
             implementation(projects.core.ui)
             implementation(projects.feature.identity)
+            implementation(projects.feature.media)
             implementation(projects.feature.search)
             implementation(projects.feature.safety)
 

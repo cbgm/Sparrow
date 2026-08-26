@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.group.model
 
-import com.cbgm.sparrow.feature.attachments.presentation.model.GalleryMediaSelection
+import com.cbgm.sparrow.feature.attachments.presentation.model.MediaSelection
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMemberInvitationStatus
 
@@ -14,7 +14,7 @@ data class GroupUiState(
     val avatarBytes: ByteArray? = null,
     val messages: List<GroupMessageUiModel> = emptyList(),
     val messageText: String = "",
-    val selectedGalleryMedia: List<GalleryMediaSelection> = emptyList(),
+    val selectedMedia: List<MediaSelection> = emptyList(),
     val isSending: Boolean = false,
     val isSomeoneTyping: Boolean = false,
     val typingDisplayName: String = "",
@@ -46,7 +46,7 @@ data class GroupUiState(
         if (!avatarBytes.contentEquals(other.avatarBytes)) return false
         if (messages != other.messages) return false
         if (messageText != other.messageText) return false
-        if (selectedGalleryMedia != other.selectedGalleryMedia) return false
+        if (selectedMedia != other.selectedMedia) return false
         if (typingDisplayName != other.typingDisplayName) return false
         if (errorMessage != other.errorMessage) return false
         if (state != other.state) return false
@@ -68,7 +68,7 @@ data class GroupUiState(
         result = 31 * result + (avatarBytes?.contentHashCode() ?: 0)
         result = 31 * result + messages.hashCode()
         result = 31 * result + messageText.hashCode()
-        result = 31 * result + selectedGalleryMedia.hashCode()
+        result = 31 * result + selectedMedia.hashCode()
         result = 31 * result + typingDisplayName.hashCode()
         result = 31 * result + (errorMessage?.hashCode() ?: 0)
         result = 31 * result + state.hashCode()

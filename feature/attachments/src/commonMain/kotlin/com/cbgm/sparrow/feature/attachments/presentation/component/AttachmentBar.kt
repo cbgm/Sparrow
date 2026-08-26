@@ -32,7 +32,8 @@ fun AttachmentBar(
     onClickCamera: () -> Unit,
     onClickFile: () -> Unit,
     onClickContact: () -> Unit,
-    isGalleryEnabled: Boolean = true
+    isGalleryEnabled: Boolean = true,
+    isCameraEnabled: Boolean = true
 ) {
     Row(
         modifier = Modifier
@@ -52,7 +53,8 @@ fun AttachmentBar(
         FilledButton(
             onClick = onClickCamera,
             imageVector = Icons.Filled.Camera,
-            tint = MaterialTheme.attachmentColors.camera
+            tint = MaterialTheme.attachmentColors.camera,
+            enabled = isCameraEnabled
         )
         FilledButton(
             onClick = onClickFile,
@@ -106,7 +108,8 @@ private fun AttachmentBarPreview() {
             onClickContact = {},
             onClickFile = {},
             onClickCamera = {},
-            isGalleryEnabled = true
+            isGalleryEnabled = true,
+            isCameraEnabled = true
         )
     }
 }
