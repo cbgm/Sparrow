@@ -30,6 +30,7 @@ kotlin {
 
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
+            implementation(libs.play.services.location)
         }
 
         commonTest.dependencies {

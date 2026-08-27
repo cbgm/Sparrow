@@ -91,7 +91,8 @@ private fun MessageAttachmentPreview(
     if (attachment.type == MessageAttachmentType.LOCATION) {
         MessageLocationAttachment(
             attachment = attachment,
-            onAttachmentVisible = onAttachmentVisible
+            onAttachmentVisible = onAttachmentVisible,
+            onAttachmentClick = onAttachmentClick
         )
     } else {
         MessageMediaAttachment(
@@ -105,7 +106,8 @@ private fun MessageAttachmentPreview(
 @Composable
 private fun MessageLocationAttachment(
     attachment: MessageMediaAttachmentUi,
-    onAttachmentVisible: (String) -> Unit
+    onAttachmentVisible: (String) -> Unit,
+    onAttachmentClick: (String) -> Unit
 ) {
     LaunchedEffect(attachment.id, attachment.bytes) {
         if (attachment.bytes == null) onAttachmentVisible(attachment.id)
@@ -113,7 +115,10 @@ private fun MessageLocationAttachment(
 
     val location = attachment.bytes?.let(LocationAttachmentPayload::decode)
     Surface(
-        modifier = Modifier.size(Dimens.MessageAttachment.previewSize),
+        modifier =
+            Modifier
+                .size(Dimens.MessageAttachment.previewSize)
+                .clickable(enabled = location != null) { onAttachmentClick(attachment.id) },
         shape = MaterialTheme.shapes.extraSmall,
         color = FunctionalColors.MediaBackground
     ) {

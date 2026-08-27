@@ -321,10 +321,32 @@ private fun BottomBar(
     containerColor: Color,
     onUiEvent: (DirectUiEvent) -> Unit
 ) {
+    var isLocationInProgress by rememberSaveable { mutableStateOf(false) }
+    var isWaitingForLocationSend by rememberSaveable { mutableStateOf(false) }
+    var hasObservedLocationSend by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(uiState.isSending, isWaitingForLocationSend) {
+        if (isWaitingForLocationSend && uiState.isSending) {
+            hasObservedLocationSend = true
+        } else if (isWaitingForLocationSend && hasObservedLocationSend && !uiState.isSending) {
+            isLocationInProgress = false
+            isWaitingForLocationSend = false
+            hasObservedLocationSend = false
+        }
+    }
+
     val currentLocationLauncher =
         rememberCurrentLocationLauncher(
-            onLocation = { onUiEvent(DirectUiEvent.ShareCurrentLocation(it)) },
-            onError = { onUiEvent(DirectUiEvent.AttachmentError(it)) }
+            onLocation = { location ->
+                isWaitingForLocationSend = true
+                onUiEvent(DirectUiEvent.ShareCurrentLocation(location))
+            },
+            onError = { error ->
+                isLocationInProgress = false
+                isWaitingForLocationSend = false
+                hasObservedLocationSend = false
+                onUiEvent(DirectUiEvent.AttachmentError(error))
+            }
         )
     val maxAttachments = MessageAttachmentPolicy.MAX_ATTACHMENTS_PER_MESSAGE
     val attachmentPicker =
@@ -342,6 +364,7 @@ private fun BottomBar(
     val canAddAttachment =
         !uiState.isLoading &&
             !uiState.isSending &&
+            !isLocationInProgress &&
             uiState.composerState.isInputEnabled &&
             uiState.selectedAttachments.size < maxAttachments
 
@@ -353,7 +376,7 @@ private fun BottomBar(
         onValueChange = { onUiEvent(DirectUiEvent.MessageTextChanged(it)) },
         onSendClick = { onUiEvent(DirectUiEvent.SendClicked) },
         isInputEnabled = !uiState.isLoading && !uiState.isSending && uiState.composerState.isInputEnabled,
-        isSendEnabled = !uiState.isLoading && !uiState.isSending && uiState.composerState.isSendActionEnabled,
+        isSendEnabled = !uiState.isLoading && !uiState.isSending && !isLocationInProgress && uiState.composerState.isSendActionEnabled,
         selectedAttachments = uiState.selectedAttachments,
         onSelectionClick = attachmentPicker::launch,
         onAttachmentRemove = { attachmentId ->
@@ -366,12 +389,20 @@ private fun BottomBar(
         isGalleryEnabled = canAddAttachment,
         isCameraEnabled = canAddAttachment,
         isFileEnabled = canAddAttachment,
+        isLocationInProgress = isLocationInProgress,
         onAttachmentButtonClick = { attachmentClick ->
             when (attachmentClick) {
                 AttachmentClick.OpenGallery -> attachmentPicker.launch(AttachmentSelectionSource.GALLERY)
                 AttachmentClick.OpenCamera -> attachmentPicker.launch(AttachmentSelectionSource.CAMERA)
                 AttachmentClick.OpenFile -> attachmentPicker.launch(AttachmentSelectionSource.FILE_PICKER)
-                AttachmentClick.OpenLocation -> currentLocationLauncher.launch()
+                AttachmentClick.OpenLocation -> {
+                    if (!isLocationInProgress) {
+                        isLocationInProgress = true
+                        isWaitingForLocationSend = false
+                        hasObservedLocationSend = false
+                        currentLocationLauncher.launch()
+                    }
+                }
                 AttachmentClick.OpenContacts -> Unit
             }
         }

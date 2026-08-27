@@ -17,9 +17,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.feature.attachments.device.rememberLocationOpener
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaExportItem
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItem
 import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
+import com.cbgm.sparrow.feature.attachments.util.LocationAttachmentPayload
 import com.cbgm.sparrow.feature.media.device.rememberMediaExporter
 import com.cbgm.sparrow.feature.media.presentation.component.MediaViewer
 import com.cbgm.sparrow.resources.Res
@@ -36,6 +38,30 @@ fun MessageAttachmentViewer(
     onEnsureAttachmentLoaded: (String) -> Unit,
     onError: (String) -> Unit
 ) {
+    val selectedAttachment = attachments.firstOrNull { it.id == selectedAttachmentId } ?: return
+    if (selectedAttachment.type == MessageAttachmentType.LOCATION) {
+        val locationOpener = rememberLocationOpener()
+        LaunchedEffect(selectedAttachment.id, selectedAttachment.bytes) {
+            val bytes = selectedAttachment.bytes
+            if (bytes == null) {
+                onEnsureAttachmentLoaded(selectedAttachment.id)
+                return@LaunchedEffect
+            }
+
+            val location = LocationAttachmentPayload.decode(bytes)
+            if (location == null) {
+                onError("Location could not be opened")
+            } else {
+                locationOpener.open(location)
+                    .onFailure { error ->
+                        onError(error.message ?: "Location could not be opened")
+                    }
+            }
+            onDismiss()
+        }
+        return
+    }
+
     val mediaAttachments = attachments.filter { it.type != MessageAttachmentType.LOCATION }
     val selectedIndex = mediaAttachments.indexOfFirst { it.id == selectedAttachmentId }
     if (selectedIndex < 0) return

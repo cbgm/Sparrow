@@ -7,6 +7,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,9 +55,20 @@ fun MessageControl(
     isGalleryEnabled: Boolean = true,
     isCameraEnabled: Boolean = true,
     isFileEnabled: Boolean = true,
+    isLocationInProgress: Boolean = false,
     onAttachmentButtonClick: (AttachmentClick) -> Unit
 ) {
     var isAttachmentBarVisible by remember { mutableStateOf(false) }
+    var locationProgressWasVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isLocationInProgress) {
+        if (isLocationInProgress) {
+            locationProgressWasVisible = true
+        } else if (locationProgressWasVisible) {
+            isAttachmentBarVisible = false
+            locationProgressWasVisible = false
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -126,12 +138,12 @@ fun MessageControl(
                         onAttachmentButtonClick(AttachmentClick.OpenContacts)
                     },
                     onClickLocation = {
-                        isAttachmentBarVisible = false
                         onAttachmentButtonClick(AttachmentClick.OpenLocation)
                     },
                     isGalleryEnabled = isGalleryEnabled,
                     isCameraEnabled = isCameraEnabled,
-                    isFileEnabled = isFileEnabled
+                    isFileEnabled = isFileEnabled,
+                    isLocationInProgress = isLocationInProgress
                 )
             }
         }
@@ -157,6 +169,7 @@ private fun MessageControlPreview() {
             isGalleryEnabled = true,
             isCameraEnabled = true,
             isFileEnabled = true,
+            isLocationInProgress = false,
             onAttachmentButtonClick = {}
         )
     }

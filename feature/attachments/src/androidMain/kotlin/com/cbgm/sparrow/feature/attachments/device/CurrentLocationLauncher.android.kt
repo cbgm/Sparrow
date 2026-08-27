@@ -4,12 +4,6 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
-import android.location.Location
-import android.location.LocationListener
-import android.location.LocationManager
-import android.os.Build
-import android.os.CancellationSignal
-import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
@@ -17,6 +11,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalContext
 import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
+import com.google.android.gms.location.CurrentLocationRequest
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 
 @Composable
 actual fun rememberCurrentLocationLauncher(
@@ -27,15 +25,16 @@ actual fun rememberCurrentLocationLauncher(
     val currentOnLocation = rememberUpdatedState(onLocation)
     val currentOnError = rememberUpdatedState(onError)
 
-    val requestCurrentLocation = remember(context) {
-        {
-            requestCurrentLocation(
-                context = context,
-                onLocation = { currentOnLocation.value(it) },
-                onError = { currentOnError.value(it) }
-            )
+    val requestCurrentLocation =
+        remember(context) {
+            {
+                requestCurrentLocation(
+                    context = context,
+                    onLocation = { currentOnLocation.value(it) },
+                    onError = { currentOnError.value(it) }
+                )
+            }
         }
-    }
 
     val permissionLauncher =
         rememberLauncherForActivityResult(
@@ -79,60 +78,46 @@ private fun requestCurrentLocation(
         return
     }
 
-    val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-    val provider = locationManager.currentLocationProvider(context)
-    if (provider == null) {
-        onError("Current location is unavailable")
-        return
-    }
+    val priority =
+        if (context.hasFineLocationPermission()) {
+            Priority.PRIORITY_HIGH_ACCURACY
+        } else {
+            Priority.PRIORITY_BALANCED_POWER_ACCURACY
+        }
+    val request =
+        CurrentLocationRequest.Builder()
+            .setPriority(priority)
+            .setMaxUpdateAgeMillis(MAX_LOCATION_AGE_MILLISECONDS)
+            .setDurationMillis(MAX_LOCATION_WAIT_MILLISECONDS)
+            .build()
+    val cancellationTokenSource = CancellationTokenSource()
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        locationManager.getCurrentLocation(
-            provider,
-            CancellationSignal(),
-            context.mainExecutor
-        ) { location ->
+    LocationServices
+        .getFusedLocationProviderClient(context)
+        .getCurrentLocation(request, cancellationTokenSource.token)
+        .addOnSuccessListener { location ->
             if (location == null) {
                 onError("Current location is unavailable")
             } else {
-                onLocation(CurrentLocation(latitude = location.latitude, longitude = location.longitude))
+                onLocation(
+                    CurrentLocation(
+                        latitude = location.latitude,
+                        longitude = location.longitude
+                    )
+                )
             }
         }
-    } else {
-        @Suppress("DEPRECATION")
-        locationManager.requestSingleUpdate(
-            provider,
-            object : LocationListener {
-                override fun onLocationChanged(location: Location) {
-                    onLocation(CurrentLocation(latitude = location.latitude, longitude = location.longitude))
-                }
-
-                @Deprecated("Deprecated in Android")
-                override fun onStatusChanged(provider: String?, status: Int, extras: android.os.Bundle?) = Unit
-
-                override fun onProviderEnabled(provider: String) = Unit
-
-                override fun onProviderDisabled(provider: String) {
-                    onError("Current location is unavailable")
-                }
-            },
-            Looper.getMainLooper()
-        )
-    }
+        .addOnFailureListener { error ->
+            onError(error.message ?: "Current location is unavailable")
+        }
 }
 
-private fun LocationManager.currentLocationProvider(context: Context): String? {
-    val fineGranted =
-        context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-
-    return when {
-        fineGranted && isProviderEnabled(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
-        isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER
-        fineGranted -> getProviders(true).firstOrNull()
-        else -> getProviders(true).firstOrNull { provider -> provider != LocationManager.GPS_PROVIDER }
-    }
-}
+private fun Context.hasFineLocationPermission(): Boolean =
+    checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
 private fun Context.hasLocationPermission(): Boolean =
-    checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+    hasFineLocationPermission() ||
         checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+private const val MAX_LOCATION_AGE_MILLISECONDS = 30_000L
+private const val MAX_LOCATION_WAIT_MILLISECONDS = 10_000L
