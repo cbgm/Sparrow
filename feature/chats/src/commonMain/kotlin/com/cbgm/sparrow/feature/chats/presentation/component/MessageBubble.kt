@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.core.ui.animation.rememberHighlightColor
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
@@ -40,7 +41,6 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
-import com.cbgm.sparrow.feature.media.domain.model.MediaContentType
 import com.cbgm.sparrow.feature.safety.presentation.component.MessageSafetyWarning
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
 import com.cbgm.sparrow.resources.Res
@@ -550,12 +550,12 @@ private fun MessageBubbleWithAttachmentsPreview() {
                         listOf(
                             MessageMediaAttachmentUi(
                                 id = "preview-image-1",
-                                type = MediaContentType.IMAGE,
+                                type = MessageAttachmentType.IMAGE,
                                 mimeType = "image/jpeg"
                             ),
                             MessageMediaAttachmentUi(
                                 id = "preview-video",
-                                type = MediaContentType.VIDEO,
+                                type = MessageAttachmentType.VIDEO,
                                 mimeType = "video/mp4"
                             )
                         )

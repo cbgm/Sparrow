@@ -7,7 +7,7 @@ import com.cbgm.sparrow.feature.attachments.domain.model.LocalAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.LocalAttachmentType
 
 internal fun List<LocalMessageAttachmentRow>.toLocalAttachments(): List<LocalAttachment> =
-    map { row -> row.toLocalAttachment() }
+    mapNotNull { row -> row.toLocalAttachment() }
 
 internal fun List<LocalAttachment>.toAttachmentStorageSummary(
     conversationId: String,
@@ -23,11 +23,12 @@ internal fun List<LocalAttachment>.toAttachmentStorageSummary(
         byteSize = sumOf(LocalAttachment::byteSize)
     )
 
-private fun LocalMessageAttachmentRow.toLocalAttachment(): LocalAttachment =
-    LocalAttachment(
+private fun LocalMessageAttachmentRow.toLocalAttachment(): LocalAttachment? {
+    val localType = attachment.type.toLocalAttachmentType() ?: return null
+    return LocalAttachment(
         id = attachment.id,
         conversationId = conversationId,
-        type = attachment.type.toLocalAttachmentType(),
+        type = localType,
         mimeType = attachment.mimeType,
         byteSize = attachment.byteSize,
         fileName = attachment.fileName,
@@ -36,10 +37,12 @@ private fun LocalMessageAttachmentRow.toLocalAttachment(): LocalAttachment =
         durationMilliseconds = attachment.durationMilliseconds,
         createdAtEpochMilliseconds = createdAtEpochMilliseconds
     )
+}
 
-private fun String.toLocalAttachmentType(): LocalAttachmentType =
+private fun String.toLocalAttachmentType(): LocalAttachmentType? =
     when (MessageAttachmentType.valueOf(this)) {
         MessageAttachmentType.IMAGE -> LocalAttachmentType.IMAGE
         MessageAttachmentType.VIDEO -> LocalAttachmentType.VIDEO
         MessageAttachmentType.FILE -> LocalAttachmentType.FILE
+        MessageAttachmentType.LOCATION -> null
     }

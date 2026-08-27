@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.attachments.domain.model
 
+import com.cbgm.sparrow.core.protocol.attachment.LOCATION_MIME_TYPE
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 
 data class OutgoingMessageAttachment(
@@ -47,6 +48,15 @@ data class OutgoingMessageAttachment(
                 require(bytes.size.toLong() <= MessageAttachmentPolicy.MAX_FILE_BYTES) {
                     "File attachment exceeds ${MessageAttachmentPolicy.MAX_FILE_BYTES} bytes"
                 }
+            }
+
+            MessageAttachmentType.LOCATION -> {
+                require(mimeType == LOCATION_MIME_TYPE) {
+                    "Location attachment must use the Sparrow location MIME type"
+                }
+                require(fileName == null) { "Location attachment must not have a file name" }
+                require(width == null && height == null) { "Location attachment must not have media dimensions" }
+                require(durationMilliseconds == null) { "Location attachment must not have a media duration" }
             }
         }
     }

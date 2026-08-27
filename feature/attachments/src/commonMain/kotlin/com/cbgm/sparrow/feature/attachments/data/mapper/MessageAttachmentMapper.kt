@@ -4,11 +4,12 @@ import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.data.database.entity.MessageAttachmentEntity
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageFileAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaAttachment
-import com.cbgm.sparrow.feature.media.domain.model.MediaContentType
 
 fun List<MessageAttachmentEntity>.toDomainMediaByMessageId(): Map<String, List<MessageMediaAttachment>> =
     filter { entity ->
-        entity.type == MessageAttachmentType.IMAGE.name || entity.type == MessageAttachmentType.VIDEO.name
+        entity.type == MessageAttachmentType.IMAGE.name ||
+            entity.type == MessageAttachmentType.VIDEO.name ||
+            entity.type == MessageAttachmentType.LOCATION.name
     }.groupBy(MessageAttachmentEntity::messageId)
         .mapValues { (_, attachments) ->
             attachments
@@ -36,15 +37,16 @@ fun List<MessageAttachmentEntity>.toDomainFilesByMessageId(
         }
 
 private fun MessageAttachmentEntity.toDomainMediaAttachment(): MessageMediaAttachment? {
-    val mediaType =
+    val attachmentType =
         when (type) {
-            MessageAttachmentType.IMAGE.name -> MediaContentType.IMAGE
-            MessageAttachmentType.VIDEO.name -> MediaContentType.VIDEO
+            MessageAttachmentType.IMAGE.name -> MessageAttachmentType.IMAGE
+            MessageAttachmentType.VIDEO.name -> MessageAttachmentType.VIDEO
+            MessageAttachmentType.LOCATION.name -> MessageAttachmentType.LOCATION
             else -> return null
         }
     return MessageMediaAttachment(
         id = id,
-        type = mediaType,
+        type = attachmentType,
         mimeType = mimeType,
         width = width,
         height = height,

@@ -14,13 +14,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaExportItem
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItem
 import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
 import com.cbgm.sparrow.feature.media.device.rememberMediaExporter
-import com.cbgm.sparrow.feature.media.domain.model.MediaContentType
 import com.cbgm.sparrow.feature.media.presentation.component.MediaViewer
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_attachments_media
@@ -36,7 +36,8 @@ fun MessageAttachmentViewer(
     onEnsureAttachmentLoaded: (String) -> Unit,
     onError: (String) -> Unit
 ) {
-    val selectedIndex = attachments.indexOfFirst { it.id == selectedAttachmentId }
+    val mediaAttachments = attachments.filter { it.type != MessageAttachmentType.LOCATION }
+    val selectedIndex = mediaAttachments.indexOfFirst { it.id == selectedAttachmentId }
     if (selectedIndex < 0) return
 
     val exporter = rememberMediaExporter()
@@ -44,18 +45,18 @@ fun MessageAttachmentViewer(
     val saveContentDescription = stringResource(Res.string.feature_attachments_save_to_camera_roll)
     var savePending by remember(selectedAttachmentId) { mutableStateOf(false) }
 
-    val loadState = attachments.map { attachment -> attachment.id to (attachment.bytes != null) }
+    val loadState = mediaAttachments.map { attachment -> attachment.id to (attachment.bytes != null) }
     LaunchedEffect(canSaveToCameraRoll, savePending, loadState) {
         if (!canSaveToCameraRoll || !savePending) return@LaunchedEffect
 
-        val missing = attachments.filter { attachment -> attachment.bytes == null }
+        val missing = mediaAttachments.filter { attachment -> attachment.bytes == null }
         if (missing.isNotEmpty()) {
             missing.forEach { attachment -> onEnsureAttachmentLoaded(attachment.id) }
             return@LaunchedEffect
         }
 
         exporter.saveToCameraRoll(
-            attachments.map(MessageMediaAttachmentUi::toMediaExportItem)
+            mediaAttachments.map(MessageMediaAttachmentUi::toMediaExportItem)
         ).onFailure { error ->
             onError(error.message ?: "Could not save media to camera roll")
         }
@@ -63,7 +64,7 @@ fun MessageAttachmentViewer(
     }
 
     MediaViewer(
-        media = attachments.map(MessageMediaAttachmentUi::toMediaItem),
+        media = mediaAttachments.map(MessageMediaAttachmentUi::toMediaItem),
         initialIndex = selectedIndex,
         onDismiss = onDismiss,
         onEnsureMediaLoaded = onEnsureAttachmentLoaded,
@@ -100,7 +101,7 @@ private fun MessageAttachmentViewerPreview() {
                 listOf(
                     MessageMediaAttachmentUi(
                         id = "preview-image",
-                        type = MediaContentType.IMAGE,
+                        type = MessageAttachmentType.IMAGE,
                         mimeType = "image/jpeg"
                     )
                 ),

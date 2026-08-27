@@ -45,6 +45,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
@@ -60,7 +61,6 @@ import com.cbgm.sparrow.feature.attachments.presentation.management.model.Attach
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementUiState
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItem
 import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
-import com.cbgm.sparrow.feature.media.domain.model.MediaContentType
 import com.cbgm.sparrow.feature.media.presentation.component.MediaThumbnail
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
@@ -354,7 +354,7 @@ private fun GridItem(
                 contentScale = ContentScale.Crop
             )
 
-            if (attachment.type == MediaContentType.VIDEO) {
+            if (attachment.type == MessageAttachmentType.VIDEO) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = null,
@@ -482,12 +482,12 @@ private fun previewAttachmentManagementUiState(): AttachmentManagementUiState =
             listOf(
                 MessageMediaAttachmentUi(
                     id = "preview-image",
-                    type = MediaContentType.IMAGE,
+                    type = MessageAttachmentType.IMAGE,
                     mimeType = "image/jpeg"
                 ),
                 MessageMediaAttachmentUi(
                     id = "preview-video",
-                    type = MediaContentType.VIDEO,
+                    type = MessageAttachmentType.VIDEO,
                     mimeType = "video/mp4",
                     durationMilliseconds = 42_000
                 )

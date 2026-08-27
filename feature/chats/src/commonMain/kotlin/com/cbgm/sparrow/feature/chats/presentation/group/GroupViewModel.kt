@@ -7,7 +7,9 @@ import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
+import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.usecase.LoadMessageAttachmentUseCase
+import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingLocationAttachment
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingMessageAttachment
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupChatContext
@@ -132,6 +134,7 @@ class GroupViewModel(
             is GroupUiEvent.MessageTextChanged -> onMessageTextChanged(event.text)
             GroupUiEvent.SendClicked -> sendCurrentMessage()
             is GroupUiEvent.AttachmentsSelected -> updateAttachmentSelection(event.attachments)
+            is GroupUiEvent.ShareCurrentLocation -> sendCurrentLocation(event.location.toOutgoingLocationAttachment())
             is GroupUiEvent.MediaAttachmentVisible -> loadAttachment(event.attachmentId)
             is GroupUiEvent.AttachmentError -> errorMessage.value = event.message
             GroupUiEvent.HeaderClicked -> navigator.navigateTo(AppRoute.GroupDetails(groupId))
@@ -247,6 +250,23 @@ class GroupViewModel(
                     }
                     .onFailure { error ->
                         errorMessage.value = error.message ?: "Message could not be sent"
+                    }
+            } finally {
+                isSending.value = false
+            }
+        }
+    }
+
+    private fun sendCurrentLocation(locationAttachment: OutgoingMessageAttachment) {
+        if (!uiState.value.isMessageInputEnabled || isSending.value) return
+
+        errorMessage.value = null
+        viewModelScope.launch {
+            isSending.value = true
+            try {
+                sendMessage(groupId, "", listOf(locationAttachment))
+                    .onFailure { error ->
+                        errorMessage.value = error.message ?: "Location could not be sent"
                     }
             } finally {
                 isSending.value = false

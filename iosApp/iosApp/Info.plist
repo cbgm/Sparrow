@@ -8,5 +8,7 @@
 	<string>Sparrow uses the camera to take your profile picture.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Sparrow uses your photo library to choose your profile picture.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Sparrow uses your location only when you choose to share your current location.</string>
 </dict>
 </plist>

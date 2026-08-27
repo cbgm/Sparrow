@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.direct.model
 
+import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
 import com.cbgm.sparrow.feature.media.presentation.model.AttachmentSelection
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
 
@@ -12,6 +13,10 @@ sealed interface DirectUiEvent {
 
     data class AttachmentsSelected(
         val attachments: List<AttachmentSelection>
+    ) : DirectUiEvent
+
+    data class ShareCurrentLocation(
+        val location: CurrentLocation
     ) : DirectUiEvent
 
     data class MediaAttachmentVisible(

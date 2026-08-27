@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.attachments.presentation.mapper
 
+import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.feature.attachments.domain.model.LocalAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.LocalAttachmentType
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentFileUi
 import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
-import com.cbgm.sparrow.feature.media.domain.model.MediaContentType
 import com.cbgm.sparrow.feature.media.util.toReadableByteSize
 
 internal fun List<LocalAttachment>.toAttachmentManagementMediaModels(
@@ -17,8 +17,8 @@ internal fun List<LocalAttachment>.toAttachmentManagementMediaModels(
                 id = attachment.id,
                 type =
                     when (attachment.type) {
-                        LocalAttachmentType.IMAGE -> MediaContentType.IMAGE
-                        LocalAttachmentType.VIDEO -> MediaContentType.VIDEO
+                        LocalAttachmentType.IMAGE -> MessageAttachmentType.IMAGE
+                        LocalAttachmentType.VIDEO -> MessageAttachmentType.VIDEO
                         LocalAttachmentType.FILE -> error("File attachment cannot be mapped to media")
                     },
                 mimeType = attachment.mimeType,

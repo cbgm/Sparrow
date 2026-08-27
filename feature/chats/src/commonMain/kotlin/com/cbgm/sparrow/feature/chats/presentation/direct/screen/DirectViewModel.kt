@@ -10,6 +10,7 @@ import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.usecase.LoadMessageAttachmentUseCase
+import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingLocationAttachment
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingMessageAttachment
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.MarkDirectConversationReadUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectChatContextUseCase
@@ -135,6 +136,7 @@ class DirectViewModel(
             is DirectUiEvent.MessageTextChanged -> onMessageTextChanged(event.text)
             DirectUiEvent.SendClicked -> sendCurrentMessage()
             is DirectUiEvent.AttachmentsSelected -> updateAttachmentSelection(event.attachments)
+            is DirectUiEvent.ShareCurrentLocation -> sendCurrentLocation(event.location.toOutgoingLocationAttachment())
             is DirectUiEvent.MediaAttachmentVisible -> loadAttachment(event.attachmentId)
             is DirectUiEvent.AttachmentError -> errorMessage.value = event.message
             DirectUiEvent.HeaderClicked -> openContactDetails()
@@ -246,11 +248,12 @@ class DirectViewModel(
 
     private suspend fun queueMessageAndStartReinvite(
         text: String,
-        attachments: List<OutgoingMessageAttachment>
+        attachments: List<OutgoingMessageAttachment>,
+        clearComposerOnSuccess: Boolean = true
     ) {
         queueMessageUntilAuthorized(conversationId, text, attachments)
             .onSuccess {
-                clearComposer()
+                if (clearComposerOnSuccess) clearComposer()
                 ensureIdentityExchangeStarted(contactId)
                     .onFailure { error ->
                         errorMessage.value = error.message ?: "Contact invitation could not be started"
@@ -262,10 +265,11 @@ class DirectViewModel(
 
     private suspend fun queueMessageForPendingReinvite(
         text: String,
-        attachments: List<OutgoingMessageAttachment>
+        attachments: List<OutgoingMessageAttachment>,
+        clearComposerOnSuccess: Boolean = true
     ) {
         queueMessageUntilAuthorized(conversationId, text, attachments)
-            .onSuccess { clearComposer() }
+            .onSuccess { if (clearComposerOnSuccess) clearComposer() }
             .onFailure { error ->
                 errorMessage.value = error.message ?: "Message could not be queued"
             }
@@ -273,7 +277,8 @@ class DirectViewModel(
 
     private suspend fun sendAuthorizedMessage(
         text: String,
-        attachments: List<OutgoingMessageAttachment>
+        attachments: List<OutgoingMessageAttachment>,
+        clearComposerOnSuccess: Boolean = true
     ) {
         val authorizationError = requireDirectChatAuthorization(contactId).exceptionOrNull()
         if (authorizationError != null) {
@@ -281,7 +286,7 @@ class DirectViewModel(
                 uiState.value.identitySetupMode == DirectIdentitySetupMode.AUTOMATIC_INVITATION &&
                 authorizationError is DirectChatAuthorizationRequiredException
             ) {
-                queueMessageAndStartReinvite(text, attachments)
+                queueMessageAndStartReinvite(text, attachments, clearComposerOnSuccess)
             } else {
                 errorMessage.value = authorizationError.message ?: "Message could not be sent"
             }
@@ -289,8 +294,47 @@ class DirectViewModel(
         }
 
         sendMessage(conversationId, text, attachments)
-            .onSuccess { clearComposer() }
+            .onSuccess { if (clearComposerOnSuccess) clearComposer() }
             .onFailure { error -> errorMessage.value = error.message ?: "Message could not be sent" }
+    }
+
+    private fun sendCurrentLocation(locationAttachment: OutgoingMessageAttachment) {
+        val composerState = uiState.value.composerState
+        if (!composerState.isSendActionEnabled || isSending.value) return
+
+        errorMessage.value = null
+        viewModelScope.launch {
+            isSending.value = true
+            try {
+                val attachments = listOf(locationAttachment)
+                when (composerState) {
+                    DirectComposerState.REINVITE_REQUIRED ->
+                        queueMessageAndStartReinvite(
+                            text = "",
+                            attachments = attachments,
+                            clearComposerOnSuccess = false
+                        )
+
+                    DirectComposerState.REINVITE_PENDING ->
+                        queueMessageForPendingReinvite(
+                            text = "",
+                            attachments = attachments,
+                            clearComposerOnSuccess = false
+                        )
+
+                    DirectComposerState.READY ->
+                        sendAuthorizedMessage(
+                            text = "",
+                            attachments = attachments,
+                            clearComposerOnSuccess = false
+                        )
+
+                    DirectComposerState.DISABLED -> Unit
+                }
+            } finally {
+                isSending.value = false
+            }
+        }
     }
 
     private fun updateAttachmentSelection(attachments: List<AttachmentSelection>) {

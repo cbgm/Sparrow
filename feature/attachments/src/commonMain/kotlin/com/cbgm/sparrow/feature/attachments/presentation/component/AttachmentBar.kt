@@ -32,6 +32,7 @@ fun AttachmentBar(
     onClickCamera: () -> Unit,
     onClickFile: () -> Unit,
     onClickContact: () -> Unit,
+    onClickLocation: () -> Unit,
     isGalleryEnabled: Boolean = true,
     isCameraEnabled: Boolean = true,
     isFileEnabled: Boolean = true
@@ -69,7 +70,7 @@ fun AttachmentBar(
             tint = MaterialTheme.attachmentColors.contact
         )
         FilledButton(
-            onClick = onClickContact,
+            onClick = onClickLocation,
             imageVector = Icons.Filled.MyLocation,
             tint = MaterialTheme.attachmentColors.location
         )
@@ -109,6 +110,7 @@ private fun AttachmentBarPreview() {
             onClickGallery = {},
             onClickContact = {},
             onClickFile = {},
+            onClickLocation = {},
             onClickCamera = {},
             isGalleryEnabled = true,
             isCameraEnabled = true,

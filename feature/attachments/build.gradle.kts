@@ -28,6 +28,10 @@ kotlin {
             implementation(libs.okio)
         }
 
+        androidMain.dependencies {
+            implementation(libs.androidx.activity.compose)
+        }
+
         commonTest.dependencies {
             implementation(libs.bundles.kmp.testing)
         }

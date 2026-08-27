@@ -27,6 +27,8 @@ class LocalAttachmentDataSource(
         entity: MessageAttachmentEntity,
         bytes: ByteArray
     ) {
+        if (entity.type == MessageAttachmentType.LOCATION.name) return
+
         runCatching {
             val message = chatDao.findMessageById(entity.messageId) ?: return
             if (message.isMine) return

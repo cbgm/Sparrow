@@ -34,6 +34,8 @@ sealed interface AttachmentClick {
     data object OpenContacts : AttachmentClick
 
     data object OpenFile : AttachmentClick
+
+    data object OpenLocation : AttachmentClick
 }
 
 @Composable
@@ -122,6 +124,10 @@ fun MessageControl(
                     onClickContact = {
                         isAttachmentBarVisible = false
                         onAttachmentButtonClick(AttachmentClick.OpenContacts)
+                    },
+                    onClickLocation = {
+                        isAttachmentBarVisible = false
+                        onAttachmentButtonClick(AttachmentClick.OpenLocation)
                     },
                     isGalleryEnabled = isGalleryEnabled,
                     isCameraEnabled = isCameraEnabled,

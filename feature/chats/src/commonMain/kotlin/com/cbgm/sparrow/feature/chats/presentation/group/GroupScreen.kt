@@ -50,6 +50,7 @@ import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.attachments.device.rememberCurrentLocationLauncher
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.presentation.component.MessageAttachmentViewer
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
@@ -262,12 +263,17 @@ private fun BottomBar(
     containerColor: Color,
     onUiEvent: (GroupUiEvent) -> Unit
 ) {
+    val currentLocationLauncher =
+        rememberCurrentLocationLauncher(
+            onLocation = { onUiEvent(GroupUiEvent.ShareCurrentLocation(it)) },
+            onError = { onUiEvent(GroupUiEvent.AttachmentError(it)) }
+        )
     val maxAttachments = MessageAttachmentPolicy.MAX_ATTACHMENTS_PER_MESSAGE
     val attachmentPicker =
         rememberAttachmentSelectionLauncher(
             maxItems = maxAttachments,
             maxImageDimension = MessageAttachmentPolicy.MAX_IMAGE_DIMENSION,
-            maxImageBytes = MessageAttachmentPolicy.MAX_IMAGE_BYTES.toInt(),
+            maxImageBytes = MessageAttachmentPolicy.MAX_IMAGE_BYTES,
             maxVideoBytes = MessageAttachmentPolicy.MAX_VIDEO_BYTES,
             maxFileBytes = MessageAttachmentPolicy.MAX_FILE_BYTES,
             selectedAttachments = uiState.selectedAttachments,
@@ -307,6 +313,7 @@ private fun BottomBar(
                 AttachmentClick.OpenGallery -> attachmentPicker.launch(AttachmentSelectionSource.GALLERY)
                 AttachmentClick.OpenCamera -> attachmentPicker.launch(AttachmentSelectionSource.CAMERA)
                 AttachmentClick.OpenFile -> attachmentPicker.launch(AttachmentSelectionSource.FILE_PICKER)
+                AttachmentClick.OpenLocation -> currentLocationLauncher.launch()
                 AttachmentClick.OpenContacts -> Unit
             }
         }
