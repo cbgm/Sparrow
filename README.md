@@ -319,7 +319,3 @@ Start here:
 - [Server overview](docs/server/overview.md)
 - [Release process](docs/development/release-process.md)
 - [FAQ](docs/faq.md)
-
-## License
-
-Apache License 2.0. See the repository license file for the exact terms.
