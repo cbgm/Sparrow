@@ -9,8 +9,7 @@ import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessages
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageFileAttachment
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaAttachment
+import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachment
 import com.cbgm.sparrow.feature.chats.data.group.mapper.toGroupConversation
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupConversationRepository
@@ -30,14 +29,12 @@ class GroupConversationRepositoryImpl(
             combine(
                 chatDao.observeConversationById(groupId),
                 chatDao.observeRecentMessages(groupId, RECENT_MESSAGE_LIMIT),
-                messageAttachmentDataSource.observeRecentMediaByConversation(groupId, RECENT_MESSAGE_LIMIT),
-                messageAttachmentDataSource.observeRecentFilesByConversation(groupId, RECENT_MESSAGE_LIMIT)
-            ) { conversation, recentMessages, attachmentsByMessageId, filesByMessageId ->
+                messageAttachmentDataSource.observeRecentByConversation(groupId, RECENT_MESSAGE_LIMIT)
+            ) { conversation, recentMessages, attachmentsByMessageId ->
                 MessageSnapshot(
                     conversation = conversation,
                     messages = recentMessages,
-                    attachmentsByMessageId = attachmentsByMessageId,
-                    filesByMessageId = filesByMessageId
+                    attachmentsByMessageId = attachmentsByMessageId
                 )
             }
 
@@ -56,8 +53,7 @@ class GroupConversationRepositoryImpl(
                     recipientStates = recipientStates,
                     invitations = invitations,
                     verificationRows = verificationRows,
-                    attachmentsByMessageId = snapshot.attachmentsByMessageId,
-                    filesByMessageId = snapshot.filesByMessageId
+                    attachmentsByMessageId = snapshot.attachmentsByMessageId
                 )
         }
     }
@@ -65,8 +61,7 @@ class GroupConversationRepositoryImpl(
     private data class MessageSnapshot(
         val conversation: ConversationEntity?,
         val messages: List<MessageEntity>,
-        val attachmentsByMessageId: Map<String, List<MessageMediaAttachment>>,
-        val filesByMessageId: Map<String, List<MessageFileAttachment>>
+        val attachmentsByMessageId: Map<String, List<MessageAttachment>>
     )
 
     private companion object {

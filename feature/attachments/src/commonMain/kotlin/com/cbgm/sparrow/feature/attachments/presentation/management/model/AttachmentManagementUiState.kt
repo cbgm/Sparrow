@@ -1,10 +1,9 @@
 package com.cbgm.sparrow.feature.attachments.presentation.management.model
 
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
+import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
 
 data class AttachmentManagementUiState(
-    val media: List<MessageMediaAttachmentUi> = emptyList(),
-    val files: List<AttachmentFileUi> = emptyList(),
+    val attachments: List<MessageAttachmentUi> = emptyList(),
     val selectedTab: AttachmentManagementTab = AttachmentManagementTab.MEDIA,
     val isSelectionMode: Boolean = false,
     val selectedIds: Set<String> = emptySet(),
@@ -14,5 +13,5 @@ data class AttachmentManagementUiState(
     val deleteError: String? = null
 ) {
     val hasAttachments: Boolean
-        get() = media.isNotEmpty() || files.isNotEmpty()
+        get() = attachments.isNotEmpty()
 }

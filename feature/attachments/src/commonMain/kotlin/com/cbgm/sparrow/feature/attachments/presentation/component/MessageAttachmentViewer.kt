@@ -20,7 +20,7 @@ import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.feature.attachments.device.rememberLocationOpener
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaExportItem
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItem
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
+import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
 import com.cbgm.sparrow.feature.attachments.util.LocationAttachmentPayload
 import com.cbgm.sparrow.feature.media.device.rememberMediaExporter
 import com.cbgm.sparrow.feature.media.presentation.component.MediaViewer
@@ -31,80 +31,145 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun MessageAttachmentViewer(
-    attachments: List<MessageMediaAttachmentUi>,
+    attachments: List<MessageAttachmentUi>,
     selectedAttachmentId: String,
     canSaveToCameraRoll: Boolean,
     onDismiss: () -> Unit,
     onEnsureAttachmentLoaded: (String) -> Unit,
     onError: (String) -> Unit
 ) {
-    val selectedAttachment = attachments.firstOrNull { it.id == selectedAttachmentId } ?: return
-    if (selectedAttachment.type == MessageAttachmentType.LOCATION) {
-        val locationOpener = rememberLocationOpener()
-        LaunchedEffect(selectedAttachment.id, selectedAttachment.bytes) {
-            val bytes = selectedAttachment.bytes
-            if (bytes == null) {
-                onEnsureAttachmentLoaded(selectedAttachment.id)
-                return@LaunchedEffect
-            }
+    val selectedAttachment =
+        attachments.firstOrNull { attachment ->
+            attachment.id == selectedAttachmentId
+        } ?: return
 
-            val location = LocationAttachmentPayload.decode(bytes)
-            if (location == null) {
-                onError("Location could not be opened")
-            } else {
-                locationOpener.open(location)
-                    .onFailure { error ->
-                        onError(error.message ?: "Location could not be opened")
-                    }
-            }
-            onDismiss()
+    when (selectedAttachment.type) {
+        MessageAttachmentType.IMAGE,
+        MessageAttachmentType.VIDEO -> {
+            MessageMediaViewer(
+                attachments = attachments,
+                selectedAttachmentId = selectedAttachmentId,
+                canSaveToCameraRoll = canSaveToCameraRoll,
+                onDismiss = onDismiss,
+                onEnsureAttachmentLoaded = onEnsureAttachmentLoaded,
+                onError = onError
+            )
         }
-        return
-    }
 
-    val mediaAttachments = attachments.filter { it.type != MessageAttachmentType.LOCATION }
-    val selectedIndex = mediaAttachments.indexOfFirst { it.id == selectedAttachmentId }
+        MessageAttachmentType.LOCATION -> {
+            MessageLocationViewer(
+                attachment = selectedAttachment,
+                onDismiss = onDismiss,
+                onEnsureAttachmentLoaded = onEnsureAttachmentLoaded,
+                onError = onError
+            )
+        }
+
+        MessageAttachmentType.FILE -> Unit
+    }
+}
+
+@Composable
+private fun MessageMediaViewer(
+    attachments: List<MessageAttachmentUi>,
+    selectedAttachmentId: String,
+    canSaveToCameraRoll: Boolean,
+    onDismiss: () -> Unit,
+    onEnsureAttachmentLoaded: (String) -> Unit,
+    onError: (String) -> Unit
+) {
+    val media =
+        attachments.filter { attachment ->
+            when (attachment.type) {
+                MessageAttachmentType.IMAGE,
+                MessageAttachmentType.VIDEO -> true
+
+                MessageAttachmentType.FILE,
+                MessageAttachmentType.LOCATION -> false
+            }
+        }
+
+    val selectedIndex =
+        media.indexOfFirst { attachment ->
+            attachment.id == selectedAttachmentId
+        }
+
     if (selectedIndex < 0) return
 
     val exporter = rememberMediaExporter()
     val mediaLabel = stringResource(Res.string.feature_attachments_media)
-    val saveContentDescription = stringResource(Res.string.feature_attachments_save_to_camera_roll)
-    var savePending by remember(selectedAttachmentId) { mutableStateOf(false) }
+    val saveContentDescription =
+        stringResource(Res.string.feature_attachments_save_to_camera_roll)
 
-    val loadState = mediaAttachments.map { attachment -> attachment.id to (attachment.bytes != null) }
-    LaunchedEffect(canSaveToCameraRoll, savePending, loadState) {
-        if (!canSaveToCameraRoll || !savePending) return@LaunchedEffect
+    var savePending by
+        remember(selectedAttachmentId) {
+            mutableStateOf(false)
+        }
 
-        val missing = mediaAttachments.filter { attachment -> attachment.bytes == null }
-        if (missing.isNotEmpty()) {
-            missing.forEach { attachment -> onEnsureAttachmentLoaded(attachment.id) }
+    val loadState =
+        media.map { attachment ->
+            attachment.id to (attachment.bytes != null)
+        }
+
+    LaunchedEffect(
+        canSaveToCameraRoll,
+        savePending,
+        loadState
+    ) {
+        if (!canSaveToCameraRoll || !savePending) {
             return@LaunchedEffect
         }
 
-        exporter.saveToCameraRoll(
-            mediaAttachments.map(MessageMediaAttachmentUi::toMediaExportItem)
-        ).onFailure { error ->
-            onError(error.message ?: "Could not save media to camera roll")
+        val unloadedAttachments =
+            media.filter { attachment ->
+                attachment.bytes == null
+            }
+
+        if (unloadedAttachments.isNotEmpty()) {
+            unloadedAttachments.forEach { attachment ->
+                onEnsureAttachmentLoaded(attachment.id)
+            }
+            return@LaunchedEffect
         }
+
+        exporter
+            .saveToCameraRoll(
+                media.map(MessageAttachmentUi::toMediaExportItem)
+            )
+            .onFailure { error ->
+                onError(
+                    error.message
+                        ?: "Could not save media to camera roll"
+                )
+            }
+
         savePending = false
     }
 
     MediaViewer(
-        media = mediaAttachments.map(MessageMediaAttachmentUi::toMediaItem),
+        media = media.map(MessageAttachmentUi::toMediaItem),
         initialIndex = selectedIndex,
         onDismiss = onDismiss,
         onEnsureMediaLoaded = onEnsureAttachmentLoaded,
-        title = { currentIndex, total -> "$mediaLabel ${currentIndex + 1}/$total" },
+        title = { currentIndex, total ->
+            "$mediaLabel ${currentIndex + 1}/$total"
+        },
         topBarActions = {
             if (canSaveToCameraRoll) {
                 IconButton(
-                    onClick = { savePending = true },
+                    onClick = {
+                        savePending = true
+                    },
                     enabled = !savePending
                 ) {
                     if (savePending) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(Dimens.MessageAttachment.loadingIndicatorSize),
-                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
+                            modifier =
+                                Modifier.size(
+                                    Dimens.MessageAttachment.loadingIndicatorSize
+                                ),
+                            strokeWidth =
+                                Dimens.Base.progressIndicatorStrokeWidth
                         )
                     } else {
                         Icon(
@@ -118,6 +183,47 @@ fun MessageAttachmentViewer(
     )
 }
 
+@Composable
+private fun MessageLocationViewer(
+    attachment: MessageAttachmentUi,
+    onDismiss: () -> Unit,
+    onEnsureAttachmentLoaded: (String) -> Unit,
+    onError: (String) -> Unit
+) {
+    val locationOpener = rememberLocationOpener()
+
+    LaunchedEffect(
+        attachment.id,
+        attachment.bytes
+    ) {
+        val bytes = attachment.bytes
+
+        if (bytes == null) {
+            onEnsureAttachmentLoaded(attachment.id)
+            return@LaunchedEffect
+        }
+
+        val location = LocationAttachmentPayload.decode(bytes)
+
+        if (location == null) {
+            onError("Location could not be opened")
+            onDismiss()
+            return@LaunchedEffect
+        }
+
+        locationOpener
+            .open(location)
+            .onFailure { error ->
+                onError(
+                    error.message
+                        ?: "Location could not be opened"
+                )
+            }
+
+        onDismiss()
+    }
+}
+
 @Preview
 @Composable
 private fun MessageAttachmentViewerPreview() {
@@ -125,10 +231,17 @@ private fun MessageAttachmentViewerPreview() {
         MessageAttachmentViewer(
             attachments =
                 listOf(
-                    MessageMediaAttachmentUi(
+                    MessageAttachmentUi(
                         id = "preview-image",
                         type = MessageAttachmentType.IMAGE,
-                        mimeType = "image/jpeg"
+                        mimeType = "image/jpeg",
+                        byteSize = 0
+                    ),
+                    MessageAttachmentUi(
+                        id = "preview-video",
+                        type = MessageAttachmentType.VIDEO,
+                        mimeType = "video/mp4",
+                        byteSize = 0
                     )
                 ),
             selectedAttachmentId = "preview-image",

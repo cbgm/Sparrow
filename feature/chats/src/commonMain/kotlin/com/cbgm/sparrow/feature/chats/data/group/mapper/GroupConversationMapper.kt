@@ -6,8 +6,7 @@ import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessages
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageFileAttachment
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaAttachment
+import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachment
 import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
 import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_END_TO_END_ENCRYPTED_MODE
@@ -25,8 +24,7 @@ internal fun ConversationWithMessages.toGroupConversation(
     recipientStates: List<MessageRecipientStateEntity>,
     invitations: List<GroupInvitationEntity>,
     verificationRows: List<GroupVerificationPairEntity> = emptyList(),
-    attachmentsByMessageId: Map<String, List<MessageMediaAttachment>> = emptyMap(),
-    filesByMessageId: Map<String, List<MessageFileAttachment>> = emptyMap()
+    attachmentsByMessageId: Map<String, List<MessageAttachment>> = emptyMap()
 ): GroupConversation {
     val timeline = buildGroupLocalMembershipTimeline(messages, invitations)
     val visibleMessages = timeline.visibleMessages
@@ -45,8 +43,7 @@ internal fun ConversationWithMessages.toGroupConversation(
                 .map { message ->
                     message.toGroupMessage(
                         recipientStates = statesByMessageId[message.id].orEmpty(),
-                        attachments = attachmentsByMessageId[message.id].orEmpty(),
-                        fileAttachments = filesByMessageId[message.id].orEmpty()
+                        attachments = attachmentsByMessageId[message.id].orEmpty()
                     )
                 },
         unreadCount =
@@ -73,8 +70,7 @@ internal fun ConversationWithMessages.toGroupConversation(
 
 private fun MessageEntity.toGroupMessage(
     recipientStates: List<MessageRecipientStateEntity>,
-    attachments: List<MessageMediaAttachment>,
-    fileAttachments: List<MessageFileAttachment>
+    attachments: List<MessageAttachment>
 ): GroupMessage {
     val deliveryStatus =
         if (recipientStates.isEmpty()) {
@@ -96,8 +92,7 @@ private fun MessageEntity.toGroupMessage(
         type = GroupMembershipMessageFactory.typeOf(transportMode),
         senderContactId = senderContactId,
         deliveryProgress = recipientStates.toDeliveryProgress(),
-        attachments = attachments,
-        fileAttachments = fileAttachments
+        attachments = attachments
     )
 }
 

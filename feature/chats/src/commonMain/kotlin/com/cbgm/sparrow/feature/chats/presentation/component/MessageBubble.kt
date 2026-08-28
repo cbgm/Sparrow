@@ -34,9 +34,8 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.messageBubble
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.attachments.presentation.component.MessageFileAttachments
-import com.cbgm.sparrow.feature.attachments.presentation.component.MessageMediaAttachments
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
+import com.cbgm.sparrow.feature.attachments.presentation.component.MessageAttachments
+import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
@@ -167,23 +166,11 @@ private fun BubbleBody(
             )
     ) {
         Column {
-            if (message.mediaAttachments.isNotEmpty()) {
-                MessageMediaAttachments(
-                    attachments = message.mediaAttachments,
+            if (message.attachments.isNotEmpty()) {
+                MessageAttachments(
+                    attachments = message.attachments,
                     onAttachmentVisible = onAttachmentVisible,
                     onAttachmentClick = onAttachmentClick,
-                    modifier =
-                        Modifier.padding(
-                            horizontal = MaterialTheme.spacing.small,
-                            vertical = MaterialTheme.spacing.base
-                        )
-                )
-            }
-
-            if (message.fileAttachments.isNotEmpty()) {
-                MessageFileAttachments(
-                    files = message.fileAttachments,
-                    onAttachmentVisible = onAttachmentVisible,
                     modifier =
                         Modifier.padding(
                             horizontal = MaterialTheme.spacing.small,
@@ -546,17 +533,19 @@ private fun MessageBubbleWithAttachmentsPreview() {
                     contentStatus = MessageContentStatus.READABLE,
                     deliveryStatus = MessageDeliveryStatus.DELIVERED,
                     senderName = "Chris",
-                    mediaAttachments =
+                    attachments =
                         listOf(
-                            MessageMediaAttachmentUi(
+                            MessageAttachmentUi(
                                 id = "preview-image-1",
                                 type = MessageAttachmentType.IMAGE,
-                                mimeType = "image/jpeg"
+                                mimeType = "image/jpeg",
+                                byteSize = 0
                             ),
-                            MessageMediaAttachmentUi(
+                            MessageAttachmentUi(
                                 id = "preview-video",
                                 type = MessageAttachmentType.VIDEO,
-                                mimeType = "video/mp4"
+                                mimeType = "video/mp4",
+                                byteSize = 0
                             )
                         )
                 ),

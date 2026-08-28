@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.component.model
 
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageFileAttachmentUi
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
+import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
@@ -18,8 +17,7 @@ data class MessageBubbleModel(
     val senderIsInContacts: Boolean = true,
     val deliveryProgress: DeliveryProgressModel = DeliveryProgressModel(),
     val safetyWarning: MessageSafetyWarningUiModel? = null,
-    val mediaAttachments: List<MessageMediaAttachmentUi> = emptyList(),
-    val fileAttachments: List<MessageFileAttachmentUi> = emptyList()
+    val attachments: List<MessageAttachmentUi> = emptyList()
 )
 
 data class DeliveryProgressModel(

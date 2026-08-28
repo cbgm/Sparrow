@@ -192,7 +192,7 @@ fun DirectScreen(
     val currentViewerAttachmentId = viewerAttachmentId
     if (currentViewerMessage != null && currentViewerAttachmentId != null) {
         MessageAttachmentViewer(
-            attachments = currentViewerMessage.mediaAttachments,
+            attachments = currentViewerMessage.attachments,
             selectedAttachmentId = currentViewerAttachmentId,
             canSaveToCameraRoll = !currentViewerMessage.isMine,
             onDismiss = {

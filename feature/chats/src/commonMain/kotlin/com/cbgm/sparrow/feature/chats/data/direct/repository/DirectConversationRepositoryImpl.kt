@@ -3,8 +3,7 @@ package com.cbgm.sparrow.feature.chats.data.direct.repository
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.model.ConversationWithMessages
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageFileAttachment
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaAttachment
+import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachment
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.mapper.toDirectConversation
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
@@ -22,14 +21,12 @@ class DirectConversationRepositoryImpl(
         combine(
             chatDao.observeConversationById(conversationId),
             chatDao.observeRecentMessages(conversationId, RECENT_MESSAGE_LIMIT),
-            messageAttachmentDataSource.observeRecentMediaByConversation(conversationId, RECENT_MESSAGE_LIMIT),
-            messageAttachmentDataSource.observeRecentFilesByConversation(conversationId, RECENT_MESSAGE_LIMIT)
-        ) { conversation, recentMessages, attachmentsByMessageId, filesByMessageId ->
+            messageAttachmentDataSource.observeRecentByConversation(conversationId, RECENT_MESSAGE_LIMIT)
+        ) { conversation, recentMessages, attachmentsByMessageId ->
             conversation?.let {
                 DirectConversationSnapshot(
                     conversation = ConversationWithMessages(it, recentMessages),
-                    attachmentsByMessageId = attachmentsByMessageId,
-                    filesByMessageId = filesByMessageId
+                    attachmentsByMessageId = attachmentsByMessageId
                 )
             }
         }.map { result ->
@@ -37,8 +34,7 @@ class DirectConversationRepositoryImpl(
                 ?.takeIf { it.conversation.conversation.type == DIRECT_CONVERSATION_TYPE }
                 ?.let { snapshot ->
                     snapshot.conversation.toDirectConversation(
-                        attachmentsByMessageId = snapshot.attachmentsByMessageId,
-                        filesByMessageId = snapshot.filesByMessageId
+                        attachmentsByMessageId = snapshot.attachmentsByMessageId
                     )
                 }
         }
@@ -62,8 +58,7 @@ class DirectConversationRepositoryImpl(
 
     private data class DirectConversationSnapshot(
         val conversation: ConversationWithMessages,
-        val attachmentsByMessageId: Map<String, List<MessageMediaAttachment>>,
-        val filesByMessageId: Map<String, List<MessageFileAttachment>>
+        val attachmentsByMessageId: Map<String, List<MessageAttachment>>
     )
 
     private companion object {

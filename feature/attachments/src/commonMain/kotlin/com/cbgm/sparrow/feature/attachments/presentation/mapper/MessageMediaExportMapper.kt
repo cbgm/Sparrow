@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.attachments.presentation.mapper
 
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
+import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
 import com.cbgm.sparrow.feature.media.domain.model.MediaContentType
 import com.cbgm.sparrow.feature.media.domain.model.MediaExportItem
 
-internal fun MessageMediaAttachmentUi.toMediaExportItem(): MediaExportItem =
+internal fun MessageAttachmentUi.toMediaExportItem(): MediaExportItem =
     MediaExportItem(
         id = id,
         type =

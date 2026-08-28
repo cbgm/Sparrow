@@ -55,13 +55,13 @@ import com.cbgm.sparrow.core.ui.theme.FunctionalColors
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.presentation.component.MessageAttachmentViewer
-import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentFileUi
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementTab
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementUiEvent
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementUiState
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItem
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
+import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
 import com.cbgm.sparrow.feature.media.presentation.component.MediaThumbnail
+import com.cbgm.sparrow.feature.media.util.toReadableByteSize
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.feature_attachments_delete_confirm
@@ -82,6 +82,13 @@ fun AttachmentManagementScreen(
     onUiEvent: (AttachmentManagementUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val mediaTabItems =
+        uiState.attachments.filter { attachment ->
+            attachment.type == MessageAttachmentType.IMAGE || attachment.type == MessageAttachmentType.VIDEO
+        }
+    val fileTabItems =
+        uiState.attachments.filter { attachment -> attachment.type == MessageAttachmentType.FILE }
+
     SparrowStaticScaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
@@ -108,7 +115,7 @@ fun AttachmentManagementScreen(
             when (uiState.selectedTab) {
                 AttachmentManagementTab.MEDIA ->
                     MediaGrid(
-                        attachments = uiState.media,
+                        attachments = mediaTabItems,
                         selectedIds = uiState.selectedIds,
                         isSelectionMode = uiState.isSelectionMode,
                         bottomPadding = innerPadding.calculateBottomPadding(),
@@ -118,7 +125,7 @@ fun AttachmentManagementScreen(
 
                 AttachmentManagementTab.FILES ->
                     FileList(
-                        attachments = uiState.files,
+                        attachments = fileTabItems,
                         selectedIds = uiState.selectedIds,
                         isSelectionMode = uiState.isSelectionMode,
                         bottomPadding = innerPadding.calculateBottomPadding(),
@@ -152,7 +159,7 @@ fun AttachmentManagementScreen(
 
     uiState.viewerAttachmentId?.let { selectedId ->
         MessageAttachmentViewer(
-            attachments = uiState.media,
+            attachments = mediaTabItems,
             selectedAttachmentId = selectedId,
             canSaveToCameraRoll = false,
             onDismiss = { onUiEvent(AttachmentManagementUiEvent.ViewerDismissed) },
@@ -294,7 +301,7 @@ private fun AttachmentTab(
 
 @Composable
 private fun MediaGrid(
-    attachments: List<MessageMediaAttachmentUi>,
+    attachments: List<MessageAttachmentUi>,
     selectedIds: Set<String>,
     isSelectionMode: Boolean,
     bottomPadding: Dp,
@@ -330,7 +337,7 @@ private fun MediaGrid(
 private fun GridItem(
     onClick: () -> Unit,
     isSelected: Boolean,
-    attachment: MessageMediaAttachmentUi,
+    attachment: MessageAttachmentUi,
     onVisible: (String) -> Unit
 ) {
     LaunchedEffect(attachment.id, attachment.bytes) {
@@ -386,7 +393,7 @@ private fun GridItem(
 
 @Composable
 private fun FileList(
-    attachments: List<AttachmentFileUi>,
+    attachments: List<MessageAttachmentUi>,
     selectedIds: Set<String>,
     isSelectionMode: Boolean,
     bottomPadding: Dp,
@@ -400,14 +407,14 @@ private fun FileList(
             ListItem(
                 headlineContent = {
                     Text(
-                        text = attachment.displayName,
+                        text = attachment.fileName ?: attachment.id,
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                 },
                 supportingContent = {
                     Text(
-                        text = attachment.sizeText,
+                        text = attachment.byteSize.toReadableByteSize(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -478,26 +485,27 @@ private fun AttachmentTabsPreview() {
 
 private fun previewAttachmentManagementUiState(): AttachmentManagementUiState =
     AttachmentManagementUiState(
-        media =
+        attachments =
             listOf(
-                MessageMediaAttachmentUi(
+                MessageAttachmentUi(
                     id = "preview-image",
                     type = MessageAttachmentType.IMAGE,
-                    mimeType = "image/jpeg"
+                    mimeType = "image/jpeg",
+                    byteSize = 0
                 ),
-                MessageMediaAttachmentUi(
+                MessageAttachmentUi(
                     id = "preview-video",
                     type = MessageAttachmentType.VIDEO,
                     mimeType = "video/mp4",
+                    byteSize = 0,
                     durationMilliseconds = 42_000
-                )
-            ),
-        files =
-            listOf(
-                AttachmentFileUi(
+                ),
+                MessageAttachmentUi(
                     id = "preview-file",
-                    displayName = "document.pdf",
-                    sizeText = "240 KB"
+                    type = MessageAttachmentType.FILE,
+                    mimeType = "application/pdf",
+                    byteSize = 240_000,
+                    fileName = "document.pdf"
                 )
             )
     )

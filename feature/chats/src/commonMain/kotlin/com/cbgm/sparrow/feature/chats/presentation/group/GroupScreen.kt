@@ -183,7 +183,7 @@ fun GroupScreen(
     val currentViewerAttachmentId = viewerAttachmentId
     if (currentViewerMessage != null && currentViewerAttachmentId != null) {
         MessageAttachmentViewer(
-            attachments = currentViewerMessage.mediaAttachments,
+            attachments = currentViewerMessage.attachments,
             selectedAttachmentId = currentViewerAttachmentId,
             canSaveToCameraRoll = !currentViewerMessage.isMine,
             onDismiss = {
@@ -295,7 +295,7 @@ private fun BottomBar(
         rememberAttachmentSelectionLauncher(
             maxItems = maxAttachments,
             maxImageDimension = MessageAttachmentPolicy.MAX_IMAGE_DIMENSION,
-            maxImageBytes = MessageAttachmentPolicy.MAX_IMAGE_BYTES,
+            maxImageBytes = MessageAttachmentPolicy.MAX_IMAGE_BYTES.toInt(),
             maxVideoBytes = MessageAttachmentPolicy.MAX_VIDEO_BYTES,
             maxFileBytes = MessageAttachmentPolicy.MAX_FILE_BYTES,
             selectedAttachments = uiState.selectedAttachments,

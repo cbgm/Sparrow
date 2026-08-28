@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.group.mapper
 
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toUi
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationState
@@ -94,20 +93,8 @@ internal fun GroupMessage.toUiModel(
                     } else {
                         safetyAssessments[id]?.toWarningUiModel()
                     },
-                mediaAttachments =
+                attachments =
                     attachments.map { attachment ->
-                        MessageMediaAttachmentUi(
-                            id = attachment.id,
-                            type = attachment.type,
-                            mimeType = attachment.mimeType,
-                            width = attachment.width,
-                            height = attachment.height,
-                            durationMilliseconds = attachment.durationMilliseconds,
-                            bytes = attachmentBytes[attachment.id]
-                        )
-                    },
-                fileAttachments =
-                    fileAttachments.map { attachment ->
                         attachment.toUi(bytes = attachmentBytes[attachment.id])
                     }
             ),
