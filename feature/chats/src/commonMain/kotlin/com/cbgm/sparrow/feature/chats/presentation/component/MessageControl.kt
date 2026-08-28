@@ -19,50 +19,58 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.presentation.component.AttachmentBar
-import com.cbgm.sparrow.feature.media.presentation.component.AttachmentSelectionPreview
-import com.cbgm.sparrow.feature.media.presentation.component.previewAttachmentSelections
-import com.cbgm.sparrow.feature.media.presentation.model.AttachmentSelection
-import com.cbgm.sparrow.feature.media.presentation.model.AttachmentSelectionSource
+import com.cbgm.sparrow.feature.media.presentation.component.MediaSelectionPreview
+import com.cbgm.sparrow.feature.media.presentation.component.previewMediaSelections
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionSource
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_chat_typing
 import org.jetbrains.compose.resources.stringResource
 
-sealed interface AttachmentClick {
-    data object OpenGallery : AttachmentClick
+/**
+ * Bündelt alle reinen UI-Zustandswerte für die Nachrichteneingabe.
+ */
+data class MessageInputState(
+    val messageText: String = "",
+    val isTyping: Boolean = false,
+    val contactName: String = "",
+    val isInputEnabled: Boolean = true,
+    val isSendEnabled: Boolean = false,
+    val isLocationInProgress: Boolean = false,
+    val selectedMedia: List<MediaSelection> = emptyList(),
+    val isGalleryEnabled: Boolean = true,
+    val isCameraEnabled: Boolean = true,
+    val isFileEnabled: Boolean = true
+)
 
-    data object OpenCamera : AttachmentClick
-
-    data object OpenContacts : AttachmentClick
-
-    data object OpenFile : AttachmentClick
-
-    data object OpenLocation : AttachmentClick
-}
+/**
+ * Bündelt alle Interaktionen und Klicks für die Nachrichteneingabe.
+ * Jede Attachment-Aktion hat jetzt ihr eigenes, klares Lambda.
+ */
+data class MessageInputActions(
+    val onValueChange: (String) -> Unit,
+    val onSendClick: () -> Unit,
+    val onSelectionClick: (MediaSelectionSource) -> Unit = {},
+    val onMediaRemove: (String) -> Unit = {},
+    val onClickCamera: () -> Unit = {},
+    val onClickFile: () -> Unit = {},
+    val onClickGallery: () -> Unit = {},
+    val onClickContact: () -> Unit = {},
+    val onClickLocation: () -> Unit = {}
+)
 
 @Composable
 fun MessageControl(
+    state: MessageInputState,
+    actions: MessageInputActions,
     containerColor: Color,
-    isTyping: Boolean,
-    contactName: String,
-    messageText: String,
-    onValueChange: (String) -> Unit,
-    onSendClick: () -> Unit,
-    isInputEnabled: Boolean,
-    isSendEnabled: Boolean,
-    selectedAttachments: List<AttachmentSelection> = emptyList(),
-    onSelectionClick: (AttachmentSelectionSource) -> Unit = {},
-    onAttachmentRemove: (String) -> Unit = {},
-    isGalleryEnabled: Boolean = true,
-    isCameraEnabled: Boolean = true,
-    isFileEnabled: Boolean = true,
-    isLocationInProgress: Boolean = false,
-    onAttachmentButtonClick: (AttachmentClick) -> Unit
+    modifier: Modifier = Modifier
 ) {
     var isAttachmentBarVisible by remember { mutableStateOf(false) }
     var locationProgressWasVisible by remember { mutableStateOf(false) }
 
-    LaunchedEffect(isLocationInProgress) {
-        if (isLocationInProgress) {
+    LaunchedEffect(state.isLocationInProgress) {
+        if (state.isLocationInProgress) {
             locationProgressWasVisible = true
         } else if (locationProgressWasVisible) {
             isAttachmentBarVisible = false
@@ -71,50 +79,47 @@ fun MessageControl(
     }
 
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         color = containerColor
     ) {
         Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = MaterialTheme.spacing.base)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = MaterialTheme.spacing.base)
         ) {
             Text(
-                text =
-                    if (isTyping) {
-                        stringResource(
-                            Res.string.feature_chats_chat_typing,
-                            contactName
-                        )
-                    } else {
-                        ""
-                    },
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            horizontal = MaterialTheme.spacing.base.times(6),
-                            vertical = MaterialTheme.spacing.micro
-                        ),
+                text = if (state.isTyping) {
+                    stringResource(
+                        Res.string.feature_chats_chat_typing,
+                        state.contactName
+                    )
+                } else {
+                    ""
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal = MaterialTheme.spacing.base.times(6),
+                        vertical = MaterialTheme.spacing.micro
+                    ),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onBackground,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            AttachmentSelectionPreview(
-                attachments = selectedAttachments,
-                onClick = onSelectionClick,
-                onRemove = onAttachmentRemove,
+            MediaSelectionPreview(
+                media = state.selectedMedia,
+                onClick = actions.onSelectionClick,
+                onRemove = actions.onMediaRemove,
                 modifier = Modifier.padding(bottom = MaterialTheme.spacing.base)
             )
             MessageInput(
-                value = messageText,
-                onValueChange = onValueChange,
-                onSendClick = onSendClick,
-                inputEnabled = isInputEnabled,
-                sendEnabled = isSendEnabled,
-                hasAttachments = selectedAttachments.isNotEmpty(),
+                value = state.messageText,
+                onValueChange = actions.onValueChange,
+                onSendClick = actions.onSendClick,
+                inputEnabled = state.isInputEnabled,
+                sendEnabled = state.isSendEnabled,
+                hasAttachments = state.selectedMedia.isNotEmpty(),
                 onAttachmentClick = { isAttachmentBarVisible = !isAttachmentBarVisible },
                 isAttachmentVisible = isAttachmentBarVisible
             )
@@ -123,27 +128,27 @@ fun MessageControl(
                 AttachmentBar(
                     onClickCamera = {
                         isAttachmentBarVisible = false
-                        onAttachmentButtonClick(AttachmentClick.OpenCamera)
+                        actions.onClickCamera()
                     },
                     onClickFile = {
                         isAttachmentBarVisible = false
-                        onAttachmentButtonClick(AttachmentClick.OpenFile)
+                        actions.onClickFile()
                     },
                     onClickGallery = {
                         isAttachmentBarVisible = false
-                        onAttachmentButtonClick(AttachmentClick.OpenGallery)
+                        actions.onClickGallery()
                     },
                     onClickContact = {
                         isAttachmentBarVisible = false
-                        onAttachmentButtonClick(AttachmentClick.OpenContacts)
+                        actions.onClickContact()
                     },
                     onClickLocation = {
-                        onAttachmentButtonClick(AttachmentClick.OpenLocation)
+                        actions.onClickLocation()
                     },
-                    isGalleryEnabled = isGalleryEnabled,
-                    isCameraEnabled = isCameraEnabled,
-                    isFileEnabled = isFileEnabled,
-                    isLocationInProgress = isLocationInProgress
+                    isGalleryEnabled = state.isGalleryEnabled,
+                    isCameraEnabled = state.isCameraEnabled,
+                    isFileEnabled = state.isFileEnabled,
+                    isLocationInProgress = state.isLocationInProgress
                 )
             }
         }
@@ -156,21 +161,29 @@ private fun MessageControlPreview() {
     SparrowTheme {
         MessageControl(
             containerColor = MaterialTheme.colorScheme.background,
-            isTyping = false,
-            contactName = "Chris",
-            messageText = "Here are the files",
-            onValueChange = {},
-            onSendClick = {},
-            isInputEnabled = true,
-            isSendEnabled = true,
-            selectedAttachments = previewAttachmentSelections(),
-            onSelectionClick = {},
-            onAttachmentRemove = {},
-            isGalleryEnabled = true,
-            isCameraEnabled = true,
-            isFileEnabled = true,
-            isLocationInProgress = false,
-            onAttachmentButtonClick = {}
+            state = MessageInputState(
+                isTyping = false,
+                contactName = "Chris",
+                messageText = "Here are the files",
+                isInputEnabled = true,
+                isSendEnabled = true,
+                selectedMedia = previewMediaSelections(),
+                isGalleryEnabled = true,
+                isCameraEnabled = true,
+                isFileEnabled = true,
+                isLocationInProgress = false
+            ),
+            actions = MessageInputActions(
+                onValueChange = {},
+                onSendClick = {},
+                onSelectionClick = {},
+                onMediaRemove = {},
+                onClickCamera = {},
+                onClickFile = {},
+                onClickGallery = {},
+                onClickContact = {},
+                onClickLocation = {}
+            )
         )
     }
 }

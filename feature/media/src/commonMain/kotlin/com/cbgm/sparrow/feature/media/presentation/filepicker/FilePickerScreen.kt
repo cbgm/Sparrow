@@ -86,7 +86,6 @@ import org.jetbrains.compose.resources.stringResource
 fun FilePickerScreen(
     uiState: FilePickerUiState,
     onUiEvent: (FilePickerUiEvent) -> Unit,
-    onGrantFileAccess: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     SparrowLazyScaffold(
@@ -96,8 +95,6 @@ fun FilePickerScreen(
             FilePickerTopBar(
                 containerColor = color,
                 uiState = uiState,
-                onBack = { onUiEvent(FilePickerUiEvent.BackClicked) },
-                onClose = { onUiEvent(FilePickerUiEvent.CloseClicked) },
                 onUiEvent = onUiEvent
             )
         },
@@ -105,14 +102,14 @@ fun FilePickerScreen(
             FilePickerBottomBar(
                 containerColor = color,
                 uiState = uiState,
-                onConfirm = { onUiEvent(FilePickerUiEvent.ConfirmClicked) }
+                onUiEvent = onUiEvent
             )
         }
     ) { innerPadding, listState ->
         when {
             uiState.requiresFileAccess ->
                 FileAccessRequired(
-                    onGrantFileAccess = onGrantFileAccess,
+                    onUiEvent = onUiEvent,
                     modifier = Modifier.fillMaxSize().padding(innerPadding)
                 )
 
@@ -133,17 +130,14 @@ fun FilePickerScreen(
                     item(key = "breadcrumbs") {
                         Breadcrumbs(
                             breadcrumbs = uiState.breadcrumbs,
-                            onBreadcrumbClick = { reference ->
-                                onUiEvent(FilePickerUiEvent.BreadcrumbClicked(reference))
-                            }
+                            onUiEvent = onUiEvent
                         )
                     }
 
                     item(key = "search") {
                         FileSearchField(
                             value = uiState.searchQuery,
-                            onValueChange = { query -> onUiEvent(FilePickerUiEvent.SearchChanged(query)) },
-                            onClear = { onUiEvent(FilePickerUiEvent.SearchCleared) }
+                            onUiEvent = onUiEvent
                         )
                     }
 
@@ -158,7 +152,7 @@ fun FilePickerScreen(
                             FileEntryRow(
                                 entry = entry,
                                 selected = entry.reference in uiState.selectedReferences,
-                                onClick = { onUiEvent(FilePickerUiEvent.EntryClicked(entry.reference)) }
+                                onUiEvent = onUiEvent
                             )
                         }
                     }
@@ -180,7 +174,7 @@ fun FilePickerScreen(
 
 @Composable
 private fun FileAccessRequired(
-    onGrantFileAccess: () -> Unit,
+    onUiEvent: (FilePickerUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -199,7 +193,7 @@ private fun FileAccessRequired(
             modifier = Modifier.padding(vertical = MaterialTheme.spacing.medium)
         )
         SparrowApprovalButton(
-            onClick = onGrantFileAccess,
+            onClick = { onUiEvent(FilePickerUiEvent.GrantFileAccessClicked) },
             text = stringResource(Res.string.feature_media_file_picker_file_access),
             fillMaxWidth = false
         )
@@ -209,7 +203,7 @@ private fun FileAccessRequired(
 @Composable
 private fun Breadcrumbs(
     breadcrumbs: List<FilePickerBreadcrumbUi>,
-    onBreadcrumbClick: (String) -> Unit
+    onUiEvent: (FilePickerUiEvent) -> Unit
 ) {
     Row(
         modifier =
@@ -234,7 +228,7 @@ private fun Breadcrumbs(
                     if (index == breadcrumbs.lastIndex) {
                         Modifier
                     } else {
-                        Modifier.clickable { onBreadcrumbClick(breadcrumb.reference) }
+                        Modifier.clickable { onUiEvent(FilePickerUiEvent.BreadcrumbClicked(breadcrumb.reference)) }
                     }
             )
             if (index < breadcrumbs.lastIndex) {
@@ -251,13 +245,12 @@ private fun Breadcrumbs(
 @Composable
 private fun FileSearchField(
     value: String,
-    onValueChange: (String) -> Unit,
-    onClear: () -> Unit
+    onUiEvent: (FilePickerUiEvent) -> Unit
 ) {
     SparrowSearchField(
         searchQuery = value,
-        onSearchQueryChanged = onValueChange,
-        onClear = onClear,
+        onSearchQueryChanged = { query -> onUiEvent(FilePickerUiEvent.SearchChanged(query)) },
+        onClear = { onUiEvent(FilePickerUiEvent.SearchCleared) },
         placeholder = stringResource(Res.string.feature_media_file_picker_search),
         modifier =
             Modifier
@@ -270,7 +263,7 @@ private fun FileSearchField(
 private fun FileEntryRow(
     entry: FileBrowserEntryUi,
     selected: Boolean,
-    onClick: () -> Unit
+    onUiEvent: (FilePickerUiEvent) -> Unit
 ) {
     ListItem(
         headlineContent = {
@@ -317,7 +310,7 @@ private fun FileEntryRow(
         modifier =
             Modifier.clickable(
                 enabled = entry.isDirectory || !entry.isBlocked,
-                onClick = onClick
+                onClick = { onUiEvent(FilePickerUiEvent.EntryClicked(entry.reference)) }
             )
     )
 }
@@ -362,8 +355,6 @@ private fun ErrorMessage(message: String) {
 private fun FilePickerTopBar(
     containerColor: Color,
     uiState: FilePickerUiState,
-    onBack: () -> Unit,
-    onClose: () -> Unit,
     onUiEvent: (FilePickerUiEvent) -> Unit
 ) {
     var showSortMenu by remember { mutableStateOf(false) }
@@ -387,7 +378,7 @@ private fun FilePickerTopBar(
             )
         },
         navigationIcon = {
-            IconButton(onClick = onBack) {
+            IconButton(onClick = { onUiEvent(FilePickerUiEvent.BackClicked) }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = stringResource(Res.string.base_back)
@@ -395,7 +386,7 @@ private fun FilePickerTopBar(
             }
         },
         actions = {
-            IconButton(onClick = onClose) {
+            IconButton(onClick = { onUiEvent(FilePickerUiEvent.CloseClicked) }) {
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = stringResource(Res.string.base_close)
@@ -479,7 +470,7 @@ private fun SortItem(
 private fun FilePickerBottomBar(
     containerColor: Color,
     uiState: FilePickerUiState,
-    onConfirm: () -> Unit
+    onUiEvent: (FilePickerUiEvent) -> Unit
 ) {
     if (uiState.requiresFileAccess || uiState.selectionCapacity <= 0) return
     Surface(color = containerColor) {
@@ -504,7 +495,7 @@ private fun FilePickerBottomBar(
                 style = MaterialTheme.typography.bodyMedium
             )
             SparrowApprovalButton(
-                onClick = onConfirm,
+                onClick = { onUiEvent(FilePickerUiEvent.ConfirmClicked) },
                 enabled = uiState.canConfirm,
                 fillMaxWidth = false,
                 content = {

@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.chats.presentation.group.model
 
 import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
-import com.cbgm.sparrow.feature.media.presentation.model.AttachmentSelection
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
 
 sealed interface GroupUiEvent {
@@ -11,15 +11,17 @@ sealed interface GroupUiEvent {
 
     data object SendClicked : GroupUiEvent
 
-    data class AttachmentsSelected(
-        val attachments: List<AttachmentSelection>
+    data class MediaSelected(
+        val media: List<MediaSelection>
     ) : GroupUiEvent
+
+    data object OpenFilePickerClicked : GroupUiEvent
 
     data class ShareCurrentLocation(
         val location: CurrentLocation
     ) : GroupUiEvent
 
-    data class MediaAttachmentVisible(
+    data class AttachmentVisible(
         val attachmentId: String
     ) : GroupUiEvent
 

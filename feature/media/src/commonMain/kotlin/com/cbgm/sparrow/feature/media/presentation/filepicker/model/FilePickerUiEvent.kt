@@ -5,8 +5,14 @@ sealed interface FilePickerUiEvent {
 
     data object CloseClicked : FilePickerUiEvent
 
+    data object GrantFileAccessClicked : FilePickerUiEvent
+
     data class FileAccessReturned(
         val rootReference: String?
+    ) : FilePickerUiEvent
+
+    data class FileAccessError(
+        val message: String
     ) : FilePickerUiEvent
 
     data class EntryClicked(

@@ -6,14 +6,14 @@ import com.cbgm.sparrow.feature.media.domain.model.CapturedMedia
 import com.cbgm.sparrow.feature.media.domain.model.FileBrowserContent
 import com.cbgm.sparrow.feature.media.domain.model.GalleryMedia
 import com.cbgm.sparrow.feature.media.domain.model.MediaContentType
-import com.cbgm.sparrow.feature.media.presentation.model.AttachmentSelection
-import com.cbgm.sparrow.feature.media.presentation.model.AttachmentSelectionSource
-import com.cbgm.sparrow.feature.media.presentation.model.AttachmentSelectionType
 import com.cbgm.sparrow.feature.media.presentation.model.MediaItem
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionSource
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionType
 import com.cbgm.sparrow.feature.media.presentation.model.MediaType
 
-fun CapturedMedia.toAttachmentSelection(): AttachmentSelection =
-    AttachmentSelection(
+fun CapturedMedia.toMediaSelection(): MediaSelection =
+    MediaSelection(
         id = IdGenerator.generate(
             prefix = when (type) {
                 CameraCaptureType.PHOTO -> "camera-image"
@@ -21,19 +21,19 @@ fun CapturedMedia.toAttachmentSelection(): AttachmentSelection =
             }
         ),
         type = when (type) {
-            CameraCaptureType.PHOTO -> AttachmentSelectionType.IMAGE
-            CameraCaptureType.VIDEO -> AttachmentSelectionType.VIDEO
+            CameraCaptureType.PHOTO -> MediaSelectionType.IMAGE
+            CameraCaptureType.VIDEO -> MediaSelectionType.VIDEO
         },
         bytes = bytes,
         mimeType = mimeType,
-        source = AttachmentSelectionSource.CAMERA,
+        source = MediaSelectionSource.CAMERA,
         width = width,
         height = height,
         durationMilliseconds = durationMilliseconds
     )
 
-fun GalleryMedia.toAttachmentSelection(existingId: String? = null): AttachmentSelection =
-    AttachmentSelection(
+fun GalleryMedia.toMediaSelection(existingId: String? = null): MediaSelection =
+    MediaSelection(
         id = existingId ?: IdGenerator.generate(
             prefix = when (type) {
                 MediaContentType.IMAGE -> "gallery-image"
@@ -41,12 +41,12 @@ fun GalleryMedia.toAttachmentSelection(existingId: String? = null): AttachmentSe
             }
         ),
         type = when (type) {
-            MediaContentType.IMAGE -> AttachmentSelectionType.IMAGE
-            MediaContentType.VIDEO -> AttachmentSelectionType.VIDEO
+            MediaContentType.IMAGE -> MediaSelectionType.IMAGE
+            MediaContentType.VIDEO -> MediaSelectionType.VIDEO
         },
         bytes = bytes,
         mimeType = mimeType,
-        source = AttachmentSelectionSource.GALLERY,
+        source = MediaSelectionSource.GALLERY,
         sourceReference = sourceReference,
         previewBytes = previewBytes,
         width = width,
@@ -54,24 +54,24 @@ fun GalleryMedia.toAttachmentSelection(existingId: String? = null): AttachmentSe
         durationMilliseconds = durationMilliseconds
     )
 
-fun FileBrowserContent.toAttachmentSelection(): AttachmentSelection =
-    AttachmentSelection(
+fun FileBrowserContent.toMediaSelection(): MediaSelection =
+    MediaSelection(
         id = IdGenerator.generate(prefix = "file"),
-        type = AttachmentSelectionType.FILE,
+        type = MediaSelectionType.FILE,
         bytes = bytes,
         mimeType = mimeType,
-        source = AttachmentSelectionSource.FILE_PICKER,
+        source = MediaSelectionSource.FILE_PICKER,
         sourceReference = sourceReference,
         fileName = displayName
     )
 
-fun AttachmentSelection.toGalleryMedia(): GalleryMedia {
-    require(source == AttachmentSelectionSource.GALLERY) { "Only gallery selections can be restored in the gallery picker" }
+fun MediaSelection.toGalleryMedia(): GalleryMedia {
+    require(source == MediaSelectionSource.GALLERY) { "Only gallery selections can be restored in the gallery picker" }
     return GalleryMedia(
         type = when (type) {
-            AttachmentSelectionType.IMAGE -> MediaContentType.IMAGE
-            AttachmentSelectionType.VIDEO -> MediaContentType.VIDEO
-            AttachmentSelectionType.FILE -> error("Files cannot be restored in the gallery picker")
+            MediaSelectionType.IMAGE -> MediaContentType.IMAGE
+            MediaSelectionType.VIDEO -> MediaContentType.VIDEO
+            MediaSelectionType.FILE -> error("Files cannot be restored in the gallery picker")
         },
         bytes = bytes,
         mimeType = mimeType,
@@ -83,13 +83,13 @@ fun AttachmentSelection.toGalleryMedia(): GalleryMedia {
     )
 }
 
-fun AttachmentSelection.toMediaItem(): MediaItem =
+fun MediaSelection.toMediaItem(): MediaItem =
     MediaItem(
         id = id,
         type = when (type) {
-            AttachmentSelectionType.IMAGE -> MediaType.IMAGE
-            AttachmentSelectionType.VIDEO -> MediaType.VIDEO
-            AttachmentSelectionType.FILE -> error("Files cannot be shown as media")
+            MediaSelectionType.IMAGE -> MediaType.IMAGE
+            MediaSelectionType.VIDEO -> MediaType.VIDEO
+            MediaSelectionType.FILE -> error("Files cannot be shown as media")
         },
         mimeType = mimeType,
         bytes = bytes,

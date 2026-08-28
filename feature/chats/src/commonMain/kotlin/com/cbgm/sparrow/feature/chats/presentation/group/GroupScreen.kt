@@ -59,16 +59,18 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMemberInvitationStatus
-import com.cbgm.sparrow.feature.chats.presentation.component.AttachmentClick
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageBubble
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageControl
+import com.cbgm.sparrow.feature.chats.presentation.component.MessageInputActions
+import com.cbgm.sparrow.feature.chats.presentation.component.MessageInputState
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
 import com.cbgm.sparrow.feature.chats.presentation.component.rememberMessageSearchTargetState
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMessageUiModel
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState
-import com.cbgm.sparrow.feature.media.presentation.model.AttachmentSelectionSource
-import com.cbgm.sparrow.feature.media.presentation.selection.rememberAttachmentSelectionLauncher
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionResult
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionSource
+import com.cbgm.sparrow.feature.media.presentation.selection.rememberMediaSelectionLauncher
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_group_accept
@@ -166,12 +168,12 @@ fun GroupScreen(
                 )
             },
             onAttachmentVisible = { attachmentId ->
-                onUiEvent(GroupUiEvent.MediaAttachmentVisible(attachmentId))
+                onUiEvent(GroupUiEvent.AttachmentVisible(attachmentId))
             },
             onAttachmentClick = { messageId, attachmentId ->
                 viewerMessageId = messageId
                 viewerAttachmentId = attachmentId
-                onUiEvent(GroupUiEvent.MediaAttachmentVisible(attachmentId))
+                onUiEvent(GroupUiEvent.AttachmentVisible(attachmentId))
             }
         )
     }
@@ -191,7 +193,7 @@ fun GroupScreen(
                 viewerAttachmentId = null
             },
             onEnsureAttachmentLoaded = { attachmentId ->
-                onUiEvent(GroupUiEvent.MediaAttachmentVisible(attachmentId))
+                onUiEvent(GroupUiEvent.AttachmentVisible(attachmentId))
             },
             onError = { error -> onUiEvent(GroupUiEvent.AttachmentError(error)) }
         )
@@ -291,63 +293,67 @@ private fun BottomBar(
             }
         )
     val maxAttachments = MessageAttachmentPolicy.MAX_ATTACHMENTS_PER_MESSAGE
-    val attachmentPicker =
-        rememberAttachmentSelectionLauncher(
+    val mediaPicker =
+        rememberMediaSelectionLauncher(
             maxItems = maxAttachments,
             maxImageDimension = MessageAttachmentPolicy.MAX_IMAGE_DIMENSION,
-            maxImageBytes = MessageAttachmentPolicy.MAX_IMAGE_BYTES.toInt(),
+            maxImageBytes = MessageAttachmentPolicy.MAX_IMAGE_BYTES,
             maxVideoBytes = MessageAttachmentPolicy.MAX_VIDEO_BYTES,
-            maxFileBytes = MessageAttachmentPolicy.MAX_FILE_BYTES,
-            selectedAttachments = uiState.selectedAttachments,
-            onAttachmentsSelected = { onUiEvent(GroupUiEvent.AttachmentsSelected(it)) },
-            onDismissed = {},
-            onError = { onUiEvent(GroupUiEvent.AttachmentError(it)) }
+            selectedMedia = uiState.selectedMedia,
+            onResult = { result ->
+                when (result) {
+                    is MediaSelectionResult.Selected -> onUiEvent(GroupUiEvent.MediaSelected(result.media))
+                    is MediaSelectionResult.Error -> onUiEvent(GroupUiEvent.AttachmentError(result.message))
+                    MediaSelectionResult.FilePickerRequested -> onUiEvent(GroupUiEvent.OpenFilePickerClicked)
+                    MediaSelectionResult.Dismissed -> Unit
+                }
+            }
         )
     val canAddAttachment =
         !uiState.isLoading &&
             !uiState.isSending &&
             !isLocationInProgress &&
             uiState.isMessageInputEnabled &&
-            uiState.selectedAttachments.size < maxAttachments
+            uiState.selectedMedia.size < maxAttachments
 
     MessageControl(
         containerColor = containerColor,
-        isTyping = uiState.isSomeoneTyping,
-        messageText = uiState.messageText,
-        contactName = uiState.typingDisplayName,
-        onValueChange = { onUiEvent(GroupUiEvent.MessageTextChanged(it)) },
-        onSendClick = { onUiEvent(GroupUiEvent.SendClicked) },
-        isInputEnabled = !uiState.isLoading && !uiState.isSending && uiState.isMessageInputEnabled,
-        isSendEnabled = !uiState.isLoading && !uiState.isSending && !isLocationInProgress && uiState.isMessageInputEnabled,
-        selectedAttachments = uiState.selectedAttachments,
-        onSelectionClick = attachmentPicker::launch,
-        onAttachmentRemove = { attachmentId ->
-            onUiEvent(
-                GroupUiEvent.AttachmentsSelected(
-                    uiState.selectedAttachments.filterNot { it.id == attachmentId }
+        state = MessageInputState(
+            messageText = uiState.messageText,
+            isTyping = uiState.isSomeoneTyping,
+            contactName = uiState.typingDisplayName,
+            isInputEnabled = !uiState.isLoading && !uiState.isSending && uiState.isMessageInputEnabled,
+            isSendEnabled = !uiState.isLoading && !uiState.isSending && !isLocationInProgress && uiState.isMessageInputEnabled,
+            isLocationInProgress = isLocationInProgress,
+            selectedMedia = uiState.selectedMedia,
+            isGalleryEnabled = canAddAttachment,
+            isCameraEnabled = canAddAttachment,
+            isFileEnabled = canAddAttachment
+        ),
+        actions = MessageInputActions(
+            onValueChange = { onUiEvent(GroupUiEvent.MessageTextChanged(it)) },
+            onSendClick = { onUiEvent(GroupUiEvent.SendClicked) },
+            onSelectionClick = mediaPicker::launch,
+            onMediaRemove = { mediaId ->
+                onUiEvent(
+                    GroupUiEvent.MediaSelected(
+                        uiState.selectedMedia.filterNot { it.id == mediaId }
+                    )
                 )
-            )
-        },
-        isGalleryEnabled = canAddAttachment,
-        isCameraEnabled = canAddAttachment,
-        isFileEnabled = canAddAttachment,
-        isLocationInProgress = isLocationInProgress,
-        onAttachmentButtonClick = { attachmentClick ->
-            when (attachmentClick) {
-                AttachmentClick.OpenGallery -> attachmentPicker.launch(AttachmentSelectionSource.GALLERY)
-                AttachmentClick.OpenCamera -> attachmentPicker.launch(AttachmentSelectionSource.CAMERA)
-                AttachmentClick.OpenFile -> attachmentPicker.launch(AttachmentSelectionSource.FILE_PICKER)
-                AttachmentClick.OpenLocation -> {
-                    if (!isLocationInProgress) {
-                        isLocationInProgress = true
-                        isWaitingForLocationSend = false
-                        hasObservedLocationSend = false
-                        currentLocationLauncher.launch()
-                    }
+            },
+            onClickGallery = { mediaPicker.launch(MediaSelectionSource.GALLERY) },
+            onClickCamera = { mediaPicker.launch(MediaSelectionSource.CAMERA) },
+            onClickFile = { mediaPicker.launch(MediaSelectionSource.FILE_PICKER) },
+            onClickContact = { /* Unit */ },
+            onClickLocation = {
+                if (!isLocationInProgress) {
+                    isLocationInProgress = true
+                    isWaitingForLocationSend = false
+                    hasObservedLocationSend = false
+                    currentLocationLauncher.launch()
                 }
-                AttachmentClick.OpenContacts -> Unit
             }
-        }
+        )
     )
 }
 
