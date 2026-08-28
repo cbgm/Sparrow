@@ -22,7 +22,6 @@ import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_contact
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import org.koin.core.parameter.parametersOf
 
 private enum class ContactDetailsContent {
     Overview,
@@ -35,12 +34,7 @@ fun ContactDetailsRoute(
     openVerification: Boolean,
     onShareContact: (Contact) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: ContactDetailsViewModel =
-        koinViewModel(
-            parameters = {
-                parametersOf(contactId)
-            }
-        )
+    viewModel: ContactDetailsViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val contentState = uiState as? ContactDetailsUiState.Content

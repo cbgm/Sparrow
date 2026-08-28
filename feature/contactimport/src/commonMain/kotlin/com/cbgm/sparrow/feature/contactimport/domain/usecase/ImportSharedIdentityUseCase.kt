@@ -3,19 +3,19 @@ package com.cbgm.sparrow.feature.contactimport.domain.usecase
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.IdentityImportTrust
 import com.cbgm.sparrow.feature.contacts.domain.model.ImportContactRequest
-import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportContactUseCase
+import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactRequest
+import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
+import com.cbgm.sparrow.feature.contacts.domain.repository.DeviceContactWriterRepository
+import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityExchangeRepository
+import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityInvitationRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityShareRepository
 
-/**
- * Decodes and imports a shared Sparrow identity.
- *
- * A phone number is mandatory because it is the stable contact,
- * conversation, and routing anchor. The contact repository then
- * merges by normalized phone number before considering public keys.
- */
 class ImportSharedIdentityUseCase(
     private val identityShareRepository: IdentityShareRepository,
-    private val importContact: ImportContactUseCase
+    private val contactRepository: ContactRepository,
+    private val identityInvitationRepository: IdentityInvitationRepository,
+    private val identityExchangeRepository: IdentityExchangeRepository,
+    private val deviceContactWriterRepository: DeviceContactWriterRepository
 ) {
     suspend operator fun invoke(
         encodedIdentity: String,
@@ -23,7 +23,10 @@ class ImportSharedIdentityUseCase(
         identityImportTrust: IdentityImportTrust = IdentityImportTrust.UNVERIFIED
     ): Result<Contact> =
         runCatching {
-            val sharedIdentity = identityShareRepository.decode(encodedIdentity).getOrThrow()
+            val sharedIdentity =
+                identityShareRepository
+                    .decode(encodedIdentity)
+                    .getOrThrow()
 
             val phoneNumber =
                 sharedIdentity
@@ -31,20 +34,49 @@ class ImportSharedIdentityUseCase(
                     .phoneNumber
                     .trim()
                     .takeIf { it.isNotEmpty() }
-                    ?: error(
-                        "Shared identity does not contain a phone number"
-                    )
+                    ?: error("Shared identity does not contain a phone number")
 
-            importContact(
-                request =
-                    ImportContactRequest(
-                        contactId = contactId,
-                        encryptionPublicKey = sharedIdentity.encryptionPublicKey.copyOf(),
-                        signingPublicKey = sharedIdentity.signingPublicKey.copyOf(),
-                        displayName = sharedIdentity.contactDetails.displayName,
-                        phoneNumber = phoneNumber,
-                        identityImportTrust = identityImportTrust
-                    )
-            ).getOrThrow()
+            val displayName =
+                sharedIdentity
+                    .contactDetails
+                    .displayName
+                    ?.trim()
+                    ?.takeIf { it.isNotEmpty() }
+
+            val persistedContact =
+                contactRepository
+                    .importContact(
+                        ImportContactRequest(
+                            contactId = contactId,
+                            encryptionPublicKey = sharedIdentity.encryptionPublicKey.copyOf(),
+                            signingPublicKey = sharedIdentity.signingPublicKey.copyOf(),
+                            displayName = displayName,
+                            phoneNumber = phoneNumber,
+                            identityImportTrust = identityImportTrust
+                        )
+                    ).getOrThrow()
+
+            identityInvitationRepository
+                .cancelForManualSetup(persistedContact.id)
+                .getOrThrow()
+
+            identityExchangeRepository
+                .startManualExchange(persistedContact.id)
+                .getOrThrow()
+
+            val importedContact =
+                contactRepository
+                    .getContact(persistedContact.id)
+                    .getOrThrow()
+                    ?: error("Imported contact could not be loaded")
+
+            deviceContactWriterRepository.addIfNotExists(
+                AddDeviceContactRequest(
+                    displayName = displayName ?: importedContact.displayName,
+                    phoneNumber = phoneNumber
+                )
+            )
+
+            importedContact
         }
 }

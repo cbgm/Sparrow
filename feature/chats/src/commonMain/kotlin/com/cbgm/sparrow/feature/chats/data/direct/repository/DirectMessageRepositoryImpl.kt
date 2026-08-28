@@ -1,25 +1,32 @@
 package com.cbgm.sparrow.feature.chats.data.direct.repository
 
-import com.cbgm.sparrow.feature.chats.data.direct.delivery.DirectMessageDeliveryCoordinator
+import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.chats.data.direct.outgoing.DirectOutgoingMessageProcessor
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectMessageRepository
 
 class DirectMessageRepositoryImpl(
-    private val outgoingMessageProcessor: DirectOutgoingMessageProcessor,
-    private val deliveryCoordinator: DirectMessageDeliveryCoordinator
+    private val outgoingMessageProcessor: DirectOutgoingMessageProcessor
 ) : DirectMessageRepository {
     override suspend fun send(
         conversationId: String,
-        text: String
-    ): Result<Unit> = outgoingMessageProcessor.send(conversationId, text)
+        text: String,
+        attachments: List<OutgoingMessageAttachment>
+    ): Result<Unit> = outgoingMessageProcessor.send(conversationId, text, attachments)
+
+    override suspend fun queueUntilAuthorized(
+        conversationId: String,
+        text: String,
+        attachments: List<OutgoingMessageAttachment>
+    ): Result<Unit> = outgoingMessageProcessor.queueUntilAuthorized(conversationId, text, attachments)
 
     override suspend fun retry(messageId: String): Result<Unit> =
         outgoingMessageProcessor.retry(messageId)
 
-    override suspend fun refreshDeliveryState(conversationId: String): Result<Unit> =
-        runCatching {
-            deliveryCoordinator.expireUnconfirmedMessages(conversationId)
-        }
+    override suspend fun releaseWaitingForAuthorization(contactId: String): Result<Unit> =
+        outgoingMessageProcessor.releaseWaitingForAuthorization(contactId)
+
+    override suspend fun discardWaitingForAuthorization(contactId: String): Result<Unit> =
+        outgoingMessageProcessor.discardWaitingForAuthorization(contactId)
 
     override suspend fun markConversationRead(conversationId: String): Result<Unit> =
         outgoingMessageProcessor.sendReadReceipts(conversationId)

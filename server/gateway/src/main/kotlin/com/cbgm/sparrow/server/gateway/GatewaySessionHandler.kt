@@ -83,40 +83,70 @@ internal class GatewaySessionHandler(
         when (message) {
             is GatewayClientMessage.Register -> handleRegistration(session, state, message)
             is GatewayClientMessage.SendEnvelope ->
-                state.connection?.let { connection ->
-                    workDispatcher.dispatch(
-                        key = "envelope:${message.envelope.recipientId}"
-                    ) {
-                        actions.sendEnvelope(connection, message)
-                    }
-                } ?: session.sendNotRegistered()
-
+                handleSendEnvelope(session, state, message, workDispatcher)
             is GatewayClientMessage.SendFederatedEnvelope ->
-                state.connection?.let { connection ->
-                    workDispatcher.dispatch(
-                        key = "envelope:${message.envelope.recipientDeviceRoutingId}"
-                    ) {
-                        actions.sendFederatedEnvelope(connection, message)
-                    }
-                } ?: session.sendNotRegistered()
-
+                handleSendFederatedEnvelope(session, state, message, workDispatcher)
             is GatewayClientMessage.TypingState ->
-                state.connection?.let { connection ->
-                    workDispatcher.dispatch(
-                        key = "typing:${message.recipientId}"
-                    ) {
-                        actions.deliverTyping(connection, message)
-                    }
-                }
-
-            is GatewayClientMessage.AcknowledgeEnvelope ->
-                state.connection?.let { connection ->
-                    pushActions.acknowledge(connection, message.envelopeId)
-                }
-
+                handleTypingState(state, message, workDispatcher)
+            is GatewayClientMessage.AcknowledgeEnvelope -> handleAcknowledge(state, message)
             is GatewayClientMessage.RefreshRoute ->
                 refreshRoute(state.connection, message.registration)
+            is GatewayClientMessage.RequestBlobUploadTicket ->
+                handleBlobUploadTicket(session, state, message)
         }
+    }
+
+    private suspend fun handleSendEnvelope(
+        session: DefaultWebSocketServerSession,
+        state: GatewaySessionState,
+        message: GatewayClientMessage.SendEnvelope,
+        workDispatcher: GatewaySessionWorkDispatcher
+    ) {
+        val connection = state.connection ?: return session.sendNotRegistered()
+        workDispatcher.dispatch(key = "envelope:${message.envelope.recipientId}") {
+            actions.sendEnvelope(connection, message)
+        }
+    }
+
+    private suspend fun handleSendFederatedEnvelope(
+        session: DefaultWebSocketServerSession,
+        state: GatewaySessionState,
+        message: GatewayClientMessage.SendFederatedEnvelope,
+        workDispatcher: GatewaySessionWorkDispatcher
+    ) {
+        val connection = state.connection ?: return session.sendNotRegistered()
+        workDispatcher.dispatch(key = "envelope:${message.envelope.recipientDeviceRoutingId}") {
+            actions.sendFederatedEnvelope(connection, message)
+        }
+    }
+
+    private fun handleTypingState(
+        state: GatewaySessionState,
+        message: GatewayClientMessage.TypingState,
+        workDispatcher: GatewaySessionWorkDispatcher
+    ) {
+        val connection = state.connection ?: return
+        workDispatcher.dispatch(key = "typing:${message.recipientId}") {
+            actions.deliverTyping(connection, message)
+        }
+    }
+
+    private fun handleAcknowledge(
+        state: GatewaySessionState,
+        message: GatewayClientMessage.AcknowledgeEnvelope
+    ) {
+        state.connection?.let { connection ->
+            pushActions.acknowledge(connection, message.envelopeId)
+        }
+    }
+
+    private suspend fun handleBlobUploadTicket(
+        session: DefaultWebSocketServerSession,
+        state: GatewaySessionState,
+        message: GatewayClientMessage.RequestBlobUploadTicket
+    ) {
+        val connection = state.connection ?: return session.sendNotRegistered()
+        actions.issueBlobUploadTicket(connection, message)
     }
 
     private suspend fun handleRegistration(
@@ -139,8 +169,8 @@ internal class GatewaySessionHandler(
         session: DefaultWebSocketServerSession,
         message: GatewayClientMessage.Register
     ): GatewayConnection? {
-        val connection = message.toConnection(session)
-        val registration = message.toRouteRegistration(connection, nodeId)
+        val connection = message.toGatewayConnection(session)
+        val registration = message.toClientRouteRegistration(connection, nodeId)
         val routeValidationFailure =
             registration?.let { currentRegistration ->
                 routeValidator.validationFailure(
@@ -212,9 +242,13 @@ internal class GatewaySessionHandler(
                 )
 
             else -> {
+                val aliases = registration.route.aliases.orEmpty()
                 connections.updateRoutingAliases(
                     connection = connection,
-                    routingAliases = registration.route.aliases.orEmpty()
+                    routingAliases = aliases
+                )
+                connection.send(
+                    GatewayServerMessage.RouteRegistered(aliases = aliases)
                 )
                 pushActions.deliverPending(connection)
             }
@@ -257,14 +291,16 @@ internal data class GatewayMessageActions(
     val sendEnvelope: suspend (GatewayConnection, GatewayClientMessage.SendEnvelope) -> Unit,
     val sendFederatedEnvelope:
         suspend (GatewayConnection, GatewayClientMessage.SendFederatedEnvelope) -> Unit,
-    val deliverTyping: suspend (GatewayConnection, GatewayClientMessage.TypingState) -> Unit
+    val deliverTyping: suspend (GatewayConnection, GatewayClientMessage.TypingState) -> Unit,
+    val issueBlobUploadTicket:
+        suspend (GatewayConnection, GatewayClientMessage.RequestBlobUploadTicket) -> Unit
 )
 
 private data class GatewaySessionState(
     var connection: GatewayConnection? = null
 )
 
-private fun GatewayClientMessage.Register.toConnection(
+private fun GatewayClientMessage.Register.toGatewayConnection(
     session: DefaultWebSocketServerSession
 ): GatewayConnection =
     GatewayConnection(
@@ -274,7 +310,7 @@ private fun GatewayClientMessage.Register.toConnection(
         session = session
     )
 
-private fun GatewayClientMessage.Register.toRouteRegistration(
+private fun GatewayClientMessage.Register.toClientRouteRegistration(
     connection: GatewayConnection,
     nodeId: String
 ): ClientRouteRegistration? {

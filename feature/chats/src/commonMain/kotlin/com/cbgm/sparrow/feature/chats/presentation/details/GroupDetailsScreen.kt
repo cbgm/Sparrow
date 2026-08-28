@@ -18,6 +18,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PersonAdd
@@ -37,6 +38,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,24 +51,40 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
+import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
-import com.cbgm.sparrow.core.ui.component.StatusBadge
+import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
+import com.cbgm.sparrow.core.ui.component.SparrowStatusBadge
+import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupAvatarUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupDetailsUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupDetailsUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupMemberVerificationState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupMemberVerificationUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupVerificationSummaryUiState
+import com.cbgm.sparrow.feature.media.presentation.avatar.AvatarEditor
+import com.cbgm.sparrow.feature.media.presentation.avatar.AvatarEditorStrings
 import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.base_verify
 import com.cbgm.sparrow.resources.base_verify_contact
+import com.cbgm.sparrow.resources.feature_attachments_media_and_files
 import com.cbgm.sparrow.resources.feature_chats_group_add_members
 import com.cbgm.sparrow.resources.feature_chats_group_admin
+import com.cbgm.sparrow.resources.feature_chats_group_avatar
+import com.cbgm.sparrow.resources.feature_chats_group_avatar_add
+import com.cbgm.sparrow.resources.feature_chats_group_avatar_change
+import com.cbgm.sparrow.resources.feature_chats_group_avatar_choose_gallery
+import com.cbgm.sparrow.resources.feature_chats_group_avatar_crop
+import com.cbgm.sparrow.resources.feature_chats_group_avatar_description
+import com.cbgm.sparrow.resources.feature_chats_group_avatar_remove
+import com.cbgm.sparrow.resources.feature_chats_group_avatar_take_photo
 import com.cbgm.sparrow.resources.feature_chats_group_details_accepted
 import com.cbgm.sparrow.resources.feature_chats_group_details_description
 import com.cbgm.sparrow.resources.feature_chats_group_details_members
@@ -91,22 +112,46 @@ fun GroupDetailsScreen(
     onUiEvent: (GroupDetailsUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    SparrowLazyScaffold(
-        modifier = modifier,
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = { containerColor ->
-            TopBar(
-                containerColor = containerColor,
-                onBack = { onUiEvent(GroupDetailsUiEvent.BackClicked) }
+    var showAvatarEditor by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        SparrowLazyScaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = MaterialTheme.colorScheme.background,
+            topBar = { containerColor ->
+                TopBar(
+                    containerColor = containerColor,
+                    onBack = { onUiEvent(GroupDetailsUiEvent.BackClicked) }
+                )
+            }
+        ) { innerPadding, listState ->
+            Content(
+                uiState = uiState,
+                innerPadding = innerPadding,
+                listState = listState,
+                onUiEvent = onUiEvent,
+                onEditGroupAvatar = { showAvatarEditor = true },
+                onRemoveGroupAvatar = { onUiEvent(GroupDetailsUiEvent.RemoveGroupAvatarClicked) }
             )
         }
-    ) { innerPadding, listState ->
-        Content(
-            uiState = uiState,
-            innerPadding = innerPadding,
-            listState = listState,
-            onUiEvent = onUiEvent
-        )
+
+        if (showAvatarEditor) {
+            AvatarEditor(
+                strings =
+                    AvatarEditorStrings(
+                        sourceTitle = stringResource(Res.string.feature_chats_group_avatar),
+                        cropTitle = stringResource(Res.string.feature_chats_group_avatar_crop),
+                        takePhoto = stringResource(Res.string.feature_chats_group_avatar_take_photo),
+                        chooseFromGallery = stringResource(Res.string.feature_chats_group_avatar_choose_gallery),
+                        cancel = stringResource(Res.string.base_cancel)
+                    ),
+                onAvatarSelected = { bytes ->
+                    showAvatarEditor = false
+                    onUiEvent(GroupDetailsUiEvent.AvatarSelected(bytes))
+                },
+                onDismiss = { showAvatarEditor = false }
+            )
+        }
     }
 }
 
@@ -128,8 +173,7 @@ private fun TopBar(
             title = {
                 Text(
                     text = stringResource(Res.string.feature_chats_group_details_title),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.titleSmall
                 )
             },
             navigationIcon = {
@@ -149,7 +193,9 @@ private fun Content(
     uiState: GroupDetailsUiState,
     innerPadding: PaddingValues,
     listState: LazyListState,
-    onUiEvent: (GroupDetailsUiEvent) -> Unit
+    onUiEvent: (GroupDetailsUiEvent) -> Unit,
+    onEditGroupAvatar: () -> Unit,
+    onRemoveGroupAvatar: () -> Unit
 ) {
     when (uiState) {
         GroupDetailsUiState.Loading ->
@@ -160,19 +206,23 @@ private fun Content(
         is GroupDetailsUiState.Content ->
             MemberList(
                 summary = uiState.summary,
+                groupAvatarState = uiState.groupAvatar,
                 innerPadding = innerPadding,
                 listState = listState,
                 onVerifyMember = { contactId ->
                     onUiEvent(GroupDetailsUiEvent.VerifyMemberClicked(contactId))
                 },
                 onAddMembers = { onUiEvent(GroupDetailsUiEvent.AddMembersClicked) },
+                onMediaAndFiles = { onUiEvent(GroupDetailsUiEvent.MediaAndFilesClicked) },
                 onRemoveMember = { contactId ->
                     onUiEvent(GroupDetailsUiEvent.RemoveMemberClicked(contactId))
                 },
                 onPromoteMember = { contactId ->
                     onUiEvent(GroupDetailsUiEvent.PromoteMemberClicked(contactId))
                 },
-                onLeaveGroup = { onUiEvent(GroupDetailsUiEvent.LeaveGroupClicked) }
+                onLeaveGroup = { onUiEvent(GroupDetailsUiEvent.LeaveGroupClicked) },
+                onEditGroupAvatar = onEditGroupAvatar,
+                onRemoveGroupAvatar = onRemoveGroupAvatar
             )
 
         is GroupDetailsUiState.Error ->
@@ -202,7 +252,7 @@ private fun Metric(
                 text = value.toString(),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = label,
@@ -247,7 +297,7 @@ private fun ErrorContentPreview() {
     SparrowTheme {
         ErrorContent(
             message = "Group details could not be loaded",
-            modifier = Modifier.padding(24.dp)
+            modifier = Modifier.padding(MaterialTheme.spacing.medium)
         )
     }
 }
@@ -258,7 +308,7 @@ private fun LoadingContent(modifier: Modifier = Modifier) {
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
-        CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -266,7 +316,7 @@ private fun LoadingContent(modifier: Modifier = Modifier) {
 @Composable
 private fun LoadingContentPreview() {
     SparrowTheme {
-        LoadingContent(modifier = Modifier.size(160.dp))
+        LoadingContent(modifier = Modifier.size(Dimens.GroupDetailsScreen.loadingSize))
     }
 }
 
@@ -323,13 +373,101 @@ private fun SummaryPreview() {
 }
 
 @Composable
+private fun GroupAvatarSection(
+    state: GroupAvatarUiState,
+    onEdit: () -> Unit,
+    onRemove: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier.padding(top = MaterialTheme.spacing.small),
+            contentAlignment = Alignment.Center
+        ) {
+            SparrowAvatar(
+                name = state.title,
+                pictureBytes = state.avatarBytes,
+                size = Dimens.GroupDetailsScreen.avatarSize
+            )
+            if (state.isSaving) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(Dimens.GroupDetailsScreen.avatarProgressSize),
+                    strokeWidth = Dimens.GroupDetailsScreen.avatarProgressStrokeWidth
+                )
+            }
+        }
+
+        Text(
+            text = stringResource(Res.string.feature_chats_group_avatar_description),
+            modifier = Modifier.padding(top = MaterialTheme.spacing.small),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+
+        if (state.canEdit) {
+            SparrowSecondaryButton(
+                onClick = onEdit,
+                enabled = !state.isSaving,
+                modifier = Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.medium),
+                text =
+                    stringResource(
+                        if (state.avatarBytes != null) {
+                            Res.string.feature_chats_group_avatar_change
+                        } else {
+                            Res.string.feature_chats_group_avatar_add
+                        }
+                    )
+            )
+
+            if (state.avatarBytes != null) {
+                SparrowOutlinedButton(
+                    onClick = onRemove,
+                    enabled = !state.isSaving,
+                    modifier = Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.small),
+                    text = stringResource(Res.string.feature_chats_group_avatar_remove)
+                )
+            }
+        }
+
+        state.errorMessage?.let { error ->
+            Text(
+                text = error,
+                modifier = Modifier.padding(top = MaterialTheme.spacing.small),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun GroupAvatarSectionPreview() {
+    SparrowTheme {
+        GroupAvatarSection(
+            state = GroupAvatarUiState(title = "Sparrow Team", canEdit = true),
+            onEdit = {},
+            onRemove = {}
+        )
+    }
+}
+
+@Composable
 private fun MemberList(
     summary: GroupVerificationSummaryUiState,
+    groupAvatarState: GroupAvatarUiState,
     onVerifyMember: (String) -> Unit,
     onAddMembers: () -> Unit,
+    onMediaAndFiles: () -> Unit,
     onRemoveMember: (String) -> Unit,
     onPromoteMember: (String) -> Unit,
     onLeaveGroup: () -> Unit,
+    onEditGroupAvatar: () -> Unit,
+    onRemoveGroupAvatar: () -> Unit,
     innerPadding: PaddingValues,
     listState: LazyListState
 ) {
@@ -347,6 +485,14 @@ private fun MemberList(
             ),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
     ) {
+        item(key = "group-avatar") {
+            GroupAvatarSection(
+                state = groupAvatarState,
+                onEdit = onEditGroupAvatar,
+                onRemove = onRemoveGroupAvatar
+            )
+        }
+
         if (!summary.isLocalAdmin && admin != null && admin.canVerify) {
             item(key = "verify-group-admin") {
                 AdminVerificationCard(
@@ -360,6 +506,20 @@ private fun MemberList(
 
         item(key = "summary") {
             Summary(summary = summary)
+        }
+
+        item(key = "media-and-files") {
+            SparrowOutlinedButton(
+                onClick = onMediaAndFiles,
+                modifier = Modifier.fillMaxWidth(),
+                content = {
+                    Icon(Icons.Default.Folder, contentDescription = null)
+                    Text(
+                        text = stringResource(Res.string.feature_attachments_media_and_files),
+                        modifier = Modifier.padding(start = MaterialTheme.spacing.small)
+                    )
+                }
+            )
         }
 
         if (summary.isLocalAdmin) {
@@ -390,11 +550,15 @@ private fun MemberListPreview() {
     SparrowTheme {
         MemberList(
             summary = GroupDetailsPreviewData.summary,
+            groupAvatarState = GroupAvatarUiState(title = "Sparrow Team", canEdit = true),
             onVerifyMember = {},
             onAddMembers = {},
+            onMediaAndFiles = {},
             onRemoveMember = {},
             onPromoteMember = {},
             onLeaveGroup = {},
+            onEditGroupAvatar = {},
+            onRemoveGroupAvatar = {},
             innerPadding = PaddingValues(),
             listState = rememberLazyListState()
         )
@@ -444,7 +608,7 @@ private fun MemberRow(
             ?: stringResource(Res.string.feature_chats_group_admin)
     val verifyDescription = stringResource(Res.string.base_verify_contact, displayName)
 
-    Column(modifier = Modifier.fillMaxWidth().padding(0.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacing.zero)) {
         ListItem(
             modifier =
                 Modifier
@@ -465,7 +629,7 @@ private fun MemberRow(
                     imageVector = member.verificationStatusIcon(),
                     contentDescription = null,
                     tint = statusColor,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(Dimens.GroupDetailsScreen.sectionIconSize)
                 )
             },
             headlineContent = {
@@ -475,7 +639,7 @@ private fun MemberRow(
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
             supportingContent = {
@@ -484,7 +648,7 @@ private fun MemberRow(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.74f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText)
                 )
             },
             trailingContent = {
@@ -492,7 +656,7 @@ private fun MemberRow(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (showVerifyAction) {
-                        StatusBadge(
+                        SparrowStatusBadge(
                             text = stringResource(Res.string.base_verify),
                             icon = Icons.Default.Verified,
                             color = statusColor
@@ -504,7 +668,7 @@ private fun MemberRow(
                                 imageVector = Icons.Default.Verified,
                                 contentDescription =
                                     stringResource(Res.string.feature_chats_group_promote_admin),
-                                tint = MaterialTheme.colorScheme.secondary
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
@@ -528,11 +692,10 @@ private fun MemberRow(
 
         if (showDivider) {
             HorizontalDivider(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(start = 80.dp),
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.05f)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = MaterialTheme.spacing.listDividerStart),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
             )
         }
     }
@@ -577,11 +740,11 @@ private fun GroupMemberVerificationUiState.verificationStatusColor(): Color =
                 MaterialTheme.colorScheme.onSurfaceVariant
 
             GroupMemberVerificationState.MUTUALLY_VERIFIED ->
-                MaterialTheme.colorScheme.secondary
+                MaterialTheme.colorScheme.tertiary
 
             GroupMemberVerificationState.ADMIN_VERIFIED_PARTICIPANT,
             GroupMemberVerificationState.PARTICIPANT_VERIFIED_ADMIN ->
-                MaterialTheme.colorScheme.secondary.copy(alpha = 0.73f)
+                MaterialTheme.colorScheme.secondary.copy(alpha = Alpha.GroupDetailsScreen.adminIcon)
 
             GroupMemberVerificationState.UNVERIFIED,
             GroupMemberVerificationState.UNAVAILABLE ->
@@ -642,15 +805,15 @@ private fun MembersCard(
                 ),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.74f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
         )
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.small,
-            color = MaterialTheme.colorScheme.primaryContainer,
-            tonalElevation = 2.dp,
-            shadowElevation = 1.dp
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            tonalElevation = Dimens.Card.tonalElevation,
+            shadowElevation = Dimens.Card.shadowElevation
         ) {
             Column {
                 summary.members.forEachIndexed { index, member ->
@@ -735,7 +898,7 @@ private fun AdminVerificationCard(
                 text = stringResource(Res.string.feature_chats_group_verify_admin_title),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = stringResource(Res.string.feature_chats_group_verify_admin_description),
@@ -746,7 +909,7 @@ private fun AdminVerificationCard(
             Text(
                 text = admin.verificationStatusText(),
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.74f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
                 modifier =
                     Modifier

@@ -21,10 +21,14 @@ federated Kotlin/Docker server stack.
 5. [Using the Android app](getting-started/using-app.md)
 6. [Local development on Windows/macOS](development/local-development.md)
 7. [Current feature status](features/current-features.md)
-8. [Server overview](server/overview.md)
-9. [Architecture overview](architecture/overview.md)
-10. [Conversation, messaging and delivery flow](features/message-transport-flow.md)
-11. [Security overview](security/overview.md)
+8. [Attachments](features/attachments.md)
+9. [Message search](features/search.md)
+10. [Message safety](features/message-safety.md)
+11. [Settings and diagnostics](features/settings.md)
+12. [Server overview](server/overview.md)
+13. [Architecture overview](architecture/overview.md)
+14. [Conversation, messaging and delivery flow](features/message-transport-flow.md)
+15. [Security overview](security/overview.md)
 
 ## Operator shortcuts
 
@@ -40,7 +44,7 @@ Those pages use relative links and therefore work in LAN and public deployments.
 - **Why Sparrow?** — the federated design, Tor comparison, and where the security model differs from Signal/WhatsApp.
 - **Getting Started** — prerequisites, first build, project structure, development flow.
 - **Architecture** — Clean Architecture rules, module boundaries, Direct/Group separation.
-- **Features** — current Android functionality and exact implementation classes.
+- **Features** — current Android functionality, attachments/media, local message search, message safety and implementation classes.
 - **Transport & API** — Control Plane discovery, node failover, WebSocket frames and packets.
 - **Security** — identity, encryption, safety numbers, server trust and threat model.
 - **Server & Operations** — Control Plane/Community Node, Docker, Caddy, Redis/PostgreSQL, launchers.

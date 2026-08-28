@@ -32,9 +32,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import com.cbgm.sparrow.core.ui.component.ContactAvatar
+import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
@@ -65,8 +66,7 @@ fun BlockedContactsScreen(
                 title = {
                     Text(
                         text = stringResource(Res.string.feature_contacts_blocked_contacts_title),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.titleSmall
                     )
                 },
                 navigationIcon = {
@@ -103,13 +103,13 @@ fun BlockedContactsScreen(
                     Icon(
                         imageVector = Icons.Default.Block,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f),
-                        modifier = Modifier.size(40.dp)
+                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.BlockedContactsScreen.icon),
+                        modifier = Modifier.size(Dimens.BlockedContactsScreen.avatarSize)
                     )
                     Text(
                         text = stringResource(Res.string.feature_contacts_blocked_contacts_empty),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
                     )
                 }
             } else {
@@ -128,6 +128,7 @@ fun BlockedContactsScreen(
                     ) { contact ->
                         BlockedContactRow(
                             contact = contact,
+                            profilePictureBytes = uiState.profilePictures[contact.id],
                             enabled = uiState.processingContactId == null,
                             onUnblock = { onUiEvent(BlockedContactsUiEvent.UnblockContactClicked(contact.id)) }
                         )
@@ -136,8 +137,8 @@ fun BlockedContactsScreen(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
-                                    .padding(start = 80.dp),
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.05f)
+                                    .padding(start = MaterialTheme.spacing.listDividerStart),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
                         )
                     }
                 }
@@ -145,8 +146,8 @@ fun BlockedContactsScreen(
 
             FloatingActionButton(
                 onClick = { onUiEvent(BlockedContactsUiEvent.AddContactClicked) },
-                containerColor = MaterialTheme.colorScheme.secondary,
-                contentColor = MaterialTheme.colorScheme.background,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
                 modifier =
                     Modifier
                         .padding(MaterialTheme.spacing.screenPadding)
@@ -165,6 +166,7 @@ fun BlockedContactsScreen(
             phoneNumber = uiState.phoneNumber,
             phoneNumberError = uiState.phoneNumberError,
             contacts = uiState.availableContacts,
+            profilePictures = uiState.profilePictures,
             enabled = uiState.processingContactId == null,
             onPhoneNumberChanged = { value ->
                 onUiEvent(BlockedContactsUiEvent.PhoneNumberChanged(value))
@@ -181,14 +183,16 @@ fun BlockedContactsScreen(
 @Composable
 private fun BlockedContactRow(
     contact: Contact,
+    profilePictureBytes: ByteArray?,
     enabled: Boolean,
     onUnblock: () -> Unit
 ) {
     Column {
         ListItem(
             leadingContent = {
-                ContactAvatar(
-                    name = contact.displayName ?: contact.preferredPhoneNumber?.value ?: "?"
+                SparrowAvatar(
+                    name = contact.displayName ?: contact.preferredPhoneNumber?.value ?: "?",
+                    pictureBytes = profilePictureBytes
                 )
             },
             headlineContent = {

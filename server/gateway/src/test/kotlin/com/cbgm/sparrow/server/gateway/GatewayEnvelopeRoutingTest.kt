@@ -178,6 +178,28 @@ class GatewayEnvelopeRoutingTest {
         }
 
     @Test
+    fun serverAssignsDeliveryDeadlineForEstablishedRecipient() {
+        val now = 10_000L
+        val envelope =
+            testTransportEnvelope()
+                .copy(recipientId = "scrouting1_recipient")
+                .toFederatedEnvelope(nowEpochMilliseconds = now)
+
+        assertEquals(now + 7L * 24L * 60L * 60L * 1_000L, envelope.expiresAtEpochMilliseconds)
+    }
+
+    @Test
+    fun serverAssignsShorterDeliveryDeadlineForBootstrapRecipient() {
+        val now = 10_000L
+        val envelope =
+            testTransportEnvelope()
+                .copy(recipientId = "scphone1_recipient")
+                .toFederatedEnvelope(nowEpochMilliseconds = now)
+
+        assertEquals(now + 24L * 60L * 60L * 1_000L, envelope.expiresAtEpochMilliseconds)
+    }
+
+    @Test
     fun remoteTypingEventIsPassedToFederation() =
         runTest {
             var routedEvent: FederatedTypingEvent? = null

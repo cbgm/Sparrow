@@ -1,0 +1,22 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# Downloaded / generated data. Do not commit public corpora or model outputs.
+data/raw/
+data/processed/
+data/labels/
+data/annotations/*.csv
+data/embeddings/
+artifacts/
+
+# Keep source metadata, licenses and curated seed data.
+!data/seed/
+!data/seed/**
+!data/licenses/
+!data/licenses/**
+
+# Large runtime embedding model; keep its metadata/hash, not the model bytes.
+models/*.task
+models/*.part

@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.contacts.presentation.overview.mapper
 
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactGroupEntity
+import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsUiState
 
 fun List<Contact>.filterContacts(query: String): List<Contact> {
     val trimmedQuery = query.trim()
@@ -45,3 +46,25 @@ fun List<Contact>.groupContactsByInitial(): List<ContactGroupEntity> =
             contacts = contacts
         )
     }
+
+internal fun List<Contact>.toContactsUiState(
+    query: String,
+    profilePictures: Map<String, ByteArray?>
+): ContactsUiState {
+    val filteredContacts = filterContacts(query)
+    return when {
+        isEmpty() -> ContactsUiState.Empty(searchQuery = query)
+        filteredContacts.isEmpty() ->
+            ContactsUiState.Content(
+                groups = emptyList(),
+                profilePictures = profilePictures,
+                searchQuery = query
+            )
+        else ->
+            ContactsUiState.Content(
+                groups = filteredContacts.groupContactsByInitial(),
+                profilePictures = profilePictures,
+                searchQuery = query
+            )
+    }
+}

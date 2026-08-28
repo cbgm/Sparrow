@@ -48,17 +48,23 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(projects.core)
+            implementation(projects.data.datastore)
+            implementation(projects.core.embedding)
             implementation(projects.core.crypto)
             implementation(projects.core.protocol)
             implementation(projects.core.ui)
             implementation(projects.navigation)
             implementation(projects.feature.chats)
+            implementation(projects.feature.attachments)
             implementation(projects.feature.contactimport)
             implementation(projects.feature.contacts)
             implementation(projects.feature.identity)
+            implementation(projects.feature.media)
             implementation(projects.feature.messaging)
             implementation(projects.feature.onboarding)
             implementation(projects.feature.settings)
+            implementation(projects.feature.search)
+            implementation(projects.feature.safety)
             implementation(projects.feature.transport)
             implementation(projects.notification)
             implementation(projects.startup)
@@ -69,7 +75,6 @@ kotlin {
             implementation(libs.bundles.serialization)
 
             implementation(libs.jetbrains.navigation.compose)
-            implementation(compose.materialIconsExtended)
         }
 
         androidMain.dependencies {

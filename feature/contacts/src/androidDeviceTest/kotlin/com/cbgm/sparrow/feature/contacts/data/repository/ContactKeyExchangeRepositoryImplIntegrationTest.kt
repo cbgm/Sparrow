@@ -6,6 +6,7 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import com.cbgm.sparrow.data.database.SparrowDatabase
 import com.cbgm.sparrow.data.database.entity.ContactEntity
+import com.cbgm.sparrow.feature.contacts.data.datasource.ContactKeyExchangeDataSource
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
@@ -32,7 +33,7 @@ class ContactKeyExchangeRepositoryImplIntegrationTest {
                 .setDriver(BundledSQLiteDriver())
                 .setQueryCoroutineContext(Dispatchers.IO)
                 .build()
-        store = ContactKeyExchangeRepositoryImpl(database.contactDao())
+        store = ContactKeyExchangeRepositoryImpl(ContactKeyExchangeDataSource(database.contactDao()))
     }
 
     @AfterTest

@@ -16,17 +16,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.extensions.toHexString
+import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-
-private val Field = Color(0xFF102A46)
 
 @Composable
 fun PublicKeySection(
@@ -40,16 +38,16 @@ fun PublicKeySection(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                modifier = Modifier.size(16.dp)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText),
+                modifier = Modifier.size(Dimens.IdentityScreen.publicKeyIconSize)
             )
 
             Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
 
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.SemiBold
             )
         }
@@ -59,7 +57,7 @@ fun PublicKeySection(
         Text(
             text = description,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.base))
@@ -70,11 +68,11 @@ fun PublicKeySection(
                 Modifier
                     .fillMaxWidth()
                     .background(
-                        color = Field,
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
                         shape = MaterialTheme.shapes.medium
                     ).padding(MaterialTheme.spacing.base),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = Alpha.IdentityScreen.publicKeyValue),
             fontFamily = FontFamily.Monospace
         )
     }

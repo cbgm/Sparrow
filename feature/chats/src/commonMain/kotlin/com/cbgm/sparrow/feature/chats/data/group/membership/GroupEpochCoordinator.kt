@@ -10,7 +10,7 @@ import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_MEMBER_ROLE
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_OWNER_ROLE
 import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
-import com.cbgm.sparrow.feature.chats.data.group.security.GroupWelcomeRecipient
+import com.cbgm.sparrow.feature.chats.data.group.security.GroupWelcomeRecipientDto
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 
 internal class GroupEpochCoordinator(
@@ -99,11 +99,11 @@ internal class GroupEpochCoordinator(
     suspend fun createRecipients(
         groupId: String,
         contacts: List<Contact>
-    ): List<GroupWelcomeRecipient> =
+    ): List<GroupWelcomeRecipientDto> =
         contacts.map { contact ->
             val invitation = groupInvitationDao.findByGroupAndContact(groupId, contact.id)
             val member = resolveMemberIdentity(groupId, contact)
-            GroupWelcomeRecipient(
+            GroupWelcomeRecipientDto(
                 contactId = contact.id,
                 invitationId = invitation?.invitationId ?: "member-${contact.id}",
                 encryptionPublicKey = member.encryptionPublicKey.copyOf()
@@ -113,10 +113,10 @@ internal class GroupEpochCoordinator(
     private suspend fun resolveMemberIdentity(
         groupId: String,
         contact: Contact
-    ): MemberIdentity {
+    ): MemberIdentityDto {
         val currentMemberKey = currentMemberKey(groupId, contact.id)
         if (currentMemberKey != null) {
-            return MemberIdentity(
+            return MemberIdentityDto(
                 encryptionPublicKey = currentMemberKey.encryptionPublicKey,
                 signingPublicKey = currentMemberKey.signingPublicKey,
                 role = currentMemberKey.role
@@ -127,7 +127,7 @@ internal class GroupEpochCoordinator(
             requireNotNull(contact.sparrowIdentity) {
                 "New group member has no accepted Sparrow identity"
             }
-        return MemberIdentity(
+        return MemberIdentityDto(
             encryptionPublicKey = contactIdentity.encryptionPublicKey,
             signingPublicKey = contactIdentity.signingPublicKey,
             role = GROUP_MEMBER_ROLE
@@ -144,9 +144,29 @@ internal class GroupEpochCoordinator(
                 contactId = contactId
             ).getOrNull()
 
-    private data class MemberIdentity(
+    private data class MemberIdentityDto(
         val encryptionPublicKey: ByteArray,
         val signingPublicKey: ByteArray,
         val role: String
-    )
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as MemberIdentityDto
+
+            if (!encryptionPublicKey.contentEquals(other.encryptionPublicKey)) return false
+            if (!signingPublicKey.contentEquals(other.signingPublicKey)) return false
+            if (role != other.role) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = encryptionPublicKey.contentHashCode()
+            result = 31 * result + signingPublicKey.contentHashCode()
+            result = 31 * result + role.hashCode()
+            return result
+        }
+    }
 }

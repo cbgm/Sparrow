@@ -8,9 +8,9 @@ import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
-import com.cbgm.sparrow.data.database.model.ConversationSummary
-import com.cbgm.sparrow.data.database.model.ConversationWithMessages
-import com.cbgm.sparrow.data.database.model.UnreadIncomingMessage
+import com.cbgm.sparrow.data.database.model.ConversationSummaryDto
+import com.cbgm.sparrow.data.database.model.ConversationWithMessagesDto
+import com.cbgm.sparrow.data.database.model.UnreadIncomingMessageDto
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -111,7 +111,7 @@ interface ChatDao {
 
     @Transaction
     @Query("SELECT * FROM conversations WHERE id = :conversationId LIMIT 1")
-    fun observeConversationWithMessagesById(conversationId: String): Flow<ConversationWithMessages?>
+    fun observeConversationWithMessagesById(conversationId: String): Flow<ConversationWithMessagesDto?>
 
     /*
      * observeConversationWithMessagesById() loads the *entire* message
@@ -186,6 +186,66 @@ interface ChatDao {
     @Upsert
     suspend fun upsertMessage(message: MessageEntity)
 
+    @Query(
+        """
+        SELECT messages.*
+        FROM messages
+        INNER JOIN conversations ON conversations.id = messages.conversationId
+        WHERE conversations.type = 'DIRECT'
+          AND conversations.contactId = :contactId
+          AND messages.isMine = 1
+          AND messages.deliveryStatus = :deliveryStatus
+        ORDER BY messages.createdAtEpochMilliseconds ASC, messages.id ASC
+        """
+    )
+    suspend fun findDirectMessagesByContactAndDeliveryStatus(
+        contactId: String,
+        deliveryStatus: String
+    ): List<MessageEntity>
+
+    @Query(
+        """
+        SELECT messages.*
+        FROM messages
+        INNER JOIN conversations ON conversations.id = messages.conversationId
+        WHERE conversations.type = 'DIRECT'
+          AND messages.isMine = 1
+          AND messages.deliveryStatus = :deliveryStatus
+        ORDER BY messages.createdAtEpochMilliseconds ASC, messages.id ASC
+        """
+    )
+    fun observeDirectMessagesByDeliveryStatus(deliveryStatus: String): Flow<List<MessageEntity>>
+
+    @Query("DELETE FROM messages WHERE id IN (:messageIds)")
+    suspend fun deleteMessagesByIds(messageIds: List<String>)
+
+    @Query(
+        """
+        UPDATE conversations
+        SET updatedAtEpochMilliseconds = COALESCE(
+            (
+                SELECT MAX(messages.createdAtEpochMilliseconds)
+                FROM messages
+                WHERE messages.conversationId = :conversationId
+            ),
+            createdAtEpochMilliseconds
+        )
+        WHERE id = :conversationId
+        """
+    )
+    suspend fun refreshConversationTimestampFromMessages(conversationId: String)
+
+    @Transaction
+    suspend fun deleteMessagesAndRefreshConversations(messages: List<MessageEntity>) {
+        if (messages.isEmpty()) return
+
+        deleteMessagesByIds(messages.map(MessageEntity::id))
+        messages
+            .map(MessageEntity::conversationId)
+            .distinct()
+            .forEach { conversationId -> refreshConversationTimestampFromMessages(conversationId) }
+    }
+
     @Upsert
     suspend fun upsertMessageRecipientStates(states: List<MessageRecipientStateEntity>)
 
@@ -249,7 +309,7 @@ interface ChatDao {
         LIMIT 1
         """
     )
-    fun observeConversationByContactId(contactId: String): Flow<ConversationWithMessages?>
+    fun observeConversationByContactId(contactId: String): Flow<ConversationWithMessagesDto?>
 
     @Query(
         """
@@ -293,27 +353,11 @@ interface ChatDao {
     LEFT JOIN contacts ON contacts.id = conversations.contactId
     WHERE (
         conversations.type = 'GROUP'
+        OR conversations.type = 'DIRECT'
         OR EXISTS (
             SELECT 1
             FROM messages
             WHERE messages.conversationId = conversations.id
-        )
-        OR (
-            conversations.type = 'DIRECT'
-            AND conversations.contactId IS NOT NULL
-            AND (
-                SELECT identity_invitations.state
-                FROM identity_invitations
-                WHERE identity_invitations.contactId = conversations.contactId
-                  AND identity_invitations.state IN (
-                      :directChatAuthorizedState,
-                      :directChatDeletedState
-                  )
-                ORDER BY
-                    identity_invitations.updatedAtEpochMilliseconds DESC,
-                    identity_invitations.createdAtEpochMilliseconds DESC
-                LIMIT 1
-            ) = :directChatAuthorizedState
         )
     )
       AND NOT EXISTS (
@@ -327,10 +371,8 @@ interface ChatDao {
     )
     fun observeConversationSummaries(
         localDeletionTransportMode: String,
-        localMembershipStartedTransportMode: String,
-        directChatAuthorizedState: String,
-        directChatDeletedState: String
-    ): Flow<List<ConversationSummary>>
+        localMembershipStartedTransportMode: String
+    ): Flow<List<ConversationSummaryDto>>
 
     @Query("DELETE FROM messages WHERE conversationId = :conversationId")
     suspend fun deleteConversationMessages(conversationId: String)
@@ -401,7 +443,7 @@ interface ChatDao {
     ORDER BY messages.createdAtEpochMilliseconds ASC
     """
     )
-    suspend fun findMessagesAwaitingReadReceipt(conversationId: String): List<UnreadIncomingMessage>
+    suspend fun findMessagesAwaitingReadReceipt(conversationId: String): List<UnreadIncomingMessageDto>
 
     @Query(
         """

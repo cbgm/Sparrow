@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -23,11 +24,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.crypto.safety.SafetyNumber
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
+import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_share_contact
+import com.cbgm.sparrow.resources.feature_attachments_media_and_files
 import com.cbgm.sparrow.resources.feature_contacts_share_contact_missing_keys
 import org.jetbrains.compose.resources.stringResource
 
@@ -35,11 +39,13 @@ import org.jetbrains.compose.resources.stringResource
 internal fun ContactDetailsContent(
     contact: Contact,
     safetyNumber: SafetyNumber?,
+    modifier: Modifier = Modifier,
+    profilePictureBytes: ByteArray? = null,
     onShareContact: () -> Unit,
     onVerifyIdentity: () -> Unit,
+    onMediaAndFiles: () -> Unit,
     scrollState: ScrollState,
-    innerPadding: PaddingValues,
-    modifier: Modifier = Modifier
+    innerPadding: PaddingValues
 ) {
     Column(
         modifier =
@@ -53,7 +59,7 @@ internal fun ContactDetailsContent(
                 ),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
     ) {
-        ContactHeader(contact = contact)
+        ContactHeader(contact = contact, profilePictureBytes = profilePictureBytes)
 
         SparrowApprovalButton(
             onClick = onShareContact,
@@ -62,12 +68,28 @@ internal fun ContactDetailsContent(
                 Icon(
                     imageVector = Icons.Default.Share,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onBackground
+                    tint = MaterialTheme.colorScheme.onPrimary
                 )
                 Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
                 Text(
                     text = stringResource(Res.string.base_share_contact),
-                    color = MaterialTheme.colorScheme.onBackground,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        )
+
+        SparrowOutlinedButton(
+            onClick = onMediaAndFiles,
+            modifier = Modifier.fillMaxWidth(),
+            content = {
+                Icon(
+                    imageVector = Icons.Default.Folder,
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
+                Text(
+                    text = stringResource(Res.string.feature_attachments_media_and_files),
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -77,7 +99,7 @@ internal fun ContactDetailsContent(
             Text(
                 text = stringResource(Res.string.feature_contacts_share_contact_missing_keys),
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -120,6 +142,7 @@ private fun ContactDetailsContentPreview() {
             safetyNumber = ContactDetailsPreviewData.safetyNumber,
             onShareContact = {},
             onVerifyIdentity = {},
+            onMediaAndFiles = {},
             scrollState = rememberScrollState(),
             innerPadding = PaddingValues(),
             modifier = Modifier.fillMaxSize()

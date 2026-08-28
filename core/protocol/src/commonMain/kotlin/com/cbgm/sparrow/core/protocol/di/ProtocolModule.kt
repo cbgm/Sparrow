@@ -6,6 +6,7 @@ import com.cbgm.sparrow.core.protocol.codec.createProtocolJson
 import com.cbgm.sparrow.core.protocol.handler.DefaultProtocolPacketHandler
 import com.cbgm.sparrow.core.protocol.handler.ProtocolPacketHandler
 import com.cbgm.sparrow.core.protocol.handler.TypedProtocolPacketHandler
+import com.cbgm.sparrow.core.protocol.message.GroupMessageContentCodec
 import com.cbgm.sparrow.core.protocol.phone.DefaultPhoneNumberNormalizer
 import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
 import kotlinx.serialization.json.Json
@@ -16,6 +17,10 @@ val protocolModule =
 
         single<Json> {
             createProtocolJson()
+        }
+
+        single {
+            GroupMessageContentCodec(json = get())
         }
 
         single<PacketCodec> {

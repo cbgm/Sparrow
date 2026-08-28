@@ -1,12 +1,10 @@
 package com.cbgm.sparrow.feature.contacts.presentation.details
 
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.crypto.safety.SafetyNumber
-import com.cbgm.sparrow.core.ui.component.PatternBackground
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
@@ -42,13 +40,7 @@ fun ContactDetailsScreen(
 
     SparrowScrollScaffold(
         modifier = modifier,
-        background = {
-            PatternBackground(
-                modifier = Modifier.fillMaxSize(),
-                backgroundColor = MaterialTheme.colorScheme.background,
-                alpha = 0.04f
-            )
-        },
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = { containerColor ->
             ContactDetailsTopBar(
                 title = title,
@@ -64,7 +56,8 @@ fun ContactDetailsScreen(
             onBack = { onUiEvent(ContactDetailsUiEvent.BackClicked) },
             onRetry = { onUiEvent(ContactDetailsUiEvent.RetryClicked) },
             onShareContact = { onUiEvent(ContactDetailsUiEvent.ShareContactClicked) },
-            onVerifyIdentity = { onUiEvent(ContactDetailsUiEvent.VerifyIdentityClicked) }
+            onVerifyIdentity = { onUiEvent(ContactDetailsUiEvent.VerifyIdentityClicked) },
+            onMediaAndFiles = { onUiEvent(ContactDetailsUiEvent.MediaAndFilesClicked) }
         )
     }
 }

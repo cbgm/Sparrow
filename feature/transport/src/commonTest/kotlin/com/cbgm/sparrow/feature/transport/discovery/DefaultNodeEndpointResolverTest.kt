@@ -307,6 +307,7 @@ class DefaultNodeEndpointResolverTest {
                         ),
                     controlPlaneConfiguration = configuration,
                     controlPlaneStatusStore = configuration,
+                    endpointSelector = NodeEndpointSelector(config = TransportConfig()),
                     now = { NOW }
                 )
 
@@ -342,6 +343,7 @@ class DefaultNodeEndpointResolverTest {
                 ),
             controlPlaneConfiguration = controlPlanes,
             controlPlaneStatusStore = controlPlanes,
+            endpointSelector = NodeEndpointSelector(config = TransportConfig()),
             now = now
         )
     }

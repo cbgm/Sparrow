@@ -1,15 +1,17 @@
 package com.cbgm.sparrow.feature.chats.presentation.verification
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.extensions.toFingerprint
+import com.cbgm.sparrow.core.ui.navigation.AppRoute
+import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.VerifyGroupMemberUseCase
+import com.cbgm.sparrow.feature.chats.presentation.verification.mapper.toScannedIdentityPreview
 import com.cbgm.sparrow.feature.chats.presentation.verification.model.GroupMemberQrVerificationError
 import com.cbgm.sparrow.feature.chats.presentation.verification.model.GroupMemberQrVerificationUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.verification.model.GroupMemberQrVerificationUiState
 import com.cbgm.sparrow.feature.contactimport.presentation.scan.model.ScannedIdentityPreview
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
-import com.cbgm.sparrow.feature.identity.domain.model.SharedIdentityPayload
 import com.cbgm.sparrow.feature.identity.domain.usecase.DecodeSharedIdentityUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,12 +20,15 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class GroupMemberQrVerificationViewModel(
-    private val groupId: String,
-    private val contactId: String,
+    savedStateHandle: SavedStateHandle,
     private val decodeSharedIdentity: DecodeSharedIdentityUseCase,
     private val getContact: GetContactUseCase,
     private val verifyGroupMember: VerifyGroupMemberUseCase
 ) : BaseViewModel() {
+    private val groupId =
+        savedStateHandle.requireRouteArgument<String>(AppRoute.VerifyIdentityQr::groupId.name)
+    private val contactId =
+        savedStateHandle.requireRouteArgument<String>(AppRoute.VerifyIdentityQr::contactId.name)
     private val _uiState = MutableStateFlow(GroupMemberQrVerificationUiState())
     val uiState: StateFlow<GroupMemberQrVerificationUiState> = _uiState.asStateFlow()
 
@@ -138,19 +143,10 @@ class GroupMemberQrVerificationViewModel(
             return null
         }
 
-        return scannedIdentity.toPreview(encodedIdentity)
+        return scannedIdentity.toScannedIdentityPreview(encodedIdentity)
     }
 
     private fun setError(error: GroupMemberQrVerificationError) {
         _uiState.update { state -> state.copy(error = error) }
     }
 }
-
-private fun SharedIdentityPayload.toPreview(encodedIdentity: String): ScannedIdentityPreview =
-    ScannedIdentityPreview(
-        encodedIdentity = encodedIdentity,
-        displayName = contactDetails.displayName,
-        phoneNumber = contactDetails.phoneNumber,
-        signingKeyFingerprint = signingPublicKey.toFingerprint(),
-        encryptionKeyFingerprint = encryptionPublicKey.toFingerprint()
-    )

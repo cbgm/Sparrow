@@ -1,10 +1,9 @@
 package com.cbgm.sparrow.feature.contacts.presentation.overview.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -23,9 +22,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.component.SparrowSearchField
+import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_group_name
+import com.cbgm.sparrow.resources.feature_contacts_search_placholder
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,7 +47,7 @@ fun GroupSelectionContactsTopBar(
 ) {
     Column {
         CenterAlignedTopAppBar(
-            windowInsets = WindowInsets(0.dp),
+            windowInsets = WindowInsets(MaterialTheme.spacing.zero),
             colors =
                 TopAppBarDefaults.topAppBarColors(
                     containerColor = containerColor,
@@ -57,7 +61,7 @@ fun GroupSelectionContactsTopBar(
                     value = title,
                     onValueChange = onTitleChanged,
                     modifier = Modifier.fillMaxWidth(),
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                    textStyle = MaterialTheme.typography.titleSmall,
                     placeholder = {
                         Text(
                             text = stringResource(Res.string.feature_chats_group_name),
@@ -74,9 +78,9 @@ fun GroupSelectionContactsTopBar(
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent,
-                            cursorColor = MaterialTheme.colorScheme.onPrimary,
-                            focusedTextColor = MaterialTheme.colorScheme.onPrimary,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onPrimary
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                            focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onBackground
                         )
                 )
             },
@@ -95,8 +99,8 @@ fun GroupSelectionContactsTopBar(
                 ) {
                     if (confirming) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp
+                            modifier = Modifier.size(Dimens.ContactsScreen.selectionProgressSize),
+                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
                         )
                     } else {
                         Icon(
@@ -108,16 +112,30 @@ fun GroupSelectionContactsTopBar(
             }
         )
 
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
-        ) {
-            SearchField(
-                searchQuery = searchQuery,
-                onSearchQueryChanged = onSearchQueryChanged
-            )
-        }
+        SparrowSearchField(
+            searchQuery = searchQuery,
+            onSearchQueryChanged = onSearchQueryChanged,
+            placeholder = stringResource(Res.string.feature_contacts_search_placholder),
+            onClear = { onSearchQueryChanged("") },
+            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.screenPadding)
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun TopBarPreview() {
+    SparrowTheme {
+        GroupSelectionContactsTopBar(
+            title = "Test",
+            searchQuery = "",
+            confirmEnabled = true,
+            confirming = false,
+            containerColor = MaterialTheme.colorScheme.background,
+            onBack = {},
+            onTitleChanged = {},
+            onSearchQueryChanged = {},
+            onConfirmed = {}
+        )
     }
 }

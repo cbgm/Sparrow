@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.transport.gateway.model
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+@kotlinx.serialization.InternalSerializationApi
 @Serializable
 sealed interface GatewayServerMessage {
     @Serializable
@@ -10,6 +11,12 @@ sealed interface GatewayServerMessage {
     data class Registered(
         @SerialName("routingId")
         val routingId: String
+    ) : GatewayServerMessage
+
+    @Serializable
+    @SerialName("route_registered")
+    data class RouteRegistered(
+        val aliases: List<String> = emptyList()
     ) : GatewayServerMessage
 
     @Serializable
@@ -26,14 +33,31 @@ sealed interface GatewayServerMessage {
     ) : GatewayServerMessage
 
     /**
-     * Confirms that the gateway accepted the envelope.
-     *
-     * This does not yet prove that the recipient device read it.
+     * Confirms that the gateway accepted the envelope and owns delivery retries until the
+     * server-declared expiry deadline.
      */
     @Serializable
     @SerialName("envelope_accepted")
     data class EnvelopeAccepted(
-        val envelopeId: String
+        val envelopeId: String,
+        val expiresAtEpochMilliseconds: Long
+    ) : GatewayServerMessage
+
+    @Serializable
+    @SerialName("blob_upload_ticket_issued")
+    data class BlobUploadTicketIssued(
+        val requestId: String,
+        val nodeId: String,
+        val uploadToken: String,
+        val blobExpiresAtEpochMilliseconds: Long
+    ) : GatewayServerMessage
+
+    @Serializable
+    @SerialName("blob_upload_ticket_rejected")
+    data class BlobUploadTicketRejected(
+        val requestId: String,
+        val code: String,
+        val message: String
     ) : GatewayServerMessage
 
     @Serializable

@@ -38,7 +38,11 @@ No. This is intentional. They have different repositories, outgoing/incoming pat
 
 ## Are attachments implemented?
 
-No complete attachment feature is documented as working currently. Do not advertise planned roadmap items as current functionality.
+Yes. Direct and Group messages support image, video, file, current-location and contact attachments through the encrypted blob attachment pipeline. Media/file storage management is available in Settings. See [Attachments](features/attachments.md).
+
+## Does semantic search or message safety send messages to a cloud AI service?
+
+No. The current semantic-search and message-safety embedding path uses a local Android MediaPipe text-embedding model. The model is downloaded/prepared and integrity-checked locally; message search/safety analysis then runs on-device.
 
 ## How are releases built?
 

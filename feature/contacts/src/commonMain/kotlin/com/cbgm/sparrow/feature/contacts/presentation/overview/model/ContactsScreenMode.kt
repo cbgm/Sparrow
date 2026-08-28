@@ -15,6 +15,10 @@ sealed interface ContactsScreenMode {
         override val searchQuery: String
     ) : ContactsScreenMode
 
+    data class AttachmentSelection(
+        override val searchQuery: String
+    ) : ContactsScreenMode
+
     data class MemberSelection(
         val title: String,
         val selectedContactIds: Set<String>,

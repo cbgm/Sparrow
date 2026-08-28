@@ -1,13 +1,15 @@
 package com.cbgm.sparrow.feature.chats.data.incoming
 
+import com.cbgm.sparrow.core.crypto.error.SignatureVerificationException
 import com.cbgm.sparrow.core.crypto.transport.DecodedTransportMessage
 import com.cbgm.sparrow.core.crypto.transport.IncomingTransportMessageDecoder
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.core.protocol.codec.PacketCodec
 import com.cbgm.sparrow.core.protocol.handler.IncomingMessageHandler
+import com.cbgm.sparrow.core.protocol.handler.IncomingMessageRejectedException
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacket
-import com.cbgm.sparrow.feature.chats.data.storage.UnreadableTransportMessageStorage
+import com.cbgm.sparrow.feature.chats.data.datasource.UnreadableTransportMessageDataSource
+import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacketDto
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 
 /**
@@ -20,7 +22,7 @@ class IncomingPacketProcessor(
     private val transportMessageDecoder: IncomingTransportMessageDecoder,
     private val packetCodec: PacketCodec,
     private val packetRouter: IncomingPacketRouter,
-    private val unreadableMessageStorage: UnreadableTransportMessageStorage
+    private val unreadableMessageDataSource: UnreadableTransportMessageDataSource
 ) : IncomingMessageHandler {
     override suspend fun handle(
         contactId: String,
@@ -89,18 +91,30 @@ class IncomingPacketProcessor(
     ) {
         val packet =
             packetCodec.decode(decoded.plaintext).getOrElse { error ->
-                throw IllegalArgumentException("Invalid protocol packet", error)
+                throw IncomingMessageRejectedException(
+                    message = "Invalid protocol packet",
+                    cause = error
+                )
             }
+
         packetRouter
             .route(
-                DecodedIncomingPacket(
+                DecodedIncomingPacketDto(
                     contactId = contactId,
                     packet = packet,
                     encodedTransportPayload = encodedTransportPayload,
                     transportMode = decoded.mode.name,
                     receivedAtEpochMilliseconds = receivedAt
                 )
-            ).getOrThrow()
+            ).getOrElse { error ->
+                if (error is SignatureVerificationException) {
+                    throw IncomingMessageRejectedException(
+                        message = "Incoming packet signature is invalid",
+                        cause = error
+                    )
+                }
+                throw error
+            }
     }
 
     private suspend fun storeUnreadable(
@@ -111,7 +125,7 @@ class IncomingPacketProcessor(
         status: MessageContentStatus,
         receivedAt: Long
     ) {
-        unreadableMessageStorage.store(
+        unreadableMessageDataSource.store(
             contactId = contactId,
             encodedTransportPayload = payload,
             text = text,

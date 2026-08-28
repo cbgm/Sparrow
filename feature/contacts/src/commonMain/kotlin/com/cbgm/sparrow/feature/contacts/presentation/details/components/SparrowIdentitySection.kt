@@ -55,27 +55,27 @@ internal fun SparrowIdentitySection(
         identity.verificationStatus == ContactVerificationStatus.VERIFIED && verifiedByContact ->
             ContactStatusRow(
                 icon = Icons.Default.Link,
-                iconColor = MaterialTheme.colorScheme.secondary,
+                iconColor = MaterialTheme.colorScheme.tertiary,
                 title = stringResource(Res.string.feature_contacts_mutually_verified),
-                titleColor = MaterialTheme.colorScheme.secondary,
+                titleColor = MaterialTheme.colorScheme.tertiary,
                 description = stringResource(Res.string.feature_contacts_identity_verified_description)
             )
 
         identity.verificationStatus == ContactVerificationStatus.VERIFIED ->
             ContactStatusRow(
                 icon = Icons.Default.Schedule,
-                iconColor = MaterialTheme.colorScheme.secondary,
+                iconColor = MaterialTheme.colorScheme.primary,
                 title = stringResource(Res.string.feature_contacts_verified_by_you),
-                titleColor = MaterialTheme.colorScheme.secondary,
+                titleColor = MaterialTheme.colorScheme.primary,
                 description = stringResource(Res.string.feature_contacts_verified_by_you_description)
             )
 
         verifiedByContact ->
             ContactStatusRow(
                 icon = Icons.Default.Security,
-                iconColor = MaterialTheme.colorScheme.tertiary,
+                iconColor = MaterialTheme.colorScheme.secondary,
                 title = stringResource(Res.string.feature_contacts_verified_by_contact),
-                titleColor = MaterialTheme.colorScheme.tertiary,
+                titleColor = MaterialTheme.colorScheme.secondary,
                 description = stringResource(Res.string.feature_contacts_verified_by_contact_description)
             )
 

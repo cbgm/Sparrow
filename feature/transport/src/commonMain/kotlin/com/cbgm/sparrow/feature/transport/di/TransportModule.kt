@@ -14,6 +14,7 @@ import com.cbgm.sparrow.feature.transport.config.TransportConfig
 import com.cbgm.sparrow.feature.transport.connection.DefaultTransportConnectionManager
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionManager
 import com.cbgm.sparrow.feature.transport.controlplane.ControlPlaneCandidateVerifier
+import com.cbgm.sparrow.feature.transport.controlplane.ControlPlaneConfigurationImpl
 import com.cbgm.sparrow.feature.transport.controlplane.ControlPlaneRequestRouter
 import com.cbgm.sparrow.feature.transport.controlplane.HttpControlPlaneDirectorySynchronizer
 import com.cbgm.sparrow.feature.transport.controlplane.HttpControlPlaneHealthMonitor
@@ -21,16 +22,19 @@ import com.cbgm.sparrow.feature.transport.controlplane.HttpNodeControlPlaneDirec
 import com.cbgm.sparrow.feature.transport.controlplane.NodeControlPlaneDirectorySource
 import com.cbgm.sparrow.feature.transport.controlplane.NodeControlPlaneDiscoverySynchronizer
 import com.cbgm.sparrow.feature.transport.controlplane.SignedDirectoryControlPlaneCandidateVerifier
+import com.cbgm.sparrow.feature.transport.device.createPlatformHttpClient
+import com.cbgm.sparrow.feature.transport.discovery.DataStoreNodeDirectoryCache
 import com.cbgm.sparrow.feature.transport.discovery.DefaultNodeEndpointResolver
 import com.cbgm.sparrow.feature.transport.discovery.HttpNodeDirectorySource
+import com.cbgm.sparrow.feature.transport.discovery.NodeDirectoryCache
 import com.cbgm.sparrow.feature.transport.discovery.NodeDirectorySource
 import com.cbgm.sparrow.feature.transport.discovery.NodeDirectoryVerifier
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
-import com.cbgm.sparrow.feature.transport.discovery.registerPlatformNodeDirectoryCache
+import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointSelector
 import com.cbgm.sparrow.feature.transport.gateway.codec.createGatewayJson
 import com.cbgm.sparrow.feature.transport.mailbox.HttpMailboxGateway
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
-import com.cbgm.sparrow.feature.transport.presence.ClientPresenceRouteManager
+import com.cbgm.sparrow.feature.transport.presence.ClientPresenceRouteCoordinator
 import com.cbgm.sparrow.feature.transport.presence.ClientRouteRegistrationFactory
 import com.cbgm.sparrow.feature.transport.push.HttpPushTokenRegistrationGateway
 import com.cbgm.sparrow.feature.transport.push.PushTokenRegistrationGateway
@@ -44,8 +48,9 @@ import com.cbgm.sparrow.feature.transport.routing.RoutingIdGenerator
 import com.cbgm.sparrow.feature.transport.routing.Sha256RoutingIdGenerator
 import com.cbgm.sparrow.feature.transport.sender.WebSocketOutgoingWireSender
 import com.cbgm.sparrow.feature.transport.websocket.DefaultWebSocketTransportClient
+import com.cbgm.sparrow.feature.transport.websocket.GatewayPendingRequestRegistry
+import com.cbgm.sparrow.feature.transport.websocket.GatewayServerMessageHandler
 import com.cbgm.sparrow.feature.transport.websocket.WebSocketTransportClient
-import com.cbgm.sparrow.feature.transport.websocket.createPlatformHttpClient
 import io.ktor.client.HttpClient
 import kotlinx.serialization.json.Json
 import org.koin.core.qualifier.named
@@ -57,7 +62,24 @@ val transportModule =
             TransportConfig()
         }
 
-        registerPlatformNodeDirectoryCache()
+        single<NodeDirectoryCache> {
+            DataStoreNodeDirectoryCache(
+                dataStore = get(),
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
+            )
+        }
+
+        single<ControlPlaneConfigurationImpl> {
+            ControlPlaneConfigurationImpl(dataStore = get())
+        }
+
+        single<ControlPlaneConfiguration> {
+            get<ControlPlaneConfigurationImpl>()
+        }
+
+        single<ControlPlaneStatusStore> {
+            get<ControlPlaneConfigurationImpl>()
+        }
 
         single<HttpClient> {
             createPlatformHttpClient(
@@ -87,11 +109,24 @@ val transportModule =
             )
         }
 
+        single {
+            GatewayPendingRequestRegistry()
+        }
+
+        single {
+            GatewayServerMessageHandler(
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
+                pendingRequestRegistry = get<GatewayPendingRequestRegistry>()
+            )
+        }
+
         single<WebSocketTransportClient> {
             DefaultWebSocketTransportClient(
                 httpClient = get<HttpClient>(),
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
-                presenceRouteManager = get<ClientPresenceRouteManager>()
+                presenceRouteCoordinator = get<ClientPresenceRouteCoordinator>(),
+                serverMessageHandler = get<GatewayServerMessageHandler>(),
+                pendingRequestRegistry = get<GatewayPendingRequestRegistry>()
             )
         }
 
@@ -104,7 +139,7 @@ val transportModule =
         }
 
         single {
-            ClientPresenceRouteManager(
+            ClientPresenceRouteCoordinator(
                 httpClient = get<HttpClient>(),
                 registrationFactory = get<ClientRouteRegistrationFactory>(),
                 localBootstrapRoutingIdProvider = get<LocalBootstrapRoutingIdProvider>()
@@ -138,6 +173,10 @@ val transportModule =
             )
         }
 
+        single {
+            NodeEndpointSelector(config = get<TransportConfig>())
+        }
+
         single<NodeEndpointResolver> {
             DefaultNodeEndpointResolver(
                 source = get<NodeDirectorySource>(),
@@ -146,7 +185,8 @@ val transportModule =
                 verifier = get(),
                 config = get<TransportConfig>(),
                 controlPlaneConfiguration = get<ControlPlaneConfiguration>(),
-                controlPlaneStatusStore = get<ControlPlaneStatusStore>()
+                controlPlaneStatusStore = get<ControlPlaneStatusStore>(),
+                endpointSelector = get<NodeEndpointSelector>()
             )
         }
 

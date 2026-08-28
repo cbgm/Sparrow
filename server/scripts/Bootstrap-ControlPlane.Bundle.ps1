@@ -208,7 +208,8 @@ function Write-NetworkConfiguration {
         [Parameter(Mandatory = $true)][hashtable]$Config,
         [Parameter(Mandatory = $true)][string]$Mode,
         [string]$PublicDomain,
-        [Parameter(Mandatory = $true)][string]$ControlPlaneId
+        [Parameter(Mandatory = $true)][string]$ControlPlaneId,
+        [Parameter(Mandatory = $true)][string]$ImageTag
     )
 
     [System.IO.File]::WriteAllLines(
@@ -221,7 +222,7 @@ function Write-NetworkConfiguration {
             "PUBLIC_DOMAIN=$PublicDomain",
             "CONTROL_PLANE_ID=$ControlPlaneId",
             "SPARROW_IMAGE_PREFIX=$($Config['SPARROW_IMAGE_PREFIX'])",
-            "SPARROW_IMAGE_TAG=$($Config['SPARROW_IMAGE_TAG'])"
+            "SPARROW_IMAGE_TAG=$ImageTag"
         ),
         [System.Text.UTF8Encoding]::new($false)
     )
@@ -284,9 +285,21 @@ function Read-LauncherConfiguration {
     $hint.Text = "Automatic detects the public IPv4 address and uses <public-ip>.sslip.io. Own address expects a domain or host such as cp.example.com."
     $panel.Controls.Add($hint)
 
+    $imageTagLabel = New-Object System.Windows.Forms.Label
+    $imageTagLabel.Location = New-Object System.Drawing.Point(0, 184)
+    $imageTagLabel.Size = New-Object System.Drawing.Size(205, 22)
+    $imageTagLabel.Text = "Image tag"
+    $panel.Controls.Add($imageTagLabel)
+
+    $imageTagText = New-Object System.Windows.Forms.TextBox
+    $imageTagText.Location = New-Object System.Drawing.Point(220, 180)
+    $imageTagText.Size = New-Object System.Drawing.Size(460, 27)
+    $imageTagText.Text = "latest"
+    $panel.Controls.Add($imageTagText)
+
     $validation = New-Object System.Windows.Forms.Label
-    $validation.Location = New-Object System.Drawing.Point(0, 184)
-    $validation.Size = New-Object System.Drawing.Size(680, 40)
+    $validation.Location = New-Object System.Drawing.Point(0, 216)
+    $validation.Size = New-Object System.Drawing.Size(680, 28)
     $validation.ForeColor = [System.Drawing.Color]::Firebrick
     $validation.Text = ""
     $panel.Controls.Add($validation)
@@ -308,6 +321,7 @@ function Read-LauncherConfiguration {
         Cancelled = $false
         Mode = "lan"
         PublicDomain = ""
+        ImageTag = "latest"
     }
 
     $updatePublicControls = {
@@ -326,6 +340,12 @@ function Read-LauncherConfiguration {
         $validation.Text = ""
         $mode = if ($modeCombo.SelectedIndex -eq 1) { "public" } else { "lan" }
         $publicDomain = ""
+        $imageTag = $imageTagText.Text.Trim()
+
+        if ($imageTag -notmatch '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$') {
+            $validation.Text = "Enter a valid Docker image tag, for example latest, pr-49, or sha-..."
+            return
+        }
 
         if ($mode -eq "public" -and $publicModeCombo.SelectedIndex -eq 1) {
             $publicDomain = $publicAddressText.Text.Trim().TrimEnd(".")
@@ -341,6 +361,7 @@ function Read-LauncherConfiguration {
 
         $state.Mode = $mode
         $state.PublicDomain = $publicDomain
+        $state.ImageTag = $imageTag
         $state.Done = $true
     })
 
@@ -380,6 +401,7 @@ function Read-LauncherConfiguration {
     return [PSCustomObject]@{
         Mode = $state.Mode
         PublicDomain = $state.PublicDomain
+        ImageTag = $state.ImageTag
     }
 }
 
@@ -403,7 +425,8 @@ function Initialize-NetworkConfiguration {
         -Config $Config `
         -Mode $launcherConfig.Mode `
         -PublicDomain $launcherConfig.PublicDomain `
-        -ControlPlaneId $controlPlaneId
+        -ControlPlaneId $controlPlaneId `
+        -ImageTag $launcherConfig.ImageTag
 
     return Read-EnvironmentFile -Path $networkConfigPath
 }

@@ -1,0 +1,16 @@
+Metadata-Version: 2.4
+Name: sparrow-safety-training
+Version: 0.4.0
+Summary: Automatic local-teacher dataset and linear-classifier pipeline for Sparrow Safety
+Requires-Python: >=3.11
+Requires-Dist: datasets<5,>=3.0
+Requires-Dist: huggingface-hub<2,>=0.34
+Requires-Dist: mediapipe==1.0.0
+Requires-Dist: numpy<3,>=1.26
+Requires-Dist: pandas<3,>=2.2
+Requires-Dist: scikit-learn<2,>=1.5
+Requires-Dist: tqdm<5,>=4.66
+Provides-Extra: dev
+Requires-Dist: pytest<10,>=8; extra == "dev"
+Provides-Extra: hf-embedding
+Requires-Dist: sentence-transformers<6,>=5.0; extra == "hf-embedding"

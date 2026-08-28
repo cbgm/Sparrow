@@ -7,14 +7,14 @@ import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.data.database.entity.GroupSecurityStateEntity
+import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupKeyDataSource
 import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupProtocolPayloadEncoder
-import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupKeyRepository
 
 internal class GroupWelcomeSecurity(
     private val groupCrypto: GroupCrypto,
     private val payloadEncoder: GroupProtocolPayloadEncoder,
     private val groupSecurityDao: GroupSecurityDao,
-    private val groupKeyRepository: GroupKeyRepository
+    private val groupKeyDataSource: GroupKeyDataSource
 ) {
     suspend fun openWelcome(
         packet: GroupCreatedPacket,
@@ -23,7 +23,7 @@ internal class GroupWelcomeSecurity(
         expectedOwnerSigningPublicKey: ByteArray,
         localEncryptionKeyPair: LocalEncryptionKeyPair,
         localSigningPublicKey: ByteArray
-    ): Result<OpenedGroupWelcome> =
+    ): Result<OpenedGroupWelcomeDto> =
         runCatching {
             val existingState = groupSecurityDao.findState(packet.groupId)
             if (existingState == null) {
@@ -112,20 +112,20 @@ internal class GroupWelcomeSecurity(
                             localEncryptionPrivateKey = localEncryptionKeyPair.privateKey
                         ).getOrThrow()
                 } else {
-                    groupKeyRepository
+                    groupKeyDataSource
                         .load(packet.groupId, packet.epoch)
                         .getOrThrow()
                         ?: error("Existing group key was not found")
                 }
 
-            OpenedGroupWelcome(
+            OpenedGroupWelcomeDto(
                 packet = packet,
                 groupKey = groupKey
             )
         }
 
     suspend fun persistJoinedGroup(
-        openedWelcome: OpenedGroupWelcome,
+        openedWelcome: OpenedGroupWelcomeDto,
         ownerContactId: String,
         authoritySigningPublicKey: ByteArray,
         localSigningPublicKey: ByteArray,
@@ -150,7 +150,7 @@ internal class GroupWelcomeSecurity(
                 "Group welcome authority is not an admin"
             }
 
-            groupKeyRepository
+            groupKeyDataSource
                 .save(
                     groupId = packet.groupId,
                     epoch = packet.epoch,
@@ -187,7 +187,7 @@ internal class GroupWelcomeSecurity(
                 groupSecurityDao.upsertMemberKeys(memberKeys)
             }
 
-            groupKeyRepository
+            groupKeyDataSource
                 .deleteBefore(
                     groupId = packet.groupId,
                     epoch = packet.epoch

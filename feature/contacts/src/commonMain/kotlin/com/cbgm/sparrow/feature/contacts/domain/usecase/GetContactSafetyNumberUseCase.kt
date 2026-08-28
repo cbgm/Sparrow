@@ -11,7 +11,7 @@ class GetContactSafetyNumberUseCase(
     private val contactRepository: ContactRepository,
     private val safetyNumberGenerator: SafetyNumberGenerator
 ) {
-    suspend fun invoke(contactId: String): Result<SafetyNumber> =
+    suspend operator fun invoke(contactId: String): Result<SafetyNumber> =
         runCatching {
             require(contactId.isNotBlank()) {
                 "Contact ID must not be blank"

@@ -20,10 +20,14 @@ import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonOff
 import androidx.compose.material.icons.filled.PrivacyTip
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -38,12 +42,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingModelState
+import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingState
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
+import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyState
+import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
 import com.cbgm.sparrow.feature.settings.presentation.overview.components.LanguagePickerDialog
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsUiEvent
@@ -52,6 +61,8 @@ import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_developer
 import com.cbgm.sparrow.resources.base_language
 import com.cbgm.sparrow.resources.base_version
+import com.cbgm.sparrow.resources.feature_attachments_storage
+import com.cbgm.sparrow.resources.feature_attachments_storage_subtitle
 import com.cbgm.sparrow.resources.feature_settings_about
 import com.cbgm.sparrow.resources.feature_settings_automatic_secure_setup
 import com.cbgm.sparrow.resources.feature_settings_automatic_secure_setup_disabled_subtitle
@@ -68,12 +79,29 @@ import com.cbgm.sparrow.resources.feature_settings_developer_menu
 import com.cbgm.sparrow.resources.feature_settings_developer_menu_subtitle
 import com.cbgm.sparrow.resources.feature_settings_general
 import com.cbgm.sparrow.resources.feature_settings_licenses_subtitle
+import com.cbgm.sparrow.resources.feature_settings_local_intelligence
+import com.cbgm.sparrow.resources.feature_settings_message_safety
+import com.cbgm.sparrow.resources.feature_settings_message_safety_analyzing
+import com.cbgm.sparrow.resources.feature_settings_message_safety_downloading
+import com.cbgm.sparrow.resources.feature_settings_message_safety_failed
+import com.cbgm.sparrow.resources.feature_settings_message_safety_ready
+import com.cbgm.sparrow.resources.feature_settings_message_safety_subtitle
 import com.cbgm.sparrow.resources.feature_settings_network
 import com.cbgm.sparrow.resources.feature_settings_open_source_licenses
 import com.cbgm.sparrow.resources.feature_settings_privacy_and_data
 import com.cbgm.sparrow.resources.feature_settings_privacy_policy
 import com.cbgm.sparrow.resources.feature_settings_privacy_policy_subtitle
+import com.cbgm.sparrow.resources.feature_settings_profile
+import com.cbgm.sparrow.resources.feature_settings_profile_picture
+import com.cbgm.sparrow.resources.feature_settings_profile_subtitle
 import com.cbgm.sparrow.resources.feature_settings_security
+import com.cbgm.sparrow.resources.feature_settings_semantic_search
+import com.cbgm.sparrow.resources.feature_settings_semantic_search_building
+import com.cbgm.sparrow.resources.feature_settings_semantic_search_downloading
+import com.cbgm.sparrow.resources.feature_settings_semantic_search_failed
+import com.cbgm.sparrow.resources.feature_settings_semantic_search_ready
+import com.cbgm.sparrow.resources.feature_settings_semantic_search_subtitle
+import com.cbgm.sparrow.resources.feature_settings_storage
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -105,6 +133,15 @@ fun SettingsScreen(
                 subtitle = uiState.currentLanguage.nativeName,
                 onClick = { onUiEvent(SettingsUiEvent.LanguagePickerOpened) },
                 showChevron = false
+            )
+        }
+
+        SettingsSection(title = stringResource(Res.string.feature_settings_profile)) {
+            SettingsRow(
+                icon = Icons.Default.Person,
+                title = stringResource(Res.string.feature_settings_profile_picture),
+                subtitle = stringResource(Res.string.feature_settings_profile_subtitle),
+                onClick = { onUiEvent(SettingsUiEvent.ProfileClicked) }
             )
         }
 
@@ -167,6 +204,39 @@ fun SettingsScreen(
             )
         }
 
+        SettingsSection(title = stringResource(Res.string.feature_settings_local_intelligence)) {
+            SettingsSwitchRow(
+                icon = Icons.Default.Search,
+                title = stringResource(Res.string.feature_settings_semantic_search),
+                subtitle = semanticSearchSubtitle(uiState.semanticSearchState),
+                checked = uiState.localEmbeddingState.semanticSearchEnabled,
+                onCheckedChange = { enabled ->
+                    onUiEvent(SettingsUiEvent.SemanticSearchEnabledChanged(enabled))
+                }
+            )
+
+            SettingsDivider()
+
+            SettingsSwitchRow(
+                icon = Icons.Default.Security,
+                title = stringResource(Res.string.feature_settings_message_safety),
+                subtitle = messageSafetySubtitle(uiState.localEmbeddingState, uiState.messageSafetyState),
+                checked = uiState.localEmbeddingState.messageSafetyEnabled,
+                onCheckedChange = { enabled ->
+                    onUiEvent(SettingsUiEvent.MessageSafetyEnabledChanged(enabled))
+                }
+            )
+        }
+
+        SettingsSection(title = stringResource(Res.string.feature_settings_storage)) {
+            SettingsRow(
+                icon = Icons.Default.Folder,
+                title = stringResource(Res.string.feature_attachments_storage),
+                subtitle = stringResource(Res.string.feature_attachments_storage_subtitle),
+                onClick = { onUiEvent(SettingsUiEvent.AttachmentStorageClicked) }
+            )
+        }
+
         SettingsSection(title = stringResource(Res.string.feature_settings_privacy_and_data)) {
             SettingsRow(
                 icon = Icons.Default.PrivacyTip,
@@ -211,7 +281,7 @@ fun SettingsScreen(
                     title = stringResource(Res.string.feature_settings_developer_menu),
                     subtitle = stringResource(Res.string.feature_settings_developer_menu_subtitle),
                     onClick = { onUiEvent(SettingsUiEvent.DeveloperMenuClicked) },
-                    iconTint = MaterialTheme.colorScheme.secondary
+                    iconTint = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -231,6 +301,61 @@ fun SettingsScreen(
 }
 
 @Composable
+private fun semanticSearchSubtitle(state: SemanticSearchState): String =
+    when (state) {
+        SemanticSearchState.Disabled,
+        SemanticSearchState.Preparing -> stringResource(Res.string.feature_settings_semantic_search_subtitle)
+        is SemanticSearchState.DownloadingModel -> {
+            val percent = state.progress?.let { (it * 100).toInt().coerceIn(0, 100) }
+            if (percent == null) {
+                stringResource(Res.string.feature_settings_semantic_search_downloading)
+            } else {
+                stringResource(Res.string.feature_settings_semantic_search_downloading) + " $percent%"
+            }
+        }
+        is SemanticSearchState.BuildingIndex ->
+            stringResource(
+                Res.string.feature_settings_semantic_search_building,
+                state.processed,
+                state.total
+            )
+        SemanticSearchState.Ready -> stringResource(Res.string.feature_settings_semantic_search_ready)
+        is SemanticSearchState.Failed -> stringResource(Res.string.feature_settings_semantic_search_failed)
+    }
+
+@Composable
+private fun messageSafetySubtitle(
+    localEmbeddingState: LocalEmbeddingState,
+    messageSafetyState: MessageSafetyState
+): String {
+    if (!localEmbeddingState.messageSafetyEnabled) {
+        return stringResource(Res.string.feature_settings_message_safety_subtitle)
+    }
+
+    return when (val modelState = localEmbeddingState.modelState) {
+        LocalEmbeddingModelState.NotNeeded,
+        LocalEmbeddingModelState.Preparing -> stringResource(Res.string.feature_settings_message_safety_subtitle)
+        is LocalEmbeddingModelState.Downloading -> {
+            val percent = modelState.progress?.let { (it * 100).toInt().coerceIn(0, 100) }
+            if (percent == null) {
+                stringResource(Res.string.feature_settings_message_safety_downloading)
+            } else {
+                stringResource(Res.string.feature_settings_message_safety_downloading) + " $percent%"
+            }
+        }
+        is LocalEmbeddingModelState.Failed -> stringResource(Res.string.feature_settings_message_safety_failed)
+        LocalEmbeddingModelState.Ready ->
+            when (messageSafetyState) {
+                MessageSafetyState.Disabled,
+                MessageSafetyState.Preparing -> stringResource(Res.string.feature_settings_message_safety_subtitle)
+                MessageSafetyState.Analyzing -> stringResource(Res.string.feature_settings_message_safety_analyzing)
+                MessageSafetyState.Ready -> stringResource(Res.string.feature_settings_message_safety_ready)
+                is MessageSafetyState.Failed -> stringResource(Res.string.feature_settings_message_safety_failed)
+            }
+    }
+}
+
+@Composable
 private fun SettingsSection(
     title: String,
     content: @Composable ColumnScope.() -> Unit
@@ -239,7 +364,7 @@ private fun SettingsSection(
         Text(
             text = title.uppercase(),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
             fontWeight = FontWeight.SemiBold,
             modifier =
                 Modifier.padding(
@@ -261,7 +386,7 @@ private fun SettingsRow(
     subtitle: String,
     onClick: () -> Unit,
     showChevron: Boolean = true,
-    iconTint: Color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+    iconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.SettingsScreen.icon)
 ) {
     Row(
         modifier =
@@ -278,7 +403,7 @@ private fun SettingsRow(
             imageVector = icon,
             contentDescription = null,
             tint = iconTint,
-            modifier = Modifier.size(22.dp)
+            modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize)
         )
 
         Spacer(modifier = Modifier.size(MaterialTheme.spacing.small))
@@ -288,12 +413,12 @@ private fun SettingsRow(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -301,8 +426,8 @@ private fun SettingsRow(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
-                modifier = Modifier.size(20.dp)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.SettingsScreen.disabledIcon),
+                modifier = Modifier.size(Dimens.SettingsScreen.secondaryIconSize)
             )
         }
     }
@@ -331,8 +456,8 @@ private fun SettingsSwitchRow(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
-            modifier = Modifier.size(22.dp)
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.SettingsScreen.icon),
+            modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize)
         )
 
         Spacer(modifier = Modifier.size(MaterialTheme.spacing.small))
@@ -342,12 +467,12 @@ private fun SettingsSwitchRow(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -356,8 +481,8 @@ private fun SettingsSwitchRow(
             onCheckedChange = null,
             colors =
                 SwitchDefaults.colors(
-                    checkedTrackColor = MaterialTheme.colorScheme.secondary,
-                    checkedThumbColor = MaterialTheme.colorScheme.primaryContainer
+                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary
                 )
         )
     }
@@ -367,7 +492,7 @@ private fun SettingsSwitchRow(
 private fun SettingsDivider() {
     HorizontalDivider(
         modifier = Modifier.padding(start = MaterialTheme.spacing.times(5)),
-        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.06f)
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.divider)
     )
 }
 
@@ -392,7 +517,7 @@ fun SettingsScreenPreview() {
             snackbarHostState = SnackbarHostState(),
             onUiEvent = {},
             scrollState = ScrollState(0),
-            innerPadding = PaddingValues(0.dp)
+            innerPadding = PaddingValues(MaterialTheme.spacing.zero)
         )
     }
 }

@@ -10,38 +10,44 @@ import org.koin.dsl.module
 
 val contactImportModule =
     module {
-
         factory {
             ImportSharedIdentityUseCase(
                 identityShareRepository = get(),
-                importContact = get()
+                contactRepository = get(),
+                identityInvitationRepository = get(),
+                identityExchangeRepository = get(),
+                deviceContactWriterRepository = get()
             )
         }
 
         factory {
             VerifyContactByQrUseCase(
                 identityShareRepository = get(),
-                importContact = get(),
-                verifyContact = get()
+                contactRepository = get(),
+                identityInvitationRepository = get(),
+                identityExchangeRepository = get(),
+                contactVerificationRepository = get()
             )
         }
 
-        viewModel { parameters ->
+        viewModel {
             ImportIdentityViewModel(
-                route = parameters.get(),
+                savedStateHandle = get(),
+                decodeSharedIdentity = get(),
                 importSharedIdentity = get()
             )
         }
 
-        viewModel { parameters ->
+        viewModel {
             ScanIdentityNavigationViewModel(
-                route = parameters.get()
+                savedStateHandle = get()
             )
         }
 
-        viewModel { parameters ->
+        viewModel {
             VerifyContactQrViewModel(
-                contactId = parameters.get(),
+                savedStateHandle = get(),
+                decodeSharedIdentity = get(),
                 verifyContactByQr = get()
             )
         }

@@ -4,7 +4,8 @@ sealed interface GroupDetailsUiState {
     data object Loading : GroupDetailsUiState
 
     data class Content(
-        val summary: GroupVerificationSummaryUiState
+        val summary: GroupVerificationSummaryUiState,
+        val groupAvatar: GroupAvatarUiState = GroupAvatarUiState()
     ) : GroupDetailsUiState
 
     data class Error(

@@ -17,13 +17,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
+import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.settings.presentation.disclaimer.model.DisclaimerUiEvent
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownColor
 import com.mikepenz.markdown.m3.markdownTypography
-
-private val MarkdownCardColor = Color(0xFF102A46)
 
 @Composable
 fun MarkdownDisclaimerScreen(
@@ -36,7 +35,7 @@ fun MarkdownDisclaimerScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { containerColor ->
-            MarkdownDisclaimerTopBar(
+            TopBar(
                 title = title,
                 containerColor = containerColor,
                 onBack = { onUiEvent(DisclaimerUiEvent.BackClicked) }
@@ -57,11 +56,11 @@ fun MarkdownDisclaimerScreen(
                     ),
             colors =
                 markdownColor(
-                    text = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f),
-                    codeBackground = MarkdownCardColor,
-                    inlineCodeBackground = MarkdownCardColor,
-                    dividerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f),
-                    tableBackground = MarkdownCardColor
+                    text = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.DisclaimerScreen.content),
+                    codeBackground = MaterialTheme.colorScheme.surfaceContainer,
+                    inlineCodeBackground = MaterialTheme.colorScheme.surfaceContainer,
+                    dividerColor = MaterialTheme.colorScheme.outlineVariant,
+                    tableBackground = MaterialTheme.colorScheme.surfaceContainer
                 ),
             typography =
                 markdownTypography(
@@ -84,21 +83,21 @@ fun MarkdownDisclaimerScreen(
                         MaterialTheme.typography.labelMedium.copy(
                             color =
                                 MaterialTheme.colorScheme.onBackground.copy(
-                                    alpha = 0.85f
+                                    alpha = Alpha.DisclaimerScreen.content
                                 )
                         ),
                     paragraph =
                         MaterialTheme.typography.bodySmall.copy(
                             color =
                                 MaterialTheme.colorScheme.onBackground.copy(
-                                    alpha = 0.85f
+                                    alpha = Alpha.DisclaimerScreen.content
                                 )
                         ),
                     list =
                         MaterialTheme.typography.bodySmall.copy(
                             color =
                                 MaterialTheme.colorScheme.onBackground.copy(
-                                    alpha = 0.85f
+                                    alpha = Alpha.DisclaimerScreen.content
                                 )
                         )
                 )
@@ -108,7 +107,7 @@ fun MarkdownDisclaimerScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MarkdownDisclaimerTopBar(
+private fun TopBar(
     title: String,
     containerColor: Color,
     onBack: () -> Unit
@@ -124,8 +123,7 @@ private fun MarkdownDisclaimerTopBar(
         title = {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleSmall
             )
         },
         navigationIcon = {

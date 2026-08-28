@@ -1,42 +1,20 @@
 package com.cbgm.sparrow.feature.identity.di
 
-import android.content.Context
-import android.content.SharedPreferences
-import com.cbgm.sparrow.feature.identity.data.datasource.AndroidPrivateKeyStorage
-import com.cbgm.sparrow.feature.identity.data.datasource.AndroidPublicIdentityStorage
-import com.cbgm.sparrow.feature.identity.data.datasource.PrivateKeyStorage
-import com.cbgm.sparrow.feature.identity.data.datasource.PublicIdentityStorage
-import com.cbgm.sparrow.feature.identity.data.repository.AndroidLocalIdentityProfileRepositoryImpl
-import com.cbgm.sparrow.feature.identity.domain.repository.LocalIdentityProfileRepository
+import com.cbgm.sparrow.feature.identity.data.datasource.ProfilePictureFileDataSource
+import com.cbgm.sparrow.feature.identity.device.AndroidPrivateKeyStorage
+import com.cbgm.sparrow.feature.identity.device.PrivateKeyStorage
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
 val androidIdentityStorageModule =
     module {
-        single<SharedPreferences> {
-            androidContext().getSharedPreferences(
-                IDENTITY_PREFERENCES_NAME,
-                Context.MODE_PRIVATE
-            )
-        }
-
-        single<LocalIdentityProfileRepository> {
-            AndroidLocalIdentityProfileRepositoryImpl(
-                preferences = get()
+        single {
+            ProfilePictureFileDataSource(
+                rootDirectory = androidContext().filesDir.absolutePath
             )
         }
 
         single<PrivateKeyStorage> {
-            AndroidPrivateKeyStorage(
-                context = androidContext()
-            )
-        }
-
-        single<PublicIdentityStorage> {
-            AndroidPublicIdentityStorage(
-                context = androidContext()
-            )
+            AndroidPrivateKeyStorage(dataStore = get())
         }
     }
-
-private const val IDENTITY_PREFERENCES_NAME = "sparrow_identity"

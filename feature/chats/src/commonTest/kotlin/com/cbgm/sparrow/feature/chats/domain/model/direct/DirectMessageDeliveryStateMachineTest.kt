@@ -9,6 +9,23 @@ import kotlin.test.assertTrue
 
 class DirectMessageDeliveryStateMachineTest {
     @Test
+    fun waitingForAuthorizationMovesToQueueOnlyAfterAuthorizationIsGranted() {
+        assertFalse(
+            DirectMessageDeliveryStateMachine.canTransition(
+                MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION,
+                MessageDeliveryEvent.SEND_STARTED
+            )
+        )
+        assertEquals(
+            MessageDeliveryStatus.QUEUED,
+            transition(
+                MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION,
+                MessageDeliveryEvent.AUTHORIZATION_GRANTED
+            )
+        )
+    }
+
+    @Test
     fun outgoingMessageFollowsExpectedTransitions() {
         val sending = transition(MessageDeliveryStatus.QUEUED, MessageDeliveryEvent.SEND_STARTED)
         val sent = transition(sending, MessageDeliveryEvent.SEND_SUCCEEDED)
@@ -37,6 +54,17 @@ class DirectMessageDeliveryStateMachineTest {
         assertEquals(MessageDeliveryStatus.QUEUED, queued)
         assertTrue(DirectMessageDeliveryStateMachine.canTransition(failed, MessageDeliveryEvent.RETRY_REQUESTED))
         assertFalse(DirectMessageDeliveryStateMachine.canTransition(MessageDeliveryStatus.SENT, MessageDeliveryEvent.SEND_STARTED))
+    }
+
+    @Test
+    fun serverAcceptedMessageFailsOnlyWhenServerRetentionExpires() {
+        val sent = transition(MessageDeliveryStatus.SENDING, MessageDeliveryEvent.SEND_SUCCEEDED)
+
+        assertEquals(MessageDeliveryStatus.SENT, sent)
+        assertEquals(
+            MessageDeliveryStatus.FAILED,
+            transition(sent, MessageDeliveryEvent.DELIVERY_EXPIRED)
+        )
     }
 
     @Test

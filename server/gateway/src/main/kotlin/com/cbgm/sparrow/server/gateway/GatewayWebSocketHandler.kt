@@ -11,9 +11,10 @@ class GatewayWebSocketHandler(
     private val nodeId: String,
     private val connections: ConnectionRegistry,
     private val federation: FederationClient,
-    private val presence: PresenceClient,
+    presence: PresenceClient,
     private val legacyPush: LegacyPushClient,
-    private val routeLifetimeMilliseconds: Long
+    private val routeLifetimeMilliseconds: Long,
+    private val blobUploadTicketIssuer: GatewayBlobUploadTicketIssuer
 ) {
     private val bestEffortPresence = BestEffortPresenceClient(presence)
     private val pushDispatcher =
@@ -47,6 +48,9 @@ class GatewayWebSocketHandler(
                             recipientId = message.recipientId,
                             isTyping = message.isTyping
                         )
+                    },
+                    issueBlobUploadTicket = { connection, message ->
+                        connection.send(blobUploadTicketIssuer.issue(message))
                     }
                 )
         ).handle(session)
@@ -82,9 +86,10 @@ class GatewayWebSocketHandler(
             return
         }
 
+        val routedEnvelope = envelope.toFederatedEnvelope()
         val accepted =
-            storeAndRouteLegacyEnvelope(
-                envelope = envelope,
+            storeAndRouteFederatedEnvelope(
+                envelope = routedEnvelope,
                 pushStorage = legacyPush::store,
                 networkDelivery = ::routeEnvelope,
                 markFederationStored = federation::markStored,
@@ -94,6 +99,7 @@ class GatewayWebSocketHandler(
         respondToEnvelope(
             sender = sender,
             envelopeId = envelope.envelopeId,
+            expiresAtEpochMilliseconds = routedEnvelope.expiresAtEpochMilliseconds,
             accepted = accepted
         )
     }
@@ -112,9 +118,10 @@ class GatewayWebSocketHandler(
             return
         }
 
+        val routedEnvelope = envelope.withServerDeliveryDeadline()
         val accepted =
             storeAndRouteFederatedEnvelope(
-                envelope = envelope,
+                envelope = routedEnvelope,
                 pushStorage = legacyPush::store,
                 networkDelivery = ::routeEnvelope,
                 markFederationStored = federation::markStored,
@@ -124,6 +131,7 @@ class GatewayWebSocketHandler(
         respondToEnvelope(
             sender = sender,
             envelopeId = envelope.envelopeId,
+            expiresAtEpochMilliseconds = routedEnvelope.expiresAtEpochMilliseconds,
             accepted = accepted
         )
     }
@@ -131,12 +139,14 @@ class GatewayWebSocketHandler(
     private suspend fun respondToEnvelope(
         sender: GatewayConnection,
         envelopeId: String,
+        expiresAtEpochMilliseconds: Long,
         accepted: Boolean
     ) {
         if (accepted) {
             sender.send(
                 GatewayServerMessage.EnvelopeAccepted(
-                    envelopeId = envelopeId
+                    envelopeId = envelopeId,
+                    expiresAtEpochMilliseconds = expiresAtEpochMilliseconds
                 )
             )
         } else {
@@ -344,7 +354,9 @@ internal suspend fun routeFederatedTypingEvent(
     }.getOrDefault(false)
 }
 
-internal fun TransportEnvelope.toFederatedEnvelope(): FederatedEnvelope =
+internal fun TransportEnvelope.toFederatedEnvelope(
+    nowEpochMilliseconds: Long = System.currentTimeMillis()
+): FederatedEnvelope =
     FederatedEnvelope(
         envelopeId = envelopeId,
         senderRoutingId = senderId,
@@ -353,13 +365,23 @@ internal fun TransportEnvelope.toFederatedEnvelope(): FederatedEnvelope =
         encryptedPayload = payload,
         createdAtEpochMilliseconds = createdAtEpochMilliseconds,
         expiresAtEpochMilliseconds =
-            createdAtEpochMilliseconds +
+            maxOf(nowEpochMilliseconds, createdAtEpochMilliseconds) +
                 if (recipientId.startsWith(BOOTSTRAP_ROUTING_ID_PREFIX)) {
                     BOOTSTRAP_ENVELOPE_TTL_MILLISECONDS
                 } else {
                     DEFAULT_ENVELOPE_TTL_MILLISECONDS
                 }
     )
+
+private fun FederatedEnvelope.withServerDeliveryDeadline(
+    nowEpochMilliseconds: Long = System.currentTimeMillis()
+): FederatedEnvelope {
+    val serverDeadline =
+        maxOf(nowEpochMilliseconds, createdAtEpochMilliseconds) + DEFAULT_ENVELOPE_TTL_MILLISECONDS
+    return copy(
+        expiresAtEpochMilliseconds = minOf(expiresAtEpochMilliseconds, serverDeadline)
+    )
+}
 
 private fun FederatedEnvelope.toTransportEnvelope(): TransportEnvelope =
     TransportEnvelope(

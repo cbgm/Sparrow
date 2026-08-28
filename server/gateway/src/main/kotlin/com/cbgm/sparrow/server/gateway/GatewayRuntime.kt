@@ -15,6 +15,12 @@ import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.pingPeriod
 import io.ktor.server.websocket.timeout
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import java.nio.file.Path
 import kotlin.time.Duration.Companion.seconds
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 
@@ -25,7 +31,10 @@ internal data class GatewayRuntime(
     val httpClient: HttpClient,
     val ownsHttpClient: Boolean,
     val connections: ConnectionRegistry,
-    val handler: GatewayWebSocketHandler
+    val handler: GatewayWebSocketHandler,
+    val blobStore: BlobStore,
+    val blobUploadPermitStore: BlobUploadPermitStore,
+    val serviceScope: CoroutineScope
 )
 
 internal fun createGatewayRuntime(
@@ -35,11 +44,35 @@ internal fun createGatewayRuntime(
 ): GatewayRuntime {
     val httpClient = suppliedHttpClient ?: createGatewayHttpClient()
     val connections = ConnectionRegistry()
+    val permitStore = BlobUploadPermitStore()
+    val blobStore =
+        BlobStore(
+            root = Path.of(config.blobStoragePath),
+            maximumBlobBytes = config.maximumBlobBytes,
+            maximumStorageBytes = config.maximumBlobStorageBytes
+        )
+    val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    serviceScope.launch {
+        BlobCleanupAgent(
+            store = blobStore,
+            cleanupIntervalMilliseconds = config.blobCleanupIntervalMilliseconds
+        ).run()
+    }
+    serviceScope.launch {
+        BlobUploadPermitCleanupAgent(
+            permitStore = permitStore,
+            cleanupIntervalMilliseconds = config.blobCleanupIntervalMilliseconds
+        ).run()
+    }
+
     return GatewayRuntime(
         httpClient = httpClient,
         ownsHttpClient = suppliedHttpClient == null,
         connections = connections,
-        handler = createGatewayHandler(identity, config, httpClient, connections)
+        handler = createGatewayHandler(identity, config, httpClient, connections, permitStore),
+        blobStore = blobStore,
+        blobUploadPermitStore = permitStore,
+        serviceScope = serviceScope
     )
 }
 
@@ -54,7 +87,8 @@ private fun createGatewayHandler(
     identity: NodeIdentity,
     config: GatewayConfig,
     httpClient: HttpClient,
-    connections: ConnectionRegistry
+    connections: ConnectionRegistry,
+    blobUploadPermitStore: BlobUploadPermitStore
 ): GatewayWebSocketHandler {
     val signer = NodeRequestSigner(identity)
     val presenceEndpointPool =
@@ -93,13 +127,22 @@ private fun createGatewayHandler(
                 signer = signer
             ),
         legacyPush = pushClient,
-        routeLifetimeMilliseconds = config.routeLifetimeMilliseconds
+        routeLifetimeMilliseconds = config.routeLifetimeMilliseconds,
+        blobUploadTicketIssuer =
+            GatewayBlobUploadTicketIssuer(
+                nodeId = identity.nodeId,
+                permitStore = blobUploadPermitStore,
+                maximumBlobBytes = config.maximumBlobBytes,
+                maximumRetentionMilliseconds = config.maximumBlobRetentionMilliseconds,
+                ticketLifetimeMilliseconds = config.blobUploadTicketLifetimeMilliseconds
+            )
     )
 }
 
 internal fun Application.configureGatewayLifecycle(runtime: GatewayRuntime) {
     monitor.subscribe(ApplicationStopped) {
         runtime.handler.close()
+        runtime.serviceScope.cancel()
         if (runtime.ownsHttpClient) {
             runtime.httpClient.close()
         }

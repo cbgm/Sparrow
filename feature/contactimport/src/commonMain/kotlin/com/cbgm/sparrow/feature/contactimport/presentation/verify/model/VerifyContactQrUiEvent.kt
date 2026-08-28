@@ -5,6 +5,10 @@ sealed interface VerifyContactQrUiEvent {
         val encodedIdentity: String
     ) : VerifyContactQrUiEvent
 
+    data object ScannedIdentityConfirmed : VerifyContactQrUiEvent
+
+    data object ScannedIdentityDismissed : VerifyContactQrUiEvent
+
     data object BackClicked : VerifyContactQrUiEvent
 
     data object ErrorDismissed : VerifyContactQrUiEvent

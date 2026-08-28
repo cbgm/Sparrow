@@ -29,7 +29,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_verify_contact
@@ -95,7 +98,7 @@ fun IdentityVerificationScreen(
                     Icon(
                         imageVector = Icons.Default.QrCodeScanner,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(Dimens.IdentityVerificationScreen.iconSize)
                     )
 
                     Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
@@ -138,7 +141,7 @@ fun IdentityVerificationScreen(
             Text(
                 text = stringResource(Res.string.feature_chats_confirm_matching_numbers_only),
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
             )
 
             if (errorMessage != null) {
@@ -158,14 +161,14 @@ fun IdentityVerificationScreen(
                 content = {
                     if (isVerifying) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(Dimens.IdentityVerificationScreen.iconSize),
+                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
                             color = MaterialTheme.colorScheme.onPrimary
                         )
                     } else {
                         Text(
                             text = stringResource(Res.string.feature_chats_numbers_match),
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -205,7 +208,7 @@ private fun SafetyNumberContent(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
                             .padding(vertical = MaterialTheme.spacing.small),
                     style = MaterialTheme.typography.titleSmall,
                     fontFamily = FontFamily.Monospace,
@@ -244,9 +247,25 @@ private fun VerificationTopBar(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
                 maxLines = 1
             )
         }
     )
+}
+
+@Preview
+@Composable
+private fun IdentityVerificationScreenPreview() {
+    SparrowTheme {
+        IdentityVerificationScreen(
+            contactName = "dsffsdf",
+            safetyNumber = "654654654",
+            isLoadingSafetyNumber = false,
+            isVerifying = false,
+            errorMessage = null,
+            onConfirm = {},
+            onScanQrCode = {},
+            onBack = {}
+        )
+    }
 }

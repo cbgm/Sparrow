@@ -24,20 +24,20 @@ fun ListingRow(
     ) {
         Text(
             text = index,
-            color = MaterialTheme.colorScheme.secondary,
+            color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold
         )
         Column(Modifier.padding(start = MaterialTheme.spacing.medium)) {
             Text(
                 text = title,
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
                 text = description,
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = .66f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall
             )
         }

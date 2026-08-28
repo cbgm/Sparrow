@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.identity.presentation.setup
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class IdentityViewModel(
+    private val savedStateHandle: SavedStateHandle,
     private val getIdentityStatus: GetIdentityStatusUseCase,
     private val getPublicIdentity: GetPublicIdentityUseCase,
     private val createIdentity: CreateIdentityUseCase,
@@ -120,6 +122,7 @@ class IdentityViewModel(
 
             createIdentity()
                 .onSuccess { publicIdentity ->
+                    clearDraft()
                     mutableUiState.value =
                         IdentityUiState.Ready(
                             publicIdentity = publicIdentity,
@@ -141,6 +144,7 @@ class IdentityViewModel(
         val currentState = mutableUiState.value
 
         if (currentState is IdentityUiState.NoIdentity) {
+            savedStateHandle[PHONE_NUMBER_KEY] = value
             mutableUiState.value =
                 currentState.copy(
                     phoneNumber = value,
@@ -153,6 +157,7 @@ class IdentityViewModel(
         val currentState = mutableUiState.value
 
         if (currentState is IdentityUiState.NoIdentity) {
+            savedStateHandle[NAME_KEY] = value
             mutableUiState.value =
                 currentState.copy(
                     name = value
@@ -163,20 +168,35 @@ class IdentityViewModel(
     private suspend fun handleIdentityStatus(status: IdentityStatus) {
         when (status) {
             IdentityStatus.NOT_CREATED -> {
-                val storedPhoneNumber =
-                    getLocalPhoneNumber().getOrNull().orEmpty()
-
-                mutableUiState.value = IdentityUiState.NoIdentity(phoneNumber = storedPhoneNumber)
+                val storedPhoneNumber = getLocalPhoneNumber().getOrNull().orEmpty()
+                val phoneNumber =
+                    if (savedStateHandle.contains(PHONE_NUMBER_KEY)) {
+                        savedStateHandle.get<String>(PHONE_NUMBER_KEY).orEmpty()
+                    } else {
+                        storedPhoneNumber
+                    }
+                mutableUiState.value =
+                    IdentityUiState.NoIdentity(
+                        phoneNumber = phoneNumber,
+                        name = savedStateHandle.get<String>(NAME_KEY).orEmpty()
+                    )
             }
 
             IdentityStatus.INCOMPLETE -> {
+                clearDraft()
                 mutableUiState.value = IdentityUiState.IncompleteIdentity
             }
 
             IdentityStatus.READY -> {
+                clearDraft()
                 loadReadyIdentity()
             }
         }
+    }
+
+    private fun clearDraft() {
+        savedStateHandle.remove<String>(PHONE_NUMBER_KEY)
+        savedStateHandle.remove<String>(NAME_KEY)
     }
 
     private suspend fun loadReadyIdentity() {
@@ -221,5 +241,10 @@ class IdentityViewModel(
                         message = error.message ?: "Failed to load public identity"
                     )
             }
+    }
+
+    private companion object {
+        const val PHONE_NUMBER_KEY = "phoneNumber"
+        const val NAME_KEY = "name"
     }
 }

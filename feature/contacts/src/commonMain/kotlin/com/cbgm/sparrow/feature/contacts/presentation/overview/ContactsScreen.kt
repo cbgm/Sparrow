@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.contacts.presentation.overview
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -18,6 +19,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.presentation.overview.components.ContactSelectionCircle
 import com.cbgm.sparrow.feature.contacts.presentation.overview.components.ContactStatus
 import com.cbgm.sparrow.feature.contacts.presentation.overview.components.ContactsErrorContent
@@ -44,7 +46,8 @@ fun ContactsScreen(
     mode: ContactsScreenMode,
     onUiEvent: (ContactsUiEvent) -> Unit,
     modifier: Modifier = Modifier,
-    snackbarHostState: SnackbarHostState? = null
+    snackbarHostState: SnackbarHostState? = null,
+    onContactSelected: (Contact) -> Unit = {}
 ) {
     var showImportSheet by rememberSaveable {
         mutableStateOf(false)
@@ -56,7 +59,8 @@ fun ContactsScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { containerColor ->
             when (mode) {
-                is ContactsScreenMode.Overview -> {
+                is ContactsScreenMode.Overview,
+                is ContactsScreenMode.AttachmentSelection -> {
                     OverviewContactsTopBar(
                         containerColor = containerColor,
                         searchQuery = mode.searchQuery,
@@ -114,13 +118,19 @@ fun ContactsScreen(
             }
         }
     ) { innerPadding, listState ->
-        ContactsContent(
-            uiState = uiState,
-            mode = mode,
-            innerPadding = innerPadding,
-            listState = listState,
-            onUiEvent = onUiEvent
-        )
+
+        Box(
+            modifier = modifier.padding(MaterialTheme.spacing.screenPadding)
+        ) {
+            ContactsContent(
+                uiState = uiState,
+                mode = mode,
+                innerPadding = innerPadding,
+                listState = listState,
+                onUiEvent = onUiEvent,
+                onContactSelected = onContactSelected
+            )
+        }
     }
 
     if (showImportSheet && mode is ContactsScreenMode.Overview) {
@@ -146,10 +156,11 @@ private fun ContactsContent(
     mode: ContactsScreenMode,
     innerPadding: PaddingValues,
     listState: LazyListState,
-    onUiEvent: (ContactsUiEvent) -> Unit
+    onUiEvent: (ContactsUiEvent) -> Unit,
+    onContactSelected: (Contact) -> Unit
 ) {
     when (uiState) {
-        ContactsUiState.Loading -> {
+        is ContactsUiState.Loading -> {
             LoadingContactsContent(
                 modifier =
                     Modifier
@@ -158,7 +169,7 @@ private fun ContactsContent(
             )
         }
 
-        ContactsUiState.Empty -> {
+        is ContactsUiState.Empty -> {
             EmptyContactsContent(
                 modifier =
                     Modifier
@@ -171,10 +182,12 @@ private fun ContactsContent(
         is ContactsUiState.Content -> {
             ContactsList(
                 groups = uiState.groups,
+                profilePictures = uiState.profilePictures,
                 mode = mode,
                 innerPadding = innerPadding,
                 listState = listState,
-                onUiEvent = onUiEvent
+                onUiEvent = onUiEvent,
+                onContactSelected = onContactSelected
             )
         }
 
@@ -207,19 +220,19 @@ private fun ContactsContent(
 @Composable
 private fun ContactsList(
     groups: List<ContactGroupEntity>,
+    profilePictures: Map<String, ByteArray?>,
     mode: ContactsScreenMode,
     innerPadding: PaddingValues,
     listState: LazyListState,
-    onUiEvent: (ContactsUiEvent) -> Unit
+    onUiEvent: (ContactsUiEvent) -> Unit,
+    onContactSelected: (Contact) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         state = listState,
         contentPadding =
             PaddingValues(
-                start = MaterialTheme.spacing.medium,
                 top = innerPadding.calculateTopPadding(),
-                end = MaterialTheme.spacing.medium,
                 bottom = innerPadding.calculateBottomPadding()
             ),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
@@ -234,6 +247,7 @@ private fun ContactsList(
 
         contactGroups(
             groups = groups,
+            profilePictures = profilePictures,
             onContactClick = { contact ->
                 when (mode) {
                     is ContactsScreenMode.Overview -> {
@@ -243,6 +257,12 @@ private fun ContactsList(
                                 contactName = contact.displayName.orEmpty()
                             )
                         )
+                    }
+
+                    is ContactsScreenMode.AttachmentSelection -> {
+                        if (contact.preferredPhoneNumber != null) {
+                            onContactSelected(contact)
+                        }
                     }
 
                     is ContactsScreenMode.GroupSelection,
@@ -255,6 +275,13 @@ private fun ContactsList(
                 when (mode) {
                     is ContactsScreenMode.Overview -> {
                         ContactStatus(contact = contact)
+                    }
+
+                    is ContactsScreenMode.AttachmentSelection -> {
+                        ContactSelectionCircle(
+                            selected = false,
+                            enabled = contact.preferredPhoneNumber != null
+                        )
                     }
 
                     is ContactsScreenMode.GroupSelection -> {

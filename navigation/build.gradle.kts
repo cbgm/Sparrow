@@ -16,12 +16,16 @@ kotlin {
         commonMain.dependencies {
             implementation(projects.core)
             implementation(projects.core.ui)
+            implementation(projects.feature.attachments)
             implementation(projects.feature.chats)
             implementation(projects.feature.contactimport)
             implementation(projects.feature.contacts)
             implementation(projects.feature.identity)
+            implementation(projects.feature.media)
             implementation(projects.feature.onboarding)
             implementation(projects.feature.settings)
+            implementation(projects.feature.search)
+            implementation(projects.feature.safety)
             implementation(projects.notification)
             implementation(projects.startup)
 
@@ -31,15 +35,6 @@ kotlin {
             implementation(libs.bundles.serialization)
 
             implementation(libs.jetbrains.navigation.compose)
-            implementation(compose.materialIconsExtended)
-        }
-
-        commonTest.dependencies {
-            implementation(libs.bundles.kmp.testing)
-        }
-
-        androidDeviceTest.dependencies {
-            implementation(libs.bundles.android.device.testing)
         }
     }
 }

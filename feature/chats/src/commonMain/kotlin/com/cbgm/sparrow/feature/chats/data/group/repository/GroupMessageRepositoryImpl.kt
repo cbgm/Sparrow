@@ -1,32 +1,28 @@
 package com.cbgm.sparrow.feature.chats.data.group.repository
 
 import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
-import com.cbgm.sparrow.feature.chats.data.group.delivery.GroupMessageDeliveryCoordinator
+import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupOutgoingMessageProcessor
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupMessageRepository
 
 class GroupMessageRepositoryImpl(
     private val groupInvitationDao: GroupInvitationDao,
-    private val outgoingMessageProcessor: GroupOutgoingMessageProcessor,
-    private val deliveryCoordinator: GroupMessageDeliveryCoordinator
+    private val outgoingMessageProcessor: GroupOutgoingMessageProcessor
 ) : GroupMessageRepository {
     override suspend fun send(
         groupId: String,
-        text: String
+        text: String,
+        attachments: List<OutgoingMessageAttachment>
     ): Result<Unit> =
         outgoingMessageProcessor.send(
             groupId = groupId,
             text = text,
+            attachments = attachments,
             invitations = groupInvitationDao.findByGroupId(groupId)
         )
 
     override suspend fun retry(messageId: String): Result<Unit> =
         outgoingMessageProcessor.retry(messageId)
-
-    override suspend fun refreshDeliveryState(groupId: String): Result<Unit> =
-        runCatching {
-            deliveryCoordinator.expireUnconfirmedRecipients(groupId)
-        }
 
     override suspend fun markConversationRead(groupId: String): Result<Unit> =
         outgoingMessageProcessor.sendReadReceipts(groupId)

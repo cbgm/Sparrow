@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -29,16 +27,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.transport.TransportDiagnosticConnectionState
 import com.cbgm.sparrow.core.transport.TransportDiagnostics
 import com.cbgm.sparrow.core.transport.TransportNodeDiagnostic
 import com.cbgm.sparrow.core.transport.TransportNodeDiagnosticState
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
+import com.cbgm.sparrow.core.ui.component.SparrowDestructiveButton
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
+import com.cbgm.sparrow.feature.settings.presentation.developer.components.DeveloperErrorLogCard
 import com.cbgm.sparrow.feature.settings.presentation.developer.components.NetworkDiagnosticsCard
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiState
@@ -66,7 +66,7 @@ fun DeveloperMenuScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { containerColor ->
-            DeveloperMenuTopBar(
+            TopBar(
                 containerColor = containerColor,
                 onBack = { onUiEvent(DeveloperMenuUiEvent.BackClicked) }
             )
@@ -89,6 +89,11 @@ fun DeveloperMenuScreen(
 
             NetworkDiagnosticsCard(diagnostics = uiState.transportDiagnostics)
 
+            DeveloperErrorLogCard(
+                savedErrorCount = uiState.savedErrorCount,
+                onClick = { onUiEvent(DeveloperMenuUiEvent.ErrorLogClicked) }
+            )
+
             DangerZoneCard(
                 isClearingLocalData = uiState.isClearingLocalData,
                 onClearLocalData = { onUiEvent(DeveloperMenuUiEvent.ClearLocalDataClicked) },
@@ -100,7 +105,7 @@ fun DeveloperMenuScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DeveloperMenuTopBar(
+private fun TopBar(
     containerColor: Color,
     onBack: () -> Unit
 ) {
@@ -115,8 +120,7 @@ private fun DeveloperMenuTopBar(
         title = {
             Text(
                 text = stringResource(Res.string.feature_settings_developer_menu),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleSmall
             )
         },
         navigationIcon = {
@@ -140,7 +144,7 @@ private fun BuildInfoCard(buildInfo: BuildInfo) {
                 text = stringResource(Res.string.feature_settings_build_info),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
@@ -193,33 +197,28 @@ private fun DangerZoneCard(
                         bottom = MaterialTheme.spacing.small
                     ),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Button(
+            SparrowDestructiveButton(
                 onClick = onClearLocalData,
                 enabled = !isClearingLocalData,
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraSmall,
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-            ) {
-                if (isClearingLocalData) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                } else {
-                    Text(
-                        text = stringResource(Res.string.base_clear_local_data),
-                        fontWeight = FontWeight.SemiBold
-                    )
+                content = {
+                    if (isClearingLocalData) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(Dimens.DeveloperMenuScreen.progressSize),
+                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(Res.string.base_clear_local_data),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
-            }
+            )
 
             Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
 
@@ -249,14 +248,14 @@ private fun BuildInfoRow(
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Text(
             text = value,
             style = MaterialTheme.typography.bodySmall,
             fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }

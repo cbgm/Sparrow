@@ -8,41 +8,35 @@ object DirectMessageDeliveryStateMachine {
         current: MessageDeliveryStatus,
         event: MessageDeliveryEvent
     ): MessageDeliveryStatus =
-        when (event) {
-            MessageDeliveryEvent.SEND_STARTED ->
-                when (current) {
-                    MessageDeliveryStatus.QUEUED,
-                    MessageDeliveryStatus.FAILED -> MessageDeliveryStatus.SENDING
-                    else -> current
-                }
+        when (current to event) {
+            MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION to MessageDeliveryEvent.AUTHORIZATION_GRANTED ->
+                MessageDeliveryStatus.QUEUED
 
-            MessageDeliveryEvent.SEND_SUCCEEDED ->
-                if (current == MessageDeliveryStatus.SENDING) MessageDeliveryStatus.SENT else current
+            MessageDeliveryStatus.QUEUED to MessageDeliveryEvent.SEND_STARTED,
+            MessageDeliveryStatus.FAILED to MessageDeliveryEvent.SEND_STARTED -> MessageDeliveryStatus.SENDING
 
-            MessageDeliveryEvent.SEND_FAILED ->
-                when (current) {
-                    MessageDeliveryStatus.QUEUED,
-                    MessageDeliveryStatus.SENDING -> MessageDeliveryStatus.FAILED
-                    else -> current
-                }
+            MessageDeliveryStatus.SENDING to MessageDeliveryEvent.SEND_SUCCEEDED -> MessageDeliveryStatus.SENT
 
-            MessageDeliveryEvent.RETRY_REQUESTED ->
-                if (current == MessageDeliveryStatus.FAILED) MessageDeliveryStatus.QUEUED else current
+            MessageDeliveryStatus.QUEUED to MessageDeliveryEvent.SEND_FAILED,
+            MessageDeliveryStatus.SENDING to MessageDeliveryEvent.SEND_FAILED -> MessageDeliveryStatus.FAILED
 
-            MessageDeliveryEvent.DELIVERY_CONFIRMED ->
-                when (current) {
-                    MessageDeliveryStatus.QUEUED,
-                    MessageDeliveryStatus.SENDING,
-                    MessageDeliveryStatus.SENT,
-                    MessageDeliveryStatus.FAILED -> MessageDeliveryStatus.DELIVERED
-                    else -> current
-                }
+            MessageDeliveryStatus.FAILED to MessageDeliveryEvent.RETRY_REQUESTED -> MessageDeliveryStatus.QUEUED
 
-            MessageDeliveryEvent.DELIVERY_TIMED_OUT ->
-                if (current == MessageDeliveryStatus.SENT) MessageDeliveryStatus.FAILED else current
+            MessageDeliveryStatus.QUEUED to MessageDeliveryEvent.DELIVERY_CONFIRMED,
+            MessageDeliveryStatus.SENDING to MessageDeliveryEvent.DELIVERY_CONFIRMED,
+            MessageDeliveryStatus.SENT to MessageDeliveryEvent.DELIVERY_CONFIRMED,
+            MessageDeliveryStatus.FAILED to MessageDeliveryEvent.DELIVERY_CONFIRMED -> MessageDeliveryStatus.DELIVERED
 
-            MessageDeliveryEvent.READ_CONFIRMED ->
-                if (current == MessageDeliveryStatus.NOT_APPLICABLE) current else MessageDeliveryStatus.READ
+            MessageDeliveryStatus.SENT to MessageDeliveryEvent.DELIVERY_EXPIRED -> MessageDeliveryStatus.FAILED
+
+            MessageDeliveryStatus.QUEUED to MessageDeliveryEvent.READ_CONFIRMED,
+            MessageDeliveryStatus.SENDING to MessageDeliveryEvent.READ_CONFIRMED,
+            MessageDeliveryStatus.SENT to MessageDeliveryEvent.READ_CONFIRMED,
+            MessageDeliveryStatus.FAILED to MessageDeliveryEvent.READ_CONFIRMED,
+            MessageDeliveryStatus.DELIVERED to MessageDeliveryEvent.READ_CONFIRMED,
+            MessageDeliveryStatus.READ to MessageDeliveryEvent.READ_CONFIRMED -> MessageDeliveryStatus.READ
+
+            else -> current
         }
 
     fun canTransition(

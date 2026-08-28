@@ -63,7 +63,11 @@ nav:
   - Features:
       - Current Feature Status: features/current-features.md
       - Chats: features/chats.md
+      - Attachments: features/attachments.md
       - Contacts: features/contacts.md
+      - Message Search: features/search.md
+      - Message Safety: features/message-safety.md
+      - Settings & Diagnostics: features/settings.md
       - Identity: features/identity.md
       - Onboarding: features/onboarding.md
       - Messaging & Delivery Flow: features/message-transport-flow.md

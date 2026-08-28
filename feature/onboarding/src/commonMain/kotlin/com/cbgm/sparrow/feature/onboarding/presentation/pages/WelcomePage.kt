@@ -32,13 +32,13 @@ fun WelcomePage(onNext: () -> Unit) {
         Text(
             text = stringResource(Res.string.feature_onboarding_welcome_to_sparrow),
             style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.SemiBold
         )
         Spacer(Modifier.height(MaterialTheme.spacing.small))
         Text(
             text = stringResource(Res.string.feature_onboarding_welcome_description),
-            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = .74f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center
         )

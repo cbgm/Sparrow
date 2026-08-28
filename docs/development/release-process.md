@@ -30,27 +30,20 @@ CONTROL_PLANE_DIRECTORY_URL
 CONTROL_PLANE_RELEASE_DIRECTORY_URL
 ```
 
-The debug APK uses `CONTROL_PLANE_DIRECTORY_URL`. The signed release APK uses
-`CONTROL_PLANE_RELEASE_DIRECTORY_URL`. Both are written into CI `local.properties` as:
-
-```properties
-controlPlaneDirectoryUrl=...
-```
-
-and become common KMP `BuildKonfig.CONTROL_PLANE_DIRECTORY_URL`.
+The debug/PR workflow reads repository variable `CONTROL_PLANE_DIRECTORY_URL` and writes the local development property `controlPlaneDirectoryUrl=...`. The signed release workflow reads `CONTROL_PLANE_RELEASE_DIRECTORY_URL` and writes `CONTROL_PLANE_RELEASE_DIRECTORY_URL=...` for the BuildKonfig release flavor. Both flavors expose the selected value to common code as `BuildKonfig.CONTROL_PLANE_DIRECTORY_URL`.
 
 ## Android signing secrets
 
 Configure GitHub Actions **Secrets**:
 
 ```text
-ANDROID_RELEASE_KEYSTORE_BASE64
-ANDROID_RELEASE_KEYSTORE_PASSWORD
-ANDROID_RELEASE_KEY_ALIAS
-ANDROID_RELEASE_KEY_PASSWORD
+KEY_STORE_FILE
+KEY_STORE_PASSWORD
+KEY_ALIAS
+KEY_PASSWORD
 ```
 
-`ANDROID_RELEASE_KEYSTORE_BASE64` is the Base64-encoded `.jks` file, not a password. Keep the original keystore in
+`KEY_STORE_FILE` is the Base64-encoded `.jks` file, not a filesystem path or password. Keep the original keystore in
 a secure backup; losing the signing key prevents future APKs from being installed as updates to the same app.
 
 Example key creation in Windows CMD:
@@ -75,8 +68,7 @@ macOS/Linux:
 base64 < sparrow-release.jks > sparrow-release-keystore-base64.txt
 ```
 
-Paste that file's contents into `ANDROID_RELEASE_KEYSTORE_BASE64`. The other three secrets contain the actual
-keystore password, alias and key password. Back up the original `.jks` offline; do not commit it.
+Paste that file's contents into `KEY_STORE_FILE`. `KEY_STORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD` contain the actual keystore password, alias, and key password. Back up the original `.jks` offline; do not commit it.
 
 ## Create a release branch
 

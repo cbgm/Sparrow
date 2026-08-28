@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.sparrow.kmp.compose.feature)
+    alias(libs.plugins.sparrow.kmp.serialization)
     alias(libs.plugins.about.libs)
 }
 
@@ -15,13 +16,19 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(projects.core)
+            implementation(projects.data.datastore)
+            implementation(projects.core.embedding)
             implementation(projects.core.ui)
+            implementation(projects.feature.identity)
+            implementation(projects.feature.media)
+            implementation(projects.feature.search)
+            implementation(projects.feature.safety)
 
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)
+            implementation(libs.bundles.serialization)
             implementation(libs.bundles.koin.compose)
 
-            implementation(compose.materialIconsExtended)
             implementation(libs.about.libs.compose)
             implementation(libs.about.libs.render)
         }

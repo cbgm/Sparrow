@@ -9,7 +9,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsUiState
@@ -22,7 +21,8 @@ internal fun ContactDetailsBody(
     onBack: () -> Unit,
     onRetry: () -> Unit,
     onShareContact: () -> Unit,
-    onVerifyIdentity: () -> Unit
+    onVerifyIdentity: () -> Unit,
+    onMediaAndFiles: () -> Unit
 ) {
     when (uiState) {
         ContactDetailsUiState.Loading ->
@@ -47,8 +47,10 @@ internal fun ContactDetailsBody(
             ContactDetailsContent(
                 contact = uiState.contact,
                 safetyNumber = uiState.safetyNumber,
+                profilePictureBytes = uiState.profilePictureBytes,
                 onShareContact = onShareContact,
                 onVerifyIdentity = onVerifyIdentity,
+                onMediaAndFiles = onMediaAndFiles,
                 scrollState = scrollState,
                 innerPadding = innerPadding,
                 modifier = Modifier.fillMaxSize()
@@ -62,7 +64,7 @@ internal fun ContactDetailsBody(
                     Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
-                        .padding(24.dp)
+                        .padding(MaterialTheme.spacing.screenPadding)
             )
     }
 }
@@ -78,7 +80,8 @@ private fun ContactDetailsBodyPreview() {
             onBack = {},
             onRetry = {},
             onShareContact = {},
-            onVerifyIdentity = {}
+            onVerifyIdentity = {},
+            onMediaAndFiles = {}
         )
     }
 }

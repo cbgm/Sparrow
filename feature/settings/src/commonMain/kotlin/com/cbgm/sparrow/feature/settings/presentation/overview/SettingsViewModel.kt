@@ -1,29 +1,33 @@
 package com.cbgm.sparrow.feature.settings.presentation.overview
 
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingFeature
+import com.cbgm.sparrow.core.embedding.domain.usecase.SetLocalEmbeddingFeatureEnabledUseCase
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.feature.search.domain.usecase.SetSemanticSearchEnabledUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetAppLanguageUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetBuildInfoUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetDeveloperEnabledUseCase
-import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveBlockUnknownContactInvitesUseCase
-import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveBlockedContactIdsUseCase
-import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveDirectIdentitySetupModeUseCase
+import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveSettingsDomainContextUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetAppLanguageUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetBlockUnknownContactInvitesUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetDeveloperEnabledUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetDirectIdentitySetupModeUseCase
+import com.cbgm.sparrow.feature.settings.presentation.overview.mapper.toSettingsUiState
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.DEVELOPER_MODE_TAP_THRESHOLD
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsEffect
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsUiState
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -31,82 +35,90 @@ class SettingsViewModel(
     private val setAppLanguageUseCase: SetAppLanguageUseCase,
     private val getAppLanguageUseCase: GetAppLanguageUseCase,
     private val getDeveloperEnabledUseCase: GetDeveloperEnabledUseCase,
-    private val getBuildInfoUseCase: GetBuildInfoUseCase,
+    getBuildInfoUseCase: GetBuildInfoUseCase,
     private val setDeveloperModeEnabledUseCase: SetDeveloperEnabledUseCase,
-    private val observeDirectIdentitySetupMode: ObserveDirectIdentitySetupModeUseCase,
+    observeSettingsDomainContext: ObserveSettingsDomainContextUseCase,
     private val setDirectIdentitySetupMode: SetDirectIdentitySetupModeUseCase,
-    private val observeBlockUnknownContactInvites: ObserveBlockUnknownContactInvitesUseCase,
     private val setBlockUnknownContactInvites: SetBlockUnknownContactInvitesUseCase,
-    private val observeBlockedContactIds: ObserveBlockedContactIdsUseCase
+    private val setSemanticSearchEnabled: SetSemanticSearchEnabledUseCase,
+    private val setLocalEmbeddingFeatureEnabled: SetLocalEmbeddingFeatureEnabledUseCase
 ) : BaseViewModel() {
-    private val _uiState = MutableStateFlow(SettingsUiState())
-    val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+    private val buildInfo = getBuildInfoUseCase()
+    private val localState = MutableStateFlow(SettingsLocalState())
+
+    val uiState: StateFlow<SettingsUiState> =
+        combine(
+            observeSettingsDomainContext(),
+            localState
+        ) { domain, local ->
+            buildInfo.toSettingsUiState(
+                currentLanguage = local.currentLanguage,
+                identitySetupMode = domain.identitySetupMode,
+                blockUnknownContactInvites = domain.blockUnknownContactInvites,
+                blockedContactCount = domain.blockedContactCount,
+                localEmbeddingState = domain.localEmbeddingState,
+                semanticSearchState = domain.semanticSearchState,
+                messageSafetyState = domain.messageSafetyState,
+                isDeveloperModeEnabled = local.isDeveloperModeEnabled,
+                developerModeTapCount = local.developerModeTapCount,
+                showLanguagePicker = local.showLanguagePicker
+            )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+            initialValue = SettingsUiState(buildInfo = buildInfo)
+        )
 
     private val _effects = Channel<SettingsEffect>(capacity = Channel.BUFFERED)
     val effects = _effects.receiveAsFlow()
 
     init {
-        loadSettings()
-        observeIdentitySetupMode()
-        observeContactBlockingSettings()
+        loadLocalSettings()
     }
 
     fun onUiEvent(event: SettingsUiEvent) {
         when (event) {
             SettingsUiEvent.LanguagePickerOpened ->
-                _uiState.update { it.copy(showLanguagePicker = true) }
+                localState.update { it.copy(showLanguagePicker = true) }
             SettingsUiEvent.LanguagePickerDismissed ->
-                _uiState.update { it.copy(showLanguagePicker = false) }
+                localState.update { it.copy(showLanguagePicker = false) }
             is SettingsUiEvent.LanguageSelected -> selectLanguage(event.language)
             is SettingsUiEvent.DirectIdentitySetupModeChanged -> changeDirectIdentitySetupMode(event.mode)
             is SettingsUiEvent.BlockUnknownContactInvitesChanged -> changeBlockUnknownContactInvites(event.enabled)
+            is SettingsUiEvent.SemanticSearchEnabledChanged -> changeSemanticSearchEnabled(event.enabled)
+            is SettingsUiEvent.MessageSafetyEnabledChanged -> changeMessageSafetyEnabled(event.enabled)
             SettingsUiEvent.PrivacyPolicyClicked -> navigator.navigateTo(AppRoute.PrivacyPolicy)
             SettingsUiEvent.DataDisclaimerClicked -> navigator.navigateTo(AppRoute.DataDisclaimer)
             SettingsUiEvent.LicensesClicked -> navigator.navigateTo(AppRoute.Licenses)
             SettingsUiEvent.DeveloperMenuClicked -> navigator.navigateTo(AppRoute.DeveloperMenu)
             SettingsUiEvent.BlockedContactsClicked -> navigator.navigateTo(AppRoute.BlockedContacts)
+            SettingsUiEvent.ProfileClicked -> navigator.navigateTo(AppRoute.ProfileSettings)
             SettingsUiEvent.ControlPlanesClicked -> navigator.navigateTo(AppRoute.ControlPlanes)
+            SettingsUiEvent.AttachmentStorageClicked -> navigator.navigateTo(AppRoute.AttachmentStorage)
             SettingsUiEvent.VersionRowTapped -> handleVersionTap()
         }
     }
 
-    private fun loadSettings() {
+    private fun loadLocalSettings() {
         viewModelScope.launch {
-            _uiState.update {
+            localState.update {
                 it.copy(
                     currentLanguage = getAppLanguageUseCase(),
-                    isDeveloperModeEnabled = getDeveloperEnabledUseCase(),
-                    buildInfo = getBuildInfoUseCase()
+                    isDeveloperModeEnabled = getDeveloperEnabledUseCase()
                 )
             }
         }
     }
 
-    private fun observeIdentitySetupMode() {
+    private fun changeSemanticSearchEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            observeDirectIdentitySetupMode().collect { mode ->
-                _uiState.update {
-                    it.copy(directIdentitySetupMode = mode)
-                }
-            }
+            setSemanticSearchEnabled(enabled)
         }
     }
 
-    private fun observeContactBlockingSettings() {
+    private fun changeMessageSafetyEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            observeBlockUnknownContactInvites().collect { enabled ->
-                _uiState.update {
-                    it.copy(blockUnknownContactInvites = enabled)
-                }
-            }
-        }
-
-        viewModelScope.launch {
-            observeBlockedContactIds().collect { contactIds ->
-                _uiState.update {
-                    it.copy(blockedContactCount = contactIds.size)
-                }
-            }
+            setLocalEmbeddingFeatureEnabled(LocalEmbeddingFeature.MESSAGE_SAFETY, enabled)
         }
     }
 
@@ -135,7 +147,7 @@ class SettingsViewModel(
     private fun selectLanguage(language: AppLanguage) {
         viewModelScope.launch {
             setAppLanguageUseCase(language)
-            _uiState.update {
+            localState.update {
                 it.copy(
                     currentLanguage = language,
                     showLanguagePicker = false
@@ -150,13 +162,14 @@ class SettingsViewModel(
     }
 
     private fun handleVersionTap() {
-        if (_uiState.value.isDeveloperModeEnabled) return
+        val state = localState.value
+        if (state.isDeveloperModeEnabled) return
 
-        val newCount = _uiState.value.developerModeTapCount + 1
+        val newCount = state.developerModeTapCount + 1
         if (newCount >= DEVELOPER_MODE_TAP_THRESHOLD) {
             viewModelScope.launch {
                 setDeveloperModeEnabledUseCase(true)
-                _uiState.update {
+                localState.update {
                     it.copy(
                         isDeveloperModeEnabled = true,
                         developerModeTapCount = 0
@@ -167,14 +180,17 @@ class SettingsViewModel(
             return
         }
 
-        _uiState.update { it.copy(developerModeTapCount = newCount) }
+        localState.update { it.copy(developerModeTapCount = newCount) }
         val remaining = DEVELOPER_MODE_TAP_THRESHOLD - newCount
         if (remaining <= 3) {
-            viewModelScope.launch {
-                _effects.send(
-                    SettingsEffect.ShowSnackbar("$remaining more taps to enable developer mode")
-                )
-            }
+            _effects.trySend(SettingsEffect.ShowSnackbar("$remaining more taps to enable developer mode"))
         }
     }
+
+    private data class SettingsLocalState(
+        val currentLanguage: AppLanguage = AppLanguage.ENGLISH,
+        val isDeveloperModeEnabled: Boolean = false,
+        val developerModeTapCount: Int = 0,
+        val showLanguagePicker: Boolean = false
+    )
 }

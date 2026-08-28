@@ -9,6 +9,8 @@ sealed interface GroupDetailsUiEvent {
 
     data object AddMembersClicked : GroupDetailsUiEvent
 
+    data object MediaAndFilesClicked : GroupDetailsUiEvent
+
     data class RemoveMemberClicked(
         val contactId: String
     ) : GroupDetailsUiEvent
@@ -42,6 +44,25 @@ sealed interface GroupDetailsUiEvent {
     data object LeaveGroupConfirmed : GroupDetailsUiEvent
 
     data object LeaveGroupDismissed : GroupDetailsUiEvent
+
+    data class AvatarSelected(
+        val bytes: ByteArray
+    ) : GroupDetailsUiEvent {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as AvatarSelected
+
+            if (!bytes.contentEquals(other.bytes)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int = bytes.contentHashCode()
+    }
+
+    data object RemoveGroupAvatarClicked : GroupDetailsUiEvent
 }
 
 sealed interface AddGroupMembersUiEvent {

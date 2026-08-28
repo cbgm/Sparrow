@@ -6,8 +6,8 @@ Push is used as a **wake-up mechanism**, not as the canonical plaintext message 
 
 Client/common notification orchestration:
 
-- `RegisterPushToken`
-- `SynchronizePendingMessages`
+- `RegisterPushTokenUseCase`
+- `SynchronizePendingMessagesUseCase`
 - `ConversationNotificationCoordinator`
 - `AppVisibilityState`
 

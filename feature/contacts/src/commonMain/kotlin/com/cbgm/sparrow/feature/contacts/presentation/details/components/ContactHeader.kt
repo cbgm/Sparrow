@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Schedule
@@ -19,12 +18,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.component.SparrowAvatar
+import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
@@ -39,7 +40,10 @@ import com.cbgm.sparrow.resources.feature_contacts_verified_sparrow_contact
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-internal fun ContactHeader(contact: Contact) {
+internal fun ContactHeader(
+    contact: Contact,
+    profilePictureBytes: ByteArray? = null
+) {
     val identity = contact.sparrowIdentity
     val verifiedByMe = identity?.verificationStatus == ContactVerificationStatus.VERIFIED
     val verifiedByContact =
@@ -51,34 +55,26 @@ internal fun ContactHeader(contact: Contact) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(contentAlignment = Alignment.BottomEnd) {
-            Surface(
-                modifier = Modifier.size(88.dp),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = contact.initials(),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+            SparrowAvatar(
+                name = contact.displayName.orEmpty(),
+                pictureBytes = profilePictureBytes,
+                size = Dimens.ContactDetailsScreen.avatarSize
+            )
 
             when {
                 isMutuallyVerified ->
                     Surface(
-                        modifier = Modifier.size(26.dp),
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.secondary
+                        modifier = Modifier.size(Dimens.ContactDetailsScreen.verificationBadgeSize),
+                        shape = MaterialTheme.shapes.circle,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        contentColor = MaterialTheme.colorScheme.onTertiary
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = null,
-                                tint = Color(0xFF071A2E),
-                                modifier = Modifier.size(16.dp)
+                                tint = MaterialTheme.colorScheme.onTertiary,
+                                modifier = Modifier.size(Dimens.ContactDetailsScreen.headerStatusIconSize)
                             )
                         }
                     }
@@ -86,13 +82,13 @@ internal fun ContactHeader(contact: Contact) {
                 verifiedByMe ->
                     ContactVerificationBadge(
                         icon = Icons.Default.Schedule,
-                        containerColor = MaterialTheme.colorScheme.secondary
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
 
                 verifiedByContact ->
                     ContactVerificationBadge(
                         icon = Icons.Default.Security,
-                        containerColor = MaterialTheme.colorScheme.tertiary
+                        containerColor = MaterialTheme.colorScheme.secondary
                     )
 
                 identity != null ->
@@ -113,7 +109,7 @@ internal fun ContactHeader(contact: Contact) {
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.micro))
 
         Text(
             text =
@@ -137,25 +133,15 @@ internal fun ContactHeader(contact: Contact) {
             color =
                 when {
                     identity == null -> MaterialTheme.colorScheme.error
-                    isMutuallyVerified || verifiedByMe -> MaterialTheme.colorScheme.secondary
-                    verifiedByContact -> MaterialTheme.colorScheme.tertiary
-                    else -> MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                    isMutuallyVerified -> MaterialTheme.colorScheme.tertiary
+                    verifiedByMe -> MaterialTheme.colorScheme.primary
+                    verifiedByContact -> MaterialTheme.colorScheme.secondary
+                    else -> MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
                 },
             textAlign = TextAlign.Center
         )
     }
 }
-
-private fun Contact.initials(): String =
-    displayName
-        ?.trim()
-        ?.split(regex = Regex("\\s+"))
-        ?.filter(String::isNotBlank)
-        ?.take(2)
-        ?.mapNotNull { part -> part.firstOrNull()?.uppercaseChar() }
-        ?.joinToString(separator = "")
-        ?.takeIf(String::isNotBlank)
-        ?: "?"
 
 @Preview
 @Composable

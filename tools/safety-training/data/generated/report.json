@@ -1,0 +1,47 @@
+{
+  "accepted_generated_rows": 1833,
+  "base_rows": 4618,
+  "candidate_rows_after_generation": 4588,
+  "combined_output": "data\\processed\\labeled.jsonl",
+  "combined_rows": 6451,
+  "generated_acceptance_rate": 0.39952048823016567,
+  "generated_collisions_with_base": 0,
+  "generated_languages": {
+    "de": 923,
+    "en": 910
+  },
+  "generated_output": "data\\generated\\validated.jsonl",
+  "generated_positives": {
+    "credential_request": 130,
+    "payment_request": 86,
+    "private_key_request": 154,
+    "urgent_action_request": 132
+  },
+  "generation_cache": "data\\generated\\generation_cache.jsonl",
+  "generation_conflicting_duplicate_groups_removed": 0,
+  "generation_exact_duplicates_removed": 212,
+  "generation_prompt_version": "sparrow-safety-contrastive-generator-v1",
+  "generator_model": "qwen3:8b",
+  "languages": [
+    "en",
+    "de"
+  ],
+  "min_confidence": 0.9,
+  "pairs_per_label_language": 200,
+  "pairs_per_label_language_by_label": {
+    "credential_request": 200,
+    "payment_request": 200,
+    "private_key_request": 600,
+    "urgent_action_request": 200
+  },
+  "rejected_generated_rows": 2755,
+  "rejected_output": "data\\generated\\rejected.jsonl",
+  "rejection_reasons": {
+    "below_confidence_threshold": 2234,
+    "does_not_match_intended_labels": 1338,
+    "validator_disagreement": 1039
+  },
+  "validation_cache": "data\\generated\\validation_cache.jsonl",
+  "validator_model_a": "qwen3:8b",
+  "validator_model_b": "gemma3:12b"
+}

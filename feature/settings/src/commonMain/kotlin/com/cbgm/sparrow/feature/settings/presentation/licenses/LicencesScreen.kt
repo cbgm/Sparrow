@@ -14,8 +14,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import com.cbgm.sparrow.core.ui.component.SparrowStaticScaffold
 import com.cbgm.sparrow.feature.settings.presentation.licenses.model.LicensesUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.licenses.model.LicensesUiState
@@ -28,8 +26,6 @@ import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
 import com.mikepenz.aboutlibraries.ui.compose.m3.style.m3VariantColors
 import com.mikepenz.aboutlibraries.ui.compose.produceLibraries
 import org.jetbrains.compose.resources.stringResource
-
-private val CardColor = Color(0xFF102A46)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,7 +40,7 @@ fun LicensesScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            LicensesTopBar(onBack = { onUiEvent(LicensesUiEvent.BackClicked) })
+            TopBar(onBack = { onUiEvent(LicensesUiEvent.BackClicked) })
         }
     ) { innerPadding ->
         LibrariesContainer(
@@ -59,11 +55,11 @@ fun LicensesScreen(
                     headerBackground = MaterialTheme.colorScheme.background,
                     headerOnBackground = MaterialTheme.colorScheme.onBackground,
                     rowBackground = MaterialTheme.colorScheme.background,
-                    rowExpandedBackground = CardColor,
+                    rowExpandedBackground = MaterialTheme.colorScheme.surfaceContainer,
                     rowOnBackground = MaterialTheme.colorScheme.onBackground,
-                    rowSubtleContent = MaterialTheme.colorScheme.onBackground,
-                    rowDivider = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.74f),
-                    actionLinkColor = MaterialTheme.colorScheme.onBackground
+                    rowSubtleContent = MaterialTheme.colorScheme.onSurfaceVariant,
+                    rowDivider = MaterialTheme.colorScheme.outlineVariant,
+                    actionLinkColor = MaterialTheme.colorScheme.primary
                 )
         )
     }
@@ -71,7 +67,7 @@ fun LicensesScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LicensesTopBar(onBack: () -> Unit) {
+private fun TopBar(onBack: () -> Unit) {
     TopAppBar(
         colors =
             TopAppBarDefaults.topAppBarColors(
@@ -83,8 +79,7 @@ private fun LicensesTopBar(onBack: () -> Unit) {
         title = {
             Text(
                 text = stringResource(Res.string.feature_settings_open_source_licenses),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleSmall
             )
         },
         navigationIcon = {
@@ -102,8 +97,8 @@ private fun LicensesTopBar(onBack: () -> Unit) {
 private fun licensesColors(): DefaultLibraryColors {
     val chipColors =
         DefaultChipColors(
-            containerColor = MaterialTheme.colorScheme.secondary,
-            contentColor = MaterialTheme.colorScheme.onBackground
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
         )
 
     return DefaultLibraryColors(
@@ -112,8 +107,8 @@ private fun licensesColors(): DefaultLibraryColors {
         versionChipColors = chipColors,
         licenseChipColors = chipColors,
         fundingChipColors = chipColors,
-        dialogBackgroundColor = MaterialTheme.colorScheme.background,
-        dialogContentColor = MaterialTheme.colorScheme.onBackground,
-        dialogConfirmButtonColor = MaterialTheme.colorScheme.secondary
+        dialogBackgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        dialogContentColor = MaterialTheme.colorScheme.onSurface,
+        dialogConfirmButtonColor = MaterialTheme.colorScheme.primary
     )
 }

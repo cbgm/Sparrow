@@ -5,7 +5,6 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,8 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,14 +23,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.core.ui.component.IdentityVerificationScreen
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
+import com.cbgm.sparrow.core.ui.component.SparrowDialogListItem
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
+import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.presentation.details.model.AddGroupMembersUiEvent
@@ -53,7 +51,6 @@ import com.cbgm.sparrow.resources.feature_chats_group_remove_member
 import com.cbgm.sparrow.resources.feature_chats_group_remove_member_description
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import org.koin.core.parameter.parametersOf
 
 private enum class DetailsContent {
     Overview,
@@ -63,14 +60,10 @@ private enum class DetailsContent {
 
 @Composable
 fun GroupDetailsFlow(
-    conversationId: String,
-    requestLeave: Boolean = false,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    requestLeave: Boolean = false
 ) {
-    val verificationViewModel =
-        koinViewModel<GroupVerificationViewModel> {
-            parametersOf(conversationId)
-        }
+    val verificationViewModel = koinViewModel<GroupVerificationViewModel>()
     val uiState by verificationViewModel.uiState.collectAsStateWithLifecycle()
     var content by rememberSaveable {
         mutableStateOf(DetailsContent.Overview)
@@ -100,6 +93,7 @@ fun GroupDetailsFlow(
         when {
             content == DetailsContent.VerifyIdentity && uiState.selectedMember == null ->
                 DetailsContent.Overview
+
             else -> content
         }
 
@@ -131,7 +125,10 @@ fun GroupDetailsFlow(
         when (target) {
             DetailsContent.Overview -> {
                 GroupDetailsScreen(
-                    uiState = GroupDetailsUiState.Content(uiState.summary),
+                    uiState = GroupDetailsUiState.Content(
+                        summary = uiState.summary,
+                        groupAvatar = uiState.groupAvatar
+                    ),
                     onUiEvent = { event ->
                         handleOverviewUiEvent(
                             event = event,
@@ -248,6 +245,7 @@ private fun handleOverviewUiEvent(
             viewModel.onUiEvent(event)
             onContentChanged(DetailsContent.VerifyIdentity)
         }
+
         else -> viewModel.onUiEvent(event)
     }
 }
@@ -289,9 +287,9 @@ private fun LeaveDialog(
                         CircularProgressIndicator(
                             modifier =
                                 Modifier
-                                    .size(20.dp)
-                                    .padding(2.dp),
-                            strokeWidth = 2.dp
+                                    .size(Dimens.GroupDetailsScreen.verificationProgressSize)
+                                    .padding(MaterialTheme.spacing.groupDetailsScreen.dialogProgressPadding),
+                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
                         )
                     } else {
                         Text(text = stringResource(Res.string.feature_chats_group_leave))
@@ -338,22 +336,22 @@ private fun PromoteBeforeLeaveDialog(
                 Text(stringResource(Res.string.feature_chats_group_promote_before_leave_description))
                 members.forEachIndexed { index, member ->
                     val contactId = member.contactId ?: return@forEachIndexed
-                    ListItem(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable(enabled = !isUpdating) { onSelect(contactId) },
-                        headlineContent = { Text(member.displayName) },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                    SparrowDialogListItem(
+                        text = member.displayName,
+                        isEnabled = !isUpdating,
+                        onClick = { onSelect(contactId) }
                     )
                     if (index < members.lastIndex) {
-                        HorizontalDivider()
+                        HorizontalDivider(
+                            modifier = Modifier.weight(1f),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.divider)
+                        )
                     }
                 }
                 errorMessage?.let { message ->
                     Text(
                         text = message,
-                        modifier = Modifier.padding(top = 12.dp),
+                        modifier = Modifier.padding(top = MaterialTheme.spacing.groupDetailsScreen.dialogErrorTopPadding),
                         color = MaterialTheme.colorScheme.error
                     )
                 }
@@ -407,7 +405,7 @@ private fun PromoteDialog(
                 errorMessage?.let { message ->
                     Text(
                         text = message,
-                        modifier = Modifier.padding(top = 12.dp),
+                        modifier = Modifier.padding(top = MaterialTheme.spacing.groupDetailsScreen.dialogErrorTopPadding),
                         color = MaterialTheme.colorScheme.error
                     )
                 }
@@ -419,7 +417,10 @@ private fun PromoteDialog(
                 fillMaxWidth = false,
                 content = {
                     if (isUpdating) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(Dimens.GroupDetailsScreen.verificationProgressSize),
+                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
+                        )
                     } else {
                         Text(stringResource(Res.string.feature_chats_group_promote_admin))
                     }
@@ -492,9 +493,9 @@ private fun RemoveDialog(
                         CircularProgressIndicator(
                             modifier =
                                 Modifier
-                                    .size(20.dp)
-                                    .padding(2.dp),
-                            strokeWidth = 2.dp
+                                    .size(Dimens.GroupDetailsScreen.verificationProgressSize)
+                                    .padding(MaterialTheme.spacing.groupDetailsScreen.dialogProgressPadding),
+                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
                         )
                     } else {
                         Text(text = stringResource(Res.string.feature_chats_group_remove_member))

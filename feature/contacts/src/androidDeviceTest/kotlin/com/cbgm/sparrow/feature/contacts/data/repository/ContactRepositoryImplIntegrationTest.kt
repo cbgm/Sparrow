@@ -8,7 +8,7 @@ import com.cbgm.sparrow.core.protocol.phone.DefaultPhoneNumberNormalizer
 import com.cbgm.sparrow.data.database.SparrowDatabase
 import com.cbgm.sparrow.data.database.entity.ContactEntity
 import com.cbgm.sparrow.data.database.entity.ContactPhoneNumberEntity
-import com.cbgm.sparrow.feature.contacts.data.merge.ContactMergeServiceImpl
+import com.cbgm.sparrow.feature.contacts.data.datasource.ContactKeyExchangeDataSource
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumberType
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
@@ -16,10 +16,6 @@ import com.cbgm.sparrow.feature.contacts.domain.model.ImportContactRequest
 import com.cbgm.sparrow.feature.contacts.domain.model.ImportDeviceContactRequest
 import com.cbgm.sparrow.feature.contacts.domain.model.ImportDevicePhoneNumber
 import com.cbgm.sparrow.feature.contacts.domain.model.SparrowIdentity
-import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactRequest
-import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactResult
-import com.cbgm.sparrow.feature.contacts.domain.repository.DeviceContactWriterRepository
-import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityExchangeRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -54,15 +50,8 @@ class ContactRepositoryImplIntegrationTest {
         repository =
             ContactRepositoryImpl(
                 contactDao = contactDao,
-                mergeService =
-                    ContactMergeServiceImpl(
-                        contactDao = contactDao,
-                        phoneNumberNormalizer = phoneNumberNormalizer
-                    ),
-                contactKeyExchangeRepository = ContactKeyExchangeRepositoryImpl(contactDao = contactDao),
-                identityExchangeRepository = TestIdentityExchangeRepository,
-                phoneNumberNormalizer = phoneNumberNormalizer,
-                deviceContactWriterRepository = TestDeviceContactWriterRepository
+                contactKeyExchangeDataSource = ContactKeyExchangeDataSource(contactDao = contactDao),
+                phoneNumberNormalizer = phoneNumberNormalizer
             )
     }
 
@@ -1079,14 +1068,4 @@ class ContactRepositoryImplIntegrationTest {
         ByteArray(size = 32) { index ->
             (seed + index).mod(256).toByte()
         }
-}
-
-private object TestIdentityExchangeRepository : IdentityExchangeRepository {
-    override suspend fun ensureStarted(contactId: String): Result<Unit> = Result.success(Unit)
-
-    override suspend fun startManualExchange(contactId: String): Result<Unit> = Result.success(Unit)
-}
-
-private object TestDeviceContactWriterRepository : DeviceContactWriterRepository {
-    override suspend fun addIfNotExists(request: AddDeviceContactRequest): AddDeviceContactResult = AddDeviceContactResult.AlreadyExists
 }

@@ -1,9 +1,7 @@
 package com.cbgm.sparrow.feature.contacts.presentation.overview.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -19,10 +17,14 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.component.SparrowSearchField
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.feature_contacts_search_placholder
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,8 +51,7 @@ fun MemberSelectionContactsTopBar(
             title = {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.titleSmall
                 )
             },
             navigationIcon = {
@@ -68,8 +69,8 @@ fun MemberSelectionContactsTopBar(
                 ) {
                     if (confirming) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp
+                            modifier = Modifier.size(Dimens.ContactsScreen.selectionProgressSize),
+                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
                         )
                     } else {
                         Icon(
@@ -81,17 +82,13 @@ fun MemberSelectionContactsTopBar(
             }
         )
 
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
-        ) {
-            SearchField(
-                searchQuery = searchQuery,
-                onSearchQueryChanged = onSearchQueryChanged
-            )
-        }
+        SparrowSearchField(
+            searchQuery = searchQuery,
+            onSearchQueryChanged = onSearchQueryChanged,
+            placeholder = stringResource(Res.string.feature_contacts_search_placholder),
+            onClear = { onSearchQueryChanged("") },
+            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.screenPadding)
+        )
     }
 }
 

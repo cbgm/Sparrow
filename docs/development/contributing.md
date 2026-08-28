@@ -35,9 +35,21 @@ If module dependencies change:
 
 Commit regenerated `docs/generated/` output; do not hand-edit it.
 
+## Architecture and naming changes
+
+Follow the project layer conventions:
+
+- data representation: `NameDto` / `toNameDto()`;
+- domain representation: `Name` / `toName()`;
+- presentation representation: `NameUi` / `toNameUi()`;
+- ViewModel -> use case -> repository contract;
+- no use-case-to-use-case, repository-to-repository/use-case, or datasource-to-repository calls.
+
+See [Clean architecture](../architecture/clean-architecture.md) and [Coding style](coding-style.md).
+
 ## Chat changes
 
-Read [Chats architecture](../architecture/chats.md) first. Keep Direct and Group responsibilities separate, and use existing state machines/coordinators instead of adding cross-cutting handlers that blur the red line.
+Read [Chats architecture](../architecture/chats.md) first. Keep Direct and Group responsibilities separate. Keep attachment source/blob ownership in `:feature:attachments` and map chat content through `MessagePartDto` -> `MessagePart` -> `MessagePartUi`.
 
 ## Documentation changes
 

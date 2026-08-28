@@ -7,8 +7,4 @@ sealed interface ContactsFlowUiEvent {
     ) : ContactsFlowUiEvent
 
     data object ImportContactClicked : ContactsFlowUiEvent
-
-    data class GroupCreated(
-        val conversationId: String
-    ) : ContactsFlowUiEvent
 }

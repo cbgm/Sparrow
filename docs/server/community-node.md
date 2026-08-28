@@ -1,13 +1,13 @@
 # Community Node
 
-A Community Node accepts client WebSockets, federates traffic to other nodes and stores recipient-selected offline
-mailboxes.
+A Community Node accepts client WebSockets, federates traffic to other nodes, stores recipient-selected offline
+mailboxes, and hosts opaque encrypted attachment blobs through the gateway.
 
 ## Package contents
 
 ```text
 Caddy
-gateway
+gateway + persistent attachment blob volume
 federation + PostgreSQL
 mailbox + PostgreSQL
 persistent node identity
@@ -68,6 +68,12 @@ ws://<host>:8490/v1/gateway
 ## Public mode
 
 The node advertises HTTPS/WSS on the configured public host.
+
+## Attachment blobs
+
+Caddy forwards `/v1/blobs/*` to the gateway. Uploads use short-lived WebSocket-issued upload tickets; downloads/deletes use per-blob capabilities. The gateway stores only the encrypted blob bytes and metadata needed for size/expiry/capability enforcement.
+
+The Community Node Compose package mounts a persistent `gateway-blob-data` volume at `/var/lib/sparrow/blobs`. Default per-blob/server storage limits come from `BLOB_MAXIMUM_BYTES` / `BLOB_MAXIMUM_STORAGE_BYTES` and can be overridden by deployment configuration. Cleanup removes expired blobs.
 
 ## `/index`
 

@@ -19,7 +19,7 @@ import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatu
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
 import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupPacketBroadcaster
 import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupMembershipPacketProtocol
-import com.cbgm.sparrow.feature.chats.data.group.security.CreatedGroupSecurity
+import com.cbgm.sparrow.feature.chats.data.group.security.CreatedGroupSecurityDto
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_MEMBER_ROLE
 import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
 import com.cbgm.sparrow.feature.chats.data.group.verification.GroupVerificationCoordinator
@@ -379,7 +379,7 @@ internal class GroupMembershipActivationCoordinator(
         conversation: ConversationEntity,
         members: List<Contact>,
         roleOverrides: Map<String, String>
-    ): CreatedGroupSecurity {
+    ): CreatedGroupSecurityDto {
         val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
         val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
         val localPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow()
@@ -423,7 +423,7 @@ internal class GroupMembershipActivationCoordinator(
         }
     }
 
-    private suspend fun enqueueWelcomePackets(securedGroup: CreatedGroupSecurity) {
+    private suspend fun enqueueWelcomePackets(securedGroup: CreatedGroupSecurityDto) {
         packetBroadcaster.enqueueAll(securedGroup.welcomePacketsByContactId).getOrThrow()
     }
 

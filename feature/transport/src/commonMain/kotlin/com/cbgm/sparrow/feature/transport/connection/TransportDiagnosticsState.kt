@@ -100,7 +100,7 @@ internal class TransportDiagnosticsState(
 
         _diagnostics.value =
             _diagnostics.value.copy(
-                connectionState = state.toDiagnosticState(),
+                connectionState = state.toTransportDiagnosticConnectionState(),
                 currentNodeId = null,
                 currentWebSocketUrl = null,
                 lastDisconnectReason = state.disconnectReason(),

@@ -279,15 +279,12 @@ class GroupVerificationCoordinator internal constructor(
                 val securityState =
                     groupSecurityDao.findState(packet.groupId)
                         ?: error("Group security state was not found")
-                check(!securityState.localRole.isGroupAdminRole()) {
-                    "A group admin must not consume another admin's verification snapshot"
-                }
+                val localIsAdmin = securityState.localRole.isGroupAdminRole()
                 val ownerMemberKey =
                     verificationState.requireCurrentRemoteAdmin(
                         groupId = packet.groupId,
                         contactId = context.contactId
                     )
-                val ownerContactId = context.contactId
                 check(ownerMemberKey.encryptionPublicKey.contentEquals(packet.ownerEncryptionPublicKey)) {
                     "Group verification snapshot admin encryption key changed"
                 }
@@ -310,27 +307,57 @@ class GroupVerificationCoordinator internal constructor(
                     return@withLock
                 }
 
-                groupVerificationDao.replaceGroup(
-                    groupId = packet.groupId,
-                    rows =
-                        packet.members.map { member ->
-                            GroupVerificationPairEntity(
-                                groupId = packet.groupId,
-                                invitationId = member.invitationId,
-                                contactId = null,
-                                displayName = member.displayName,
-                                membershipStatus = member.membershipStatus,
-                                participantEncryptionPublicKey = null,
-                                participantSigningPublicKey = null,
-                                adminVerifiedParticipant = member.adminVerifiedParticipant,
-                                participantVerifiedAdmin = member.participantVerifiedAdmin,
-                                updatedAtEpochMilliseconds =
-                                    packet.generatedAtEpochMilliseconds
-                            )
-                        }
-                )
+                val snapshotRows =
+                    packet.members.map { member ->
+                        GroupVerificationPairEntity(
+                            groupId = packet.groupId,
+                            invitationId = member.invitationId,
+                            contactId = null,
+                            displayName = member.displayName,
+                            membershipStatus = member.membershipStatus,
+                            participantEncryptionPublicKey = null,
+                            participantSigningPublicKey = null,
+                            adminVerifiedParticipant = member.adminVerifiedParticipant,
+                            participantVerifiedAdmin = member.participantVerifiedAdmin,
+                            updatedAtEpochMilliseconds = packet.generatedAtEpochMilliseconds
+                        )
+                    }
+
+                if (localIsAdmin) {
+                    applyPendingSnapshotAsAdmin(
+                        groupId = packet.groupId,
+                        snapshotRows = snapshotRows
+                    )
+                } else {
+                    groupVerificationDao.replaceGroup(
+                        groupId = packet.groupId,
+                        rows = snapshotRows
+                    )
+                }
             }
         }
+
+    private suspend fun applyPendingSnapshotAsAdmin(
+        groupId: String,
+        snapshotRows: List<GroupVerificationPairEntity>
+    ) {
+        val localAuthoritativeRows =
+            groupVerificationDao
+                .findByGroupId(groupId)
+                .filter { row -> row.contactId != null }
+        val localInvitationIds =
+            localAuthoritativeRows.mapTo(mutableSetOf()) { row -> row.invitationId }
+        val remotePendingRows =
+            snapshotRows.filter { row ->
+                row.membershipStatus == GroupVerificationPairEntity.PENDING_STATUS &&
+                    row.invitationId !in localInvitationIds
+            }
+
+        groupVerificationDao.replaceGroup(
+            groupId = groupId,
+            rows = localAuthoritativeRows + remotePendingRows
+        )
+    }
 
     private suspend fun verifyParticipantAsOwnerLocked(
         groupId: String,

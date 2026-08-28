@@ -20,6 +20,14 @@ sealed interface SettingsUiEvent {
         val enabled: Boolean
     ) : SettingsUiEvent
 
+    data class SemanticSearchEnabledChanged(
+        val enabled: Boolean
+    ) : SettingsUiEvent
+
+    data class MessageSafetyEnabledChanged(
+        val enabled: Boolean
+    ) : SettingsUiEvent
+
     data object PrivacyPolicyClicked : SettingsUiEvent
 
     data object DataDisclaimerClicked : SettingsUiEvent
@@ -30,7 +38,11 @@ sealed interface SettingsUiEvent {
 
     data object BlockedContactsClicked : SettingsUiEvent
 
+    data object ProfileClicked : SettingsUiEvent
+
     data object ControlPlanesClicked : SettingsUiEvent
+
+    data object AttachmentStorageClicked : SettingsUiEvent
 
     data object VersionRowTapped : SettingsUiEvent
 }

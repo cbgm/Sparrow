@@ -10,12 +10,12 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `core` |
 | Directory | `core` |
 | Build file | `core/build.gradle.kts` |
-| Kotlin files | 12 |
-| Production Kotlin files | 12 |
+| Kotlin files | 17 |
+| Production Kotlin files | 17 |
 | Test Kotlin files | 0 |
 | Resource files | 1 |
 | Direct dependencies | 0 |
-| Direct dependents | 12 |
+| Direct dependents | 17 |
 
 ## Source sets
 
@@ -29,13 +29,18 @@ None.
 
 ## Dependents
 
+- [`:core:embedding`](../modules/core-embedding.md)
 - [`:core:protocol`](../modules/core-protocol.md)
 - [`:data:database`](../modules/data-database.md)
+- [`:feature:attachments`](../modules/feature-attachments.md)
 - [`:feature:chats`](../modules/feature-chats.md)
 - [`:feature:contactimport`](../modules/feature-contactimport.md)
 - [`:feature:contacts`](../modules/feature-contacts.md)
 - [`:feature:identity`](../modules/feature-identity.md)
+- [`:feature:media`](../modules/feature-media.md)
 - [`:feature:messaging`](../modules/feature-messaging.md)
+- [`:feature:safety`](../modules/feature-safety.md)
+- [`:feature:search`](../modules/feature-search.md)
 - [`:feature:settings`](../modules/feature-settings.md)
 - [`:feature:transport`](../modules/feature-transport.md)
 - [`:navigation`](../modules/navigation.md)

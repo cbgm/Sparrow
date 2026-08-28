@@ -1,20 +1,17 @@
 package com.cbgm.sparrow.feature.contacts.presentation.overview
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportDeviceContactsUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
-import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.filterContacts
-import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.groupContactsByInitial
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsWithProfilePicturesUseCase
+import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.toContactsUiState
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsEffect
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsUiState
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -22,32 +19,32 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class ContactsViewModel(
-    private val observeContacts: ObserveContactsUseCase,
+    savedStateHandle: SavedStateHandle,
+    observeContactsWithProfilePictures: ObserveContactsWithProfilePicturesUseCase,
     private val importDeviceContacts: ImportDeviceContactsUseCase
 ) : BaseViewModel() {
-    private val _searchQuery = MutableStateFlow("")
-    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+    private val searchQuery = savedStateHandle.getMutableStateFlow(SEARCH_QUERY_KEY, "")
 
     private val _effects = Channel<ContactsEffect>(capacity = Channel.BUFFERED)
     val effects = _effects.receiveAsFlow()
 
     val uiState: StateFlow<ContactsUiState> =
         combine(
-            observeContacts(),
+            observeContactsWithProfilePictures(),
             searchQuery
-        ) { contacts, query ->
-            contacts.toUiState(query)
+        ) { snapshot, query ->
+            snapshot.contacts.toContactsUiState(query, snapshot.profilePictures)
         }.catch { error ->
-            emit(ContactsUiState.Error(error.message ?: "Failed to load contacts"))
+            emit(ContactsUiState.Error(error.message ?: "Failed to load contacts", searchQuery.value))
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-            initialValue = ContactsUiState.Loading
+            initialValue = ContactsUiState.Loading()
         )
 
     fun onUiEvent(event: ContactsUiEvent) {
         when (event) {
-            is ContactsUiEvent.SearchQueryChanged -> _searchQuery.value = event.query
+            is ContactsUiEvent.SearchQueryChanged -> searchQuery.value = event.query
             ContactsUiEvent.ImportDeviceContacts -> importContacts()
             ContactsUiEvent.DeviceContactsPermissionDenied -> showPermissionDenied()
             ContactsUiEvent.BackClicked -> emitEffect(ContactsEffect.BackRequested)
@@ -79,24 +76,18 @@ class ContactsViewModel(
     }
 
     private fun showPermissionDenied() {
-        viewModelScope.launch {
-            _effects.send(
-                ContactsEffect.ShowError(
-                    "Contacts permission is required to import device contacts."
-                )
+        emitEffect(
+            ContactsEffect.ShowError(
+                "Contacts permission is required to import device contacts."
             )
-        }
+        )
     }
 
     private fun emitEffect(effect: ContactsEffect) {
         _effects.trySend(effect)
     }
 
-    private fun List<Contact>.toUiState(query: String): ContactsUiState {
-        if (isEmpty()) return ContactsUiState.Empty
-
-        return ContactsUiState.Content(
-            groups = filterContacts(query).groupContactsByInitial()
-        )
+    private companion object {
+        const val SEARCH_QUERY_KEY = "searchQuery"
     }
 }

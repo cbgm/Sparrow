@@ -1,42 +1,81 @@
 package com.cbgm.sparrow.feature.settings.presentation.network
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
 import com.cbgm.sparrow.core.transport.ControlPlaneDirectorySynchronizer
 import com.cbgm.sparrow.core.transport.ControlPlaneEndpoint
-import com.cbgm.sparrow.core.transport.ControlPlaneEndpointStatus
 import com.cbgm.sparrow.core.transport.ControlPlaneHealthMonitor
-import com.cbgm.sparrow.core.transport.ControlPlaneReachability
-import com.cbgm.sparrow.core.transport.ControlPlaneStatusStore
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveControlPlaneSettingsContextUseCase
+import com.cbgm.sparrow.feature.settings.presentation.network.mapper.toControlPlaneSettingsUiState
+import com.cbgm.sparrow.feature.settings.presentation.network.mapper.toControlPlaneUiModels
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneDirectoryError
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsError
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsUiState
-import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiModel
-import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiSource
-import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiStatus
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
 class ControlPlaneSettingsViewModel(
+    private val savedStateHandle: SavedStateHandle,
     private val configuration: ControlPlaneConfiguration,
-    private val statusStore: ControlPlaneStatusStore,
+    observeControlPlaneSettingsContext: ObserveControlPlaneSettingsContextUseCase,
     private val healthMonitor: ControlPlaneHealthMonitor,
     private val directorySynchronizer: ControlPlaneDirectorySynchronizer
 ) : BaseViewModel() {
-    private val _uiState = MutableStateFlow(ControlPlaneSettingsUiState())
-    val uiState: StateFlow<ControlPlaneSettingsUiState> = _uiState.asStateFlow()
+    private val showAddDialog =
+        savedStateHandle.getMutableStateFlow(SHOW_ADD_DIALOG_KEY, false)
+    private val newUrl =
+        savedStateHandle.getMutableStateFlow(NEW_URL_KEY, "")
+    private val directoryDraft =
+        MutableStateFlow(savedStateHandle.get<String>(DIRECTORY_DRAFT_KEY))
+    private val actionState = MutableStateFlow(ControlPlaneActionState())
+    private val formState =
+        combine(showAddDialog, newUrl, directoryDraft) { showAddDialog, newUrl, directoryDraft ->
+            ControlPlaneFormState(
+                showAddDialog = showAddDialog,
+                newUrl = newUrl,
+                directoryDraft = directoryDraft
+            )
+        }
+
+    private val configurationContext = observeControlPlaneSettingsContext()
+
+    val uiState: StateFlow<ControlPlaneSettingsUiState> =
+        combine(
+            configurationContext,
+            formState,
+            actionState
+        ) { configuration, form, action ->
+            configuration.statuses
+                .toControlPlaneUiModels(configuration.manualBaseUrls, configuration.directoryBaseUrls)
+                .toControlPlaneSettingsUiState(
+                    showAddDialog = form.showAddDialog,
+                    newUrl = form.newUrl,
+                    addError = action.addError,
+                    directoryUrl = configuration.directoryUrl,
+                    directoryDraft = form.directoryDraft ?: configuration.directoryUrl,
+                    directoryError = action.directoryError,
+                    isRefreshing = action.isRefreshing,
+                    isDirectorySyncing = action.isDirectorySyncing,
+                    lastDirectoryCount = action.lastDirectoryCount
+                )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+            initialValue = ControlPlaneSettingsUiState()
+        )
 
     init {
-        observeConfiguration()
         startHealthRefresh()
         refreshAll()
     }
@@ -44,38 +83,48 @@ class ControlPlaneSettingsViewModel(
     fun onUiEvent(event: ControlPlaneSettingsUiEvent) {
         when (event) {
             ControlPlaneSettingsUiEvent.BackClicked -> navigator.popBackStack()
-            ControlPlaneSettingsUiEvent.AddClicked ->
-                _uiState.update { it.copy(showAddDialog = true, addError = null) }
-            ControlPlaneSettingsUiEvent.AddDismissed ->
-                _uiState.update { it.copy(showAddDialog = false, newUrl = "", addError = null) }
+            ControlPlaneSettingsUiEvent.AddClicked -> openAddDialog()
+            ControlPlaneSettingsUiEvent.AddDismissed -> closeAddDialog()
             ControlPlaneSettingsUiEvent.AddConfirmed -> addControlPlane()
             ControlPlaneSettingsUiEvent.DirectoryApply -> saveDirectoryUrl()
             ControlPlaneSettingsUiEvent.Refresh -> refreshAll()
-            is ControlPlaneSettingsUiEvent.NewUrlChanged ->
-                _uiState.update { it.copy(newUrl = event.value, addError = null) }
-            is ControlPlaneSettingsUiEvent.DirectoryUrlChanged ->
-                _uiState.update { it.copy(directoryDraft = event.value, directoryError = null) }
+            is ControlPlaneSettingsUiEvent.NewUrlChanged -> updateNewUrl(event.value)
             is ControlPlaneSettingsUiEvent.Remove -> removeControlPlane(event.url)
         }
     }
 
+    private fun openAddDialog() {
+        showAddDialog.value = true
+        actionState.update { state -> state.copy(addError = null) }
+    }
+
+    private fun closeAddDialog() {
+        clearAddDialogForm()
+        actionState.update { state -> state.copy(addError = null) }
+    }
+
+    private fun updateNewUrl(value: String) {
+        newUrl.value = value
+        actionState.update { state -> state.copy(addError = null) }
+    }
+
     private fun addControlPlane() {
-        val candidate = _uiState.value.newUrl.normalizeHttpUrl()
+        val candidate = newUrl.value.normalizeHttpUrl()
         if (candidate == null) {
-            _uiState.update { it.copy(addError = ControlPlaneSettingsError.INVALID_URL) }
+            actionState.update { it.copy(addError = ControlPlaneSettingsError.INVALID_URL) }
             return
         }
         if (candidate in configuration.manualBaseUrls.value) {
-            _uiState.update { it.copy(addError = ControlPlaneSettingsError.DUPLICATE) }
+            actionState.update { it.copy(addError = ControlPlaneSettingsError.DUPLICATE) }
             return
         }
+
         viewModelScope.launch {
             val directoryResult = directorySynchronizer.synchronizeFrom(candidate)
             if (directoryResult.isSuccess) {
-                _uiState.update { current ->
-                    current.copy(
-                        showAddDialog = false,
-                        newUrl = "",
+                clearAddDialogForm()
+                actionState.update {
+                    it.copy(
                         addError = null,
                         directoryError = null,
                         lastDirectoryCount = directoryResult.getOrThrow()
@@ -88,12 +137,11 @@ class ControlPlaneSettingsViewModel(
             configuration
                 .addManual(candidate)
                 .onSuccess {
-                    _uiState.update {
-                        it.copy(showAddDialog = false, newUrl = "", addError = null)
-                    }
+                    clearAddDialogForm()
+                    actionState.update { it.copy(addError = null) }
                     refreshAllNow()
                 }.onFailure {
-                    _uiState.update { it.copy(addError = ControlPlaneSettingsError.SAVE_FAILED) }
+                    actionState.update { it.copy(addError = ControlPlaneSettingsError.SAVE_FAILED) }
                 }
         }
     }
@@ -104,7 +152,7 @@ class ControlPlaneSettingsViewModel(
                 .removeManual(url)
                 .onSuccess { refreshAllNow() }
                 .onFailure {
-                    _uiState.update { state ->
+                    actionState.update { state ->
                         state.copy(addError = ControlPlaneSettingsError.KEEP_ONE)
                     }
                 }
@@ -112,50 +160,38 @@ class ControlPlaneSettingsViewModel(
     }
 
     private fun saveDirectoryUrl() {
-        val draft = _uiState.value.directoryDraft
+        val draft = directoryDraft.value ?: configuration.directoryUrl.value.orEmpty()
         val normalized = draft.takeIf(String::isNotBlank)?.normalizeHttpUrl()
         if (draft.isNotBlank() && normalized == null) {
-            _uiState.update { it.copy(directoryError = ControlPlaneDirectoryError.INVALID_URL) }
+            actionState.update { it.copy(directoryError = ControlPlaneDirectoryError.INVALID_URL) }
             return
         }
+
         viewModelScope.launch {
             configuration
                 .setDirectoryUrl(normalized)
-                .onSuccess { refreshAllNow() }
-                .onFailure {
-                    _uiState.update { state ->
+                .onSuccess {
+                    setDirectoryDraft(null)
+                    refreshAllNow()
+                }.onFailure {
+                    actionState.update { state ->
                         state.copy(directoryError = ControlPlaneDirectoryError.SAVE_FAILED)
                     }
                 }
         }
     }
 
-    private fun observeConfiguration() {
-        viewModelScope.launch {
-            combine(
-                statusStore.statuses,
-                configuration.manualBaseUrls,
-                configuration.directoryBaseUrls,
-                configuration.directoryUrl
-            ) { statuses, manual, directory, directoryUrl ->
-                ConfigurationSnapshot(
-                    entries = statuses.toUiModels(manual, directory),
-                    directoryUrl = directoryUrl.orEmpty()
-                )
-            }.collect { snapshot ->
-                _uiState.update { current ->
-                    current.copy(
-                        entries = snapshot.entries,
-                        directoryUrl = snapshot.directoryUrl,
-                        directoryDraft =
-                            if (current.directoryDraft == current.directoryUrl) {
-                                snapshot.directoryUrl
-                            } else {
-                                current.directoryDraft
-                            }
-                    )
-                }
-            }
+    private fun clearAddDialogForm() {
+        showAddDialog.value = false
+        newUrl.value = ""
+    }
+
+    private fun setDirectoryDraft(value: String?) {
+        directoryDraft.value = value
+        if (value == null) {
+            savedStateHandle.remove<String>(DIRECTORY_DRAFT_KEY)
+        } else {
+            savedStateHandle[DIRECTORY_DRAFT_KEY] = value
         }
     }
 
@@ -173,16 +209,23 @@ class ControlPlaneSettingsViewModel(
     }
 
     private suspend fun refreshAllNow() {
-        _uiState.update { it.copy(isRefreshing = true, directoryError = null) }
+        actionState.update {
+            it.copy(
+                isRefreshing = true,
+                directoryError = null
+            )
+        }
+
         val directoryResult =
             if (configuration.directoryUrl.value == null) {
                 Result.success(0)
             } else {
-                _uiState.update { it.copy(isDirectorySyncing = true) }
+                actionState.update { it.copy(isDirectorySyncing = true) }
                 directorySynchronizer.refresh()
             }
+
         healthMonitor.refresh()
-        _uiState.update { current ->
+        actionState.update { current ->
             current.copy(
                 isRefreshing = false,
                 isDirectorySyncing = false,
@@ -197,15 +240,27 @@ class ControlPlaneSettingsViewModel(
         }
     }
 
+    private data class ControlPlaneFormState(
+        val showAddDialog: Boolean = false,
+        val newUrl: String = "",
+        val directoryDraft: String? = null
+    )
+
+    private data class ControlPlaneActionState(
+        val addError: ControlPlaneSettingsError? = null,
+        val directoryError: ControlPlaneDirectoryError? = null,
+        val isRefreshing: Boolean = false,
+        val isDirectorySyncing: Boolean = false,
+        val lastDirectoryCount: Int? = null
+    )
+
     private companion object {
+        const val SHOW_ADD_DIALOG_KEY = "showAddDialog"
+        const val NEW_URL_KEY = "newUrl"
+        const val DIRECTORY_DRAFT_KEY = "directoryDraft"
         const val HEALTH_REFRESH_INTERVAL_MILLISECONDS = 1_000L
     }
 }
-
-private data class ConfigurationSnapshot(
-    val entries: List<ControlPlaneUiModel>,
-    val directoryUrl: String
-)
 
 private fun String.normalizeHttpUrl(): String? {
     val trimmed = trim().trimEnd('/')
@@ -218,55 +273,3 @@ private fun String.normalizeHttpUrl(): String? {
         }
     return runCatching { ControlPlaneEndpoint(normalized).baseUrl }.getOrNull()
 }
-
-private fun List<ControlPlaneEndpointStatus>.toUiModels(
-    manual: Set<String>,
-    directory: Set<String>
-): List<ControlPlaneUiModel> =
-    map { status ->
-        ControlPlaneUiModel(
-            url = status.endpoint.baseUrl,
-            status = status.toUiStatus(),
-            source = sourceFor(status.endpoint.baseUrl, manual, directory),
-            canRemove = canRemove(status.endpoint.baseUrl, manual, directory)
-        )
-    }.sortedWith(
-        compareBy<ControlPlaneUiModel> { it.status.sortOrder() }
-            .thenBy(ControlPlaneUiModel::url)
-    )
-
-private fun ControlPlaneEndpointStatus.toUiStatus(): ControlPlaneUiStatus =
-    when {
-        reachability == ControlPlaneReachability.UNREACHABLE -> ControlPlaneUiStatus.UNREACHABLE
-        isActive && reachability == ControlPlaneReachability.AVAILABLE -> ControlPlaneUiStatus.ACTIVE
-        reachability == ControlPlaneReachability.AVAILABLE -> ControlPlaneUiStatus.AVAILABLE
-        else -> ControlPlaneUiStatus.CHECKING
-    }
-
-private fun sourceFor(
-    url: String,
-    manual: Set<String>,
-    directory: Set<String>
-): ControlPlaneUiSource =
-    when {
-        url in manual && url in directory -> ControlPlaneUiSource.MANUAL_AND_DIRECTORY
-        url in directory -> ControlPlaneUiSource.DIRECTORY
-        else -> ControlPlaneUiSource.MANUAL
-    }
-
-private fun canRemove(
-    url: String,
-    manual: Set<String>,
-    directory: Set<String>
-): Boolean {
-    if (url !in manual) return false
-    return ((manual - url) + directory).isNotEmpty()
-}
-
-private fun ControlPlaneUiStatus.sortOrder(): Int =
-    when (this) {
-        ControlPlaneUiStatus.ACTIVE -> 0
-        ControlPlaneUiStatus.AVAILABLE -> 1
-        ControlPlaneUiStatus.CHECKING -> 2
-        ControlPlaneUiStatus.UNREACHABLE -> 3
-    }

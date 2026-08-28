@@ -1,10 +1,8 @@
 package com.cbgm.sparrow.feature.contacts.presentation.overview.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -17,10 +15,11 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.component.SparrowSearchField
+import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_contacts
+import com.cbgm.sparrow.resources.feature_contacts_search_placholder
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,7 +32,7 @@ fun OverviewContactsTopBar(
 ) {
     Column {
         CenterAlignedTopAppBar(
-            windowInsets = WindowInsets(0.dp),
+            windowInsets = WindowInsets(MaterialTheme.spacing.zero),
             colors =
                 TopAppBarDefaults.topAppBarColors(
                     containerColor = containerColor,
@@ -44,8 +43,7 @@ fun OverviewContactsTopBar(
             title = {
                 Text(
                     text = stringResource(Res.string.base_contacts),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.titleSmall
                 )
             },
             actions = {
@@ -58,16 +56,12 @@ fun OverviewContactsTopBar(
             }
         )
 
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
-        ) {
-            SearchField(
-                searchQuery = searchQuery,
-                onSearchQueryChanged = onSearchQueryChanged
-            )
-        }
+        SparrowSearchField(
+            searchQuery = searchQuery,
+            onSearchQueryChanged = onSearchQueryChanged,
+            placeholder = stringResource(Res.string.feature_contacts_search_placholder),
+            onClear = { onSearchQueryChanged("") },
+            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.screenPadding)
+        )
     }
 }

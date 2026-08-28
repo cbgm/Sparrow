@@ -8,7 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 
 @Composable
@@ -17,7 +17,7 @@ internal fun ContactDetailsLoadingContent(modifier: Modifier = Modifier) {
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
-        CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -25,6 +25,6 @@ internal fun ContactDetailsLoadingContent(modifier: Modifier = Modifier) {
 @Composable
 private fun ContactDetailsLoadingContentPreview() {
     SparrowTheme {
-        ContactDetailsLoadingContent(modifier = Modifier.size(160.dp))
+        ContactDetailsLoadingContent(modifier = Modifier.size(Dimens.ContactDetailsScreen.loadingSize))
     }
 }

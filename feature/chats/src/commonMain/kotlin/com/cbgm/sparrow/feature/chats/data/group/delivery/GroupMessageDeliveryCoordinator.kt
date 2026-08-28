@@ -4,7 +4,7 @@ import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.MessageDeliveryStatusDao
 import com.cbgm.sparrow.data.database.dao.MessageRecipientStateDao
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
-import com.cbgm.sparrow.feature.chats.data.group.mapper.toGroupDeliveryStatus
+import com.cbgm.sparrow.feature.chats.data.group.mapper.toMessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessageDeliveryStateMachine
@@ -69,29 +69,12 @@ class GroupMessageDeliveryCoordinator(
         }
     }
 
-    suspend fun expireUnconfirmedRecipients(
-        groupId: String,
-        timeoutMilliseconds: Long = DELIVERY_TIMEOUT_MILLISECONDS
-    ) {
-        require(groupId.isNotBlank()) { "Group ID must not be blank" }
-        require(timeoutMilliseconds > 0L) { "Delivery timeout must be positive" }
-        val cutoff = SystemClock.nowEpochMilliseconds() - timeoutMilliseconds
-        mutex.withLock {
-            messageRecipientStateDao
-                .findByConversationAndDeliveryStatusBefore(groupId, MessageDeliveryStatus.SENT.name, cutoff)
-                .forEach { state ->
-                    updateRecipientState(state, MessageDeliveryEvent.DELIVERY_TIMED_OUT, "Recipient did not confirm delivery")
-                    updateAggregatedStatus(state.messageId)
-                }
-        }
-    }
-
     private suspend fun updateRecipientState(
         state: MessageRecipientStateEntity,
         event: MessageDeliveryEvent,
         errorMessage: String? = null
     ) {
-        val current = state.deliveryStatus.toGroupDeliveryStatus()
+        val current = state.deliveryStatus.toMessageDeliveryStatus()
         val next = GroupMessageDeliveryStateMachine.transition(current, event)
         if (next == current) return
         messageRecipientStateDao.updateDeliveryStatus(
@@ -104,12 +87,8 @@ class GroupMessageDeliveryCoordinator(
     }
 
     private suspend fun updateAggregatedStatus(messageId: String) {
-        val statuses = messageRecipientStateDao.findByMessageId(messageId).map { it.deliveryStatus.toGroupDeliveryStatus() }
+        val statuses = messageRecipientStateDao.findByMessageId(messageId).map { it.deliveryStatus.toMessageDeliveryStatus() }
         val aggregated = GroupMessageDeliveryStateMachine.aggregate(statuses)
         messageDeliveryStatusDao.updateDeliveryStatusByMessageId(messageId, aggregated.name)
-    }
-
-    private companion object {
-        const val DELIVERY_TIMEOUT_MILLISECONDS = 60_000L
     }
 }

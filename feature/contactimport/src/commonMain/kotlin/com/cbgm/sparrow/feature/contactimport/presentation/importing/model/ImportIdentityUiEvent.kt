@@ -1,16 +1,15 @@
 package com.cbgm.sparrow.feature.contactimport.presentation.importing.model
 
-import com.cbgm.sparrow.feature.contacts.domain.model.IdentityImportTrust
-
 sealed interface ImportIdentityUiEvent {
     data class EncodedIdentityChanged(
         val value: String
     ) : ImportIdentityUiEvent
 
-    data class ImportClicked(
-        val contactId: String?,
-        val identityImportTrust: IdentityImportTrust
-    ) : ImportIdentityUiEvent
+    data object ImportClicked : ImportIdentityUiEvent
+
+    data object ScannedIdentityConfirmed : ImportIdentityUiEvent
+
+    data object ScannedIdentityDismissed : ImportIdentityUiEvent
 
     data object BackClicked : ImportIdentityUiEvent
 

@@ -5,8 +5,9 @@ import androidx.test.core.app.ApplicationProvider
 import com.cbgm.sparrow.core.crypto.SodiumRuntime
 import com.cbgm.sparrow.core.crypto.identity.SodiumIdentityKeyGenerator
 import com.cbgm.sparrow.core.crypto.signature.SodiumDetachedSignatureCrypto
-import com.cbgm.sparrow.feature.identity.data.datasource.AndroidPrivateKeyStorage
-import com.cbgm.sparrow.feature.identity.data.datasource.AndroidPublicIdentityStorage
+import com.cbgm.sparrow.data.datastore.createSparrowDataStore
+import com.cbgm.sparrow.feature.identity.data.datasource.SparrowDataStorePublicIdentityDataSource
+import com.cbgm.sparrow.feature.identity.device.AndroidPrivateKeyStorage
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityStatus
 import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
 import kotlinx.coroutines.runBlocking
@@ -26,7 +27,7 @@ import kotlin.test.assertTrue
  *
  * - libsodium key generation
  * - Android Keystore-backed private-key protection
- * - SharedPreferences persistence
+ * - persistent identity storage
  * - repository coordination
  */
 class IdentityRepositoryImplTest {
@@ -50,9 +51,10 @@ class IdentityRepositoryImplTest {
             /**
              * Create the real Android storage implementations.
              */
-            val privateKeyStorage = AndroidPrivateKeyStorage(context = context)
+            val dataStore = createTestDataStore(context)
+            val privateKeyStorage = AndroidPrivateKeyStorage(dataStore = dataStore)
 
-            val publicIdentityStorage = AndroidPublicIdentityStorage(context = context)
+            val publicIdentityDataSource = SparrowDataStorePublicIdentityDataSource(dataStore = dataStore)
 
             /**
              * Start with a clean state.
@@ -62,7 +64,7 @@ class IdentityRepositoryImplTest {
              */
             privateKeyStorage.deleteIdentityPrivateKeys().getOrThrow()
 
-            publicIdentityStorage.delete().getOrThrow()
+            publicIdentityDataSource.delete().getOrThrow()
 
             try {
                 /**
@@ -76,7 +78,7 @@ class IdentityRepositoryImplTest {
                         identityKeyGenerator = SodiumIdentityKeyGenerator(),
                         signatureCrypto = SodiumDetachedSignatureCrypto(),
                         privateKeyStorage = privateKeyStorage,
-                        publicIdentityStorage = publicIdentityStorage
+                        publicIdentityDataSource = publicIdentityDataSource
                     )
 
                 /**
@@ -175,7 +177,7 @@ class IdentityRepositoryImplTest {
                  */
                 privateKeyStorage.deleteIdentityPrivateKeys().getOrThrow()
 
-                publicIdentityStorage.delete().getOrThrow()
+                publicIdentityDataSource.delete().getOrThrow()
             }
         }
 
@@ -190,16 +192,17 @@ class IdentityRepositoryImplTest {
 
             val context = ApplicationProvider.getApplicationContext<Context>()
 
-            val privateKeyStorage = AndroidPrivateKeyStorage(context = context)
+            val dataStore = createTestDataStore(context)
+            val privateKeyStorage = AndroidPrivateKeyStorage(dataStore = dataStore)
 
-            val publicIdentityStorage = AndroidPublicIdentityStorage(context = context)
+            val publicIdentityDataSource = SparrowDataStorePublicIdentityDataSource(dataStore = dataStore)
 
             /**
              * Start from a clean state.
              */
             privateKeyStorage.deleteIdentityPrivateKeys().getOrThrow()
 
-            publicIdentityStorage.delete().getOrThrow()
+            publicIdentityDataSource.delete().getOrThrow()
 
             try {
                 val repository =
@@ -207,7 +210,7 @@ class IdentityRepositoryImplTest {
                         identityKeyGenerator = SodiumIdentityKeyGenerator(),
                         signatureCrypto = SodiumDetachedSignatureCrypto(),
                         privateKeyStorage = privateKeyStorage,
-                        publicIdentityStorage = publicIdentityStorage
+                        publicIdentityDataSource = publicIdentityDataSource
                     )
 
                 /**
@@ -321,7 +324,7 @@ class IdentityRepositoryImplTest {
                  */
                 privateKeyStorage.deleteIdentityPrivateKeys().getOrThrow()
 
-                publicIdentityStorage.delete().getOrThrow()
+                publicIdentityDataSource.delete().getOrThrow()
             }
         }
 
@@ -332,11 +335,12 @@ class IdentityRepositoryImplTest {
             SodiumRuntime.initialize().getOrThrow()
 
             val context = ApplicationProvider.getApplicationContext<Context>()
-            val privateKeyStorage = AndroidPrivateKeyStorage(context = context)
-            val publicIdentityStorage = AndroidPublicIdentityStorage(context = context)
+            val dataStore = createTestDataStore(context)
+            val privateKeyStorage = AndroidPrivateKeyStorage(dataStore = dataStore)
+            val publicIdentityDataSource = SparrowDataStorePublicIdentityDataSource(dataStore = dataStore)
 
             privateKeyStorage.deleteIdentityPrivateKeys().getOrThrow()
-            publicIdentityStorage.delete().getOrThrow()
+            publicIdentityDataSource.delete().getOrThrow()
 
             try {
                 val keyGenerator = SodiumIdentityKeyGenerator()
@@ -349,7 +353,7 @@ class IdentityRepositoryImplTest {
                         signingPrivateKey = privateIdentity.signingPrivateKey
                     ).getOrThrow()
 
-                publicIdentityStorage
+                publicIdentityDataSource
                     .save(
                         PublicIdentity(
                             encryptionPublicKey = unrelatedPublicIdentity.encryptionPublicKey.toByteArray(),
@@ -362,7 +366,7 @@ class IdentityRepositoryImplTest {
                         identityKeyGenerator = keyGenerator,
                         signatureCrypto = SodiumDetachedSignatureCrypto(),
                         privateKeyStorage = privateKeyStorage,
-                        publicIdentityStorage = publicIdentityStorage
+                        publicIdentityDataSource = publicIdentityDataSource
                     )
 
                 val status = repository.getStatus().getOrThrow()
@@ -373,7 +377,15 @@ class IdentityRepositoryImplTest {
                 )
             } finally {
                 privateKeyStorage.deleteIdentityPrivateKeys().getOrThrow()
-                publicIdentityStorage.delete().getOrThrow()
+                publicIdentityDataSource.delete().getOrThrow()
             }
         }
+
+    private fun createTestDataStore(context: Context) =
+        createSparrowDataStore(
+            filePath =
+                context.filesDir
+                    .resolve("identity-test-${System.nanoTime()}.preferences_pb")
+                    .absolutePath
+        )
 }

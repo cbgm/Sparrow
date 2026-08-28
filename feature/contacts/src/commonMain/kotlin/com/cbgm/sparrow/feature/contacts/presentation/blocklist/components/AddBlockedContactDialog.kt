@@ -14,22 +14,20 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import com.cbgm.sparrow.core.ui.component.ContactAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
-import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
+import com.cbgm.sparrow.core.ui.component.SparrowAvatar
+import com.cbgm.sparrow.core.ui.component.SparrowInputField
+import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.resources.Res
@@ -45,13 +43,12 @@ import com.cbgm.sparrow.resources.feature_contacts_sparrow_contact
 import com.cbgm.sparrow.resources.feature_contacts_unnamed_contact
 import org.jetbrains.compose.resources.stringResource
 
-private val Field = Color(0xFF102A46)
-
 @Composable
 fun AddBlockedContactDialog(
     phoneNumber: String,
     phoneNumberError: String?,
     contacts: List<Contact>,
+    profilePictures: Map<String, ByteArray?>,
     enabled: Boolean,
     onPhoneNumberChanged: (String) -> Unit,
     onBlockPhoneNumber: () -> Unit,
@@ -68,39 +65,18 @@ fun AddBlockedContactDialog(
                     style = MaterialTheme.typography.bodySmall
                 )
 
-                OutlinedTextField(
+                SparrowInputField(
                     value = phoneNumber,
                     onValueChange = onPhoneNumberChanged,
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = enabled,
-                    singleLine = true,
+                    isEnabled = enabled,
+                    isSingleLine = true,
                     isError = phoneNumberError != null,
-                    label = {
-                        Text(text = stringResource(Res.string.feature_contacts_phone_number))
-                    },
-                    supportingText =
-                        phoneNumberError?.let { error ->
-                            {
-                                Text(text = error)
-                            }
-                        },
-                    keyboardOptions =
-                        KeyboardOptions(
-                            keyboardType = KeyboardType.Phone,
-                            imeAction = ImeAction.Done
-                        ),
-                    colors =
-                        OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            focusedContainerColor = Field,
-                            unfocusedContainerColor = Field,
-                            focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .18f),
-                            focusedLabelColor = MaterialTheme.colorScheme.secondary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .72f),
-                            cursorColor = MaterialTheme.colorScheme.secondary
-                        )
+                    label = stringResource(Res.string.feature_contacts_phone_number),
+                    errorText = phoneNumberError ?: "",
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Phone,
+                        imeAction = ImeAction.Done
+                    )
                 )
 
                 SparrowApprovalButton(
@@ -131,7 +107,10 @@ fun AddBlockedContactDialog(
                         style = MaterialTheme.typography.bodyMedium
                     )
                 } else {
-                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp)) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth()
+                            .heightIn(max = Dimens.BlockedContactsScreen.dialogListMaxHeight)
+                    ) {
                         items(
                             items = contacts,
                             key = Contact::id
@@ -145,10 +124,11 @@ fun AddBlockedContactDialog(
                                         }.padding(vertical = MaterialTheme.spacing.small),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                ContactAvatar(
+                                SparrowAvatar(
                                     name =
                                         contact.displayName
-                                            ?: contact.preferredPhoneNumber?.value ?: "?"
+                                            ?: contact.preferredPhoneNumber?.value ?: "?",
+                                    pictureBytes = profilePictures[contact.id]
                                 )
                                 Spacer(modifier = Modifier.size(MaterialTheme.spacing.small))
                                 Column(modifier = Modifier.weight(1f)) {
@@ -176,7 +156,7 @@ fun AddBlockedContactDialog(
         },
         confirmButton = {},
         dismissButton = {
-            SparrowSecondaryButton(
+            SparrowOutlinedButton(
                 fillMaxWidth = false,
                 onClick = onDismiss,
                 text = stringResource(Res.string.base_close)

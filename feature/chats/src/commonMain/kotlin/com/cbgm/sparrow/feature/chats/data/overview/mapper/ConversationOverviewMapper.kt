@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.chats.data.overview.mapper
 
-import com.cbgm.sparrow.data.database.model.ConversationSummary
+import com.cbgm.sparrow.data.database.model.ConversationSummaryDto
 import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverview
 import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverviewType
 
-internal fun ConversationSummary.toConversationOverview(): ConversationOverview {
+internal fun ConversationSummaryDto.toConversationOverview(): ConversationOverview {
     val type =
         if (conversationType == GROUP_CONVERSATION_TYPE) {
             ConversationOverviewType.GROUP

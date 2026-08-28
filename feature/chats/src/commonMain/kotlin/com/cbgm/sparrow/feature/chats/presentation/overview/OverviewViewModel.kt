@@ -8,8 +8,8 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.GroupLeaveRequirement
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.DeleteDirectConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeleteGroupConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.GetGroupLeaveRequirementUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.overview.ObserveConversationOverviewsUseCase
-import com.cbgm.sparrow.feature.chats.presentation.overview.mapper.toConversationListItem
+import com.cbgm.sparrow.feature.chats.domain.usecase.overview.ObserveConversationOverviewContextUseCase
+import com.cbgm.sparrow.feature.chats.presentation.overview.mapper.toOverviewUiState
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.ConversationListItem
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiState
@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class OverviewViewModel(
-    observeConversations: ObserveConversationOverviewsUseCase,
+    observeConversationContext: ObserveConversationOverviewContextUseCase,
     private val deleteDirectConversation: DeleteDirectConversationUseCase,
     private val deleteGroupConversation: DeleteGroupConversationUseCase,
     private val getGroupLeaveRequirement: GetGroupLeaveRequirementUseCase
@@ -28,13 +28,12 @@ class OverviewViewModel(
     private val logger = SparrowLog.withTag("OverviewViewModel")
 
     val uiState: StateFlow<OverviewUiState> =
-        observeConversations()
-            .map { conversations ->
-                if (conversations.isEmpty()) {
-                    OverviewUiState.Empty
-                } else {
-                    OverviewUiState.Content(conversations.map { it.toConversationListItem() })
-                }
+        observeConversationContext()
+            .map { context ->
+                context.conversations.toOverviewUiState(
+                    profilePictures = context.profilePictures,
+                    groupAvatars = context.groupAvatars
+                )
             }.stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),

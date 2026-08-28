@@ -8,18 +8,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
+import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -43,8 +41,6 @@ import com.cbgm.sparrow.resources.feature_onboarding_try_sim_number_again
 import com.cbgm.sparrow.resources.feature_onboarding_your_name
 import org.jetbrains.compose.resources.stringResource
 
-private val Field = Color(0xFF102A46)
-
 @Composable
 fun PhonePage(
     identityState: IdentityUiState,
@@ -62,10 +58,16 @@ fun PhonePage(
     ) {
         when (identityState) {
             IdentityUiState.Loading -> {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(MaterialTheme.spacing.small))
                 Text(
-                    text = if (isCreating) stringResource(Res.string.base_generating_secure_identity) else stringResource(Res.string.feature_onboarding_preparing_phone_setup),
+                    text = if (isCreating) {
+                        stringResource(Res.string.base_generating_secure_identity)
+                    } else {
+                        stringResource(
+                            Res.string.feature_onboarding_preparing_phone_setup
+                        )
+                    },
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -75,92 +77,44 @@ fun PhonePage(
                 Text(
                     text = stringResource(Res.string.feature_onboarding_approve_phone_number),
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(Modifier.height(MaterialTheme.spacing.base))
                 Text(
                     text = stringResource(Res.string.feature_onboarding_phone_routing_description),
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = .74f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
                 )
                 Spacer(Modifier.height(MaterialTheme.spacing.medium))
-                OutlinedTextField(
+                SparrowInputField(
                     value = identityState.phoneNumber,
                     onValueChange = onPhoneNumberChanged,
                     modifier = Modifier.fillMaxWidth(),
-                    label = {
-                        Text(stringResource(Res.string.base_phone_number))
-                    },
-                    placeholder = {
-                        Text("+491701234567")
-                    },
-                    supportingText = {
-                        Text(
-                            text =
-                                identityState.phoneNumberError
-                                    ?: if (identityState.phoneNumber.isBlank()) stringResource(Res.string.feature_onboarding_no_automatic_number) else stringResource(Res.string.feature_onboarding_detected_automatically_confirm),
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    },
+                    label = stringResource(Res.string.base_phone_number),
+                    placeholderText = "+491701234567",
+                    errorText = identityState.phoneNumberError
+                        ?: if (identityState.phoneNumber.isBlank()) {
+                            stringResource(Res.string.feature_onboarding_no_automatic_number)
+                        } else {
+                            stringResource(
+                                Res.string.feature_onboarding_detected_automatically_confirm
+                            )
+                        },
                     isError = identityState.phoneNumberError != null,
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    textStyle =
-                        MaterialTheme.typography.bodySmall.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.SemiBold
-                        ),
-                    colors =
-                        OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            focusedContainerColor = Field,
-                            unfocusedContainerColor = Field,
-                            focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .18f),
-                            focusedLabelColor = MaterialTheme.colorScheme.secondary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .72f),
-                            cursorColor = MaterialTheme.colorScheme.secondary
-                        )
+                    isSingleLine = true
                 )
                 Spacer(Modifier.height(MaterialTheme.spacing.small))
-                OutlinedTextField(
+                SparrowInputField(
                     value = identityState.name,
                     onValueChange = onNameChanged,
                     modifier = Modifier.fillMaxWidth(),
-                    label = {
-                        Text(stringResource(Res.string.feature_onboarding_your_name))
-                    },
-                    placeholder = {
-                        Text(stringResource(Res.string.feature_onboarding_your_name))
-                    },
-                    supportingText = {
-                        Text(
-                            text = stringResource(Res.string.feature_onboarding_input_your_name),
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    textStyle =
-                        MaterialTheme.typography.bodySmall.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.SemiBold
-                        ),
-                    colors =
-                        OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            focusedContainerColor = Field,
-                            unfocusedContainerColor = Field,
-                            focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .18f),
-                            focusedLabelColor = MaterialTheme.colorScheme.secondary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .72f),
-                            cursorColor = MaterialTheme.colorScheme.secondary
-                        )
+                    label = stringResource(Res.string.feature_onboarding_your_name),
+                    placeholderText = stringResource(Res.string.feature_onboarding_your_name),
+                    errorText = stringResource(Res.string.feature_onboarding_input_your_name),
+                    isSingleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
                 )
                 Spacer(Modifier.height(MaterialTheme.spacing.base))
                 if (canRetryAutomatic) {
@@ -172,7 +126,13 @@ fun PhonePage(
                 }
                 SparrowSecondaryButton(
                     onClick = onChooseAnotherNumber,
-                    text = if (identityState.phoneNumber.isBlank()) stringResource(Res.string.base_choose_phone_number) else stringResource(Res.string.base_choose_another_number)
+                    text = if (identityState.phoneNumber.isBlank()) {
+                        stringResource(Res.string.base_choose_phone_number)
+                    } else {
+                        stringResource(
+                            Res.string.base_choose_another_number
+                        )
+                    }
                 )
                 Spacer(Modifier.height(MaterialTheme.spacing.small))
                 SparrowApprovalButton(
@@ -183,7 +143,7 @@ fun PhonePage(
             }
 
             is IdentityUiState.Ready -> {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(MaterialTheme.spacing.medium))
                 Text(
                     text = stringResource(Res.string.base_identity_ready_opening),

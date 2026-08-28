@@ -73,10 +73,6 @@ sealed interface ControlPlaneSettingsUiEvent {
         val value: String
     ) : ControlPlaneSettingsUiEvent
 
-    data class DirectoryUrlChanged(
-        val value: String
-    ) : ControlPlaneSettingsUiEvent
-
     data class Remove(
         val url: String
     ) : ControlPlaneSettingsUiEvent

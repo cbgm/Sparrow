@@ -10,15 +10,29 @@ sealed interface AppRoute {
     data object Main : AppRoute
 
     @Serializable
+    data object MessageSearch : AppRoute
+
+    @Serializable
+    data class MessageSafetyDetails(
+        val messageId: String,
+        val levelId: String,
+        val reasonIds: String,
+        val focusReasonId: String? = null,
+        val contactId: String? = null
+    ) : AppRoute
+
+    @Serializable
     data class Chat(
         val conversationId: String,
         val contactId: String,
-        val contactName: String
+        val contactName: String,
+        val targetMessageId: String? = null
     ) : AppRoute
 
     @Serializable
     data class GroupConversation(
-        val conversationId: String
+        val conversationId: String,
+        val targetMessageId: String? = null
     ) : AppRoute
 
     @Serializable
@@ -68,11 +82,32 @@ sealed interface AppRoute {
     data object DeveloperMenu : AppRoute
 
     @Serializable
+    data object DeveloperErrorLog : AppRoute
+
+    @Serializable
+    data object ProfileSettings : AppRoute
+
+    @Serializable
     data object ControlPlanes : AppRoute
+
+    @Serializable
+    data class FilePicker(
+        val sessionId: String
+    ) : AppRoute
+
+    @Serializable
+    data object AttachmentStorage : AppRoute
+
+    @Serializable
+    data class AttachmentManagement(
+        val conversationId: String
+    ) : AppRoute
 
     @Serializable
     data object BlockedContacts : AppRoute
 
     @Serializable
-    data object ContactInvitations : AppRoute
+    data class ContactInvitations(
+        val showOutgoing: Boolean = false
+    ) : AppRoute
 }

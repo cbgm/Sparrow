@@ -1,32 +1,34 @@
 package com.cbgm.sparrow.feature.chats.presentation.details
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
+import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupLeaveRequirement
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.AddGroupMembersUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.GetGroupLeaveRequirementUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.LeaveGroupUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupAdministrationUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupVerificationUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupDetailsContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.PromoteGroupMemberUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.RemoveGroupAvatarUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.RemoveGroupMemberUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupAvatarUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SynchronizeGroupVerificationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.TransferGroupAdminAndLeaveUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.VerifyGroupMemberUseCase
 import com.cbgm.sparrow.feature.chats.presentation.details.mapper.buildGroupVerificationSummary
+import com.cbgm.sparrow.feature.chats.presentation.details.mapper.toGroupAvatarUiState
+import com.cbgm.sparrow.feature.chats.presentation.details.mapper.toGroupVerificationUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.AddGroupMembersUiEvent
+import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupAvatarUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupDetailsUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupLeavePrompt
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupLeaveUiState
-import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupMemberManagementUiState
-import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupMemberVerificationState
-import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupMemberVerificationUiState
+import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupVerificationSummaryUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupVerificationUiState
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
-import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.filterContacts
-import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.groupContactsByInitial
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsWithProfilePicturesUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -36,102 +38,107 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class GroupVerificationViewModel(
-    private val conversationId: String,
-    observeGroupVerification: ObserveGroupVerificationUseCase,
+    private val savedStateHandle: SavedStateHandle,
+    observeGroupDetailsContext: ObserveGroupDetailsContextUseCase,
     private val synchronizeGroupVerification: SynchronizeGroupVerificationUseCase,
     private val verifyGroupMember: VerifyGroupMemberUseCase,
     private val getContactSafetyNumber: GetContactSafetyNumberUseCase,
-    observeContacts: ObserveContactsUseCase,
+    observeContactsWithProfilePictures: ObserveContactsWithProfilePicturesUseCase,
     private val addGroupMembers: AddGroupMembersUseCase,
     private val removeGroupMember: RemoveGroupMemberUseCase,
     private val promoteGroupMember: PromoteGroupMemberUseCase,
     private val transferGroupAdminAndLeave: TransferGroupAdminAndLeaveUseCase,
-    observeGroupAdministration: ObserveGroupAdministrationUseCase,
+    private val setGroupAvatar: SetGroupAvatarUseCase,
+    private val removeGroupAvatar: RemoveGroupAvatarUseCase,
     private val getGroupLeaveRequirement: GetGroupLeaveRequirementUseCase,
     private val leaveGroup: LeaveGroupUseCase
 ) : BaseViewModel() {
-    private val verificationState = MutableStateFlow(GroupVerificationSelectionState())
-    private val memberManagementState = MutableStateFlow(GroupMemberManagementState())
+    private val conversationId =
+        savedStateHandle.requireRouteArgument<String>(AppRoute.GroupDetails::conversationId.name)
+    private val restoredVerificationContactId =
+        savedStateHandle.get<String>(VERIFICATION_CONTACT_ID_KEY)
+    private val verificationState =
+        MutableStateFlow(
+            GroupVerificationSelectionState(
+                selectedContactId = restoredVerificationContactId,
+                isLoadingSafetyNumber = restoredVerificationContactId != null
+            )
+        )
+    private val memberManagementState =
+        MutableStateFlow(
+            GroupMemberManagementState(
+                selectedContactIds =
+                    savedStateHandle
+                        .get<Array<String>>(SELECTED_CONTACT_IDS_KEY)
+                        .orEmpty()
+                        .toSet(),
+                searchQuery = savedStateHandle.get<String>(MEMBER_SEARCH_QUERY_KEY).orEmpty()
+            )
+        )
     private val leaveState = MutableStateFlow(GroupLeaveUiState())
-    private val contactsFlow = observeContacts()
-    private val summaryFlow =
+    private val avatarActionState = MutableStateFlow(GroupAvatarActionState())
+    private val contactsWithProfilePictures = observeContactsWithProfilePictures()
+
+    private val groupOverviewFlow =
         combine(
-            observeGroupVerification(conversationId),
-            observeGroupAdministration(conversationId)
-        ) { groupState, administration ->
-            buildGroupVerificationSummary(
-                isLocalAdmin = administration.isLocalAdmin || groupState.context.isLocalAdmin,
-                isLocalMemberActive = groupState.context.isLocalMemberActive,
-                ownerContactId = groupState.context.ownerContactId,
-                ownerDisplayName = groupState.ownerDisplayName,
-                ownInvitationId = groupState.context.ownInvitationId,
-                isLeavePending = groupState.context.isLeavePending,
-                rows = groupState.pairs,
-                remoteAdminContactIds = administration.adminContactIds,
-                currentMemberContactIds = administration.currentMemberContactIds,
-                promotableContactIds = administration.promotableContactIds,
-                requiresAdminPromotionBeforeLeave = administration.requiresPromotionBeforeLeave
+            observeGroupDetailsContext(conversationId),
+            avatarActionState
+        ) { context, avatarAction ->
+            val groupState = context.verification
+            val administration = context.administration
+            val summary =
+                buildGroupVerificationSummary(
+                    isLocalAdmin = administration.isLocalAdmin || groupState.context.isLocalAdmin,
+                    isLocalMemberActive = groupState.context.isLocalMemberActive,
+                    ownerContactId = groupState.context.ownerContactId,
+                    ownerDisplayName = groupState.ownerDisplayName,
+                    ownInvitationId = groupState.context.ownInvitationId,
+                    isLeavePending = groupState.context.isLeavePending,
+                    rows = groupState.pairs,
+                    remoteAdminContactIds = administration.adminContactIds,
+                    currentMemberContactIds = administration.currentMemberContactIds,
+                    promotableContactIds = administration.promotableContactIds,
+                    requiresAdminPromotionBeforeLeave = administration.requiresPromotionBeforeLeave
+                )
+
+            GroupOverviewSnapshot(
+                summary = summary,
+                avatar =
+                    toGroupAvatarUiState(
+                        title = context.conversation?.title.orEmpty(),
+                        avatarBytes = context.avatar.bytes,
+                        canEdit = summary.isLocalAdmin,
+                        isSaving = avatarAction.isSaving,
+                        errorMessage = avatarAction.errorMessage
+                    )
             )
         }
 
     val uiState: StateFlow<GroupVerificationUiState> =
         combine(
-            summaryFlow,
+            groupOverviewFlow,
             verificationState,
-            contactsFlow,
+            contactsWithProfilePictures,
             memberManagementState,
             leaveState
-        ) { summary, verification, contacts, memberManagement, leave ->
-            val blockedContactIds =
-                summary.currentMemberContactIds.toMutableSet().also { blocked ->
-                    summary.members
-                        .filterNot(GroupMemberVerificationUiState::isActive)
-                        .filter { member -> member.state == GroupMemberVerificationState.INVITATION_PENDING }
-                        .mapNotNullTo(blocked, GroupMemberVerificationUiState::contactId)
-                }
-            val availableContacts =
-                contacts.filterNot { contact -> contact.id in blockedContactIds }
-            GroupVerificationUiState(
-                summary = summary,
-                selectedMember =
-                    verification.selectedContactId?.let { selectedContactId ->
-                        summary.members.firstOrNull { member ->
-                            member.contactId == selectedContactId &&
-                                member.canVerify
-                        }
-                    },
+        ) { overview, verification, contactsSnapshot, memberManagement, leave ->
+            toGroupVerificationUiState(
+                summary = overview.summary,
+                groupAvatar = overview.avatar,
+                contacts = contactsSnapshot.contacts,
+                profilePictures = contactsSnapshot.profilePictures,
+                selectedContactId = verification.selectedContactId,
                 safetyNumber = verification.safetyNumber,
                 isLoadingSafetyNumber = verification.isLoadingSafetyNumber,
                 isVerifying = verification.isVerifying,
-                errorMessage = verification.errorMessage,
-                memberManagement =
-                    GroupMemberManagementUiState(
-                        availableContactGroups =
-                            availableContacts
-                                .filterContacts(memberManagement.searchQuery)
-                                .groupContactsByInitial(),
-                        selectedContactIds =
-                            memberManagement.selectedContactIds.filterTo(mutableSetOf()) { contactId ->
-                                availableContacts.any { contact -> contact.id == contactId }
-                            },
-                        searchQuery = memberManagement.searchQuery,
-                        removalCandidate =
-                            memberManagement.removalCandidateContactId?.let { contactId ->
-                                summary.members.firstOrNull { member ->
-                                    !member.isGroupAdmin && member.contactId == contactId
-                                }
-                            },
-                        promotionCandidate =
-                            memberManagement.promotionCandidateContactId?.let { contactId ->
-                                summary.members.firstOrNull { member ->
-                                    !member.isGroupAdmin && member.contactId == contactId
-                                }
-                            },
-                        promotionRequiredForLeave = summary.requiresAdminPromotionBeforeLeave,
-                        isUpdating = memberManagement.isUpdating,
-                        errorMessage = memberManagement.errorMessage,
-                        completedRevision = memberManagement.completedRevision
-                    ),
+                verificationError = verification.errorMessage,
+                selectedContactIds = memberManagement.selectedContactIds,
+                searchQuery = memberManagement.searchQuery,
+                removalCandidateContactId = memberManagement.removalCandidateContactId,
+                promotionCandidateContactId = memberManagement.promotionCandidateContactId,
+                isUpdatingMembers = memberManagement.isUpdating,
+                memberManagementError = memberManagement.errorMessage,
+                completedRevision = memberManagement.completedRevision,
                 leave = leave
             )
         }.stateIn(
@@ -141,6 +148,8 @@ class GroupVerificationViewModel(
         )
 
     init {
+        persistMemberSelection()
+        restoredVerificationContactId?.let(::loadSafetyNumber)
         synchronize()
     }
 
@@ -164,7 +173,11 @@ class GroupVerificationViewModel(
             GroupDetailsUiEvent.LeaveGroupConfirmed -> leaveGroup()
             GroupDetailsUiEvent.LeaveGroupDismissed -> dismissLeavePrompt()
             GroupDetailsUiEvent.LeaveGroupClicked -> requestLeave()
+            is GroupDetailsUiEvent.AvatarSelected -> saveGroupAvatar(event.bytes)
+            GroupDetailsUiEvent.RemoveGroupAvatarClicked -> removeCurrentGroupAvatar()
             GroupDetailsUiEvent.AddMembersClicked -> Unit
+            GroupDetailsUiEvent.MediaAndFilesClicked ->
+                navigator.navigateTo(AppRoute.AttachmentManagement(conversationId))
         }
     }
 
@@ -177,6 +190,38 @@ class GroupVerificationViewModel(
         }
     }
 
+    private fun saveGroupAvatar(bytes: ByteArray) {
+        if (avatarActionState.value.isSaving || bytes.isEmpty()) return
+
+        avatarActionState.value = GroupAvatarActionState(isSaving = true)
+        viewModelScope.launch {
+            setGroupAvatar(conversationId, bytes)
+                .onSuccess { avatarActionState.value = GroupAvatarActionState() }
+                .onFailure { error ->
+                    avatarActionState.value =
+                        GroupAvatarActionState(
+                            errorMessage = error.message ?: "Group avatar could not be saved"
+                        )
+                }
+        }
+    }
+
+    private fun removeCurrentGroupAvatar() {
+        if (avatarActionState.value.isSaving) return
+
+        avatarActionState.value = GroupAvatarActionState(isSaving = true)
+        viewModelScope.launch {
+            removeGroupAvatar(conversationId)
+                .onSuccess { avatarActionState.value = GroupAvatarActionState() }
+                .onFailure { error ->
+                    avatarActionState.value =
+                        GroupAvatarActionState(
+                            errorMessage = error.message ?: "Group avatar could not be removed"
+                        )
+                }
+        }
+    }
+
     private fun scanMemberQr(contactId: String) {
         navigator.navigateTo(
             AppRoute.VerifyIdentityQr(
@@ -184,6 +229,15 @@ class GroupVerificationViewModel(
                 groupId = conversationId
             )
         )
+    }
+
+    private fun persistMemberSelection() {
+        viewModelScope.launch {
+            memberManagementState.collect { state ->
+                savedStateHandle[MEMBER_SEARCH_QUERY_KEY] = state.searchQuery
+                savedStateHandle[SELECTED_CONTACT_IDS_KEY] = state.selectedContactIds.toTypedArray()
+            }
+        }
     }
 
     private fun synchronize() {
@@ -211,12 +265,20 @@ class GroupVerificationViewModel(
             return
         }
 
+        selectVerificationContact(contactId)
+        loadSafetyNumber(contactId)
+    }
+
+    private fun selectVerificationContact(contactId: String) {
+        savedStateHandle[VERIFICATION_CONTACT_ID_KEY] = contactId
         verificationState.value =
             GroupVerificationSelectionState(
                 selectedContactId = contactId,
                 isLoadingSafetyNumber = true
             )
+    }
 
+    private fun loadSafetyNumber(contactId: String) {
         viewModelScope.launch {
             getContactSafetyNumber
                 .invoke(contactId = contactId)
@@ -273,7 +335,7 @@ class GroupVerificationViewModel(
                 groupId = conversationId,
                 contactId = contactId
             ).onSuccess {
-                verificationState.value = GroupVerificationSelectionState()
+                clearVerificationSelection()
             }.onFailure { error ->
                 verificationState.update { state ->
                     state.copy(
@@ -289,8 +351,13 @@ class GroupVerificationViewModel(
 
     private fun dismissVerification() {
         if (!verificationState.value.isVerifying) {
-            verificationState.value = GroupVerificationSelectionState()
+            clearVerificationSelection()
         }
+    }
+
+    private fun clearVerificationSelection() {
+        savedStateHandle.remove<String>(VERIFICATION_CONTACT_ID_KEY)
+        verificationState.value = GroupVerificationSelectionState()
     }
 
     private fun updateMemberSearchQuery(query: String) {
@@ -522,6 +589,16 @@ class GroupVerificationViewModel(
         }
     }
 
+    private data class GroupOverviewSnapshot(
+        val summary: GroupVerificationSummaryUiState,
+        val avatar: GroupAvatarUiState
+    )
+
+    private data class GroupAvatarActionState(
+        val isSaving: Boolean = false,
+        val errorMessage: String? = null
+    )
+
     private data class GroupVerificationSelectionState(
         val selectedContactId: String? = null,
         val safetyNumber: String = "",
@@ -539,4 +616,10 @@ class GroupVerificationViewModel(
         val errorMessage: String? = null,
         val completedRevision: Int = 0
     )
+
+    private companion object {
+        const val VERIFICATION_CONTACT_ID_KEY = "verificationContactId"
+        const val MEMBER_SEARCH_QUERY_KEY = "memberSearchQuery"
+        const val SELECTED_CONTACT_IDS_KEY = "selectedContactIds"
+    }
 }

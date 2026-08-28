@@ -31,6 +31,7 @@ internal fun Application.installGatewayRoutes(
         installInformationRoute(identity, config)
         installControlPlaneDiscoveryRoute(config)
         installGatewayWebSocketRoute(runtime)
+        installBlobRoutes(runtime.blobStore, runtime.blobUploadPermitStore)
         installIncomingEnvelopeRoute(runtime, config)
         installIncomingTypingRoute(runtime, config)
         installInternalLoadRoute(runtime, config)

@@ -7,14 +7,22 @@ Messaging crosses modules, but each module has a narrow job.
 | Packet contracts | `:core:protocol` | `SparrowPacket`, `PacketCodec`, packet data classes |
 | Persistent outbox contract | `:core:protocol` | `ProtocolOutbox`, `OutboxProcessor`, `OutgoingWireSender` |
 | Persistent outbox storage | `:data:database` | `DefaultProtocolOutbox` + Room DAOs |
-| Conversation meaning | `:feature:chats` | Direct/Group repositories, handlers, state machines |
+| Conversation meaning | `:feature:chats` | Direct/Group repositories, handlers, state machines, `MessagePartDto`/`MessagePart`/`MessagePartUi` |
+| Attachment blob/cache/storage | `:feature:attachments` | `MessageAttachmentDataSource`, `BlobTransferDataSource`, attachment repositories |
+| Media/file platform access | `:feature:media` | gallery/camera/file launchers, media viewer/open/export helpers |
 | Contact/identity packet meaning | `:feature:contacts` | invitation/identity handlers and use cases |
 | Send/receive orchestration | `:feature:messaging` | `DefaultOutboxRunner`, `DefaultOutboxProcessor`, `DefaultIncomingEnvelopeRunner`, `DefaultIncomingEnvelopeProcessor` |
 | Wire connection/discovery | `:feature:transport` | `DefaultTransportConnectionManager`, `DefaultWebSocketTransportClient`, discovery clients |
 | Client edge | `:server:gateway` | `GatewayWebSocketHandler`, `GatewaySessionHandler`, `ConnectionRegistry` |
 | Cross-node forwarding | `:server:federation` | `FederationRouter`, `FederationPeerRouter`, `OutboundEnvelopeRetryAgent` |
 | Offline store | `:server:mailbox` | `configureMailboxRoutes()`, `MailboxStorage`, `PostgresMailboxStore` |
-| Android wake-up | `:server:push` + `:notification` | `PushCoordinator`, `FirebasePushSender`, `SynchronizePendingMessages` |
+| Android wake-up | `:server:push` + `:notification` | `PushCoordinator`, `FirebasePushSender`, `SynchronizePendingMessagesUseCase` |
+
+## Attachment boundary
+
+Attachment source/transfer/storage ownership is separate from conversation meaning. `:feature:attachments` prepares and uploads encrypted blobs and exposes source attachment metadata. `:feature:chats` converts that boundary into its own typed `MessagePartDto`/`MessagePart`/`MessagePartUi` representations.
+
+This avoids leaking one generic attachment module model into Direct/Group domain state while still keeping blob behavior centralized. Image, video, file, location and contact all currently use this blob attachment path.
 
 ## Outgoing boundary
 
@@ -22,27 +30,32 @@ Messaging crosses modules, but each module has a narrow job.
 sequenceDiagram
     participant VM as Direct/Group ViewModel
     participant UC as Send*MessageUseCase
-    participant Repo as MessageRepository
-    participant Proc as *OutgoingMessageProcessor
+    participant Repo as Direct/Group message repository
+    participant Proc as Direct/Group outgoing processor
     participant Outbox as ProtocolOutbox
     participant Runner as DefaultOutboxRunner
     participant OP as DefaultOutboxProcessor
-    participant Sender as OutgoingWireSender
+    participant PS as OutgoingPacketSender
+    participant PF as OutgoingTransportPayloadFactory
+    participant RR as OutgoingRecipientRoutingResolver
+    participant Sender as WebSocketOutgoingWireSender
     participant WS as DefaultWebSocketTransportClient
 
-    VM->>UC: send(text)
+    VM->>UC: send text + attachments
     UC->>Repo: send(...)
     Repo->>Proc: create/store/enqueue
     Proc->>Outbox: enqueue(packet)
     Runner->>OP: processPending()
-    OP->>OP: encode + transport policy + resolve routing ID
-    OP->>Sender: send(routingId, encrypted/encoded payload)
+    OP->>PS: send(outbox item)
+    PS->>PF: create transport payload
+    PS->>RR: resolve recipient routing ID
+    PS->>Sender: sendWithAcceptance(...)
     Sender->>WS: send envelope
 ```
 
-`DefaultOutboxProcessor` deliberately does not know whether a message bubble is Direct or Group. It decodes the already-created packet, asks `OutgoingTransportPayloadFactory` how it must be protected, resolves a routing ID with `ContactRoutingIdResolver` or `GroupRoutingIdResolver`, and hands opaque bytes to the wire sender.
+`DefaultOutboxProcessor` owns outbox state transitions/batching; it does not know Direct/Group conversation semantics and no longer performs packet protection/routing itself. `OutgoingPacketSender` decodes the application packet, asks `OutgoingTransportPayloadFactory` for transport protection, resolves the destination with `OutgoingRecipientRoutingResolver`, and hands the encoded transport payload to `OutgoingWireSender`/`WebSocketOutgoingWireSender`.
 
-It processes recipient groups concurrently with a maximum of eight recipient groups at once, while preserving ordering within one recipient group.
+`OutgoingRecipientRoutingResolver` uses `ContactRoutingDataSource` and `GroupRoutingDataSource` according to the concrete packet type. The outbox processes recipient groups concurrently with a maximum of eight recipient groups at once, while preserving ordering within one recipient group.
 
 ## Incoming boundary
 

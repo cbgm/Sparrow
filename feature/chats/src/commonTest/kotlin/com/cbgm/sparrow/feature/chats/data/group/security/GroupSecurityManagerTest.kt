@@ -13,8 +13,8 @@ import com.cbgm.sparrow.core.protocol.packet.GroupMembershipChangePayload
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.data.database.entity.GroupSecurityStateEntity
+import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupKeyDataSource
 import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupProtocolPayloadEncoder
-import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupKeyRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -29,14 +29,14 @@ import kotlin.test.assertTrue
 class GroupSecurityManagerTest {
     private val encoder = GroupProtocolPayloadEncoder()
     private val dao = InMemoryGroupSecurityDao()
-    private val keyStorage = InMemoryGroupKeyRepository()
+    private val keyStorage = InMemoryGroupKeyDataSource()
     private val crypto = DeterministicGroupCrypto()
     private val groupWelcomeSecurity =
         GroupWelcomeSecurity(
             groupCrypto = crypto,
             payloadEncoder = encoder,
             groupSecurityDao = dao,
-            groupKeyRepository = keyStorage
+            groupKeyDataSource = keyStorage
         )
     private val manager =
         GroupSecurityManager(
@@ -44,7 +44,7 @@ class GroupSecurityManagerTest {
             cryptoHash = DefaultCryptoHash(),
             payloadEncoder = encoder,
             groupSecurityDao = dao,
-            groupKeyRepository = keyStorage,
+            groupKeyDataSource = keyStorage,
             groupWelcomeSecurity = groupWelcomeSecurity
         )
 
@@ -161,7 +161,7 @@ class GroupSecurityManagerTest {
                         memberKeys = listOf(memberKey),
                         recipients =
                             listOf(
-                                GroupWelcomeRecipient(
+                                GroupWelcomeRecipientDto(
                                     contactId = REMOTE_CONTACT_ID,
                                     invitationId = INVITATION_ID,
                                     encryptionPublicKey = byteArrayOf(5)
@@ -179,7 +179,7 @@ class GroupSecurityManagerTest {
                         memberKeys = listOf(memberKey),
                         recipients =
                             listOf(
-                                GroupWelcomeRecipient(
+                                GroupWelcomeRecipientDto(
                                     contactId = REMOTE_CONTACT_ID,
                                     invitationId = INVITATION_ID,
                                     encryptionPublicKey = byteArrayOf(5)
@@ -221,7 +221,7 @@ class GroupSecurityManagerTest {
                     )
                 )
             val recipient =
-                GroupWelcomeRecipient(
+                GroupWelcomeRecipientDto(
                     contactId = REMOTE_CONTACT_ID,
                     invitationId = INVITATION_ID,
                     encryptionPublicKey = byteArrayOf(5)
@@ -462,7 +462,7 @@ class GroupSecurityManagerTest {
                     memberKeys = listOf(memberKey(epoch = nextEpoch)),
                     recipients =
                         listOf(
-                            GroupWelcomeRecipient(
+                            GroupWelcomeRecipientDto(
                                 contactId = REMOTE_CONTACT_ID,
                                 invitationId = INVITATION_ID,
                                 encryptionPublicKey = byteArrayOf(5)
@@ -626,7 +626,7 @@ class GroupSecurityManagerTest {
             }
     }
 
-    private class InMemoryGroupKeyRepository : GroupKeyRepository {
+    private class InMemoryGroupKeyDataSource : GroupKeyDataSource {
         private val values = mutableMapOf<Pair<String, Int>, ByteArray>()
 
         override suspend fun save(

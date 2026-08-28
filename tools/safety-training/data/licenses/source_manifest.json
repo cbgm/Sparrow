@@ -1,0 +1,53 @@
+{
+  "checked_on": "2026-08-21",
+  "sources": [
+    {
+      "id": "uci_sms",
+      "name": "SMS Spam Collection",
+      "url": "https://archive.ics.uci.edu/dataset/228/sms+spam+collection",
+      "license": "CC BY 4.0",
+      "role": "training candidate pool",
+      "notes": "5,574 real SMS messages with spam/ham labels. Sparrow target labels are generated independently by the dual-pass teacher; spam/ham is not equivalent to a Sparrow Safety reason. Preserve dataset attribution."
+    },
+    {
+      "id": "scamshield",
+      "name": "ScamShield Scam Detection Dataset",
+      "url": "https://huggingface.co/datasets/rehan-ml/scamshield-scam-detection-data",
+      "license": "MIT wrapper; upstream source attribution still required",
+      "role": "optional training candidate pool",
+      "notes": "Contains SMS Spam Collection plus EMSCAD and a small synthetic contrastive portion. Do not blindly combine its SMS rows with UCI; exact deduplication is mandatory and upstream licenses/attribution must be retained."
+    },
+    {
+      "id": "german_synthetic",
+      "name": "Tanaos Synthetic Spam Detection Dataset German",
+      "url": "https://huggingface.co/datasets/tanaos/synthetic-spam-detection-dataset-german",
+      "license": "MIT",
+      "role": "optional German augmentation only",
+      "notes": "Synthetic spam/not-spam data. Do not use as Sparrow's gold validation/test benchmark and do not map spam/not_spam directly to Sparrow labels; run the same automatic Sparrow teacher labeling."
+    },
+    {
+      "id": "otp_phishing",
+      "name": "SMS Dataset OTP / OTP Intent / Phishing",
+      "url": "https://huggingface.co/datasets/gandharvbakshi/SMS-dataset-OTP-OTP_INTENT_Phishing",
+      "license": "MIT; gated access conditions also apply",
+      "role": "optional credential/OTP candidate pool",
+      "notes": "Requires accepting Hugging Face dataset access conditions. OTP presence is not the same as CREDENTIAL_REQUEST; run the same automatic Sparrow teacher labeling."
+    },
+    {
+      "id": "scamguardbench",
+      "name": "ScamGuardBench",
+      "url": "https://huggingface.co/datasets/flowxai/scamguardbench",
+      "license": "Apache-2.0",
+      "role": "external evaluation reference",
+      "notes": "Useful especially for false-positive testing on legitimate-but-confusable messages. It is not automatically imported because its taxonomy differs from Sparrow's four semantic reasons."
+    },
+    {
+      "id": "embeddinggemma",
+      "name": "EmbeddingGemma 300M",
+      "url": "https://storage.googleapis.com/mediapipe-models/text_embedder/embedding_gemma/int4int8/latest/embedding_gemma.task",
+      "license": "Gemma terms apply to the model; MediaPipe runtime/API licensing is separate",
+      "role": "frozen embedding model",
+      "notes": "Exact int4/int8 MediaPipe task model used by Sparrow's Android LocalEmbeddingModel. The URL contains 'latest'; record and pin the downloaded SHA-256 for reproducibility."
+    }
+  ]
+}

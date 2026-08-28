@@ -90,9 +90,13 @@ flowchart TD
 Important rules:
 
 - ViewModels call use cases, not repository implementations.
+- Use cases do not call other use cases.
+- Repository implementations do not call other repositories or use cases.
+- Datasources do not call repositories.
 - Domain code does not depend on Compose, Room, Ktor or Android APIs.
-- Repository packages contain repository contracts/implementations, not unrelated coordinators.
-- Platform-specific code belongs in the corresponding source set (`androidMain`, `iosMain`) of the owning module.
+- Data representation models use `...Dto`; domain models are unsuffixed; presentation representations use `...Ui`.
+- Mapper functions are named for their destination: `toNameDto()`, `toName()`, `toNameUi()`.
+- Platform-specific code belongs in the corresponding source set (`androidMain`, `iosMain`) of the owning module, under the owning top-level responsibility such as `device`.
 - `androidApp` stays small.
 
 ## Messaging boundary
