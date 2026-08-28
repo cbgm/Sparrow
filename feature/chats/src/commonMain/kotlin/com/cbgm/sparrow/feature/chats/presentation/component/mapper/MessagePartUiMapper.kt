@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.chats.presentation.component.mapper
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachment
 import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
+import com.cbgm.sparrow.feature.attachments.util.ContactAttachmentPayload
 import com.cbgm.sparrow.feature.attachments.util.LocationAttachmentPayload
 import com.cbgm.sparrow.feature.chats.presentation.component.model.ImageVideoTypeUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
@@ -54,6 +55,12 @@ private fun MessageAttachment.toMessagePartUi(bytes: ByteArray?): MessagePartUi?
                 id = id,
                 location = bytes?.let(LocationAttachmentPayload::decode)
             )
+
+        MessageAttachmentType.CONTACT ->
+            MessagePartUi.ContactUi(
+                id = id,
+                contact = bytes?.let(ContactAttachmentPayload::decode)
+            )
     }
 
 fun MessagePartUi.ImageVideoUi.toMediaItem(): MediaItem =
@@ -75,7 +82,7 @@ internal fun MessageBubbleUi.toMessageAttachmentUi(): List<MessageAttachmentUi> 
     buildList {
         imageVideoParts.forEach { part ->
             add(
-                MessageAttachmentUi.ImageVideoAttachment(
+                MessageAttachmentUi.ImageVideoAttachmentUi(
                     id = part.id,
                     type =
                         when (part.type) {
@@ -96,7 +103,7 @@ internal fun MessageBubbleUi.toMessageAttachmentUi(): List<MessageAttachmentUi> 
 
         fileParts.forEach { part ->
             add(
-                MessageAttachmentUi.FileAttachment(
+                MessageAttachmentUi.FileAttachmentUi(
                     id = part.id,
                     mimeType = part.mimeType,
                     byteSize = part.byteSize,
@@ -109,9 +116,18 @@ internal fun MessageBubbleUi.toMessageAttachmentUi(): List<MessageAttachmentUi> 
 
         locationPart?.location?.let { location ->
             add(
-                MessageAttachmentUi.LocationAttachment(
+                MessageAttachmentUi.LocationAttachmentUi(
                     id = locationPart.id,
                     location = location
+                )
+            )
+        }
+
+        contactPart?.contact?.let { contact ->
+            add(
+                MessageAttachmentUi.ContactAttachmentUi(
+                    id = contactPart.id,
+                    contact = contact
                 )
             )
         }

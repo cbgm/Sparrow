@@ -8,10 +8,12 @@ enum class MessageAttachmentType {
     IMAGE,
     VIDEO,
     FILE,
-    LOCATION
+    LOCATION,
+    CONTACT
 }
 
 const val LOCATION_MIME_TYPE = "application/vnd.sparrow.location"
+const val CONTACT_MIME_TYPE = "application/vnd.sparrow.contact"
 
 @Serializable
 data class MessageAttachment(
@@ -59,6 +61,16 @@ data class MessageAttachment(
                 require(fileName == null) { "Location attachment must not have a file name" }
                 require(width == null && height == null && durationMilliseconds == null) {
                     "Location attachments must not contain media metadata"
+                }
+            }
+
+            MessageAttachmentType.CONTACT -> {
+                require(mimeType == CONTACT_MIME_TYPE) {
+                    "Contact attachment must use the Sparrow contact MIME type"
+                }
+                require(fileName == null) { "Contact attachment must not have a file name" }
+                require(width == null && height == null && durationMilliseconds == null) {
+                    "Contact attachments must not contain media metadata"
                 }
             }
         }

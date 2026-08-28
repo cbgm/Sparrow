@@ -98,6 +98,7 @@ internal fun GroupMessage.toGroupMessageUi(
                 imageVideoParts = parts.filterIsInstance<MessagePartUi.ImageVideoUi>(),
                 fileParts = parts.filterIsInstance<MessagePartUi.FileUi>(),
                 locationPart = parts.filterIsInstance<MessagePartUi.LocationUi>().firstOrNull(),
+                contactPart = parts.filterIsInstance<MessagePartUi.ContactUi>().firstOrNull(),
                 textPart =
                     text
                         .takeIf(String::isNotBlank)

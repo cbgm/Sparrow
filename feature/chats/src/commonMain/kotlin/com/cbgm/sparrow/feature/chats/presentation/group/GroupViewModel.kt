@@ -8,7 +8,9 @@ import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
+import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.attachments.domain.usecase.LoadMessageAttachmentUseCase
+import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingContactAttachment
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingLocationAttachment
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingMessageAttachment
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationState
@@ -24,6 +26,8 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupTypingUseCase
 import com.cbgm.sparrow.feature.chats.presentation.group.mapper.toGroupUiState
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState
+import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactResult
+import com.cbgm.sparrow.feature.contacts.domain.usecase.AddDeviceContactUseCase
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toDetailsRoute
@@ -54,7 +58,8 @@ class GroupViewModel(
     private val observeMemberTyping: ObserveGroupMemberTypingUseCase,
     private val setGroupTyping: SetGroupTypingUseCase,
     observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase,
-    private val loadMessageAttachment: LoadMessageAttachmentUseCase
+    private val loadMessageAttachment: LoadMessageAttachmentUseCase,
+    private val addDeviceContact: AddDeviceContactUseCase
 ) : BaseViewModel() {
     private val groupId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.GroupConversation::conversationId.name)
@@ -136,6 +141,8 @@ class GroupViewModel(
             is GroupUiEvent.MediaSelected -> updateMediaSelection(event.media)
             is GroupUiEvent.OpenFilePicker -> navigator.navigateTo(AppRoute.FilePicker(event.sessionId))
             is GroupUiEvent.ShareCurrentLocation -> sendCurrentLocation(event.location.toOutgoingLocationAttachment())
+            is GroupUiEvent.ShareContact -> sendContact(event.contact.toOutgoingContactAttachment())
+            is GroupUiEvent.AddSharedContact -> addSharedContact(event.contact)
             is GroupUiEvent.AttachmentVisible -> loadAttachment(event.attachmentId)
             is GroupUiEvent.AttachmentError -> errorMessage.value = event.message
             GroupUiEvent.HeaderClicked -> navigator.navigateTo(AppRoute.GroupDetails(groupId))
@@ -271,6 +278,47 @@ class GroupViewModel(
                     }
             } finally {
                 isSending.value = false
+            }
+        }
+    }
+
+    private fun sendContact(contactAttachment: OutgoingMessageAttachment) {
+        if (!uiState.value.isMessageInputEnabled || isSending.value) return
+
+        errorMessage.value = null
+        viewModelScope.launch {
+            isSending.value = true
+            try {
+                sendMessage(groupId, "", listOf(contactAttachment))
+                    .onFailure { error ->
+                        errorMessage.value = error.message ?: "Contact could not be sent"
+                    }
+            } finally {
+                isSending.value = false
+            }
+        }
+    }
+
+    private fun addSharedContact(contact: SharedContact) {
+        viewModelScope.launch {
+            when (
+                val result =
+                    addDeviceContact(
+                        displayName = contact.displayName,
+                        phoneNumber = contact.phoneNumber
+                    )
+            ) {
+                AddDeviceContactResult.Added,
+                AddDeviceContactResult.AlreadyExists -> errorMessage.value = null
+
+                AddDeviceContactResult.PermissionDenied ->
+                    errorMessage.value = "Contacts permission is required to add this contact"
+
+                AddDeviceContactResult.InvalidPhoneNumber ->
+                    errorMessage.value = "The shared phone number is invalid"
+
+                is AddDeviceContactResult.Failure ->
+                    errorMessage.value = result.throwable.message ?: "Contact could not be added"
             }
         }
     }

@@ -35,6 +35,7 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.messageBubble
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
@@ -69,6 +70,7 @@ internal fun MessageBubble(
     onSafetyDetailsClick: (MessageSafetyWarningUi) -> Unit = {},
     onAttachmentVisible: (String) -> Unit = {},
     onAttachmentClick: (String) -> Unit = {},
+    onContactClick: (SharedContact) -> Unit = {},
     isSearchHighlighted: Boolean = false
 ) {
     val bubbleState = bubbleState(message)
@@ -91,6 +93,7 @@ internal fun MessageBubble(
                 safetyWarning = safetyWarning,
                 onAttachmentVisible = onAttachmentVisible,
                 onAttachmentClick = onAttachmentClick,
+                onContactClick = onContactClick,
                 onSafetyDetailsClick = {
                     if (safetyWarning != null) onSafetyDetailsClick(safetyWarning)
                 }
@@ -143,16 +146,32 @@ private fun BubbleBody(
     safetyWarning: MessageSafetyWarningUi? = null,
     onAttachmentVisible: (String) -> Unit = {},
     onAttachmentClick: (String) -> Unit = {},
+    onContactClick: (SharedContact) -> Unit = {},
     onSafetyDetailsClick: () -> Unit = {}
 ) {
     val showTextBubble =
         message.locationPart == null &&
+            message.contactPart == null &&
             (state.text.isNotBlank() || state.isContentFailed || safetyWarning != null)
 
     Column(
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro),
         horizontalAlignment = if (message.isMine) Alignment.End else Alignment.Start
     ) {
+        message.contactPart?.let { contactPart ->
+            MessageBubbleSurface(
+                message = message,
+                state = state,
+                isSearchHighlighted = isSearchHighlighted
+            ) {
+                ContactMessageBubbleBody(
+                    contactPart = contactPart,
+                    onAttachmentVisible = onAttachmentVisible,
+                    onContactClick = onContactClick
+                )
+            }
+        }
+
         message.locationPart?.let { locationPart ->
             MessageBubbleSurface(
                 message = message,

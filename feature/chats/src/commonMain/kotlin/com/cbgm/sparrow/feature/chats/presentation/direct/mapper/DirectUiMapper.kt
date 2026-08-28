@@ -48,6 +48,7 @@ internal fun DirectMessage.toUi(
         imageVideoParts = parts.filterIsInstance<MessagePartUi.ImageVideoUi>(),
         fileParts = parts.filterIsInstance<MessagePartUi.FileUi>(),
         locationPart = parts.filterIsInstance<MessagePartUi.LocationUi>().firstOrNull(),
+        contactPart = parts.filterIsInstance<MessagePartUi.ContactUi>().firstOrNull(),
         textPart =
             text
                 .takeIf(String::isNotBlank)

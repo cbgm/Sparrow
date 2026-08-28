@@ -2,11 +2,12 @@ package com.cbgm.sparrow.feature.attachments.presentation.model
 
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
+import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 
 sealed interface MessageAttachmentUi {
     val id: String
 
-    data class ImageVideoAttachment(
+    data class ImageVideoAttachmentUi(
         override val id: String,
         val type: MessageAttachmentType,
         val mimeType: String,
@@ -20,7 +21,7 @@ sealed interface MessageAttachmentUi {
     ) : MessageAttachmentUi {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
-            if (other !is ImageVideoAttachment) return false
+            if (other !is ImageVideoAttachmentUi) return false
 
             return id == other.id &&
                 type == other.type &&
@@ -49,7 +50,7 @@ sealed interface MessageAttachmentUi {
         }
     }
 
-    data class FileAttachment(
+    data class FileAttachmentUi(
         override val id: String,
         val mimeType: String,
         val byteSize: Long,
@@ -59,7 +60,7 @@ sealed interface MessageAttachmentUi {
     ) : MessageAttachmentUi {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
-            if (other !is FileAttachment) return false
+            if (other !is FileAttachmentUi) return false
 
             return id == other.id &&
                 mimeType == other.mimeType &&
@@ -80,8 +81,13 @@ sealed interface MessageAttachmentUi {
         }
     }
 
-    data class LocationAttachment(
+    data class LocationAttachmentUi(
         override val id: String,
         val location: CurrentLocation
+    ) : MessageAttachmentUi
+
+    data class ContactAttachmentUi(
+        override val id: String,
+        val contact: SharedContact
     ) : MessageAttachmentUi
 }

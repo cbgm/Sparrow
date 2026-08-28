@@ -83,9 +83,9 @@ fun AttachmentManagementScreen(
     modifier: Modifier = Modifier
 ) {
     val mediaTabItems =
-        uiState.attachments.filterIsInstance<MessageAttachmentUi.ImageVideoAttachment>()
+        uiState.attachments.filterIsInstance<MessageAttachmentUi.ImageVideoAttachmentUi>()
     val fileTabItems =
-        uiState.attachments.filterIsInstance<MessageAttachmentUi.FileAttachment>()
+        uiState.attachments.filterIsInstance<MessageAttachmentUi.FileAttachmentUi>()
 
     SparrowStaticScaffold(
         modifier = modifier,
@@ -299,7 +299,7 @@ private fun AttachmentTab(
 
 @Composable
 private fun MediaGrid(
-    attachments: List<MessageAttachmentUi.ImageVideoAttachment>,
+    attachments: List<MessageAttachmentUi.ImageVideoAttachmentUi>,
     selectedIds: Set<String>,
     isSelectionMode: Boolean,
     bottomPadding: Dp,
@@ -335,7 +335,7 @@ private fun MediaGrid(
 private fun GridItem(
     onClick: () -> Unit,
     isSelected: Boolean,
-    attachment: MessageAttachmentUi.ImageVideoAttachment,
+    attachment: MessageAttachmentUi.ImageVideoAttachmentUi,
     onVisible: (String) -> Unit
 ) {
     LaunchedEffect(attachment.id, attachment.bytes) {
@@ -391,7 +391,7 @@ private fun GridItem(
 
 @Composable
 private fun FileList(
-    attachments: List<MessageAttachmentUi.FileAttachment>,
+    attachments: List<MessageAttachmentUi.FileAttachmentUi>,
     selectedIds: Set<String>,
     isSelectionMode: Boolean,
     bottomPadding: Dp,
@@ -485,20 +485,20 @@ private fun previewAttachmentManagementUiState(): AttachmentManagementUiState =
     AttachmentManagementUiState(
         attachments =
             listOf(
-                MessageAttachmentUi.ImageVideoAttachment(
+                MessageAttachmentUi.ImageVideoAttachmentUi(
                     id = "preview-image",
                     type = MessageAttachmentType.IMAGE,
                     mimeType = "image/jpeg",
                     byteSize = 0
                 ),
-                MessageAttachmentUi.ImageVideoAttachment(
+                MessageAttachmentUi.ImageVideoAttachmentUi(
                     id = "preview-video",
                     type = MessageAttachmentType.VIDEO,
                     mimeType = "video/mp4",
                     byteSize = 0,
                     durationMilliseconds = 42_000
                 ),
-                MessageAttachmentUi.FileAttachment(
+                MessageAttachmentUi.FileAttachmentUi(
                     id = "preview-file",
                     mimeType = "application/pdf",
                     byteSize = 240_000,

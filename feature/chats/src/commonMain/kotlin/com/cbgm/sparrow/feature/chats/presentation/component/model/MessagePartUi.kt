@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.chats.presentation.component.model
 
 import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
+import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 
 sealed interface MessagePartUi {
     data class ImageVideoUi(
@@ -80,6 +81,11 @@ sealed interface MessagePartUi {
     data class LocationUi(
         val id: String,
         val location: CurrentLocation? = null
+    ) : MessagePartUi
+
+    data class ContactUi(
+        val id: String,
+        val contact: SharedContact? = null
     ) : MessagePartUi
 
     data class TextUi(

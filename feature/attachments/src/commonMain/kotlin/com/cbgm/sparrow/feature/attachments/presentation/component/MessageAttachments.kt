@@ -58,10 +58,10 @@ fun MessageAttachments(
 
     val previewAttachments =
         attachments.filter { attachment ->
-            attachment is MessageAttachmentUi.ImageVideoAttachment ||
-                attachment is MessageAttachmentUi.LocationAttachment
+            attachment is MessageAttachmentUi.ImageVideoAttachmentUi ||
+                attachment is MessageAttachmentUi.LocationAttachmentUi
         }
-    val fileItems = attachments.filterIsInstance<MessageAttachmentUi.FileAttachment>()
+    val fileItems = attachments.filterIsInstance<MessageAttachmentUi.FileAttachmentUi>()
 
     if (previewAttachments.isNotEmpty()) {
         MessageAttachmentGrid(
@@ -134,26 +134,27 @@ private fun MessageAttachmentPreview(
     onAttachmentClick: (String) -> Unit
 ) {
     when (attachment) {
-        is MessageAttachmentUi.ImageVideoAttachment ->
+        is MessageAttachmentUi.ImageVideoAttachmentUi ->
             MessageVisualAttachment(
                 attachment = attachment,
                 onAttachmentVisible = onAttachmentVisible,
                 onAttachmentClick = onAttachmentClick
             )
 
-        is MessageAttachmentUi.LocationAttachment ->
+        is MessageAttachmentUi.LocationAttachmentUi ->
             MessageLocationAttachment(
                 attachment = attachment,
                 onAttachmentClick = onAttachmentClick
             )
 
-        is MessageAttachmentUi.FileAttachment -> Unit
+        is MessageAttachmentUi.FileAttachmentUi,
+        is MessageAttachmentUi.ContactAttachmentUi -> Unit
     }
 }
 
 @Composable
 private fun MessageLocationAttachment(
-    attachment: MessageAttachmentUi.LocationAttachment,
+    attachment: MessageAttachmentUi.LocationAttachmentUi,
     onAttachmentClick: (String) -> Unit
 ) {
     Surface(
@@ -190,7 +191,7 @@ private fun MessageLocationAttachment(
 
 @Composable
 private fun MessageVisualAttachment(
-    attachment: MessageAttachmentUi.ImageVideoAttachment,
+    attachment: MessageAttachmentUi.ImageVideoAttachmentUi,
     onAttachmentVisible: (String) -> Unit,
     onAttachmentClick: (String) -> Unit
 ) {
@@ -242,7 +243,7 @@ private fun MessageVisualAttachment(
 
 @Composable
 private fun MessageFileList(
-    attachments: List<MessageAttachmentUi.FileAttachment>,
+    attachments: List<MessageAttachmentUi.FileAttachmentUi>,
     onAttachmentVisible: (String) -> Unit,
     onOpenError: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -354,19 +355,19 @@ private fun MessageAttachmentsPreview() {
         MessageAttachments(
             attachments =
                 listOf(
-                    MessageAttachmentUi.ImageVideoAttachment(
+                    MessageAttachmentUi.ImageVideoAttachmentUi(
                         id = "preview-image",
                         type = MessageAttachmentType.IMAGE,
                         mimeType = "image/jpeg",
                         byteSize = 0
                     ),
-                    MessageAttachmentUi.ImageVideoAttachment(
+                    MessageAttachmentUi.ImageVideoAttachmentUi(
                         id = "preview-video",
                         type = MessageAttachmentType.VIDEO,
                         mimeType = "video/mp4",
                         byteSize = 0
                     ),
-                    MessageAttachmentUi.LocationAttachment(
+                    MessageAttachmentUi.LocationAttachmentUi(
                         id = "preview-location",
                         location = CurrentLocation(latitude = 50.2586, longitude = 10.9644)
                     )

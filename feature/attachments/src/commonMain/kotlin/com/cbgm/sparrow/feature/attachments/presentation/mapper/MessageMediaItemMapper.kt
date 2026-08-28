@@ -5,7 +5,7 @@ import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachment
 import com.cbgm.sparrow.feature.media.presentation.model.MediaItem
 import com.cbgm.sparrow.feature.media.presentation.model.MediaType
 
-internal fun MessageAttachmentUi.ImageVideoAttachment.toMediaItem(): MediaItem =
+internal fun MessageAttachmentUi.ImageVideoAttachmentUi.toMediaItem(): MediaItem =
     MediaItem(
         id = id,
         type =

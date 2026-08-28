@@ -100,7 +100,7 @@ class AttachmentManagementViewModel(
 
         if (
             uiState.value.attachments.none { attachment ->
-                attachment.id == attachmentId && attachment !is MessageAttachmentUi.FileAttachment
+                attachment.id == attachmentId && attachment !is MessageAttachmentUi.FileAttachmentUi
             }
         ) {
             return

@@ -44,9 +44,9 @@ fun MessageAttachmentViewer(
         } ?: return
 
     when (selectedAttachment) {
-        is MessageAttachmentUi.ImageVideoAttachment ->
+        is MessageAttachmentUi.ImageVideoAttachmentUi ->
             MessageMediaViewer(
-                attachments = attachments.filterIsInstance<MessageAttachmentUi.ImageVideoAttachment>(),
+                attachments = attachments.filterIsInstance<MessageAttachmentUi.ImageVideoAttachmentUi>(),
                 selectedAttachmentId = selectedAttachmentId,
                 canSaveToCameraRoll = canSaveToCameraRoll,
                 onDismiss = onDismiss,
@@ -54,20 +54,21 @@ fun MessageAttachmentViewer(
                 onError = onError
             )
 
-        is MessageAttachmentUi.LocationAttachment ->
+        is MessageAttachmentUi.LocationAttachmentUi ->
             MessageLocationViewer(
                 attachment = selectedAttachment,
                 onDismiss = onDismiss,
                 onError = onError
             )
 
-        is MessageAttachmentUi.FileAttachment -> Unit
+        is MessageAttachmentUi.FileAttachmentUi,
+        is MessageAttachmentUi.ContactAttachmentUi -> Unit
     }
 }
 
 @Composable
 private fun MessageMediaViewer(
-    attachments: List<MessageAttachmentUi.ImageVideoAttachment>,
+    attachments: List<MessageAttachmentUi.ImageVideoAttachmentUi>,
     selectedAttachmentId: String,
     canSaveToCameraRoll: Boolean,
     onDismiss: () -> Unit,
@@ -150,7 +151,7 @@ private fun MessageMediaViewer(
 
 @Composable
 private fun MessageLocationViewer(
-    attachment: MessageAttachmentUi.LocationAttachment,
+    attachment: MessageAttachmentUi.LocationAttachmentUi,
     onDismiss: () -> Unit,
     onError: (String) -> Unit
 ) {
@@ -174,19 +175,19 @@ private fun MessageAttachmentViewerPreview() {
         MessageAttachmentViewer(
             attachments =
                 listOf(
-                    MessageAttachmentUi.ImageVideoAttachment(
+                    MessageAttachmentUi.ImageVideoAttachmentUi(
                         id = "preview-image",
                         type = MessageAttachmentType.IMAGE,
                         mimeType = "image/jpeg",
                         byteSize = 0
                     ),
-                    MessageAttachmentUi.ImageVideoAttachment(
+                    MessageAttachmentUi.ImageVideoAttachmentUi(
                         id = "preview-video",
                         type = MessageAttachmentType.VIDEO,
                         mimeType = "video/mp4",
                         byteSize = 0
                     ),
-                    MessageAttachmentUi.LocationAttachment(
+                    MessageAttachmentUi.LocationAttachmentUi(
                         id = "preview-location",
                         location = CurrentLocation(latitude = 50.2586, longitude = 10.9644)
                     )

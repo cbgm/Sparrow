@@ -12,7 +12,7 @@ internal fun List<LocalAttachment>.toAttachmentManagementUi(
         when (attachment.type) {
             MessageAttachmentType.IMAGE,
             MessageAttachmentType.VIDEO ->
-                MessageAttachmentUi.ImageVideoAttachment(
+                MessageAttachmentUi.ImageVideoAttachmentUi(
                     id = attachment.id,
                     type = attachment.type,
                     mimeType = attachment.mimeType,
@@ -25,7 +25,7 @@ internal fun List<LocalAttachment>.toAttachmentManagementUi(
                 )
 
             MessageAttachmentType.FILE ->
-                MessageAttachmentUi.FileAttachment(
+                MessageAttachmentUi.FileAttachmentUi(
                     id = attachment.id,
                     mimeType = attachment.mimeType,
                     byteSize = attachment.byteSize,
@@ -36,10 +36,12 @@ internal fun List<LocalAttachment>.toAttachmentManagementUi(
                 loadedBytes[attachment.id]
                     ?.let(LocationAttachmentPayload::decode)
                     ?.let { location ->
-                        MessageAttachmentUi.LocationAttachment(
+                        MessageAttachmentUi.LocationAttachmentUi(
                             id = attachment.id,
                             location = location
                         )
                     }
+
+            MessageAttachmentType.CONTACT -> null
         }
     }

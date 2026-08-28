@@ -585,4 +585,5 @@
     <string name="feature_media_file_picker_empty_folder">Dieser Ordner ist leer</string>
     <string name="feature_media_file_picker_file_access">Dateizugriff erlauben</string>
     <string name="feature_media_file_picker_file_access_body">Sparrow benötigt Dateizugriff, um die Ordner und Dateien auf diesem Gerät anzuzeigen.</string>
+    <string name="feature_chats_add_shared_contact_description">Möchtest du diesen geteilten Kontakt zu deinen Kontakten hinzufügen?</string>
 </resources>

@@ -25,6 +25,7 @@ import com.cbgm.sparrow.feature.contacts.domain.repository.ContactVerificationRe
 import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityExchangeRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityInvitationRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.AcceptContactInvitationUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.AddDeviceContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.BlockContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.DeclineAndBlockContactInvitationUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.DeclineContactInvitationUseCase
@@ -222,6 +223,10 @@ val contactsModule =
                 contactKeyExchangeDataSource = get(),
                 phoneNumberNormalizer = get<PhoneNumberNormalizer>()
             )
+        }
+
+        factory {
+            AddDeviceContactUseCase(repository = get())
         }
 
         factory {
