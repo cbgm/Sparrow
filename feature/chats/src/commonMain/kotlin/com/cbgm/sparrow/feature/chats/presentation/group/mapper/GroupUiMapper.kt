@@ -67,7 +67,7 @@ internal fun GroupMessage.toGroupMessageUi(
     safetyAssessments: Map<String, MessageSafetyAssessment>,
     attachmentBytes: Map<String, ByteArray> = emptyMap()
 ): GroupMessageUi {
-    val parts = attachments.toMessagePartsUi(attachmentBytes)
+    val partsUi = parts.toMessagePartsUi(attachmentBytes)
 
     return GroupMessageUi(
         bubble =
@@ -95,19 +95,11 @@ internal fun GroupMessage.toGroupMessageUi(
                     } else {
                         safetyAssessments[id]?.toMessageSafetyWarningUi()
                     },
-                imageVideoParts = parts.filterIsInstance<MessagePartUi.ImageVideoUi>(),
-                fileParts = parts.filterIsInstance<MessagePartUi.FileUi>(),
-                locationPart = parts.filterIsInstance<MessagePartUi.LocationUi>().firstOrNull(),
-                contactPart = parts.filterIsInstance<MessagePartUi.ContactUi>().firstOrNull(),
-                textPart =
-                    text
-                        .takeIf(String::isNotBlank)
-                        ?.let { value ->
-                            MessagePartUi.TextUi(
-                                text = value,
-                                isContentFailed = false
-                            )
-                        }
+                imageVideoParts = partsUi.filterIsInstance<MessagePartUi.ImageVideoUi>(),
+                fileParts = partsUi.filterIsInstance<MessagePartUi.FileUi>(),
+                locationPart = partsUi.filterIsInstance<MessagePartUi.LocationUi>().firstOrNull(),
+                contactPart = partsUi.filterIsInstance<MessagePartUi.ContactUi>().firstOrNull(),
+                textPart = partsUi.filterIsInstance<MessagePartUi.TextUi>().firstOrNull()
             ),
         type = type,
         senderContactId = senderContactId,

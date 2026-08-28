@@ -1,13 +1,12 @@
 package com.cbgm.sparrow.feature.chats.domain.model.group
 
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachment
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.feature.chats.domain.model.MessagePart
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 
 data class GroupMessage(
     val id: String,
-    val text: String,
     val isMine: Boolean,
     val timestamp: Long,
     val security: MessageSecurity,
@@ -16,5 +15,5 @@ data class GroupMessage(
     val type: ChatMessageType = ChatMessageType.USER,
     val senderContactId: String? = null,
     val deliveryProgress: MessageDeliveryProgress = MessageDeliveryProgress(),
-    val attachments: List<MessageAttachment> = emptyList()
+    val parts: List<MessagePart> = emptyList()
 )

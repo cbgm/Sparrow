@@ -3,9 +3,10 @@ package com.cbgm.sparrow.feature.chats.data.direct.repository
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.model.ConversationWithMessages
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachment
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.mapper.toDirectConversation
+import com.cbgm.sparrow.feature.chats.data.mapper.toMessagePartDtos
+import com.cbgm.sparrow.feature.chats.data.model.MessagePartDto
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectConversationRepository
 import kotlinx.coroutines.flow.Flow
@@ -26,7 +27,10 @@ class DirectConversationRepositoryImpl(
             conversation?.let {
                 DirectConversationSnapshot(
                     conversation = ConversationWithMessages(it, recentMessages),
-                    attachmentsByMessageId = attachmentsByMessageId
+                    partsByMessageId =
+                        attachmentsByMessageId.mapValues { (_, attachments) ->
+                            attachments.toMessagePartDtos()
+                        }
                 )
             }
         }.map { result ->
@@ -34,7 +38,7 @@ class DirectConversationRepositoryImpl(
                 ?.takeIf { it.conversation.conversation.type == DIRECT_CONVERSATION_TYPE }
                 ?.let { snapshot ->
                     snapshot.conversation.toDirectConversation(
-                        attachmentsByMessageId = snapshot.attachmentsByMessageId
+                        partsByMessageId = snapshot.partsByMessageId
                     )
                 }
         }
@@ -58,7 +62,7 @@ class DirectConversationRepositoryImpl(
 
     private data class DirectConversationSnapshot(
         val conversation: ConversationWithMessages,
-        val attachmentsByMessageId: Map<String, List<MessageAttachment>>
+        val partsByMessageId: Map<String, List<MessagePartDto>>
     )
 
     private companion object {

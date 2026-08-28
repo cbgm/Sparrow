@@ -6,10 +6,11 @@ import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessages
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachment
 import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
 import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_END_TO_END_ENCRYPTED_MODE
+import com.cbgm.sparrow.feature.chats.data.mapper.toDomain
+import com.cbgm.sparrow.feature.chats.data.model.MessagePartDto
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
@@ -24,7 +25,7 @@ internal fun ConversationWithMessages.toGroupConversation(
     recipientStates: List<MessageRecipientStateEntity>,
     invitations: List<GroupInvitationEntity>,
     verificationRows: List<GroupVerificationPairEntity> = emptyList(),
-    attachmentsByMessageId: Map<String, List<MessageAttachment>> = emptyMap()
+    partsByMessageId: Map<String, List<MessagePartDto>> = emptyMap()
 ): GroupConversation {
     val timeline = buildGroupLocalMembershipTimeline(messages, invitations)
     val visibleMessages = timeline.visibleMessages
@@ -43,7 +44,7 @@ internal fun ConversationWithMessages.toGroupConversation(
                 .map { message ->
                     message.toGroupMessage(
                         recipientStates = statesByMessageId[message.id].orEmpty(),
-                        attachments = attachmentsByMessageId[message.id].orEmpty()
+                        attachmentParts = partsByMessageId[message.id].orEmpty()
                     )
                 },
         unreadCount =
@@ -70,7 +71,7 @@ internal fun ConversationWithMessages.toGroupConversation(
 
 private fun MessageEntity.toGroupMessage(
     recipientStates: List<MessageRecipientStateEntity>,
-    attachments: List<MessageAttachment>
+    attachmentParts: List<MessagePartDto>
 ): GroupMessage {
     val deliveryStatus =
         if (recipientStates.isEmpty()) {
@@ -83,7 +84,6 @@ private fun MessageEntity.toGroupMessage(
 
     return GroupMessage(
         id = id,
-        text = text,
         isMine = isMine,
         timestamp = createdAtEpochMilliseconds,
         security = transportMode.toMessageSecurity(),
@@ -92,7 +92,13 @@ private fun MessageEntity.toGroupMessage(
         type = GroupMembershipMessageFactory.typeOf(transportMode),
         senderContactId = senderContactId,
         deliveryProgress = recipientStates.toDeliveryProgress(),
-        attachments = attachments
+        parts =
+            buildList {
+                text
+                    .takeIf(String::isNotBlank)
+                    ?.let { value -> add(MessagePartDto.TextDto(text = value)) }
+                addAll(attachmentParts)
+            }.map { part -> part.toDomain() }
     )
 }
 

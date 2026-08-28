@@ -3,7 +3,8 @@ package com.cbgm.sparrow.feature.chats.data.direct.mapper
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessages
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachment
+import com.cbgm.sparrow.feature.chats.data.mapper.toDomain
+import com.cbgm.sparrow.feature.chats.data.model.MessagePartDto
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
@@ -11,7 +12,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessage
 
 internal fun ConversationWithMessages.toDirectConversation(
-    attachmentsByMessageId: Map<String, List<MessageAttachment>> = emptyMap()
+    partsByMessageId: Map<String, List<MessagePartDto>> = emptyMap()
 ): DirectConversation =
     DirectConversation(
         id = conversation.id,
@@ -22,7 +23,7 @@ internal fun ConversationWithMessages.toDirectConversation(
                 .map { message ->
                     message.toDirectMessage(
                         contactId = requireNotNull(conversation.contactId),
-                        attachments = attachmentsByMessageId[message.id].orEmpty()
+                        attachmentParts = partsByMessageId[message.id].orEmpty()
                     )
                 },
         unreadCount =
@@ -35,12 +36,11 @@ internal fun ConversationWithMessages.toDirectConversation(
 
 private fun MessageEntity.toDirectMessage(
     contactId: String,
-    attachments: List<MessageAttachment>
+    attachmentParts: List<MessagePartDto>
 ): DirectMessage =
     DirectMessage(
         id = id,
         contactId = contactId,
-        text = text,
         isMine = isMine,
         timestamp = createdAtEpochMilliseconds,
         security = transportMode.toMessageSecurity(),
@@ -51,7 +51,13 @@ private fun MessageEntity.toDirectMessage(
             } else {
                 MessageDeliveryStatus.NOT_APPLICABLE
             },
-        attachments = attachments
+        parts =
+            buildList {
+                text
+                    .takeIf(String::isNotBlank)
+                    ?.let { value -> add(MessagePartDto.TextDto(text = value)) }
+                addAll(attachmentParts)
+            }.map { part -> part.toDomain() }
     )
 
 private fun String.toMessageSecurity(): MessageSecurity =

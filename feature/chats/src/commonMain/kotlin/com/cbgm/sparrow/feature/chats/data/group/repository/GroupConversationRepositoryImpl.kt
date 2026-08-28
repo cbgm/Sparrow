@@ -9,8 +9,9 @@ import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessages
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachment
 import com.cbgm.sparrow.feature.chats.data.group.mapper.toGroupConversation
+import com.cbgm.sparrow.feature.chats.data.mapper.toMessagePartDtos
+import com.cbgm.sparrow.feature.chats.data.model.MessagePartDto
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupConversationRepository
 import kotlinx.coroutines.flow.Flow
@@ -34,7 +35,10 @@ class GroupConversationRepositoryImpl(
                 MessageSnapshot(
                     conversation = conversation,
                     messages = recentMessages,
-                    attachmentsByMessageId = attachmentsByMessageId
+                    partsByMessageId =
+                        attachmentsByMessageId.mapValues { (_, attachments) ->
+                            attachments.toMessagePartDtos()
+                        }
                 )
             }
 
@@ -53,7 +57,7 @@ class GroupConversationRepositoryImpl(
                     recipientStates = recipientStates,
                     invitations = invitations,
                     verificationRows = verificationRows,
-                    attachmentsByMessageId = snapshot.attachmentsByMessageId
+                    partsByMessageId = snapshot.partsByMessageId
                 )
         }
     }
@@ -61,7 +65,7 @@ class GroupConversationRepositoryImpl(
     private data class MessageSnapshot(
         val conversation: ConversationEntity?,
         val messages: List<MessageEntity>,
-        val attachmentsByMessageId: Map<String, List<MessageAttachment>>
+        val partsByMessageId: Map<String, List<MessagePartDto>>
     )
 
     private companion object {
