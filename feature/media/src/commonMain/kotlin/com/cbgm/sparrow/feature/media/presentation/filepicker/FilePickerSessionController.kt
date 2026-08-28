@@ -3,15 +3,15 @@ package com.cbgm.sparrow.feature.media.presentation.filepicker
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerSessionResult
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class FilePickerSessionController {
     private val sessions = mutableMapOf<String, FilePickerSession>()
-    private val _results = MutableSharedFlow<FilePickerSessionResult>(extraBufferCapacity = 16)
+    private val _results = MutableStateFlow<Map<String, FilePickerSessionResult>>(emptyMap())
 
-    val results: SharedFlow<FilePickerSessionResult> = _results.asSharedFlow()
+    val results: StateFlow<Map<String, FilePickerSessionResult>> = _results.asStateFlow()
 
     fun startSession(
         maxItems: Int,
@@ -42,20 +42,30 @@ class FilePickerSessionController {
 
     fun complete(sessionId: String, media: List<MediaSelection>) {
         if (sessions.remove(sessionId) == null) return
-        _results.tryEmit(FilePickerSessionResult.Completed(sessionId = sessionId, media = media))
+        publishResult(FilePickerSessionResult.Completed(sessionId = sessionId, media = media))
     }
 
     fun dismiss(sessionId: String) {
         if (sessions.remove(sessionId) == null) return
-        _results.tryEmit(FilePickerSessionResult.Dismissed(sessionId))
+        publishResult(FilePickerSessionResult.Dismissed(sessionId))
     }
 
     fun reportError(sessionId: String, message: String) {
         if (sessionId !in sessions) return
-        _results.tryEmit(FilePickerSessionResult.Failed(sessionId = sessionId, message = message))
+        publishResult(FilePickerSessionResult.Failed(sessionId = sessionId, message = message))
+    }
+
+    fun consumeResult(sessionId: String): FilePickerSessionResult? {
+        val result = _results.value[sessionId] ?: return null
+        _results.value = _results.value - sessionId
+        return result
     }
 
     fun isActive(sessionId: String): Boolean = sessionId in sessions
+
+    private fun publishResult(result: FilePickerSessionResult) {
+        _results.value = _results.value + (result.sessionId to result)
+    }
 }
 
 data class FilePickerSessionSnapshot(

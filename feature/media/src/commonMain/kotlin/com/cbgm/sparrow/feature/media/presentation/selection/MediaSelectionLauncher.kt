@@ -3,11 +3,10 @@ package com.cbgm.sparrow.feature.media.presentation.selection
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import com.cbgm.sparrow.feature.media.device.GalleryPickerStrings
 import com.cbgm.sparrow.feature.media.device.rememberCameraCaptureLauncher
 import com.cbgm.sparrow.feature.media.device.rememberGalleryPickerLauncher
@@ -51,8 +50,6 @@ fun rememberMediaSelectionLauncher(
     val currentResult = rememberUpdatedState(onResult)
     val filePickerSessionStarted = rememberUpdatedState(onFilePickerSessionStarted)
 
-    var activeFilePickerSessionId by remember { mutableStateOf<String?>(null) }
-
     val remainingCapacity = (maxItems - currentMedia.size).coerceAtLeast(0)
     val existingReferences = remember(currentMedia) {
         currentMedia.mapNotNullTo(mutableSetOf()) { it.sourceReference }
@@ -86,10 +83,8 @@ fun rememberMediaSelectionLauncher(
         currentResult = currentResult
     )
 
-    ObserveFilePickerResults(
+    ObserveStateFilePickerResults(
         filePickerLauncher = filePickerLauncher,
-        activeSessionIdProvider = { activeFilePickerSessionId },
-        onSessionReset = { activeFilePickerSessionId = null },
         existingReferences = existingReferences,
         tryAdd = tryAdd,
         currentResult = currentResult
@@ -112,7 +107,6 @@ fun rememberMediaSelectionLauncher(
                             maxFileBytes = maxFileBytes,
                             blockedSourceReferences = existingReferences
                         )
-                        activeFilePickerSessionId = sessionId
                         filePickerSessionStarted.value(sessionId)
                     }
                 }
@@ -183,32 +177,27 @@ private fun rememberSubCameraLauncher(
 )
 
 @Composable
-private fun ObserveFilePickerResults(
+private fun ObserveStateFilePickerResults(
     filePickerLauncher: FilePickerLauncher,
-    activeSessionIdProvider: () -> String?,
-    onSessionReset: () -> Unit,
     existingReferences: Set<String?>,
     tryAdd: (List<MediaSelection>) -> Unit,
     currentResult: State<(MediaSelectionResult) -> Unit>
 ) {
-    val activeSessionId = activeSessionIdProvider()
+    val filePickerResults by filePickerLauncher.results.collectAsState()
 
-    LaunchedEffect(filePickerLauncher, activeSessionId) {
-        filePickerLauncher.results.collect { pickerResult ->
-            if (pickerResult.sessionId != activeSessionId) return@collect
-            onSessionReset()
+    LaunchedEffect(filePickerResults) {
+        val pickerResult = filePickerLauncher.consumeResult() ?: return@LaunchedEffect
 
-            when (pickerResult) {
-                is FilePickerSessionResult.Completed -> {
-                    val uniqueFiles = pickerResult.media.filterNot { it.sourceReference in existingReferences }
-                    tryAdd(uniqueFiles)
-                }
-                is FilePickerSessionResult.Dismissed -> {
-                    currentResult.value(MediaSelectionResult.Dismissed)
-                }
-                is FilePickerSessionResult.Failed -> {
-                    currentResult.value(MediaSelectionResult.Error(pickerResult.message))
-                }
+        when (pickerResult) {
+            is FilePickerSessionResult.Completed -> {
+                val uniqueFiles = pickerResult.media.filterNot { it.sourceReference in existingReferences }
+                tryAdd(uniqueFiles)
+            }
+            is FilePickerSessionResult.Dismissed -> {
+                currentResult.value(MediaSelectionResult.Dismissed)
+            }
+            is FilePickerSessionResult.Failed -> {
+                currentResult.value(MediaSelectionResult.Error(pickerResult.message))
             }
         }
     }
