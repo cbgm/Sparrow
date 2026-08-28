@@ -145,6 +145,8 @@ private fun BubbleBody(
     onAttachmentClick: (String) -> Unit = {},
     onSafetyDetailsClick: () -> Unit = {}
 ) {
+    val annotatedText = rememberLinkAnnotatedString(state.text)
+
     val bubbleShapes = MaterialTheme.shapes.messageBubble
     val bubbleColor =
         rememberHighlightColor(
@@ -194,7 +196,7 @@ private fun BubbleBody(
                     }
 
                     Text(
-                        text = state.text,
+                        text = annotatedText,
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.bodyMedium
                     )
