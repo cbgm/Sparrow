@@ -10,12 +10,12 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `core` |
 | Directory | `core/ui` |
 | Build file | `core/ui/build.gradle.kts` |
-| Kotlin files | 52 |
-| Production Kotlin files | 51 |
+| Kotlin files | 39 |
+| Production Kotlin files | 38 |
 | Test Kotlin files | 1 |
-| Resource files | 1 |
+| Resource files | 0 |
 | Direct dependencies | 1 |
-| Direct dependents | 11 |
+| Direct dependents | 13 |
 
 ## Source sets
 
@@ -30,10 +30,12 @@ Generated automatically by `./gradlew architectureReport`.
 
 ## Dependents
 
+- [`:feature:attachments`](../modules/feature-attachments.md)
 - [`:feature:chats`](../modules/feature-chats.md)
 - [`:feature:contactimport`](../modules/feature-contactimport.md)
 - [`:feature:contacts`](../modules/feature-contacts.md)
 - [`:feature:identity`](../modules/feature-identity.md)
+- [`:feature:media`](../modules/feature-media.md)
 - [`:feature:onboarding`](../modules/feature-onboarding.md)
 - [`:feature:safety`](../modules/feature-safety.md)
 - [`:feature:search`](../modules/feature-search.md)

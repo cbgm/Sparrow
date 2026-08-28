@@ -2,6 +2,24 @@
 
 This page records the current architectural direction in plain language.
 
+## Typed layer models and target-named mappers
+
+Data representations use `...Dto`, domain models are unsuffixed, and presentation representations use `...Ui`. Mapper names describe the concrete destination: `toNameDto()`, `toName()` and `toNameUi()`. Room persistence types remain `...Entity`.
+
+Reason: a type/function name should reveal its architectural layer and destination without relying on package context or generic names such as `toDomain()`/`toUi()`.
+
+## Attachment ownership vs chat representation
+
+`:feature:attachments` owns attachment source data, encrypted blob transfer/loading/cache and saved-copy storage. `:feature:chats` owns its conversation representation through `MessagePartDto` -> `MessagePart` -> `MessagePartUi`, with typed text/image-video/file/location/contact variants.
+
+Reason: attachment transport/storage can evolve independently (including richer payloads later) without forcing Direct/Group domain models to depend on the attachment module's source model or add parallel per-type fields.
+
+## Strict dependency direction inside features
+
+Datasources do not call repositories; repositories do not call other repositories or use cases; use cases do not call other use cases. Cross-boundary workflows are composed by the appropriate higher-level coordinator/caller.
+
+Reason: this keeps data access, business operations and orchestration ownership explicit and prevents dependency chains from becoming circular or difficult to test.
+
 ## Separate Direct and Group stacks
 
 Direct and Group conversations share transport/protocol infrastructure only where semantics are truly identical. Membership, typing, delivery aggregation, message repositories, outgoing processing and UI/ViewModels remain separate.

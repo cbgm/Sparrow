@@ -25,4 +25,4 @@ Generated secret files are deliberately ignored by Git.
 
 ## Release signing is separate
 
-Android release signing secrets are **not server secrets** and are stored in GitHub Actions Secrets (`ANDROID_RELEASE_*`). Do not put the Android `.jks` into this directory or commit it.
+Android release signing secrets are **not server secrets**. The release workflow uses GitHub Actions Secrets `KEY_STORE_FILE`, `KEY_STORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD`. `KEY_STORE_FILE` contains the Base64-encoded keystore. Do not put the Android `.jks` into this directory or commit it.

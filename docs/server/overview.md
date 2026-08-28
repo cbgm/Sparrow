@@ -20,6 +20,7 @@ flowchart TB
     subgraph NODE[Community Node]
         CADDY2[Caddy]
         GW[gateway]
+        BLOBS[(encrypted blob volume)]
         FED[federation]
         MB[mailbox]
         PGFED[(PostgreSQL federation)]
@@ -36,6 +37,7 @@ flowchart TB
     PRES --> REDIS
     PUSH --> PGPUSH
     CADDY2 --> GW
+    GW --> BLOBS
     CADDY2 --> FED
     CADDY2 --> MB
     FED --> PGFED
@@ -88,7 +90,7 @@ Key classes:
 
 ### `gateway`
 
-Owns client WebSockets, connection registry, route refresh handling, typing and envelope ingress/egress.
+Owns client WebSockets, connection registry, route refresh handling, typing, envelope ingress/egress and the encrypted attachment-blob HTTP store.
 
 Key classes:
 
@@ -97,6 +99,7 @@ Key classes:
 - `GatewayWebSocketHandler`
 - `GatewaySessionHandler`
 - `ConnectionRegistry`
+- `BlobStore` / `BlobUploadPermitStore` / `GatewayBlobUploadTicketIssuer`
 
 ### `federation`
 

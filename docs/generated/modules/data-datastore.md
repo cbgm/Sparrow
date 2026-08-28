@@ -1,4 +1,4 @@
-# `:core:datastore`
+# `:data:datastore`
 
 Generated automatically by `./gradlew architectureReport`.
 
@@ -7,9 +7,9 @@ Generated automatically by `./gradlew architectureReport`.
 | Property | Value |
 |---|---|
 | Name | `datastore` |
-| Group | `core` |
-| Directory | `core/datastore` |
-| Build file | `core/datastore/build.gradle.kts` |
+| Group | `data` |
+| Directory | `data/datastore` |
+| Build file | `data/datastore/build.gradle.kts` |
 | Kotlin files | 4 |
 | Production Kotlin files | 4 |
 | Test Kotlin files | 0 |

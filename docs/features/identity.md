@@ -11,9 +11,8 @@ Key classes:
 - `CreateIdentityUseCase`
 - `IdentityRepositoryImpl`
 - `SodiumIdentityKeyGenerator` in `:core:crypto`
-- `PublicIdentityStorage` / `PrivateKeyStorage`
-- `PublicIdentityStorageImpl`
-- `AndroidPrivateKeyStorage`
+- `PublicIdentityDataSource` / `SparrowDataStorePublicIdentityDataSource`
+- `PrivateKeyStorage` / `AndroidPrivateKeyStorage`
 - `IdentityLocalEncryptionKeyPairProvider`
 - `IdentityLocalSigningKeyPairProvider`
 - `CreateSharedIdentityUseCase`
@@ -27,7 +26,7 @@ sequenceDiagram
     participant UC as CreateIdentityUseCase
     participant R as IdentityRepositoryImpl
     participant K as SodiumIdentityKeyGenerator
-    participant PUB as PublicIdentityStorage
+    participant PUB as PublicIdentityDataSource
     participant PRIV as PrivateKeyStorage
 
     UI->>UC: create identity

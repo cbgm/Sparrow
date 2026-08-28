@@ -10,19 +10,17 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/search` |
 | Build file | `feature/search/build.gradle.kts` |
-| Kotlin files | 29 |
-| Production Kotlin files | 26 |
-| Test Kotlin files | 3 |
+| Kotlin files | 30 |
+| Production Kotlin files | 28 |
+| Test Kotlin files | 2 |
 | Resource files | 0 |
 | Direct dependencies | 4 |
 | Direct dependents | 4 |
 
 ## Source sets
 
-- `androidMain`
 - `commonMain`
 - `commonTest`
-- `iosMain`
 
 ## Dependencies
 

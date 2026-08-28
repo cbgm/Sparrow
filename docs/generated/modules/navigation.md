@@ -10,26 +10,27 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `navigation` |
 | Directory | `navigation` |
 | Build file | `navigation/build.gradle.kts` |
-| Kotlin files | 14 |
-| Production Kotlin files | 14 |
+| Kotlin files | 16 |
+| Production Kotlin files | 16 |
 | Test Kotlin files | 0 |
-| Resource files | 1 |
-| Direct dependencies | 12 |
+| Resource files | 0 |
+| Direct dependencies | 14 |
 | Direct dependents | 1 |
 
 ## Source sets
 
-- `androidMain`
 - `commonMain`
 
 ## Dependencies
 
 - [`:core`](../modules/core.md)
 - [`:core:ui`](../modules/core-ui.md)
+- [`:feature:attachments`](../modules/feature-attachments.md)
 - [`:feature:chats`](../modules/feature-chats.md)
 - [`:feature:contactimport`](../modules/feature-contactimport.md)
 - [`:feature:contacts`](../modules/feature-contacts.md)
 - [`:feature:identity`](../modules/feature-identity.md)
+- [`:feature:media`](../modules/feature-media.md)
 - [`:feature:onboarding`](../modules/feature-onboarding.md)
 - [`:feature:safety`](../modules/feature-safety.md)
 - [`:feature:search`](../modules/feature-search.md)

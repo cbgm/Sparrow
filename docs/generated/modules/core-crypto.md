@@ -10,12 +10,12 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `core` |
 | Directory | `core/crypto` |
 | Build file | `core/crypto/build.gradle.kts` |
-| Kotlin files | 38 |
-| Production Kotlin files | 33 |
+| Kotlin files | 40 |
+| Production Kotlin files | 35 |
 | Test Kotlin files | 5 |
 | Resource files | 1 |
 | Direct dependencies | 0 |
-| Direct dependents | 7 |
+| Direct dependents | 8 |
 
 ## Source sets
 
@@ -30,6 +30,7 @@ None.
 
 ## Dependents
 
+- [`:feature:attachments`](../modules/feature-attachments.md)
 - [`:feature:chats`](../modules/feature-chats.md)
 - [`:feature:contacts`](../modules/feature-contacts.md)
 - [`:feature:identity`](../modules/feature-identity.md)

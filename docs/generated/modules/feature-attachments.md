@@ -1,4 +1,4 @@
-# `:feature:identity`
+# `:feature:attachments`
 
 Generated automatically by `./gradlew architectureReport`.
 
@@ -6,20 +6,19 @@ Generated automatically by `./gradlew architectureReport`.
 
 | Property | Value |
 |---|---|
-| Name | `identity` |
+| Name | `attachments` |
 | Group | `feature` |
-| Directory | `feature/identity` |
-| Build file | `feature/identity/build.gradle.kts` |
-| Kotlin files | 70 |
-| Production Kotlin files | 65 |
-| Test Kotlin files | 5 |
+| Directory | `feature/attachments` |
+| Build file | `feature/attachments/build.gradle.kts` |
+| Kotlin files | 60 |
+| Production Kotlin files | 59 |
+| Test Kotlin files | 1 |
 | Resource files | 1 |
-| Direct dependencies | 5 |
-| Direct dependents | 7 |
+| Direct dependencies | 7 |
+| Direct dependents | 3 |
 
 ## Source sets
 
-- `androidDeviceTest`
 - `androidMain`
 - `commonMain`
 - `commonTest`
@@ -31,14 +30,12 @@ Generated automatically by `./gradlew architectureReport`.
 - [`:core:crypto`](../modules/core-crypto.md)
 - [`:core:protocol`](../modules/core-protocol.md)
 - [`:core:ui`](../modules/core-ui.md)
-- [`:data:datastore`](../modules/data-datastore.md)
+- [`:data:database`](../modules/data-database.md)
+- [`:feature:media`](../modules/feature-media.md)
+- [`:feature:transport`](../modules/feature-transport.md)
 
 ## Dependents
 
 - [`:feature:chats`](../modules/feature-chats.md)
-- [`:feature:contactimport`](../modules/feature-contactimport.md)
-- [`:feature:onboarding`](../modules/feature-onboarding.md)
-- [`:feature:settings`](../modules/feature-settings.md)
 - [`:navigation`](../modules/navigation.md)
 - [`:shared`](../modules/shared.md)
-- [`:startup`](../modules/startup.md)

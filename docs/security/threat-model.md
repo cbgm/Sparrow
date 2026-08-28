@@ -21,9 +21,14 @@ Depending on deployment, infrastructure can observe some metadata such as:
 - node/Control Plane access timing;
 - routing IDs and delivery timing within the protocol's needs;
 - node connection counts/load;
-- encrypted envelope sizes.
+- encrypted envelope sizes;
+- encrypted attachment/blob sizes and blob-transfer timing.
 
 Sparrow is not documented as an anonymity network.
+
+## Local search and message safety
+
+Semantic search and message-safety embedding/classification are designed to run locally on the Android client. The current implementation does not send message plaintext to a cloud AI service for those features. The embedding model itself is downloaded and integrity-checked locally.
 
 ## Device compromise
 

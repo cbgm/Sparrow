@@ -6,12 +6,12 @@ Generated automatically by `./gradlew architectureReport`.
 
 | Metric | Count |
 |---|---:|
-| Modules | 38 |
+| Modules | 40 |
 | Module groups | 11 |
-| Project dependencies | 131 |
-| Kotlin files | 1141 |
-| Test Kotlin files | 99 |
-| Resource files | 51 |
+| Project dependencies | 147 |
+| Kotlin files | 1384 |
+| Test Kotlin files | 100 |
+| Resource files | 53 |
 
 ## Module groups
 
@@ -23,7 +23,6 @@ Generated automatically by `./gradlew architectureReport`.
 
 - [**core** (`:core`)](modules/core.md)
 - [**crypto** (`:core:crypto`)](modules/core-crypto.md)
-- [**datastore** (`:core:datastore`)](modules/core-datastore.md)
 - [**embedding** (`:core:embedding`)](modules/core-embedding.md)
 - [**protocol** (`:core:protocol`)](modules/core-protocol.md)
 - [**ui** (`:core:ui`)](modules/core-ui.md)
@@ -32,14 +31,17 @@ Generated automatically by `./gradlew architectureReport`.
 
 - [**data** (`:data`)](modules/data.md)
 - [**database** (`:data:database`)](modules/data-database.md)
+- [**datastore** (`:data:datastore`)](modules/data-datastore.md)
 
 ### feature
 
 - [**feature** (`:feature`)](modules/feature.md)
+- [**attachments** (`:feature:attachments`)](modules/feature-attachments.md)
 - [**chats** (`:feature:chats`)](modules/feature-chats.md)
 - [**contactimport** (`:feature:contactimport`)](modules/feature-contactimport.md)
 - [**contacts** (`:feature:contacts`)](modules/feature-contacts.md)
 - [**identity** (`:feature:identity`)](modules/feature-identity.md)
+- [**media** (`:feature:media`)](modules/feature-media.md)
 - [**messaging** (`:feature:messaging`)](modules/feature-messaging.md)
 - [**onboarding** (`:feature:onboarding`)](modules/feature-onboarding.md)
 - [**safety** (`:feature:safety`)](modules/feature-safety.md)
@@ -98,7 +100,6 @@ graph TD
     subgraph group_core["core"]
         module_core[":core"]
         module_core_crypto[":core:crypto"]
-        module_core_datastore[":core:datastore"]
         module_core_embedding[":core:embedding"]
         module_core_protocol[":core:protocol"]
         module_core_ui[":core:ui"]
@@ -107,14 +108,17 @@ graph TD
     subgraph group_data["data"]
         module_data[":data"]
         module_data_database[":data:database"]
+        module_data_datastore[":data:datastore"]
     end
 
     subgraph group_feature["feature"]
         module_feature[":feature"]
+        module_feature_attachments[":feature:attachments"]
         module_feature_chats[":feature:chats"]
         module_feature_contactimport[":feature:contactimport"]
         module_feature_contacts[":feature:contacts"]
         module_feature_identity[":feature:identity"]
+        module_feature_media[":feature:media"]
         module_feature_messaging[":feature:messaging"]
         module_feature_onboarding[":feature:onboarding"]
         module_feature_safety[":feature:safety"]
@@ -164,20 +168,29 @@ graph TD
 
     module_androidApp --> module_shared
     module_core_embedding --> module_core
-    module_core_embedding --> module_core_datastore
+    module_core_embedding --> module_data_datastore
     module_core_protocol --> module_core
     module_core_ui --> module_resources
     module_data_database --> module_core
     module_data_database --> module_core_protocol
+    module_feature_attachments --> module_core
+    module_feature_attachments --> module_core_crypto
+    module_feature_attachments --> module_core_protocol
+    module_feature_attachments --> module_core_ui
+    module_feature_attachments --> module_data_database
+    module_feature_attachments --> module_feature_media
+    module_feature_attachments --> module_feature_transport
     module_feature_chats --> module_core
     module_feature_chats --> module_core_crypto
-    module_feature_chats --> module_core_datastore
     module_feature_chats --> module_core_protocol
     module_feature_chats --> module_core_ui
     module_feature_chats --> module_data_database
+    module_feature_chats --> module_data_datastore
+    module_feature_chats --> module_feature_attachments
     module_feature_chats --> module_feature_contactimport
     module_feature_chats --> module_feature_contacts
     module_feature_chats --> module_feature_identity
+    module_feature_chats --> module_feature_media
     module_feature_chats --> module_feature_safety
     module_feature_contactimport --> module_core
     module_feature_contactimport --> module_core_ui
@@ -190,9 +203,11 @@ graph TD
     module_feature_contacts --> module_data_database
     module_feature_identity --> module_core
     module_feature_identity --> module_core_crypto
-    module_feature_identity --> module_core_datastore
     module_feature_identity --> module_core_protocol
     module_feature_identity --> module_core_ui
+    module_feature_identity --> module_data_datastore
+    module_feature_media --> module_core
+    module_feature_media --> module_core_ui
     module_feature_messaging --> module_core
     module_feature_messaging --> module_core_crypto
     module_feature_messaging --> module_core_protocol
@@ -212,22 +227,25 @@ graph TD
     module_feature_search --> module_core_ui
     module_feature_search --> module_data_database
     module_feature_settings --> module_core
-    module_feature_settings --> module_core_datastore
     module_feature_settings --> module_core_embedding
     module_feature_settings --> module_core_ui
+    module_feature_settings --> module_data_datastore
     module_feature_settings --> module_feature_identity
+    module_feature_settings --> module_feature_media
     module_feature_settings --> module_feature_safety
     module_feature_settings --> module_feature_search
     module_feature_transport --> module_core
     module_feature_transport --> module_core_crypto
-    module_feature_transport --> module_core_datastore
     module_feature_transport --> module_core_protocol
+    module_feature_transport --> module_data_datastore
     module_navigation --> module_core
     module_navigation --> module_core_ui
+    module_navigation --> module_feature_attachments
     module_navigation --> module_feature_chats
     module_navigation --> module_feature_contactimport
     module_navigation --> module_feature_contacts
     module_navigation --> module_feature_identity
+    module_navigation --> module_feature_media
     module_navigation --> module_feature_onboarding
     module_navigation --> module_feature_safety
     module_navigation --> module_feature_search
@@ -268,15 +286,17 @@ graph TD
     module_server_security --> module_server_protocol
     module_shared --> module_core
     module_shared --> module_core_crypto
-    module_shared --> module_core_datastore
     module_shared --> module_core_embedding
     module_shared --> module_core_protocol
     module_shared --> module_core_ui
     module_shared --> module_data_database
+    module_shared --> module_data_datastore
+    module_shared --> module_feature_attachments
     module_shared --> module_feature_chats
     module_shared --> module_feature_contactimport
     module_shared --> module_feature_contacts
     module_shared --> module_feature_identity
+    module_shared --> module_feature_media
     module_shared --> module_feature_messaging
     module_shared --> module_feature_onboarding
     module_shared --> module_feature_safety

@@ -10,11 +10,11 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/settings` |
 | Build file | `feature/settings/build.gradle.kts` |
-| Kotlin files | 65 |
-| Production Kotlin files | 65 |
+| Kotlin files | 87 |
+| Production Kotlin files | 87 |
 | Test Kotlin files | 0 |
 | Resource files | 2 |
-| Direct dependencies | 7 |
+| Direct dependencies | 8 |
 | Direct dependents | 2 |
 
 ## Source sets
@@ -25,10 +25,11 @@ Generated automatically by `./gradlew architectureReport`.
 ## Dependencies
 
 - [`:core`](../modules/core.md)
-- [`:core:datastore`](../modules/core-datastore.md)
 - [`:core:embedding`](../modules/core-embedding.md)
 - [`:core:ui`](../modules/core-ui.md)
+- [`:data:datastore`](../modules/data-datastore.md)
 - [`:feature:identity`](../modules/feature-identity.md)
+- [`:feature:media`](../modules/feature-media.md)
 - [`:feature:safety`](../modules/feature-safety.md)
 - [`:feature:search`](../modules/feature-search.md)
 
