@@ -50,14 +50,10 @@ private fun MessageAttachment.toMessagePartUi(bytes: ByteArray?): MessagePartUi?
             )
 
         MessageAttachmentType.LOCATION ->
-            bytes
-                ?.let(LocationAttachmentPayload::decode)
-                ?.let { location ->
-                    MessagePartUi.LocationUi(
-                        id = id,
-                        location = location
-                    )
-                }
+            MessagePartUi.LocationUi(
+                id = id,
+                location = bytes?.let(LocationAttachmentPayload::decode)
+            )
     }
 
 fun MessagePartUi.ImageVideoUi.toMediaItem(): MediaItem =
@@ -70,7 +66,6 @@ fun MessagePartUi.ImageVideoUi.toMediaItem(): MediaItem =
             },
         mimeType = mimeType,
         bytes = bytes,
-        thumbnailBytes = bytes,
         width = width,
         height = height,
         durationMilliseconds = durationMilliseconds
@@ -112,11 +107,11 @@ internal fun MessageBubbleUi.toMessageAttachmentUi(): List<MessageAttachmentUi> 
             )
         }
 
-        locationPart?.let { part ->
+        locationPart?.location?.let { location ->
             add(
                 MessageAttachmentUi.LocationAttachment(
-                    id = part.id,
-                    location = part.location
+                    id = locationPart.id,
+                    location = location
                 )
             )
         }

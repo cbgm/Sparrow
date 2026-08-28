@@ -161,6 +161,7 @@ private fun BubbleBody(
             ) {
                 LocationMessageBubbleBody(
                     locationPart = locationPart,
+                    onAttachmentVisible = onAttachmentVisible,
                     onAttachmentClick = onAttachmentClick
                 )
             }

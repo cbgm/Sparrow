@@ -8,10 +8,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -26,8 +28,15 @@ import kotlin.math.roundToLong
 @Composable
 internal fun LocationMessageBubbleBody(
     locationPart: MessagePartUi.LocationUi,
+    onAttachmentVisible: (String) -> Unit,
     onAttachmentClick: (String) -> Unit
 ) {
+    val location = locationPart.location
+
+    LaunchedEffect(locationPart.id, location) {
+        if (location == null) onAttachmentVisible(locationPart.id)
+    }
+
     Box(
         modifier =
             Modifier
@@ -36,22 +45,29 @@ internal fun LocationMessageBubbleBody(
                     vertical = MaterialTheme.spacing.base
                 )
                 .size(Dimens.MessageAttachment.previewSize)
-                .clickable { onAttachmentClick(locationPart.id) },
+                .clickable(enabled = location != null) { onAttachmentClick(locationPart.id) },
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
-        ) {
-            Icon(
-                imageVector = Icons.Default.MyLocation,
-                contentDescription = null,
-                tint = MaterialTheme.attachmentColors.location
+        if (location == null) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(Dimens.MessageAttachment.loadingIndicatorSize),
+                strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
             )
-            Text(
-                text = "${locationPart.location.latitude.toCoordinateText()}\n${locationPart.location.longitude.toCoordinateText()}",
-                style = MaterialTheme.typography.labelSmall
-            )
+        } else {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MyLocation,
+                    contentDescription = null,
+                    tint = MaterialTheme.attachmentColors.location
+                )
+                Text(
+                    text = "${location.latitude.toCoordinateText()}\n${location.longitude.toCoordinateText()}",
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
         }
     }
 }
@@ -64,11 +80,13 @@ private fun LocationMessageBubbleBodyPreview() {
             locationPart =
                 MessagePartUi.LocationUi(
                     id = "preview-location",
-                    location = CurrentLocation(
-                        latitude = 50.2586,
-                        longitude = 10.9644
-                    )
+                    location =
+                        CurrentLocation(
+                            latitude = 50.2586,
+                            longitude = 10.9644
+                        )
                 ),
+            onAttachmentVisible = {},
             onAttachmentClick = {}
         )
     }

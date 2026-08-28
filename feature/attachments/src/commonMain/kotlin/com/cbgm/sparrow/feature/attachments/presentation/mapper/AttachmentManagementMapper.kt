@@ -5,7 +5,7 @@ import com.cbgm.sparrow.feature.attachments.domain.model.LocalAttachment
 import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
 import com.cbgm.sparrow.feature.attachments.util.LocationAttachmentPayload
 
-internal fun List<LocalAttachment>.toAttachmentManagementUiModels(
+internal fun List<LocalAttachment>.toAttachmentManagementUi(
     loadedBytes: Map<String, ByteArray>
 ): List<MessageAttachmentUi> =
     mapNotNull { attachment ->

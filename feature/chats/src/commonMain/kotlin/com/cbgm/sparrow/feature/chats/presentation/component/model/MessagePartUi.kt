@@ -79,7 +79,7 @@ sealed interface MessagePartUi {
 
     data class LocationUi(
         val id: String,
-        val location: CurrentLocation
+        val location: CurrentLocation? = null
     ) : MessagePartUi
 
     data class TextUi(
