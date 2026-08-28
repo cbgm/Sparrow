@@ -8,7 +8,7 @@ import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactDetailsContextUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.VerifyContactUseCase
-import com.cbgm.sparrow.feature.contacts.presentation.details.mapper.toUiState
+import com.cbgm.sparrow.feature.contacts.presentation.details.mapper.toContactDetailsUiState
 import com.cbgm.sparrow.feature.contacts.presentation.details.mapper.withVerificationState
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsUiState
@@ -72,7 +72,7 @@ class ContactDetailsViewModel(
         reloadRevision.flatMapLatest {
             observeContactDetailsContext(contactId)
                 .map { context ->
-                    context.contact?.toUiState(
+                    context.contact?.toContactDetailsUiState(
                         safetyNumber = context.safetyNumber,
                         profilePictureBytes = context.profilePictureBytes
                     ) ?: ContactDetailsUiState.NotFound

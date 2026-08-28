@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportDeviceContactsUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsWithProfilePicturesUseCase
-import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.toUiState
+import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.toContactsUiState
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsEffect
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsUiState
@@ -33,7 +33,7 @@ class ContactsViewModel(
             observeContactsWithProfilePictures(),
             searchQuery
         ) { snapshot, query ->
-            snapshot.contacts.toUiState(query, snapshot.profilePictures)
+            snapshot.contacts.toContactsUiState(query, snapshot.profilePictures)
         }.catch { error ->
             emit(ContactsUiState.Error(error.message ?: "Failed to load contacts", searchQuery.value))
         }.stateIn(

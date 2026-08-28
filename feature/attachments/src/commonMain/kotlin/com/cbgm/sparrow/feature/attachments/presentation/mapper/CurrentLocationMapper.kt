@@ -7,7 +7,7 @@ import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.attachments.util.LocationAttachmentPayload
 
-fun CurrentLocation.toOutgoingLocationAttachment(): OutgoingMessageAttachment =
+fun CurrentLocation.toOutgoingMessageAttachment(): OutgoingMessageAttachment =
     OutgoingMessageAttachment(
         id = IdGenerator.generate(prefix = "location"),
         type = MessageAttachmentType.LOCATION,

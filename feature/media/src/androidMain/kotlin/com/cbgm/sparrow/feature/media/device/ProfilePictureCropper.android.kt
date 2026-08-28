@@ -15,7 +15,7 @@ internal actual fun cropAndEncodeProfilePicture(
                 "Profile picture could not be decoded"
             }
         val sourceRect =
-            cropRegion.toSourceRect(
+            cropRegion.toProfilePictureSourceRect(
                 sourceWidth = bitmap.width,
                 sourceHeight = bitmap.height
             )

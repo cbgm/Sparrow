@@ -93,7 +93,7 @@ internal class GroupInvitationCoordinator(
                 val ownerIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
                 val ownerSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
                 val now = SystemClock.nowEpochMilliseconds()
-                val newInvitations = mutableListOf<OutgoingInvitation>()
+                val newInvitations = mutableListOf<OutgoingInvitationDto>()
 
                 loadContacts(contactIds).forEach { contact ->
                     val existing =
@@ -197,7 +197,7 @@ internal class GroupInvitationCoordinator(
         ownerIdentity: LocalPublicIdentity,
         ownerSigningKeyPair: LocalSigningKeyPair,
         createdAt: Long
-    ): OutgoingInvitation {
+    ): OutgoingInvitationDto {
         val invitationId = IdGenerator.generate(prefix = "group-invitation")
         val expiresAt = createdAt + INVITATION_VALIDITY_MILLISECONDS
         val packet =
@@ -223,14 +223,14 @@ internal class GroupInvitationCoordinator(
                 expiresAtEpochMilliseconds = expiresAt,
                 updatedAtEpochMilliseconds = createdAt
             )
-        return OutgoingInvitation(entity, packet)
+        return OutgoingInvitationDto(entity, packet)
     }
 
-    private suspend fun persistInvitations(invitations: List<OutgoingInvitation>) {
-        groupInvitationDao.upsertAll(invitations.map(OutgoingInvitation::entity))
+    private suspend fun persistInvitations(invitations: List<OutgoingInvitationDto>) {
+        groupInvitationDao.upsertAll(invitations.map(OutgoingInvitationDto::entity))
     }
 
-    private suspend fun sendInvitations(invitations: List<OutgoingInvitation>) {
+    private suspend fun sendInvitations(invitations: List<OutgoingInvitationDto>) {
         invitations.forEach { invitation ->
             protocolOutbox
                 .enqueue(invitation.entity.contactId, invitation.packet)
@@ -391,7 +391,7 @@ internal class GroupInvitationCoordinator(
             this == GroupInvitationStatus.EXPIRED.name ||
             this == GroupInvitationStatus.FAILED.name
 
-    private data class OutgoingInvitation(
+    private data class OutgoingInvitationDto(
         val entity: GroupInvitationEntity,
         val packet: GroupInvitePacket
     )

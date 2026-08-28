@@ -105,10 +105,10 @@ class SynchronizePendingMessagesUseCase(
                 conversation
                     .takeIf { current ->
                         current.unreadCount > unreadCountBeforeSync
-                    }?.toNotification()
+                    }?.toConversationNotification()
             }
 
-    private fun ConversationOverview.toNotification(): ConversationNotification =
+    private fun ConversationOverview.toConversationNotification(): ConversationNotification =
         ConversationNotification(
             conversationId = id,
             title = displayName,

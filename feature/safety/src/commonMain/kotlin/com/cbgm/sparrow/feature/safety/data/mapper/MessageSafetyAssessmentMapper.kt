@@ -4,7 +4,7 @@ import com.cbgm.sparrow.data.database.entity.MessageSafetyAssessmentEntity
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyAssessment
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyReason
 
-internal fun MessageSafetyAssessmentEntity.toDomain(): MessageSafetyAssessment =
+internal fun MessageSafetyAssessmentEntity.toMessageSafetyAssessment(): MessageSafetyAssessment =
     MessageSafetyAssessment(
         reasons =
             reasons
@@ -16,7 +16,7 @@ internal fun MessageSafetyAssessmentEntity.toDomain(): MessageSafetyAssessment =
                 .toCollection(linkedSetOf())
     )
 
-internal fun MessageSafetyAssessment.toEntity(
+internal fun MessageSafetyAssessment.toMessageSafetyAssessmentEntity(
     messageId: String,
     analyzerVersion: Int
 ): MessageSafetyAssessmentEntity =

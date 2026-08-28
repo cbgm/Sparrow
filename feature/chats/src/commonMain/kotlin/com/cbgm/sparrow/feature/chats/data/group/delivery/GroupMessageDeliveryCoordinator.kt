@@ -4,7 +4,7 @@ import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.MessageDeliveryStatusDao
 import com.cbgm.sparrow.data.database.dao.MessageRecipientStateDao
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
-import com.cbgm.sparrow.feature.chats.data.group.mapper.toGroupDeliveryStatus
+import com.cbgm.sparrow.feature.chats.data.group.mapper.toMessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessageDeliveryStateMachine
@@ -74,7 +74,7 @@ class GroupMessageDeliveryCoordinator(
         event: MessageDeliveryEvent,
         errorMessage: String? = null
     ) {
-        val current = state.deliveryStatus.toGroupDeliveryStatus()
+        val current = state.deliveryStatus.toMessageDeliveryStatus()
         val next = GroupMessageDeliveryStateMachine.transition(current, event)
         if (next == current) return
         messageRecipientStateDao.updateDeliveryStatus(
@@ -87,7 +87,7 @@ class GroupMessageDeliveryCoordinator(
     }
 
     private suspend fun updateAggregatedStatus(messageId: String) {
-        val statuses = messageRecipientStateDao.findByMessageId(messageId).map { it.deliveryStatus.toGroupDeliveryStatus() }
+        val statuses = messageRecipientStateDao.findByMessageId(messageId).map { it.deliveryStatus.toMessageDeliveryStatus() }
         val aggregated = GroupMessageDeliveryStateMachine.aggregate(statuses)
         messageDeliveryStatusDao.updateDeliveryStatusByMessageId(messageId, aggregated.name)
     }

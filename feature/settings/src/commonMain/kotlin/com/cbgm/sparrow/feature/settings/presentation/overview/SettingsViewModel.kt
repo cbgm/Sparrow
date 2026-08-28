@@ -16,7 +16,7 @@ import com.cbgm.sparrow.feature.settings.domain.usecase.SetAppLanguageUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetBlockUnknownContactInvitesUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetDeveloperEnabledUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetDirectIdentitySetupModeUseCase
-import com.cbgm.sparrow.feature.settings.presentation.overview.mapper.toUiState
+import com.cbgm.sparrow.feature.settings.presentation.overview.mapper.toSettingsUiState
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.DEVELOPER_MODE_TAP_THRESHOLD
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsEffect
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsUiEvent
@@ -51,7 +51,7 @@ class SettingsViewModel(
             observeSettingsDomainContext(),
             localState
         ) { domain, local ->
-            buildInfo.toUiState(
+            buildInfo.toSettingsUiState(
                 currentLanguage = local.currentLanguage,
                 identitySetupMode = domain.identitySetupMode,
                 blockUnknownContactInvites = domain.blockUnknownContactInvites,

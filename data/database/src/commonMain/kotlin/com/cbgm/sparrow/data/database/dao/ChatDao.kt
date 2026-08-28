@@ -8,9 +8,9 @@ import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
-import com.cbgm.sparrow.data.database.model.ConversationSummary
-import com.cbgm.sparrow.data.database.model.ConversationWithMessages
-import com.cbgm.sparrow.data.database.model.UnreadIncomingMessage
+import com.cbgm.sparrow.data.database.model.ConversationSummaryDto
+import com.cbgm.sparrow.data.database.model.ConversationWithMessagesDto
+import com.cbgm.sparrow.data.database.model.UnreadIncomingMessageDto
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -111,7 +111,7 @@ interface ChatDao {
 
     @Transaction
     @Query("SELECT * FROM conversations WHERE id = :conversationId LIMIT 1")
-    fun observeConversationWithMessagesById(conversationId: String): Flow<ConversationWithMessages?>
+    fun observeConversationWithMessagesById(conversationId: String): Flow<ConversationWithMessagesDto?>
 
     /*
      * observeConversationWithMessagesById() loads the *entire* message
@@ -309,7 +309,7 @@ interface ChatDao {
         LIMIT 1
         """
     )
-    fun observeConversationByContactId(contactId: String): Flow<ConversationWithMessages?>
+    fun observeConversationByContactId(contactId: String): Flow<ConversationWithMessagesDto?>
 
     @Query(
         """
@@ -372,7 +372,7 @@ interface ChatDao {
     fun observeConversationSummaries(
         localDeletionTransportMode: String,
         localMembershipStartedTransportMode: String
-    ): Flow<List<ConversationSummary>>
+    ): Flow<List<ConversationSummaryDto>>
 
     @Query("DELETE FROM messages WHERE conversationId = :conversationId")
     suspend fun deleteConversationMessages(conversationId: String)
@@ -443,7 +443,7 @@ interface ChatDao {
     ORDER BY messages.createdAtEpochMilliseconds ASC
     """
     )
-    suspend fun findMessagesAwaitingReadReceipt(conversationId: String): List<UnreadIncomingMessage>
+    suspend fun findMessagesAwaitingReadReceipt(conversationId: String): List<UnreadIncomingMessageDto>
 
     @Query(
         """

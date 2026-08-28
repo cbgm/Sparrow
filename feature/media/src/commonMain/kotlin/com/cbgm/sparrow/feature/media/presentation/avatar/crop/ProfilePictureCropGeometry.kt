@@ -117,7 +117,7 @@ internal data class ProfilePictureCropGeometry(
         )
     }
 
-    fun toCropRegion(center: Offset): ProfilePictureCropRegion {
+    fun toProfilePictureCropRegion(center: Offset): ProfilePictureCropRegion {
         val sourceCenterX = (center.x - imageLeft) / displayScale
         val sourceCenterY = (center.y - imageTop) / displayScale
         val sourceCropSize = cropDiameter / displayScale

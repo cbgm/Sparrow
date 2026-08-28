@@ -7,7 +7,7 @@ import com.cbgm.sparrow.feature.search.domain.model.MessageSearchConversationTyp
 import com.cbgm.sparrow.feature.search.domain.usecase.ObserveSemanticSearchStateUseCase
 import com.cbgm.sparrow.feature.search.domain.usecase.SearchMessagesUseCase
 import com.cbgm.sparrow.feature.search.presentation.overview.mapper.toMessageSearchMode
-import com.cbgm.sparrow.feature.search.presentation.overview.mapper.toUiModel
+import com.cbgm.sparrow.feature.search.presentation.overview.mapper.toMessageSearchResultUi
 import com.cbgm.sparrow.feature.search.presentation.overview.model.MessageSearchUiEvent
 import com.cbgm.sparrow.feature.search.presentation.overview.model.MessageSearchUiState
 import kotlinx.coroutines.CancellationException
@@ -97,7 +97,7 @@ class MessageSearchViewModel(
                     if (mutableUiState.value.query != query) return@launch
                     mutableUiState.value =
                         mutableUiState.value.copy(
-                            results = results.map { it.toUiModel() },
+                            results = results.map { it.toMessageSearchResultUi() },
                             isSearching = false,
                             searchFailed = false
                         )

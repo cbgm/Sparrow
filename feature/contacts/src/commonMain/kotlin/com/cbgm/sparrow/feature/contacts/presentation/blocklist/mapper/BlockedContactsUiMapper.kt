@@ -3,7 +3,7 @@ package com.cbgm.sparrow.feature.contacts.presentation.blocklist.mapper
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactBlocklist
 import com.cbgm.sparrow.feature.contacts.presentation.blocklist.model.BlockedContactsUiState
 
-internal fun ContactBlocklist.toUiState(
+internal fun ContactBlocklist.toBlockedContactsUiState(
     profilePictures: Map<String, ByteArray?>,
     showAddContacts: Boolean,
     phoneNumber: String,

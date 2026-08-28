@@ -6,7 +6,7 @@ import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.VerifyGroupMemberUseCase
-import com.cbgm.sparrow.feature.chats.presentation.verification.mapper.toPreview
+import com.cbgm.sparrow.feature.chats.presentation.verification.mapper.toScannedIdentityPreview
 import com.cbgm.sparrow.feature.chats.presentation.verification.model.GroupMemberQrVerificationError
 import com.cbgm.sparrow.feature.chats.presentation.verification.model.GroupMemberQrVerificationUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.verification.model.GroupMemberQrVerificationUiState
@@ -143,7 +143,7 @@ class GroupMemberQrVerificationViewModel(
             return null
         }
 
-        return scannedIdentity.toPreview(encodedIdentity)
+        return scannedIdentity.toScannedIdentityPreview(encodedIdentity)
     }
 
     private fun setError(error: GroupMemberQrVerificationError) {

@@ -2,9 +2,9 @@ package com.cbgm.sparrow.feature.safety.data.repository
 
 import com.cbgm.sparrow.core.coroutines.ApplicationCoroutineScope
 import com.cbgm.sparrow.feature.safety.data.datasource.MessageSafetyLocalDataSource
-import com.cbgm.sparrow.feature.safety.data.mapper.toDomain
-import com.cbgm.sparrow.feature.safety.data.mapper.toEntity
-import com.cbgm.sparrow.feature.safety.data.mapper.toSafetyCandidate
+import com.cbgm.sparrow.feature.safety.data.mapper.toMessageSafetyAssessment
+import com.cbgm.sparrow.feature.safety.data.mapper.toMessageSafetyAssessmentEntity
+import com.cbgm.sparrow.feature.safety.data.mapper.toMessageSafetyCandidate
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyAssessment
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyCandidate
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyState
@@ -31,7 +31,7 @@ class MessageSafetyRepositoryImpl(
             if (currentState == MessageSafetyState.Disabled) {
                 emptyMap()
             } else {
-                stored.associate { assessment -> assessment.messageId to assessment.toDomain() }
+                stored.associate { assessment -> assessment.messageId to assessment.toMessageSafetyAssessment() }
             }
         }.stateIn(
             scope = applicationScope,
@@ -48,7 +48,7 @@ class MessageSafetyRepositoryImpl(
             .getMessagesMissingAssessment(
                 analyzerVersion = ANALYZER_VERSION,
                 limit = limit
-            ).map { source -> source.toSafetyCandidate() }
+            ).map { source -> source.toMessageSafetyCandidate() }
 
     override suspend fun getUnassessedMessageCount(): Int =
         localDataSource.getUnassessedMessageCount(ANALYZER_VERSION)
@@ -61,7 +61,7 @@ class MessageSafetyRepositoryImpl(
         assessment: MessageSafetyAssessment
     ) {
         localDataSource.upsertAssessment(
-            assessment.toEntity(
+            assessment.toMessageSafetyAssessmentEntity(
                 messageId = messageId,
                 analyzerVersion = ANALYZER_VERSION
             )

@@ -103,7 +103,7 @@ internal class PostgresOutboundEnvelopeStorage(
                     )
                     statement.setLong(ATTEMPT_EXPIRY_PARAMETER_INDEX, currentTime)
                     statement.executeQuery().use { results ->
-                        if (results.next()) results.toEntry() else null
+                        if (results.next()) results.toOutboundEnvelopeEntry() else null
                     }
                 }
         }
@@ -163,7 +163,7 @@ internal class PostgresOutboundEnvelopeStorage(
                     statement.executeQuery().use { results ->
                         buildList {
                             while (results.next()) {
-                                add(results.toEntry())
+                                add(results.toOutboundEnvelopeEntry())
                             }
                         }
                     }
@@ -204,7 +204,7 @@ internal class PostgresOutboundEnvelopeStorage(
             ).use { statement ->
                 statement.setString(1, envelopeId)
                 statement.executeQuery().use { results ->
-                    if (results.next()) results.toEntry() else null
+                    if (results.next()) results.toOutboundEnvelopeEntry() else null
                 }
             }
 
@@ -221,7 +221,7 @@ internal class PostgresOutboundEnvelopeStorage(
             }
     }
 
-    private fun ResultSet.toEntry(): OutboundEnvelopeEntry =
+    private fun ResultSet.toOutboundEnvelopeEntry(): OutboundEnvelopeEntry =
         OutboundEnvelopeEntry(
             envelope = serverJson.decodeFromString<FederatedEnvelope>(getString("envelope_json")),
             state = EnvelopeAcceptanceState.valueOf(getString("state")),

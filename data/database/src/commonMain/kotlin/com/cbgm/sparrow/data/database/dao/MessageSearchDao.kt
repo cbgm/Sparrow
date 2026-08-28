@@ -4,9 +4,9 @@ import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Upsert
 import com.cbgm.sparrow.data.database.entity.MessageSearchEmbeddingEntity
-import com.cbgm.sparrow.data.database.model.MessageSearchSource
-import com.cbgm.sparrow.data.database.model.StoredMessageEmbedding
-import com.cbgm.sparrow.data.database.model.StoredMessageSearchMatch
+import com.cbgm.sparrow.data.database.model.MessageSearchSourceDto
+import com.cbgm.sparrow.data.database.model.StoredMessageEmbeddingDto
+import com.cbgm.sparrow.data.database.model.StoredMessageSearchMatchDto
 
 @Dao
 interface MessageSearchDao {
@@ -45,7 +45,7 @@ interface MessageSearchDao {
     suspend fun getMessagesMissingEmbedding(
         modelVersion: Int,
         limit: Int
-    ): List<MessageSearchSource>
+    ): List<MessageSearchSourceDto>
 
     @Query(
         """
@@ -100,7 +100,7 @@ interface MessageSearchDao {
     suspend fun searchExactMessages(
         query: String,
         limit: Int
-    ): List<StoredMessageSearchMatch>
+    ): List<StoredMessageSearchMatchDto>
 
     @Query(
         """
@@ -131,5 +131,5 @@ interface MessageSearchDao {
           AND TRIM(messages.text) != ''
         """
     )
-    suspend fun getIndexedMessages(modelVersion: Int): List<StoredMessageEmbedding>
+    suspend fun getIndexedMessages(modelVersion: Int): List<StoredMessageEmbeddingDto>
 }

@@ -3,7 +3,7 @@ package com.cbgm.sparrow.feature.messaging.data.datasource
 import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.data.database.dao.ContactRoutingIdDao
 import com.cbgm.sparrow.data.database.entity.ContactRoutingIdEntity
-import com.cbgm.sparrow.data.database.model.ContactWithPublicIdentity
+import com.cbgm.sparrow.data.database.model.ContactWithPublicIdentityDto
 import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.transport.routing.RoutingIdGenerator
 
@@ -27,13 +27,13 @@ class ContactRoutingDataSource(
             persistAndReturnBootstrapRoutingId(requireContact(contactId))
         }
 
-    private suspend fun requireContact(contactId: String): ContactWithPublicIdentity {
+    private suspend fun requireContact(contactId: String): ContactWithPublicIdentityDto {
         require(contactId.isNotBlank()) { "Contact ID must not be blank" }
         return contactDao.findById(contactId) ?: error("Contact was not found")
     }
 
     private suspend fun persistAndReturnBootstrapRoutingId(
-        contact: ContactWithPublicIdentity
+        contact: ContactWithPublicIdentityDto
     ): String {
         val contactId = contact.contact.id
         val routingId = contact.bootstrapRoutingId()
@@ -47,12 +47,12 @@ class ContactRoutingDataSource(
         return routingId
     }
 
-    private fun ContactWithPublicIdentity.canonicalRoutingId(): String =
+    private fun ContactWithPublicIdentityDto.canonicalRoutingId(): String =
         routingIdGenerator
             .deriveFromSigningPublicKey(checkNotNull(publicIdentity).signingPublicKey)
             .getOrThrow()
 
-    private suspend fun ContactWithPublicIdentity.bootstrapRoutingId(): String {
+    private suspend fun ContactWithPublicIdentityDto.bootstrapRoutingId(): String {
         contactRoutingIdDao
             .findRoutingIdByContactId(contact.id)
             ?.takeIf { routingId -> routingId.startsWith(BOOTSTRAP_ROUTING_ID_PREFIX) }

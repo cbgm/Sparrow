@@ -7,7 +7,7 @@ import androidx.room.Upsert
 import com.cbgm.sparrow.data.database.entity.ContactEntity
 import com.cbgm.sparrow.data.database.entity.ContactPhoneNumberEntity
 import com.cbgm.sparrow.data.database.entity.ContactPublicIdentityEntity
-import com.cbgm.sparrow.data.database.model.ContactWithPublicIdentity
+import com.cbgm.sparrow.data.database.model.ContactWithPublicIdentityDto
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -57,7 +57,7 @@ interface ContactDao {
         LIMIT 1
         """
     )
-    suspend fun findByNormalizedPhoneNumber(normalizedPhoneNumber: String): ContactWithPublicIdentity?
+    suspend fun findByNormalizedPhoneNumber(normalizedPhoneNumber: String): ContactWithPublicIdentityDto?
 
     @Transaction
     @Query(
@@ -68,7 +68,7 @@ interface ContactDao {
         LIMIT 1
         """
     )
-    suspend fun findById(contactId: String): ContactWithPublicIdentity?
+    suspend fun findById(contactId: String): ContactWithPublicIdentityDto?
 
     @Transaction
     @Query(
@@ -82,7 +82,7 @@ interface ContactDao {
         LIMIT 1
         """
     )
-    suspend fun findBySigningPublicKey(signingPublicKey: ByteArray): ContactWithPublicIdentity?
+    suspend fun findBySigningPublicKey(signingPublicKey: ByteArray): ContactWithPublicIdentityDto?
 
     @Transaction
     @Query(
@@ -95,7 +95,7 @@ interface ContactDao {
         LIMIT 1
         """
     )
-    suspend fun findByPhoneNumber(phoneNumber: String): ContactWithPublicIdentity?
+    suspend fun findByPhoneNumber(phoneNumber: String): ContactWithPublicIdentityDto?
 
     @Transaction
     @Query(
@@ -111,7 +111,7 @@ interface ContactDao {
             createdAtEpochMilliseconds
         """
     )
-    fun observeAll(): Flow<List<ContactWithPublicIdentity>>
+    fun observeAll(): Flow<List<ContactWithPublicIdentityDto>>
 
     @Transaction
     @Query(
@@ -122,7 +122,7 @@ interface ContactDao {
         LIMIT 1
         """
     )
-    suspend fun findByDeviceContactId(deviceContactId: String): ContactWithPublicIdentity?
+    suspend fun findByDeviceContactId(deviceContactId: String): ContactWithPublicIdentityDto?
 
     @Query(
         """

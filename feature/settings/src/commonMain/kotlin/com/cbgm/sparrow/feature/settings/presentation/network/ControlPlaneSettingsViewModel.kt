@@ -8,8 +8,8 @@ import com.cbgm.sparrow.core.transport.ControlPlaneEndpoint
 import com.cbgm.sparrow.core.transport.ControlPlaneHealthMonitor
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveControlPlaneSettingsContextUseCase
-import com.cbgm.sparrow.feature.settings.presentation.network.mapper.toUiModels
-import com.cbgm.sparrow.feature.settings.presentation.network.mapper.toUiState
+import com.cbgm.sparrow.feature.settings.presentation.network.mapper.toControlPlaneSettingsUiState
+import com.cbgm.sparrow.feature.settings.presentation.network.mapper.toControlPlaneUiModels
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneDirectoryError
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsError
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneSettingsUiEvent
@@ -57,8 +57,8 @@ class ControlPlaneSettingsViewModel(
             actionState
         ) { configuration, form, action ->
             configuration.statuses
-                .toUiModels(configuration.manualBaseUrls, configuration.directoryBaseUrls)
-                .toUiState(
+                .toControlPlaneUiModels(configuration.manualBaseUrls, configuration.directoryBaseUrls)
+                .toControlPlaneSettingsUiState(
                     showAddDialog = form.showAddDialog,
                     newUrl = form.newUrl,
                     addError = action.addError,

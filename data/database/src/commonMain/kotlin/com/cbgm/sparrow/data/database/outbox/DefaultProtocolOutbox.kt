@@ -34,7 +34,7 @@ class DefaultProtocolOutbox(
             val existing = outboxDao.findByPacketId(packetId = packet.packetId)
 
             if (existing != null) {
-                return@runCatching existing.toDomain()
+                return@runCatching existing.toProtocolOutboxItem()
             }
 
             val encodedPacket = packetCodec.encode(packet = packet).getOrThrow()
@@ -59,7 +59,7 @@ class DefaultProtocolOutbox(
 
             outboxDao
                 .findByPacketId(packetId = packet.packetId)
-                ?.toDomain()
+                ?.toProtocolOutboxItem()
                 ?: error("Queued protocol packet could not be loaded")
         }
     }
@@ -69,7 +69,7 @@ class DefaultProtocolOutbox(
             .observePending()
             .map { entities ->
                 entities.map { entity ->
-                    entity.toDomain()
+                    entity.toProtocolOutboxItem()
                 }
             }
 
@@ -100,7 +100,7 @@ class DefaultProtocolOutbox(
                             status = OutboxStatus.EXPIRED.name,
                             lastError = DELIVERY_EXPIRED_ERROR,
                             updatedAtEpochMilliseconds = nowEpochMilliseconds
-                        ).toDomain()
+                        ).toProtocolOutboxItem()
                 }
             }
         }
@@ -111,7 +111,7 @@ class DefaultProtocolOutbox(
                 "Pending-item limit must be positive"
             }
 
-            outboxDao.getPending(limit = limit).map { entity -> entity.toDomain() }
+            outboxDao.getPending(limit = limit).map { entity -> entity.toProtocolOutboxItem() }
         }
 
     override suspend fun markProcessing(itemId: String): Result<Unit> =
@@ -153,7 +153,7 @@ class DefaultProtocolOutbox(
                 "Packet ID must not be blank"
             }
 
-            outboxDao.findByPacketId(packetId = packetId)?.toDomain()
+            outboxDao.findByPacketId(packetId = packetId)?.toProtocolOutboxItem()
         }
 
     override suspend fun markSent(itemId: String): Result<Unit> =
@@ -268,7 +268,7 @@ class DefaultProtocolOutbox(
             }
         }
 
-    private fun ProtocolOutboxEntity.toDomain(): ProtocolOutboxItem =
+    private fun ProtocolOutboxEntity.toProtocolOutboxItem(): ProtocolOutboxItem =
         ProtocolOutboxItem(
             id = id,
             contactId = contactId,

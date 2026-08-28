@@ -8,7 +8,7 @@ import com.cbgm.sparrow.feature.settings.domain.usecase.ClearLocalDataUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetBuildInfoUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveDeveloperErrorsUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetDeveloperEnabledUseCase
-import com.cbgm.sparrow.feature.settings.presentation.developer.mapper.toUiState
+import com.cbgm.sparrow.feature.settings.presentation.developer.mapper.toDeveloperMenuUiState
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiState
 import kotlinx.coroutines.delay
@@ -43,7 +43,7 @@ class DeveloperMenuViewModel(
             savedErrorCount,
             isClearingLocalData
         ) { diagnostics, errorCount, isClearing ->
-            diagnostics.toUiState(
+            diagnostics.toDeveloperMenuUiState(
                 buildInfo = buildInfo,
                 savedErrorCount = errorCount,
                 isClearingLocalData = isClearing

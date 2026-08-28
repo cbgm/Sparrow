@@ -3,7 +3,7 @@ package com.cbgm.sparrow.feature.search.data.repository
 import com.cbgm.sparrow.feature.search.data.datasource.MessageSearchIndexDataSource
 import com.cbgm.sparrow.feature.search.data.datasource.MessageSearchLocalDataSource
 import com.cbgm.sparrow.feature.search.data.datasource.SemanticSearchEmbeddingDataSource
-import com.cbgm.sparrow.feature.search.data.mapper.toSemanticSearchResult
+import com.cbgm.sparrow.feature.search.data.mapper.toMessageSearchResult
 import com.cbgm.sparrow.feature.search.data.model.SemanticSearchIndexConfig
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchResult
 import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
@@ -75,7 +75,7 @@ class SemanticSearchRepositoryImpl(
                             conversationTitle = message.conversationTitle,
                             contactName = message.contactName
                         )
-                    message.toSemanticSearchResult(
+                    message.toMessageSearchResult(
                         score = (semanticScore + metadataBoost).coerceAtMost(1f)
                     )
                 }.filter { result ->

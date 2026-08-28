@@ -55,7 +55,7 @@ class BlobStore(
             val written = writeBlobData(paths.data, channel, allowedBytes)
             try {
                 validateBlobSize(written, claims.maximumBytes)
-                val metadata = claims.toMetadata(written)
+                val metadata = claims.toBlobMetadata(written)
                 writeMetadataAndCommit(
                     metadataPath = paths.metadata,
                     metadata = metadata,
@@ -134,7 +134,7 @@ class BlobStore(
         }
     }
 
-    private fun BlobUploadTicketClaims.toMetadata(written: Long): BlobMetadata =
+    private fun BlobUploadTicketClaims.toBlobMetadata(written: Long): BlobMetadata =
         BlobMetadata(
             blobId = blobId,
             byteSize = written,

@@ -6,20 +6,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverview
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.ConversationListItem
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiState
 
-internal fun List<ConversationOverview>.directContactIds(): Set<String> =
-    asSequence()
-        .filter { conversation -> conversation.type == ConversationOverviewType.DIRECT }
-        .map(ConversationOverview::contactId)
-        .filter(String::isNotBlank)
-        .toSet()
-
-internal fun List<ConversationOverview>.groupIds(): Set<String> =
-    asSequence()
-        .filter { conversation -> conversation.type == ConversationOverviewType.GROUP }
-        .map(ConversationOverview::id)
-        .toSet()
-
-internal fun List<ConversationOverview>.toUiState(
+internal fun List<ConversationOverview>.toOverviewUiState(
     profilePictures: Map<String, ByteArray?>,
     groupAvatars: Map<String, ByteArray?>
 ): OverviewUiState =

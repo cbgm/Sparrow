@@ -1,12 +1,12 @@
 package com.cbgm.sparrow.feature.search.data.mapper
 
-import com.cbgm.sparrow.data.database.model.StoredMessageEmbedding
-import com.cbgm.sparrow.data.database.model.StoredMessageSearchMatch
+import com.cbgm.sparrow.data.database.model.StoredMessageEmbeddingDto
+import com.cbgm.sparrow.data.database.model.StoredMessageSearchMatchDto
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchConversationType
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchMatchType
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchResult
 
-internal fun StoredMessageSearchMatch.toExactSearchResult(): MessageSearchResult =
+internal fun StoredMessageSearchMatchDto.toMessageSearchResult(): MessageSearchResult =
     MessageSearchResult(
         messageId = messageId,
         conversationId = conversationId,
@@ -18,7 +18,7 @@ internal fun StoredMessageSearchMatch.toExactSearchResult(): MessageSearchResult
         matchType = MessageSearchMatchType.EXACT
     )
 
-internal fun StoredMessageEmbedding.toSemanticSearchResult(score: Float): MessageSearchResult =
+internal fun StoredMessageEmbeddingDto.toMessageSearchResult(score: Float): MessageSearchResult =
     MessageSearchResult(
         messageId = messageId,
         conversationId = conversationId,

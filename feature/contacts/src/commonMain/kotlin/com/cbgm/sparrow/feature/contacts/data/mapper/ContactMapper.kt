@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.contacts.data.mapper
 
 import com.cbgm.sparrow.data.database.entity.ContactPhoneNumberEntity
 import com.cbgm.sparrow.data.database.entity.ContactPublicIdentityEntity
-import com.cbgm.sparrow.data.database.model.ContactWithPublicIdentity
+import com.cbgm.sparrow.data.database.model.ContactWithPublicIdentityDto
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumber
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumberType
@@ -11,24 +11,24 @@ import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.SparrowIdentity
 
-fun ContactWithPublicIdentity.toDomain(): Contact =
+fun ContactWithPublicIdentityDto.toContact(): Contact =
     Contact(
         id = contact.id,
         displayName = contact.displayName,
         phoneNumbers =
             phoneNumbers.map { phoneNumber ->
-                phoneNumber.toDomain()
+                phoneNumber.toContactPhoneNumber()
             },
         preferredPhoneNumberId = contact.preferredPhoneNumberId,
         deviceContactId =
             contact.deviceContactId,
         deviceContactLinkStatus = contact.deviceContactLinkStatus.toDeviceContactLinkStatus(),
-        sparrowIdentity = publicIdentity?.toDomain(),
+        sparrowIdentity = publicIdentity?.toSparrowIdentity(),
         createdAtEpochMilliseconds = contact.createdAtEpochMilliseconds,
         updatedAtEpochMilliseconds = contact.updatedAtEpochMilliseconds
     )
 
-private fun ContactPhoneNumberEntity.toDomain(): ContactPhoneNumber =
+private fun ContactPhoneNumberEntity.toContactPhoneNumber(): ContactPhoneNumber =
     ContactPhoneNumber(
         id = id,
         value = value,
@@ -36,7 +36,7 @@ private fun ContactPhoneNumberEntity.toDomain(): ContactPhoneNumber =
         label = label
     )
 
-private fun ContactPublicIdentityEntity.toDomain(): SparrowIdentity =
+private fun ContactPublicIdentityEntity.toSparrowIdentity(): SparrowIdentity =
     SparrowIdentity(
         encryptionPublicKey = encryptionPublicKey.copyOf(),
         signingPublicKey = signingPublicKey.copyOf(),

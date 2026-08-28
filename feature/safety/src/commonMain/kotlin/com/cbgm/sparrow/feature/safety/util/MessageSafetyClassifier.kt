@@ -25,7 +25,7 @@ class MessageSafetyClassifier {
 
     private fun probability(
         embedding: FloatArray,
-        head: GeneratedMessageSafetyMlpModel.Head
+        head: GeneratedMessageSafetyMlpModel.HeadDto
     ): Float {
         var outputLogit = head.outputBias.toDouble()
         for (hiddenIndex in 0 until head.hiddenSize) {
@@ -42,7 +42,7 @@ class MessageSafetyClassifier {
         return sigmoid(outputLogit).toFloat()
     }
 
-    private fun validateHead(head: GeneratedMessageSafetyMlpModel.Head) {
+    private fun validateHead(head: GeneratedMessageSafetyMlpModel.HeadDto) {
         check(head.hiddenSize > 0) { "Safety classifier hidden size must be positive" }
         check(head.hiddenWeights.size == GeneratedMessageSafetyMlpModel.EMBEDDING_DIMENSIONS * head.hiddenSize) {
             "Safety classifier hidden weight count does not match embedding/hidden dimensions"

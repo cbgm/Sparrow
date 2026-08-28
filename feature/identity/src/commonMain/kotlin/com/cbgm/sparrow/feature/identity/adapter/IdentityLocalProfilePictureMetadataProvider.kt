@@ -13,7 +13,7 @@ class IdentityLocalProfilePictureMetadataProvider(
 ) : LocalProfilePictureMetadataProvider {
     override suspend fun forInvite(): Result<ProfilePictureMetadata> =
         repository.get().map { picture ->
-            picture.toMetadata(includeBytes = true)
+            picture.toProfilePictureMetadata(includeBytes = true)
         }
 
     override suspend fun forMessage(): Result<ProfilePictureMetadata> =
@@ -21,7 +21,7 @@ class IdentityLocalProfilePictureMetadataProvider(
             val age =
                 (SystemClock.nowEpochMilliseconds() - picture.changedAtEpochMilliseconds)
                     .coerceAtLeast(0L)
-            picture.toMetadata(
+            picture.toProfilePictureMetadata(
                 includeBytes =
                     picture.hasPicture &&
                         picture.changedAtEpochMilliseconds > 0L &&
@@ -29,7 +29,7 @@ class IdentityLocalProfilePictureMetadataProvider(
             )
         }
 
-    private fun LocalProfilePicture.toMetadata(includeBytes: Boolean): ProfilePictureMetadata =
+    private fun LocalProfilePicture.toProfilePictureMetadata(includeBytes: Boolean): ProfilePictureMetadata =
         ProfilePictureMetadata(
             changedAtEpochMilliseconds = changedAtEpochMilliseconds,
             hasPicture = hasPicture,

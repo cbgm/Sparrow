@@ -169,8 +169,8 @@ internal class GatewaySessionHandler(
         session: DefaultWebSocketServerSession,
         message: GatewayClientMessage.Register
     ): GatewayConnection? {
-        val connection = message.toConnection(session)
-        val registration = message.toRouteRegistration(connection, nodeId)
+        val connection = message.toGatewayConnection(session)
+        val registration = message.toClientRouteRegistration(connection, nodeId)
         val routeValidationFailure =
             registration?.let { currentRegistration ->
                 routeValidator.validationFailure(
@@ -300,7 +300,7 @@ private data class GatewaySessionState(
     var connection: GatewayConnection? = null
 )
 
-private fun GatewayClientMessage.Register.toConnection(
+private fun GatewayClientMessage.Register.toGatewayConnection(
     session: DefaultWebSocketServerSession
 ): GatewayConnection =
     GatewayConnection(
@@ -310,7 +310,7 @@ private fun GatewayClientMessage.Register.toConnection(
         session = session
     )
 
-private fun GatewayClientMessage.Register.toRouteRegistration(
+private fun GatewayClientMessage.Register.toClientRouteRegistration(
     connection: GatewayConnection,
     nodeId: String
 ): ClientRouteRegistration? {

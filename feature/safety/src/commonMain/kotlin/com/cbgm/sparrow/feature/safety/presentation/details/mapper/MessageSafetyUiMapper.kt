@@ -11,7 +11,7 @@ fun MessageSafetyAssessment.toMessageSafetyWarningUi(): MessageSafetyWarningUi? 
 
     return MessageSafetyWarningUi(
         level = warningLevel(),
-        reasons = reasons.map(MessageSafetyReason::toUiReason)
+        reasons = reasons.map(MessageSafetyReason::toMessageSafetyWarningReason)
     )
 }
 
@@ -22,7 +22,7 @@ private fun MessageSafetyAssessment.warningLevel(): MessageSafetyWarningLevel =
         MessageSafetyWarningLevel.SUSPICIOUS
     }
 
-private fun MessageSafetyReason.toUiReason(): MessageSafetyWarningReason =
+private fun MessageSafetyReason.toMessageSafetyWarningReason(): MessageSafetyWarningReason =
     when (this) {
         MessageSafetyReason.SUSPICIOUS_LINK -> MessageSafetyWarningReason.SUSPICIOUS_LINK
         MessageSafetyReason.LOOKALIKE_DOMAIN -> MessageSafetyWarningReason.LOOKALIKE_DOMAIN

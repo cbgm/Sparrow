@@ -5,7 +5,7 @@ import com.cbgm.sparrow.core.protocol.packet.ChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessagePacketHandler
-import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacket
+import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacketDto
 import com.cbgm.sparrow.feature.contacts.domain.model.DirectChatAuthorizationRequiredException
 import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
 
@@ -17,7 +17,7 @@ class DirectIncomingPacketProcessor(
     fun canProcess(packet: SparrowPacket): Boolean =
         packet is ChatMessagePacket
 
-    suspend fun process(incoming: DecodedIncomingPacket): Result<Unit> {
+    suspend fun process(incoming: DecodedIncomingPacketDto): Result<Unit> {
         val packet =
             incoming.packet as? ChatMessagePacket
                 ?: error("DirectIncomingPacketProcessor received a non-direct packet")
@@ -32,12 +32,12 @@ class DirectIncomingPacketProcessor(
 
         val conversationId = conversationDataSource.getOrCreate(incoming.contactId).id
         return messagePacketHandler.handle(
-            context = incoming.toContext(conversationId),
+            context = incoming.toIncomingPacketContext(conversationId),
             packet = packet
         )
     }
 
-    private fun DecodedIncomingPacket.toContext(conversationId: String): IncomingPacketContext =
+    private fun DecodedIncomingPacketDto.toIncomingPacketContext(conversationId: String): IncomingPacketContext =
         IncomingPacketContext(
             contactId = contactId,
             conversationId = conversationId,

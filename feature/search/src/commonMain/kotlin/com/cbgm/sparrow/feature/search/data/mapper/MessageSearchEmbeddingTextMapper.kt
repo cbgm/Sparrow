@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.search.data.mapper
 
-import com.cbgm.sparrow.data.database.model.MessageSearchSource
+import com.cbgm.sparrow.data.database.model.MessageSearchSourceDto
 
-internal fun MessageSearchSource.toEmbeddingText(): String =
+internal fun MessageSearchSourceDto.toEmbeddingText(): String =
     buildList {
         senderName.cleanOrNull()?.let { add("Sender: $it") }
         messageSearchConversationName(conversationTitle, contactName)?.let { add("Conversation: $it") }

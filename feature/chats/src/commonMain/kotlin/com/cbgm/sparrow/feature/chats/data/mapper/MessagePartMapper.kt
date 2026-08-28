@@ -47,7 +47,7 @@ private fun MessageAttachment.toMessagePartDto(): MessagePartDto =
             MessagePartDto.ContactDto(id = id)
     }
 
-internal fun MessagePartDto.toDomain(): MessagePart =
+internal fun MessagePartDto.toMessagePart(): MessagePart =
     when (this) {
         is MessagePartDto.TextDto ->
             MessagePart.Text(text = text)

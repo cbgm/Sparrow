@@ -161,7 +161,7 @@ class GroupSecurityManagerTest {
                         memberKeys = listOf(memberKey),
                         recipients =
                             listOf(
-                                GroupWelcomeRecipient(
+                                GroupWelcomeRecipientDto(
                                     contactId = REMOTE_CONTACT_ID,
                                     invitationId = INVITATION_ID,
                                     encryptionPublicKey = byteArrayOf(5)
@@ -179,7 +179,7 @@ class GroupSecurityManagerTest {
                         memberKeys = listOf(memberKey),
                         recipients =
                             listOf(
-                                GroupWelcomeRecipient(
+                                GroupWelcomeRecipientDto(
                                     contactId = REMOTE_CONTACT_ID,
                                     invitationId = INVITATION_ID,
                                     encryptionPublicKey = byteArrayOf(5)
@@ -221,7 +221,7 @@ class GroupSecurityManagerTest {
                     )
                 )
             val recipient =
-                GroupWelcomeRecipient(
+                GroupWelcomeRecipientDto(
                     contactId = REMOTE_CONTACT_ID,
                     invitationId = INVITATION_ID,
                     encryptionPublicKey = byteArrayOf(5)
@@ -462,7 +462,7 @@ class GroupSecurityManagerTest {
                     memberKeys = listOf(memberKey(epoch = nextEpoch)),
                     recipients =
                         listOf(
-                            GroupWelcomeRecipient(
+                            GroupWelcomeRecipientDto(
                                 contactId = REMOTE_CONTACT_ID,
                                 invitationId = INVITATION_ID,
                                 encryptionPublicKey = byteArrayOf(5)

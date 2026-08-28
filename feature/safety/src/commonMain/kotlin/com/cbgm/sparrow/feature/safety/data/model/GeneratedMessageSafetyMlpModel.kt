@@ -10,7 +10,7 @@ internal object GeneratedMessageSafetyMlpModel {
     const val TRAINING_DATASET_SHA256 = "f2ba8bf085c2aa9fb44fd2410abe0b6f0872f5347a7445c6707acedda5734431"
     const val EMBEDDING_MODEL_SHA256 = "913b7a1edc7c7c3d1da3979ec1d0648ed9e0a370f181bb59ab177ca4b97707ad"
 
-    data class Head(
+    data class HeadDto(
         val hiddenSize: Int,
         val hiddenWeights: FloatArray,
         val hiddenBias: FloatArray,
@@ -22,7 +22,7 @@ internal object GeneratedMessageSafetyMlpModel {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
-            other as Head
+            other as HeadDto
 
             if (hiddenSize != other.hiddenSize) return false
             if (outputBias != other.outputBias) return false
@@ -45,7 +45,7 @@ internal object GeneratedMessageSafetyMlpModel {
         }
     }
 
-    val byReason: Map<MessageSafetyReason, Head> =
+    val byReason: Map<MessageSafetyReason, HeadDto> =
         mapOf(
             MessageSafetyReason.URGENT_ACTION_REQUEST to urgentActionRequestHead(),
             MessageSafetyReason.CREDENTIAL_REQUEST to credentialRequestHead(),
@@ -53,8 +53,8 @@ internal object GeneratedMessageSafetyMlpModel {
             MessageSafetyReason.PRIVATE_KEY_REQUEST to privateKeyRequestHead()
         )
 
-    private fun urgentActionRequestHead(): Head =
-        Head(
+    private fun urgentActionRequestHead(): HeadDto =
+        HeadDto(
             hiddenSize = 16,
             hiddenWeights = urgentActionRequestHiddenWeights(),
             hiddenBias = urgentActionRequestHiddenBias(),
@@ -2195,8 +2195,8 @@ internal object GeneratedMessageSafetyMlpModel {
             -0.129300147f
         )
 
-    private fun credentialRequestHead(): Head =
-        Head(
+    private fun credentialRequestHead(): HeadDto =
+        HeadDto(
             hiddenSize = 16,
             hiddenWeights = credentialRequestHiddenWeights(),
             hiddenBias = credentialRequestHiddenBias(),
@@ -4337,8 +4337,8 @@ internal object GeneratedMessageSafetyMlpModel {
             0f
         )
 
-    private fun paymentRequestHead(): Head =
-        Head(
+    private fun paymentRequestHead(): HeadDto =
+        HeadDto(
             hiddenSize = 32,
             hiddenWeights = paymentRequestHiddenWeights(),
             hiddenBias = paymentRequestHiddenBias(),
@@ -8599,8 +8599,8 @@ internal object GeneratedMessageSafetyMlpModel {
             7.14669847f
         )
 
-    private fun privateKeyRequestHead(): Head =
-        Head(
+    private fun privateKeyRequestHead(): HeadDto =
+        HeadDto(
             hiddenSize = 16,
             hiddenWeights = privateKeyRequestHiddenWeights(),
             hiddenBias = privateKeyRequestHiddenBias(),

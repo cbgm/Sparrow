@@ -117,7 +117,7 @@ internal class GroupMemberRemovalCoordinator(
     private suspend fun loadMemberRemoval(
         groupId: String,
         contactId: String
-    ): MemberRemoval {
+    ): MemberRemovalDto {
         groupSecurityManager.findOwnedGroupEpoch(groupId).getOrThrow()
         val currentMemberKey = currentMemberKey(groupId, contactId)
         val invitation =
@@ -139,7 +139,7 @@ internal class GroupMemberRemovalCoordinator(
                 invitation?.createdAtEpochMilliseconds ?: 0L,
                 SystemClock.nowEpochMilliseconds()
             )
-        return MemberRemoval(
+        return MemberRemovalDto(
             currentMemberKey = currentMemberKey,
             invitation = invitation,
             contact = contact,
@@ -153,7 +153,7 @@ internal class GroupMemberRemovalCoordinator(
         groupId: String,
         contactId: String,
         reason: String,
-        removal: MemberRemoval
+        removal: MemberRemovalDto
     ): Int {
         if (removal.currentMemberKey == null) {
             return GroupMemberRemovedPacket.PENDING_INVITATION_EPOCH
@@ -175,7 +175,7 @@ internal class GroupMemberRemovalCoordinator(
         contactId: String,
         reason: String,
         removalEpoch: Int,
-        removal: MemberRemoval
+        removal: MemberRemovalDto
     ) {
         val packet =
             membershipPacketProtocol
@@ -214,7 +214,7 @@ internal class GroupMemberRemovalCoordinator(
         contactId: String,
         reason: String,
         removalEpoch: Int,
-        removal: MemberRemoval
+        removal: MemberRemovalDto
     ) {
         chatDao.deleteConversationParticipant(groupId, contactId)
         val message =
@@ -303,7 +303,7 @@ internal class GroupMemberRemovalCoordinator(
                 contactId = contactId
             ).getOrThrow()
 
-    private data class MemberRemoval(
+    private data class MemberRemovalDto(
         val currentMemberKey: GroupMemberKeyEntity?,
         val invitation: GroupInvitationEntity?,
         val contact: Contact,
@@ -315,7 +315,7 @@ internal class GroupMemberRemovalCoordinator(
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
-            other as MemberRemoval
+            other as MemberRemovalDto
 
             if (removedAt != other.removedAt) return false
             if (currentMemberKey != other.currentMemberKey) return false

@@ -4,7 +4,7 @@ import com.cbgm.sparrow.core.crypto.safety.SafetyNumber
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsUiState
 
-internal fun Contact.toUiState(
+internal fun Contact.toContactDetailsUiState(
     safetyNumber: SafetyNumber?,
     profilePictureBytes: ByteArray?
 ): ContactDetailsUiState.Content =

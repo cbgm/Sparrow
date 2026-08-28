@@ -5,7 +5,7 @@ import com.cbgm.sparrow.data.database.dao.ContactRoutingIdDao
 import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
 import kotlinx.coroutines.flow.first
 
-data class MailboxContactState(
+data class MailboxContactStateDto(
     val contactId: String,
     val isProvisioningEligible: Boolean
 )
@@ -14,7 +14,7 @@ class MailboxContactDataSource(
     private val contactDao: ContactDao,
     private val contactRoutingIdDao: ContactRoutingIdDao
 ) {
-    suspend fun findContactStates(): List<MailboxContactState> =
+    suspend fun findContactStates(): List<MailboxContactStateDto> =
         contactDao
             .observeAll()
             .first()
@@ -24,7 +24,7 @@ class MailboxContactDataSource(
                     contact.publicIdentity?.keyExchangeStatus == KeyExchangeStatus.MUTUAL.name
                 val hasRoutingId =
                     !contactRoutingIdDao.findRoutingIdByContactId(contactId).isNullOrBlank()
-                MailboxContactState(
+                MailboxContactStateDto(
                     contactId = contactId,
                     isProvisioningEligible = hasMutualIdentity && hasRoutingId
                 )

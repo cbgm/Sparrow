@@ -9,7 +9,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.direct.DeleteDirectConversa
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeleteGroupConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.GetGroupLeaveRequirementUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.overview.ObserveConversationOverviewContextUseCase
-import com.cbgm.sparrow.feature.chats.presentation.overview.mapper.toUiState
+import com.cbgm.sparrow.feature.chats.presentation.overview.mapper.toOverviewUiState
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.ConversationListItem
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiState
@@ -30,7 +30,7 @@ class OverviewViewModel(
     val uiState: StateFlow<OverviewUiState> =
         observeConversationContext()
             .map { context ->
-                context.conversations.toUiState(
+                context.conversations.toOverviewUiState(
                     profilePictures = context.profilePictures,
                     groupAvatars = context.groupAvatars
                 )

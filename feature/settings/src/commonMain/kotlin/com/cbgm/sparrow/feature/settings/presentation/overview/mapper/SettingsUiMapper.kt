@@ -8,7 +8,7 @@ import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsUiState
 
-internal fun BuildInfo.toUiState(
+internal fun BuildInfo.toSettingsUiState(
     currentLanguage: AppLanguage,
     identitySetupMode: DirectIdentitySetupMode,
     blockUnknownContactInvites: Boolean,

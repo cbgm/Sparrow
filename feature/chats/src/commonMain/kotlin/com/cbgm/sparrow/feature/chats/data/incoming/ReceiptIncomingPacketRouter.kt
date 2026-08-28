@@ -5,7 +5,7 @@ import com.cbgm.sparrow.core.protocol.packet.ReadReceiptPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectReceiptPacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupReceiptPacketHandler
-import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacket
+import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacketDto
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
 
 /** Routes the shared receipt packet format to the owning conversation path. */
@@ -16,9 +16,9 @@ class ReceiptIncomingPacketRouter(
     fun canRoute(packet: SparrowPacket): Boolean =
         packet is DeliveryReceiptPacket || packet is ReadReceiptPacket
 
-    suspend fun route(incoming: DecodedIncomingPacket): Result<Unit> =
+    suspend fun route(incoming: DecodedIncomingPacketDto): Result<Unit> =
         runCatching {
-            val receipt = incoming.packet.toReceipt()
+            val receipt = incoming.packet.toReceiptDto()
             when {
                 groupHandler.canHandle(receipt.messageId, incoming.contactId) ->
                     groupHandler.handle(
@@ -36,18 +36,18 @@ class ReceiptIncomingPacketRouter(
             }
         }
 
-    private fun SparrowPacket.toReceipt(): Receipt =
+    private fun SparrowPacket.toReceiptDto(): ReceiptDto =
         when (this) {
             is DeliveryReceiptPacket ->
-                Receipt(messageId, MessageDeliveryEvent.DELIVERY_CONFIRMED)
+                ReceiptDto(messageId, MessageDeliveryEvent.DELIVERY_CONFIRMED)
 
             is ReadReceiptPacket ->
-                Receipt(messageId, MessageDeliveryEvent.READ_CONFIRMED)
+                ReceiptDto(messageId, MessageDeliveryEvent.READ_CONFIRMED)
 
             else -> error("Packet is not a receipt")
         }
 
-    private data class Receipt(
+    private data class ReceiptDto(
         val messageId: String,
         val event: MessageDeliveryEvent
     )

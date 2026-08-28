@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.media.data.model
 
-data class FileBrowserEntryData(
+data class FileBrowserEntryDto(
     val reference: String,
     val sourceReference: String?,
     val displayName: String,

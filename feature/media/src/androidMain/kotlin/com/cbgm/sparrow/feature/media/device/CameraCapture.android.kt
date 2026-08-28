@@ -427,7 +427,7 @@ private fun startVideoRecording(
                         outputFile.delete()
                         onFinalized(null, "Video recording could not be completed")
                     } else {
-                        runCatching { outputFile.toCapturedVideo() }
+                        runCatching { outputFile.toCapturedMedia() }
                             .onSuccess { captured ->
                                 outputFile.delete()
                                 onFinalized(captured, null)
@@ -444,7 +444,7 @@ private fun startVideoRecording(
     onStarted(recording)
 }
 
-private fun File.toCapturedVideo(): CapturedMedia {
+private fun File.toCapturedMedia(): CapturedMedia {
     val retriever = MediaMetadataRetriever()
     return try {
         retriever.setDataSource(absolutePath)

@@ -4,7 +4,7 @@ import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.settings.domain.usecase.ClearDeveloperErrorsUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.ObserveDeveloperErrorsUseCase
-import com.cbgm.sparrow.feature.settings.presentation.errors.mapper.toUiModel
+import com.cbgm.sparrow.feature.settings.presentation.errors.mapper.toDeveloperErrorUi
 import com.cbgm.sparrow.feature.settings.presentation.errors.model.DeveloperErrorLogUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.errors.model.DeveloperErrorLogUiState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,7 +28,7 @@ class DeveloperErrorLogViewModel(
             showClearConfirmation
         ) { errors, clearing, showConfirmation ->
             DeveloperErrorLogUiState(
-                errors = errors.map { error -> error.toUiModel() },
+                errors = errors.map { error -> error.toDeveloperErrorUi() },
                 isClearing = clearing,
                 showClearConfirmation = showConfirmation
             )

@@ -4,7 +4,7 @@ import com.cbgm.sparrow.core.time.formatDetailedTimestamp
 import com.cbgm.sparrow.feature.settings.domain.model.DeveloperError
 import com.cbgm.sparrow.feature.settings.presentation.errors.model.DeveloperErrorUi
 
-internal fun DeveloperError.toUiModel(): DeveloperErrorUi =
+internal fun DeveloperError.toDeveloperErrorUi(): DeveloperErrorUi =
     DeveloperErrorUi(
         id = id,
         timestamp = formatDetailedTimestamp(timestampEpochMilliseconds),

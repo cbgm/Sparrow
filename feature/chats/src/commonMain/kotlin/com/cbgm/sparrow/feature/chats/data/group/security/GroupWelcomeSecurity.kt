@@ -23,7 +23,7 @@ internal class GroupWelcomeSecurity(
         expectedOwnerSigningPublicKey: ByteArray,
         localEncryptionKeyPair: LocalEncryptionKeyPair,
         localSigningPublicKey: ByteArray
-    ): Result<OpenedGroupWelcome> =
+    ): Result<OpenedGroupWelcomeDto> =
         runCatching {
             val existingState = groupSecurityDao.findState(packet.groupId)
             if (existingState == null) {
@@ -118,14 +118,14 @@ internal class GroupWelcomeSecurity(
                         ?: error("Existing group key was not found")
                 }
 
-            OpenedGroupWelcome(
+            OpenedGroupWelcomeDto(
                 packet = packet,
                 groupKey = groupKey
             )
         }
 
     suspend fun persistJoinedGroup(
-        openedWelcome: OpenedGroupWelcome,
+        openedWelcome: OpenedGroupWelcomeDto,
         ownerContactId: String,
         authoritySigningPublicKey: ByteArray,
         localSigningPublicKey: ByteArray,

@@ -55,7 +55,7 @@ class ObserveConversationNotificationEventsUseCase(
                             !appVisibilityState.isVisible.value -> {
                             emit(
                                 ConversationNotificationEvent.Show(
-                                    notification = conversation.toNotification()
+                                    notification = conversation.toConversationNotification()
                                 )
                             )
                         }
@@ -66,7 +66,7 @@ class ObserveConversationNotificationEventsUseCase(
             }
         }
 
-    private fun ConversationOverview.toNotification(): ConversationNotification =
+    private fun ConversationOverview.toConversationNotification(): ConversationNotification =
         ConversationNotification(
             conversationId = id,
             title = displayName,

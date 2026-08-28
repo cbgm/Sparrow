@@ -47,7 +47,7 @@ fun List<Contact>.groupContactsByInitial(): List<ContactGroupEntity> =
         )
     }
 
-internal fun List<Contact>.toUiState(
+internal fun List<Contact>.toContactsUiState(
     query: String,
     profilePictures: Map<String, ByteArray?>
 ): ContactsUiState {

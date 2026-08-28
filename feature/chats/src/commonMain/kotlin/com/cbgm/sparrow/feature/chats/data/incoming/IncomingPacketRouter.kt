@@ -5,7 +5,7 @@ import com.cbgm.sparrow.core.protocol.handler.ProtocolPacketHandler
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.DirectIncomingPacketProcessor
 import com.cbgm.sparrow.feature.chats.data.group.incoming.GroupIncomingPacketProcessor
-import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacket
+import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacketDto
 
 /**
  * Routes a decoded protocol packet to exactly one feature path.
@@ -20,7 +20,7 @@ class IncomingPacketRouter(
     private val fallbackPacketHandler: ProtocolPacketHandler,
     private val chatDao: ChatDao
 ) {
-    suspend fun route(incoming: DecodedIncomingPacket): Result<Unit> =
+    suspend fun route(incoming: DecodedIncomingPacketDto): Result<Unit> =
         when {
             directProcessor.canProcess(incoming.packet) -> directProcessor.process(incoming)
             groupProcessor.canProcess(incoming.packet) -> groupProcessor.process(incoming)
@@ -28,13 +28,13 @@ class IncomingPacketRouter(
             else -> processFallback(incoming)
         }
 
-    private suspend fun processFallback(incoming: DecodedIncomingPacket): Result<Unit> =
+    private suspend fun processFallback(incoming: DecodedIncomingPacketDto): Result<Unit> =
         fallbackPacketHandler.handle(
             context = incoming.toFallbackContext(),
             packet = incoming.packet
         )
 
-    private suspend fun DecodedIncomingPacket.toFallbackContext(): IncomingPacketContext {
+    private suspend fun DecodedIncomingPacketDto.toFallbackContext(): IncomingPacketContext {
         val conversationId =
             chatDao.findConversationByContactId(contactId)?.id
                 ?: "control-${packet.packetId}"

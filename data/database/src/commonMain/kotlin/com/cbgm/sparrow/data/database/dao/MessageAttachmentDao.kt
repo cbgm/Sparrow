@@ -4,7 +4,7 @@ import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Upsert
 import com.cbgm.sparrow.data.database.entity.MessageAttachmentEntity
-import com.cbgm.sparrow.data.database.model.LocalMessageAttachmentRow
+import com.cbgm.sparrow.data.database.model.LocalMessageAttachmentRowDto
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -75,7 +75,7 @@ interface MessageAttachmentDao {
         ORDER BY messages.createdAtEpochMilliseconds DESC, message_attachments.position ASC
         """
     )
-    fun observeAllLocal(): Flow<List<LocalMessageAttachmentRow>>
+    fun observeAllLocal(): Flow<List<LocalMessageAttachmentRowDto>>
 
     @Query(
         """
@@ -89,7 +89,7 @@ interface MessageAttachmentDao {
         ORDER BY messages.createdAtEpochMilliseconds DESC, message_attachments.position ASC
         """
     )
-    fun observeLocalByConversationId(conversationId: String): Flow<List<LocalMessageAttachmentRow>>
+    fun observeLocalByConversationId(conversationId: String): Flow<List<LocalMessageAttachmentRowDto>>
 
     @Query(
         """
@@ -102,7 +102,7 @@ interface MessageAttachmentDao {
           AND message_attachments.localFileName IS NOT NULL
         """
     )
-    suspend fun findLocalRowsByIds(attachmentIds: List<String>): List<LocalMessageAttachmentRow>
+    suspend fun findLocalRowsByIds(attachmentIds: List<String>): List<LocalMessageAttachmentRowDto>
 
     @Query(
         """

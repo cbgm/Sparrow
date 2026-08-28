@@ -64,7 +64,7 @@ class StartupViewModel(
                 .initialize()
                 .onSuccess { result ->
                     initializationCompleted = result !is AppInitializationResult.IdentityRequired
-                    mutableUiState.value = result.toUiState()
+                    mutableUiState.value = result.toStartupUiState()
                 }.onFailure { error ->
                     mutableUiState.value =
                         StartupUiState.Error(
@@ -75,7 +75,7 @@ class StartupViewModel(
     }
 }
 
-private fun AppInitializationResult.toUiState(): StartupUiState =
+private fun AppInitializationResult.toStartupUiState(): StartupUiState =
     when (this) {
         AppInitializationResult.IdentityRequired -> StartupUiState.IdentityRequired
         AppInitializationResult.ReadyOnline -> StartupUiState.Ready(StartupConnection.ONLINE)

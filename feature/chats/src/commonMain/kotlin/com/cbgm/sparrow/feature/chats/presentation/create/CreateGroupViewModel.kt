@@ -4,7 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.CreateGroupConversationUseCase
-import com.cbgm.sparrow.feature.chats.presentation.create.mapper.toUiState
+import com.cbgm.sparrow.feature.chats.presentation.create.mapper.toCreateGroupUiState
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupEffect
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupUiState
@@ -47,7 +47,7 @@ class CreateGroupViewModel(
             formState,
             actionState
         ) { snapshot, form, action ->
-            snapshot.contacts.contacts.toUiState(
+            snapshot.contacts.contacts.toCreateGroupUiState(
                 profilePictures = snapshot.contacts.profilePictures,
                 title = form.title,
                 searchQuery = form.searchQuery,

@@ -3,7 +3,7 @@ package com.cbgm.sparrow.feature.chats.data.group.mapper
 import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 
-internal data class GroupLocalMembershipTimeline(
+internal data class GroupLocalMembershipTimelineDto(
     val visibleMessages: List<MessageEntity>,
     val currentInvitations: List<GroupInvitationEntity>,
     val isLocallyInactive: Boolean
@@ -12,7 +12,7 @@ internal data class GroupLocalMembershipTimeline(
 internal fun buildGroupLocalMembershipTimeline(
     messages: List<MessageEntity>,
     invitations: List<GroupInvitationEntity>
-): GroupLocalMembershipTimeline {
+): GroupLocalMembershipTimelineDto {
     val orderedMessages =
         messages.sortedWith(
             compareBy<MessageEntity>(MessageEntity::createdAtEpochMilliseconds)
@@ -39,7 +39,7 @@ internal fun buildGroupLocalMembershipTimeline(
             invitations
         }
 
-    return GroupLocalMembershipTimeline(
+    return GroupLocalMembershipTimelineDto(
         visibleMessages = orderedMessages.visibleDuringMembershipPeriods(),
         currentInvitations = currentInvitations,
         isLocallyInactive = locallyInactive && currentInvitations.isEmpty()

@@ -3,7 +3,7 @@ package com.cbgm.sparrow.feature.safety.presentation.details.mapper
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 
-fun MessageSafetyWarningUi.toDetailsRoute(
+fun MessageSafetyWarningUi.toMessageSafetyDetails(
     messageId: String,
     contactId: String?
 ): AppRoute.MessageSafetyDetails =

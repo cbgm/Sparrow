@@ -25,7 +25,7 @@ internal class GroupAvatarBroadcaster(
             val context = requireAdminContext(groupId)
             val avatar = dataSource.get(groupId)
             if (avatar.changedAtEpochMilliseconds == 0L) return@runCatching
-            val metadata = avatar.toMetadata()
+            val metadata = avatar.toGroupAvatarMetadata()
             val packets =
                 context.recipientContactIds.associateWith {
                     packetProtocol
@@ -45,11 +45,11 @@ internal class GroupAvatarBroadcaster(
             if (avatar.changedAtEpochMilliseconds == 0L) return@runCatching
             val context = requireAdminContext(groupId)
             check(contactId in context.recipientContactIds) { "Contact is not an active group member" }
-            val packet = packetProtocol.create(groupId, context.epoch, avatar.toMetadata(), context.signingKeyPair).getOrThrow()
+            val packet = packetProtocol.create(groupId, context.epoch, avatar.toGroupAvatarMetadata(), context.signingKeyPair).getOrThrow()
             packetBroadcaster.enqueueAll(mapOf(contactId to packet)).getOrThrow()
         }
 
-    private suspend fun requireAdminContext(groupId: String): AdminContext {
+    private suspend fun requireAdminContext(groupId: String): AdminContextDto {
         val state = groupSecurityDao.findState(groupId) ?: error("Group security state was not found")
         check(state.localRole.isGroupAdminRole()) { "Only a group admin may change the group avatar" }
         val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
@@ -64,17 +64,17 @@ internal class GroupAvatarBroadcaster(
                 .map { member -> member.contactId }
                 .filter(String::isNotBlank)
                 .toSet()
-        return AdminContext(state.currentEpoch, signingKeyPair, recipients)
+        return AdminContextDto(state.currentEpoch, signingKeyPair, recipients)
     }
 
-    private fun GroupAvatar.toMetadata(): GroupAvatarMetadata =
+    private fun GroupAvatar.toGroupAvatarMetadata(): GroupAvatarMetadata =
         GroupAvatarMetadata(
             changedAtEpochMilliseconds = changedAtEpochMilliseconds,
             hasAvatar = hasAvatar,
             payload = bytes?.let { GroupAvatarPayload(it.copyOf()) }
         )
 
-    private data class AdminContext(
+    private data class AdminContextDto(
         val epoch: Int,
         val signingKeyPair: com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair,
         val recipientContactIds: Set<String>
