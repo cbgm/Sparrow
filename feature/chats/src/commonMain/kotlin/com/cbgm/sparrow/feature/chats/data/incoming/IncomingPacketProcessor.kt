@@ -9,7 +9,7 @@ import com.cbgm.sparrow.core.protocol.handler.IncomingMessageHandler
 import com.cbgm.sparrow.core.protocol.handler.IncomingMessageRejectedException
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.chats.data.datasource.UnreadableTransportMessageDataSource
-import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacket
+import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacketDto
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 
 /**
@@ -99,7 +99,7 @@ class IncomingPacketProcessor(
 
         packetRouter
             .route(
-                DecodedIncomingPacket(
+                DecodedIncomingPacketDto(
                     contactId = contactId,
                     packet = packet,
                     encodedTransportPayload = encodedTransportPayload,

@@ -6,7 +6,7 @@ import com.cbgm.sparrow.data.database.entity.ContactEntity
 import com.cbgm.sparrow.data.database.entity.ContactPhoneNumberEntity
 import com.cbgm.sparrow.data.database.entity.ContactPublicIdentityEntity
 
-data class ContactWithPublicIdentity(
+data class ContactWithPublicIdentityDto(
     @Embedded
     val contact: ContactEntity,
     @Relation(

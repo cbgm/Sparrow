@@ -62,3 +62,21 @@ Artifacts created from a `release/**` branch push. They are change-aware and are
 
 **Full release**  
 A `v*` tagged build that rebuilds/publishes the complete APK + server image + launcher package set and combined full ZIP.
+
+**DTO (`...Dto`)**  
+A data-layer representation model. DTO naming is used for data models crossing/mapping within feature/data boundaries; Room persistence classes remain `...Entity`.
+
+**UI model (`...Ui`)**  
+A presentation-layer representation consumed by Compose/ViewModel UI state. Presentation mapping functions are named `toNameUi()`.
+
+**MessagePart**  
+Chats-domain typed representation of message content. The current hierarchy mirrors `MessagePartDto` in data and `MessagePartUi` in presentation and includes text, image/video, file, location and contact variants.
+
+**Attachment blob**  
+Encrypted attachment payload stored/transferred separately from the normal chat packet. Message packets carry attachment metadata and an encrypted blob reference.
+
+**Semantic search**  
+Optional local message search mode that supplements exact local matches with on-device embedding similarity results.
+
+**Message safety**  
+Optional on-device risk-warning analysis combining structural checks and local embedding-based classification.

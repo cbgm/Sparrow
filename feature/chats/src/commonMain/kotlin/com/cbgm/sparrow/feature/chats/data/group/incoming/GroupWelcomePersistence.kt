@@ -13,7 +13,7 @@ internal class GroupWelcomePersistence(
     private val contactDao: ContactDao,
     private val groupSecurityDao: GroupSecurityDao
 ) {
-    suspend fun loadPreviousMembership(groupId: String): PreviousGroupMembership {
+    suspend fun loadPreviousMembership(groupId: String): PreviousGroupMembershipDto {
         val participants = chatDao.findConversationParticipants(groupId)
         val previousEpoch = groupSecurityDao.findState(groupId)?.currentEpoch
         val signingKeys =
@@ -30,7 +30,7 @@ internal class GroupWelcomePersistence(
                             )?.signingPublicKey
                 }
             }
-        return PreviousGroupMembership(participants, signingKeys)
+        return PreviousGroupMembershipDto(participants, signingKeys)
     }
 
     suspend fun persistConversation(
@@ -86,8 +86,8 @@ internal class GroupWelcomePersistence(
 
     suspend fun replaceMembership(
         packet: GroupCreatedPacket,
-        previous: PreviousGroupMembership,
-        current: ResolvedGroupMembership,
+        previous: PreviousGroupMembershipDto,
+        current: ResolvedGroupMembershipDto,
         persistedAt: Long
     ) {
         val currentParticipantIds = current.participants.mapTo(mutableSetOf()) { it.contactId }
@@ -104,7 +104,7 @@ internal class GroupWelcomePersistence(
 
     private suspend fun removedMembershipMessages(
         packet: GroupCreatedPacket,
-        previous: PreviousGroupMembership,
+        previous: PreviousGroupMembershipDto,
         currentParticipantIds: Set<String>,
         persistedAt: Long
     ) =
@@ -132,7 +132,7 @@ internal class GroupWelcomePersistence(
 
     private suspend fun addedMembershipMessages(
         packet: GroupCreatedPacket,
-        current: ResolvedGroupMembership,
+        current: ResolvedGroupMembershipDto,
         previousParticipantIds: Set<String>,
         persistedAt: Long
     ) =

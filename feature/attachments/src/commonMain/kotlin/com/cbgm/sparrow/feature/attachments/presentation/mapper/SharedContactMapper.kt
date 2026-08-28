@@ -7,7 +7,7 @@ import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachme
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.attachments.util.ContactAttachmentPayload
 
-fun SharedContact.toOutgoingContactAttachment(): OutgoingMessageAttachment =
+fun SharedContact.toOutgoingMessageAttachment(): OutgoingMessageAttachment =
     OutgoingMessageAttachment(
         id = IdGenerator.generate(prefix = "contact"),
         type = MessageAttachmentType.CONTACT,

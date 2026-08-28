@@ -11,12 +11,14 @@ This page explains the technologies a new contributor/operator will encounter. I
 | Compose Multiplatform + Material 3 | Declarative UI | Shared screens/components/theme |
 | Coroutines / Flow / StateFlow | Async/reactive primitives | ViewModel state, runners, reconnect/retry loops and server work |
 | Koin | Dependency injection | Connects use cases/contracts/implementations and ViewModels |
-| Room + bundled SQLite | Client database | Contacts, conversations, messages, recipient state and persistent outbox |
+| Room + bundled SQLite | Client database | Contacts, conversations, messages, attachment metadata, search/safety state, recipient state and persistent outbox |
+| DataStore | KMP key/value persistence | Feature settings, local-model toggles and other durable lightweight settings |
 | Kotlin Serialization | Serialization | Client application packets and JSON/server models |
 | Ktor client | HTTP/WebSocket client | Control Plane directory/health, gateway WebSocket, mailbox/push calls |
 | libsodium bindings | Cryptography | Identity key pairs, sealed boxes, signatures and group AEAD |
 | Android Keystore | Hardware/OS-backed key store | Holds the AES wrapping key used by `AndroidPrivateKeyStorage` |
-| WorkManager | Android background scheduling | Push-token registration and pending-message synchronization workers |
+| WorkManager | Android background scheduling | Push-token registration, pending-message synchronization and local embedding-model download/preparation work |
+| MediaPipe Text Embedder | On-device ML runtime | Local text embeddings shared by semantic search and message-safety analysis |
 | Firebase Messaging | Android push client | Receives wake-up data messages |
 | CameraX + ZXing | Camera/QR tools | Identity QR scanning/verification |
 | Navigation Compose | Typed Compose navigation | App destinations/graphs |

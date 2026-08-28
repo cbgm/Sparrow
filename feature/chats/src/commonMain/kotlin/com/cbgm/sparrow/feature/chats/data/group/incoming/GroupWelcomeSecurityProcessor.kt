@@ -28,7 +28,7 @@ internal class GroupWelcomeSecurityProcessor(
         packet: GroupCreatedPacket,
         senderContactId: String,
         isFirstWelcome: Boolean
-    ): GroupWelcomeContext {
+    ): GroupWelcomeContextDto {
         val authorityIdentity =
             resolveAuthorityIdentity(
                 groupId = packet.groupId,
@@ -56,7 +56,7 @@ internal class GroupWelcomeSecurityProcessor(
             ).getOrThrow()
         }
 
-        return GroupWelcomeContext(
+        return GroupWelcomeContextDto(
             authorityIdentity = authorityIdentity,
             localIdentity = localIdentity,
             openedWelcome = openedWelcome
@@ -66,9 +66,9 @@ internal class GroupWelcomeSecurityProcessor(
     fun validateAuthorityAndResolveReferenceAdmin(
         packet: GroupCreatedPacket,
         senderContactId: String,
-        welcome: GroupWelcomeContext,
-        membership: ResolvedGroupMembership
-    ): GroupWelcomeReferenceAdmin {
+        welcome: GroupWelcomeContextDto,
+        membership: ResolvedGroupMembershipDto
+    ): GroupWelcomeReferenceAdminDto {
         val membershipChange = packet.membershipChange
         val authorityLeft =
             membershipChange != null &&
@@ -82,23 +82,23 @@ internal class GroupWelcomeSecurityProcessor(
         check(authorityLeft || senderIsAdmin) { "Authenticated sender is not a group admin" }
 
         if (!authorityLeft) {
-            return GroupWelcomeReferenceAdmin(
+            return GroupWelcomeReferenceAdminDto(
                 contactId = senderContactId,
                 signingPublicKey = welcome.authorityIdentity.signingPublicKey
             )
         }
 
         val continuingAdmin = membership.memberKeys.firstOrNull { it.role.isGroupAdminRole() }
-        return GroupWelcomeReferenceAdmin(
+        return GroupWelcomeReferenceAdminDto(
             contactId = continuingAdmin?.contactId ?: senderContactId,
             signingPublicKey = continuingAdmin?.signingPublicKey ?: welcome.authorityIdentity.signingPublicKey
         )
     }
 
     suspend fun persistGroupSecurity(
-        welcome: GroupWelcomeContext,
-        membership: ResolvedGroupMembership,
-        referenceAdmin: GroupWelcomeReferenceAdmin,
+        welcome: GroupWelcomeContextDto,
+        membership: ResolvedGroupMembershipDto,
+        referenceAdmin: GroupWelcomeReferenceAdminDto,
         persistedAt: Long
     ) {
         groupSecurityManager
@@ -115,7 +115,7 @@ internal class GroupWelcomeSecurityProcessor(
     suspend fun sendReadyAcknowledgement(
         packet: GroupCreatedPacket,
         senderContactId: String,
-        welcome: GroupWelcomeContext
+        welcome: GroupWelcomeContextDto
     ) {
         val readyAcknowledgement =
             membershipPacketProtocol
@@ -138,12 +138,12 @@ internal class GroupWelcomeSecurityProcessor(
         groupId: String,
         senderContactId: String,
         isFirstWelcome: Boolean
-    ): GroupWelcomeAuthorityIdentity {
+    ): GroupWelcomeAuthorityIdentityDto {
         if (isFirstWelcome) {
             val contactIdentity =
                 contactDao.findPublicIdentityByContactId(senderContactId)
                     ?: error("Inviting group admin has no accepted Sparrow identity")
-            return GroupWelcomeAuthorityIdentity(
+            return GroupWelcomeAuthorityIdentityDto(
                 encryptionPublicKey = contactIdentity.encryptionPublicKey.copyOf(),
                 signingPublicKey = contactIdentity.signingPublicKey.copyOf()
             )
@@ -161,7 +161,7 @@ internal class GroupWelcomeSecurityProcessor(
         check(memberKey.role.isGroupAdminRole()) {
             "Group update sender is not an admin"
         }
-        return GroupWelcomeAuthorityIdentity(
+        return GroupWelcomeAuthorityIdentityDto(
             encryptionPublicKey = memberKey.encryptionPublicKey.copyOf(),
             signingPublicKey = memberKey.signingPublicKey.copyOf()
         )

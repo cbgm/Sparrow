@@ -43,33 +43,32 @@ internal fun ProfilePictureCropCanvas(
     val scrimColor = FunctionalColors.MediaBackground
     val guideColor = FunctionalColors.MediaForeground
 
-    val geometry =
-        remember(
-            viewportSize,
-            image.width,
-            image.height,
-            zoom,
-            imageOffset
-        ) {
-            viewportSize
-                .takeIf { it.width > 0 && it.height > 0 }
-                ?.let {
-                    profilePictureCropGeometry(
-                        viewportWidth = it.width.toFloat(),
-                        viewportHeight = it.height.toFloat(),
-                        sourceWidth = image.width,
-                        sourceHeight = image.height,
-                        zoom = zoom,
-                        imageOffset = imageOffset
-                    )
-                }
-        }
+    val geometry = remember(
+        viewportSize,
+        image.width,
+        image.height,
+        zoom,
+        imageOffset
+    ) {
+        viewportSize
+            .takeIf { it.width > 0 && it.height > 0 }
+            ?.let {
+                profilePictureCropGeometry(
+                    viewportWidth = it.width.toFloat(),
+                    viewportHeight = it.height.toFloat(),
+                    sourceWidth = image.width,
+                    sourceHeight = image.height,
+                    zoom = zoom,
+                    imageOffset = imageOffset
+                )
+            }
+    }
 
     LaunchedEffect(geometry) {
         val activeGeometry = geometry ?: return@LaunchedEffect
         val center = activeGeometry.clampCropCenter(cropCenter ?: activeGeometry.imageCenter)
         cropCenter = center
-        currentOnCropRegionChanged(activeGeometry.toCropRegion(center))
+        currentOnCropRegionChanged(activeGeometry.toProfilePictureCropRegion(center))
     }
 
     Canvas(
@@ -95,7 +94,7 @@ internal fun ProfilePictureCropCanvas(
                                 imageOffset = updatedOffset
                             )
                         currentOnCropRegionChanged(
-                            activeGeometry.toCropRegion(updatedCenter)
+                            activeGeometry.toProfilePictureCropRegion(updatedCenter)
                         )
                     }
                 )

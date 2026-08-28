@@ -49,21 +49,24 @@ boundaries, and the exact classes implementing discovery, failover, federation a
 
 The current codebase implements:
 
-- onboarding and local identity creation;
-- device-contact import and contact management;
-- identity sharing/import, contact invitations, accept/decline/block, and QR/safety-number verification;
-- direct chats with encrypted messages, persistent outbox, sent/delivered/read state, retry, typing, and unread state;
-- group creation, invitations, membership activation, add/remove/promote/leave/admin-transfer flows;
-- group messages with per-recipient delivery/read aggregation, typing, group security epochs, and member verification;
-- signed Control Plane discovery, multiple Control Planes, health monitoring, node failover, cooldown diagnostics,
-  and automatic reconnect;
-- WebSocket foreground delivery, mailbox-backed offline delivery, and Android FCM wake-ups;
-- Control Plane and Community Node launcher bundles, Docker deployment, health/readiness endpoints, metrics,
-  request IDs, and smoke tests;
+- onboarding, local identity creation, Android-protected private-key storage, identity sharing/import and QR/safety-number verification;
+- device-contact import/linking, contact invitations, accept/decline/block, identity exchange and contact verification;
+- Direct chats with encrypted messages, persistent outbox/retry, sent/delivered/read state, typing, unread state and two-day queued re-authorization handling;
+- Group chats with invitations, membership activation, add/remove/promote/leave/admin-transfer flows, epoch security, typing and per-recipient delivery/read aggregation;
+- typed message content across data/domain/presentation (`MessagePartDto` -> `MessagePart` -> `MessagePartUi`);
+- encrypted blob attachments for images, videos, files, current location and shared contacts; selectable media/files support up to 8 attachments per message, while location/contact are single-shot attachment messages;
+- gallery/camera/file selection, media thumbnails, non-autoplay video viewing, swipeable attachment viewing, file opening, current-location sharing and contact sharing;
+- received attachment storage/management, per-conversation media/files storage and media export; location/contact payloads remain attachment blobs but are excluded from saved media/file copies;
+- contact attachment selection through the existing Contacts UI; contact bubbles show name/number and can add the shared contact to device contacts after confirmation;
+- local message search with exact matching plus optional on-device semantic search backed by a verified local MediaPipe text-embedding model;
+- optional on-device message-safety analysis with structural checks plus the local embedding model, warning details and block action;
+- Settings controls for semantic search/message safety, attachment storage management and a timestamped developer error log with clear action;
+- signed Control Plane discovery, multiple Control Planes, health monitoring, node failover, cooldown diagnostics and automatic reconnect;
+- WebSocket foreground delivery, mailbox-backed offline delivery and Android FCM wake-ups;
+- Control Plane and Community Node launcher bundles, Docker deployment, health/readiness endpoints, metrics, request IDs and smoke tests;
 - incremental release-candidate packaging plus full tagged GitHub releases.
 
-See [Current feature status](docs/features/current-features.md), [Chats](docs/features/chats.md), and [Transport](docs/features/transport.md) for details and
-limitations.
+See [Current feature status](docs/features/current-features.md), [Attachments](docs/features/attachments.md), [Chats](docs/features/chats.md), [Search](docs/features/search.md), [Message safety](docs/features/message-safety.md), and [Transport](docs/features/transport.md) for details and limitations.
 
 ## The system in one picture
 
@@ -84,6 +87,7 @@ flowchart LR
 
     subgraph Community Node
         N1 --> G[Gateway]
+        G --> B[Encrypted attachment blobs]
         N1 --> F[Federation]
         N1 --> M[Mailbox / PostgreSQL]
     end
@@ -220,15 +224,23 @@ startup/                   Startup UI/model
 navigation/                Navigation graphs and destinations
 core/                      Cross-cutting utilities
 core/crypto/               Libsodium crypto implementations
+core/embedding/            Shared local text-embedding runtime/model lifecycle
 core/protocol/             Transport-independent packets, codec, outbox contracts
 core/ui/                   Shared Compose components/theme/navigation primitives
-data/database/             Room database, DAOs, protocol outbox persistence
+data/database/             Room database, DAOs, entities, durable outbox
+data/datastore/            Shared settings/key-value persistence
 feature/identity/          Local identity lifecycle and sharing
 feature/contacts/          Contacts, invitations, verification, identity exchange
-feature/chats/             Direct + Group conversation/domain/data/UI paths
+feature/contactimport/     Device/QR contact and identity import flows
+feature/chats/             Direct + Group conversation domain/data/UI paths
+feature/attachments/       Attachment blob transfer, cache, storage, management and attachment UI models
+feature/media/             Gallery/camera/file access, media rendering/viewing/export and file browser
 feature/messaging/         Incoming/outgoing orchestration between protocol, crypto and transport
+feature/search/            Exact + optional on-device semantic message search
+feature/safety/            On-device message-safety analysis and warning/details UI
 feature/transport/         Control Plane/node discovery, WebSocket, routing, mailbox/push gateways
-feature/settings/          User/developer/network settings
+feature/onboarding/        Onboarding flows
+feature/settings/          User/developer/network settings and developer error log
 notification/              Android notification and background work integration
 server/                    Control Plane, Community Node and shared server modules
 build-logic/               Gradle convention/architecture/quality plugins
@@ -254,6 +266,7 @@ Direct and Group chat behavior is intentionally separated. Start with
 - **Firebase Cloud Messaging:** Android wake-up notification path for offline delivery.
 - **Micrometer/Prometheus:** server metrics.
 - **Detekt + ktlint:** static analysis and formatting/quality checks.
+- **MediaPipe Text Embedder:** on-device embeddings for optional semantic message search and message-safety analysis.
 - **BuildKonfig:** exposes the build-time Control Plane directory value to common KMP code.
 
 Read [Technology stack](docs/technology-stack.md) for a beginner-friendly explanation.
@@ -315,6 +328,11 @@ Start here:
 - [Architecture](docs/architecture/overview.md)
 - [How to extend the project](docs/development/extending.md)
 - [Detailed messaging flow + UML](docs/features/message-transport-flow.md)
+- [Current feature status](docs/features/current-features.md)
+- [Attachments](docs/features/attachments.md)
+- [Message search](docs/features/search.md)
+- [Message safety](docs/features/message-safety.md)
+- [Settings and diagnostics](docs/features/settings.md)
 - [Security](docs/security/overview.md)
 - [Server overview](docs/server/overview.md)
 - [Release process](docs/development/release-process.md)

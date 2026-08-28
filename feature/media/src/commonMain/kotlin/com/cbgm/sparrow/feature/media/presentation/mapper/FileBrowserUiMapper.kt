@@ -5,17 +5,17 @@ import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FileBrowserE
 import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FileBrowserEntryUi
 import com.cbgm.sparrow.feature.media.util.toReadableByteSize
 
-internal fun FileBrowserEntry.toUiModel(blockedSourceReferences: Set<String>): FileBrowserEntryUi =
+internal fun FileBrowserEntry.toFileBrowserEntryUi(blockedSourceReferences: Set<String>): FileBrowserEntryUi =
     FileBrowserEntryUi(
         reference = reference,
         displayName = displayName,
-        kind = toEntryKind(),
+        kind = toFileBrowserEntryKind(),
         sizeText = byteSize?.toReadableByteSize(),
         typeText = toTypeText(),
         isBlocked = !isDirectory && sourceReference != null && sourceReference in blockedSourceReferences
     )
 
-private fun FileBrowserEntry.toEntryKind(): FileBrowserEntryKind {
+private fun FileBrowserEntry.toFileBrowserEntryKind(): FileBrowserEntryKind {
     if (isDirectory) return FileBrowserEntryKind.DIRECTORY
     val mime = mimeType.orEmpty().lowercase()
     val extension = displayName.substringAfterLast('.', "").lowercase()
@@ -35,7 +35,7 @@ private fun FileBrowserEntry.toTypeText(): String? {
     val extension = displayName.substringAfterLast('.', "").takeIf(String::isNotBlank)
     if (extension != null) return extension.uppercase()
     return mimeType
-        ?.substringAfter('/', missingDelimiterValue = mimeType.orEmpty())
+        ?.substringAfter('/', missingDelimiterValue = mimeType)
         ?.replace('-', ' ')
         ?.uppercase()
         ?.takeIf(String::isNotBlank)

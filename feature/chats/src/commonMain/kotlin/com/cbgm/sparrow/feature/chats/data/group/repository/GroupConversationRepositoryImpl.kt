@@ -7,7 +7,7 @@ import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.data.database.dao.MessageRecipientStateDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
-import com.cbgm.sparrow.data.database.model.ConversationWithMessages
+import com.cbgm.sparrow.data.database.model.ConversationWithMessagesDto
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
 import com.cbgm.sparrow.feature.chats.data.group.mapper.toGroupConversation
 import com.cbgm.sparrow.feature.chats.data.mapper.toMessagePartDtos
@@ -32,7 +32,7 @@ class GroupConversationRepositoryImpl(
                 chatDao.observeRecentMessages(groupId, RECENT_MESSAGE_LIMIT),
                 messageAttachmentDataSource.observeRecentByConversation(groupId, RECENT_MESSAGE_LIMIT)
             ) { conversation, recentMessages, attachmentsByMessageId ->
-                MessageSnapshot(
+                MessageSnapshotDto(
                     conversation = conversation,
                     messages = recentMessages,
                     partsByMessageId =
@@ -51,7 +51,7 @@ class GroupConversationRepositoryImpl(
         ) { snapshot, memberKeys, recipientStates, invitations, verificationRows ->
             snapshot.conversation
                 ?.takeIf { it.type == GROUP_CONVERSATION_TYPE }
-                ?.let { ConversationWithMessages(it, snapshot.messages) }
+                ?.let { ConversationWithMessagesDto(it, snapshot.messages) }
                 ?.toGroupConversation(
                     participantContactIds = memberKeys.map { memberKey -> memberKey.contactId },
                     recipientStates = recipientStates,
@@ -62,7 +62,7 @@ class GroupConversationRepositoryImpl(
         }
     }
 
-    private data class MessageSnapshot(
+    private data class MessageSnapshotDto(
         val conversation: ConversationEntity?,
         val messages: List<MessageEntity>,
         val partsByMessageId: Map<String, List<MessagePartDto>>

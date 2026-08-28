@@ -6,7 +6,7 @@ import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.data.database.dao.ContactRoutingIdDao
 import com.cbgm.sparrow.data.database.entity.ContactEntity
 import com.cbgm.sparrow.data.database.entity.ContactRoutingIdEntity
-import com.cbgm.sparrow.data.database.model.ContactWithPublicIdentity
+import com.cbgm.sparrow.data.database.model.ContactWithPublicIdentityDto
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.sparrow.feature.transport.routing.RoutingIdGenerator
 import kotlinx.coroutines.flow.first
@@ -44,7 +44,7 @@ class ContactByRoutingIdDataSource(
 
     private suspend fun findMatchingContactId(
         routingId: String,
-        contacts: List<ContactWithPublicIdentity>
+        contacts: List<ContactWithPublicIdentityDto>
     ): String? {
         val bootstrap = routingId.isBootstrap()
         val matches =

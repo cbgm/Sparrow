@@ -11,8 +11,6 @@ import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.attachments.domain.usecase.LoadMessageAttachmentUseCase
-import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingContactAttachment
-import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingLocationAttachment
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingMessageAttachment
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.MarkDirectConversationReadUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectChatContextUseCase
@@ -33,7 +31,7 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.EnsureIdentityExchangeSt
 import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
-import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toDetailsRoute
+import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyDetails
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -142,15 +140,15 @@ class DirectViewModel(
             DirectUiEvent.SendClicked -> sendCurrentMessage()
             is DirectUiEvent.MediaSelected -> updateMediaSelection(event.media)
             is DirectUiEvent.OpenFilePicker -> navigator.navigateTo(AppRoute.FilePicker(event.sessionId))
-            is DirectUiEvent.ShareCurrentLocation -> sendCurrentLocation(event.location.toOutgoingLocationAttachment())
-            is DirectUiEvent.ShareContact -> sendContact(event.contact.toOutgoingContactAttachment())
+            is DirectUiEvent.ShareCurrentLocation -> sendCurrentLocation(event.location.toOutgoingMessageAttachment())
+            is DirectUiEvent.ShareContact -> sendContact(event.contact.toOutgoingMessageAttachment())
             is DirectUiEvent.AddSharedContact -> addSharedContact(event.contact)
             is DirectUiEvent.AttachmentVisible -> loadAttachment(event.attachmentId)
             is DirectUiEvent.AttachmentError -> errorMessage.value = event.message
             DirectUiEvent.HeaderClicked -> openContactDetails()
             is DirectUiEvent.RetryMessage -> retryFailedMessage(event.messageId)
             is DirectUiEvent.SafetyWarningClicked ->
-                navigator.navigateTo(event.warning.toDetailsRoute(event.messageId, contactId))
+                navigator.navigateTo(event.warning.toMessageSafetyDetails(event.messageId, contactId))
             DirectUiEvent.VerifyIdentityClicked -> verifyIdentity()
             DirectUiEvent.ShareIdentityClicked -> navigator.navigateTo(AppRoute.ShareIdentity)
             DirectUiEvent.ImportIdentityClicked -> navigator.navigateTo(AppRoute.ImportContact(contactId))

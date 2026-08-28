@@ -6,7 +6,7 @@ import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
 import com.cbgm.sparrow.feature.search.presentation.overview.model.MessageSearchMode
 import com.cbgm.sparrow.feature.search.presentation.overview.model.MessageSearchResultUi
 
-internal fun MessageSearchResult.toUiModel(): MessageSearchResultUi =
+internal fun MessageSearchResult.toMessageSearchResultUi(): MessageSearchResultUi =
     MessageSearchResultUi(
         messageId = messageId,
         conversationId = conversationId,

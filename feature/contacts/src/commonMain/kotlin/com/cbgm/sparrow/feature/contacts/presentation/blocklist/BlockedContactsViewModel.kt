@@ -6,7 +6,7 @@ import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.contacts.domain.usecase.BlockContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveBlockedContactsContextUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.UnblockContactUseCase
-import com.cbgm.sparrow.feature.contacts.presentation.blocklist.mapper.toUiState
+import com.cbgm.sparrow.feature.contacts.presentation.blocklist.mapper.toBlockedContactsUiState
 import com.cbgm.sparrow.feature.contacts.presentation.blocklist.model.BlockedContactsEffect
 import com.cbgm.sparrow.feature.contacts.presentation.blocklist.model.BlockedContactsUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.blocklist.model.BlockedContactsUiState
@@ -45,7 +45,7 @@ class BlockedContactsViewModel(
             formState,
             actionState
         ) { context, form, action ->
-            context.blocklist.toUiState(
+            context.blocklist.toBlockedContactsUiState(
                 profilePictures = context.profilePictures,
                 showAddContacts = form.showAddContacts,
                 phoneNumber = form.phoneNumber,

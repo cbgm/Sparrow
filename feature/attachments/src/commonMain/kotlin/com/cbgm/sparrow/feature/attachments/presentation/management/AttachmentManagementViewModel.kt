@@ -11,7 +11,7 @@ import com.cbgm.sparrow.feature.attachments.domain.usecase.ObserveLocalAttachmen
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementTab
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementUiEvent
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementUiState
-import com.cbgm.sparrow.feature.attachments.presentation.mapper.toAttachmentManagementUi
+import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMessageAttachmentsUi
 import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -40,7 +40,7 @@ class AttachmentManagementViewModel(
             val viewerAttachmentId = local.viewerAttachmentId?.takeIf(attachmentIds::contains)
 
             AttachmentManagementUiState(
-                attachments = attachments.toAttachmentManagementUi(local.loadedBytes),
+                attachments = attachments.toMessageAttachmentsUi(local.loadedBytes),
                 selectedTab = local.selectedTab,
                 isSelectionMode = local.isSelectionMode,
                 selectedIds = selectedIds,

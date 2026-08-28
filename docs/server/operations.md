@@ -69,6 +69,7 @@ Durable:
 - federation outbound queue PostgreSQL;
 - mailbox PostgreSQL;
 - node identity volumes;
+- Community Node gateway attachment-blob volume (`gateway-blob-data`);
 - registry signing/authority material.
 
 Ephemeral/rebuildable:
@@ -93,7 +94,8 @@ server/scripts/Restore-SparrowBackup.ps1
 5. Check PostgreSQL/Redis health.
 6. Check Caddy logs if the service is healthy internally but the public route returns 502.
 7. For Community Node registration, verify the directory URL and `/v1/control-planes`.
-8. For client disconnects, inspect gateway health and Android transport logs.
+8. For attachment failures, inspect gateway blob/ticket logs, blob volume capacity and configured size/retention values.
+9. For client disconnects, inspect gateway health and Android transport logs.
 
 ## Caddy 502 errors
 

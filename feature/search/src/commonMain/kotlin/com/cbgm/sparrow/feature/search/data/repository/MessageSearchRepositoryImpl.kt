@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.search.data.repository
 
 import com.cbgm.sparrow.feature.search.data.datasource.MessageSearchLocalDataSource
-import com.cbgm.sparrow.feature.search.data.mapper.toExactSearchResult
+import com.cbgm.sparrow.feature.search.data.mapper.toMessageSearchResult
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchResult
 import com.cbgm.sparrow.feature.search.domain.repository.MessageSearchRepository
 
@@ -19,6 +19,6 @@ class MessageSearchRepositoryImpl(
             .searchExactMessages(
                 query = normalizedQuery,
                 limit = limit.coerceAtLeast(1)
-            ).map { it.toExactSearchResult() }
+            ).map { it.toMessageSearchResult() }
     }
 }

@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.media.device
 
 import com.cbgm.sparrow.feature.media.data.datasource.FileBrowserDataSource
-import com.cbgm.sparrow.feature.media.data.model.FileBrowserContentData
-import com.cbgm.sparrow.feature.media.data.model.FileBrowserDirectoryData
-import com.cbgm.sparrow.feature.media.data.model.FileBrowserEntryData
+import com.cbgm.sparrow.feature.media.data.model.FileBrowserContentDto
+import com.cbgm.sparrow.feature.media.data.model.FileBrowserDirectoryDto
+import com.cbgm.sparrow.feature.media.data.model.FileBrowserEntryDto
 import com.cbgm.sparrow.feature.media.util.toReadableByteSize
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.Foundation.NSFileManager
@@ -36,16 +36,16 @@ class IosFileBrowserDataSource : FileBrowserDataSource {
             rootUrl = selectedUrl
         }
 
-    override suspend fun getRootDirectory(): Result<FileBrowserDirectoryData> =
+    override suspend fun getRootDirectory(): Result<FileBrowserDirectoryDto> =
         runCatching {
             val root = requireRootUrl()
-            FileBrowserDirectoryData(
+            FileBrowserDirectoryDto(
                 reference = requireNotNull(root.path),
                 displayName = root.lastPathComponent?.takeIf(String::isNotBlank) ?: "Files"
             )
         }
 
-    override suspend fun listDirectory(reference: String): Result<List<FileBrowserEntryData>> =
+    override suspend fun listDirectory(reference: String): Result<List<FileBrowserEntryDto>> =
         runCatching {
             val directoryPath = resolveInsideRoot(reference)
             val manager = NSFileManager.defaultManager
@@ -58,7 +58,7 @@ class IosFileBrowserDataSource : FileBrowserDataSource {
                 val childPath = directoryPath.trimEnd('/') + "/" + name
                 val attributes = manager.attributesOfItemAtPath(childPath, error = null) ?: return@mapNotNull null
                 val isDirectory = attributes[NSFileType] == NSFileTypeDirectory
-                FileBrowserEntryData(
+                FileBrowserEntryDto(
                     reference = childPath,
                     sourceReference = childPath.takeUnless { isDirectory },
                     displayName = name,
@@ -67,7 +67,7 @@ class IosFileBrowserDataSource : FileBrowserDataSource {
                     mimeType = if (isDirectory) null else mimeType(name)
                 )
             }.sortedWith(
-                compareByDescending<FileBrowserEntryData> { entry -> entry.isDirectory }
+                compareByDescending<FileBrowserEntryDto> { entry -> entry.isDirectory }
                     .thenBy(String.CASE_INSENSITIVE_ORDER) { entry -> entry.displayName }
             )
         }
@@ -75,7 +75,7 @@ class IosFileBrowserDataSource : FileBrowserDataSource {
     override suspend fun readFile(
         reference: String,
         maxByteSize: Long
-    ): Result<FileBrowserContentData> =
+    ): Result<FileBrowserContentDto> =
         runCatching {
             require(maxByteSize > 0L) { "Invalid file size limit" }
             val path = resolveInsideRoot(reference)
@@ -92,7 +92,7 @@ class IosFileBrowserDataSource : FileBrowserDataSource {
             val bytes = requireNotNull(manager.contentsAtPath(path)) { "File is not readable" }.toByteArray()
             require(bytes.size.toLong() <= maxByteSize) { "File exceeds the maximum size" }
 
-            FileBrowserContentData(
+            FileBrowserContentDto(
                 sourceReference = path,
                 displayName = path.substringAfterLast('/').ifBlank { "file" },
                 mimeType = mimeType(path),

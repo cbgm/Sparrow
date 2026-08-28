@@ -10,8 +10,8 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/identity` |
 | Build file | `feature/identity/build.gradle.kts` |
-| Kotlin files | 67 |
-| Production Kotlin files | 62 |
+| Kotlin files | 70 |
+| Production Kotlin files | 65 |
 | Test Kotlin files | 5 |
 | Resource files | 1 |
 | Direct dependencies | 5 |
@@ -29,9 +29,9 @@ Generated automatically by `./gradlew architectureReport`.
 
 - [`:core`](../modules/core.md)
 - [`:core:crypto`](../modules/core-crypto.md)
-- [`:core:datastore`](../modules/core-datastore.md)
 - [`:core:protocol`](../modules/core-protocol.md)
 - [`:core:ui`](../modules/core-ui.md)
+- [`:data:datastore`](../modules/data-datastore.md)
 
 ## Dependents
 

@@ -26,10 +26,13 @@ The client owns:
 
 - local identity/key material;
 - contacts and trust state;
-- direct/group conversation state;
+- Direct/Group conversation state and typed message parts;
+- attachment selection/blob encryption/transfer/cache/saved-copy management;
 - packet creation and packet processing;
 - end-to-end encryption/decryption;
 - persistent outgoing outbox;
+- local exact/semantic message search;
+- optional local message-safety analysis;
 - node discovery/failover;
 - mailbox synchronization and Android push wake-ups.
 
@@ -76,5 +79,6 @@ health maintenance.
 - [Installation](installation.md)
 - [First build](first-build.md)
 - [Project structure](project-structure.md)
+- [Current feature status](../features/current-features.md)
 - [Server overview](../server/overview.md)
 - [Architecture](../architecture/overview.md)

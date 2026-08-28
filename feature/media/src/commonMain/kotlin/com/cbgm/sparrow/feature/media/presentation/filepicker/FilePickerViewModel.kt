@@ -16,8 +16,8 @@ import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerBr
 import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerSortMode
 import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerUiEvent
 import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerUiState
+import com.cbgm.sparrow.feature.media.presentation.mapper.toFileBrowserEntryUi
 import com.cbgm.sparrow.feature.media.presentation.mapper.toMediaSelection
-import com.cbgm.sparrow.feature.media.presentation.mapper.toUiModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -238,7 +238,7 @@ class FilePickerViewModel(
             }.let { sorted -> if (state.sortAscending) sorted else sorted.reversed() }
 
         _uiState.update { current ->
-            current.copy(entries = (directories + sortedFiles).map { it.toUiModel(blockedSourceReferences) })
+            current.copy(entries = (directories + sortedFiles).map { it.toFileBrowserEntryUi(blockedSourceReferences) })
         }
     }
 

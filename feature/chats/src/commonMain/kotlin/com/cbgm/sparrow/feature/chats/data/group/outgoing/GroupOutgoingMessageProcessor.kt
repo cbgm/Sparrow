@@ -19,13 +19,13 @@ import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
-import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachment
+import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachmentDto
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.chats.data.group.delivery.GroupMessageDeliveryCoordinator
 import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
-import com.cbgm.sparrow.feature.chats.data.group.mapper.toGroupDeliveryStatus
+import com.cbgm.sparrow.feature.chats.data.group.mapper.toMessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_END_TO_END_ENCRYPTED_MODE
 import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
@@ -218,10 +218,10 @@ class GroupOutgoingMessageProcessor(
     private suspend fun encryptAndEnqueue(
         message: MessageEntity,
         recipients: List<GroupMemberKeyEntity>,
-        prepared: List<PreparedMessageAttachment>
+        prepared: List<PreparedMessageAttachmentDto>
     ) {
         val packets = createPackets(message, recipients, prepared)
-        val recipientStates = packets.map { (recipient, packet) -> packet.toRecipientState(recipient) }
+        val recipientStates = packets.map { (recipient, packet) -> packet.toMessageRecipientStateEntity(recipient) }
 
         chatDao.upsertOutgoingGroupMessage(
             message = message,
@@ -260,7 +260,7 @@ class GroupOutgoingMessageProcessor(
     private suspend fun createPackets(
         message: MessageEntity,
         recipients: List<GroupMemberKeyEntity>,
-        prepared: List<PreparedMessageAttachment>
+        prepared: List<PreparedMessageAttachmentDto>
     ): Map<GroupMemberKeyEntity, GroupChatMessagePacket> {
         val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
         val profilePicture =
@@ -269,7 +269,7 @@ class GroupOutgoingMessageProcessor(
             groupMessageContentCodec.encode(
                 GroupMessageContent(
                     text = message.text,
-                    attachments = prepared.map(PreparedMessageAttachment::attachment)
+                    attachments = prepared.map(PreparedMessageAttachmentDto::attachment)
                 )
             )
         val securedMessage =
@@ -298,7 +298,7 @@ class GroupOutgoingMessageProcessor(
         }
     }
 
-    private fun GroupChatMessagePacket.toRecipientState(
+    private fun GroupChatMessagePacket.toMessageRecipientStateEntity(
         recipient: GroupMemberKeyEntity
     ): MessageRecipientStateEntity =
         MessageRecipientStateEntity(
@@ -317,7 +317,7 @@ class GroupOutgoingMessageProcessor(
     ) {
         val currentState = messageRecipientStateDao.findByPacketId(packetId)
             ?: error("Recipient delivery state was not found")
-        val currentStatus = currentState.deliveryStatus.toGroupDeliveryStatus()
+        val currentStatus = currentState.deliveryStatus.toMessageDeliveryStatus()
 
         check(
             GroupMessageDeliveryStateMachine.canTransition(

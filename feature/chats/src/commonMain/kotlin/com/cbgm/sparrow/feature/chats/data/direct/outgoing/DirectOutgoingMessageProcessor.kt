@@ -14,11 +14,11 @@ import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
-import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachment
+import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachmentDto
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.chats.data.direct.delivery.DirectMessageDeliveryCoordinator
-import com.cbgm.sparrow.feature.chats.data.direct.mapper.toDirectDeliveryStatus
+import com.cbgm.sparrow.feature.chats.data.direct.mapper.toMessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
@@ -73,7 +73,7 @@ class DirectOutgoingMessageProcessor(
                     createPacket(
                         messageId = messageId,
                         text = normalizedText,
-                        attachments = prepared.map(PreparedMessageAttachment::attachment)
+                        attachments = prepared.map(PreparedMessageAttachmentDto::attachment)
                     ).also { packet ->
                         linkPacket(messageId = messageId, packet = packet, contact = contact)
                     }
@@ -141,7 +141,7 @@ class DirectOutgoingMessageProcessor(
             check(message.isMine) { "Only outgoing messages can be retried" }
             check(
                 DirectMessageDeliveryStateMachine.canTransition(
-                    current = message.deliveryStatus.toDirectDeliveryStatus(),
+                    current = message.deliveryStatus.toMessageDeliveryStatus(),
                     event = MessageDeliveryEvent.RETRY_REQUESTED
                 )
             ) {
@@ -180,7 +180,7 @@ class DirectOutgoingMessageProcessor(
     ) {
         val nextStatus =
             DirectMessageDeliveryStateMachine.transition(
-                current = message.deliveryStatus.toDirectDeliveryStatus(),
+                current = message.deliveryStatus.toMessageDeliveryStatus(),
                 event = MessageDeliveryEvent.AUTHORIZATION_GRANTED
             )
         check(nextStatus == MessageDeliveryStatus.QUEUED) {
@@ -210,11 +210,11 @@ class DirectOutgoingMessageProcessor(
     }
 
     private suspend fun persistPreparedMessage(
-        target: DirectTarget,
+        target: DirectTargetDto,
         contact: Contact,
         messageId: String,
         text: String,
-        prepared: List<PreparedMessageAttachment>,
+        prepared: List<PreparedMessageAttachmentDto>,
         deliveryStatus: MessageDeliveryStatus
     ) {
         val createdAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
@@ -270,12 +270,12 @@ class DirectOutgoingMessageProcessor(
             deliveryStatus = MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION.name
         )
 
-    private suspend fun loadTarget(conversationId: String): DirectTarget {
+    private suspend fun loadTarget(conversationId: String): DirectTargetDto {
         val conversation = chatDao.findConversationById(conversationId)
             ?: error("Direct conversation was not found")
         check(conversation.type == DIRECT_CONVERSATION_TYPE) { "Conversation is not direct" }
         val contactId = requireNotNull(conversation.contactId) { "Direct conversation has no contact" }
-        return DirectTarget(conversationId = conversation.id, contactId = contactId)
+        return DirectTargetDto(conversationId = conversation.id, contactId = contactId)
     }
 
     private suspend fun createPacket(
@@ -343,7 +343,7 @@ class DirectOutgoingMessageProcessor(
         return if (canEncrypt) TransportEncryptionMode.SEALED_BOX else TransportEncryptionMode.PLAINTEXT
     }
 
-    private data class DirectTarget(
+    private data class DirectTargetDto(
         val conversationId: String,
         val contactId: String
     )

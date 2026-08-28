@@ -7,7 +7,7 @@ import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.data.database.entity.ContactEntity
 import com.cbgm.sparrow.data.database.entity.ContactPhoneNumberEntity
 import com.cbgm.sparrow.feature.contacts.data.datasource.ContactKeyExchangeDataSource
-import com.cbgm.sparrow.feature.contacts.data.mapper.toDomain
+import com.cbgm.sparrow.feature.contacts.data.mapper.toContact
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumberType
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
@@ -214,7 +214,7 @@ class ContactRepositoryImpl(
             contactDao
                 .findById(
                     contactId = contactId
-                )?.toDomain()
+                )?.toContact()
         }
 
     override suspend fun findBySigningPublicKey(signingPublicKey: ByteArray): Result<Contact?> =
@@ -226,7 +226,7 @@ class ContactRepositoryImpl(
             contactDao
                 .findBySigningPublicKey(
                     signingPublicKey = signingPublicKey
-                )?.toDomain()
+                )?.toContact()
         }
 
     override suspend fun findOrCreateByPhoneNumber(phoneNumber: String): Result<Contact> =
@@ -243,7 +243,7 @@ class ContactRepositoryImpl(
 
             contactDao
                 .findByNormalizedPhoneNumber(normalizedPhoneNumber = normalizedValue)
-                ?.toDomain()
+                ?.toContact()
                 ?.let { contact -> return@runCatching contact }
 
             val now = SystemClock.nowEpochMilliseconds()
@@ -286,7 +286,7 @@ class ContactRepositoryImpl(
     override fun observeContacts(): Flow<List<Contact>> =
         contactDao.observeAll().map { contacts ->
             contacts.map { contact ->
-                contact.toDomain()
+                contact.toContact()
             }
         }
 
@@ -486,7 +486,7 @@ class ContactRepositoryImpl(
             contactDao
                 .findById(
                     contactId = existing.contact.id
-                )?.toDomain()
+                )?.toContact()
         }
     }
 
@@ -494,7 +494,7 @@ class ContactRepositoryImpl(
         requestedContactId: String?,
         signingPublicKey: ByteArray,
         normalizedPhoneNumber: String?
-    ): ResolvedContactImport {
+    ): ResolvedContactImportDto {
         if (requestedContactId != null) {
             val selectedContact =
                 contactDao.findById(
@@ -503,7 +503,7 @@ class ContactRepositoryImpl(
                     "Selected contact was not found: $requestedContactId"
                 )
 
-            return ResolvedContactImport(
+            return ResolvedContactImportDto(
                 contactId = selectedContact.contact.id,
                 isNewContact = false
             )
@@ -523,7 +523,7 @@ class ContactRepositoryImpl(
             )
         }
 
-        return ResolvedContactImport(
+        return ResolvedContactImportDto(
             contactId = mergeResult.contactId,
             isNewContact = mergeResult.isNewContact
         )
@@ -532,7 +532,7 @@ class ContactRepositoryImpl(
     private suspend fun findOrCreateForSparrowIdentity(
         signingPublicKey: ByteArray,
         phoneNumber: String?
-    ): ResolvedContactImport {
+    ): ResolvedContactImportDto {
         val normalizedPhoneNumber =
             phoneNumber
                 ?.takeIf { it.isNotBlank() }
@@ -540,23 +540,23 @@ class ContactRepositoryImpl(
 
         if (normalizedPhoneNumber != null) {
             contactDao.findByNormalizedPhoneNumber(normalizedPhoneNumber)?.let { contact ->
-                return ResolvedContactImport(contact.contact.id, isNewContact = false)
+                return ResolvedContactImportDto(contact.contact.id, isNewContact = false)
             }
         }
 
         contactDao.findBySigningPublicKey(signingPublicKey)?.let { contact ->
-            return ResolvedContactImport(contact.contact.id, isNewContact = false)
+            return ResolvedContactImportDto(contact.contact.id, isNewContact = false)
         }
 
-        return ResolvedContactImport(IdGenerator.generate(), isNewContact = true)
+        return ResolvedContactImportDto(IdGenerator.generate(), isNewContact = true)
     }
 
     private suspend fun findOrCreateForDeviceContact(
         deviceContactId: String,
         phoneNumbers: List<ImportDevicePhoneNumber>
-    ): ResolvedContactImport {
+    ): ResolvedContactImportDto {
         contactDao.findByDeviceContactId(deviceContactId)?.let { contact ->
-            return ResolvedContactImport(contact.contact.id, isNewContact = false)
+            return ResolvedContactImportDto(contact.contact.id, isNewContact = false)
         }
 
         phoneNumbers.forEach { phoneNumber ->
@@ -564,11 +564,11 @@ class ContactRepositoryImpl(
                 phoneNumberNormalizer.normalize(phoneNumber.value).getOrNull()
                     ?: return@forEach
             contactDao.findByNormalizedPhoneNumber(normalized)?.let { contact ->
-                return ResolvedContactImport(contact.contact.id, isNewContact = false)
+                return ResolvedContactImportDto(contact.contact.id, isNewContact = false)
             }
         }
 
-        return ResolvedContactImport(IdGenerator.generate(), isNewContact = true)
+        return ResolvedContactImportDto(IdGenerator.generate(), isNewContact = true)
     }
 
     private suspend fun replaceDevicePhoneNumbers(
@@ -690,9 +690,9 @@ class ContactRepositoryImpl(
         contactDao
             .findById(
                 contactId = contactId
-            )?.toDomain() ?: error(message)
+            )?.toContact() ?: error(message)
 
-    private data class ResolvedContactImport(
+    private data class ResolvedContactImportDto(
         val contactId: String,
         val isNewContact: Boolean
     )

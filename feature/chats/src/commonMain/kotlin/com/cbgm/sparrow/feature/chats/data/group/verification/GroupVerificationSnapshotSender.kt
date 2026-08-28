@@ -58,7 +58,7 @@ internal class GroupVerificationSnapshotSender(
         val members =
             groupVerificationDao
                 .findByGroupId(groupId)
-                .map { row -> row.toPayload() }
+                .map { row -> row.toGroupVerificationMemberPayload() }
         val snapshotId = IdGenerator.generate()
         val unsignedPacket =
             GroupVerificationSnapshotPacket(
@@ -86,7 +86,7 @@ internal class GroupVerificationSnapshotSender(
             ).getOrThrow()
     }
 
-    private fun GroupVerificationPairEntity.toPayload(): GroupVerificationMemberPayload =
+    private fun GroupVerificationPairEntity.toGroupVerificationMemberPayload(): GroupVerificationMemberPayload =
         GroupVerificationMemberPayload(
             invitationId = invitationId,
             displayName = displayName,

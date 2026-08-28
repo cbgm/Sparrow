@@ -8,7 +8,7 @@ internal data class ProfilePictureCropRegion(
     val centerYFraction: Float,
     val sizeFractionOfShortEdge: Float
 ) {
-    fun toSourceRect(
+    fun toProfilePictureSourceRect(
         sourceWidth: Int,
         sourceHeight: Int
     ): ProfilePictureSourceRect {

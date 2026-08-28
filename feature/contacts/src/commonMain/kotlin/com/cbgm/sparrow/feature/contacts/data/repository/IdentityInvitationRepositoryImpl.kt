@@ -1636,7 +1636,7 @@ class IdentityInvitationRepositoryImpl(
             return IdentityHandshakeState.MUTUAL_UNVERIFIED
         }
 
-        return latestInvitation?.state.toHandshakeStateOrNull()
+        return latestInvitation?.state.toIdentityHandshakeStateOrNull()
     }
 
     private suspend fun resumeActiveHandshake(invitation: IdentityInvitationEntity): Boolean {
@@ -1811,7 +1811,7 @@ class IdentityInvitationRepositoryImpl(
         return true
     }
 
-    private fun String?.toHandshakeStateOrNull(): IdentityHandshakeState? =
+    private fun String?.toIdentityHandshakeStateOrNull(): IdentityHandshakeState? =
         this?.let { state ->
             IdentityHandshakeState.entries.firstOrNull { candidate ->
                 candidate.name == state

@@ -10,8 +10,6 @@ import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.attachments.domain.usecase.LoadMessageAttachmentUseCase
-import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingContactAttachment
-import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingLocationAttachment
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingMessageAttachment
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupChatContext
@@ -30,7 +28,7 @@ import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactRes
 import com.cbgm.sparrow.feature.contacts.domain.usecase.AddDeviceContactUseCase
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
-import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toDetailsRoute
+import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyDetails
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -140,15 +138,15 @@ class GroupViewModel(
             GroupUiEvent.SendClicked -> sendCurrentMessage()
             is GroupUiEvent.MediaSelected -> updateMediaSelection(event.media)
             is GroupUiEvent.OpenFilePicker -> navigator.navigateTo(AppRoute.FilePicker(event.sessionId))
-            is GroupUiEvent.ShareCurrentLocation -> sendCurrentLocation(event.location.toOutgoingLocationAttachment())
-            is GroupUiEvent.ShareContact -> sendContact(event.contact.toOutgoingContactAttachment())
+            is GroupUiEvent.ShareCurrentLocation -> sendCurrentLocation(event.location.toOutgoingMessageAttachment())
+            is GroupUiEvent.ShareContact -> sendContact(event.contact.toOutgoingMessageAttachment())
             is GroupUiEvent.AddSharedContact -> addSharedContact(event.contact)
             is GroupUiEvent.AttachmentVisible -> loadAttachment(event.attachmentId)
             is GroupUiEvent.AttachmentError -> errorMessage.value = event.message
             GroupUiEvent.HeaderClicked -> navigator.navigateTo(AppRoute.GroupDetails(groupId))
             is GroupUiEvent.RetryMessage -> retryFailedMessage(event.messageId)
             is GroupUiEvent.SafetyWarningClicked ->
-                navigator.navigateTo(event.warning.toDetailsRoute(event.messageId, event.contactId))
+                navigator.navigateTo(event.warning.toMessageSafetyDetails(event.messageId, event.contactId))
             GroupUiEvent.BackClicked ->
                 if (targetMessageId != null) {
                     navigator.popBackStack()

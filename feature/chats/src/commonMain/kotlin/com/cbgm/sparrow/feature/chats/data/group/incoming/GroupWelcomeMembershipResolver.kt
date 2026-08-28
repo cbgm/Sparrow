@@ -22,8 +22,8 @@ internal class GroupWelcomeMembershipResolver(
     suspend fun resolve(
         packet: GroupCreatedPacket,
         senderContactId: String,
-        welcome: GroupWelcomeContext
-    ): ResolvedGroupMembership {
+        welcome: GroupWelcomeContextDto
+    ): ResolvedGroupMembershipDto {
         val localPhoneNumber = normalizedLocalPhoneNumber()
         val participants = mutableListOf<ConversationParticipantEntity>()
         val memberKeys = mutableListOf<GroupMemberKeyEntity>()
@@ -39,11 +39,11 @@ internal class GroupWelcomeMembershipResolver(
                     senderContactId = senderContactId,
                     senderSigningPublicKey = welcome.authorityIdentity.signingPublicKey
                 )
-            participants += member.toParticipant(packet, contactId)
-            memberKeys += member.toMemberKey(packet, contactId)
+            participants += member.toConversationParticipantEntity(packet, contactId)
+            memberKeys += member.toGroupMemberKeyEntity(packet, contactId)
         }
 
-        return ResolvedGroupMembership(participants, memberKeys)
+        return ResolvedGroupMembershipDto(participants, memberKeys)
     }
 
     private suspend fun normalizedLocalPhoneNumber(): String? =
@@ -141,7 +141,7 @@ internal class GroupWelcomeMembershipResolver(
         )
     }
 
-    private fun GroupMemberPayload.toParticipant(
+    private fun GroupMemberPayload.toConversationParticipantEntity(
         packet: GroupCreatedPacket,
         contactId: String
     ): ConversationParticipantEntity =
@@ -152,7 +152,7 @@ internal class GroupWelcomeMembershipResolver(
             joinedAtEpochMilliseconds = packet.createdAtEpochMilliseconds
         )
 
-    private fun GroupMemberPayload.toMemberKey(
+    private fun GroupMemberPayload.toGroupMemberKeyEntity(
         packet: GroupCreatedPacket,
         contactId: String
     ): GroupMemberKeyEntity =

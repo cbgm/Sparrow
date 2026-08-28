@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.attachments.data.mapper
 
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
-import com.cbgm.sparrow.data.database.model.LocalMessageAttachmentRow
+import com.cbgm.sparrow.data.database.model.LocalMessageAttachmentRowDto
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentStorageSummary
 import com.cbgm.sparrow.feature.attachments.domain.model.LocalAttachment
 
-internal fun List<LocalMessageAttachmentRow>.toLocalAttachments(): List<LocalAttachment> =
+internal fun List<LocalMessageAttachmentRowDto>.toLocalAttachments(): List<LocalAttachment> =
     mapNotNull { row -> row.toLocalAttachment() }
 
 internal fun List<LocalAttachment>.toAttachmentStorageSummary(
@@ -22,7 +22,7 @@ internal fun List<LocalAttachment>.toAttachmentStorageSummary(
         byteSize = sumOf(LocalAttachment::byteSize)
     )
 
-private fun LocalMessageAttachmentRow.toLocalAttachment(): LocalAttachment? {
+private fun LocalMessageAttachmentRowDto.toLocalAttachment(): LocalAttachment? {
     val attachmentType = MessageAttachmentType.valueOf(attachment.type)
     if (attachmentType == MessageAttachmentType.LOCATION || attachmentType == MessageAttachmentType.CONTACT) return null
 

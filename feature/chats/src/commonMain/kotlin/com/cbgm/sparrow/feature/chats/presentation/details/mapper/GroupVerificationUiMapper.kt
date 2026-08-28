@@ -52,7 +52,7 @@ internal fun buildGroupVerificationSummary(
                     if (!isActive && row.membershipStatus == GroupVerificationMembershipStatus.ACTIVE) {
                         GroupMemberVerificationState.UNAVAILABLE
                     } else {
-                        row.toVerificationState()
+                        row.toGroupMemberVerificationState()
                     },
                 canVerify =
                     isLocalAdmin &&
@@ -82,7 +82,7 @@ internal fun buildGroupVerificationSummary(
                     if (isLocalAdmin) {
                         GroupMemberVerificationState.GROUP_ADMIN
                     } else {
-                        ownPair?.toVerificationState()
+                        ownPair?.toGroupMemberVerificationState()
                             ?: GroupMemberVerificationState.UNVERIFIED
                     },
                 canVerify =
@@ -126,7 +126,7 @@ internal fun buildGroupVerificationSummary(
 private fun GroupVerificationPair.isActive(): Boolean =
     membershipStatus == GroupVerificationMembershipStatus.ACTIVE
 
-private fun GroupVerificationPair.toVerificationState(): GroupMemberVerificationState =
+private fun GroupVerificationPair.toGroupMemberVerificationState(): GroupMemberVerificationState =
     when {
         !isActive() -> GroupMemberVerificationState.INVITATION_PENDING
         adminVerifiedParticipant && participantVerifiedAdmin ->

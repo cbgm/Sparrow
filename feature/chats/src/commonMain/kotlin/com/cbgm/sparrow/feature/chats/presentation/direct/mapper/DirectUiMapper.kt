@@ -27,7 +27,7 @@ internal fun resolveContactName(
         ?: fallbackContactName.takeIf(String::isNotBlank)
         ?: "Unknown contact"
 
-internal fun DirectMessage.toUi(
+internal fun DirectMessage.toMessageBubbleUi(
     safetyAssessments: Map<String, MessageSafetyAssessment>,
     attachmentBytes: Map<String, ByteArray> = emptyMap()
 ): MessageBubbleUi {
@@ -53,7 +53,7 @@ internal fun DirectMessage.toUi(
     )
 }
 
-internal fun Contact?.toSecurityState(): ContactSecurityState {
+internal fun Contact?.toContactSecurityState(): ContactSecurityState {
     val identity = this?.sparrowIdentity ?: return ContactSecurityState.NO_REMOTE_PUBLIC_KEYS
 
     if (identity.keyExchangeStatus != KeyExchangeStatus.MUTUAL) {
@@ -113,12 +113,12 @@ internal fun toDirectUiState(
         messages =
             buildList {
                 for (message in conversation?.messages.orEmpty().asReversed()) {
-                    add(message.toUi(safetyAssessments, attachmentBytes))
+                    add(message.toMessageBubbleUi(safetyAssessments, attachmentBytes))
                 }
             },
         messageText = currentText,
         isContactTyping = contactTyping,
-        contactSecurityState = contact.toSecurityState(),
+        contactSecurityState = contact.toContactSecurityState(),
         identitySetupMode = setupMode,
         isLoading = contact == null,
         isChatAuthorized = isChatAuthorized,

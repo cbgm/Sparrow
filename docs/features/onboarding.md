@@ -24,4 +24,4 @@ The exact navigation condition is driven by startup/identity/onboarding state, s
 
 ## Platform notes
 
-Android has the usable permission/phone/contact integrations. The KMP project contains iOS source sets, but iOS is not currently a usable client and should not be documented as having completed onboarding parity.
+Android has the usable onboarding permission/phone/contact integrations. Location permission for sharing the current location is requested at runtime by the attachment action rather than being a required onboarding permission. The KMP project contains iOS source sets, but iOS is not currently a usable client and should not be documented as having completed onboarding parity.

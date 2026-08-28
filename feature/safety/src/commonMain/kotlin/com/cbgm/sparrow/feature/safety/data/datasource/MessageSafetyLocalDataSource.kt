@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.safety.data.datasource
 
 import com.cbgm.sparrow.data.database.dao.MessageSafetyDao
 import com.cbgm.sparrow.data.database.entity.MessageSafetyAssessmentEntity
-import com.cbgm.sparrow.data.database.model.MessageSafetySource
+import com.cbgm.sparrow.data.database.model.MessageSafetySourceDto
 import kotlinx.coroutines.flow.Flow
 
 class MessageSafetyLocalDataSource(
@@ -14,7 +14,7 @@ class MessageSafetyLocalDataSource(
     suspend fun getMessagesMissingAssessment(
         analyzerVersion: Int,
         limit: Int
-    ): List<MessageSafetySource> =
+    ): List<MessageSafetySourceDto> =
         dao.getMessagesMissingAssessment(
             analyzerVersion = analyzerVersion,
             limit = limit

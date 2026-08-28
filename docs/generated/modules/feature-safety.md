@@ -10,15 +10,16 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `feature` |
 | Directory | `feature/safety` |
 | Build file | `feature/safety/build.gradle.kts` |
-| Kotlin files | 28 |
-| Production Kotlin files | 27 |
-| Test Kotlin files | 1 |
-| Resource files | 0 |
+| Kotlin files | 38 |
+| Production Kotlin files | 32 |
+| Test Kotlin files | 6 |
+| Resource files | 1 |
 | Direct dependencies | 5 |
 | Direct dependents | 5 |
 
 ## Source sets
 
+- `androidDeviceTest`
 - `commonMain`
 - `commonTest`
 

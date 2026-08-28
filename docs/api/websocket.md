@@ -19,6 +19,12 @@ sequenceDiagram
     end
 ```
 
+## Blob upload tickets
+
+The authenticated gateway WebSocket is also the control channel for attachment uploads. The client can request a blob-upload ticket containing the intended blob ID, maximum bytes and expiry. The gateway returns either an issued short-lived permit or a rejection such as an invalid size/expiry. The actual encrypted bytes are then uploaded over the HTTP `/v1/blobs/{blobId}` endpoint.
+
+This keeps upload authorization tied to the authenticated gateway session while keeping large blob bytes out of WebSocket chat frames.
+
 ## Reliability boundary
 
 A successful WebSocket send is not the same as the recipient having read a message. Application delivery state is updated by explicit callbacks/receipts through the Direct or Group delivery state machines.

@@ -57,7 +57,7 @@ Settings can also accept either a single Control Plane URL or a directory URL in
 - `DefaultTransportConnectionManager`
 - `DefaultWebSocketTransportClient`
 - `WebSocketOutgoingWireSender`
-- `ClientPresenceRouteManager`
+- `ClientPresenceRouteCoordinator`
 - `ClientRouteRegistrationFactory`
 - `Sha256RoutingIdGenerator`
 

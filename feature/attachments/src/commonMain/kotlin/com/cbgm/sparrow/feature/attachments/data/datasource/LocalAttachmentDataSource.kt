@@ -7,7 +7,7 @@ import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.MessageAttachmentEntity
-import com.cbgm.sparrow.data.database.model.LocalMessageAttachmentRow
+import com.cbgm.sparrow.data.database.model.LocalMessageAttachmentRowDto
 import com.cbgm.sparrow.feature.attachments.data.mapper.toAttachmentStorageSummary
 import com.cbgm.sparrow.feature.attachments.data.mapper.toLocalAttachments
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentStorageSummary
@@ -97,7 +97,7 @@ class LocalAttachmentDataSource(
             attachmentDao.clearLocalFileNamesForConversation(conversationId)
         }
 
-    private suspend fun deleteLocalCopies(row: LocalMessageAttachmentRow) {
+    private suspend fun deleteLocalCopies(row: LocalMessageAttachmentRowDto) {
         row.attachment.localFileName?.let(fileDataSource::delete)
         fileDataSource.deleteSavedAttachment(
             conversationId = row.conversationId,

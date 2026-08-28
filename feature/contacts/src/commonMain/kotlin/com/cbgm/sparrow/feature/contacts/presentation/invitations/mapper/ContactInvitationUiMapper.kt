@@ -4,7 +4,7 @@ import com.cbgm.sparrow.feature.contacts.domain.model.ContactInvitation
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationTab
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiState
 
-internal fun toUiState(
+internal fun toContactInvitationUiState(
     selectedTab: ContactInvitationTab,
     incomingInvitations: List<ContactInvitation>,
     outgoingInvitations: List<ContactInvitation>,

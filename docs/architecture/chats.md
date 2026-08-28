@@ -13,7 +13,7 @@ flowchart TB
     ROUTER --> DIRECT[DirectIncomingPacketProcessor]
     ROUTER --> GROUP[GroupIncomingPacketProcessor]
 
-    DIRECT --> DSTORE[DirectConversationStorage]
+    DIRECT --> DSTORE[DirectConversationDataSource]
     DIRECT --> DDEL[DirectMessageDeliveryCoordinator]
 
     GROUP --> REG[GroupPacketHandlerRegistry]
@@ -32,7 +32,7 @@ IncomingPacketProcessor
   -> IncomingPacketRouter
   -> DirectIncomingPacketProcessor
   -> DirectMessagePacketHandler / DirectReceiptPacketHandler
-  -> DirectConversationStorage / DirectMessageDeliveryCoordinator
+  -> DirectConversationDataSource / DirectMessageDeliveryCoordinator
 ```
 
 Outgoing:
@@ -61,6 +61,12 @@ ObserveDirectTypingUseCase / SetDirectTypingUseCase
   -> DirectTypingRepository
   -> DirectTypingRepositoryImpl
 ```
+
+## Direct authorization boundary
+
+Direct messages that cannot currently be authorized are not pushed through the normal outbox immediately. `DirectViewModel` uses `QueueDirectMessageUntilAuthorizedUseCase`; `DirectOutgoingMessageProcessor` persists them as `WAITING_FOR_AUTHORIZATION`. `HandleAcceptedDirectInvitationUseCase` releases valid waiting messages, `HandleDeclinedDirectInvitationUseCase` discards them, and `DirectPendingAuthorizationMessagePolicy` expires them after two days.
+
+This remains a Direct-chat rule; it must not be moved into Group membership state or shared transport code.
 
 ## Group conversation path
 
@@ -153,6 +159,21 @@ There is **no orphaned-group state/mode** in the current code.
 
 A removed member is not kept in the recipient set merely because that contact was previously in the group. Re-invitation starts a new active membership period; old absence-period messages are not supposed to become ordinary backlog for that member.
 
+## Typed message representation
+
+Direct and Group messages share a typed chat-owned content representation. The layers are deliberately parallel:
+
+```text
+MessagePartDto  ->  MessagePart  ->  MessagePartUi
+     data            domain           presentation
+```
+
+Current variants are text, image/video, file, location and contact. Data DTO variants use the `Dto` suffix; domain variants are unsuffixed; presentation variants use `Ui`. Mapper functions are named for their destination (`toMessagePartDto()`, `toMessagePart()`, `toMessagePartUi()`).
+
+`:feature:attachments` remains the source owner for attachment blob preparation/transfer/loading/storage. The chats data boundary converts attachment source metadata into `MessagePartDto`; Direct/Group domain models do not expose the attachment feature's source `MessageAttachment` model.
+
+Do not add parallel fields such as `locationAttachment` or `contactAttachment` to Direct/Group domain messages. Extend the typed part hierarchy when the conversation representation needs a new content kind.
+
 ## Shared edges
 
 These are shared because the protocol/infrastructure is actually shared:
@@ -175,12 +196,15 @@ Shared routers contain dispatch only. Conversation-specific rules belong under `
 - `data/**/incoming/handler` — explicit packet handlers;
 - `data/**/outgoing` — outgoing orchestration;
 - `data/**/delivery` — delivery callbacks/coordinators;
-- `data/**/mapper` — mappings;
+- `data/model` — shared chats DTO representations such as `MessagePartDto`;
+- `data/**/mapper` — mappings named for their concrete destination type;
 - `data/**/storage` — focused persistence helpers that are not repositories;
 - `data/group/membership` — group membership coordinators/state machine/epoch helpers;
 - `data/group/protocol` — group membership protocol construction/verification;
 - `data/group/security` — group cryptographic state/operations;
 - `data/group/verification` — verification synchronization.
+
+General dependency rules still apply inside these paths: datasources do not call repositories; repositories do not call repositories/use cases; use cases do not call use cases. Keep small model/mapper/repository/usecase packages flat unless the number of files genuinely justifies another grouping level.
 
 ## Presentation
 

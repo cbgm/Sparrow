@@ -3,15 +3,15 @@ package com.cbgm.sparrow.feature.chats.data.group.incoming
 import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentity
 import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
-import com.cbgm.sparrow.feature.chats.data.group.security.OpenedGroupWelcome
+import com.cbgm.sparrow.feature.chats.data.group.security.OpenedGroupWelcomeDto
 
-internal data class GroupWelcomeContext(
-    val authorityIdentity: GroupWelcomeAuthorityIdentity,
+internal data class GroupWelcomeContextDto(
+    val authorityIdentity: GroupWelcomeAuthorityIdentityDto,
     val localIdentity: LocalPublicIdentity,
-    val openedWelcome: OpenedGroupWelcome
+    val openedWelcome: OpenedGroupWelcomeDto
 )
 
-internal data class GroupWelcomeAuthorityIdentity(
+internal data class GroupWelcomeAuthorityIdentityDto(
     val encryptionPublicKey: ByteArray,
     val signingPublicKey: ByteArray
 ) {
@@ -19,7 +19,7 @@ internal data class GroupWelcomeAuthorityIdentity(
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as GroupWelcomeAuthorityIdentity
+        other as GroupWelcomeAuthorityIdentityDto
 
         if (!encryptionPublicKey.contentEquals(other.encryptionPublicKey)) return false
         if (!signingPublicKey.contentEquals(other.signingPublicKey)) return false
@@ -34,17 +34,17 @@ internal data class GroupWelcomeAuthorityIdentity(
     }
 }
 
-internal data class PreviousGroupMembership(
+internal data class PreviousGroupMembershipDto(
     val participants: List<ConversationParticipantEntity>,
     val signingKeysByContactId: Map<String, ByteArray?>
 )
 
-internal data class ResolvedGroupMembership(
+internal data class ResolvedGroupMembershipDto(
     val participants: List<ConversationParticipantEntity>,
     val memberKeys: List<GroupMemberKeyEntity>
 )
 
-internal data class GroupWelcomeReferenceAdmin(
+internal data class GroupWelcomeReferenceAdminDto(
     val contactId: String,
     val signingPublicKey: ByteArray
 ) {
@@ -52,7 +52,7 @@ internal data class GroupWelcomeReferenceAdmin(
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as GroupWelcomeReferenceAdmin
+        other as GroupWelcomeReferenceAdminDto
 
         if (contactId != other.contactId) return false
         if (!signingPublicKey.contentEquals(other.signingPublicKey)) return false

@@ -113,12 +113,12 @@ private class CameraPickerDelegate(
             runCatching {
                 val image = didFinishPickingMediaWithInfo[UIImagePickerControllerOriginalImage] as? UIImage
                 if (image != null) {
-                    return@runCatching image.toCapturedPhoto(config)
+                    return@runCatching image.toCapturedMedia(config)
                 }
 
                 val videoUrl = didFinishPickingMediaWithInfo[UIImagePickerControllerMediaURL] as? NSURL
                     ?: error("Captured media could not be read")
-                videoUrl.toCapturedVideo(config)
+                videoUrl.toCapturedMedia(config)
             }
 
         picker.dismissViewControllerAnimated(true, null)
@@ -134,7 +134,7 @@ private class CameraPickerDelegate(
 }
 
 @OptIn(ExperimentalForeignApi::class)
-private fun UIImage.toCapturedPhoto(config: CameraCaptureConfig): CapturedMedia {
+private fun UIImage.toCapturedMedia(config: CameraCaptureConfig): CapturedMedia {
     val sourceWidth = size.width
     val sourceHeight = size.height
     require(sourceWidth > 0.0 && sourceHeight > 0.0) { "Captured photo has invalid dimensions" }
@@ -185,7 +185,7 @@ private fun UIImage.encodeCameraPhoto(maxBytes: Int?): ByteArray {
 }
 
 @OptIn(ExperimentalForeignApi::class)
-private fun NSURL.toCapturedVideo(config: CameraCaptureConfig): CapturedMedia {
+private fun NSURL.toCapturedMedia(config: CameraCaptureConfig): CapturedMedia {
     val data = NSData(contentsOfURL = this) ?: error("Captured video could not be read")
     config.maxVideoBytes?.let { maxBytes ->
         require(data.length <= maxBytes.toULong()) { "Captured video exceeds the configured size limit" }

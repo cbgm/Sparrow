@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.data.database.model
 
-data class ConversationSummary(
+data class ConversationSummaryDto(
     val conversationId: String,
     val contactId: String?,
     val contactName: String?,

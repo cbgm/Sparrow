@@ -13,7 +13,7 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.DeclineContactInvitation
 import com.cbgm.sparrow.feature.contacts.domain.usecase.DeleteDeclinedOutgoingInvitationUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.MarkContactInvitationsViewedUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactInvitationsContextUseCase
-import com.cbgm.sparrow.feature.contacts.presentation.invitations.mapper.toUiState
+import com.cbgm.sparrow.feature.contacts.presentation.invitations.mapper.toContactInvitationUiState
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationEffect
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationTab
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiEvent
@@ -63,7 +63,7 @@ class ContactInvitationViewModel(
             invitationsContext,
             processingInvitationId
         ) { tab, context, processingId ->
-            toUiState(
+            toContactInvitationUiState(
                 selectedTab = tab,
                 incomingInvitations = context.incoming,
                 outgoingInvitations = context.outgoing,

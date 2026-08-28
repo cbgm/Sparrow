@@ -10,13 +10,13 @@ import com.cbgm.sparrow.data.database.entity.RemoteMailboxRouteEntity
 class RoomMailboxRouteRepository(
     private val dao: MailboxRouteDao
 ) : MailboxRouteRepository {
-    override suspend fun localForContact(contactId: String): Result<LocalMailboxCredential?> = runCatching { dao.findLocal(contactId)?.toDomain() }
+    override suspend fun localForContact(contactId: String): Result<LocalMailboxCredential?> = runCatching { dao.findLocal(contactId)?.toLocalMailboxCredential() }
 
-    override suspend fun remoteForRecipientRoutingId(routingId: String): Result<MailboxDeliveryRoute?> = runCatching { dao.findRemoteByRoutingId(routingId)?.toRoute() }
+    override suspend fun remoteForRecipientRoutingId(routingId: String): Result<MailboxDeliveryRoute?> = runCatching { dao.findRemoteByRoutingId(routingId)?.toMailboxDeliveryRoute() }
 
-    override suspend fun allLocal(): Result<List<LocalMailboxCredential>> = runCatching { dao.allLocal().map(LocalMailboxCredentialEntity::toDomain) }
+    override suspend fun allLocal(): Result<List<LocalMailboxCredential>> = runCatching { dao.allLocal().map(LocalMailboxCredentialEntity::toLocalMailboxCredential) }
 
-    override suspend fun saveLocal(credential: LocalMailboxCredential): Result<Unit> = runCatching { dao.upsertLocal(credential.toEntity()) }
+    override suspend fun saveLocal(credential: LocalMailboxCredential): Result<Unit> = runCatching { dao.upsertLocal(credential.toLocalMailboxCredentialEntity()) }
 
     override suspend fun saveRemote(
         contactId: String,
@@ -27,7 +27,7 @@ class RoomMailboxRouteRepository(
             if (current == null || route.sequence > current.sequence ||
                 (route.sequence == current.sequence && route.routeId == current.routeId)
             ) {
-                dao.upsertRemote(route.toEntity(contactId))
+                dao.upsertRemote(route.toRemoteMailboxRouteEntity(contactId))
             }
         }
 
@@ -40,16 +40,16 @@ class RoomMailboxRouteRepository(
     override suspend fun deleteAllRemote(): Result<Unit> = runCatching { dao.deleteAllRemote() }
 }
 
-private fun LocalMailboxCredentialEntity.toDomain() =
+private fun LocalMailboxCredentialEntity.toLocalMailboxCredential() =
     LocalMailboxCredential(
         contactId,
-        toRoute(),
+        toMailboxDeliveryRoute(),
         accessEndpoint,
         retrievalCapability,
         revocationPending
     )
 
-private fun LocalMailboxCredentialEntity.toRoute() =
+private fun LocalMailboxCredentialEntity.toMailboxDeliveryRoute() =
     MailboxDeliveryRoute(
         routeId,
         nodeId,
@@ -61,7 +61,7 @@ private fun LocalMailboxCredentialEntity.toRoute() =
         identitySignature
     )
 
-private fun RemoteMailboxRouteEntity.toRoute() =
+private fun RemoteMailboxRouteEntity.toMailboxDeliveryRoute() =
     MailboxDeliveryRoute(
         routeId,
         nodeId,
@@ -73,7 +73,7 @@ private fun RemoteMailboxRouteEntity.toRoute() =
         identitySignature
     )
 
-private fun LocalMailboxCredential.toEntity() =
+private fun LocalMailboxCredential.toLocalMailboxCredentialEntity() =
     LocalMailboxCredentialEntity(
         contactId,
         deliveryRoute.routeId,
@@ -89,7 +89,7 @@ private fun LocalMailboxCredential.toEntity() =
         revocationPending
     )
 
-private fun MailboxDeliveryRoute.toEntity(contactId: String) =
+private fun MailboxDeliveryRoute.toRemoteMailboxRouteEntity(contactId: String) =
     RemoteMailboxRouteEntity(
         contactId,
         routeId,

@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.chats.data.direct.repository
 
 import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.model.ConversationWithMessages
+import com.cbgm.sparrow.data.database.model.ConversationWithMessagesDto
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.mapper.toDirectConversation
@@ -25,8 +25,8 @@ class DirectConversationRepositoryImpl(
             messageAttachmentDataSource.observeRecentByConversation(conversationId, RECENT_MESSAGE_LIMIT)
         ) { conversation, recentMessages, attachmentsByMessageId ->
             conversation?.let {
-                DirectConversationSnapshot(
-                    conversation = ConversationWithMessages(it, recentMessages),
+                DirectConversationSnapshotDto(
+                    conversation = ConversationWithMessagesDto(it, recentMessages),
                     partsByMessageId =
                         attachmentsByMessageId.mapValues { (_, attachments) ->
                             attachments.toMessagePartDtos()
@@ -60,8 +60,8 @@ class DirectConversationRepositoryImpl(
             chatDao.deleteConversation(conversationId)
         }
 
-    private data class DirectConversationSnapshot(
-        val conversation: ConversationWithMessages,
+    private data class DirectConversationSnapshotDto(
+        val conversation: ConversationWithMessagesDto,
         val partsByMessageId: Map<String, List<MessagePartDto>>
     )
 

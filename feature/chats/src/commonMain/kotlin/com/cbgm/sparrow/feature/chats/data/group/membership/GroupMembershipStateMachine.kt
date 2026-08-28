@@ -35,7 +35,7 @@ internal object GroupMembershipStateMachine {
         currentStatus: String,
         event: GroupMembershipEvent
     ): GroupInvitationStatus {
-        val current = currentStatus.toInvitationStatus()
+        val current = currentStatus.toGroupInvitationStatus()
         val next = nextStatus(current, event)
         check(next != null) {
             "Unsupported group membership transition: $current + $event"
@@ -86,7 +86,7 @@ internal object GroupMembershipStateMachine {
             .map { invitation ->
                 GroupMemberInvitationState(
                     contactId = invitation.contactId,
-                    status = invitation.status.toMemberStatus()
+                    status = invitation.status.toGroupMemberInvitationStatus()
                 )
             }
 
@@ -192,7 +192,7 @@ internal object GroupMembershipStateMachine {
     private fun List<GroupInvitationEntity>.allHaveStatus(status: GroupInvitationStatus): Boolean =
         all { invitation -> invitation.status == status.name }
 
-    private fun String.toInvitationStatus(): GroupInvitationStatus =
+    private fun String.toGroupInvitationStatus(): GroupInvitationStatus =
         GroupInvitationStatus.entries.firstOrNull { status -> status.name == this }
             ?: error("Unknown group invitation status: $this")
 
@@ -209,7 +209,7 @@ internal object GroupMembershipStateMachine {
         this == GroupInvitationStatus.REMOVED.name ||
             this == GroupInvitationStatus.GROUP_DELETED.name
 
-    private fun String.toMemberStatus(): GroupMemberInvitationStatus =
+    private fun String.toGroupMemberInvitationStatus(): GroupMemberInvitationStatus =
         when (this) {
             GroupInvitationStatus.IDENTITY_READY.name -> GroupMemberInvitationStatus.ACCEPTED
             GroupInvitationStatus.WELCOME_SENT.name,

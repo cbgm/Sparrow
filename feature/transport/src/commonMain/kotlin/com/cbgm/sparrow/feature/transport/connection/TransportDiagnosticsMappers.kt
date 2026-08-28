@@ -14,7 +14,7 @@ internal fun NodeEndpoint.diagnosticState(
         else -> TransportNodeDiagnosticState.AVAILABLE
     }
 
-internal fun TransportConnectionState.toDiagnosticState(): TransportDiagnosticConnectionState =
+internal fun TransportConnectionState.toTransportDiagnosticConnectionState(): TransportDiagnosticConnectionState =
     when (this) {
         TransportConnectionState.Disconnected -> TransportDiagnosticConnectionState.DISCONNECTED
         TransportConnectionState.Connecting -> TransportDiagnosticConnectionState.CONNECTING

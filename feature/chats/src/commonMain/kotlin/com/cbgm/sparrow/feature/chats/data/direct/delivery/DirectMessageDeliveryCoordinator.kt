@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.chats.data.direct.delivery
 
 import com.cbgm.sparrow.data.database.dao.MessageDeliveryStatusDao
-import com.cbgm.sparrow.feature.chats.data.direct.mapper.toDirectDeliveryStatus
+import com.cbgm.sparrow.feature.chats.data.direct.mapper.toMessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessageDeliveryStateMachine
 
@@ -34,7 +34,7 @@ class DirectMessageDeliveryCoordinator(
         errorMessage: String? = null
     ) {
         require(packetId.isNotBlank()) { "Packet ID must not be blank" }
-        val current = messageDeliveryStatusDao.findOutgoingDeliveryStatusByPacketId(packetId)?.toDirectDeliveryStatus() ?: return
+        val current = messageDeliveryStatusDao.findOutgoingDeliveryStatusByPacketId(packetId)?.toMessageDeliveryStatus() ?: return
         val next = DirectMessageDeliveryStateMachine.transition(current, event)
         if (next != current) {
             messageDeliveryStatusDao.updateDeliveryStatus(packetId, next.name)
@@ -47,7 +47,7 @@ class DirectMessageDeliveryCoordinator(
         event: MessageDeliveryEvent
     ) {
         requireReceiptEvent(messageId, contactId, event)
-        val current = messageDeliveryStatusDao.findOutgoingDeliveryStatus(messageId, contactId)?.toDirectDeliveryStatus() ?: return
+        val current = messageDeliveryStatusDao.findOutgoingDeliveryStatus(messageId, contactId)?.toMessageDeliveryStatus() ?: return
         val next = DirectMessageDeliveryStateMachine.transition(current, event)
         if (next != current) {
             messageDeliveryStatusDao.updateDeliveryStatusByMessageId(messageId, next.name)
@@ -56,7 +56,7 @@ class DirectMessageDeliveryCoordinator(
 
     suspend fun applyRetryEvent(messageId: String) {
         require(messageId.isNotBlank()) { "Message ID must not be blank" }
-        val current = messageDeliveryStatusDao.findOutgoingDeliveryStatusByMessageId(messageId)?.toDirectDeliveryStatus() ?: return
+        val current = messageDeliveryStatusDao.findOutgoingDeliveryStatusByMessageId(messageId)?.toMessageDeliveryStatus() ?: return
         val next = DirectMessageDeliveryStateMachine.transition(current, MessageDeliveryEvent.RETRY_REQUESTED)
         if (next != current) {
             messageDeliveryStatusDao.updateDeliveryStatusByMessageId(messageId, next.name)

@@ -10,9 +10,9 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `core` |
 | Directory | `core/embedding` |
 | Build file | `core/embedding/build.gradle.kts` |
-| Kotlin files | 20 |
+| Kotlin files | 21 |
 | Production Kotlin files | 20 |
-| Test Kotlin files | 0 |
+| Test Kotlin files | 1 |
 | Resource files | 0 |
 | Direct dependencies | 2 |
 | Direct dependents | 5 |
@@ -21,11 +21,12 @@ Generated automatically by `./gradlew architectureReport`.
 
 - `androidMain`
 - `commonMain`
+- `commonTest`
 
 ## Dependencies
 
 - [`:core`](../modules/core.md)
-- [`:core:datastore`](../modules/core-datastore.md)
+- [`:data:datastore`](../modules/data-datastore.md)
 
 ## Dependents
 

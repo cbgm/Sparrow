@@ -39,7 +39,7 @@ internal fun toGroupUiState(
         title = conversation?.title.orEmpty(),
         avatarBytes = avatarBytes,
         messages =
-            conversation.toGroupMessageUi(
+            conversation.toGroupMessagesUi(
                 contactsById = contactsById,
                 profilePictures = profilePictures,
                 safetyAssessments = safetyAssessments,
@@ -56,7 +56,7 @@ internal fun toGroupUiState(
         readyMemberCount = administration.activeMemberCount,
         pendingMemberCount = conversation?.pendingParticipantCount ?: 0,
         showInvitationActions = groupState == GroupConversationState.INVITED,
-        memberProgress = conversation.toMemberProgressUi(contactsById)
+        memberProgress = conversation.toGroupMemberProgressUi(contactsById)
     )
 }
 
@@ -121,14 +121,14 @@ internal fun Contact?.displayNameForChat(isInContacts: Boolean): String {
     }
 }
 
-private fun GroupConversation?.toGroupMessageUi(
+private fun GroupConversation?.toGroupMessagesUi(
     contactsById: Map<String, Contact>,
     profilePictures: Map<String, ByteArray?>,
     safetyAssessments: Map<String, MessageSafetyAssessment>,
     attachmentBytes: Map<String, ByteArray>
 ): List<GroupMessageUi> =
     buildList {
-        for (message in this@toGroupMessageUi?.messages.orEmpty().asReversed()) {
+        for (message in this@toGroupMessagesUi?.messages.orEmpty().asReversed()) {
             val senderContactId = message.senderContactId
             val sender = senderContactId?.let(contactsById::get)
             val senderIsInContacts = sender?.deviceContactLinkStatus == DeviceContactLinkStatus.LINKED
@@ -144,7 +144,7 @@ private fun GroupConversation?.toGroupMessageUi(
         }
     }
 
-private fun GroupConversation?.toMemberProgressUi(
+private fun GroupConversation?.toGroupMemberProgressUi(
     contactsById: Map<String, Contact>
 ): List<GroupMemberProgressUi> =
     this

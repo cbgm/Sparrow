@@ -4,7 +4,7 @@ import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Upsert
 import com.cbgm.sparrow.data.database.entity.MessageSafetyAssessmentEntity
-import com.cbgm.sparrow.data.database.model.MessageSafetySource
+import com.cbgm.sparrow.data.database.model.MessageSafetySourceDto
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -30,7 +30,7 @@ interface MessageSafetyDao {
     suspend fun getMessagesMissingAssessment(
         analyzerVersion: Int,
         limit: Int
-    ): List<MessageSafetySource>
+    ): List<MessageSafetySourceDto>
 
     @Query(
         """

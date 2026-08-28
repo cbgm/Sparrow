@@ -5,7 +5,7 @@ import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.filterContacts
 import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.groupContactsByInitial
 
-internal fun List<Contact>.toUiState(
+internal fun List<Contact>.toCreateGroupUiState(
     profilePictures: Map<String, ByteArray?>,
     title: String,
     searchQuery: String,

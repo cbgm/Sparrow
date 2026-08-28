@@ -67,7 +67,7 @@ import com.cbgm.sparrow.feature.chats.presentation.component.MessageBubble
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageControl
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageInputActions
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageInputState
-import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toMessageAttachmentUi
+import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toMessageAttachmentsUi
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toSharedContact
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessagePartUi
@@ -226,7 +226,7 @@ fun GroupScreen(
     val currentViewerAttachmentId = viewerAttachmentId
     if (currentViewerMessage != null && currentViewerAttachmentId != null) {
         MessageAttachmentViewer(
-            attachments = currentViewerMessage.toMessageAttachmentUi(),
+            attachments = currentViewerMessage.toMessageAttachmentsUi(),
             selectedAttachmentId = currentViewerAttachmentId,
             canSaveToCameraRoll = !currentViewerMessage.isMine,
             onDismiss = {

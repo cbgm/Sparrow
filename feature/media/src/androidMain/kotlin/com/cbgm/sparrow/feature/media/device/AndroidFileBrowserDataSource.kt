@@ -8,9 +8,9 @@ import android.os.Environment
 import android.webkit.MimeTypeMap
 import androidx.core.content.ContextCompat
 import com.cbgm.sparrow.feature.media.data.datasource.FileBrowserDataSource
-import com.cbgm.sparrow.feature.media.data.model.FileBrowserContentData
-import com.cbgm.sparrow.feature.media.data.model.FileBrowserDirectoryData
-import com.cbgm.sparrow.feature.media.data.model.FileBrowserEntryData
+import com.cbgm.sparrow.feature.media.data.model.FileBrowserContentDto
+import com.cbgm.sparrow.feature.media.data.model.FileBrowserDirectoryDto
+import com.cbgm.sparrow.feature.media.data.model.FileBrowserEntryDto
 import com.cbgm.sparrow.feature.media.util.toReadableByteSize
 import java.io.File
 
@@ -34,18 +34,18 @@ class AndroidFileBrowserDataSource(
             }
         }
 
-    override suspend fun getRootDirectory(): Result<FileBrowserDirectoryData> =
+    override suspend fun getRootDirectory(): Result<FileBrowserDirectoryDto> =
         runCatching {
             requireAccess()
             val root = storageRoot()
             check(root.exists() && root.isDirectory) { "Internal storage is not available" }
-            FileBrowserDirectoryData(
+            FileBrowserDirectoryDto(
                 reference = root.canonicalPath,
                 displayName = "Internal storage"
             )
         }
 
-    override suspend fun listDirectory(reference: String): Result<List<FileBrowserEntryData>> =
+    override suspend fun listDirectory(reference: String): Result<List<FileBrowserEntryDto>> =
         runCatching {
             requireAccess()
             val directory = resolveInsideStorage(reference)
@@ -54,9 +54,9 @@ class AndroidFileBrowserDataSource(
             directory.listFiles()
                 ?.asSequence()
                 ?.filter { file -> file.canRead() }
-                ?.map { file -> file.toBrowserEntry() }
+                ?.map { file -> file.toFileBrowserEntryDto() }
                 ?.sortedWith(
-                    compareByDescending<FileBrowserEntryData> { entry -> entry.isDirectory }
+                    compareByDescending<FileBrowserEntryDto> { entry -> entry.isDirectory }
                         .thenBy(String.CASE_INSENSITIVE_ORDER) { entry -> entry.displayName }
                 )
                 ?.toList()
@@ -66,7 +66,7 @@ class AndroidFileBrowserDataSource(
     override suspend fun readFile(
         reference: String,
         maxByteSize: Long
-    ): Result<FileBrowserContentData> =
+    ): Result<FileBrowserContentDto> =
         runCatching {
             requireAccess()
             require(maxByteSize > 0L) { "Invalid file size limit" }
@@ -76,7 +76,7 @@ class AndroidFileBrowserDataSource(
             require(size <= maxByteSize) {
                 "${file.name} is too large (${size.toReadableByteSize()}, maximum ${maxByteSize.toReadableByteSize()})"
             }
-            FileBrowserContentData(
+            FileBrowserContentDto(
                 sourceReference = file.canonicalPath,
                 displayName = file.name.ifBlank { "file" },
                 mimeType = mimeType(file),
@@ -113,9 +113,9 @@ class AndroidFileBrowserDataSource(
         return candidate
     }
 
-    private fun File.toBrowserEntry(): FileBrowserEntryData {
+    private fun File.toFileBrowserEntryDto(): FileBrowserEntryDto {
         val canonical = canonicalFile
-        return FileBrowserEntryData(
+        return FileBrowserEntryDto(
             reference = canonical.path,
             sourceReference = canonical.path.takeUnless { isDirectory },
             displayName = name.ifBlank { canonical.path },

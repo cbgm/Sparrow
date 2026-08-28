@@ -24,7 +24,7 @@ class GroupVerificationRepositoryImpl(
     override fun observePairs(groupId: String): Flow<List<GroupVerificationPair>> =
         groupVerificationDao
             .observeByGroupId(groupId)
-            .map { rows -> rows.map { row -> row.toDomain() } }
+            .map { rows -> rows.map { row -> row.toGroupVerificationPair() } }
 
     override fun observeContext(groupId: String): Flow<GroupVerificationContext> =
         combine(
@@ -71,7 +71,7 @@ class GroupVerificationRepositoryImpl(
         }
 }
 
-private fun GroupVerificationPairEntity.toDomain(): GroupVerificationPair =
+private fun GroupVerificationPairEntity.toGroupVerificationPair(): GroupVerificationPair =
     GroupVerificationPair(
         groupId = groupId,
         invitationId = invitationId,

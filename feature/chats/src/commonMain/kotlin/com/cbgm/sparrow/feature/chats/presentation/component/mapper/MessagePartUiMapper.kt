@@ -85,7 +85,7 @@ fun MessagePartUi.ImageVideoUi.toMediaItem(): MediaItem =
         durationMilliseconds = durationMilliseconds
     )
 
-internal fun MessageBubbleUi.toMessageAttachmentUi(): List<MessageAttachmentUi> =
+internal fun MessageBubbleUi.toMessageAttachmentsUi(): List<MessageAttachmentUi> =
     buildList {
         imageVideoParts.forEach { part ->
             add(

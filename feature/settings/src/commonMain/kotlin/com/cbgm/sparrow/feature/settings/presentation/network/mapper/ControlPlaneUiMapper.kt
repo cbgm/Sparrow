@@ -9,14 +9,14 @@ import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlane
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiSource
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiStatus
 
-internal fun List<ControlPlaneEndpointStatus>.toUiModels(
+internal fun List<ControlPlaneEndpointStatus>.toControlPlaneUiModels(
     manual: Set<String>,
     directory: Set<String>
 ): List<ControlPlaneUiModel> =
     map { status ->
         ControlPlaneUiModel(
             url = status.endpoint.baseUrl,
-            status = status.toUiStatus(),
+            status = status.toControlPlaneUiStatus(),
             source = sourceFor(status.endpoint.baseUrl, manual, directory),
             canRemove = canRemove(status.endpoint.baseUrl, manual, directory)
         )
@@ -25,7 +25,7 @@ internal fun List<ControlPlaneEndpointStatus>.toUiModels(
             .thenBy(ControlPlaneUiModel::url)
     )
 
-internal fun List<ControlPlaneUiModel>.toUiState(
+internal fun List<ControlPlaneUiModel>.toControlPlaneSettingsUiState(
     showAddDialog: Boolean,
     newUrl: String,
     addError: ControlPlaneSettingsError?,
@@ -49,7 +49,7 @@ internal fun List<ControlPlaneUiModel>.toUiState(
         lastDirectoryCount = lastDirectoryCount
     )
 
-private fun ControlPlaneEndpointStatus.toUiStatus(): ControlPlaneUiStatus =
+private fun ControlPlaneEndpointStatus.toControlPlaneUiStatus(): ControlPlaneUiStatus =
     when {
         reachability == ControlPlaneReachability.UNREACHABLE -> ControlPlaneUiStatus.UNREACHABLE
         isActive && reachability == ControlPlaneReachability.AVAILABLE -> ControlPlaneUiStatus.ACTIVE
