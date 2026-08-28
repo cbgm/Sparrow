@@ -10,6 +10,4 @@ sealed interface MediaSelectionResult {
     data class Error(
         val message: String
     ) : MediaSelectionResult
-
-    data object FilePickerRequested : MediaSelectionResult
 }

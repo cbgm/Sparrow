@@ -27,8 +27,6 @@ import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.DirectChatAuthorizationRequiredException
 import com.cbgm.sparrow.feature.contacts.domain.usecase.EnsureIdentityExchangeStartedUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
-import com.cbgm.sparrow.feature.media.presentation.filepicker.FilePickerSessionController
-import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerSessionResult
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toDetailsRoute
@@ -55,8 +53,7 @@ class DirectViewModel(
     private val observeTyping: ObserveDirectTypingUseCase,
     private val setTyping: SetDirectTypingUseCase,
     observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase,
-    private val loadMessageAttachment: LoadMessageAttachmentUseCase,
-    private val filePickerSessions: FilePickerSessionController
+    private val loadMessageAttachment: LoadMessageAttachmentUseCase
 ) : BaseViewModel() {
     private val conversationId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.Chat::conversationId.name)
@@ -74,7 +71,6 @@ class DirectViewModel(
     private val attachmentBytes = MutableStateFlow<Map<String, ByteArray>>(emptyMap())
     private val isSending = MutableStateFlow(false)
     private val loadingAttachmentIds = mutableSetOf<String>()
-    private var activeFilePickerSessionId: String? = null
     private var localTypingStopJob: Job? = null
     private var remoteTypingTimeoutJob: Job? = null
     private var isLocalTyping = false
@@ -133,7 +129,6 @@ class DirectViewModel(
 
     init {
         observeIncomingTyping()
-        observeFilePickerResults()
     }
 
     fun onUiEvent(event: DirectUiEvent) {
@@ -141,7 +136,7 @@ class DirectViewModel(
             is DirectUiEvent.MessageTextChanged -> onMessageTextChanged(event.text)
             DirectUiEvent.SendClicked -> sendCurrentMessage()
             is DirectUiEvent.MediaSelected -> updateMediaSelection(event.media)
-            DirectUiEvent.OpenFilePickerClicked -> openFilePicker()
+            is DirectUiEvent.OpenFilePicker -> navigator.navigateTo(AppRoute.FilePicker(event.sessionId))
             is DirectUiEvent.ShareCurrentLocation -> sendCurrentLocation(event.location.toOutgoingLocationAttachment())
             is DirectUiEvent.AttachmentVisible -> loadAttachment(event.attachmentId)
             is DirectUiEvent.AttachmentError -> errorMessage.value = event.message
@@ -174,59 +169,6 @@ class DirectViewModel(
         viewModelScope.launch {
             markConversationRead(conversationId)
                 .onFailure { error -> logger.warn(error) { "Could not mark direct conversation as read" } }
-        }
-    }
-
-    private fun openFilePicker() {
-        val remainingCapacity =
-            MessageAttachmentPolicy.MAX_ATTACHMENTS_PER_MESSAGE - selectedMedia.value.size
-        if (remainingCapacity <= 0) {
-            errorMessage.value = "No more files can be selected"
-            return
-        }
-
-        val sessionId =
-            filePickerSessions.startSession(
-                maxItems = remainingCapacity,
-                maxFileBytes = MessageAttachmentPolicy.MAX_FILE_BYTES,
-                blockedSourceReferences =
-                    selectedMedia.value.mapNotNullTo(mutableSetOf()) { media ->
-                        media.sourceReference
-                    }
-            )
-        activeFilePickerSessionId = sessionId
-        navigator.navigateTo(AppRoute.FilePicker(sessionId))
-    }
-
-    private fun observeFilePickerResults() {
-        viewModelScope.launch {
-            filePickerSessions.results.collect { result ->
-                if (result.sessionId != activeFilePickerSessionId) return@collect
-
-                when (result) {
-                    is FilePickerSessionResult.Completed -> {
-                        activeFilePickerSessionId = null
-                        val existingReferences =
-                            selectedMedia.value.mapNotNullTo(mutableSetOf()) { media ->
-                                media.sourceReference
-                            }
-                        updateMediaSelection(
-                            selectedMedia.value +
-                                result.media.filterNot { media ->
-                                    media.sourceReference in existingReferences
-                                }
-                        )
-                    }
-
-                    is FilePickerSessionResult.Dismissed -> {
-                        activeFilePickerSessionId = null
-                    }
-
-                    is FilePickerSessionResult.Failed -> {
-                        errorMessage.value = result.message
-                    }
-                }
-            }
         }
     }
 

@@ -376,8 +376,7 @@ private fun org.koin.core.module.Module.registerViewModels() {
             observeMemberTyping = get(),
             setGroupTyping = get(),
             observeMessageSafetyAssessments = get(),
-            loadMessageAttachment = get(),
-            filePickerSessions = get()
+            loadMessageAttachment = get()
         )
     }
 
@@ -422,8 +421,7 @@ private fun org.koin.core.module.Module.registerViewModels() {
             observeTyping = get(),
             setTyping = get(),
             observeMessageSafetyAssessments = get(),
-            loadMessageAttachment = get(),
-            filePickerSessions = get()
+            loadMessageAttachment = get()
         )
     }
 }

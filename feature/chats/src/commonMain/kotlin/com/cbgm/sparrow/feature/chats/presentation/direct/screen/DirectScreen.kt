@@ -357,14 +357,17 @@ private fun BottomBar(
             maxImageDimension = MessageAttachmentPolicy.MAX_IMAGE_DIMENSION,
             maxImageBytes = MessageAttachmentPolicy.MAX_IMAGE_BYTES,
             maxVideoBytes = MessageAttachmentPolicy.MAX_VIDEO_BYTES,
+            maxFileBytes = MessageAttachmentPolicy.MAX_FILE_BYTES,
             selectedMedia = uiState.selectedMedia,
             onResult = { result ->
                 when (result) {
                     is MediaSelectionResult.Selected -> onUiEvent(DirectUiEvent.MediaSelected(result.media))
                     is MediaSelectionResult.Error -> onUiEvent(DirectUiEvent.AttachmentError(result.message))
-                    MediaSelectionResult.FilePickerRequested -> onUiEvent(DirectUiEvent.OpenFilePickerClicked)
                     MediaSelectionResult.Dismissed -> Unit
                 }
+            },
+            onFilePickerSessionStarted = { sessionId ->
+                onUiEvent(DirectUiEvent.OpenFilePicker(sessionId))
             }
         )
     val canAddAttachment =

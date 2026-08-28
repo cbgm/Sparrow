@@ -15,7 +15,9 @@ sealed interface GroupUiEvent {
         val media: List<MediaSelection>
     ) : GroupUiEvent
 
-    data object OpenFilePickerClicked : GroupUiEvent
+    data class OpenFilePicker(
+        val sessionId: String
+    ) : GroupUiEvent
 
     data class ShareCurrentLocation(
         val location: CurrentLocation

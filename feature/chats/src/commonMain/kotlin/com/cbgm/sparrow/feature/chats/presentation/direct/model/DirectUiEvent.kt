@@ -15,7 +15,9 @@ sealed interface DirectUiEvent {
         val media: List<MediaSelection>
     ) : DirectUiEvent
 
-    data object OpenFilePickerClicked : DirectUiEvent
+    data class OpenFilePicker(
+        val sessionId: String
+    ) : DirectUiEvent
 
     data class ShareCurrentLocation(
         val location: CurrentLocation
