@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.FilePresent
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoAlbum
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -32,9 +33,11 @@ fun AttachmentBar(
     onClickCamera: () -> Unit,
     onClickFile: () -> Unit,
     onClickContact: () -> Unit,
+    onClickLocation: () -> Unit,
     isGalleryEnabled: Boolean = true,
     isCameraEnabled: Boolean = true,
-    isFileEnabled: Boolean = true
+    isFileEnabled: Boolean = true,
+    isLocationInProgress: Boolean = false
 ) {
     Row(
         modifier = Modifier
@@ -69,9 +72,11 @@ fun AttachmentBar(
             tint = MaterialTheme.attachmentColors.contact
         )
         FilledButton(
-            onClick = onClickContact,
+            onClick = onClickLocation,
             imageVector = Icons.Filled.MyLocation,
-            tint = MaterialTheme.attachmentColors.location
+            tint = MaterialTheme.attachmentColors.location,
+            enabled = !isLocationInProgress,
+            isLoading = isLocationInProgress
         )
     }
 }
@@ -81,7 +86,8 @@ private fun FilledButton(
     imageVector: ImageVector,
     onClick: () -> Unit,
     tint: Color = MaterialTheme.colorScheme.secondary,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    isLoading: Boolean = false
 ) {
     FilledIconButton(
         onClick = onClick,
@@ -92,12 +98,20 @@ private fun FilledButton(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
     ) {
-        Icon(
-            imageVector = imageVector,
-            contentDescription = null,
-            tint = tint,
-            modifier = Modifier.size(Dimens.AttachmentBar.iconSize)
-        )
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(Dimens.AttachmentBar.iconSize),
+                color = tint,
+                strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
+            )
+        } else {
+            Icon(
+                imageVector = imageVector,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(Dimens.AttachmentBar.iconSize)
+            )
+        }
     }
 }
 
@@ -109,10 +123,12 @@ private fun AttachmentBarPreview() {
             onClickGallery = {},
             onClickContact = {},
             onClickFile = {},
+            onClickLocation = {},
             onClickCamera = {},
             isGalleryEnabled = true,
             isCameraEnabled = true,
-            isFileEnabled = true
+            isFileEnabled = true,
+            isLocationInProgress = false
         )
     }
 }

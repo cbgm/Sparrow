@@ -1,18 +1,22 @@
 package com.cbgm.sparrow.feature.media.presentation.filepicker
 
 import com.cbgm.sparrow.core.id.IdGenerator
-import com.cbgm.sparrow.feature.media.presentation.model.AttachmentSelection
+import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerSessionResult
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class FilePickerSessionController {
     private val sessions = mutableMapOf<String, FilePickerSession>()
+    private val _results = MutableStateFlow<Map<String, FilePickerSessionResult>>(emptyMap())
+
+    val results: StateFlow<Map<String, FilePickerSessionResult>> = _results.asStateFlow()
 
     fun startSession(
         maxItems: Int,
         maxFileBytes: Long,
-        blockedSourceReferences: Set<String>,
-        onFilesSelected: (List<AttachmentSelection>) -> Unit,
-        onDismissed: () -> Unit,
-        onError: (String) -> Unit
+        blockedSourceReferences: Set<String>
     ): String {
         require(maxItems > 0)
         require(maxFileBytes > 0)
@@ -22,10 +26,7 @@ class FilePickerSessionController {
             FilePickerSession(
                 maxItems = maxItems,
                 maxFileBytes = maxFileBytes,
-                blockedSourceReferences = blockedSourceReferences,
-                onFilesSelected = onFilesSelected,
-                onDismissed = onDismissed,
-                onError = onError
+                blockedSourceReferences = blockedSourceReferences
             )
         return sessionId
     }
@@ -39,20 +40,32 @@ class FilePickerSessionController {
             )
         }
 
-    fun complete(sessionId: String, files: List<AttachmentSelection>) {
-        val session = sessions.remove(sessionId) ?: return
-        session.onFilesSelected(files)
+    fun complete(sessionId: String, media: List<MediaSelection>) {
+        if (sessions.remove(sessionId) == null) return
+        publishResult(FilePickerSessionResult.Completed(sessionId = sessionId, media = media))
     }
 
     fun dismiss(sessionId: String) {
-        sessions.remove(sessionId)?.onDismissed?.invoke()
+        if (sessions.remove(sessionId) == null) return
+        publishResult(FilePickerSessionResult.Dismissed(sessionId))
     }
 
     fun reportError(sessionId: String, message: String) {
-        sessions[sessionId]?.onError?.invoke(message)
+        if (sessionId !in sessions) return
+        publishResult(FilePickerSessionResult.Failed(sessionId = sessionId, message = message))
+    }
+
+    fun consumeResult(sessionId: String): FilePickerSessionResult? {
+        val result = _results.value[sessionId] ?: return null
+        _results.value = _results.value - sessionId
+        return result
     }
 
     fun isActive(sessionId: String): Boolean = sessionId in sessions
+
+    private fun publishResult(result: FilePickerSessionResult) {
+        _results.value = _results.value + (result.sessionId to result)
+    }
 }
 
 data class FilePickerSessionSnapshot(
@@ -64,8 +77,5 @@ data class FilePickerSessionSnapshot(
 private data class FilePickerSession(
     val maxItems: Int,
     val maxFileBytes: Long,
-    val blockedSourceReferences: Set<String>,
-    val onFilesSelected: (List<AttachmentSelection>) -> Unit,
-    val onDismissed: () -> Unit,
-    val onError: (String) -> Unit
+    val blockedSourceReferences: Set<String>
 )

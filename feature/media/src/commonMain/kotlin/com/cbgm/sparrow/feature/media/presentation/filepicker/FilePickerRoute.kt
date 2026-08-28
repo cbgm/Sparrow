@@ -18,7 +18,7 @@ fun FilePickerRoute() {
             onReturned = { reference ->
                 viewModel.onUiEvent(FilePickerUiEvent.FileAccessReturned(reference))
             },
-            onError = viewModel::onExternalError
+            onError = { message -> viewModel.onUiEvent(FilePickerUiEvent.FileAccessError(message)) }
         )
 
     FilePickerBackHandler(
@@ -31,7 +31,11 @@ fun FilePickerRoute() {
 
     FilePickerScreen(
         uiState = uiState,
-        onUiEvent = viewModel::onUiEvent,
-        onGrantFileAccess = accessLauncher::launch
+        onUiEvent = { event ->
+            when (event) {
+                FilePickerUiEvent.GrantFileAccessClicked -> accessLauncher.launch()
+                else -> viewModel.onUiEvent(event)
+            }
+        }
     )
 }

@@ -1,23 +1,23 @@
 package com.cbgm.sparrow.feature.media.presentation.model
 
-enum class AttachmentSelectionSource {
+enum class MediaSelectionSource {
     GALLERY,
     CAMERA,
     FILE_PICKER
 }
 
-enum class AttachmentSelectionType {
+enum class MediaSelectionType {
     IMAGE,
     VIDEO,
     FILE
 }
 
-data class AttachmentSelection(
+data class MediaSelection(
     val id: String,
-    val type: AttachmentSelectionType,
+    val type: MediaSelectionType,
     val bytes: ByteArray,
     val mimeType: String,
-    val source: AttachmentSelectionSource,
+    val source: MediaSelectionSource,
     val sourceReference: String? = null,
     val fileName: String? = null,
     val previewBytes: ByteArray? = null,
@@ -30,7 +30,7 @@ data class AttachmentSelection(
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is AttachmentSelection) return false
+        if (other !is MediaSelection) return false
 
         if (id != other.id) return false
         if (type != other.type) return false

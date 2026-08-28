@@ -7,8 +7,11 @@ import kotlinx.serialization.Serializable
 enum class MessageAttachmentType {
     IMAGE,
     VIDEO,
-    FILE
+    FILE,
+    LOCATION
 }
+
+const val LOCATION_MIME_TYPE = "application/vnd.sparrow.location"
 
 @Serializable
 data class MessageAttachment(
@@ -48,6 +51,16 @@ data class MessageAttachment(
             }
 
             MessageAttachmentType.FILE -> Unit
+
+            MessageAttachmentType.LOCATION -> {
+                require(mimeType == LOCATION_MIME_TYPE) {
+                    "Location attachment must use the Sparrow location MIME type"
+                }
+                require(fileName == null) { "Location attachment must not have a file name" }
+                require(width == null && height == null && durationMilliseconds == null) {
+                    "Location attachments must not contain media metadata"
+                }
+            }
         }
     }
 }

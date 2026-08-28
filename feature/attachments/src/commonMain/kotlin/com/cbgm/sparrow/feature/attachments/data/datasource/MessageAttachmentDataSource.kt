@@ -2,20 +2,18 @@ package com.cbgm.sparrow.feature.attachments.data.datasource
 
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.attachment.EncryptedBlobReference
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
 import com.cbgm.sparrow.data.database.entity.MessageAttachmentEntity
-import com.cbgm.sparrow.feature.attachments.data.mapper.toDomainFilesByMessageId
-import com.cbgm.sparrow.feature.attachments.data.mapper.toDomainMediaByMessageId
+import com.cbgm.sparrow.feature.attachments.data.mapper.toDomainByMessageId
 import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachment
+import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageFileAttachment
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageMediaAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.UploadedBlob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment as ProtocolMessageAttachment
 
 class MessageAttachmentDataSource(
     private val attachmentDao: MessageAttachmentDao,
@@ -75,7 +73,7 @@ class MessageAttachmentDataSource(
                 }
         return PreparedMessageAttachment(
             attachment =
-                MessageAttachment(
+                ProtocolMessageAttachment(
                     attachmentId = attachmentId,
                     type = type,
                     mimeType = mimeType,
@@ -105,7 +103,7 @@ class MessageAttachmentDataSource(
 
     suspend fun persistIncoming(
         messageId: String,
-        attachments: List<MessageAttachment>
+        attachments: List<ProtocolMessageAttachment>
     ) {
         if (attachments.isEmpty()) return
         attachmentDao.upsertAll(
@@ -120,7 +118,7 @@ class MessageAttachmentDataSource(
         )
     }
 
-    suspend fun protocolAttachments(messageId: String): List<MessageAttachment> =
+    suspend fun protocolAttachments(messageId: String): List<ProtocolMessageAttachment> =
         attachmentDao.findByMessageId(messageId).map { entity -> entity.toProtocolAttachment() }
 
     suspend fun cacheIncoming(messageId: String) {
@@ -153,20 +151,13 @@ class MessageAttachmentDataSource(
         return bytes
     }
 
-    fun observeRecentMediaByConversation(
+    fun observeRecentByConversation(
         conversationId: String,
         messageLimit: Int
-    ): Flow<Map<String, List<MessageMediaAttachment>>> =
-        attachmentDao.observeRecentByConversation(conversationId, messageLimit)
-            .map { attachments -> attachments.toDomainMediaByMessageId() }
-
-    fun observeRecentFilesByConversation(
-        conversationId: String,
-        messageLimit: Int
-    ): Flow<Map<String, List<MessageFileAttachment>>> =
+    ): Flow<Map<String, List<MessageAttachment>>> =
         attachmentDao.observeRecentByConversation(conversationId, messageLimit)
             .map { attachments ->
-                attachments.toDomainFilesByMessageId(fileDataSource::resolveCacheFilePath)
+                attachments.toDomainByMessageId(fileDataSource::resolveCacheFilePath)
             }
 
     suspend fun deleteForMessages(messageIds: List<String>) {
@@ -213,7 +204,7 @@ class MessageAttachmentDataSource(
             localFileName = localFileName
         )
 
-    private fun MessageAttachment.toEntity(
+    private fun ProtocolMessageAttachment.toEntity(
         messageId: String,
         position: Int,
         deleteCapability: String?,
@@ -242,8 +233,8 @@ class MessageAttachmentDataSource(
             localFileName = localFileName
         )
 
-    private fun MessageAttachmentEntity.toProtocolAttachment(): MessageAttachment =
-        MessageAttachment(
+    private fun MessageAttachmentEntity.toProtocolAttachment(): ProtocolMessageAttachment =
+        ProtocolMessageAttachment(
             attachmentId = id,
             type = MessageAttachmentType.valueOf(type),
             mimeType = mimeType,

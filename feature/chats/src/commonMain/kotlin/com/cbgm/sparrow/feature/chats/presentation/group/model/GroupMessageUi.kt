@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.chats.presentation.group.model
 
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
 
-data class GroupMessageUiModel(
-    val bubble: MessageBubbleModel,
+data class GroupMessageUi(
+    val bubble: MessageBubbleUi,
     val type: ChatMessageType,
     val senderContactId: String? = null,
     val senderProfilePictureBytes: ByteArray? = null
@@ -14,17 +14,12 @@ data class GroupMessageUiModel(
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (javaClass != other?.javaClass) return false
+        if (other !is GroupMessageUi) return false
 
-        other as GroupMessageUiModel
-
-        if (bubble != other.bubble) return false
-        if (type != other.type) return false
-        if (senderContactId != other.senderContactId) return false
-        if (!senderProfilePictureBytes.contentEquals(other.senderProfilePictureBytes)) return false
-        if (id != other.id) return false
-
-        return true
+        return bubble == other.bubble &&
+            type == other.type &&
+            senderContactId == other.senderContactId &&
+            senderProfilePictureBytes.contentEquals(other.senderProfilePictureBytes)
     }
 
     override fun hashCode(): Int {
@@ -32,7 +27,6 @@ data class GroupMessageUiModel(
         result = 31 * result + type.hashCode()
         result = 31 * result + (senderContactId?.hashCode() ?: 0)
         result = 31 * result + (senderProfilePictureBytes?.contentHashCode() ?: 0)
-        result = 31 * result + id.hashCode()
         return result
     }
 }

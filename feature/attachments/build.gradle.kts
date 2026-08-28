@@ -28,6 +28,11 @@ kotlin {
             implementation(libs.okio)
         }
 
+        androidMain.dependencies {
+            implementation(libs.androidx.activity.compose)
+            implementation(libs.play.services.location)
+        }
+
         commonTest.dependencies {
             implementation(libs.bundles.kmp.testing)
         }

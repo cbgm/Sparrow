@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.chats.presentation.group.model
 
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMemberInvitationStatus
-import com.cbgm.sparrow.feature.media.presentation.model.AttachmentSelection
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
 
 data class GroupMemberProgressUi(
     val displayName: String,
@@ -12,9 +12,9 @@ data class GroupMemberProgressUi(
 data class GroupUiState(
     val title: String = "",
     val avatarBytes: ByteArray? = null,
-    val messages: List<GroupMessageUiModel> = emptyList(),
+    val messages: List<GroupMessageUi> = emptyList(),
     val messageText: String = "",
-    val selectedAttachments: List<AttachmentSelection> = emptyList(),
+    val selectedMedia: List<MediaSelection> = emptyList(),
     val isSending: Boolean = false,
     val isSomeoneTyping: Boolean = false,
     val typingDisplayName: String = "",
@@ -46,7 +46,7 @@ data class GroupUiState(
         if (!avatarBytes.contentEquals(other.avatarBytes)) return false
         if (messages != other.messages) return false
         if (messageText != other.messageText) return false
-        if (selectedAttachments != other.selectedAttachments) return false
+        if (selectedMedia != other.selectedMedia) return false
         if (typingDisplayName != other.typingDisplayName) return false
         if (errorMessage != other.errorMessage) return false
         if (state != other.state) return false
@@ -68,7 +68,7 @@ data class GroupUiState(
         result = 31 * result + (avatarBytes?.contentHashCode() ?: 0)
         result = 31 * result + messages.hashCode()
         result = 31 * result + messageText.hashCode()
-        result = 31 * result + selectedAttachments.hashCode()
+        result = 31 * result + selectedMedia.hashCode()
         result = 31 * result + typingDisplayName.hashCode()
         result = 31 * result + (errorMessage?.hashCode() ?: 0)
         result = 31 * result + state.hashCode()

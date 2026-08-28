@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.attachments.presentation.component
+package com.cbgm.sparrow.feature.chats.presentation.component
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,51 +26,64 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.FunctionalColors
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItem
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
-import com.cbgm.sparrow.feature.media.domain.model.MediaContentType
+import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toMediaItem
+import com.cbgm.sparrow.feature.chats.presentation.component.model.ImageVideoTypeUi
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessagePartUi
 import com.cbgm.sparrow.feature.media.presentation.component.MediaThumbnail
 
 @Composable
-fun MessageMediaAttachments(
-    attachments: List<MessageMediaAttachmentUi>,
+internal fun PhotoVideoMessageBubbleBody(
+    imageVideoParts: List<MessagePartUi.ImageVideoUi>,
     onAttachmentVisible: (String) -> Unit,
-    onAttachmentClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    onAttachmentClick: (String) -> Unit
 ) {
-    if (attachments.isEmpty()) return
+    Content(
+        imageVideoParts = imageVideoParts,
+        onAttachmentVisible = onAttachmentVisible,
+        onAttachmentClick = onAttachmentClick
+    )
+}
 
-    val previewAttachments = attachments.take(MAX_PREVIEW_ATTACHMENTS)
-    val hiddenCount = (attachments.size - MAX_PREVIEW_ATTACHMENTS).coerceAtLeast(0)
+@Composable
+private fun Content(
+    imageVideoParts: List<MessagePartUi.ImageVideoUi>,
+    onAttachmentVisible: (String) -> Unit,
+    onAttachmentClick: (String) -> Unit
+) {
+    val visiblePhotoVideoParts = imageVideoParts.take(MAX_PREVIEW_ATTACHMENTS)
+    val hiddenCount = (imageVideoParts.size - MAX_PREVIEW_ATTACHMENTS).coerceAtLeast(0)
 
     Column(
-        modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)) {
-            previewAttachments.take(ATTACHMENTS_PER_ROW).forEach { attachment ->
-                MessageMediaAttachment(
-                    attachment = attachment,
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
+        ) {
+            visiblePhotoVideoParts.take(ATTACHMENTS_PER_ROW).forEach { visiblePart ->
+                MessageMediaPreview(
+                    imageVideoPart = visiblePart,
                     onAttachmentVisible = onAttachmentVisible,
                     onAttachmentClick = onAttachmentClick
                 )
             }
         }
 
-        if (previewAttachments.size > ATTACHMENTS_PER_ROW || hiddenCount > 0) {
-            Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)) {
-                previewAttachments.drop(ATTACHMENTS_PER_ROW).forEach { attachment ->
-                    MessageMediaAttachment(
-                        attachment = attachment,
+        if (visiblePhotoVideoParts.size > ATTACHMENTS_PER_ROW || hiddenCount > 0) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
+            ) {
+                visiblePhotoVideoParts.drop(ATTACHMENTS_PER_ROW).forEach { photoVideoPart ->
+                    MessageMediaPreview(
+                        imageVideoPart = photoVideoPart,
                         onAttachmentVisible = onAttachmentVisible,
                         onAttachmentClick = onAttachmentClick
                     )
                 }
 
                 if (hiddenCount > 0) {
-                    MoreMediaAttachment(
+                    MoreAttachment(
                         additionalCount = hiddenCount,
-                        onClick = { onAttachmentClick(attachments[MAX_PREVIEW_ATTACHMENTS].id) }
+                        onClick = { onAttachmentClick(imageVideoParts[MAX_PREVIEW_ATTACHMENTS].id) }
                     )
                 }
             }
@@ -79,31 +92,31 @@ fun MessageMediaAttachments(
 }
 
 @Composable
-private fun MessageMediaAttachment(
-    attachment: MessageMediaAttachmentUi,
+private fun MessageMediaPreview(
+    imageVideoPart: MessagePartUi.ImageVideoUi,
     onAttachmentVisible: (String) -> Unit,
     onAttachmentClick: (String) -> Unit
 ) {
-    LaunchedEffect(attachment.id, attachment.bytes) {
-        if (attachment.bytes == null) onAttachmentVisible(attachment.id)
+    LaunchedEffect(imageVideoPart.id, imageVideoPart.bytes) {
+        if (imageVideoPart.bytes == null) onAttachmentVisible(imageVideoPart.id)
     }
 
     Surface(
         modifier =
             Modifier
                 .size(Dimens.MessageAttachment.previewSize)
-                .clickable { onAttachmentClick(attachment.id) },
+                .clickable { onAttachmentClick(imageVideoPart.id) },
         shape = MaterialTheme.shapes.extraSmall,
         color = FunctionalColors.MediaBackground
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             MediaThumbnail(
-                media = attachment.toMediaItem(),
+                media = imageVideoPart.toMediaItem(),
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
 
-            if (attachment.bytes == null) {
+            if (imageVideoPart.bytes == null) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -115,14 +128,15 @@ private fun MessageMediaAttachment(
                 }
             }
 
-            if (attachment.type == MediaContentType.VIDEO) {
+            if (imageVideoPart.type == ImageVideoTypeUi.VIDEO) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .size(Dimens.MessageAttachment.previewPlayIconSize)
+                    modifier =
+                        Modifier
+                            .align(Alignment.Center)
+                            .size(Dimens.MessageAttachment.previewPlayIconSize)
                 )
             }
         }
@@ -130,14 +144,15 @@ private fun MessageMediaAttachment(
 }
 
 @Composable
-private fun MoreMediaAttachment(
+private fun MoreAttachment(
     additionalCount: Int,
     onClick: () -> Unit
 ) {
     Surface(
-        modifier = Modifier
-            .size(Dimens.MessageAttachment.previewSize)
-            .clickable(onClick = onClick),
+        modifier =
+            Modifier
+                .size(Dimens.MessageAttachment.previewSize)
+                .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.extraSmall,
         color = FunctionalColors.MediaBackground
     ) {
@@ -155,39 +170,36 @@ private fun MoreMediaAttachment(
     }
 }
 
-private const val MAX_PREVIEW_ATTACHMENTS = 3
-private const val ATTACHMENTS_PER_ROW = 2
-
 @Preview
 @Composable
-private fun MessageMediaAttachmentsPreview() {
+private fun MediaMessageBubbleBodyPreview() {
     SparrowTheme {
-        MessageMediaAttachments(
-            attachments =
+        PhotoVideoMessageBubbleBody(
+            imageVideoParts =
                 listOf(
-                    MessageMediaAttachmentUi(
-                        id = "preview-image-1",
-                        type = MediaContentType.IMAGE,
+                    MessagePartUi.ImageVideoUi(
+                        id = "preview-image",
+                        type = ImageVideoTypeUi.IMAGE,
                         mimeType = "image/jpeg",
-                        bytes = byteArrayOf()
+                        byteSize = 0
                     ),
-                    MessageMediaAttachmentUi(
-                        id = "preview-image-2",
-                        type = MediaContentType.IMAGE,
-                        mimeType = "image/png",
-                        bytes = byteArrayOf()
-                    ),
-                    MessageMediaAttachmentUi(
+                    MessagePartUi.ImageVideoUi(
                         id = "preview-video",
-                        type = MediaContentType.VIDEO,
+                        type = ImageVideoTypeUi.VIDEO,
                         mimeType = "video/mp4",
-                        bytes = byteArrayOf()
+                        byteSize = 0
                     ),
-                    MessageMediaAttachmentUi(
-                        id = "preview-image-3",
-                        type = MediaContentType.IMAGE,
+                    MessagePartUi.ImageVideoUi(
+                        id = "preview-image-2",
+                        type = ImageVideoTypeUi.IMAGE,
                         mimeType = "image/jpeg",
-                        bytes = byteArrayOf()
+                        byteSize = 0
+                    ),
+                    MessagePartUi.ImageVideoUi(
+                        id = "preview-image-3",
+                        type = ImageVideoTypeUi.IMAGE,
+                        mimeType = "image/jpeg",
+                        byteSize = 0
                     )
                 ),
             onAttachmentVisible = {},
@@ -195,3 +207,6 @@ private fun MessageMediaAttachmentsPreview() {
         )
     }
 }
+
+private const val MAX_PREVIEW_ATTACHMENTS = 3
+private const val ATTACHMENTS_PER_ROW = 2

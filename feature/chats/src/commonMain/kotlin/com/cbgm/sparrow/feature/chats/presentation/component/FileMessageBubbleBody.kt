@@ -1,11 +1,10 @@
-package com.cbgm.sparrow.feature.attachments.presentation.component
+package com.cbgm.sparrow.feature.chats.presentation.component
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -29,21 +28,31 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageFileAttachmentUi
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessagePartUi
 import com.cbgm.sparrow.feature.media.device.rememberFileOpener
+import com.cbgm.sparrow.feature.media.util.toReadableByteSize
 
 @Composable
-fun MessageFileAttachments(
-    files: List<MessageFileAttachmentUi>,
-    modifier: Modifier = Modifier,
-    onAttachmentVisible: (String) -> Unit = {},
-    onOpenError: (String) -> Unit = {}
+internal fun FileMessageBubbleBody(
+    fileParts: List<MessagePartUi.FileUi>,
+    onAttachmentVisible: (String) -> Unit
 ) {
-    if (files.isEmpty()) return
+    if (fileParts.isEmpty()) return
 
+    Content(
+        fileParts = fileParts,
+        onAttachmentVisible = onAttachmentVisible
+    )
+}
+
+@Composable
+private fun Content(
+    fileParts: List<MessagePartUi.FileUi>,
+    onAttachmentVisible: (String) -> Unit
+) {
     val opener = rememberFileOpener()
     var pendingFileId by remember { mutableStateOf<String?>(null) }
-    val pendingFile = pendingFileId?.let { id -> files.firstOrNull { it.id == id } }
+    val pendingFile = pendingFileId?.let { id -> fileParts.firstOrNull { it.id == id } }
 
     LaunchedEffect(pendingFileId, pendingFile?.localFilePath) {
         val file = pendingFile ?: return@LaunchedEffect
@@ -53,33 +62,28 @@ fun MessageFileAttachments(
             localFilePath = localFilePath,
             fileName = file.fileName,
             mimeType = file.mimeType
-        ).onFailure { error ->
-            onOpenError(error.message ?: "File could not be opened")
-        }
+        )
         pendingFileId = null
     }
 
     Column(
-        modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
-        files.forEach { file ->
-            val isOpening = pendingFileId == file.id
+        fileParts.forEach { attachment ->
+            val isOpening = pendingFileId == attachment.id
+
             Surface(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable(enabled = !isOpening) {
-                            pendingFileId = file.id
-                            if (file.localFilePath == null) {
-                                onAttachmentVisible(file.id)
-                            }
-                        },
-                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.clickable(enabled = !isOpening) {
+                    pendingFileId = attachment.id
+                    if (attachment.localFilePath == null) {
+                        onAttachmentVisible(attachment.id)
+                    }
+                },
+                shape = MaterialTheme.shapes.extraSmall,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh
             ) {
                 Row(
-                    modifier = Modifier.padding(MaterialTheme.spacing.base),
+                    modifier = Modifier.padding(MaterialTheme.spacing.micro),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (isOpening) {
@@ -94,16 +98,18 @@ fun MessageFileAttachments(
                             modifier = Modifier.size(Dimens.MessageAttachment.filePreviewIconSize)
                         )
                     }
+
                     Spacer(modifier = Modifier.width(MaterialTheme.spacing.base))
-                    Column(modifier = Modifier.weight(1f)) {
+
+                    Column {
                         Text(
-                            text = file.fileName,
+                            text = attachment.fileName,
                             style = MaterialTheme.typography.bodySmall,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = file.sizeText,
+                            text = attachment.byteSize.toReadableByteSize(),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -116,19 +122,27 @@ fun MessageFileAttachments(
 
 @Preview
 @Composable
-private fun MessageFileAttachmentsPreview() {
+private fun FileMessageBubbleBodyPreview() {
     SparrowTheme {
-        MessageFileAttachments(
-            files =
+        FileMessageBubbleBody(
+            fileParts =
                 listOf(
-                    MessageFileAttachmentUi(
+                    MessagePartUi.FileUi(
                         id = "preview-file",
-                        fileName = "project-plan.pdf",
                         mimeType = "application/pdf",
-                        sizeText = "248 KB",
-                        localFilePath = "/data/user/0/com.cbgm.sparrow/files/message-attachments/preview.bin"
+                        byteSize = 1_048_576,
+                        fileName = "document.pdf",
+                        localFilePath = ""
+                    ),
+                    MessagePartUi.FileUi(
+                        id = "preview-file-2",
+                        mimeType = "text/plain",
+                        byteSize = 42_000,
+                        fileName = "notes.txt",
+                        localFilePath = ""
                     )
-                )
+                ),
+            onAttachmentVisible = {}
         )
     }
 }

@@ -45,6 +45,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
@@ -54,14 +55,13 @@ import com.cbgm.sparrow.core.ui.theme.FunctionalColors
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.presentation.component.MessageAttachmentViewer
-import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentFileUi
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementTab
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementUiEvent
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementUiState
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItem
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
-import com.cbgm.sparrow.feature.media.domain.model.MediaContentType
+import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
 import com.cbgm.sparrow.feature.media.presentation.component.MediaThumbnail
+import com.cbgm.sparrow.feature.media.util.toReadableByteSize
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.feature_attachments_delete_confirm
@@ -82,6 +82,11 @@ fun AttachmentManagementScreen(
     onUiEvent: (AttachmentManagementUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val mediaTabItems =
+        uiState.attachments.filterIsInstance<MessageAttachmentUi.ImageVideoAttachment>()
+    val fileTabItems =
+        uiState.attachments.filterIsInstance<MessageAttachmentUi.FileAttachment>()
+
     SparrowStaticScaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
@@ -108,7 +113,7 @@ fun AttachmentManagementScreen(
             when (uiState.selectedTab) {
                 AttachmentManagementTab.MEDIA ->
                     MediaGrid(
-                        attachments = uiState.media,
+                        attachments = mediaTabItems,
                         selectedIds = uiState.selectedIds,
                         isSelectionMode = uiState.isSelectionMode,
                         bottomPadding = innerPadding.calculateBottomPadding(),
@@ -118,7 +123,7 @@ fun AttachmentManagementScreen(
 
                 AttachmentManagementTab.FILES ->
                     FileList(
-                        attachments = uiState.files,
+                        attachments = fileTabItems,
                         selectedIds = uiState.selectedIds,
                         isSelectionMode = uiState.isSelectionMode,
                         bottomPadding = innerPadding.calculateBottomPadding(),
@@ -152,7 +157,7 @@ fun AttachmentManagementScreen(
 
     uiState.viewerAttachmentId?.let { selectedId ->
         MessageAttachmentViewer(
-            attachments = uiState.media,
+            attachments = mediaTabItems,
             selectedAttachmentId = selectedId,
             canSaveToCameraRoll = false,
             onDismiss = { onUiEvent(AttachmentManagementUiEvent.ViewerDismissed) },
@@ -294,7 +299,7 @@ private fun AttachmentTab(
 
 @Composable
 private fun MediaGrid(
-    attachments: List<MessageMediaAttachmentUi>,
+    attachments: List<MessageAttachmentUi.ImageVideoAttachment>,
     selectedIds: Set<String>,
     isSelectionMode: Boolean,
     bottomPadding: Dp,
@@ -330,7 +335,7 @@ private fun MediaGrid(
 private fun GridItem(
     onClick: () -> Unit,
     isSelected: Boolean,
-    attachment: MessageMediaAttachmentUi,
+    attachment: MessageAttachmentUi.ImageVideoAttachment,
     onVisible: (String) -> Unit
 ) {
     LaunchedEffect(attachment.id, attachment.bytes) {
@@ -354,7 +359,7 @@ private fun GridItem(
                 contentScale = ContentScale.Crop
             )
 
-            if (attachment.type == MediaContentType.VIDEO) {
+            if (attachment.type == MessageAttachmentType.VIDEO) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = null,
@@ -386,7 +391,7 @@ private fun GridItem(
 
 @Composable
 private fun FileList(
-    attachments: List<AttachmentFileUi>,
+    attachments: List<MessageAttachmentUi.FileAttachment>,
     selectedIds: Set<String>,
     isSelectionMode: Boolean,
     bottomPadding: Dp,
@@ -400,14 +405,14 @@ private fun FileList(
             ListItem(
                 headlineContent = {
                     Text(
-                        text = attachment.displayName,
+                        text = attachment.fileName,
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                 },
                 supportingContent = {
                     Text(
-                        text = attachment.sizeText,
+                        text = attachment.byteSize.toReadableByteSize(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -478,26 +483,26 @@ private fun AttachmentTabsPreview() {
 
 private fun previewAttachmentManagementUiState(): AttachmentManagementUiState =
     AttachmentManagementUiState(
-        media =
+        attachments =
             listOf(
-                MessageMediaAttachmentUi(
+                MessageAttachmentUi.ImageVideoAttachment(
                     id = "preview-image",
-                    type = MediaContentType.IMAGE,
-                    mimeType = "image/jpeg"
+                    type = MessageAttachmentType.IMAGE,
+                    mimeType = "image/jpeg",
+                    byteSize = 0
                 ),
-                MessageMediaAttachmentUi(
+                MessageAttachmentUi.ImageVideoAttachment(
                     id = "preview-video",
-                    type = MediaContentType.VIDEO,
+                    type = MessageAttachmentType.VIDEO,
                     mimeType = "video/mp4",
+                    byteSize = 0,
                     durationMilliseconds = 42_000
-                )
-            ),
-        files =
-            listOf(
-                AttachmentFileUi(
+                ),
+                MessageAttachmentUi.FileAttachment(
                     id = "preview-file",
-                    displayName = "document.pdf",
-                    sizeText = "240 KB"
+                    mimeType = "application/pdf",
+                    byteSize = 240_000,
+                    fileName = "document.pdf"
                 )
             )
     )

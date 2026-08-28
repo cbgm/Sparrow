@@ -1,7 +1,8 @@
 package com.cbgm.sparrow.feature.chats.presentation.group.model
 
-import com.cbgm.sparrow.feature.media.presentation.model.AttachmentSelection
-import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
+import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
+import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 
 sealed interface GroupUiEvent {
     data class MessageTextChanged(
@@ -10,11 +11,19 @@ sealed interface GroupUiEvent {
 
     data object SendClicked : GroupUiEvent
 
-    data class AttachmentsSelected(
-        val attachments: List<AttachmentSelection>
+    data class MediaSelected(
+        val media: List<MediaSelection>
     ) : GroupUiEvent
 
-    data class MediaAttachmentVisible(
+    data class OpenFilePicker(
+        val sessionId: String
+    ) : GroupUiEvent
+
+    data class ShareCurrentLocation(
+        val location: CurrentLocation
+    ) : GroupUiEvent
+
+    data class AttachmentVisible(
         val attachmentId: String
     ) : GroupUiEvent
 
@@ -31,7 +40,7 @@ sealed interface GroupUiEvent {
     data class SafetyWarningClicked(
         val messageId: String,
         val contactId: String?,
-        val warning: MessageSafetyWarningUiModel
+        val warning: MessageSafetyWarningUi
     ) : GroupUiEvent
 
     data object BackClicked : GroupUiEvent

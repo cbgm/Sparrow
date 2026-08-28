@@ -11,8 +11,8 @@ import com.cbgm.sparrow.feature.attachments.domain.usecase.ObserveLocalAttachmen
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementTab
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementUiEvent
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementUiState
-import com.cbgm.sparrow.feature.attachments.presentation.mapper.toAttachmentManagementFileModels
-import com.cbgm.sparrow.feature.attachments.presentation.mapper.toAttachmentManagementMediaModels
+import com.cbgm.sparrow.feature.attachments.presentation.mapper.toAttachmentManagementUi
+import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
@@ -40,8 +40,7 @@ class AttachmentManagementViewModel(
             val viewerAttachmentId = local.viewerAttachmentId?.takeIf(attachmentIds::contains)
 
             AttachmentManagementUiState(
-                media = attachments.toAttachmentManagementMediaModels(local.loadedBytes),
-                files = attachments.toAttachmentManagementFileModels(),
+                attachments = attachments.toAttachmentManagementUi(local.loadedBytes),
                 selectedTab = local.selectedTab,
                 isSelectionMode = local.isSelectionMode,
                 selectedIds = selectedIds,
@@ -99,7 +98,13 @@ class AttachmentManagementViewModel(
             return
         }
 
-        if (uiState.value.media.none { media -> media.id == attachmentId }) return
+        if (
+            uiState.value.attachments.none { attachment ->
+                attachment.id == attachmentId && attachment !is MessageAttachmentUi.FileAttachment
+            }
+        ) {
+            return
+        }
 
         localState.update { state -> state.copy(viewerAttachmentId = attachmentId) }
         ensureLoaded(attachmentId)

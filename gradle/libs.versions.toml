@@ -36,6 +36,7 @@ micrometer = "1.17.0"
 okio = "3.16.4"
 logback = "1.5.18"
 play-services-auth = "21.1.1"
+play-services-location = "21.4.0"
 about-libs-compose = "15.0.4"
 about-libs-render = "0.43.0"
 about-libs-plugin = "15.0.4"
@@ -133,6 +134,7 @@ ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 
 play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "play-services-auth" }
+play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "play-services-location" }
 
 about-libs-compose = { module = "com.mikepenz:aboutlibraries-compose-m3", version.ref = "about-libs-compose" }
 about-libs-render = { module = "com.mikepenz:multiplatform-markdown-renderer-m3", version.ref = "about-libs-render" }

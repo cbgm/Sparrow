@@ -7,6 +7,7 @@ import com.cbgm.sparrow.feature.media.domain.usecase.CheckFileBrowserAccessUseCa
 import com.cbgm.sparrow.feature.media.domain.usecase.GetFileBrowserRootUseCase
 import com.cbgm.sparrow.feature.media.domain.usecase.ReadFileBrowserEntryUseCase
 import com.cbgm.sparrow.feature.media.domain.usecase.SetFileBrowserRootUseCase
+import com.cbgm.sparrow.feature.media.presentation.filepicker.FilePickerLauncher
 import com.cbgm.sparrow.feature.media.presentation.filepicker.FilePickerSessionController
 import com.cbgm.sparrow.feature.media.presentation.filepicker.FilePickerViewModel
 import org.koin.core.module.dsl.bind
@@ -25,6 +26,7 @@ val mediaModule =
         factory { BrowseFileDirectoryUseCase(repository = get()) }
         factory { ReadFileBrowserEntryUseCase(repository = get()) }
         singleOf(::FilePickerSessionController)
+        singleOf(::FilePickerLauncher)
         viewModel {
             FilePickerViewModel(
                 savedStateHandle = get(),

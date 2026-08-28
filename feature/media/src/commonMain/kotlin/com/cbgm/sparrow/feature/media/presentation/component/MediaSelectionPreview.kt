@@ -32,42 +32,42 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.media.presentation.mapper.toMediaItem
-import com.cbgm.sparrow.feature.media.presentation.model.AttachmentSelection
-import com.cbgm.sparrow.feature.media.presentation.model.AttachmentSelectionSource
-import com.cbgm.sparrow.feature.media.presentation.model.AttachmentSelectionType
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionSource
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionType
 import com.cbgm.sparrow.feature.media.util.toReadableByteSize
 
 @Composable
-fun AttachmentSelectionPreview(
-    attachments: List<AttachmentSelection>,
-    onClick: (AttachmentSelectionSource) -> Unit,
+fun MediaSelectionPreview(
+    media: List<MediaSelection>,
+    onClick: (MediaSelectionSource) -> Unit,
     onRemove: (String) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
-    if (attachments.isEmpty()) return
+    if (media.isEmpty()) return
 
     LazyRow(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
-        items(attachments, key = AttachmentSelection::id) { attachment ->
-            when (attachment.type) {
-                AttachmentSelectionType.IMAGE,
-                AttachmentSelectionType.VIDEO ->
-                    MediaAttachmentSelectionItem(
-                        attachment = attachment,
+        items(media, key = MediaSelection::id) { selection ->
+            when (selection.type) {
+                MediaSelectionType.IMAGE,
+                MediaSelectionType.VIDEO ->
+                    MediaSelectionItem(
+                        selection = selection,
                         enabled = enabled,
-                        onClick = { onClick(AttachmentSelectionSource.GALLERY) },
-                        onRemove = { onRemove(attachment.id) }
+                        onClick = { onClick(MediaSelectionSource.GALLERY) },
+                        onRemove = { onRemove(selection.id) }
                     )
 
-                AttachmentSelectionType.FILE ->
-                    FileAttachmentSelectionItem(
-                        attachment = attachment,
+                MediaSelectionType.FILE ->
+                    FileSelectionItem(
+                        selection = selection,
                         enabled = enabled,
-                        onClick = { onClick(AttachmentSelectionSource.FILE_PICKER) },
-                        onRemove = { onRemove(attachment.id) }
+                        onClick = { onClick(MediaSelectionSource.FILE_PICKER) },
+                        onRemove = { onRemove(selection.id) }
                     )
             }
         }
@@ -75,8 +75,8 @@ fun AttachmentSelectionPreview(
 }
 
 @Composable
-private fun MediaAttachmentSelectionItem(
-    attachment: AttachmentSelection,
+private fun MediaSelectionItem(
+    selection: MediaSelection,
     enabled: Boolean,
     onClick: () -> Unit,
     onRemove: () -> Unit
@@ -84,7 +84,7 @@ private fun MediaAttachmentSelectionItem(
     Box(
         modifier =
             Modifier
-                .size(Dimens.MessageAttachment.previewSize)
+                .size(Dimens.MediaSelection.previewSize)
                 .clickable(enabled = enabled, onClick = onClick)
     ) {
         Surface(
@@ -93,25 +93,25 @@ private fun MediaAttachmentSelectionItem(
             color = MaterialTheme.colorScheme.surfaceContainerHigh
         ) {
             MediaThumbnail(
-                media = attachment.toMediaItem(),
+                media = selection.toMediaItem(),
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
         }
 
-        if (attachment.type == AttachmentSelectionType.VIDEO) {
+        if (selection.type == MediaSelectionType.VIDEO) {
             Surface(
                 modifier = Modifier.align(Alignment.Center),
                 shape = MaterialTheme.shapes.extraLarge,
                 color =
                     MaterialTheme.colorScheme.scrim.copy(
-                        alpha = Alpha.MessageAttachment.playButtonBackground
+                        alpha = Alpha.MediaSelection.playButtonBackground
                     )
             ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = null,
-                    modifier = Modifier.size(Dimens.MessageAttachment.previewPlayIconSize),
+                    modifier = Modifier.size(Dimens.MediaSelection.previewPlayIconSize),
                     tint = MaterialTheme.colorScheme.secondary
                 )
             }
@@ -122,8 +122,8 @@ private fun MediaAttachmentSelectionItem(
 }
 
 @Composable
-private fun FileAttachmentSelectionItem(
-    attachment: AttachmentSelection,
+private fun FileSelectionItem(
+    selection: MediaSelection,
     enabled: Boolean,
     onClick: () -> Unit,
     onRemove: () -> Unit
@@ -135,27 +135,26 @@ private fun FileAttachmentSelectionItem(
             color = MaterialTheme.colorScheme.surfaceContainerHigh
         ) {
             Row(
-                modifier =
-                    Modifier
-                        .width(Dimens.MessageAttachment.filePreviewWidth)
-                        .padding(MaterialTheme.spacing.base),
+                modifier = Modifier
+                    .width(Dimens.MediaSelection.filePreviewWidth)
+                    .padding(MaterialTheme.spacing.base),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     imageVector = Icons.Default.InsertDriveFile,
                     contentDescription = null,
-                    modifier = Modifier.size(Dimens.MessageAttachment.filePreviewIconSize)
+                    modifier = Modifier.size(Dimens.MediaSelection.filePreviewIconSize)
                 )
                 Spacer(modifier = Modifier.width(MaterialTheme.spacing.base))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = attachment.fileName ?: attachment.id,
+                        text = selection.fileName ?: selection.id,
                         style = MaterialTheme.typography.bodySmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = attachment.byteSize.toReadableByteSize(),
+                        text = selection.byteSize.toReadableByteSize(),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -175,7 +174,7 @@ private fun BoxScope.RemoveButton(
         modifier =
             Modifier
                 .align(Alignment.TopEnd)
-                .size(Dimens.MessageAttachment.previewRemoveButtonSize)
+                .size(Dimens.MediaSelection.previewRemoveButtonSize)
                 .clickable(enabled = enabled, onClick = onRemove),
         shape = MaterialTheme.shapes.extraLarge,
         color = MaterialTheme.colorScheme.surfaceContainer
@@ -184,7 +183,7 @@ private fun BoxScope.RemoveButton(
             Icon(
                 imageVector = Icons.Default.Close,
                 contentDescription = null,
-                modifier = Modifier.size(Dimens.MessageAttachment.previewRemoveIconSize),
+                modifier = Modifier.size(Dimens.MediaSelection.previewRemoveIconSize),
                 tint = MaterialTheme.colorScheme.primary
             )
         }
@@ -193,11 +192,11 @@ private fun BoxScope.RemoveButton(
 
 @Preview
 @Composable
-private fun AttachmentSelectionPreviewPreview() {
+private fun MediaSelectionPreviewPreview() {
     SparrowTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
-            AttachmentSelectionPreview(
-                attachments = previewAttachmentSelections(),
+            MediaSelectionPreview(
+                media = previewMediaSelections(),
                 onClick = {},
                 onRemove = {}
             )
@@ -205,34 +204,34 @@ private fun AttachmentSelectionPreviewPreview() {
     }
 }
 
-fun previewAttachmentSelections(): List<AttachmentSelection> =
+fun previewMediaSelections(): List<MediaSelection> =
     listOf(
-        AttachmentSelection(
+        MediaSelection(
             id = "preview-image",
-            type = AttachmentSelectionType.IMAGE,
+            type = MediaSelectionType.IMAGE,
             bytes = PREVIEW_IMAGE_PNG.hexToBytes(),
             mimeType = "image/png",
-            source = AttachmentSelectionSource.GALLERY,
+            source = MediaSelectionSource.GALLERY,
             width = 48,
             height = 48
         ),
-        AttachmentSelection(
+        MediaSelection(
             id = "preview-video",
-            type = AttachmentSelectionType.VIDEO,
+            type = MediaSelectionType.VIDEO,
             bytes = PREVIEW_VIDEO_THUMBNAIL_PNG.hexToBytes(),
             mimeType = "video/mp4",
-            source = AttachmentSelectionSource.GALLERY,
+            source = MediaSelectionSource.GALLERY,
             previewBytes = PREVIEW_VIDEO_THUMBNAIL_PNG.hexToBytes(),
             width = 48,
             height = 48,
             durationMilliseconds = 12_000L
         ),
-        AttachmentSelection(
+        MediaSelection(
             id = "preview-file",
-            type = AttachmentSelectionType.FILE,
+            type = MediaSelectionType.FILE,
             bytes = ByteArray(1024),
             mimeType = "application/pdf",
-            source = AttachmentSelectionSource.FILE_PICKER,
+            source = MediaSelectionSource.FILE_PICKER,
             fileName = "document.pdf"
         )
     )

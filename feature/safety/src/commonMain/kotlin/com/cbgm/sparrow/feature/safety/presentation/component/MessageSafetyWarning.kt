@@ -23,7 +23,7 @@ import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningLevel
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningReason
-import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
+import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_safety_high_risk_message
 import com.cbgm.sparrow.resources.feature_safety_suspicious_message
@@ -31,7 +31,7 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun MessageSafetyWarning(
-    warning: MessageSafetyWarningUiModel,
+    warning: MessageSafetyWarningUi,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -96,7 +96,7 @@ private fun MessageSafetyWarningPreview() {
     SparrowTheme {
         MessageSafetyWarning(
             warning =
-                MessageSafetyWarningUiModel(
+                MessageSafetyWarningUi(
                     level = MessageSafetyWarningLevel.SUSPICIOUS,
                     reasons = listOf(MessageSafetyWarningReason.SUSPICIOUS_LINK)
                 ),

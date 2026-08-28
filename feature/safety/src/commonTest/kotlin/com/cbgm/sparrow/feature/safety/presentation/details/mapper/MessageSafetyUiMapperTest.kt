@@ -11,7 +11,7 @@ import kotlin.test.assertNull
 class MessageSafetyUiMapperTest {
     @Test
     fun safeAssessmentHasNoWarning() {
-        assertNull(MessageSafetyAssessment.Safe.toWarningUiModel())
+        assertNull(MessageSafetyAssessment.Safe.toMessageSafetyWarningUi())
     }
 
     @Test
@@ -19,7 +19,7 @@ class MessageSafetyUiMapperTest {
         val warning =
             MessageSafetyAssessment(
                 reasons = setOf(MessageSafetyReason.URGENT_ACTION_REQUEST)
-            ).toWarningUiModel()
+            ).toMessageSafetyWarningUi()
 
         assertEquals(MessageSafetyWarningLevel.SUSPICIOUS, warning?.level)
         assertEquals(listOf(MessageSafetyWarningReason.URGENT_ACTION_REQUEST), warning?.reasons)
@@ -30,7 +30,7 @@ class MessageSafetyUiMapperTest {
         val warning =
             MessageSafetyAssessment(
                 reasons = setOf(MessageSafetyReason.PRIVATE_KEY_REQUEST)
-            ).toWarningUiModel()
+            ).toMessageSafetyWarningUi()
 
         assertEquals(MessageSafetyWarningLevel.HIGH, warning?.level)
     }

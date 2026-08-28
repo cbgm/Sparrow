@@ -16,7 +16,7 @@ import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerBr
 import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerSortMode
 import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerUiEvent
 import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerUiState
-import com.cbgm.sparrow.feature.media.presentation.mapper.toAttachmentSelection
+import com.cbgm.sparrow.feature.media.presentation.mapper.toMediaSelection
 import com.cbgm.sparrow.feature.media.presentation.mapper.toUiModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -53,11 +53,6 @@ class FilePickerViewModel(
         if (session != null) refreshAccessAndOpenRoot()
     }
 
-    fun onExternalError(message: String) {
-        sessions.reportError(sessionId, message)
-        _uiState.update { state -> state.copy(errorMessage = message, isLoading = false) }
-    }
-
     fun dismissSessionIfActive() {
         if (sessions.isActive(sessionId)) sessions.dismiss(sessionId)
     }
@@ -66,7 +61,9 @@ class FilePickerViewModel(
         when (event) {
             FilePickerUiEvent.BackClicked -> handleBack()
             FilePickerUiEvent.CloseClicked -> closePicker()
+            FilePickerUiEvent.GrantFileAccessClicked -> Unit
             is FilePickerUiEvent.FileAccessReturned -> handleFileAccessReturned(event.rootReference)
+            is FilePickerUiEvent.FileAccessError -> handleFileAccessError(event.message)
             is FilePickerUiEvent.EntryClicked -> handleEntryClick(event.reference)
             is FilePickerUiEvent.BreadcrumbClicked -> navigateToBreadcrumb(event.reference)
             is FilePickerUiEvent.SearchChanged -> updateSearch(event.query)
@@ -75,6 +72,11 @@ class FilePickerViewModel(
             FilePickerUiEvent.SortDirectionToggled -> toggleSortDirection()
             FilePickerUiEvent.ConfirmClicked -> confirmSelection()
         }
+    }
+
+    private fun handleFileAccessError(message: String) {
+        sessions.reportError(sessionId, message)
+        _uiState.update { state -> state.copy(errorMessage = message, isLoading = false) }
     }
 
     private fun handleFileAccessReturned(rootReference: String?) {
@@ -124,7 +126,7 @@ class FilePickerViewModel(
             return
         }
 
-        directoryStack.removeLast()
+        directoryStack.removeAt(directoryStack.lastIndex)
         loadDirectory(directoryStack.last().reference)
     }
 
@@ -136,7 +138,7 @@ class FilePickerViewModel(
     private fun navigateToBreadcrumb(reference: String) {
         val targetIndex = directoryStack.indexOfFirst { it.reference == reference }
         if (targetIndex < 0 || targetIndex == directoryStack.lastIndex) return
-        while (directoryStack.lastIndex > targetIndex) directoryStack.removeLast()
+        while (directoryStack.lastIndex > targetIndex) directoryStack.removeAt(directoryStack.lastIndex)
         loadDirectory(reference)
     }
 
@@ -249,7 +251,7 @@ class FilePickerViewModel(
         viewModelScope.launch {
             runCatching {
                 selectedReferences.map { reference ->
-                    readFile(reference, currentSession.maxFileBytes).getOrThrow().toAttachmentSelection()
+                    readFile(reference, currentSession.maxFileBytes).getOrThrow().toMediaSelection()
                 }
             }.onSuccess { files ->
                 sessions.complete(sessionId, files)

@@ -4,12 +4,12 @@ import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyAssessment
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyReason
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningLevel
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningReason
-import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
+import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 
-fun MessageSafetyAssessment.toWarningUiModel(): MessageSafetyWarningUiModel? {
+fun MessageSafetyAssessment.toMessageSafetyWarningUi(): MessageSafetyWarningUi? {
     if (reasons.isEmpty()) return null
 
-    return MessageSafetyWarningUiModel(
+    return MessageSafetyWarningUi(
         level = warningLevel(),
         reasons = reasons.map(MessageSafetyReason::toUiReason)
     )

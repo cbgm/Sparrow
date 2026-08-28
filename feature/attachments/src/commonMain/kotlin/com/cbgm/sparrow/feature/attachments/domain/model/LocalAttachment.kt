@@ -1,9 +1,11 @@
 package com.cbgm.sparrow.feature.attachments.domain.model
 
+import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
+
 data class LocalAttachment(
     val id: String,
     val conversationId: String,
-    val type: LocalAttachmentType,
+    val type: MessageAttachmentType,
     val mimeType: String,
     val byteSize: Long,
     val fileName: String?,
@@ -12,9 +14,3 @@ data class LocalAttachment(
     val durationMilliseconds: Long?,
     val createdAtEpochMilliseconds: Long
 )
-
-enum class LocalAttachmentType {
-    IMAGE,
-    VIDEO,
-    FILE
-}

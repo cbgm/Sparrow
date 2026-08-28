@@ -61,12 +61,18 @@ object Dimens {
 
     object MessageAttachment {
         val previewPlayIconSize = 16.dp
+        val previewSize = 50.dp
+        val filePreviewIconSize = 24.dp
+        val loadingIndicatorSize = 24.dp
+    }
+
+    object MediaSelection {
+        val previewPlayIconSize = 16.dp
         val previewRemoveButtonSize = 22.dp
         val previewRemoveIconSize = 14.dp
         val previewSize = 50.dp
         val filePreviewWidth = 190.dp
         val filePreviewIconSize = 24.dp
-        val loadingIndicatorSize = 24.dp
     }
 
     object Media {

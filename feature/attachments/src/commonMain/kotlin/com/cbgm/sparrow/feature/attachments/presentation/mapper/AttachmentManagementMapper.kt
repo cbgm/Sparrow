@@ -1,41 +1,45 @@
 package com.cbgm.sparrow.feature.attachments.presentation.mapper
 
+import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.feature.attachments.domain.model.LocalAttachment
-import com.cbgm.sparrow.feature.attachments.domain.model.LocalAttachmentType
-import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentFileUi
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageMediaAttachmentUi
-import com.cbgm.sparrow.feature.media.domain.model.MediaContentType
-import com.cbgm.sparrow.feature.media.util.toReadableByteSize
+import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
+import com.cbgm.sparrow.feature.attachments.util.LocationAttachmentPayload
 
-internal fun List<LocalAttachment>.toAttachmentManagementMediaModels(
+internal fun List<LocalAttachment>.toAttachmentManagementUi(
     loadedBytes: Map<String, ByteArray>
-): List<MessageMediaAttachmentUi> =
-    asSequence()
-        .filter { attachment -> attachment.type != LocalAttachmentType.FILE }
-        .map { attachment ->
-            MessageMediaAttachmentUi(
-                id = attachment.id,
-                type =
-                    when (attachment.type) {
-                        LocalAttachmentType.IMAGE -> MediaContentType.IMAGE
-                        LocalAttachmentType.VIDEO -> MediaContentType.VIDEO
-                        LocalAttachmentType.FILE -> error("File attachment cannot be mapped to media")
-                    },
-                mimeType = attachment.mimeType,
-                width = attachment.width,
-                height = attachment.height,
-                durationMilliseconds = attachment.durationMilliseconds,
-                bytes = loadedBytes[attachment.id]
-            )
-        }.toList()
+): List<MessageAttachmentUi> =
+    mapNotNull { attachment ->
+        when (attachment.type) {
+            MessageAttachmentType.IMAGE,
+            MessageAttachmentType.VIDEO ->
+                MessageAttachmentUi.ImageVideoAttachment(
+                    id = attachment.id,
+                    type = attachment.type,
+                    mimeType = attachment.mimeType,
+                    byteSize = attachment.byteSize,
+                    fileName = attachment.fileName,
+                    width = attachment.width,
+                    height = attachment.height,
+                    durationMilliseconds = attachment.durationMilliseconds,
+                    bytes = loadedBytes[attachment.id]
+                )
 
-internal fun List<LocalAttachment>.toAttachmentManagementFileModels(): List<AttachmentFileUi> =
-    asSequence()
-        .filter { attachment -> attachment.type == LocalAttachmentType.FILE }
-        .map { attachment ->
-            AttachmentFileUi(
-                id = attachment.id,
-                displayName = attachment.fileName ?: attachment.id,
-                sizeText = attachment.byteSize.toReadableByteSize()
-            )
-        }.toList()
+            MessageAttachmentType.FILE ->
+                MessageAttachmentUi.FileAttachment(
+                    id = attachment.id,
+                    mimeType = attachment.mimeType,
+                    byteSize = attachment.byteSize,
+                    fileName = attachment.fileName ?: attachment.id
+                )
+
+            MessageAttachmentType.LOCATION ->
+                loadedBytes[attachment.id]
+                    ?.let(LocationAttachmentPayload::decode)
+                    ?.let { location ->
+                        MessageAttachmentUi.LocationAttachment(
+                            id = attachment.id,
+                            location = location
+                        )
+                    }
+        }
+    }

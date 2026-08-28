@@ -7,7 +7,9 @@ import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
+import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.usecase.LoadMessageAttachmentUseCase
+import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingLocationAttachment
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingMessageAttachment
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupChatContext
@@ -22,7 +24,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupTypingUseCase
 import com.cbgm.sparrow.feature.chats.presentation.group.mapper.toGroupUiState
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState
-import com.cbgm.sparrow.feature.media.presentation.model.AttachmentSelection
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toDetailsRoute
 import kotlinx.coroutines.Job
@@ -62,7 +64,7 @@ class GroupViewModel(
     private val messageText = savedStateHandle.getMutableStateFlow(MESSAGE_TEXT_KEY, "")
     private val errorMessage = MutableStateFlow<String?>(null)
     private val typingContactIds = MutableStateFlow<Set<String>>(emptySet())
-    private val selectedAttachments = MutableStateFlow<List<AttachmentSelection>>(emptyList())
+    private val selectedMedia = MutableStateFlow<List<MediaSelection>>(emptyList())
     private val attachmentBytes = MutableStateFlow<Map<String, ByteArray>>(emptyMap())
     private val isSending = MutableStateFlow(false)
     private val loadingAttachmentIds = mutableSetOf<String>()
@@ -87,10 +89,10 @@ class GroupViewModel(
             messageText,
             errorMessage,
             typingContactIds,
-            selectedAttachments,
+            selectedMedia,
             isSending
-        ) { text, error, typingIds, attachments, sending ->
-            GroupComposerContext(text, error, typingIds, attachments, sending)
+        ) { text, error, typingIds, media, sending ->
+            GroupComposerContext(text, error, typingIds, media, sending)
         }
 
     val uiState: StateFlow<GroupUiState> =
@@ -114,7 +116,7 @@ class GroupViewModel(
                 safetyAssessments = safetyAssessments,
                 attachmentBytes = loadedAttachmentBytes
             ).copy(
-                selectedAttachments = composer.attachments,
+                selectedMedia = composer.media,
                 isSending = composer.isSending
             )
         }.stateIn(
@@ -131,8 +133,10 @@ class GroupViewModel(
         when (event) {
             is GroupUiEvent.MessageTextChanged -> onMessageTextChanged(event.text)
             GroupUiEvent.SendClicked -> sendCurrentMessage()
-            is GroupUiEvent.AttachmentsSelected -> updateAttachmentSelection(event.attachments)
-            is GroupUiEvent.MediaAttachmentVisible -> loadAttachment(event.attachmentId)
+            is GroupUiEvent.MediaSelected -> updateMediaSelection(event.media)
+            is GroupUiEvent.OpenFilePicker -> navigator.navigateTo(AppRoute.FilePicker(event.sessionId))
+            is GroupUiEvent.ShareCurrentLocation -> sendCurrentLocation(event.location.toOutgoingLocationAttachment())
+            is GroupUiEvent.AttachmentVisible -> loadAttachment(event.attachmentId)
             is GroupUiEvent.AttachmentError -> errorMessage.value = event.message
             GroupUiEvent.HeaderClicked -> navigator.navigateTo(AppRoute.GroupDetails(groupId))
             is GroupUiEvent.RetryMessage -> retryFailedMessage(event.messageId)
@@ -232,17 +236,17 @@ class GroupViewModel(
     private fun sendCurrentMessage() {
         if (!uiState.value.isMessageInputEnabled || isSending.value) return
         val text = messageText.value.trim()
-        val selections = selectedAttachments.value
+        val selections = selectedMedia.value
         if (text.isEmpty() && selections.isEmpty()) return
 
         viewModelScope.launch {
             isSending.value = true
             try {
-                val attachments = selections.map(AttachmentSelection::toOutgoingMessageAttachment)
+                val attachments = selections.map(MediaSelection::toOutgoingMessageAttachment)
                 sendMessage(groupId, text, attachments)
                     .onSuccess {
                         messageText.value = ""
-                        selectedAttachments.value = emptyList()
+                        selectedMedia.value = emptyList()
                         stopTypingNow()
                     }
                     .onFailure { error ->
@@ -254,13 +258,30 @@ class GroupViewModel(
         }
     }
 
-    private fun updateAttachmentSelection(attachments: List<AttachmentSelection>) {
+    private fun sendCurrentLocation(locationAttachment: OutgoingMessageAttachment) {
+        if (!uiState.value.isMessageInputEnabled || isSending.value) return
+
+        errorMessage.value = null
+        viewModelScope.launch {
+            isSending.value = true
+            try {
+                sendMessage(groupId, "", listOf(locationAttachment))
+                    .onFailure { error ->
+                        errorMessage.value = error.message ?: "Location could not be sent"
+                    }
+            } finally {
+                isSending.value = false
+            }
+        }
+    }
+
+    private fun updateMediaSelection(media: List<MediaSelection>) {
         runCatching {
             MessageAttachmentPolicy.requireValid(
-                attachments.map(AttachmentSelection::toOutgoingMessageAttachment)
+                media.map(MediaSelection::toOutgoingMessageAttachment)
             )
         }.onSuccess {
-            selectedAttachments.value = attachments
+            selectedMedia.value = media
             errorMessage.value = null
         }.onFailure { error ->
             errorMessage.value = error.message ?: "Selected attachments could not be attached"
@@ -344,7 +365,7 @@ class GroupViewModel(
         val text: String,
         val error: String?,
         val typingIds: Set<String>,
-        val attachments: List<AttachmentSelection>,
+        val media: List<MediaSelection>,
         val isSending: Boolean
     )
 
