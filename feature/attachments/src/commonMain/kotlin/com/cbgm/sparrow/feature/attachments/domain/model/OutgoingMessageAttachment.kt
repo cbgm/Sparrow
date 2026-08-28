@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.attachments.domain.model
 
+import com.cbgm.sparrow.core.protocol.attachment.CONTACT_MIME_TYPE
 import com.cbgm.sparrow.core.protocol.attachment.LOCATION_MIME_TYPE
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 
@@ -57,6 +58,15 @@ data class OutgoingMessageAttachment(
                 require(fileName == null) { "Location attachment must not have a file name" }
                 require(width == null && height == null) { "Location attachment must not have media dimensions" }
                 require(durationMilliseconds == null) { "Location attachment must not have a media duration" }
+            }
+
+            MessageAttachmentType.CONTACT -> {
+                require(mimeType == CONTACT_MIME_TYPE) {
+                    "Contact attachment must use the Sparrow contact MIME type"
+                }
+                require(fileName == null) { "Contact attachment must not have a file name" }
+                require(width == null && height == null) { "Contact attachment must not have media dimensions" }
+                require(durationMilliseconds == null) { "Contact attachment must not have a media duration" }
             }
         }
     }

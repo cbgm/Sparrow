@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -46,12 +47,14 @@ import com.cbgm.sparrow.core.ui.component.PatternBackground
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowBannerButton
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.device.rememberCurrentLocationLauncher
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
+import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.attachments.presentation.component.MessageAttachmentViewer
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
@@ -59,17 +62,20 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMemberInvitationStatus
+import com.cbgm.sparrow.feature.chats.presentation.component.AddSharedContactDialog
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageBubble
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageControl
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageInputActions
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageInputState
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toMessageAttachmentUi
+import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toSharedContact
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessagePartUi
 import com.cbgm.sparrow.feature.chats.presentation.component.rememberMessageSearchTargetState
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMessageUi
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState
+import com.cbgm.sparrow.feature.contacts.presentation.overview.ContactAttachmentSelectionRoute
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionResult
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionSource
 import com.cbgm.sparrow.feature.media.presentation.selection.rememberMediaSelectionLauncher
@@ -126,6 +132,8 @@ fun GroupScreen(
 ) {
     var viewerMessageId by rememberSaveable { mutableStateOf<String?>(null) }
     var viewerAttachmentId by rememberSaveable { mutableStateOf<String?>(null) }
+    var showContactSelection by rememberSaveable { mutableStateOf(false) }
+    var pendingSharedContact by remember { mutableStateOf<SharedContact?>(null) }
 
     SparrowLazyScaffold(
         modifier = modifier,
@@ -148,7 +156,8 @@ fun GroupScreen(
             BottomBar(
                 uiState = uiState,
                 containerColor = containerColor,
-                onUiEvent = onUiEvent
+                onUiEvent = onUiEvent,
+                onContactAttachmentClick = { showContactSelection = true }
             )
         }
     ) { innerPadding, listState ->
@@ -176,7 +185,37 @@ fun GroupScreen(
                 viewerMessageId = messageId
                 viewerAttachmentId = attachmentId
                 onUiEvent(GroupUiEvent.AttachmentVisible(attachmentId))
-            }
+            },
+            onContactClick = { contact -> pendingSharedContact = contact }
+        )
+    }
+
+    SparrowOverlayHost(
+        visible = showContactSelection,
+        onDismissRequest = { showContactSelection = false },
+        horizontalPadding = MaterialTheme.spacing.zero,
+        topPadding = MaterialTheme.spacing.times(6)
+    ) { dismissOverlay ->
+        ContactAttachmentSelectionRoute(
+            onContactSelected = { contact ->
+                contact.toSharedContact()?.let { sharedContact ->
+                    dismissOverlay()
+                    onUiEvent(GroupUiEvent.ShareContact(sharedContact))
+                }
+            },
+            onBack = dismissOverlay,
+            modifier = Modifier.fillMaxSize()
+        )
+    }
+
+    pendingSharedContact?.let { contact ->
+        AddSharedContactDialog(
+            contact = contact,
+            onConfirm = {
+                pendingSharedContact = null
+                onUiEvent(GroupUiEvent.AddSharedContact(contact))
+            },
+            onDismiss = { pendingSharedContact = null }
         )
     }
 
@@ -265,7 +304,8 @@ private fun TopBar(
 private fun BottomBar(
     uiState: GroupUiState,
     containerColor: Color,
-    onUiEvent: (GroupUiEvent) -> Unit
+    onUiEvent: (GroupUiEvent) -> Unit,
+    onContactAttachmentClick: () -> Unit
 ) {
     var isLocationInProgress by rememberSaveable { mutableStateOf(false) }
     var isWaitingForLocationSend by rememberSaveable { mutableStateOf(false) }
@@ -349,7 +389,7 @@ private fun BottomBar(
             onClickGallery = { mediaPicker.launch(MediaSelectionSource.GALLERY) },
             onClickCamera = { mediaPicker.launch(MediaSelectionSource.CAMERA) },
             onClickFile = { mediaPicker.launch(MediaSelectionSource.FILE_PICKER) },
-            onClickContact = { /* Unit */ },
+            onClickContact = onContactAttachmentClick,
             onClickLocation = {
                 if (!isLocationInProgress) {
                     isLocationInProgress = true
@@ -371,7 +411,8 @@ private fun Content(
     onRetryMessage: (String) -> Unit,
     onSafetyWarningClick: (String, String?, MessageSafetyWarningUi) -> Unit,
     onAttachmentVisible: (String) -> Unit,
-    onAttachmentClick: (String, String) -> Unit
+    onAttachmentClick: (String, String) -> Unit,
+    onContactClick: (SharedContact) -> Unit
 ) {
     when {
         uiState.isLoading -> LoadingContent(
@@ -391,6 +432,7 @@ private fun Content(
             onSafetyWarningClick = onSafetyWarningClick,
             onAttachmentVisible = onAttachmentVisible,
             onAttachmentClick = onAttachmentClick,
+            onContactClick = onContactClick,
             contentPadding = innerPadding
         )
     }
@@ -405,6 +447,7 @@ private fun MessageList(
     onSafetyWarningClick: (String, String?, MessageSafetyWarningUi) -> Unit,
     onAttachmentVisible: (String) -> Unit,
     onAttachmentClick: (String, String) -> Unit,
+    onContactClick: (SharedContact) -> Unit,
     contentPadding: PaddingValues
 ) {
     val searchTargetState =
@@ -441,6 +484,7 @@ private fun MessageList(
                     onSafetyWarningClick = onSafetyWarningClick,
                     onAttachmentVisible = onAttachmentVisible,
                     onAttachmentClick = onAttachmentClick,
+                    onContactClick = onContactClick,
                     isSearchHighlighted = message.id == searchTargetState.highlightedMessageId
                 )
             } else {
@@ -460,6 +504,7 @@ private fun GroupMessageBubble(
     onSafetyWarningClick: (String, String?, MessageSafetyWarningUi) -> Unit,
     onAttachmentVisible: (String) -> Unit,
     onAttachmentClick: (String, String) -> Unit,
+    onContactClick: (SharedContact) -> Unit,
     modifier: Modifier = Modifier,
     isSearchHighlighted: Boolean = false
 ) {
@@ -472,6 +517,7 @@ private fun GroupMessageBubble(
             },
             onAttachmentVisible = onAttachmentVisible,
             onAttachmentClick = { attachmentId -> onAttachmentClick(message.id, attachmentId) },
+            onContactClick = onContactClick,
             modifier = modifier,
             isSearchHighlighted = isSearchHighlighted
         )
@@ -496,6 +542,7 @@ private fun GroupMessageBubble(
             },
             onAttachmentVisible = onAttachmentVisible,
             onAttachmentClick = { attachmentId -> onAttachmentClick(message.id, attachmentId) },
+            onContactClick = onContactClick,
             modifier = Modifier.weight(1f),
             isSearchHighlighted = isSearchHighlighted
         )

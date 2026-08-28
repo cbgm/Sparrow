@@ -58,7 +58,9 @@ class MessageAttachmentFileDataSource(
         require(conversationId.isNotBlank()) { "Conversation ID must not be blank" }
         require(attachmentId.isNotBlank()) { "Attachment ID must not be blank" }
         require(bytes.isNotEmpty()) { "Attachment bytes must not be empty" }
-        require(type != MessageAttachmentType.LOCATION) { "Location attachments are not saved as files" }
+        require(type != MessageAttachmentType.LOCATION && type != MessageAttachmentType.CONTACT) {
+            "Location and contact attachments are not saved as files"
+        }
 
         val conversationDirectory = resolveConversationDirectory(conversationId, displayName)
         val targetDirectory =

@@ -5,7 +5,7 @@ import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachment
 import com.cbgm.sparrow.feature.media.domain.model.MediaContentType
 import com.cbgm.sparrow.feature.media.domain.model.MediaExportItem
 
-internal fun MessageAttachmentUi.ImageVideoAttachment.toMediaExportItem(): MediaExportItem =
+internal fun MessageAttachmentUi.ImageVideoAttachmentUi.toMediaExportItem(): MediaExportItem =
     MediaExportItem(
         id = id,
         type =

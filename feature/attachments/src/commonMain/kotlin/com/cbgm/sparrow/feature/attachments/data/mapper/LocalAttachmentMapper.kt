@@ -24,7 +24,7 @@ internal fun List<LocalAttachment>.toAttachmentStorageSummary(
 
 private fun LocalMessageAttachmentRow.toLocalAttachment(): LocalAttachment? {
     val attachmentType = MessageAttachmentType.valueOf(attachment.type)
-    if (attachmentType == MessageAttachmentType.LOCATION) return null
+    if (attachmentType == MessageAttachmentType.LOCATION || attachmentType == MessageAttachmentType.CONTACT) return null
 
     return LocalAttachment(
         id = attachment.id,

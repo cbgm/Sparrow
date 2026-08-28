@@ -9,7 +9,9 @@ import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
+import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.attachments.domain.usecase.LoadMessageAttachmentUseCase
+import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingContactAttachment
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingLocationAttachment
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingMessageAttachment
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.MarkDirectConversationReadUseCase
@@ -25,6 +27,8 @@ import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectComposerSt
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.DirectChatAuthorizationRequiredException
+import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactResult
+import com.cbgm.sparrow.feature.contacts.domain.usecase.AddDeviceContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.EnsureIdentityExchangeStartedUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
@@ -53,7 +57,8 @@ class DirectViewModel(
     private val observeTyping: ObserveDirectTypingUseCase,
     private val setTyping: SetDirectTypingUseCase,
     observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase,
-    private val loadMessageAttachment: LoadMessageAttachmentUseCase
+    private val loadMessageAttachment: LoadMessageAttachmentUseCase,
+    private val addDeviceContact: AddDeviceContactUseCase
 ) : BaseViewModel() {
     private val conversationId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.Chat::conversationId.name)
@@ -138,6 +143,8 @@ class DirectViewModel(
             is DirectUiEvent.MediaSelected -> updateMediaSelection(event.media)
             is DirectUiEvent.OpenFilePicker -> navigator.navigateTo(AppRoute.FilePicker(event.sessionId))
             is DirectUiEvent.ShareCurrentLocation -> sendCurrentLocation(event.location.toOutgoingLocationAttachment())
+            is DirectUiEvent.ShareContact -> sendContact(event.contact.toOutgoingContactAttachment())
+            is DirectUiEvent.AddSharedContact -> addSharedContact(event.contact)
             is DirectUiEvent.AttachmentVisible -> loadAttachment(event.attachmentId)
             is DirectUiEvent.AttachmentError -> errorMessage.value = event.message
             DirectUiEvent.HeaderClicked -> openContactDetails()
@@ -334,6 +341,69 @@ class DirectViewModel(
                 }
             } finally {
                 isSending.value = false
+            }
+        }
+    }
+
+    private fun sendContact(contactAttachment: OutgoingMessageAttachment) {
+        val composerState = uiState.value.composerState
+        if (!composerState.isSendActionEnabled || isSending.value) return
+
+        errorMessage.value = null
+        viewModelScope.launch {
+            isSending.value = true
+            try {
+                val attachments = listOf(contactAttachment)
+                when (composerState) {
+                    DirectComposerState.REINVITE_REQUIRED ->
+                        queueMessageAndStartReinvite(
+                            text = "",
+                            attachments = attachments,
+                            clearComposerOnSuccess = false
+                        )
+
+                    DirectComposerState.REINVITE_PENDING ->
+                        queueMessageForPendingReinvite(
+                            text = "",
+                            attachments = attachments,
+                            clearComposerOnSuccess = false
+                        )
+
+                    DirectComposerState.READY ->
+                        sendAuthorizedMessage(
+                            text = "",
+                            attachments = attachments,
+                            clearComposerOnSuccess = false
+                        )
+
+                    DirectComposerState.DISABLED -> Unit
+                }
+            } finally {
+                isSending.value = false
+            }
+        }
+    }
+
+    private fun addSharedContact(contact: SharedContact) {
+        viewModelScope.launch {
+            when (
+                val result =
+                    addDeviceContact(
+                        displayName = contact.displayName,
+                        phoneNumber = contact.phoneNumber
+                    )
+            ) {
+                AddDeviceContactResult.Added,
+                AddDeviceContactResult.AlreadyExists -> errorMessage.value = null
+
+                AddDeviceContactResult.PermissionDenied ->
+                    errorMessage.value = "Contacts permission is required to add this contact"
+
+                AddDeviceContactResult.InvalidPhoneNumber ->
+                    errorMessage.value = "The shared phone number is invalid"
+
+                is AddDeviceContactResult.Failure ->
+                    errorMessage.value = result.throwable.message ?: "Contact could not be added"
             }
         }
     }
