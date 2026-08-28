@@ -1,14 +1,11 @@
-package com.cbgm.sparrow.feature.attachments.presentation.model
+package com.cbgm.sparrow.feature.chats.presentation.component.model
 
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
 
-sealed interface MessageAttachmentUi {
-    val id: String
-
-    data class ImageVideoAttachment(
-        override val id: String,
-        val type: MessageAttachmentType,
+sealed interface MessagePartUi {
+    data class ImageVideoUi(
+        val id: String,
+        val type: ImageVideoTypeUi,
         val mimeType: String,
         val byteSize: Long,
         val fileName: String? = null,
@@ -17,10 +14,10 @@ sealed interface MessageAttachmentUi {
         val durationMilliseconds: Long? = null,
         val localFilePath: String? = null,
         val bytes: ByteArray? = null
-    ) : MessageAttachmentUi {
+    ) : MessagePartUi {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
-            if (other !is ImageVideoAttachment) return false
+            if (other !is ImageVideoUi) return false
 
             return id == other.id &&
                 type == other.type &&
@@ -49,17 +46,17 @@ sealed interface MessageAttachmentUi {
         }
     }
 
-    data class FileAttachment(
-        override val id: String,
+    data class FileUi(
+        val id: String,
         val mimeType: String,
         val byteSize: Long,
         val fileName: String,
         val localFilePath: String? = null,
         val bytes: ByteArray? = null
-    ) : MessageAttachmentUi {
+    ) : MessagePartUi {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
-            if (other !is FileAttachment) return false
+            if (other !is FileUi) return false
 
             return id == other.id &&
                 mimeType == other.mimeType &&
@@ -80,8 +77,18 @@ sealed interface MessageAttachmentUi {
         }
     }
 
-    data class LocationAttachment(
-        override val id: String,
+    data class LocationUi(
+        val id: String,
         val location: CurrentLocation
-    ) : MessageAttachmentUi
+    ) : MessagePartUi
+
+    data class TextUi(
+        val text: String,
+        val isContentFailed: Boolean
+    ) : MessagePartUi
+}
+
+enum class ImageVideoTypeUi {
+    IMAGE,
+    VIDEO
 }

@@ -69,7 +69,8 @@ import com.cbgm.sparrow.feature.chats.presentation.component.MessageBubble
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageControl
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageInputActions
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageInputState
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
+import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toMessageAttachmentUi
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.component.rememberMessageSearchTargetState
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectComposerState
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiEvent
@@ -77,7 +78,7 @@ import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiState
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionResult
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionSource
 import com.cbgm.sparrow.feature.media.presentation.selection.rememberMediaSelectionLauncher
-import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
+import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.base_verify
@@ -194,7 +195,7 @@ fun DirectScreen(
     val currentViewerAttachmentId = viewerAttachmentId
     if (currentViewerMessage != null && currentViewerAttachmentId != null) {
         MessageAttachmentViewer(
-            attachments = currentViewerMessage.attachments,
+            attachments = currentViewerMessage.toMessageAttachmentUi(),
             selectedAttachmentId = currentViewerAttachmentId,
             canSaveToCameraRoll = !currentViewerMessage.isMine,
             onDismiss = {
@@ -425,7 +426,7 @@ private fun Content(
     innerPadding: PaddingValues,
     targetMessageId: String?,
     onRetryMessage: (String) -> Unit,
-    onSafetyWarningClick: (String, MessageSafetyWarningUiModel) -> Unit,
+    onSafetyWarningClick: (String, MessageSafetyWarningUi) -> Unit,
     onAttachmentVisible: (String) -> Unit,
     onAttachmentClick: (String, String) -> Unit
 ) {
@@ -455,11 +456,11 @@ private fun Content(
 
 @Composable
 private fun MessageList(
-    messages: List<MessageBubbleModel>,
+    messages: List<MessageBubbleUi>,
     listState: LazyListState,
     targetMessageId: String?,
     onRetryMessage: (String) -> Unit,
-    onSafetyWarningClick: (String, MessageSafetyWarningUiModel) -> Unit,
+    onSafetyWarningClick: (String, MessageSafetyWarningUi) -> Unit,
     onAttachmentVisible: (String) -> Unit,
     onAttachmentClick: (String, String) -> Unit,
     contentPadding: PaddingValues
@@ -467,7 +468,7 @@ private fun MessageList(
     val searchTargetState =
         rememberMessageSearchTargetState(
             targetMessageId = targetMessageId,
-            messageIds = messages.map(MessageBubbleModel::id),
+            messageIds = messages.map(MessageBubbleUi::id),
             listState = listState
         )
     val newestMessage = messages.firstOrNull()
@@ -490,7 +491,7 @@ private fun MessageList(
             ),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
-        items(items = messages, key = MessageBubbleModel::id) { message ->
+        items(items = messages, key = MessageBubbleUi::id) { message ->
             MessageBubble(
                 message = message,
                 onRetryClick = { onRetryMessage(message.id) },
@@ -836,10 +837,9 @@ private fun DirectMessagesPreview() {
                     contactSecurityState = ContactSecurityState.MUTUAL_KEYS_VERIFIED,
                     messages =
                         listOf(
-                            MessageBubbleModel(
+                            MessageBubbleUi(
                                 id = "1",
                                 isMine = true,
-                                text = "Hello from a direct chat",
                                 security = MessageSecurity.END_TO_END_ENCRYPTED,
                                 contentStatus = MessageContentStatus.READABLE,
                                 deliveryStatus = MessageDeliveryStatus.DELIVERED

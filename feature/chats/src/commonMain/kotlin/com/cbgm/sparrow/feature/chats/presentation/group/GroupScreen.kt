@@ -63,15 +63,17 @@ import com.cbgm.sparrow.feature.chats.presentation.component.MessageBubble
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageControl
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageInputActions
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageInputState
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
+import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toMessageAttachmentUi
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessagePartUi
 import com.cbgm.sparrow.feature.chats.presentation.component.rememberMessageSearchTargetState
-import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMessageUiModel
+import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMessageUi
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionResult
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionSource
 import com.cbgm.sparrow.feature.media.presentation.selection.rememberMediaSelectionLauncher
-import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
+import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_group_accept
 import com.cbgm.sparrow.resources.feature_chats_group_decline
@@ -185,7 +187,7 @@ fun GroupScreen(
     val currentViewerAttachmentId = viewerAttachmentId
     if (currentViewerMessage != null && currentViewerAttachmentId != null) {
         MessageAttachmentViewer(
-            attachments = currentViewerMessage.attachments,
+            attachments = currentViewerMessage.toMessageAttachmentUi(),
             selectedAttachmentId = currentViewerAttachmentId,
             canSaveToCameraRoll = !currentViewerMessage.isMine,
             onDismiss = {
@@ -297,7 +299,7 @@ private fun BottomBar(
         rememberMediaSelectionLauncher(
             maxItems = maxAttachments,
             maxImageDimension = MessageAttachmentPolicy.MAX_IMAGE_DIMENSION,
-            maxImageBytes = MessageAttachmentPolicy.MAX_IMAGE_BYTES.toInt(),
+            maxImageBytes = MessageAttachmentPolicy.MAX_IMAGE_BYTES,
             maxVideoBytes = MessageAttachmentPolicy.MAX_VIDEO_BYTES,
             maxFileBytes = MessageAttachmentPolicy.MAX_FILE_BYTES,
             selectedMedia = uiState.selectedMedia,
@@ -367,7 +369,7 @@ private fun Content(
     innerPadding: PaddingValues,
     targetMessageId: String?,
     onRetryMessage: (String) -> Unit,
-    onSafetyWarningClick: (String, String?, MessageSafetyWarningUiModel) -> Unit,
+    onSafetyWarningClick: (String, String?, MessageSafetyWarningUi) -> Unit,
     onAttachmentVisible: (String) -> Unit,
     onAttachmentClick: (String, String) -> Unit
 ) {
@@ -396,11 +398,11 @@ private fun Content(
 
 @Composable
 private fun MessageList(
-    messages: List<GroupMessageUiModel>,
+    messages: List<GroupMessageUi>,
     listState: LazyListState,
     targetMessageId: String?,
     onRetryMessage: (String) -> Unit,
-    onSafetyWarningClick: (String, String?, MessageSafetyWarningUiModel) -> Unit,
+    onSafetyWarningClick: (String, String?, MessageSafetyWarningUi) -> Unit,
     onAttachmentVisible: (String) -> Unit,
     onAttachmentClick: (String, String) -> Unit,
     contentPadding: PaddingValues
@@ -408,7 +410,7 @@ private fun MessageList(
     val searchTargetState =
         rememberMessageSearchTargetState(
             targetMessageId = targetMessageId,
-            messageIds = messages.map(GroupMessageUiModel::id),
+            messageIds = messages.map(GroupMessageUi::id),
             listState = listState
         )
     val newestMessage = messages.firstOrNull()
@@ -431,7 +433,7 @@ private fun MessageList(
             ),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
-        items(items = messages, key = GroupMessageUiModel::id) { message ->
+        items(items = messages, key = GroupMessageUi::id) { message ->
             if (message.type == ChatMessageType.USER) {
                 GroupMessageBubble(
                     message = message,
@@ -453,9 +455,9 @@ private fun MessageList(
 
 @Composable
 private fun GroupMessageBubble(
-    message: GroupMessageUiModel,
+    message: GroupMessageUi,
     onRetryMessage: (String) -> Unit,
-    onSafetyWarningClick: (String, String?, MessageSafetyWarningUiModel) -> Unit,
+    onSafetyWarningClick: (String, String?, MessageSafetyWarningUi) -> Unit,
     onAttachmentVisible: (String) -> Unit,
     onAttachmentClick: (String, String) -> Unit,
     modifier: Modifier = Modifier,
@@ -978,17 +980,21 @@ private fun GroupMessagesPreview() {
                     memberCount = 4,
                     messages =
                         listOf(
-                            GroupMessageUiModel(
+                            GroupMessageUi(
                                 bubble =
-                                    MessageBubbleModel(
+                                    MessageBubbleUi(
                                         id = "1",
                                         isMine = false,
-                                        text = "Hello everyone",
                                         security = MessageSecurity.END_TO_END_ENCRYPTED,
                                         contentStatus = MessageContentStatus.READABLE,
                                         deliveryStatus = MessageDeliveryStatus.NOT_APPLICABLE,
                                         senderName = "Alex",
-                                        senderIsInContacts = true
+                                        senderIsInContacts = true,
+                                        textPart =
+                                            MessagePartUi.TextUi(
+                                                text = "Hello everyone",
+                                                isContentFailed = false
+                                            )
                                     ),
                                 type = ChatMessageType.USER
                             )

@@ -5,15 +5,14 @@ import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachment
 import com.cbgm.sparrow.feature.media.domain.model.MediaContentType
 import com.cbgm.sparrow.feature.media.domain.model.MediaExportItem
 
-internal fun MessageAttachmentUi.toMediaExportItem(): MediaExportItem =
+internal fun MessageAttachmentUi.ImageVideoAttachment.toMediaExportItem(): MediaExportItem =
     MediaExportItem(
         id = id,
         type =
             when (type) {
                 MessageAttachmentType.IMAGE -> MediaContentType.IMAGE
                 MessageAttachmentType.VIDEO -> MediaContentType.VIDEO
-                MessageAttachmentType.LOCATION -> error("Location attachment cannot be exported to the camera roll")
-                MessageAttachmentType.FILE -> error("File attachment cannot be exported to the camera roll")
+                else -> error("Unsupported image/video attachment type: $type")
             },
         mimeType = mimeType,
         bytes = requireNotNull(bytes) { "Media attachment must be loaded before export" }

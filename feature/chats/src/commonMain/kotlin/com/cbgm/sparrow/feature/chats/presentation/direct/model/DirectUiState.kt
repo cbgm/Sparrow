@@ -2,14 +2,14 @@ package com.cbgm.sparrow.feature.chats.presentation.direct.model
 
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
 
 data class DirectUiState(
     val contactId: String = "",
     val contactName: String = "",
     val profilePictureBytes: ByteArray? = null,
-    val messages: List<MessageBubbleModel> = emptyList(),
+    val messages: List<MessageBubbleUi> = emptyList(),
     val messageText: String = "",
     val selectedMedia: List<MediaSelection> = emptyList(),
     val isSending: Boolean = false,

@@ -1,21 +1,22 @@
 package com.cbgm.sparrow.feature.chats.presentation.group.mapper
 
-import com.cbgm.sparrow.feature.attachments.presentation.mapper.toUi
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessage
-import com.cbgm.sparrow.feature.chats.presentation.component.model.DeliveryProgressModel
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
+import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toMessagePartsUi
+import com.cbgm.sparrow.feature.chats.presentation.component.model.DeliveryProgressUi
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessagePartUi
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMemberProgressUi
-import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMessageUiModel
+import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMessageUi
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyAssessment
-import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toWarningUiModel
+import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyWarningUi
 
 internal fun toGroupUiState(
     conversation: GroupConversation?,
@@ -38,7 +39,7 @@ internal fun toGroupUiState(
         title = conversation?.title.orEmpty(),
         avatarBytes = avatarBytes,
         messages =
-            conversation.toMessageUiModels(
+            conversation.toGroupMessageUi(
                 contactsById = contactsById,
                 profilePictures = profilePictures,
                 safetyAssessments = safetyAssessments,
@@ -55,22 +56,23 @@ internal fun toGroupUiState(
         readyMemberCount = administration.activeMemberCount,
         pendingMemberCount = conversation?.pendingParticipantCount ?: 0,
         showInvitationActions = groupState == GroupConversationState.INVITED,
-        memberProgress = conversation.toMemberProgress(contactsById)
+        memberProgress = conversation.toMemberProgressUi(contactsById)
     )
 }
 
-internal fun GroupMessage.toUiModel(
+internal fun GroupMessage.toGroupMessageUi(
     senderName: String?,
     senderIsInContacts: Boolean,
     senderProfilePictureBytes: ByteArray?,
     safetyAssessments: Map<String, MessageSafetyAssessment>,
     attachmentBytes: Map<String, ByteArray> = emptyMap()
-): GroupMessageUiModel =
-    GroupMessageUiModel(
+): GroupMessageUi {
+    val parts = attachments.toMessagePartsUi(attachmentBytes)
+
+    return GroupMessageUi(
         bubble =
-            MessageBubbleModel(
+            MessageBubbleUi(
                 id = id,
-                text = text,
                 isMine = isMine,
                 security = security,
                 contentStatus = contentStatus,
@@ -78,7 +80,7 @@ internal fun GroupMessage.toUiModel(
                 senderName = senderName,
                 senderIsInContacts = senderIsInContacts,
                 deliveryProgress =
-                    DeliveryProgressModel(
+                    DeliveryProgressUi(
                         recipientCount = deliveryProgress.recipientCount,
                         deliveredCount = deliveryProgress.deliveredCount,
                         readCount = deliveryProgress.readCount
@@ -91,17 +93,26 @@ internal fun GroupMessage.toUiModel(
                     ) {
                         null
                     } else {
-                        safetyAssessments[id]?.toWarningUiModel()
+                        safetyAssessments[id]?.toMessageSafetyWarningUi()
                     },
-                attachments =
-                    attachments.map { attachment ->
-                        attachment.toUi(bytes = attachmentBytes[attachment.id])
-                    }
+                imageVideoParts = parts.filterIsInstance<MessagePartUi.ImageVideoUi>(),
+                fileParts = parts.filterIsInstance<MessagePartUi.FileUi>(),
+                locationPart = parts.filterIsInstance<MessagePartUi.LocationUi>().firstOrNull(),
+                textPart =
+                    text
+                        .takeIf(String::isNotBlank)
+                        ?.let { value ->
+                            MessagePartUi.TextUi(
+                                text = value,
+                                isContentFailed = false
+                            )
+                        }
             ),
         type = type,
         senderContactId = senderContactId,
         senderProfilePictureBytes = senderProfilePictureBytes
     )
+}
 
 internal fun Contact?.displayNameForChat(isInContacts: Boolean): String {
     if (this == null) return "Unknown contact"
@@ -117,19 +128,19 @@ internal fun Contact?.displayNameForChat(isInContacts: Boolean): String {
     }
 }
 
-private fun GroupConversation?.toMessageUiModels(
+private fun GroupConversation?.toGroupMessageUi(
     contactsById: Map<String, Contact>,
     profilePictures: Map<String, ByteArray?>,
     safetyAssessments: Map<String, MessageSafetyAssessment>,
     attachmentBytes: Map<String, ByteArray>
-): List<GroupMessageUiModel> =
+): List<GroupMessageUi> =
     buildList {
-        for (message in this@toMessageUiModels?.messages.orEmpty().asReversed()) {
+        for (message in this@toGroupMessageUi?.messages.orEmpty().asReversed()) {
             val senderContactId = message.senderContactId
             val sender = senderContactId?.let(contactsById::get)
             val senderIsInContacts = sender?.deviceContactLinkStatus == DeviceContactLinkStatus.LINKED
             add(
-                message.toUiModel(
+                message.toGroupMessageUi(
                     senderName = sender.displayNameForChat(senderIsInContacts),
                     senderIsInContacts = senderIsInContacts,
                     senderProfilePictureBytes = senderContactId?.let(profilePictures::get),
@@ -140,7 +151,7 @@ private fun GroupConversation?.toMessageUiModels(
         }
     }
 
-private fun GroupConversation?.toMemberProgress(
+private fun GroupConversation?.toMemberProgressUi(
     contactsById: Map<String, Contact>
 ): List<GroupMemberProgressUi> =
     this

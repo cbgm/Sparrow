@@ -1,12 +1,13 @@
 package com.cbgm.sparrow.feature.chats.presentation.direct.mapper
 
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
-import com.cbgm.sparrow.feature.attachments.presentation.mapper.toUi
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessage
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
+import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toMessagePartsUi
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessagePartUi
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectComposerState
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
@@ -14,7 +15,7 @@ import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.IdentityHandshakeState
 import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyAssessment
-import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toWarningUiModel
+import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyWarningUi
 
 internal fun resolveContactName(
     contact: Contact?,
@@ -26,13 +27,14 @@ internal fun resolveContactName(
         ?: fallbackContactName.takeIf(String::isNotBlank)
         ?: "Unknown contact"
 
-internal fun DirectMessage.toUiModel(
+internal fun DirectMessage.toUi(
     safetyAssessments: Map<String, MessageSafetyAssessment>,
     attachmentBytes: Map<String, ByteArray> = emptyMap()
-): MessageBubbleModel =
-    MessageBubbleModel(
+): MessageBubbleUi {
+    val parts = attachments.toMessagePartsUi(attachmentBytes)
+
+    return MessageBubbleUi(
         id = id,
-        text = text,
         isMine = isMine,
         security = security,
         contentStatus = contentStatus,
@@ -41,13 +43,22 @@ internal fun DirectMessage.toUiModel(
             if (isMine || contentStatus != MessageContentStatus.READABLE) {
                 null
             } else {
-                safetyAssessments[id]?.toWarningUiModel()
+                safetyAssessments[id]?.toMessageSafetyWarningUi()
             },
-        attachments =
-            attachments.map { attachment ->
-                attachment.toUi(bytes = attachmentBytes[attachment.id])
-            }
+        imageVideoParts = parts.filterIsInstance<MessagePartUi.ImageVideoUi>(),
+        fileParts = parts.filterIsInstance<MessagePartUi.FileUi>(),
+        locationPart = parts.filterIsInstance<MessagePartUi.LocationUi>().firstOrNull(),
+        textPart =
+            text
+                .takeIf(String::isNotBlank)
+                ?.let { value ->
+                    MessagePartUi.TextUi(
+                        text = value,
+                        isContentFailed = false
+                    )
+                }
     )
+}
 
 internal fun Contact?.toSecurityState(): ContactSecurityState {
     val identity = this?.sparrowIdentity ?: return ContactSecurityState.NO_REMOTE_PUBLIC_KEYS
@@ -109,7 +120,7 @@ internal fun toDirectUiState(
         messages =
             buildList {
                 for (message in conversation?.messages.orEmpty().asReversed()) {
-                    add(message.toUiModel(safetyAssessments, attachmentBytes))
+                    add(message.toUi(safetyAssessments, attachmentBytes))
                 }
             },
         messageText = currentText,
@@ -142,12 +153,8 @@ internal fun resolveDirectComposerState(
         DirectIdentitySetupMode.AUTOMATIC_INVITATION ->
             when {
                 isChatAuthorized -> DirectComposerState.READY
-                handshake == IdentityHandshakeState.INVITE_SENT ->
-                    DirectComposerState.REINVITE_PENDING
-
-                handshake in REINVITE_RETRY_STATES ->
-                    DirectComposerState.REINVITE_REQUIRED
-
+                handshake == IdentityHandshakeState.INVITE_SENT -> DirectComposerState.REINVITE_PENDING
+                handshake in REINVITE_RETRY_STATES -> DirectComposerState.REINVITE_REQUIRED
                 else -> DirectComposerState.DISABLED
             }
     }

@@ -18,10 +18,10 @@ import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.feature.attachments.device.rememberLocationOpener
+import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaExportItem
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItem
 import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
-import com.cbgm.sparrow.feature.attachments.util.LocationAttachmentPayload
 import com.cbgm.sparrow.feature.media.device.rememberMediaExporter
 import com.cbgm.sparrow.feature.media.presentation.component.MediaViewer
 import com.cbgm.sparrow.resources.Res
@@ -43,54 +43,39 @@ fun MessageAttachmentViewer(
             attachment.id == selectedAttachmentId
         } ?: return
 
-    when (selectedAttachment.type) {
-        MessageAttachmentType.IMAGE,
-        MessageAttachmentType.VIDEO -> {
+    when (selectedAttachment) {
+        is MessageAttachmentUi.ImageVideoAttachment ->
             MessageMediaViewer(
-                attachments = attachments,
+                attachments = attachments.filterIsInstance<MessageAttachmentUi.ImageVideoAttachment>(),
                 selectedAttachmentId = selectedAttachmentId,
                 canSaveToCameraRoll = canSaveToCameraRoll,
                 onDismiss = onDismiss,
                 onEnsureAttachmentLoaded = onEnsureAttachmentLoaded,
                 onError = onError
             )
-        }
 
-        MessageAttachmentType.LOCATION -> {
+        is MessageAttachmentUi.LocationAttachment ->
             MessageLocationViewer(
                 attachment = selectedAttachment,
                 onDismiss = onDismiss,
-                onEnsureAttachmentLoaded = onEnsureAttachmentLoaded,
                 onError = onError
             )
-        }
 
-        MessageAttachmentType.FILE -> Unit
+        is MessageAttachmentUi.FileAttachment -> Unit
     }
 }
 
 @Composable
 private fun MessageMediaViewer(
-    attachments: List<MessageAttachmentUi>,
+    attachments: List<MessageAttachmentUi.ImageVideoAttachment>,
     selectedAttachmentId: String,
     canSaveToCameraRoll: Boolean,
     onDismiss: () -> Unit,
     onEnsureAttachmentLoaded: (String) -> Unit,
     onError: (String) -> Unit
 ) {
-    val media =
-        attachments.filter { attachment ->
-            when (attachment.type) {
-                MessageAttachmentType.IMAGE,
-                MessageAttachmentType.VIDEO -> true
-
-                MessageAttachmentType.FILE,
-                MessageAttachmentType.LOCATION -> false
-            }
-        }
-
     val selectedIndex =
-        media.indexOfFirst { attachment ->
+        attachments.indexOfFirst { attachment ->
             attachment.id == selectedAttachmentId
         }
 
@@ -98,16 +83,12 @@ private fun MessageMediaViewer(
 
     val exporter = rememberMediaExporter()
     val mediaLabel = stringResource(Res.string.feature_attachments_media)
-    val saveContentDescription =
-        stringResource(Res.string.feature_attachments_save_to_camera_roll)
+    val saveContentDescription = stringResource(Res.string.feature_attachments_save_to_camera_roll)
 
-    var savePending by
-        remember(selectedAttachmentId) {
-            mutableStateOf(false)
-        }
+    var savePending by remember(selectedAttachmentId) { mutableStateOf(false) }
 
     val loadState =
-        media.map { attachment ->
+        attachments.map { attachment ->
             attachment.id to (attachment.bytes != null)
         }
 
@@ -116,14 +97,9 @@ private fun MessageMediaViewer(
         savePending,
         loadState
     ) {
-        if (!canSaveToCameraRoll || !savePending) {
-            return@LaunchedEffect
-        }
+        if (!canSaveToCameraRoll || !savePending) return@LaunchedEffect
 
-        val unloadedAttachments =
-            media.filter { attachment ->
-                attachment.bytes == null
-            }
+        val unloadedAttachments = attachments.filter { attachment -> attachment.bytes == null }
 
         if (unloadedAttachments.isNotEmpty()) {
             unloadedAttachments.forEach { attachment ->
@@ -133,21 +109,16 @@ private fun MessageMediaViewer(
         }
 
         exporter
-            .saveToCameraRoll(
-                media.map(MessageAttachmentUi::toMediaExportItem)
-            )
+            .saveToCameraRoll(attachments.map { attachment -> attachment.toMediaExportItem() })
             .onFailure { error ->
-                onError(
-                    error.message
-                        ?: "Could not save media to camera roll"
-                )
+                onError(error.message ?: "Could not save media to camera roll")
             }
 
         savePending = false
     }
 
     MediaViewer(
-        media = media.map(MessageAttachmentUi::toMediaItem),
+        media = attachments.map { attachment -> attachment.toMediaItem() },
         initialIndex = selectedIndex,
         onDismiss = onDismiss,
         onEnsureMediaLoaded = onEnsureAttachmentLoaded,
@@ -157,19 +128,13 @@ private fun MessageMediaViewer(
         topBarActions = {
             if (canSaveToCameraRoll) {
                 IconButton(
-                    onClick = {
-                        savePending = true
-                    },
+                    onClick = { savePending = true },
                     enabled = !savePending
                 ) {
                     if (savePending) {
                         CircularProgressIndicator(
-                            modifier =
-                                Modifier.size(
-                                    Dimens.MessageAttachment.loadingIndicatorSize
-                                ),
-                            strokeWidth =
-                                Dimens.Base.progressIndicatorStrokeWidth
+                            modifier = Modifier.size(Dimens.MessageAttachment.loadingIndicatorSize),
+                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
                         )
                     } else {
                         Icon(
@@ -185,39 +150,17 @@ private fun MessageMediaViewer(
 
 @Composable
 private fun MessageLocationViewer(
-    attachment: MessageAttachmentUi,
+    attachment: MessageAttachmentUi.LocationAttachment,
     onDismiss: () -> Unit,
-    onEnsureAttachmentLoaded: (String) -> Unit,
     onError: (String) -> Unit
 ) {
     val locationOpener = rememberLocationOpener()
 
-    LaunchedEffect(
-        attachment.id,
-        attachment.bytes
-    ) {
-        val bytes = attachment.bytes
-
-        if (bytes == null) {
-            onEnsureAttachmentLoaded(attachment.id)
-            return@LaunchedEffect
-        }
-
-        val location = LocationAttachmentPayload.decode(bytes)
-
-        if (location == null) {
-            onError("Location could not be opened")
-            onDismiss()
-            return@LaunchedEffect
-        }
-
+    LaunchedEffect(attachment.id, attachment.location) {
         locationOpener
-            .open(location)
+            .open(attachment.location)
             .onFailure { error ->
-                onError(
-                    error.message
-                        ?: "Location could not be opened"
-                )
+                onError(error.message ?: "Location could not be opened")
             }
 
         onDismiss()
@@ -231,17 +174,21 @@ private fun MessageAttachmentViewerPreview() {
         MessageAttachmentViewer(
             attachments =
                 listOf(
-                    MessageAttachmentUi(
+                    MessageAttachmentUi.ImageVideoAttachment(
                         id = "preview-image",
                         type = MessageAttachmentType.IMAGE,
                         mimeType = "image/jpeg",
                         byteSize = 0
                     ),
-                    MessageAttachmentUi(
+                    MessageAttachmentUi.ImageVideoAttachment(
                         id = "preview-video",
                         type = MessageAttachmentType.VIDEO,
                         mimeType = "video/mp4",
                         byteSize = 0
+                    ),
+                    MessageAttachmentUi.LocationAttachment(
+                        id = "preview-location",
+                        location = CurrentLocation(latitude = 50.2586, longitude = 10.9644)
                     )
                 ),
             selectedAttachmentId = "preview-image",

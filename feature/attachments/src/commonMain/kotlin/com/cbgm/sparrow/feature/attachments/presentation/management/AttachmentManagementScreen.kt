@@ -83,11 +83,9 @@ fun AttachmentManagementScreen(
     modifier: Modifier = Modifier
 ) {
     val mediaTabItems =
-        uiState.attachments.filter { attachment ->
-            attachment.type == MessageAttachmentType.IMAGE || attachment.type == MessageAttachmentType.VIDEO
-        }
+        uiState.attachments.filterIsInstance<MessageAttachmentUi.ImageVideoAttachment>()
     val fileTabItems =
-        uiState.attachments.filter { attachment -> attachment.type == MessageAttachmentType.FILE }
+        uiState.attachments.filterIsInstance<MessageAttachmentUi.FileAttachment>()
 
     SparrowStaticScaffold(
         modifier = modifier,
@@ -301,7 +299,7 @@ private fun AttachmentTab(
 
 @Composable
 private fun MediaGrid(
-    attachments: List<MessageAttachmentUi>,
+    attachments: List<MessageAttachmentUi.ImageVideoAttachment>,
     selectedIds: Set<String>,
     isSelectionMode: Boolean,
     bottomPadding: Dp,
@@ -337,7 +335,7 @@ private fun MediaGrid(
 private fun GridItem(
     onClick: () -> Unit,
     isSelected: Boolean,
-    attachment: MessageAttachmentUi,
+    attachment: MessageAttachmentUi.ImageVideoAttachment,
     onVisible: (String) -> Unit
 ) {
     LaunchedEffect(attachment.id, attachment.bytes) {
@@ -393,7 +391,7 @@ private fun GridItem(
 
 @Composable
 private fun FileList(
-    attachments: List<MessageAttachmentUi>,
+    attachments: List<MessageAttachmentUi.FileAttachment>,
     selectedIds: Set<String>,
     isSelectionMode: Boolean,
     bottomPadding: Dp,
@@ -407,7 +405,7 @@ private fun FileList(
             ListItem(
                 headlineContent = {
                     Text(
-                        text = attachment.fileName ?: attachment.id,
+                        text = attachment.fileName,
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onBackground
                     )
@@ -487,22 +485,21 @@ private fun previewAttachmentManagementUiState(): AttachmentManagementUiState =
     AttachmentManagementUiState(
         attachments =
             listOf(
-                MessageAttachmentUi(
+                MessageAttachmentUi.ImageVideoAttachment(
                     id = "preview-image",
                     type = MessageAttachmentType.IMAGE,
                     mimeType = "image/jpeg",
                     byteSize = 0
                 ),
-                MessageAttachmentUi(
+                MessageAttachmentUi.ImageVideoAttachment(
                     id = "preview-video",
                     type = MessageAttachmentType.VIDEO,
                     mimeType = "video/mp4",
                     byteSize = 0,
                     durationMilliseconds = 42_000
                 ),
-                MessageAttachmentUi(
+                MessageAttachmentUi.FileAttachment(
                     id = "preview-file",
-                    type = MessageAttachmentType.FILE,
                     mimeType = "application/pdf",
                     byteSize = 240_000,
                     fileName = "document.pdf"

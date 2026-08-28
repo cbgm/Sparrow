@@ -2,7 +2,6 @@ package com.cbgm.sparrow.feature.attachments.presentation.management
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
@@ -13,6 +12,7 @@ import com.cbgm.sparrow.feature.attachments.presentation.management.model.Attach
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementUiEvent
 import com.cbgm.sparrow.feature.attachments.presentation.management.model.AttachmentManagementUiState
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toAttachmentManagementUiModels
+import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
@@ -100,7 +100,7 @@ class AttachmentManagementViewModel(
 
         if (
             uiState.value.attachments.none { attachment ->
-                attachment.id == attachmentId && attachment.type != MessageAttachmentType.FILE
+                attachment.id == attachmentId && attachment !is MessageAttachmentUi.FileAttachment
             }
         ) {
             return

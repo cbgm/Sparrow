@@ -12,7 +12,7 @@ data class GroupMemberProgressUi(
 data class GroupUiState(
     val title: String = "",
     val avatarBytes: ByteArray? = null,
-    val messages: List<GroupMessageUiModel> = emptyList(),
+    val messages: List<GroupMessageUi> = emptyList(),
     val messageText: String = "",
     val selectedMedia: List<MediaSelection> = emptyList(),
     val isSending: Boolean = false,

@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.chats.presentation.direct.model
 
 import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
-import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
+import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 
 sealed interface DirectUiEvent {
     data class MessageTextChanged(
@@ -39,7 +39,7 @@ sealed interface DirectUiEvent {
 
     data class SafetyWarningClicked(
         val messageId: String,
-        val warning: MessageSafetyWarningUiModel
+        val warning: MessageSafetyWarningUi
     ) : DirectUiEvent
 
     data object VerifyIdentityClicked : DirectUiEvent

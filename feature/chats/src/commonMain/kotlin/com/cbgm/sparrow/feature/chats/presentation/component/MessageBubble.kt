@@ -1,9 +1,11 @@
 package com.cbgm.sparrow.feature.chats.presentation.component
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -27,21 +29,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.core.ui.animation.rememberHighlightColor
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.messageBubble
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.attachments.presentation.component.MessageAttachments
-import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleModel
-import com.cbgm.sparrow.feature.safety.presentation.component.MessageSafetyWarning
-import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUiModel
+import com.cbgm.sparrow.feature.chats.presentation.component.model.ImageVideoTypeUi
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessagePartUi
+import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_decryption_failed
 import com.cbgm.sparrow.resources.feature_chats_delivered
@@ -63,10 +63,10 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun MessageBubble(
-    message: MessageBubbleModel,
+    message: MessageBubbleUi,
     onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onSafetyDetailsClick: (MessageSafetyWarningUiModel) -> Unit = {},
+    onSafetyDetailsClick: (MessageSafetyWarningUi) -> Unit = {},
     onAttachmentVisible: (String) -> Unit = {},
     onAttachmentClick: (String) -> Unit = {},
     isSearchHighlighted: Boolean = false
@@ -110,7 +110,7 @@ internal fun MessageBubble(
 }
 
 @Composable
-private fun SenderLabel(message: MessageBubbleModel) {
+private fun SenderLabel(message: MessageBubbleUi) {
     if (message.isMine || message.senderName.isNullOrBlank()) return
 
     val senderLabel =
@@ -137,16 +137,91 @@ private fun SenderLabel(message: MessageBubbleModel) {
 
 @Composable
 private fun BubbleBody(
-    message: MessageBubbleModel,
+    message: MessageBubbleUi,
     state: BubbleState,
     isSearchHighlighted: Boolean = false,
-    safetyWarning: MessageSafetyWarningUiModel? = null,
+    safetyWarning: MessageSafetyWarningUi? = null,
     onAttachmentVisible: (String) -> Unit = {},
     onAttachmentClick: (String) -> Unit = {},
     onSafetyDetailsClick: () -> Unit = {}
 ) {
-    val annotatedText = rememberLinkAnnotatedString(state.text)
+    val showTextBubble =
+        message.locationPart == null &&
+            (state.text.isNotBlank() || state.isContentFailed || safetyWarning != null)
 
+    Column(
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro),
+        horizontalAlignment = if (message.isMine) Alignment.End else Alignment.Start
+    ) {
+        message.locationPart?.let { locationPart ->
+            MessageBubbleSurface(
+                message = message,
+                state = state,
+                isSearchHighlighted = isSearchHighlighted
+            ) {
+                LocationMessageBubbleBody(
+                    locationPart = locationPart,
+                    onAttachmentClick = onAttachmentClick
+                )
+            }
+        }
+
+        if (message.imageVideoParts.isNotEmpty()) {
+            MessageBubbleSurface(
+                message = message,
+                state = state,
+                isSearchHighlighted = isSearchHighlighted
+            ) {
+                PhotoVideoMessageBubbleBody(
+                    imageVideoParts = message.imageVideoParts,
+                    onAttachmentVisible = onAttachmentVisible,
+                    onAttachmentClick = onAttachmentClick
+                )
+            }
+        }
+
+        if (message.fileParts.isNotEmpty()) {
+            MessageBubbleSurface(
+                message = message,
+                state = state,
+                isSearchHighlighted = isSearchHighlighted
+            ) {
+                FileMessageBubbleBody(
+                    fileParts = message.fileParts,
+                    onAttachmentVisible = onAttachmentVisible
+                )
+            }
+        }
+
+        if (showTextBubble) {
+            MessageBubbleSurface(
+                message = message,
+                state = state,
+                isSearchHighlighted = isSearchHighlighted
+            ) {
+                TextMessageBubbleBody(
+                    textPart =
+                        message.textPart
+                            ?: MessagePartUi.TextUi(
+                                text = state.text,
+                                isContentFailed = state.isContentFailed
+                            ),
+                    safetyWarning = safetyWarning,
+                    onSafetyDetailsClick = onSafetyDetailsClick
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MessageBubbleSurface(
+    message: MessageBubbleUi,
+    state: BubbleState,
+    isSearchHighlighted: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
     val bubbleShapes = MaterialTheme.shapes.messageBubble
     val bubbleColor =
         rememberHighlightColor(
@@ -156,6 +231,7 @@ private fun BubbleBody(
         )
 
     Surface(
+        modifier = modifier,
         color = bubbleColor,
         contentColor = state.contentColor,
         shape =
@@ -167,70 +243,33 @@ private fun BubbleBody(
                 tailReturnOffset = bubbleShapes.tailReturnOffset
             )
     ) {
-        Column {
-            if (message.attachments.isNotEmpty()) {
-                MessageAttachments(
-                    attachments = message.attachments,
-                    onAttachmentVisible = onAttachmentVisible,
-                    onAttachmentClick = onAttachmentClick,
-                    modifier =
-                        Modifier.padding(
-                            horizontal = MaterialTheme.spacing.small,
-                            vertical = MaterialTheme.spacing.base
-                        )
+        Box(
+            modifier =
+                Modifier.absolutePadding(
+                    left =
+                        if (message.isMine) {
+                            MaterialTheme.spacing.micro
+                        } else {
+                            bubbleShapes.tailWidth + MaterialTheme.spacing.micro
+                        },
+                    top = MaterialTheme.spacing.micro,
+                    right =
+                        if (message.isMine) {
+                            bubbleShapes.tailWidth + MaterialTheme.spacing.micro
+                        } else {
+                            MaterialTheme.spacing.micro
+                        },
+                    bottom = MaterialTheme.spacing.micro
                 )
-            }
-
-            if (state.text.isNotBlank() || state.isContentFailed) {
-                Row(
-                    modifier =
-                        Modifier.padding(
-                            horizontal = MaterialTheme.spacing.small,
-                            vertical = MaterialTheme.spacing.base
-                        ),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    if (state.isContentFailed) {
-                        Icon(imageVector = Icons.Default.ErrorOutline, contentDescription = null)
-                        Spacer(modifier = Modifier.width(MaterialTheme.spacing.base))
-                    }
-
-                    Text(
-                        text = annotatedText,
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-
-            safetyWarning?.let { warning ->
-                MessageSafetyWarning(
-                    warning = warning,
-                    onClick = onSafetyDetailsClick,
-                    modifier =
-                        Modifier.padding(
-                            start =
-                                if (message.isMine) {
-                                    MaterialTheme.spacing.zero
-                                } else {
-                                    bubbleShapes.tailWidth
-                                },
-                            end =
-                                if (message.isMine) {
-                                    bubbleShapes.tailWidth
-                                } else {
-                                    MaterialTheme.spacing.zero
-                                }
-                        )
-                )
-            }
+        ) {
+            content()
         }
     }
 }
 
 @Composable
 private fun Metadata(
-    message: MessageBubbleModel,
+    message: MessageBubbleUi,
     onRetryClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -252,7 +291,7 @@ private fun Metadata(
 }
 
 @Composable
-private fun DeliveryProgress(message: MessageBubbleModel) {
+private fun DeliveryProgress(message: MessageBubbleUi) {
     val progress = message.deliveryProgress
     if (progress.recipientCount <= 1) return
 
@@ -271,7 +310,7 @@ private fun DeliveryProgress(message: MessageBubbleModel) {
 }
 
 @Composable
-private fun SecurityIndicator(message: MessageBubbleModel) {
+private fun SecurityIndicator(message: MessageBubbleUi) {
     val text =
         when (message.contentStatus) {
             MessageContentStatus.INVALID_PACKET -> stringResource(Res.string.feature_chats_invalid_packet)
@@ -457,11 +496,11 @@ private fun DeliveryLabel(
 }
 
 @Composable
-private fun bubbleState(message: MessageBubbleModel): BubbleState =
+private fun bubbleState(message: MessageBubbleUi): BubbleState =
     when (message.contentStatus) {
         MessageContentStatus.READABLE ->
             BubbleState(
-                text = message.text,
+                text = message.textPart?.text ?: "",
                 isContentFailed = false,
                 bubbleColor =
                     if (message.isMine) {
@@ -495,7 +534,7 @@ private fun failedBubbleState(text: String) =
         contentColor = MaterialTheme.colorScheme.onErrorContainer
     )
 
-private data class BubbleState(
+internal data class BubbleState(
     val text: String,
     val isContentFailed: Boolean,
     val bubbleColor: Color,
@@ -508,13 +547,17 @@ private fun MessageBubblePreview() {
     SparrowTheme {
         MessageBubble(
             message =
-                MessageBubbleModel(
+                MessageBubbleUi(
                     id = "preview",
-                    text = "Encrypted message",
                     isMine = true,
                     security = MessageSecurity.END_TO_END_ENCRYPTED,
                     contentStatus = MessageContentStatus.READABLE,
-                    deliveryStatus = MessageDeliveryStatus.DELIVERED
+                    deliveryStatus = MessageDeliveryStatus.DELIVERED,
+                    textPart =
+                        MessagePartUi.TextUi(
+                            text = "Encrypted message",
+                            isContentFailed = false
+                        )
                 ),
             onRetryClick = {}
         )
@@ -527,29 +570,41 @@ private fun MessageBubbleWithAttachmentsPreview() {
     SparrowTheme {
         MessageBubble(
             message =
-                MessageBubbleModel(
+                MessageBubbleUi(
                     id = "preview-attachments",
-                    text = "Photos from today",
                     isMine = false,
                     security = MessageSecurity.END_TO_END_ENCRYPTED,
                     contentStatus = MessageContentStatus.READABLE,
                     deliveryStatus = MessageDeliveryStatus.DELIVERED,
                     senderName = "Chris",
-                    attachments =
-                        listOf(
-                            MessageAttachmentUi(
-                                id = "preview-image-1",
-                                type = MessageAttachmentType.IMAGE,
-                                mimeType = "image/jpeg",
-                                byteSize = 0
-                            ),
-                            MessageAttachmentUi(
-                                id = "preview-video",
-                                type = MessageAttachmentType.VIDEO,
-                                mimeType = "video/mp4",
-                                byteSize = 0
-                            )
+                    fileParts = listOf(
+                        MessagePartUi.FileUi(
+                            id = "preview-file",
+                            mimeType = "application/pdf",
+                            byteSize = 0,
+                            fileName = "test.pdf",
+                            localFilePath = ""
                         )
+                    ),
+                    imageVideoParts = listOf(
+                        MessagePartUi.ImageVideoUi(
+                            id = "preview-image-1",
+                            type = ImageVideoTypeUi.IMAGE,
+                            mimeType = "image/jpeg",
+                            byteSize = 0
+                        ),
+                        MessagePartUi.ImageVideoUi(
+                            id = "preview-video",
+                            type = ImageVideoTypeUi.VIDEO,
+                            mimeType = "video/mp4",
+                            byteSize = 0
+                        )
+                    ),
+                    locationPart = null,
+                    textPart = MessagePartUi.TextUi(
+                        text = "Test message",
+                        isContentFailed = false
+                    )
                 ),
             onRetryClick = {},
             onAttachmentVisible = {},
