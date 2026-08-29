@@ -1,0 +1,116 @@
+<vector
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="160dp"
+    android:height="100dp"
+    android:viewportWidth="160"
+    android:viewportHeight="100">
+
+    <!-- Base -->
+    <path
+        android:fillColor="#EEF1F3"
+        android:pathData="M0,0H160V100H0Z" />
+
+    <!-- Parks -->
+    <path
+        android:fillColor="#D7EBD4"
+        android:pathData="M8,58L38,52L46,78L20,94L4,82Z" />
+
+    <path
+        android:fillColor="#DDEFD8"
+        android:pathData="M111,4L151,8L156,34L126,42L106,26Z" />
+
+    <!-- Water -->
+    <path
+        android:fillColor="#D5E8F6"
+        android:pathData="M126,53C139,48 151,53 160,61V100H137C133,89 119,83 122,69C123,63 124,57 126,53Z" />
+
+    <!-- Small city blocks -->
+    <path
+        android:fillColor="#E1E4E6"
+        android:pathData="M51,8H72V22H51Z" />
+
+    <path
+        android:fillColor="#E1E4E6"
+        android:pathData="M80,11H100V29H80Z" />
+
+    <path
+        android:fillColor="#E1E4E6"
+        android:pathData="M53,72H73V91H53Z" />
+
+    <path
+        android:fillColor="#E1E4E6"
+        android:pathData="M84,68H104V86H84Z" />
+
+    <!-- Roads: dark underlay -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M-5,25L165,25"
+        android:strokeColor="#D7DADD"
+        android:strokeWidth="10"
+        android:strokeLineCap="round" />
+
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M-5,72L165,72"
+        android:strokeColor="#D7DADD"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M34,-10L69,110"
+        android:strokeColor="#D7DADD"
+        android:strokeWidth="10"
+        android:strokeLineCap="round" />
+
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M115,-10L91,110"
+        android:strokeColor="#D7DADD"
+        android:strokeWidth="8"
+        android:strokeLineCap="round" />
+
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M-10,93L170,7"
+        android:strokeColor="#D7DADD"
+        android:strokeWidth="8"
+        android:strokeLineCap="round" />
+
+    <!-- Roads: white center -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M-5,25L165,25"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round" />
+
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M-5,72L165,72"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round" />
+
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M34,-10L69,110"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round" />
+
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M115,-10L91,110"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round" />
+
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M-10,93L170,7"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round" />
+
+</vector>
