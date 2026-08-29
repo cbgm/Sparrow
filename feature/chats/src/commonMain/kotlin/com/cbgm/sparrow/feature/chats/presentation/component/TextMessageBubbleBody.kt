@@ -27,9 +27,11 @@ internal fun TextMessageBubbleBody(
 ) {
     val annotatedText = rememberLinkAnnotatedString(textPart.text)
 
+    val padding = if (safetyWarning != null) MaterialTheme.spacing.base else MaterialTheme.spacing.micro
+
     Column {
         if (textPart.text.isNotBlank() || textPart.isContentFailed) {
-            Row(modifier = Modifier.padding(MaterialTheme.spacing.micro)) {
+            Row(modifier = Modifier.padding(padding)) {
                 if (textPart.isContentFailed) {
                     Icon(imageVector = Icons.Default.ErrorOutline, contentDescription = null)
                     Spacer(modifier = Modifier.width(MaterialTheme.spacing.base))

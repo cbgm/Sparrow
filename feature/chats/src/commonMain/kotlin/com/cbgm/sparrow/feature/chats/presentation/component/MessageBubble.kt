@@ -219,6 +219,7 @@ private fun BubbleBody(
             MessageBubbleSurface(
                 message = message,
                 state = state,
+                hasInnerPadding = safetyWarning == null,
                 isSearchHighlighted = isSearchHighlighted
             ) {
                 TextMessageBubbleBody(

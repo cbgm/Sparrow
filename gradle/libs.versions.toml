@@ -1,5 +1,5 @@
 [versions]
-agp = "9.3.2"
+agp = "9.2.1"
 android-compileSdk = "37"
 android-minSdk = "29"
 android-targetSdk = "37"
@@ -55,7 +55,7 @@ hikari = "7.1.0"
 postgresql = "42.7.13"
 jedis = "5.2.0"
 material-icons = "1.7.3"
-mediapipe = "1.0.0"
+mediapipe = "0.10.35"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
