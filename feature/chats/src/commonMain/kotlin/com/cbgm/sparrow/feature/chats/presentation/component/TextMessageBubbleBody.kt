@@ -21,20 +21,24 @@ import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyW
 
 @Composable
 internal fun TextMessageBubbleBody(
-    textPart: MessagePartUi.TextUi,
+    textPart: MessagePartUi.Text,
     safetyWarning: MessageSafetyWarningUi?,
     onSafetyDetailsClick: () -> Unit
 ) {
+    val annotatedText = rememberLinkAnnotatedString(textPart.text)
+
+    val padding = if (safetyWarning != null) MaterialTheme.spacing.base else MaterialTheme.spacing.micro
+
     Column {
         if (textPart.text.isNotBlank() || textPart.isContentFailed) {
-            Row(modifier = Modifier.padding(MaterialTheme.spacing.micro)) {
+            Row(modifier = Modifier.padding(padding)) {
                 if (textPart.isContentFailed) {
                     Icon(imageVector = Icons.Default.ErrorOutline, contentDescription = null)
                     Spacer(modifier = Modifier.width(MaterialTheme.spacing.base))
                 }
 
                 Text(
-                    text = textPart.text,
+                    text = annotatedText,
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -55,7 +59,7 @@ internal fun TextMessageBubbleBody(
 private fun TextMessageBubbleBodyPreview() {
     SparrowTheme {
         TextMessageBubbleBody(
-            textPart = MessagePartUi.TextUi(
+            textPart = MessagePartUi.Text(
                 text = "Encrypted message",
                 isContentFailed = false
             ),

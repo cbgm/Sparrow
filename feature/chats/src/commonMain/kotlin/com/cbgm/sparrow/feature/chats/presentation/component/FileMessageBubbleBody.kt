@@ -34,7 +34,7 @@ import com.cbgm.sparrow.feature.media.util.toReadableByteSize
 
 @Composable
 internal fun FileMessageBubbleBody(
-    fileParts: List<MessagePartUi.FileUi>,
+    fileParts: List<MessagePartUi.File>,
     onAttachmentVisible: (String) -> Unit
 ) {
     if (fileParts.isEmpty()) return
@@ -47,7 +47,7 @@ internal fun FileMessageBubbleBody(
 
 @Composable
 private fun Content(
-    fileParts: List<MessagePartUi.FileUi>,
+    fileParts: List<MessagePartUi.File>,
     onAttachmentVisible: (String) -> Unit
 ) {
     val opener = rememberFileOpener()
@@ -127,14 +127,14 @@ private fun FileMessageBubbleBodyPreview() {
         FileMessageBubbleBody(
             fileParts =
                 listOf(
-                    MessagePartUi.FileUi(
+                    MessagePartUi.File(
                         id = "preview-file",
                         mimeType = "application/pdf",
                         byteSize = 1_048_576,
                         fileName = "document.pdf",
                         localFilePath = ""
                     ),
-                    MessagePartUi.FileUi(
+                    MessagePartUi.File(
                         id = "preview-file-2",
                         mimeType = "text/plain",
                         byteSize = 42_000,

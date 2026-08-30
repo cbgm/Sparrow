@@ -49,6 +49,7 @@ object Dimens {
         val progressStrokeWidth = 1.5.dp
         val retrySize = 28.dp
         val retryIconSize = 16.dp
+        val staticBubbleSize = 200.dp
     }
 
     object MessageInput {

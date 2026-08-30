@@ -23,15 +23,22 @@ class AcceptGroupInvitationUseCase(
         }
 
     private suspend fun acceptOwnerIdentity(invitation: GroupInvitationOwnerIdentity) {
-        val existingIdentity = requireContactIdentity(invitation.contactId)
+        val existingIdentity =
+            contactRepository
+                .getContact(invitation.contactId)
+                .getOrThrow()
+                ?.sparrowIdentity
         val encryptionPublicKey =
             invitation.encryptionPublicKey
-                ?: existingIdentity.encryptionPublicKey
+                ?: existingIdentity?.encryptionPublicKey
+                ?: error("Group owner encryption identity was not stored")
         val signingPublicKey =
             invitation.signingPublicKey
-                ?: existingIdentity.signingPublicKey
+                ?: existingIdentity?.signingPublicKey
+                ?: error("Group owner signing identity was not stored")
         val sameIdentity =
-            existingIdentity.encryptionPublicKey.contentEquals(encryptionPublicKey) &&
+            existingIdentity != null &&
+                existingIdentity.encryptionPublicKey.contentEquals(encryptionPublicKey) &&
                 existingIdentity.signingPublicKey.contentEquals(signingPublicKey)
 
         if (!sameIdentity) {

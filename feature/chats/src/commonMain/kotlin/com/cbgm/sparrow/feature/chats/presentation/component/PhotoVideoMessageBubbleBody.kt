@@ -33,7 +33,7 @@ import com.cbgm.sparrow.feature.media.presentation.component.MediaThumbnail
 
 @Composable
 internal fun PhotoVideoMessageBubbleBody(
-    imageVideoParts: List<MessagePartUi.ImageVideoUi>,
+    imageVideoParts: List<MessagePartUi.ImageVideo>,
     onAttachmentVisible: (String) -> Unit,
     onAttachmentClick: (String) -> Unit
 ) {
@@ -46,7 +46,7 @@ internal fun PhotoVideoMessageBubbleBody(
 
 @Composable
 private fun Content(
-    imageVideoParts: List<MessagePartUi.ImageVideoUi>,
+    imageVideoParts: List<MessagePartUi.ImageVideo>,
     onAttachmentVisible: (String) -> Unit,
     onAttachmentClick: (String) -> Unit
 ) {
@@ -93,7 +93,7 @@ private fun Content(
 
 @Composable
 private fun MessageMediaPreview(
-    imageVideoPart: MessagePartUi.ImageVideoUi,
+    imageVideoPart: MessagePartUi.ImageVideo,
     onAttachmentVisible: (String) -> Unit,
     onAttachmentClick: (String) -> Unit
 ) {
@@ -177,25 +177,25 @@ private fun MediaMessageBubbleBodyPreview() {
         PhotoVideoMessageBubbleBody(
             imageVideoParts =
                 listOf(
-                    MessagePartUi.ImageVideoUi(
+                    MessagePartUi.ImageVideo(
                         id = "preview-image",
                         type = ImageVideoTypeUi.IMAGE,
                         mimeType = "image/jpeg",
                         byteSize = 0
                     ),
-                    MessagePartUi.ImageVideoUi(
+                    MessagePartUi.ImageVideo(
                         id = "preview-video",
                         type = ImageVideoTypeUi.VIDEO,
                         mimeType = "video/mp4",
                         byteSize = 0
                     ),
-                    MessagePartUi.ImageVideoUi(
+                    MessagePartUi.ImageVideo(
                         id = "preview-image-2",
                         type = ImageVideoTypeUi.IMAGE,
                         mimeType = "image/jpeg",
                         byteSize = 0
                     ),
-                    MessagePartUi.ImageVideoUi(
+                    MessagePartUi.ImageVideo(
                         id = "preview-image-3",
                         type = ImageVideoTypeUi.IMAGE,
                         mimeType = "image/jpeg",

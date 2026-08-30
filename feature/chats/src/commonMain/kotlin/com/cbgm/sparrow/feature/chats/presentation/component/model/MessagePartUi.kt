@@ -4,7 +4,7 @@ import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 
 sealed interface MessagePartUi {
-    data class ImageVideoUi(
+    data class ImageVideo(
         val id: String,
         val type: ImageVideoTypeUi,
         val mimeType: String,
@@ -18,7 +18,7 @@ sealed interface MessagePartUi {
     ) : MessagePartUi {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
-            if (other !is ImageVideoUi) return false
+            if (other !is ImageVideo) return false
 
             return id == other.id &&
                 type == other.type &&
@@ -47,7 +47,7 @@ sealed interface MessagePartUi {
         }
     }
 
-    data class FileUi(
+    data class File(
         val id: String,
         val mimeType: String,
         val byteSize: Long,
@@ -57,7 +57,7 @@ sealed interface MessagePartUi {
     ) : MessagePartUi {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
-            if (other !is FileUi) return false
+            if (other !is File) return false
 
             return id == other.id &&
                 mimeType == other.mimeType &&
@@ -78,17 +78,17 @@ sealed interface MessagePartUi {
         }
     }
 
-    data class LocationUi(
+    data class Location(
         val id: String,
         val location: CurrentLocation? = null
     ) : MessagePartUi
 
-    data class ContactUi(
+    data class Contact(
         val id: String,
         val contact: SharedContact? = null
     ) : MessagePartUi
 
-    data class TextUi(
+    data class Text(
         val text: String,
         val isContentFailed: Boolean
     ) : MessagePartUi

@@ -1038,7 +1038,7 @@ private fun GroupMessagesPreview() {
                                         senderName = "Alex",
                                         senderIsInContacts = true,
                                         textPart =
-                                            MessagePartUi.TextUi(
+                                            MessagePartUi.Text(
                                                 text = "Hello everyone",
                                                 isContentFailed = false
                                             )

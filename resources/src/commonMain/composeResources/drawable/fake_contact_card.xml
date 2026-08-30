@@ -1,0 +1,57 @@
+<vector
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="160dp"
+    android:height="100dp"
+    android:viewportWidth="160"
+    android:viewportHeight="100">
+
+    <!-- Card background -->
+    <path
+        android:fillColor="#F2F4F5"
+        android:pathData="M0,0H160V100H0Z" />
+
+    <!-- Decorative panels -->
+    <path
+        android:fillColor="#E3EEE7"
+        android:pathData="M0,0H160V30H0Z" />
+
+    <path
+        android:fillColor="#E9ECEE"
+        android:pathData="M105,0H160V100H105Z" />
+
+    <!-- Avatar shadow -->
+    <path
+        android:fillColor="#D5DDD8"
+        android:pathData="M20,21a25,25 0,1 0,50 0a25,25 0,1 0,-50 0" />
+
+    <!-- Avatar -->
+    <path
+        android:fillColor="#C3D8C9"
+        android:pathData="M23,21a22,22 0,1 0,44 0a22,22 0,1 0,-44 0" />
+
+    <!-- Fake name -->
+    <path
+        android:fillColor="#CDD2D5"
+        android:pathData="M80,23H136V31H80Z" />
+
+    <!-- Fake secondary line -->
+    <path
+        android:fillColor="#DDE1E3"
+        android:pathData="M80,39H126V45H80Z" />
+
+    <!-- Fake phone line -->
+    <path
+        android:fillColor="#D7DBDE"
+        android:pathData="M22,68H113V75H22Z" />
+
+    <!-- Small decorative line -->
+    <path
+        android:fillColor="#E0E3E5"
+        android:pathData="M22,82H91V87H22Z" />
+
+    <!-- Right-side circle -->
+    <path
+        android:fillColor="#D8E7DC"
+        android:pathData="M126,66a14,14 0,1 0,28 0a14,14 0,1 0,-28 0" />
+
+</vector>

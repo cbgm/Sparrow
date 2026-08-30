@@ -15,11 +15,11 @@ data class MessageBubbleUi(
     val senderIsInContacts: Boolean = true,
     val deliveryProgress: DeliveryProgressUi = DeliveryProgressUi(),
     val safetyWarning: MessageSafetyWarningUi? = null,
-    val fileParts: List<MessagePartUi.FileUi> = emptyList(),
-    val imageVideoParts: List<MessagePartUi.ImageVideoUi> = emptyList(),
-    val locationPart: MessagePartUi.LocationUi? = null,
-    val contactPart: MessagePartUi.ContactUi? = null,
-    val textPart: MessagePartUi.TextUi? = null
+    val fileParts: List<MessagePartUi.File> = emptyList(),
+    val imageVideoParts: List<MessagePartUi.ImageVideo> = emptyList(),
+    val locationPart: MessagePartUi.Location? = null,
+    val contactPart: MessagePartUi.Contact? = null,
+    val textPart: MessagePartUi.Text? = null
 )
 
 data class DeliveryProgressUi(

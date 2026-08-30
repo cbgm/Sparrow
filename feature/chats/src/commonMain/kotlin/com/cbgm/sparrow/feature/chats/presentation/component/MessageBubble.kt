@@ -162,6 +162,7 @@ private fun BubbleBody(
             MessageBubbleSurface(
                 message = message,
                 state = state,
+                hasInnerPadding = false,
                 isSearchHighlighted = isSearchHighlighted
             ) {
                 ContactMessageBubbleBody(
@@ -176,6 +177,7 @@ private fun BubbleBody(
             MessageBubbleSurface(
                 message = message,
                 state = state,
+                hasInnerPadding = false,
                 isSearchHighlighted = isSearchHighlighted
             ) {
                 LocationMessageBubbleBody(
@@ -217,12 +219,13 @@ private fun BubbleBody(
             MessageBubbleSurface(
                 message = message,
                 state = state,
+                hasInnerPadding = safetyWarning == null,
                 isSearchHighlighted = isSearchHighlighted
             ) {
                 TextMessageBubbleBody(
                     textPart =
                         message.textPart
-                            ?: MessagePartUi.TextUi(
+                            ?: MessagePartUi.Text(
                                 text = state.text,
                                 isContentFailed = state.isContentFailed
                             ),
@@ -240,6 +243,7 @@ private fun MessageBubbleSurface(
     state: BubbleState,
     isSearchHighlighted: Boolean,
     modifier: Modifier = Modifier,
+    hasInnerPadding: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val bubbleShapes = MaterialTheme.shapes.messageBubble
@@ -263,23 +267,30 @@ private fun MessageBubbleSurface(
                 tailReturnOffset = bubbleShapes.tailReturnOffset
             )
     ) {
+        val additionalPadding =
+            if (hasInnerPadding) {
+                MaterialTheme.spacing.micro
+            } else {
+                MaterialTheme.spacing.zero
+            }
+
         Box(
             modifier =
                 Modifier.absolutePadding(
                     left =
                         if (message.isMine) {
-                            MaterialTheme.spacing.micro
+                            additionalPadding
                         } else {
-                            bubbleShapes.tailWidth + MaterialTheme.spacing.micro
+                            bubbleShapes.tailWidth + additionalPadding
                         },
-                    top = MaterialTheme.spacing.micro,
+                    top = additionalPadding,
                     right =
                         if (message.isMine) {
-                            bubbleShapes.tailWidth + MaterialTheme.spacing.micro
+                            bubbleShapes.tailWidth + additionalPadding
                         } else {
-                            MaterialTheme.spacing.micro
+                            additionalPadding
                         },
-                    bottom = MaterialTheme.spacing.micro
+                    bottom = additionalPadding
                 )
         ) {
             content()
@@ -574,7 +585,7 @@ private fun MessageBubblePreview() {
                     contentStatus = MessageContentStatus.READABLE,
                     deliveryStatus = MessageDeliveryStatus.DELIVERED,
                     textPart =
-                        MessagePartUi.TextUi(
+                        MessagePartUi.Text(
                             text = "Encrypted message",
                             isContentFailed = false
                         )
@@ -598,7 +609,7 @@ private fun MessageBubbleWithAttachmentsPreview() {
                     deliveryStatus = MessageDeliveryStatus.DELIVERED,
                     senderName = "Chris",
                     fileParts = listOf(
-                        MessagePartUi.FileUi(
+                        MessagePartUi.File(
                             id = "preview-file",
                             mimeType = "application/pdf",
                             byteSize = 0,
@@ -607,13 +618,13 @@ private fun MessageBubbleWithAttachmentsPreview() {
                         )
                     ),
                     imageVideoParts = listOf(
-                        MessagePartUi.ImageVideoUi(
+                        MessagePartUi.ImageVideo(
                             id = "preview-image-1",
                             type = ImageVideoTypeUi.IMAGE,
                             mimeType = "image/jpeg",
                             byteSize = 0
                         ),
-                        MessagePartUi.ImageVideoUi(
+                        MessagePartUi.ImageVideo(
                             id = "preview-video",
                             type = ImageVideoTypeUi.VIDEO,
                             mimeType = "video/mp4",
@@ -621,7 +632,7 @@ private fun MessageBubbleWithAttachmentsPreview() {
                         )
                     ),
                     locationPart = null,
-                    textPart = MessagePartUi.TextUi(
+                    textPart = MessagePartUi.Text(
                         text = "Test message",
                         isContentFailed = false
                     )

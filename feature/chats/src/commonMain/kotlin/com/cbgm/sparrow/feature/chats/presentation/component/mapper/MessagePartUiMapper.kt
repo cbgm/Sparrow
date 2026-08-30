@@ -24,13 +24,13 @@ private fun MessagePart.toMessagePartUi(
 ): MessagePartUi =
     when (this) {
         is MessagePart.Text ->
-            MessagePartUi.TextUi(
+            MessagePartUi.Text(
                 text = text,
                 isContentFailed = false
             )
 
         is MessagePart.ImageVideo ->
-            MessagePartUi.ImageVideoUi(
+            MessagePartUi.ImageVideo(
                 id = id,
                 type =
                     when (type) {
@@ -48,7 +48,7 @@ private fun MessagePart.toMessagePartUi(
             )
 
         is MessagePart.File ->
-            MessagePartUi.FileUi(
+            MessagePartUi.File(
                 id = id,
                 mimeType = mimeType,
                 byteSize = byteSize,
@@ -58,19 +58,19 @@ private fun MessagePart.toMessagePartUi(
             )
 
         is MessagePart.Location ->
-            MessagePartUi.LocationUi(
+            MessagePartUi.Location(
                 id = id,
                 location = attachmentBytes[id]?.let(LocationAttachmentPayload::decode)
             )
 
         is MessagePart.Contact ->
-            MessagePartUi.ContactUi(
+            MessagePartUi.Contact(
                 id = id,
                 contact = attachmentBytes[id]?.let(ContactAttachmentPayload::decode)
             )
     }
 
-fun MessagePartUi.ImageVideoUi.toMediaItem(): MediaItem =
+fun MessagePartUi.ImageVideo.toMediaItem(): MediaItem =
     MediaItem(
         id = id,
         type =
