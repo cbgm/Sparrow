@@ -24,6 +24,10 @@ important platform/runtime integrations are still missing, so feature parity wit
 A complete release workflow now exists, but **there is currently no official tagged GitHub release with the
 full downloadable package yet**. Until the first `v*` tag is published, build from source or use CI artifacts.
 
+## Demo Video
+
+https://github.com/user-attachments/assets/cb4918f3-c53d-4353-aae0-15d689c7b85f
+
 ## What makes Sparrow different?
 
 Sparrow combines client-side end-to-end encryption with a **federated, independently hostable transport
