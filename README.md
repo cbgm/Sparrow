@@ -13,8 +13,6 @@
 ![Architecture](https://img.shields.io/badge/Architecture-Clean-success)
 ![Compose UI](https://img.shields.io/badge/UI-Compose_Multiplatform-blue)
 ![Detekt](https://img.shields.io/badge/Quality-Detekt-success)
-![License](https://img.shields.io/badge/License-Apache%202.0-blue)
-
 </div>
 
 ## Project status
@@ -25,6 +23,10 @@ important platform/runtime integrations are still missing, so feature parity wit
 
 A complete release workflow now exists, but **there is currently no official tagged GitHub release with the
 full downloadable package yet**. Until the first `v*` tag is published, build from source or use CI artifacts.
+
+## Demo Video
+
+https://github.com/user-attachments/assets/cb4918f3-c53d-4353-aae0-15d689c7b85f
 
 ## What makes Sparrow different?
 
@@ -338,6 +340,9 @@ Start here:
 - [Release process](docs/development/release-process.md)
 - [FAQ](docs/faq.md)
 
-## License
+Copyright © 2026 Christian Bergmann. All Rights Reserved.
 
-Apache License 2.0. See the repository license file for the exact terms.
+This software and its source code are proprietary and confidential.
+Unauthorized copying, modification, distribution, sublicensing, or use
+of this software, in whole or in part, is prohibited without prior
+written permission from the copyright holder.

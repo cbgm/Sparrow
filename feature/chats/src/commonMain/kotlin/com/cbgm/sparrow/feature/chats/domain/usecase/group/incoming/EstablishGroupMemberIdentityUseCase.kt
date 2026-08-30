@@ -19,9 +19,9 @@ class EstablishGroupMemberIdentityUseCase(
                     .getContact(contactId)
                     .getOrThrow()
                     ?.sparrowIdentity
-                    ?: error("Contact identity was not found: $contactId")
             val sameIdentity =
-                existingIdentity.encryptionPublicKey.contentEquals(encryptionPublicKey) &&
+                existingIdentity != null &&
+                    existingIdentity.encryptionPublicKey.contentEquals(encryptionPublicKey) &&
                     existingIdentity.signingPublicKey.contentEquals(signingPublicKey)
 
             if (!sameIdentity) {

@@ -391,6 +391,8 @@
     <string name="feature_chats_manual_identity_incomplete_description">Eine Identität ist bekannt. Auch das andere Gerät muss die passende Identität importieren.</string>
     <string name="feature_chats_manual_identity_setup_action">Einrichten</string>
     <string name="feature_chats_import_contact_identity">Kontaktidentität importieren</string>
+    <string name="feature_contacts_location">Aufenthaltsort</string>
+
 
     <!-- Feature: group verification -->
     <string name="feature_chats_group_verification_title">Gruppenverifizierung</string>
@@ -554,6 +556,7 @@
     <string name="feature_safety_block_confirm">Diesen Nutzer blockieren?</string>
     <string name="feature_safety_block_confirm_description">Dieser Nutzer wird blockiert und seine Berechtigung für Direktchats wird widerrufen. Du kannst ihn später in den Einstellungen wieder entsperren.</string>
     <string name="feature_safety_block_error">Der Nutzer konnte nicht vollständig blockiert werden. Bitte versuche es erneut.</string>
+    <string name="feature_safety_block_this_user_button">Diesen Nutzer blockieren</string>
 
     <string name="feature_chats_media">Medien</string>
     <string name="feature_chats_save_to_camera_roll">In Kamerarolle speichern</string>

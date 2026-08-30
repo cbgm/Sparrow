@@ -63,7 +63,10 @@ fun AttachmentStorageScreen(
                     Modifier.fillMaxSize().padding(innerPadding),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(uiState.message, color = MaterialTheme.colorScheme.error)
+                    Text(
+                        text = uiState.message,
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
 
             is AttachmentStorageUiState.Content -> {
@@ -72,7 +75,10 @@ fun AttachmentStorageScreen(
                         Modifier.fillMaxSize().padding(innerPadding),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(stringResource(Res.string.feature_attachments_storage_empty))
+                        Text(
+                            text = stringResource(Res.string.feature_attachments_storage_empty),
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
                     }
                 } else {
                     LazyColumn(

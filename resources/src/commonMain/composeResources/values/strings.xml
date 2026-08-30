@@ -392,6 +392,8 @@
     <string name="feature_chats_manual_identity_incomplete_description">One identity is known. The other device must also import the matching identity.</string>
     <string name="feature_chats_manual_identity_setup_action">Set up</string>
     <string name="feature_chats_import_contact_identity">Import contact identity</string>
+    <string name="feature_chats_location">Location</string>
+
 
     <!-- Feature: group verification -->
     <string name="feature_chats_group_verification_title">Group verification</string>
@@ -553,6 +555,7 @@
     <string name="feature_safety_block_confirm">Block this user?</string>
     <string name="feature_safety_block_confirm_description">This user will be blocked and their direct-chat authorization will be revoked. You can unblock them later in Settings.</string>
     <string name="feature_safety_block_error">The user could not be blocked completely. Please try again.</string>
+    <string name="feature_safety_block_this_user_button">Block this user</string>
 
     <string name="feature_attachments_media">Media</string>
     <string name="feature_attachments_save_to_camera_roll">Save to camera roll</string>

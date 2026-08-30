@@ -95,11 +95,11 @@ internal fun GroupMessage.toGroupMessageUi(
                     } else {
                         safetyAssessments[id]?.toMessageSafetyWarningUi()
                     },
-                imageVideoParts = partsUi.filterIsInstance<MessagePartUi.ImageVideoUi>(),
-                fileParts = partsUi.filterIsInstance<MessagePartUi.FileUi>(),
-                locationPart = partsUi.filterIsInstance<MessagePartUi.LocationUi>().firstOrNull(),
-                contactPart = partsUi.filterIsInstance<MessagePartUi.ContactUi>().firstOrNull(),
-                textPart = partsUi.filterIsInstance<MessagePartUi.TextUi>().firstOrNull()
+                imageVideoParts = partsUi.filterIsInstance<MessagePartUi.ImageVideo>(),
+                fileParts = partsUi.filterIsInstance<MessagePartUi.File>(),
+                locationPart = partsUi.filterIsInstance<MessagePartUi.Location>().firstOrNull(),
+                contactPart = partsUi.filterIsInstance<MessagePartUi.Contact>().firstOrNull(),
+                textPart = partsUi.filterIsInstance<MessagePartUi.Text>().firstOrNull()
             ),
         type = type,
         senderContactId = senderContactId,

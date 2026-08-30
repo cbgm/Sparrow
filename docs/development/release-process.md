@@ -70,19 +70,103 @@ base64 < sparrow-release.jks > sparrow-release-keystore-base64.txt
 
 Paste that file's contents into `KEY_STORE_FILE`. `KEY_STORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD` contain the actual keystore password, alias, and key password. Back up the original `.jks` offline; do not commit it.
 
-## Create a release branch
+## Complete release command sequence
 
-When `master` is ready to stabilize a release line:
+Use this sequence when the current `develop` state is ready to become a release candidate. The normal Sparrow workflow keeps release work flowing in one direction: `develop -> master -> release/x.y -> tag`.
 
-```bash
-git switch master
-git pull
-git switch -c release/0.1
+### 1. Update local `develop` from origin
+
+Start from the integration branch and pull the current remote state:
+
+```powershell
+git checkout develop
+git status
+git pull origin develop
+```
+
+`git status` should be clean before continuing. Do not start the release procedure with an uncommitted working tree.
+
+### 2. Merge `develop` into `master` with the exact `develop` tree
+
+Update local `master`, create a real merge relationship with `develop`, then replace the merge result with the exact tree from `develop` before committing:
+
+```powershell
+git checkout master
+git pull origin master
+
+git merge develop -s ours --no-commit --no-ff
+git read-tree --reset -u develop
+git commit -m "Merge develop into master"
+
+git push origin master
+```
+
+This intentionally avoids manual conflict resolution. `git merge ... -s ours --no-commit --no-ff` records both branch histories as a merge without trying to combine their file contents. `git read-tree --reset -u develop` then makes the pending merge tree exactly match `develop`, and the explicit commit creates the release merge commit `Merge develop into master`. The result is therefore a real merge commit whose project contents are identical to the tested `develop` state.
+
+### 3. Create a new release branch from the updated `master`
+
+For a new `0.1` release line:
+
+```powershell
+git checkout master
+git pull origin master
+git checkout -b release/0.1
 git push -u origin release/0.1
 ```
 
-Every later push to that branch creates/updates release-candidate artifacts according to the changed files below.
-It does **not** publish the official GitHub Release yet.
+Every later push to that branch creates or updates release-candidate artifacts according to the changed files below. It does **not** publish the official GitHub Release yet.
+
+If the release branch already exists, do not create it again. Update it from `master` instead:
+
+```powershell
+git checkout release/0.1
+git pull origin release/0.1
+git merge master -X theirs
+git push origin release/0.1
+```
+
+Here `release/0.1` is `ours` and `master` is `theirs`, so conflicting hunks prefer the newly promoted `master` state.
+
+### 4. Stabilize and test the release branch
+
+Any release-specific fix is committed and pushed on the release branch:
+
+```powershell
+git checkout release/0.1
+git pull origin release/0.1
+
+# make/fix/test the release changes
+
+git add .
+git commit -m "Fix release issue"
+git push origin release/0.1
+```
+
+Each push to `release/**` creates a new release candidate. Test the candidate artifacts before tagging.
+
+### 5. Tag the exact tested release commit
+
+For an alpha release:
+
+```powershell
+git checkout release/0.1
+git pull origin release/0.1
+git status
+git tag v0.1.0-alpha.1
+git push origin v0.1.0-alpha.1
+```
+
+For a stable release, use the stable semantic-version tag instead:
+
+```powershell
+git checkout release/0.1
+git pull origin release/0.1
+git status
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The tag must point at the exact release-branch commit whose candidate was tested. A `v*` tag triggers the complete release build described below.
 
 ## Every push to `release/**`
 
@@ -155,20 +239,9 @@ Community Node Caddy/launcher-only change:
 
 A shared server-security/protocol change conservatively rebuilds all server images and both server bundles.
 
-## Tagging a full release
+## What tagging a full release does
 
-Tag an exact commit that belongs to a `release/**` branch:
-
-```bash
-git tag v0.1.0-alpha.1
-git push origin v0.1.0-alpha.1
-```
-
-Stable format also works:
-
-```text
-v0.1.0
-```
+Use the exact tagging commands from the complete release sequence above. The supported tag forms include prerelease versions such as `v0.1.0-alpha.1` and stable versions such as `v0.1.0`.
 
 A `v*` tag **forces a complete build**, regardless of change detection:
 
