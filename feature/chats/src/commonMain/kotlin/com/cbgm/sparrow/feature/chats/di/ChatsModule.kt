@@ -141,7 +141,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.profile.ObserveRemoteProfil
 import com.cbgm.sparrow.feature.chats.presentation.ContactsFlowViewModel
 import com.cbgm.sparrow.feature.chats.presentation.create.CreateGroupViewModel
 import com.cbgm.sparrow.feature.chats.presentation.details.GroupVerificationViewModel
-import com.cbgm.sparrow.feature.chats.presentation.direct.screen.DirectViewModel
+import com.cbgm.sparrow.feature.chats.presentation.direct.DirectViewModel
 import com.cbgm.sparrow.feature.chats.presentation.group.GroupViewModel
 import com.cbgm.sparrow.feature.chats.presentation.overview.OverviewViewModel
 import com.cbgm.sparrow.feature.chats.presentation.verification.GroupMemberQrVerificationViewModel

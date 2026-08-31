@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.chats.presentation.direct.screen
+package com.cbgm.sparrow.feature.chats.presentation.direct
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
