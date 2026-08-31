@@ -32,8 +32,6 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthori
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyDetails
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -41,7 +39,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.milliseconds
 
 class DirectViewModel(
     savedStateHandle: SavedStateHandle,
@@ -70,16 +67,19 @@ class DirectViewModel(
     private val messageText = savedStateHandle.getMutableStateFlow(MESSAGE_TEXT_KEY, "")
     private val replyToMessageId = savedStateHandle.getMutableStateFlow(REPLY_TO_MESSAGE_ID_KEY, "")
     private val errorMessage = MutableStateFlow<String?>(null)
-    private val isContactTyping = MutableStateFlow(false)
     private val selectedMedia = MutableStateFlow<List<MediaSelection>>(emptyList())
     private val attachmentBytes = MutableStateFlow<Map<String, ByteArray>>(emptyMap())
     private val isSending = MutableStateFlow(false)
     private val loadingAttachmentIds = mutableSetOf<String>()
-    private var localTypingStopJob: Job? = null
-    private var remoteTypingTimeoutJob: Job? = null
-    private var isLocalTyping = false
 
     private val conversationContext = observeChatContext(conversationId, contactId)
+
+    private val typingController =
+        TypingIndicatorController(
+            scope = viewModelScope,
+            sendTypingState = { isTyping -> setTyping(contactId, isTyping) },
+            logTag = "DirectViewModel"
+        )
 
     private val composerDraft =
         combine(messageText, replyToMessageId) { text, replyId ->
@@ -93,7 +93,7 @@ class DirectViewModel(
         combine(
             composerDraft,
             errorMessage,
-            isContactTyping,
+            typingController.isContactTyping,
             selectedMedia,
             isSending
         ) { draft, error, contactTyping, media, sending ->
@@ -141,7 +141,9 @@ class DirectViewModel(
         )
 
     init {
-        observeIncomingTyping()
+        viewModelScope.launch {
+            observeTyping(contactId).collect(typingController::onIncomingTypingChanged)
+        }
     }
 
     fun onUiEvent(event: DirectUiEvent) {
@@ -152,8 +154,8 @@ class DirectViewModel(
             DirectUiEvent.CancelReply -> clearReply()
             is DirectUiEvent.MediaSelected -> updateMediaSelection(event.media)
             is DirectUiEvent.OpenFilePicker -> navigator.navigateTo(AppRoute.FilePicker(event.sessionId))
-            is DirectUiEvent.ShareCurrentLocation -> sendCurrentLocation(event.location.toOutgoingMessageAttachment())
-            is DirectUiEvent.ShareContact -> sendContact(event.contact.toOutgoingMessageAttachment())
+            is DirectUiEvent.ShareCurrentLocation -> sendAttachmentOnly(event.location.toOutgoingMessageAttachment())
+            is DirectUiEvent.ShareContact -> sendAttachmentOnly(event.contact.toOutgoingMessageAttachment())
             is DirectUiEvent.AddSharedContact -> addSharedContact(event.contact)
             is DirectUiEvent.AttachmentVisible -> loadAttachment(event.attachmentId)
             is DirectUiEvent.AttachmentError -> errorMessage.value = event.message
@@ -173,14 +175,7 @@ class DirectViewModel(
         }
     }
 
-    fun stopTyping() {
-        localTypingStopJob?.cancel()
-        localTypingStopJob = null
-        if (!isLocalTyping) return
-
-        isLocalTyping = false
-        sendTypingState(isTyping = false)
-    }
+    fun stopTyping() = typingController.stopLocalTyping()
 
     fun markConversationRead() {
         viewModelScope.launch {
@@ -189,74 +184,56 @@ class DirectViewModel(
         }
     }
 
-    private fun observeIncomingTyping() {
-        viewModelScope.launch {
-            observeTyping(contactId).collect { isTyping ->
-                remoteTypingTimeoutJob?.cancel()
-                isContactTyping.value = isTyping
-                if (isTyping) scheduleRemoteTypingTimeout()
-            }
-        }
-    }
-
-    private fun scheduleRemoteTypingTimeout() {
-        remoteTypingTimeoutJob =
-            viewModelScope.launch {
-                delay(REMOTE_TYPING_TIMEOUT_MILLISECONDS.milliseconds)
-                isContactTyping.value = false
-            }
-    }
-
     private fun onMessageTextChanged(value: String) {
         if (!uiState.value.composerState.isInputEnabled) return
-
         messageText.value = value
         errorMessage.value = null
-        localTypingStopJob?.cancel()
-
-        if (value.isBlank()) {
-            stopTyping()
-            return
-        }
-
-        if (!uiState.value.composerState.sendsTypingIndicators) {
-            isLocalTyping = false
-            return
-        }
-
-        if (!isLocalTyping) {
-            isLocalTyping = true
-            sendTypingState(isTyping = true)
-        }
-        scheduleLocalTypingTimeout()
-    }
-
-    private fun scheduleLocalTypingTimeout() {
-        localTypingStopJob =
-            viewModelScope.launch {
-                delay(LOCAL_TYPING_TIMEOUT_MILLISECONDS.milliseconds)
-                stopTypingNow()
-            }
+        typingController.onLocalTextChanged(value, sendsIndicators = uiState.value.composerState.sendsTypingIndicators)
     }
 
     private fun sendCurrentMessage() {
+        val text = messageText.value.trim()
+        val selections = selectedMedia.value
+        if (text.isEmpty() && selections.isEmpty()) return
+
+        val attachments = selections.map(MediaSelection::toOutgoingMessageAttachment)
+        dispatchSend(text = text, attachments = attachments, clearComposerOnSuccess = true)
+    }
+
+    /** Shared entry point for location and contact shares: text is always empty, one attachment. */
+    private fun sendAttachmentOnly(attachment: OutgoingMessageAttachment) {
+        dispatchSend(text = "", attachments = listOf(attachment), clearComposerOnSuccess = false)
+    }
+
+    /**
+     * Guards on composer/sending state, flips [isSending] for the duration, and routes the
+     * payload to the right use case for the current [DirectComposerState]. Shared by
+     * [sendCurrentMessage] and [sendAttachmentOnly] so the reinvite/queue/send branching lives
+     * in exactly one place.
+     */
+    private fun dispatchSend(
+        text: String,
+        attachments: List<OutgoingMessageAttachment>,
+        clearComposerOnSuccess: Boolean
+    ) {
         val composerState = uiState.value.composerState
         if (!composerState.isSendActionEnabled || isSending.value) return
 
-        val text = messageText.value.trim()
-        val selections = selectedMedia.value
         val replyTo = replyToMessageId.value.takeIf(String::isNotBlank)
-        if (text.isEmpty() && selections.isEmpty()) return
-
         errorMessage.value = null
         viewModelScope.launch {
             isSending.value = true
-            val attachments = selections.map(MediaSelection::toOutgoingMessageAttachment)
             try {
                 when (composerState) {
-                    DirectComposerState.REINVITE_REQUIRED -> queueMessageAndStartReinvite(text, attachments, replyTo)
-                    DirectComposerState.REINVITE_PENDING -> queueMessageForPendingReinvite(text, attachments, replyTo)
-                    DirectComposerState.READY -> sendAuthorizedMessage(text, attachments, replyTo)
+                    DirectComposerState.REINVITE_REQUIRED ->
+                        queueMessageAndStartReinvite(text, attachments, replyTo, clearComposerOnSuccess)
+
+                    DirectComposerState.REINVITE_PENDING ->
+                        queueMessageForPendingReinvite(text, attachments, replyTo, clearComposerOnSuccess)
+
+                    DirectComposerState.READY ->
+                        sendAuthorizedMessage(text, attachments, replyTo, clearComposerOnSuccess)
+
                     DirectComposerState.DISABLED -> Unit
                 }
             } finally {
@@ -320,92 +297,6 @@ class DirectViewModel(
             .onFailure { error -> errorMessage.value = error.message ?: "Message could not be sent" }
     }
 
-    private fun sendCurrentLocation(locationAttachment: OutgoingMessageAttachment) {
-        val composerState = uiState.value.composerState
-        if (!composerState.isSendActionEnabled || isSending.value) return
-
-        val replyTo = replyToMessageId.value.takeIf(String::isNotBlank)
-        errorMessage.value = null
-        viewModelScope.launch {
-            isSending.value = true
-            try {
-                val attachments = listOf(locationAttachment)
-                when (composerState) {
-                    DirectComposerState.REINVITE_REQUIRED ->
-                        queueMessageAndStartReinvite(
-                            text = "",
-                            attachments = attachments,
-                            replyToMessageId = replyTo,
-                            clearComposerOnSuccess = false
-                        )
-
-                    DirectComposerState.REINVITE_PENDING ->
-                        queueMessageForPendingReinvite(
-                            text = "",
-                            attachments = attachments,
-                            replyToMessageId = replyTo,
-                            clearComposerOnSuccess = false
-                        )
-
-                    DirectComposerState.READY ->
-                        sendAuthorizedMessage(
-                            text = "",
-                            attachments = attachments,
-                            replyToMessageId = replyTo,
-                            clearComposerOnSuccess = false
-                        )
-
-                    DirectComposerState.DISABLED -> Unit
-                }
-            } finally {
-                isSending.value = false
-            }
-        }
-    }
-
-    private fun sendContact(contactAttachment: OutgoingMessageAttachment) {
-        val composerState = uiState.value.composerState
-        if (!composerState.isSendActionEnabled || isSending.value) return
-
-        val replyTo = replyToMessageId.value.takeIf(String::isNotBlank)
-        errorMessage.value = null
-        viewModelScope.launch {
-            isSending.value = true
-            try {
-                val attachments = listOf(contactAttachment)
-                when (composerState) {
-                    DirectComposerState.REINVITE_REQUIRED ->
-                        queueMessageAndStartReinvite(
-                            text = "",
-                            attachments = attachments,
-                            replyToMessageId = replyTo,
-                            clearComposerOnSuccess = false
-                        )
-
-                    DirectComposerState.REINVITE_PENDING ->
-                        queueMessageForPendingReinvite(
-                            text = "",
-                            attachments = attachments,
-                            replyToMessageId = replyTo,
-                            clearComposerOnSuccess = false
-                        )
-
-                    DirectComposerState.READY ->
-                        sendAuthorizedMessage(
-                            text = "",
-                            attachments = attachments,
-                            replyToMessageId = replyTo,
-                            clearComposerOnSuccess = false
-                        )
-
-                    DirectComposerState.DISABLED -> Unit
-                }
-            } finally {
-                isSending.value = false
-            }
-        }
-    }
-
     private fun addSharedContact(contact: SharedContact) {
         viewModelScope.launch {
             when (
@@ -449,7 +340,7 @@ class DirectViewModel(
 
         viewModelScope.launch {
             loadMessageAttachment(attachmentId)
-                .onSuccess { bytes -> attachmentBytes.value = attachmentBytes.value + (attachmentId to bytes) }
+                .onSuccess { bytes -> attachmentBytes.value += (attachmentId to bytes) }
                 .onFailure { error -> logger.warn(error) { "Could not load message attachment $attachmentId" } }
             loadingAttachmentIds.remove(attachmentId)
         }
@@ -459,7 +350,7 @@ class DirectViewModel(
         messageText.value = ""
         replyToMessageId.value = ""
         selectedMedia.value = emptyList()
-        stopTypingNow()
+        typingController.stopLocalTypingNow()
     }
 
     private fun startReply(messageId: String) {
@@ -479,21 +370,6 @@ class DirectViewModel(
             retryMessage(messageId)
                 .onFailure { error -> errorMessage.value = error.message ?: "Message could not be queued again" }
         }
-    }
-
-    private fun sendTypingState(isTyping: Boolean) {
-        viewModelScope.launch { sendTypingStateNow(isTyping) }
-    }
-
-    private suspend fun sendTypingStateNow(isTyping: Boolean) {
-        setTyping(contactId, isTyping)
-            .onFailure { error -> logger.warn(error) { "Could not send direct typing state for $contactId" } }
-    }
-
-    private suspend fun stopTypingNow() {
-        if (!isLocalTyping) return
-        isLocalTyping = false
-        sendTypingStateNow(isTyping = false)
     }
 
     private fun openContactDetails() {
@@ -521,7 +397,5 @@ class DirectViewModel(
     private companion object {
         const val MESSAGE_TEXT_KEY = "messageText"
         const val REPLY_TO_MESSAGE_ID_KEY = "replyToMessageId"
-        const val LOCAL_TYPING_TIMEOUT_MILLISECONDS = 1500
-        const val REMOTE_TYPING_TIMEOUT_MILLISECONDS = 3000
     }
 }
