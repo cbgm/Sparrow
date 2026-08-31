@@ -51,12 +51,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.component.PatternBackground
-import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
-import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
-import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -82,6 +79,7 @@ import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toSharedCont
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.component.rememberMessageJumpState
 import com.cbgm.sparrow.feature.chats.presentation.component.rememberMessageSearchTargetState
+import com.cbgm.sparrow.feature.chats.presentation.direct.component.IdentitySetupDialog
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectComposerState
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiState
@@ -91,7 +89,6 @@ import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionSource
 import com.cbgm.sparrow.feature.media.presentation.selection.rememberMediaSelectionLauncher
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 import com.cbgm.sparrow.resources.Res
-import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.base_verify
 import com.cbgm.sparrow.resources.feature_chats_chat_key_exchange_incomplete_description
 import com.cbgm.sparrow.resources.feature_chats_chat_key_exchange_incomplete_title
@@ -110,17 +107,13 @@ import com.cbgm.sparrow.resources.feature_chats_chat_verified_by_me_keys_descrip
 import com.cbgm.sparrow.resources.feature_chats_chat_verified_by_me_title
 import com.cbgm.sparrow.resources.feature_chats_chat_verified_e2ee
 import com.cbgm.sparrow.resources.feature_chats_chat_verified_keys_description
-import com.cbgm.sparrow.resources.feature_chats_import_contact_identity
 import com.cbgm.sparrow.resources.feature_chats_loading_chat
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_incomplete_description
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_incomplete_title
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_required_description
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_required_title
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_setup_action
-import com.cbgm.sparrow.resources.feature_chats_manual_identity_setup_description
-import com.cbgm.sparrow.resources.feature_chats_manual_identity_setup_title
 import com.cbgm.sparrow.resources.feature_chats_start_conversation_with
-import com.cbgm.sparrow.resources.feature_identity_share_my_identity
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -363,54 +356,6 @@ private fun TopBar(
         }
 
         uiState.errorMessage?.let { message -> ErrorMessage(message = message) }
-    }
-}
-
-@Composable
-private fun IdentitySetupDialog(
-    onShareIdentity: () -> Unit,
-    onImportIdentity: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    SparrowAlertDialog(
-        onDismissRequest = onDismiss,
-        title = stringResource(Res.string.feature_chats_manual_identity_setup_title),
-        text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(text = stringResource(Res.string.feature_chats_manual_identity_setup_description))
-                Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-                SparrowOutlinedButton(
-                    onClick = onShareIdentity,
-                    modifier = Modifier.fillMaxWidth(),
-                    text = stringResource(Res.string.feature_identity_share_my_identity)
-                )
-                SparrowOutlinedButton(
-                    onClick = onImportIdentity,
-                    modifier = Modifier.fillMaxWidth(),
-                    text = stringResource(Res.string.feature_chats_import_contact_identity)
-                )
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            SparrowSecondaryButton(
-                onClick = onDismiss,
-                text = stringResource(Res.string.base_cancel),
-                fillMaxWidth = false
-            )
-        }
-    )
-}
-
-@Preview
-@Composable
-private fun IdentitySetupDialogPreview() {
-    SparrowTheme {
-        IdentitySetupDialog(
-            onShareIdentity = {},
-            onImportIdentity = {},
-            onDismiss = {}
-        )
     }
 }
 
