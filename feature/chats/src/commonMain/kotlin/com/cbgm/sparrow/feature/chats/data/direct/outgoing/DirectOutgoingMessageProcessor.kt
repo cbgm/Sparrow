@@ -50,7 +50,8 @@ class DirectOutgoingMessageProcessor(
     suspend fun send(
         conversationId: String,
         text: String,
-        attachments: List<OutgoingMessageAttachment> = emptyList()
+        attachments: List<OutgoingMessageAttachment> = emptyList(),
+        replyToMessageId: String? = null
     ): Result<Unit> =
         runCatching {
             val normalizedText = requireMessageContent(text, attachments)
@@ -66,14 +67,16 @@ class DirectOutgoingMessageProcessor(
                 messageId = messageId,
                 text = normalizedText,
                 prepared = prepared,
-                deliveryStatus = MessageDeliveryStatus.QUEUED
+                deliveryStatus = MessageDeliveryStatus.QUEUED,
+                replyToMessageId = replyToMessageId
             )
             val packet =
                 try {
                     createPacket(
                         messageId = messageId,
                         text = normalizedText,
-                        attachments = prepared.map(PreparedMessageAttachmentDto::attachment)
+                        attachments = prepared.map(PreparedMessageAttachmentDto::attachment),
+                        replyToMessageId = replyToMessageId
                     ).also { packet ->
                         linkPacket(messageId = messageId, packet = packet, contact = contact)
                     }
@@ -89,7 +92,8 @@ class DirectOutgoingMessageProcessor(
     suspend fun queueUntilAuthorized(
         conversationId: String,
         text: String,
-        attachments: List<OutgoingMessageAttachment> = emptyList()
+        attachments: List<OutgoingMessageAttachment> = emptyList(),
+        replyToMessageId: String? = null
     ): Result<Unit> =
         runCatching {
             val normalizedText = requireMessageContent(text, attachments)
@@ -102,7 +106,8 @@ class DirectOutgoingMessageProcessor(
                 messageId = IdGenerator.generate(prefix = "message"),
                 text = normalizedText,
                 prepared = prepared,
-                deliveryStatus = MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION
+                deliveryStatus = MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION,
+                replyToMessageId = replyToMessageId
             )
         }
 
@@ -191,7 +196,8 @@ class DirectOutgoingMessageProcessor(
             createPacket(
                 messageId = message.id,
                 text = message.text,
-                attachments = attachmentTransfer.protocolAttachments(message.id)
+                attachments = attachmentTransfer.protocolAttachments(message.id),
+                replyToMessageId = message.replyToMessageId
             )
         chatDao.upsertMessage(
             message.copy(
@@ -215,7 +221,8 @@ class DirectOutgoingMessageProcessor(
         messageId: String,
         text: String,
         prepared: List<PreparedMessageAttachmentDto>,
-        deliveryStatus: MessageDeliveryStatus
+        deliveryStatus: MessageDeliveryStatus,
+        replyToMessageId: String?
     ) {
         val createdAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
         val message =
@@ -224,6 +231,7 @@ class DirectOutgoingMessageProcessor(
                 conversationId = target.conversationId,
                 packetId = null,
                 text = text,
+                replyToMessageId = replyToMessageId,
                 transportPayload = null,
                 transportMode = contact.plannedTransportMode().name,
                 contentStatus = MessageContentStatus.READABLE.name,
@@ -281,7 +289,8 @@ class DirectOutgoingMessageProcessor(
     private suspend fun createPacket(
         messageId: String,
         text: String,
-        attachments: List<MessageAttachment>
+        attachments: List<MessageAttachment>,
+        replyToMessageId: String?
     ): ChatMessagePacket =
         ChatMessagePacket(
             packetId = IdGenerator.generate(prefix = "packet"),
@@ -289,6 +298,7 @@ class DirectOutgoingMessageProcessor(
             sentAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
             text = text,
             attachments = attachments,
+            replyToMessageId = replyToMessageId,
             senderPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow(),
             profilePicture = localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
         )

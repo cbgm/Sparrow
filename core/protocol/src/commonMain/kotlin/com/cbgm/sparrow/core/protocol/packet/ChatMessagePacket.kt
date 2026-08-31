@@ -26,6 +26,8 @@ data class ChatMessagePacket(
     val text: String,
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val attachments: List<MessageAttachment> = emptyList(),
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val replyToMessageId: String? = null,
     val senderPhoneNumber: String? = null,
     val profilePicture: ProfilePictureMetadata = ProfilePictureMetadata()
 ) : SparrowPacket {
@@ -56,6 +58,10 @@ data class ChatMessagePacket(
 
         require(attachments.map(MessageAttachment::attachmentId).distinct().size == attachments.size) {
             "Attachment IDs must be unique within a message"
+        }
+
+        require(replyToMessageId == null || replyToMessageId.isNotBlank()) {
+            "Reply message ID must not be blank"
         }
 
         require(senderPhoneNumber == null || senderPhoneNumber.isNotBlank()) {

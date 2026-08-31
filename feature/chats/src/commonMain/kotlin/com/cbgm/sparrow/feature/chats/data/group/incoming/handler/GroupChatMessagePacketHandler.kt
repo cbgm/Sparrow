@@ -81,6 +81,7 @@ class GroupChatMessagePacketHandler(
                     conversationId = groupPacket.groupId,
                     packetId = groupPacket.packetId,
                     text = content.text,
+                    replyToMessageId = content.replyToMessageId,
                     transportPayload = context.encodedTransportPayload,
                     transportMode = GROUP_END_TO_END_ENCRYPTED_MODE,
                     contentStatus = MessageContentStatus.READABLE.name,

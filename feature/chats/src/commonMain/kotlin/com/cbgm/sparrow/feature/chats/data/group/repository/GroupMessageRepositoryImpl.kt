@@ -12,12 +12,14 @@ class GroupMessageRepositoryImpl(
     override suspend fun send(
         groupId: String,
         text: String,
-        attachments: List<OutgoingMessageAttachment>
+        attachments: List<OutgoingMessageAttachment>,
+        replyToMessageId: String?
     ): Result<Unit> =
         outgoingMessageProcessor.send(
             groupId = groupId,
             text = text,
             attachments = attachments,
+            replyToMessageId = replyToMessageId,
             invitations = groupInvitationDao.findByGroupId(groupId)
         )
 

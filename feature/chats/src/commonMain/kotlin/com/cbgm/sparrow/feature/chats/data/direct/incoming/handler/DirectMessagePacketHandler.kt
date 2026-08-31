@@ -111,6 +111,7 @@ class DirectMessagePacketHandler(
             conversationId = conversationId,
             packetId = packetId,
             text = text,
+            replyToMessageId = replyToMessageId,
             transportPayload = context.encodedTransportPayload,
             transportMode = context.transportMode,
             contentStatus = MessageContentStatus.READABLE.name,

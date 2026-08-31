@@ -12,6 +12,7 @@ data class GroupMessage(
     val security: MessageSecurity,
     val contentStatus: MessageContentStatus,
     val deliveryStatus: MessageDeliveryStatus,
+    val replyToMessageId: String? = null,
     val type: ChatMessageType = ChatMessageType.USER,
     val senderContactId: String? = null,
     val deliveryProgress: MessageDeliveryProgress = MessageDeliveryProgress(),

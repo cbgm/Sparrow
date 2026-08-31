@@ -89,6 +89,7 @@ private fun MessageEntity.toGroupMessage(
         security = transportMode.toMessageSecurity(),
         contentStatus = contentStatus.toMessageContentStatus(),
         deliveryStatus = if (isMine) deliveryStatus else MessageDeliveryStatus.NOT_APPLICABLE,
+        replyToMessageId = replyToMessageId,
         type = GroupMembershipMessageFactory.typeOf(transportMode),
         senderContactId = senderContactId,
         deliveryProgress = recipientStates.toMessageDeliveryProgress(),

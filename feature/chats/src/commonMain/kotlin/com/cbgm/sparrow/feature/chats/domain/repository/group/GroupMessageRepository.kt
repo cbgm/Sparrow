@@ -6,7 +6,8 @@ interface GroupMessageRepository {
     suspend fun send(
         groupId: String,
         text: String,
-        attachments: List<OutgoingMessageAttachment> = emptyList()
+        attachments: List<OutgoingMessageAttachment> = emptyList(),
+        replyToMessageId: String? = null
     ): Result<Unit>
 
     suspend fun retry(messageId: String): Result<Unit>

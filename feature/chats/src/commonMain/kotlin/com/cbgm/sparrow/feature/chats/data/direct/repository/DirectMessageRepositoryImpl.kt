@@ -10,14 +10,16 @@ class DirectMessageRepositoryImpl(
     override suspend fun send(
         conversationId: String,
         text: String,
-        attachments: List<OutgoingMessageAttachment>
-    ): Result<Unit> = outgoingMessageProcessor.send(conversationId, text, attachments)
+        attachments: List<OutgoingMessageAttachment>,
+        replyToMessageId: String?
+    ): Result<Unit> = outgoingMessageProcessor.send(conversationId, text, attachments, replyToMessageId)
 
     override suspend fun queueUntilAuthorized(
         conversationId: String,
         text: String,
-        attachments: List<OutgoingMessageAttachment>
-    ): Result<Unit> = outgoingMessageProcessor.queueUntilAuthorized(conversationId, text, attachments)
+        attachments: List<OutgoingMessageAttachment>,
+        replyToMessageId: String?
+    ): Result<Unit> = outgoingMessageProcessor.queueUntilAuthorized(conversationId, text, attachments, replyToMessageId)
 
     override suspend fun retry(messageId: String): Result<Unit> =
         outgoingMessageProcessor.retry(messageId)

@@ -65,6 +65,7 @@ class GroupViewModel(
         savedStateHandle.get<String>(AppRoute.GroupConversation::targetMessageId.name)
     private val logger = SparrowLog.withTag("GroupViewModel")
     private val messageText = savedStateHandle.getMutableStateFlow(MESSAGE_TEXT_KEY, "")
+    private val replyToMessageId = savedStateHandle.getMutableStateFlow(REPLY_TO_MESSAGE_ID_KEY, "")
     private val errorMessage = MutableStateFlow<String?>(null)
     private val typingContactIds = MutableStateFlow<Set<String>>(emptySet())
     private val selectedMedia = MutableStateFlow<List<MediaSelection>>(emptyList())
@@ -87,15 +88,23 @@ class GroupViewModel(
                 emit(GroupContextObservation.Failed(error.message ?: "Group conversation could not be loaded"))
             }
 
+    private val composerDraft =
+        combine(messageText, replyToMessageId) { text, replyId ->
+            GroupComposerDraft(
+                text = text,
+                replyToMessageId = replyId.takeIf(String::isNotBlank)
+            )
+        }
+
     private val composerContext =
         combine(
-            messageText,
+            composerDraft,
             errorMessage,
             typingContactIds,
             selectedMedia,
             isSending
-        ) { text, error, typingIds, media, sending ->
-            GroupComposerContext(text, error, typingIds, media, sending)
+        ) { draft, error, typingIds, media, sending ->
+            GroupComposerContext(draft.text, error, draft.replyToMessageId, typingIds, media, sending)
         }
 
     val uiState: StateFlow<GroupUiState> =
@@ -113,6 +122,7 @@ class GroupViewModel(
                 avatarBytes = presentation.context?.avatarBytes,
                 currentText = composer.text,
                 currentError = composer.error,
+                currentReplyToMessageId = composer.replyToMessageId,
                 observationError = presentation.errorMessage,
                 isLoading = presentation is GroupContextObservation.Loading,
                 typingContactIds = composer.typingIds,
@@ -136,6 +146,8 @@ class GroupViewModel(
         when (event) {
             is GroupUiEvent.MessageTextChanged -> onMessageTextChanged(event.text)
             GroupUiEvent.SendClicked -> sendCurrentMessage()
+            is GroupUiEvent.ReplyToMessage -> startReply(event.messageId)
+            GroupUiEvent.CancelReply -> clearReply()
             is GroupUiEvent.MediaSelected -> updateMediaSelection(event.media)
             is GroupUiEvent.OpenFilePicker -> navigator.navigateTo(AppRoute.FilePicker(event.sessionId))
             is GroupUiEvent.ShareCurrentLocation -> sendCurrentLocation(event.location.toOutgoingMessageAttachment())
@@ -242,15 +254,17 @@ class GroupViewModel(
         if (!uiState.value.isMessageInputEnabled || isSending.value) return
         val text = messageText.value.trim()
         val selections = selectedMedia.value
+        val replyTo = replyToMessageId.value.takeIf(String::isNotBlank)
         if (text.isEmpty() && selections.isEmpty()) return
 
         viewModelScope.launch {
             isSending.value = true
             try {
                 val attachments = selections.map(MediaSelection::toOutgoingMessageAttachment)
-                sendMessage(groupId, text, attachments)
+                sendMessage(groupId, text, attachments, replyTo)
                     .onSuccess {
                         messageText.value = ""
+                        replyToMessageId.value = ""
                         selectedMedia.value = emptyList()
                         stopTypingNow()
                     }
@@ -266,11 +280,13 @@ class GroupViewModel(
     private fun sendCurrentLocation(locationAttachment: OutgoingMessageAttachment) {
         if (!uiState.value.isMessageInputEnabled || isSending.value) return
 
+        val replyTo = replyToMessageId.value.takeIf(String::isNotBlank)
         errorMessage.value = null
         viewModelScope.launch {
             isSending.value = true
             try {
-                sendMessage(groupId, "", listOf(locationAttachment))
+                sendMessage(groupId, "", listOf(locationAttachment), replyTo)
+                    .onSuccess { clearReply() }
                     .onFailure { error ->
                         errorMessage.value = error.message ?: "Location could not be sent"
                     }
@@ -283,11 +299,13 @@ class GroupViewModel(
     private fun sendContact(contactAttachment: OutgoingMessageAttachment) {
         if (!uiState.value.isMessageInputEnabled || isSending.value) return
 
+        val replyTo = replyToMessageId.value.takeIf(String::isNotBlank)
         errorMessage.value = null
         viewModelScope.launch {
             isSending.value = true
             try {
-                sendMessage(groupId, "", listOf(contactAttachment))
+                sendMessage(groupId, "", listOf(contactAttachment), replyTo)
+                    .onSuccess { clearReply() }
                     .onFailure { error ->
                         errorMessage.value = error.message ?: "Contact could not be sent"
                     }
@@ -344,6 +362,16 @@ class GroupViewModel(
                 .onFailure { error -> logger.warn(error) { "Could not load message attachment $attachmentId" } }
             loadingAttachmentIds.remove(attachmentId)
         }
+    }
+
+    private fun startReply(messageId: String) {
+        if (uiState.value.messages.none { message -> message.id == messageId }) return
+        replyToMessageId.value = messageId
+        errorMessage.value = null
+    }
+
+    private fun clearReply() {
+        replyToMessageId.value = ""
     }
 
     private fun retryFailedMessage(messageId: String) {
@@ -407,9 +435,15 @@ class GroupViewModel(
         }
     }
 
+    private data class GroupComposerDraft(
+        val text: String,
+        val replyToMessageId: String?
+    )
+
     private data class GroupComposerContext(
         val text: String,
         val error: String?,
+        val replyToMessageId: String?,
         val typingIds: Set<String>,
         val media: List<MediaSelection>,
         val isSending: Boolean
@@ -417,6 +451,7 @@ class GroupViewModel(
 
     private companion object {
         const val MESSAGE_TEXT_KEY = "messageText"
+        const val REPLY_TO_MESSAGE_ID_KEY = "replyToMessageId"
         const val LOCAL_TYPING_TIMEOUT_MILLISECONDS = 1500
         const val REMOTE_TYPING_TIMEOUT_MILLISECONDS = 3000
     }

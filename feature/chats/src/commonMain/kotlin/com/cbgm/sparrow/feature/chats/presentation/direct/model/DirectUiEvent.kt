@@ -12,6 +12,12 @@ sealed interface DirectUiEvent {
 
     data object SendClicked : DirectUiEvent
 
+    data class ReplyToMessage(
+        val messageId: String
+    ) : DirectUiEvent
+
+    data object CancelReply : DirectUiEvent
+
     data class MediaSelected(
         val media: List<MediaSelection>
     ) : DirectUiEvent

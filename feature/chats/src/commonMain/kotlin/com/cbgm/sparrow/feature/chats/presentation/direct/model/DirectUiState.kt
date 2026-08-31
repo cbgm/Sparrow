@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.chats.presentation.direct.model
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageReplyUi
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
 
 data class DirectUiState(
@@ -11,6 +12,7 @@ data class DirectUiState(
     val profilePictureBytes: ByteArray? = null,
     val messages: List<MessageBubbleUi> = emptyList(),
     val messageText: String = "",
+    val replyTo: MessageReplyUi? = null,
     val selectedMedia: List<MediaSelection> = emptyList(),
     val isSending: Boolean = false,
     val isContactTyping: Boolean = false,
@@ -36,6 +38,7 @@ data class DirectUiState(
         if (!profilePictureBytes.contentEquals(other.profilePictureBytes)) return false
         if (messages != other.messages) return false
         if (messageText != other.messageText) return false
+        if (replyTo != other.replyTo) return false
         if (selectedMedia != other.selectedMedia) return false
         if (contactSecurityState != other.contactSecurityState) return false
         if (identitySetupMode != other.identitySetupMode) return false
@@ -55,6 +58,7 @@ data class DirectUiState(
         result = 31 * result + (profilePictureBytes?.contentHashCode() ?: 0)
         result = 31 * result + messages.hashCode()
         result = 31 * result + messageText.hashCode()
+        result = 31 * result + (replyTo?.hashCode() ?: 0)
         result = 31 * result + selectedMedia.hashCode()
         result = 31 * result + contactSecurityState.hashCode()
         result = 31 * result + identitySetupMode.hashCode()

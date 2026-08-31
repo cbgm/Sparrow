@@ -51,6 +51,7 @@ private fun MessageEntity.toDirectMessage(
             } else {
                 MessageDeliveryStatus.NOT_APPLICABLE
             },
+        replyToMessageId = replyToMessageId,
         parts =
             buildList {
                 text

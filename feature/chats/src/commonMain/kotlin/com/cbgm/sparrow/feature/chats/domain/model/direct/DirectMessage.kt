@@ -13,5 +13,6 @@ data class DirectMessage(
     val security: MessageSecurity,
     val contentStatus: MessageContentStatus,
     val deliveryStatus: MessageDeliveryStatus,
+    val replyToMessageId: String? = null,
     val parts: List<MessagePart> = emptyList()
 )

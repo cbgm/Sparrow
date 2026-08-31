@@ -12,7 +12,9 @@ import kotlinx.serialization.json.Json
 data class GroupMessageContent(
     val text: String = "",
     @EncodeDefault(EncodeDefault.Mode.NEVER)
-    val attachments: List<MessageAttachment> = emptyList()
+    val attachments: List<MessageAttachment> = emptyList(),
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val replyToMessageId: String? = null
 ) {
     init {
         require(text.isNotBlank() || attachments.isNotEmpty()) {
@@ -23,6 +25,9 @@ data class GroupMessageContent(
         }
         require(attachments.map(MessageAttachment::attachmentId).distinct().size == attachments.size) {
             "Group attachment IDs must be unique"
+        }
+        require(replyToMessageId == null || replyToMessageId.isNotBlank()) {
+            "Reply message ID must not be blank"
         }
     }
 }

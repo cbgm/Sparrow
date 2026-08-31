@@ -9,7 +9,8 @@ class SendGroupMessageUseCase(
     suspend operator fun invoke(
         groupId: String,
         text: String,
-        attachments: List<OutgoingMessageAttachment> = emptyList()
+        attachments: List<OutgoingMessageAttachment> = emptyList(),
+        replyToMessageId: String? = null
     ): Result<Unit> =
-        repository.send(groupId, text, attachments)
+        repository.send(groupId, text, attachments, replyToMessageId)
 }

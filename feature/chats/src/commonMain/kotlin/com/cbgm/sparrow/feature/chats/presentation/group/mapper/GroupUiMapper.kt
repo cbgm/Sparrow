@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.chats.presentation.group.mapper
 
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
+import com.cbgm.sparrow.feature.chats.domain.model.MessagePart
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
@@ -10,6 +11,7 @@ import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toMessagePar
 import com.cbgm.sparrow.feature.chats.presentation.component.model.DeliveryProgressUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessagePartUi
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageReplyUi
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMemberProgressUi
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMessageUi
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState
@@ -30,10 +32,13 @@ internal fun toGroupUiState(
     isLoading: Boolean,
     typingContactIds: Set<String>,
     safetyAssessments: Map<String, MessageSafetyAssessment>,
-    attachmentBytes: Map<String, ByteArray> = emptyMap()
+    attachmentBytes: Map<String, ByteArray> = emptyMap(),
+    currentReplyToMessageId: String? = null
 ): GroupUiState {
     val contactsById = contacts.associateBy(Contact::id)
     val groupState = conversation?.state ?: GroupConversationState.READY
+    val conversationMessages = conversation?.messages.orEmpty()
+    val messagesById = conversationMessages.associateBy(GroupMessage::id)
 
     return GroupUiState(
         title = conversation?.title.orEmpty(),
@@ -46,6 +51,7 @@ internal fun toGroupUiState(
                 attachmentBytes = attachmentBytes
             ),
         messageText = currentText,
+        replyTo = currentReplyToMessageId.toGroupReplyPreview(messagesById, contactsById),
         isSomeoneTyping = typingContactIds.isNotEmpty(),
         typingDisplayName = typingContactIds.toTypingDisplayName(contactsById),
         errorMessage = currentError ?: observationError,
@@ -65,7 +71,8 @@ internal fun GroupMessage.toGroupMessageUi(
     senderIsInContacts: Boolean,
     senderProfilePictureBytes: ByteArray?,
     safetyAssessments: Map<String, MessageSafetyAssessment>,
-    attachmentBytes: Map<String, ByteArray> = emptyMap()
+    attachmentBytes: Map<String, ByteArray> = emptyMap(),
+    reply: MessageReplyUi? = null
 ): GroupMessageUi {
     val partsUi = parts.toMessagePartsUi(attachmentBytes)
 
@@ -95,6 +102,7 @@ internal fun GroupMessage.toGroupMessageUi(
                     } else {
                         safetyAssessments[id]?.toMessageSafetyWarningUi()
                     },
+                reply = reply,
                 imageVideoParts = partsUi.filterIsInstance<MessagePartUi.ImageVideo>(),
                 fileParts = partsUi.filterIsInstance<MessagePartUi.File>(),
                 locationPart = partsUi.filterIsInstance<MessagePartUi.Location>().firstOrNull(),
@@ -126,9 +134,12 @@ private fun GroupConversation?.toGroupMessagesUi(
     profilePictures: Map<String, ByteArray?>,
     safetyAssessments: Map<String, MessageSafetyAssessment>,
     attachmentBytes: Map<String, ByteArray>
-): List<GroupMessageUi> =
-    buildList {
-        for (message in this@toGroupMessagesUi?.messages.orEmpty().asReversed()) {
+): List<GroupMessageUi> {
+    val messages = this?.messages.orEmpty()
+    val messagesById = messages.associateBy(GroupMessage::id)
+
+    return buildList {
+        for (message in messages.asReversed()) {
             val senderContactId = message.senderContactId
             val sender = senderContactId?.let(contactsById::get)
             val senderIsInContacts = sender?.deviceContactLinkStatus == DeviceContactLinkStatus.LINKED
@@ -138,11 +149,46 @@ private fun GroupConversation?.toGroupMessagesUi(
                     senderIsInContacts = senderIsInContacts,
                     senderProfilePictureBytes = senderContactId?.let(profilePictures::get),
                     safetyAssessments = safetyAssessments,
-                    attachmentBytes = attachmentBytes
+                    attachmentBytes = attachmentBytes,
+                    reply = message.replyToMessageId.toGroupReplyPreview(messagesById, contactsById)
                 )
             )
         }
     }
+}
+
+private fun String?.toGroupReplyPreview(
+    messagesById: Map<String, GroupMessage>,
+    contactsById: Map<String, Contact>
+): MessageReplyUi? =
+    this?.let { messageId ->
+        val target = messagesById[messageId]
+        val sender = target?.senderContactId?.let(contactsById::get)
+        val senderIsInContacts = sender?.deviceContactLinkStatus == DeviceContactLinkStatus.LINKED
+        MessageReplyUi(
+            messageId = messageId,
+            isMine = target?.isMine,
+            senderName =
+                if (target?.isMine == false) {
+                    sender.displayNameForChat(senderIsInContacts)
+                } else {
+                    null
+                },
+            previewText = target?.parts.toReplyPreviewText()
+        )
+    }
+
+private fun List<MessagePart>?.toReplyPreviewText(): String? =
+    this
+        ?.filterIsInstance<MessagePart.Text>()
+        ?.firstOrNull()
+        ?.text
+        ?.takeIf(String::isNotBlank)
+        ?: this
+            ?.filterIsInstance<MessagePart.File>()
+            ?.firstOrNull()
+            ?.fileName
+            ?.takeIf(String::isNotBlank)
 
 private fun GroupConversation?.toGroupMemberProgressUi(
     contactsById: Map<String, Contact>

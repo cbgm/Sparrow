@@ -60,6 +60,7 @@ class GroupOutgoingMessageProcessor(
         groupId: String,
         text: String,
         attachments: List<OutgoingMessageAttachment> = emptyList(),
+        replyToMessageId: String? = null,
         invitations: List<GroupInvitationEntity>
     ): Result<Unit> =
         runCatching {
@@ -69,7 +70,7 @@ class GroupOutgoingMessageProcessor(
                 val recipients = findCurrentEpochRecipients(groupId)
                 check(recipients.isNotEmpty()) { "Group has no active recipients" }
 
-                val message = createQueuedMessage(groupId, normalizedText)
+                val message = createQueuedMessage(groupId, normalizedText, replyToMessageId)
                 val prepared = attachmentTransfer.prepareAttachments(attachments).getOrThrow()
                 try {
                     encryptAndEnqueue(message, recipients, prepared)
@@ -191,13 +192,15 @@ class GroupOutgoingMessageProcessor(
 
     private fun createQueuedMessage(
         groupId: String,
-        text: String
+        text: String,
+        replyToMessageId: String?
     ): MessageEntity =
         MessageEntity(
             id = IdGenerator.generate(prefix = "group-message"),
             conversationId = groupId,
             packetId = null,
             text = text,
+            replyToMessageId = replyToMessageId,
             transportPayload = null,
             transportMode = GROUP_END_TO_END_ENCRYPTED_MODE,
             contentStatus = MessageContentStatus.READABLE.name,
@@ -269,7 +272,8 @@ class GroupOutgoingMessageProcessor(
             groupMessageContentCodec.encode(
                 GroupMessageContent(
                     text = message.text,
-                    attachments = prepared.map(PreparedMessageAttachmentDto::attachment)
+                    attachments = prepared.map(PreparedMessageAttachmentDto::attachment),
+                    replyToMessageId = message.replyToMessageId
                 )
             )
         val securedMessage =

@@ -112,6 +112,10 @@
     <string name="feature_chats_numbers_match">Nummern stimmen überein</string>
     <string name="feature_chats_queued">In Warteschlange</string>
     <string name="feature_chats_waiting_for_invitation_acceptance">Warte auf Annahme der Einladung</string>
+    <string name="feature_chats_reply">Antworten</string>
+    <string name="feature_chats_you">Du</string>
+    <string name="feature_chats_attachment">Anhang</string>
+    <string name="feature_chats_original_message_unavailable">Ursprüngliche Nachricht nicht verfügbar</string>
     <string name="feature_chats_read">Gelesen</string>
     <string name="feature_chats_safety_number_unavailable">Sicherheitsnummer nicht verfügbar</string>
     <string name="feature_chats_sending">Wird gesendet</string>

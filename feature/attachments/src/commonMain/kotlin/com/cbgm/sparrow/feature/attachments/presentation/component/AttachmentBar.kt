@@ -34,13 +34,14 @@ fun AttachmentBar(
     onClickFile: () -> Unit,
     onClickContact: () -> Unit,
     onClickLocation: () -> Unit,
+    modifier: Modifier = Modifier,
     isGalleryEnabled: Boolean = true,
     isCameraEnabled: Boolean = true,
     isFileEnabled: Boolean = true,
     isLocationInProgress: Boolean = false
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(
                 bottom = MaterialTheme.spacing.screenPadding

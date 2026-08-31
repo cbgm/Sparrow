@@ -69,7 +69,7 @@ object Dimens {
 
     object MediaSelection {
         val previewPlayIconSize = 16.dp
-        val previewRemoveButtonSize = 22.dp
+        val previewRemoveButtonSize = 20.dp
         val previewRemoveIconSize = 14.dp
         val previewSize = 50.dp
         val filePreviewWidth = 190.dp

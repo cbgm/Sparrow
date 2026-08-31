@@ -9,6 +9,7 @@ class QueueDirectMessageUntilAuthorizedUseCase(
     suspend operator fun invoke(
         conversationId: String,
         text: String,
-        attachments: List<OutgoingMessageAttachment> = emptyList()
-    ): Result<Unit> = repository.queueUntilAuthorized(conversationId, text, attachments)
+        attachments: List<OutgoingMessageAttachment> = emptyList(),
+        replyToMessageId: String? = null
+    ): Result<Unit> = repository.queueUntilAuthorized(conversationId, text, attachments, replyToMessageId)
 }

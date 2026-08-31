@@ -68,6 +68,7 @@ class DirectViewModel(
         savedStateHandle.get<String>(AppRoute.Chat::targetMessageId.name)
     private val logger = SparrowLog.withTag("DirectViewModel")
     private val messageText = savedStateHandle.getMutableStateFlow(MESSAGE_TEXT_KEY, "")
+    private val replyToMessageId = savedStateHandle.getMutableStateFlow(REPLY_TO_MESSAGE_ID_KEY, "")
     private val errorMessage = MutableStateFlow<String?>(null)
     private val isContactTyping = MutableStateFlow(false)
     private val selectedMedia = MutableStateFlow<List<MediaSelection>>(emptyList())
@@ -80,16 +81,24 @@ class DirectViewModel(
 
     private val conversationContext = observeChatContext(conversationId, contactId)
 
+    private val composerDraft =
+        combine(messageText, replyToMessageId) { text, replyId ->
+            ComposerDraft(
+                text = text,
+                replyToMessageId = replyId.takeIf(String::isNotBlank)
+            )
+        }
+
     private val composerContext =
         combine(
-            messageText,
+            composerDraft,
             errorMessage,
             isContactTyping,
             selectedMedia,
             isSending
-        ) { text, error, contactTyping, media, sending ->
+        ) { draft, error, contactTyping, media, sending ->
             if (!error.isNullOrEmpty()) logger.error { error }
-            ComposerContext(text, error, contactTyping, media, sending)
+            ComposerContext(draft.text, error, draft.replyToMessageId, contactTyping, media, sending)
         }
 
     private val functionalUiState: Flow<DirectUiState> =
@@ -108,6 +117,7 @@ class DirectViewModel(
                 setupMode = context.setupMode,
                 currentText = composer.text,
                 currentError = composer.error,
+                currentReplyToMessageId = composer.replyToMessageId,
                 contactTyping = composer.contactTyping,
                 safetyAssessments = safetyAssessments,
                 attachmentBytes = loadedAttachmentBytes
@@ -138,6 +148,8 @@ class DirectViewModel(
         when (event) {
             is DirectUiEvent.MessageTextChanged -> onMessageTextChanged(event.text)
             DirectUiEvent.SendClicked -> sendCurrentMessage()
+            is DirectUiEvent.ReplyToMessage -> startReply(event.messageId)
+            DirectUiEvent.CancelReply -> clearReply()
             is DirectUiEvent.MediaSelected -> updateMediaSelection(event.media)
             is DirectUiEvent.OpenFilePicker -> navigator.navigateTo(AppRoute.FilePicker(event.sessionId))
             is DirectUiEvent.ShareCurrentLocation -> sendCurrentLocation(event.location.toOutgoingMessageAttachment())
@@ -233,6 +245,7 @@ class DirectViewModel(
 
         val text = messageText.value.trim()
         val selections = selectedMedia.value
+        val replyTo = replyToMessageId.value.takeIf(String::isNotBlank)
         if (text.isEmpty() && selections.isEmpty()) return
 
         errorMessage.value = null
@@ -241,9 +254,9 @@ class DirectViewModel(
             val attachments = selections.map(MediaSelection::toOutgoingMessageAttachment)
             try {
                 when (composerState) {
-                    DirectComposerState.REINVITE_REQUIRED -> queueMessageAndStartReinvite(text, attachments)
-                    DirectComposerState.REINVITE_PENDING -> queueMessageForPendingReinvite(text, attachments)
-                    DirectComposerState.READY -> sendAuthorizedMessage(text, attachments)
+                    DirectComposerState.REINVITE_REQUIRED -> queueMessageAndStartReinvite(text, attachments, replyTo)
+                    DirectComposerState.REINVITE_PENDING -> queueMessageForPendingReinvite(text, attachments, replyTo)
+                    DirectComposerState.READY -> sendAuthorizedMessage(text, attachments, replyTo)
                     DirectComposerState.DISABLED -> Unit
                 }
             } finally {
@@ -255,11 +268,12 @@ class DirectViewModel(
     private suspend fun queueMessageAndStartReinvite(
         text: String,
         attachments: List<OutgoingMessageAttachment>,
+        replyToMessageId: String?,
         clearComposerOnSuccess: Boolean = true
     ) {
-        queueMessageUntilAuthorized(conversationId, text, attachments)
+        queueMessageUntilAuthorized(conversationId, text, attachments, replyToMessageId)
             .onSuccess {
-                if (clearComposerOnSuccess) clearComposer()
+                if (clearComposerOnSuccess) clearComposer() else clearReply()
                 ensureIdentityExchangeStarted(contactId)
                     .onFailure { error ->
                         errorMessage.value = error.message ?: "Contact invitation could not be started"
@@ -272,10 +286,11 @@ class DirectViewModel(
     private suspend fun queueMessageForPendingReinvite(
         text: String,
         attachments: List<OutgoingMessageAttachment>,
+        replyToMessageId: String?,
         clearComposerOnSuccess: Boolean = true
     ) {
-        queueMessageUntilAuthorized(conversationId, text, attachments)
-            .onSuccess { if (clearComposerOnSuccess) clearComposer() }
+        queueMessageUntilAuthorized(conversationId, text, attachments, replyToMessageId)
+            .onSuccess { if (clearComposerOnSuccess) clearComposer() else clearReply() }
             .onFailure { error ->
                 errorMessage.value = error.message ?: "Message could not be queued"
             }
@@ -284,6 +299,7 @@ class DirectViewModel(
     private suspend fun sendAuthorizedMessage(
         text: String,
         attachments: List<OutgoingMessageAttachment>,
+        replyToMessageId: String?,
         clearComposerOnSuccess: Boolean = true
     ) {
         val authorizationError = requireDirectChatAuthorization(contactId).exceptionOrNull()
@@ -292,15 +308,15 @@ class DirectViewModel(
                 uiState.value.identitySetupMode == DirectIdentitySetupMode.AUTOMATIC_INVITATION &&
                 authorizationError is DirectChatAuthorizationRequiredException
             ) {
-                queueMessageAndStartReinvite(text, attachments, clearComposerOnSuccess)
+                queueMessageAndStartReinvite(text, attachments, replyToMessageId, clearComposerOnSuccess)
             } else {
                 errorMessage.value = authorizationError.message ?: "Message could not be sent"
             }
             return
         }
 
-        sendMessage(conversationId, text, attachments)
-            .onSuccess { if (clearComposerOnSuccess) clearComposer() }
+        sendMessage(conversationId, text, attachments, replyToMessageId)
+            .onSuccess { if (clearComposerOnSuccess) clearComposer() else clearReply() }
             .onFailure { error -> errorMessage.value = error.message ?: "Message could not be sent" }
     }
 
@@ -308,6 +324,7 @@ class DirectViewModel(
         val composerState = uiState.value.composerState
         if (!composerState.isSendActionEnabled || isSending.value) return
 
+        val replyTo = replyToMessageId.value.takeIf(String::isNotBlank)
         errorMessage.value = null
         viewModelScope.launch {
             isSending.value = true
@@ -318,6 +335,7 @@ class DirectViewModel(
                         queueMessageAndStartReinvite(
                             text = "",
                             attachments = attachments,
+                            replyToMessageId = replyTo,
                             clearComposerOnSuccess = false
                         )
 
@@ -325,6 +343,7 @@ class DirectViewModel(
                         queueMessageForPendingReinvite(
                             text = "",
                             attachments = attachments,
+                            replyToMessageId = replyTo,
                             clearComposerOnSuccess = false
                         )
 
@@ -332,6 +351,7 @@ class DirectViewModel(
                         sendAuthorizedMessage(
                             text = "",
                             attachments = attachments,
+                            replyToMessageId = replyTo,
                             clearComposerOnSuccess = false
                         )
 
@@ -347,6 +367,7 @@ class DirectViewModel(
         val composerState = uiState.value.composerState
         if (!composerState.isSendActionEnabled || isSending.value) return
 
+        val replyTo = replyToMessageId.value.takeIf(String::isNotBlank)
         errorMessage.value = null
         viewModelScope.launch {
             isSending.value = true
@@ -357,6 +378,7 @@ class DirectViewModel(
                         queueMessageAndStartReinvite(
                             text = "",
                             attachments = attachments,
+                            replyToMessageId = replyTo,
                             clearComposerOnSuccess = false
                         )
 
@@ -364,6 +386,7 @@ class DirectViewModel(
                         queueMessageForPendingReinvite(
                             text = "",
                             attachments = attachments,
+                            replyToMessageId = replyTo,
                             clearComposerOnSuccess = false
                         )
 
@@ -371,6 +394,7 @@ class DirectViewModel(
                         sendAuthorizedMessage(
                             text = "",
                             attachments = attachments,
+                            replyToMessageId = replyTo,
                             clearComposerOnSuccess = false
                         )
 
@@ -433,8 +457,19 @@ class DirectViewModel(
 
     private suspend fun clearComposer() {
         messageText.value = ""
+        replyToMessageId.value = ""
         selectedMedia.value = emptyList()
         stopTypingNow()
+    }
+
+    private fun startReply(messageId: String) {
+        if (uiState.value.messages.none { message -> message.id == messageId }) return
+        replyToMessageId.value = messageId
+        errorMessage.value = null
+    }
+
+    private fun clearReply() {
+        replyToMessageId.value = ""
     }
 
     private fun retryFailedMessage(messageId: String) {
@@ -469,9 +504,15 @@ class DirectViewModel(
         navigator.navigateTo(AppRoute.ContactDetails(conversationId, contactId, openVerification = true))
     }
 
+    private data class ComposerDraft(
+        val text: String,
+        val replyToMessageId: String?
+    )
+
     private data class ComposerContext(
         val text: String,
         val error: String?,
+        val replyToMessageId: String?,
         val contactTyping: Boolean,
         val media: List<MediaSelection>,
         val isSending: Boolean
@@ -479,6 +520,7 @@ class DirectViewModel(
 
     private companion object {
         const val MESSAGE_TEXT_KEY = "messageText"
+        const val REPLY_TO_MESSAGE_ID_KEY = "replyToMessageId"
         const val LOCAL_TYPING_TIMEOUT_MILLISECONDS = 1500
         const val REMOTE_TYPING_TIMEOUT_MILLISECONDS = 3000
     }
