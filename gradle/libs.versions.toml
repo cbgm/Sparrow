@@ -55,7 +55,7 @@ hikari = "7.1.0"
 postgresql = "42.7.13"
 jedis = "5.2.0"
 material-icons = "1.7.3"
-mediapipe = "0.10.35"
+mediapipe = "latest.release"
 haze = "2.0.0-beta01"
 
 [libraries]
