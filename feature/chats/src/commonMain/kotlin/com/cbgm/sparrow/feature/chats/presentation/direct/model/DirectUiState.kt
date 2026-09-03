@@ -11,6 +11,8 @@ data class DirectUiState(
     val contactName: String = "",
     val profilePictureBytes: ByteArray? = null,
     val messages: List<MessageBubbleUi> = emptyList(),
+    val contextMessage: MessageBubbleUi? = null,
+    val canEditContextMessage: Boolean = false,
     val messageText: String = "",
     val replyTo: MessageReplyUi? = null,
     val editingMessageId: String? = null,
@@ -38,6 +40,8 @@ data class DirectUiState(
         if (contactName != other.contactName) return false
         if (!profilePictureBytes.contentEquals(other.profilePictureBytes)) return false
         if (messages != other.messages) return false
+        if (canEditContextMessage != other.canEditContextMessage) return false
+        if (contextMessage != other.contextMessage) return false
         if (messageText != other.messageText) return false
         if (replyTo != other.replyTo) return false
         if (editingMessageId != other.editingMessageId) return false
@@ -59,6 +63,8 @@ data class DirectUiState(
         result = 31 * result + contactName.hashCode()
         result = 31 * result + (profilePictureBytes?.contentHashCode() ?: 0)
         result = 31 * result + messages.hashCode()
+        result = 31 * result + canEditContextMessage.hashCode()
+        result = 31 * result + (contextMessage?.hashCode() ?: 0)
         result = 31 * result + messageText.hashCode()
         result = 31 * result + (replyTo?.hashCode() ?: 0)
         result = 31 * result + (editingMessageId?.hashCode() ?: 0)

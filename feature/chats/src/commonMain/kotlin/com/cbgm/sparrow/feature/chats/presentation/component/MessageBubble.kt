@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.chats.presentation.component
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -138,7 +139,7 @@ internal fun MessageBubble(
                                     Alignment.BottomEnd
                                 }
                             )
-                            .offset(y = MaterialTheme.spacing.base)
+                            .offset(y = MaterialTheme.spacing.small)
                 )
             }
             if (showMetadata) {
@@ -183,11 +184,6 @@ private fun SenderLabel(message: MessageBubbleUi) {
     )
 }
 
-/**
- * Which single part of the message is actually rendered as the "primary" content bubble.
- * Parts are checked in priority order; the reply preview (if any) is attached only to
- * whichever one wins, matching the same priority used to decide what's shown at all.
- */
 private enum class PrimaryContent { CONTACT, LOCATION, IMAGE_VIDEO, FILE, TEXT, NONE }
 
 private fun MessageBubbleUi.primaryContent(showTextBubble: Boolean): PrimaryContent = when {
@@ -348,7 +344,8 @@ private fun MessageBubbleSurface(
             tailReturnOffset = bubbleShapes.tailReturnOffset
         )
 
-    val contentPadding = if (hasInnerPadding) MaterialTheme.spacing.micro else MaterialTheme.spacing.zero
+    val contentPadding =
+        if (hasInnerPadding) MaterialTheme.spacing.micro else MaterialTheme.spacing.zero
     val tailPadding = bubbleShapes.tailWidth + contentPadding
 
     Surface(
@@ -401,20 +398,24 @@ private fun MessageReactions(
     val cloudWidth = iconSlotSize + iconStep * (visibleReactions.size - 1).toFloat()
     var anchor by remember { mutableStateOf<SparrowOverlayAnchor?>(null) }
 
+    val interactionSource = remember { MutableInteractionSource() }
+
     Surface(
         modifier =
             modifier
                 .captureSparrowOverlayAnchor { anchor = it }
-                .clickable { anchor?.let(onClick) },
-        shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = { anchor?.let(onClick) }
+                ),
+        color = Color.Transparent
     ) {
         Box(
-            modifier =
-                Modifier
-                    .padding(Dimens.MessageReaction.cloudContentPadding)
-                    .width(cloudWidth)
-                    .height(cloudHeight)
+            modifier = Modifier
+                .padding(Dimens.MessageReaction.cloudContentPadding)
+                .width(cloudWidth)
+                .height(cloudHeight)
         ) {
             visibleReactions.forEachIndexed { index, reaction ->
                 val yOffset =

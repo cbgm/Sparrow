@@ -26,6 +26,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.SendGroupMessageUseCa
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupTypingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ToggleGroupMessageReactionUseCase
 import com.cbgm.sparrow.feature.chats.presentation.group.mapper.toGroupUiState
+import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMessageUi
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactResult
@@ -73,6 +74,7 @@ class GroupViewModel(
     private val selectedMedia = MutableStateFlow<List<MediaSelection>>(emptyList())
     private val attachmentBytes = MutableStateFlow<Map<String, ByteArray>>(emptyMap())
     private val isSending = MutableStateFlow(false)
+    private val contextMessageId = MutableStateFlow<String?>(null)
     private val loadingAttachmentIds = mutableSetOf<String>()
 
     private val typing =
@@ -127,26 +129,36 @@ class GroupViewModel(
             presentationContext,
             composerContext,
             attachmentBytes,
-            observeMessageSafetyAssessments()
-        ) { presentation, composer, loadedAttachmentBytes, safetyAssessments ->
-            toGroupUiState(
-                conversation = presentation.context?.conversation,
-                administration = presentation.context?.administration ?: GroupAdministrationState(),
-                contacts = presentation.context?.contacts.orEmpty(),
-                profilePictures = presentation.context?.profilePictures.orEmpty(),
-                avatarBytes = presentation.context?.avatarBytes,
-                currentText = composer.text,
-                currentError = composer.error,
-                currentReplyToMessageId = composer.replyToMessageId,
-                observationError = presentation.errorMessage,
-                isLoading = presentation is GroupContextObservation.Loading,
-                typingContactIds = composer.typingIds,
-                safetyAssessments = safetyAssessments,
-                attachmentBytes = loadedAttachmentBytes
-            ).copy(
-                selectedMedia = composer.media,
-                isSending = composer.isSending,
-                editingMessageId = composer.editingMessageId
+            observeMessageSafetyAssessments(),
+            contextMessageId
+        ) { presentation, composer, loadedAttachmentBytes, safetyAssessments, selectedContextMessageId ->
+            val state =
+                toGroupUiState(
+                    conversation = presentation.context?.conversation,
+                    administration = presentation.context?.administration ?: GroupAdministrationState(),
+                    contacts = presentation.context?.contacts.orEmpty(),
+                    profilePictures = presentation.context?.profilePictures.orEmpty(),
+                    avatarBytes = presentation.context?.avatarBytes,
+                    currentText = composer.text,
+                    currentError = composer.error,
+                    currentReplyToMessageId = composer.replyToMessageId,
+                    observationError = presentation.errorMessage,
+                    isLoading = presentation is GroupContextObservation.Loading,
+                    typingContactIds = composer.typingIds,
+                    safetyAssessments = safetyAssessments,
+                    attachmentBytes = loadedAttachmentBytes
+                ).copy(
+                    selectedMedia = composer.media,
+                    isSending = composer.isSending,
+                    editingMessageId = composer.editingMessageId
+                )
+
+            val contextMessage =
+                state.messages.firstOrNull { message -> message.id == selectedContextMessageId }
+
+            state.copy(
+                contextMessage = contextMessage,
+                canEditContextMessage = contextMessage?.let(::canEditMessage) == true
             )
         }.stateIn(
             scope = viewModelScope,
@@ -165,6 +177,8 @@ class GroupViewModel(
             is GroupUiEvent.ReplyToMessage -> startReply(event.messageId)
             GroupUiEvent.CancelReply -> clearReply()
             is GroupUiEvent.EditMessage -> startEdit(event.messageId)
+            is GroupUiEvent.MessageContextRequested -> contextMessageId.value = event.messageId
+            GroupUiEvent.MessageContextDismissed -> contextMessageId.value = null
             GroupUiEvent.CancelEdit -> cancelEdit()
             is GroupUiEvent.MessageReactionSelected -> toggleReaction(event.messageId, event.emoji)
             is GroupUiEvent.DeleteMessage -> deleteMessage(event.messageId)
@@ -337,10 +351,9 @@ class GroupViewModel(
 
     private fun startEdit(messageId: String) {
         val message = uiState.value.messages.firstOrNull { it.id == messageId } ?: return
+        if (!canEditMessage(message)) return
+
         val text = message.bubble.textPart?.text?.takeIf(String::isNotBlank) ?: return
-        if (!message.bubble.isMine || message.type != ChatMessageType.USER) return
-        if (message.bubble.deliveryProgress.readCount > 0) return
-        if (message.bubble.fileParts.isNotEmpty() || message.bubble.imageVideoParts.isNotEmpty() || message.bubble.locationPart != null || message.bubble.contactPart != null) return
 
         replyToMessageId.value = ""
         selectedMedia.value = emptyList()
@@ -348,6 +361,16 @@ class GroupViewModel(
         messageText.value = text
         errorMessage.value = null
     }
+
+    private fun canEditMessage(message: GroupMessageUi): Boolean =
+        message.type == ChatMessageType.USER &&
+            message.bubble.isMine &&
+            message.bubble.deliveryProgress.readCount == 0 &&
+            !message.bubble.textPart?.text.isNullOrBlank() &&
+            message.bubble.fileParts.isEmpty() &&
+            message.bubble.imageVideoParts.isEmpty() &&
+            message.bubble.locationPart == null &&
+            message.bubble.contactPart == null
 
     private fun cancelEdit() {
         editingMessageId.value = ""

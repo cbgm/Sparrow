@@ -158,22 +158,7 @@ fun GroupScreen(
     var reactionBurst by remember { mutableStateOf<MessageReactionBurst?>(null) }
     var feedbackOverlay by remember { mutableStateOf<FeedbackOverlayData?>(null) }
 
-    val contextMessage =
-        messageContextAnchor
-            ?.messageId
-            ?.let { messageId -> uiState.messages.firstOrNull { it.id == messageId } }
-    val contextMessageText = contextMessage?.bubble?.textPart?.text?.takeIf { it.isNotBlank() }
-    val canEditContextMessage =
-        contextMessage?.let { message ->
-            message.type == ChatMessageType.USER &&
-                message.bubble.isMine &&
-                message.bubble.deliveryProgress.readCount == 0 &&
-                contextMessageText != null &&
-                message.bubble.fileParts.isEmpty() &&
-                message.bubble.imageVideoParts.isEmpty() &&
-                message.bubble.locationPart == null &&
-                message.bubble.contactPart == null
-        } == true
+    val contextMessage = uiState.contextMessage
     val clipboardWriter = rememberClipboardWriter()
     val copiedText = stringResource(Res.string.common_copied)
     val contextMenuColor =
@@ -184,8 +169,8 @@ fun GroupScreen(
         }
 
     val activeContextAnchor =
-        messageContextAnchor?.takeIf {
-            contextMessage != null
+        messageContextAnchor?.takeIf { anchor ->
+            anchor.messageId == contextMessage?.id
         }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -194,29 +179,26 @@ fun GroupScreen(
             menuColor = contextMenuColor,
             onDismiss = {
                 messageContextAnchor = null
+                onUiEvent(GroupUiEvent.MessageContextDismissed)
             },
             onReplyClick = {
-                contextMessage?.let { message ->
-                    onUiEvent(
-                        GroupUiEvent.ReplyToMessage(
-                            message.id
-                        )
-                    )
+                contextMessage?.id?.let { messageId ->
+                    onUiEvent(GroupUiEvent.ReplyToMessage(messageId))
                 }
             },
             onReactionClick = { emoji ->
-                contextMessage?.let { message ->
-                    onUiEvent(GroupUiEvent.MessageReactionSelected(message.id, emoji))
+                contextMessage?.id?.let { messageId ->
+                    onUiEvent(GroupUiEvent.MessageReactionSelected(messageId, emoji))
                 }
             },
-            showEdit = canEditContextMessage,
+            showEdit = uiState.canEditContextMessage,
             onEditClick = {
-                contextMessage?.let { message ->
-                    onUiEvent(GroupUiEvent.EditMessage(message.id))
+                contextMessage?.id?.let { messageId ->
+                    onUiEvent(GroupUiEvent.EditMessage(messageId))
                 }
             },
             onCopyClick = {
-                contextMessageText?.let(clipboardWriter::copyText)
+                contextMessage?.bubble?.textPart?.text?.takeIf(String::isNotBlank)?.let(clipboardWriter::copyText)
                 activeContextAnchor?.let { contextAnchor ->
                     feedbackOverlay =
                         FeedbackOverlayData(
@@ -227,8 +209,8 @@ fun GroupScreen(
                 }
             },
             onDeleteClick = {
-                contextMessage?.let { message ->
-                    onUiEvent(GroupUiEvent.DeleteMessage(message.id))
+                contextMessage?.id?.let { messageId ->
+                    onUiEvent(GroupUiEvent.DeleteMessage(messageId))
                 }
             },
             modifier = Modifier.fillMaxSize(),
@@ -284,7 +266,10 @@ fun GroupScreen(
                     innerPadding = innerPadding,
                     targetMessageId = targetMessageId,
                     selectedContextMessageId = messageContextAnchor?.messageId,
-                    onContextMessageRequested = { messageContextAnchor = it },
+                    onContextMessageRequested = { anchor ->
+                        messageContextAnchor = anchor
+                        onUiEvent(GroupUiEvent.MessageContextRequested(anchor.messageId))
+                    },
                     onReactionBurstRequested = { reactionBurst = it },
                     onRetryMessage = { messageId ->
                         onUiEvent(GroupUiEvent.RetryMessage(messageId))

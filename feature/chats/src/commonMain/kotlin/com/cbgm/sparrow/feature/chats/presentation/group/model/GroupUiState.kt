@@ -14,6 +14,8 @@ data class GroupUiState(
     val title: String = "",
     val avatarBytes: ByteArray? = null,
     val messages: List<GroupMessageUi> = emptyList(),
+    val contextMessage: GroupMessageUi? = null,
+    val canEditContextMessage: Boolean = false,
     val messageText: String = "",
     val replyTo: MessageReplyUi? = null,
     val editingMessageId: String? = null,
@@ -48,6 +50,8 @@ data class GroupUiState(
         if (title != other.title) return false
         if (!avatarBytes.contentEquals(other.avatarBytes)) return false
         if (messages != other.messages) return false
+        if (canEditContextMessage != other.canEditContextMessage) return false
+        if (contextMessage != other.contextMessage) return false
         if (messageText != other.messageText) return false
         if (replyTo != other.replyTo) return false
         if (editingMessageId != other.editingMessageId) return false
@@ -72,6 +76,8 @@ data class GroupUiState(
         result = 31 * result + title.hashCode()
         result = 31 * result + (avatarBytes?.contentHashCode() ?: 0)
         result = 31 * result + messages.hashCode()
+        result = 31 * result + canEditContextMessage.hashCode()
+        result = 31 * result + (contextMessage?.hashCode() ?: 0)
         result = 31 * result + messageText.hashCode()
         result = 31 * result + (replyTo?.hashCode() ?: 0)
         result = 31 * result + (editingMessageId?.hashCode() ?: 0)

@@ -23,6 +23,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.direct.RetryDirectMessageUs
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SendDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SetDirectTypingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ToggleDirectMessageReactionUseCase
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.toDirectUiState
 import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.withProfilePicture
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectComposerState
@@ -78,6 +79,7 @@ class DirectViewModel(
     private val selectedMedia = MutableStateFlow<List<MediaSelection>>(emptyList())
     private val attachmentBytes = MutableStateFlow<Map<String, ByteArray>>(emptyMap())
     private val isSending = MutableStateFlow(false)
+    private val contextMessageId = MutableStateFlow<String?>(null)
     private val loadingAttachmentIds = mutableSetOf<String>()
 
     private val conversationContext = observeChatContext(conversationId, contactId)
@@ -123,27 +125,37 @@ class DirectViewModel(
             conversationContext,
             composerContext,
             attachmentBytes,
-            observeMessageSafetyAssessments()
-        ) { context, composer, loadedAttachmentBytes, safetyAssessments ->
-            toDirectUiState(
-                contactId = contactId,
-                fallbackContactName = fallbackContactName,
-                conversation = context.conversation,
-                contact = context.contact,
-                handshake = context.handshake,
-                setupMode = context.setupMode,
-                currentText = composer.text,
-                currentError = composer.error,
-                currentReplyToMessageId = composer.replyToMessageId,
-                contactTyping = composer.contactTyping,
-                safetyAssessments = safetyAssessments,
-                attachmentBytes = loadedAttachmentBytes
-            ).withProfilePicture(context.profilePictureBytes)
-                .copy(
-                    selectedMedia = composer.media,
-                    isSending = composer.isSending,
-                    editingMessageId = composer.editingMessageId
-                )
+            observeMessageSafetyAssessments(),
+            contextMessageId
+        ) { context, composer, loadedAttachmentBytes, safetyAssessments, selectedContextMessageId ->
+            val state =
+                toDirectUiState(
+                    contactId = contactId,
+                    fallbackContactName = fallbackContactName,
+                    conversation = context.conversation,
+                    contact = context.contact,
+                    handshake = context.handshake,
+                    setupMode = context.setupMode,
+                    currentText = composer.text,
+                    currentError = composer.error,
+                    currentReplyToMessageId = composer.replyToMessageId,
+                    contactTyping = composer.contactTyping,
+                    safetyAssessments = safetyAssessments,
+                    attachmentBytes = loadedAttachmentBytes
+                ).withProfilePicture(context.profilePictureBytes)
+                    .copy(
+                        selectedMedia = composer.media,
+                        isSending = composer.isSending,
+                        editingMessageId = composer.editingMessageId
+                    )
+
+            val contextMessage =
+                state.messages.firstOrNull { message -> message.id == selectedContextMessageId }
+
+            state.copy(
+                contextMessage = contextMessage,
+                canEditContextMessage = contextMessage?.let(::canEditMessage) == true
+            )
         }
 
     val uiState: StateFlow<DirectUiState> =
@@ -171,6 +183,8 @@ class DirectViewModel(
             is DirectUiEvent.ReplyToMessage -> startReply(event.messageId)
             DirectUiEvent.CancelReply -> clearReply()
             is DirectUiEvent.EditMessage -> startEdit(event.messageId)
+            is DirectUiEvent.MessageContextRequested -> contextMessageId.value = event.messageId
+            DirectUiEvent.MessageContextDismissed -> contextMessageId.value = null
             DirectUiEvent.CancelEdit -> cancelEdit()
             is DirectUiEvent.MessageReactionSelected -> toggleReaction(event.messageId, event.emoji)
             is DirectUiEvent.DeleteMessage -> deleteMessage(event.messageId)
@@ -396,9 +410,9 @@ class DirectViewModel(
 
     private fun startEdit(messageId: String) {
         val message = uiState.value.messages.firstOrNull { it.id == messageId } ?: return
+        if (!canEditMessage(message)) return
+
         val text = message.textPart?.text?.takeIf(String::isNotBlank) ?: return
-        if (!message.isMine || message.deliveryStatus == MessageDeliveryStatus.READ) return
-        if (message.fileParts.isNotEmpty() || message.imageVideoParts.isNotEmpty() || message.locationPart != null || message.contactPart != null) return
 
         replyToMessageId.value = ""
         selectedMedia.value = emptyList()
@@ -406,6 +420,15 @@ class DirectViewModel(
         messageText.value = text
         errorMessage.value = null
     }
+
+    private fun canEditMessage(message: MessageBubbleUi): Boolean =
+        message.isMine &&
+            message.deliveryStatus != MessageDeliveryStatus.READ &&
+            !message.textPart?.text.isNullOrBlank() &&
+            message.fileParts.isEmpty() &&
+            message.imageVideoParts.isEmpty() &&
+            message.locationPart == null &&
+            message.contactPart == null
 
     private fun cancelEdit() {
         editingMessageId.value = ""

@@ -148,33 +148,18 @@ fun DirectScreen(
     var reactionBurst by remember { mutableStateOf<MessageReactionBurst?>(null) }
     var feedbackOverlay by remember { mutableStateOf<FeedbackOverlayData?>(null) }
 
-    val contextMessage =
-        messageContextAnchor
-            ?.messageId
-            ?.let { messageId -> uiState.messages.firstOrNull { it.id == messageId } }
-    val contextMessageText = contextMessage?.textPart?.text?.takeIf { it.isNotBlank() }
-    val canEditContextMessage =
-        contextMessage?.let { message ->
-            message.isMine &&
-                message.deliveryStatus != MessageDeliveryStatus.READ &&
-                contextMessageText != null &&
-                message.fileParts.isEmpty() &&
-                message.imageVideoParts.isEmpty() &&
-                message.locationPart == null &&
-                message.contactPart == null
-        } == true
     val clipboardWriter = rememberClipboardWriter()
     val copiedText = stringResource(Res.string.common_copied)
     val contextMenuColor =
-        if (contextMessage?.isMine == true) {
+        if (uiState.contextMessage?.isMine == true) {
             MaterialTheme.colorScheme.primaryContainer
         } else {
             MaterialTheme.colorScheme.surfaceContainerHigh
         }
 
     val activeContextAnchor =
-        messageContextAnchor?.takeIf {
-            contextMessage != null
+        messageContextAnchor?.takeIf { anchor ->
+            anchor.messageId == uiState.contextMessage?.id
         }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -183,29 +168,26 @@ fun DirectScreen(
             menuColor = contextMenuColor,
             onDismiss = {
                 messageContextAnchor = null
+                onUiEvent(DirectUiEvent.MessageContextDismissed)
             },
             onReplyClick = {
-                contextMessage?.let { message ->
-                    onUiEvent(
-                        DirectUiEvent.ReplyToMessage(
-                            message.id
-                        )
-                    )
+                uiState.contextMessage?.id?.let { messageId ->
+                    onUiEvent(DirectUiEvent.ReplyToMessage(messageId))
                 }
             },
             onReactionClick = { emoji ->
-                contextMessage?.let { message ->
-                    onUiEvent(DirectUiEvent.MessageReactionSelected(message.id, emoji))
+                uiState.contextMessage?.id?.let { messageId ->
+                    onUiEvent(DirectUiEvent.MessageReactionSelected(messageId, emoji))
                 }
             },
-            showEdit = canEditContextMessage,
+            showEdit = uiState.canEditContextMessage,
             onEditClick = {
-                contextMessage?.let { message ->
-                    onUiEvent(DirectUiEvent.EditMessage(message.id))
+                uiState.contextMessage?.id?.let { messageId ->
+                    onUiEvent(DirectUiEvent.EditMessage(messageId))
                 }
             },
             onCopyClick = {
-                contextMessageText?.let(clipboardWriter::copyText)
+                uiState.contextMessage?.textPart?.text?.takeIf(String::isNotBlank)?.let(clipboardWriter::copyText)
                 activeContextAnchor?.let { contextAnchor ->
                     feedbackOverlay =
                         FeedbackOverlayData(
@@ -216,13 +198,13 @@ fun DirectScreen(
                 }
             },
             onDeleteClick = {
-                contextMessage?.let { message ->
-                    onUiEvent(DirectUiEvent.DeleteMessage(message.id))
+                uiState.contextMessage?.id?.let { messageId ->
+                    onUiEvent(DirectUiEvent.DeleteMessage(messageId))
                 }
             },
             modifier = Modifier.fillMaxSize(),
             preview = {
-                contextMessage?.let { message ->
+                uiState.contextMessage?.let { message ->
                     MessageBubble(
                         message = message,
                         onRetryClick = {},
@@ -270,7 +252,10 @@ fun DirectScreen(
                     innerPadding = innerPadding,
                     targetMessageId = targetMessageId,
                     selectedContextMessageId = messageContextAnchor?.messageId,
-                    onContextMessageRequested = { messageContextAnchor = it },
+                    onContextMessageRequested = { anchor ->
+                        messageContextAnchor = anchor
+                        onUiEvent(DirectUiEvent.MessageContextRequested(anchor.messageId))
+                    },
                     onReactionBurstRequested = { reactionBurst = it },
                     onRetryMessage = { messageId ->
                         onUiEvent(DirectUiEvent.RetryMessage(messageId))
