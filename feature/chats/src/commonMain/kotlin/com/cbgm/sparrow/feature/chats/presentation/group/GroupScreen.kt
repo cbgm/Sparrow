@@ -44,10 +44,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.component.FeedbackOverlay
+import com.cbgm.sparrow.core.ui.component.FeedbackOverlayData
 import com.cbgm.sparrow.core.ui.component.PatternBackground
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowBannerButton
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowOverlay
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.device.clipboard.rememberClipboardWriter
 import com.cbgm.sparrow.core.ui.theme.Alpha
@@ -74,6 +77,7 @@ import com.cbgm.sparrow.feature.chats.presentation.component.MessageDissolve
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageInputActions
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageInputState
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageReactionBurst
+import com.cbgm.sparrow.feature.chats.presentation.component.MessageReactionBurstOverlay
 import com.cbgm.sparrow.feature.chats.presentation.component.captureMessageContextAnchor
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toMessageAttachmentsUi
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toSharedContact
@@ -91,6 +95,7 @@ import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionSource
 import com.cbgm.sparrow.feature.media.presentation.selection.rememberMediaSelectionLauncher
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.common_copied
 import com.cbgm.sparrow.resources.feature_chats_group_accept
 import com.cbgm.sparrow.resources.feature_chats_group_decline
 import com.cbgm.sparrow.resources.feature_chats_group_deleted_description
@@ -146,6 +151,7 @@ fun GroupScreen(
     var pendingSharedContact by remember { mutableStateOf<SharedContact?>(null) }
     var messageContextAnchor by remember { mutableStateOf<MessageContextAnchor?>(null) }
     var reactionBurst by remember { mutableStateOf<MessageReactionBurst?>(null) }
+    var feedbackOverlay by remember { mutableStateOf<FeedbackOverlayData?>(null) }
 
     val contextMessage =
         messageContextAnchor
@@ -153,124 +159,153 @@ fun GroupScreen(
             ?.let { messageId -> uiState.messages.firstOrNull { it.id == messageId } }
     val contextMessageText = contextMessage?.bubble?.textPart?.text?.takeIf { it.isNotBlank() }
     val clipboardWriter = rememberClipboardWriter()
+    val copiedText = stringResource(Res.string.common_copied)
+    val contextMenuColor =
+        if (contextMessage?.bubble?.isMine == true) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHigh
+        }
 
     val activeContextAnchor =
         messageContextAnchor?.takeIf {
             contextMessage != null
         }
 
-    MessageContextHost(
-        anchor = activeContextAnchor,
-        menuColor =
-            if (contextMessage?.bubble?.isMine == true) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerHigh
+    Box(modifier = modifier.fillMaxSize()) {
+        MessageContextHost(
+            anchor = activeContextAnchor,
+            menuColor = contextMenuColor,
+            onDismiss = {
+                messageContextAnchor = null
             },
-        onDismiss = {
-            messageContextAnchor = null
-        },
-        onReplyClick = {
-            contextMessage?.let { message ->
-                onUiEvent(
-                    GroupUiEvent.ReplyToMessage(
-                        message.id
+            onReplyClick = {
+                contextMessage?.let { message ->
+                    onUiEvent(
+                        GroupUiEvent.ReplyToMessage(
+                            message.id
+                        )
                     )
-                )
+                }
+            },
+            onReactionClick = { emoji ->
+                contextMessage?.let { message ->
+                    onUiEvent(GroupUiEvent.MessageReactionSelected(message.id, emoji))
+                }
+            },
+            onCopyClick = {
+                contextMessageText?.let(clipboardWriter::copyText)
+                activeContextAnchor?.let { contextAnchor ->
+                    feedbackOverlay =
+                        FeedbackOverlayData(
+                            anchor = contextAnchor.overlayAnchor,
+                            text = copiedText,
+                            color = contextMenuColor
+                        )
+                }
+            },
+            onDeleteClick = {
+                contextMessage?.let { message ->
+                    onUiEvent(GroupUiEvent.DeleteMessage(message.id))
+                }
+            },
+            modifier = Modifier.fillMaxSize(),
+            preview = {
+                contextMessage?.let { message ->
+                    GroupMessageBubble(
+                        message = message,
+                        onRetryMessage = {},
+                        onSafetyWarningClick = { _, _, _ -> },
+                        onAttachmentVisible = {},
+                        onAttachmentClick = { _, _ -> },
+                        onContactClick = {},
+                        onReplyPreviewClick = {},
+                        onContextMessageRequested = {},
+                        onReactionBurstRequested = {},
+                        isContextSelected = false,
+                        isSearchHighlighted = false,
+                        showMetadata = false,
+                        contextMenuEnabled = false
+                    )
+                }
             }
-        },
-        onReactionClick = { emoji ->
-            contextMessage?.let { message ->
-                onUiEvent(GroupUiEvent.MessageReactionSelected(message.id, emoji))
-            }
-        },
-        onCopyClick = {
-            contextMessageText?.let(clipboardWriter::copyText)
-        },
-        onDeleteClick = {
-            contextMessage?.let { message ->
-                onUiEvent(GroupUiEvent.DeleteMessage(message.id))
-            }
-        },
-        reactionBurst = reactionBurst,
-        onReactionBurstDismiss = { reactionBurst = null },
-        modifier = modifier,
-        preview = {
-            contextMessage?.let { message ->
-                GroupMessageBubble(
-                    message = message,
-                    onRetryMessage = {},
-                    onSafetyWarningClick = { _, _, _ -> },
-                    onAttachmentVisible = {},
-                    onAttachmentClick = { _, _ -> },
-                    onContactClick = {},
-                    onReplyPreviewClick = {},
-                    onContextMessageRequested = {},
-                    onReactionBurstRequested = {},
-                    isContextSelected = false,
-                    isSearchHighlighted = false,
-                    showMetadata = false,
-                    contextMenuEnabled = false
+        ) {
+            SparrowLazyScaffold(
+                modifier = Modifier.fillMaxSize(),
+                barColor = MaterialTheme.colorScheme.background,
+                background = {
+                    PatternBackground(
+                        modifier = Modifier.fillMaxSize(),
+                        backgroundColor = MaterialTheme.colorScheme.background,
+                        alpha = Alpha.PatternBackground.conversation
+                    )
+                },
+                topBar = { containerColor ->
+                    TopBar(
+                        uiState = uiState,
+                        containerColor = containerColor,
+                        onUiEvent = onUiEvent
+                    )
+                },
+                bottomBar = { containerColor ->
+                    BottomBar(
+                        uiState = uiState,
+                        containerColor = containerColor,
+                        onUiEvent = onUiEvent,
+                        onContactAttachmentClick = { showContactSelection = true }
+                    )
+                }
+            ) { innerPadding, listState ->
+                Content(
+                    uiState = uiState,
+                    listState = listState,
+                    innerPadding = innerPadding,
+                    targetMessageId = targetMessageId,
+                    selectedContextMessageId = messageContextAnchor?.messageId,
+                    onContextMessageRequested = { messageContextAnchor = it },
+                    onReactionBurstRequested = { reactionBurst = it },
+                    onRetryMessage = { messageId ->
+                        onUiEvent(GroupUiEvent.RetryMessage(messageId))
+                    },
+                    onSafetyWarningClick = { messageId, contactId, warning ->
+                        onUiEvent(
+                            GroupUiEvent.SafetyWarningClicked(
+                                messageId = messageId,
+                                contactId = contactId,
+                                warning = warning
+                            )
+                        )
+                    },
+                    onAttachmentVisible = { attachmentId ->
+                        onUiEvent(GroupUiEvent.AttachmentVisible(attachmentId))
+                    },
+                    onAttachmentClick = { messageId, attachmentId ->
+                        viewerMessageId = messageId
+                        viewerAttachmentId = attachmentId
+                        onUiEvent(GroupUiEvent.AttachmentVisible(attachmentId))
+                    },
+                    onContactClick = { contact -> pendingSharedContact = contact }
                 )
             }
         }
-    ) {
-        SparrowLazyScaffold(
-            modifier = Modifier.fillMaxSize(),
-            barColor = MaterialTheme.colorScheme.background,
-            background = {
-                PatternBackground(
-                    modifier = Modifier.fillMaxSize(),
-                    backgroundColor = MaterialTheme.colorScheme.background,
-                    alpha = Alpha.PatternBackground.conversation
-                )
-            },
-            topBar = { containerColor ->
-                TopBar(
-                    uiState = uiState,
-                    containerColor = containerColor,
-                    onUiEvent = onUiEvent
-                )
-            },
-            bottomBar = { containerColor ->
-                BottomBar(
-                    uiState = uiState,
-                    containerColor = containerColor,
-                    onUiEvent = onUiEvent,
-                    onContactAttachmentClick = { showContactSelection = true }
+
+        feedbackOverlay?.let { feedback ->
+            SparrowOverlay(anchor = feedback.anchor) {
+                FeedbackOverlay(
+                    text = feedback.text,
+                    color = feedback.color,
+                    onDismiss = { feedbackOverlay = null }
                 )
             }
-        ) { innerPadding, listState ->
-            Content(
-                uiState = uiState,
-                listState = listState,
-                innerPadding = innerPadding,
-                targetMessageId = targetMessageId,
-                selectedContextMessageId = messageContextAnchor?.messageId,
-                onContextMessageRequested = { messageContextAnchor = it },
-                onReactionBurstRequested = { reactionBurst = it },
-                onRetryMessage = { messageId ->
-                    onUiEvent(GroupUiEvent.RetryMessage(messageId))
-                },
-                onSafetyWarningClick = { messageId, contactId, warning ->
-                    onUiEvent(
-                        GroupUiEvent.SafetyWarningClicked(
-                            messageId = messageId,
-                            contactId = contactId,
-                            warning = warning
-                        )
-                    )
-                },
-                onAttachmentVisible = { attachmentId ->
-                    onUiEvent(GroupUiEvent.AttachmentVisible(attachmentId))
-                },
-                onAttachmentClick = { messageId, attachmentId ->
-                    viewerMessageId = messageId
-                    viewerAttachmentId = attachmentId
-                    onUiEvent(GroupUiEvent.AttachmentVisible(attachmentId))
-                },
-                onContactClick = { contact -> pendingSharedContact = contact }
-            )
+        }
+
+        reactionBurst?.let { burst ->
+            SparrowOverlay(anchor = burst.anchor) {
+                MessageReactionBurstOverlay(
+                    burst = burst,
+                    onDismiss = { reactionBurst = null }
+                )
+            }
         }
     }
 
@@ -510,22 +545,23 @@ private fun Content(
     onContactClick: (SharedContact) -> Unit
 ) {
     val fillModifier = Modifier.fillMaxSize().padding(innerPadding)
-    val messageState =
+    val dissolvingMessageState =
         rememberDissolvingMessageListState(
             messages = uiState.messages,
-            idOf = GroupMessageUi::id
+            idOf = { message -> message.id },
+            shouldDissolve = { message -> !message.bubble.isMine }
         )
 
     when {
         uiState.isLoading -> LoadingContent(modifier = fillModifier)
 
-        messageState.messages.isEmpty() -> EmptyContent(
+        dissolvingMessageState.messages.isEmpty() -> EmptyContent(
             title = uiState.title,
             modifier = fillModifier
         )
 
         else -> MessageList(
-            messageState = messageState,
+            dissolvingMessageState = dissolvingMessageState,
             listState = listState,
             targetMessageId = targetMessageId,
             selectedContextMessageId = selectedContextMessageId,
@@ -543,7 +579,7 @@ private fun Content(
 
 @Composable
 private fun MessageList(
-    messageState: DissolvingMessageListState<GroupMessageUi>,
+    dissolvingMessageState: DissolvingMessageListState<GroupMessageUi>,
     listState: LazyListState,
     targetMessageId: String?,
     selectedContextMessageId: String?,
@@ -556,7 +592,7 @@ private fun MessageList(
     onContactClick: (SharedContact) -> Unit,
     contentPadding: PaddingValues
 ) {
-    val messages = messageState.messages
+    val messages = dissolvingMessageState.messages
     val searchTargetState =
         rememberMessageSearchTargetState(
             targetMessageId = targetMessageId,
@@ -590,8 +626,8 @@ private fun MessageList(
     ) {
         items(items = messages, key = GroupMessageUi::id) { message ->
             MessageDissolve(
-                isDissolving = messageState.isDissolving(message),
-                onFinished = { messageState.finishDissolve(message.id) }
+                messageId = message.id,
+                state = dissolvingMessageState
             ) {
                 if (message.type == ChatMessageType.USER) {
                     GroupMessageBubble(
@@ -666,11 +702,11 @@ private fun GroupMessageBubble(
             onContactClick = onContactClick,
             onReplyPreviewClick = onReplyPreviewClick,
             onActionMenuVisibilityChange = onActionMenuVisibilityChange,
-            onReactionsClick = { boundsInRoot ->
+            onReactionsClick = { anchor ->
                 onReactionBurstRequested(
                     MessageReactionBurst(
                         reactions = message.bubble.reactions,
-                        boundsInRoot = boundsInRoot
+                        anchor = anchor
                     )
                 )
             },
@@ -702,11 +738,11 @@ private fun GroupMessageBubble(
             onContactClick = onContactClick,
             onReplyPreviewClick = onReplyPreviewClick,
             onActionMenuVisibilityChange = onActionMenuVisibilityChange,
-            onReactionsClick = { boundsInRoot ->
+            onReactionsClick = { anchor ->
                 onReactionBurstRequested(
                     MessageReactionBurst(
                         reactions = message.bubble.reactions,
-                        boundsInRoot = boundsInRoot
+                        anchor = anchor
                     )
                 )
             },

@@ -50,9 +50,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
+import com.cbgm.sparrow.core.ui.component.FeedbackOverlay
+import com.cbgm.sparrow.core.ui.component.FeedbackOverlayData
 import com.cbgm.sparrow.core.ui.component.PatternBackground
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
+import com.cbgm.sparrow.core.ui.component.SparrowOverlay
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.device.clipboard.rememberClipboardWriter
 import com.cbgm.sparrow.core.ui.theme.Alpha
@@ -77,6 +80,7 @@ import com.cbgm.sparrow.feature.chats.presentation.component.MessageDissolve
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageInputActions
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageInputState
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageReactionBurst
+import com.cbgm.sparrow.feature.chats.presentation.component.MessageReactionBurstOverlay
 import com.cbgm.sparrow.feature.chats.presentation.component.captureMessageContextAnchor
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toMessageAttachmentsUi
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toSharedContact
@@ -95,6 +99,7 @@ import com.cbgm.sparrow.feature.media.presentation.selection.rememberMediaSelect
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_verify
+import com.cbgm.sparrow.resources.common_copied
 import com.cbgm.sparrow.resources.feature_chats_chat_key_exchange_incomplete_description
 import com.cbgm.sparrow.resources.feature_chats_chat_key_exchange_incomplete_title
 import com.cbgm.sparrow.resources.feature_chats_chat_no_keys_description
@@ -136,6 +141,7 @@ fun DirectScreen(
     var pendingSharedContact by remember { mutableStateOf<SharedContact?>(null) }
     var messageContextAnchor by remember { mutableStateOf<MessageContextAnchor?>(null) }
     var reactionBurst by remember { mutableStateOf<MessageReactionBurst?>(null) }
+    var feedbackOverlay by remember { mutableStateOf<FeedbackOverlayData?>(null) }
 
     val contextMessage =
         messageContextAnchor
@@ -143,120 +149,149 @@ fun DirectScreen(
             ?.let { messageId -> uiState.messages.firstOrNull { it.id == messageId } }
     val contextMessageText = contextMessage?.textPart?.text?.takeIf { it.isNotBlank() }
     val clipboardWriter = rememberClipboardWriter()
+    val copiedText = stringResource(Res.string.common_copied)
+    val contextMenuColor =
+        if (contextMessage?.isMine == true) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHigh
+        }
 
     val activeContextAnchor =
         messageContextAnchor?.takeIf {
             contextMessage != null
         }
 
-    MessageContextHost(
-        anchor = activeContextAnchor,
-        menuColor =
-            if (contextMessage?.isMine == true) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerHigh
+    Box(modifier = modifier.fillMaxSize()) {
+        MessageContextHost(
+            anchor = activeContextAnchor,
+            menuColor = contextMenuColor,
+            onDismiss = {
+                messageContextAnchor = null
             },
-        onDismiss = {
-            messageContextAnchor = null
-        },
-        onReplyClick = {
-            contextMessage?.let { message ->
-                onUiEvent(
-                    DirectUiEvent.ReplyToMessage(
-                        message.id
+            onReplyClick = {
+                contextMessage?.let { message ->
+                    onUiEvent(
+                        DirectUiEvent.ReplyToMessage(
+                            message.id
+                        )
                     )
-                )
+                }
+            },
+            onReactionClick = { emoji ->
+                contextMessage?.let { message ->
+                    onUiEvent(DirectUiEvent.MessageReactionSelected(message.id, emoji))
+                }
+            },
+            onCopyClick = {
+                contextMessageText?.let(clipboardWriter::copyText)
+                activeContextAnchor?.let { contextAnchor ->
+                    feedbackOverlay =
+                        FeedbackOverlayData(
+                            anchor = contextAnchor.overlayAnchor,
+                            text = copiedText,
+                            color = contextMenuColor
+                        )
+                }
+            },
+            onDeleteClick = {
+                contextMessage?.let { message ->
+                    onUiEvent(DirectUiEvent.DeleteMessage(message.id))
+                }
+            },
+            modifier = Modifier.fillMaxSize(),
+            preview = {
+                contextMessage?.let { message ->
+                    MessageBubble(
+                        message = message,
+                        onRetryClick = {},
+                        onSafetyDetailsClick = {},
+                        onAttachmentVisible = {},
+                        onAttachmentClick = {},
+                        onContactClick = {},
+                        onReplyPreviewClick = {},
+                        isSearchHighlighted = false,
+                        showMetadata = false
+                    )
+                }
             }
-        },
-        onReactionClick = { emoji ->
-            contextMessage?.let { message ->
-                onUiEvent(DirectUiEvent.MessageReactionSelected(message.id, emoji))
-            }
-        },
-        onCopyClick = {
-            contextMessageText?.let(clipboardWriter::copyText)
-        },
-        onDeleteClick = {
-            contextMessage?.let { message ->
-                onUiEvent(DirectUiEvent.DeleteMessage(message.id))
-            }
-        },
-        reactionBurst = reactionBurst,
-        onReactionBurstDismiss = { reactionBurst = null },
-        modifier = modifier,
-        preview = {
-            contextMessage?.let { message ->
-                MessageBubble(
-                    message = message,
-                    onRetryClick = {},
-                    onSafetyDetailsClick = {},
-                    onAttachmentVisible = {},
-                    onAttachmentClick = {},
-                    onContactClick = {},
-                    onReplyPreviewClick = {},
-                    isSearchHighlighted = false,
-                    showMetadata = false
+        ) {
+            SparrowLazyScaffold(
+                modifier = Modifier.fillMaxSize(),
+                barColor = MaterialTheme.colorScheme.background,
+                background = {
+                    PatternBackground(
+                        modifier = Modifier.fillMaxSize(),
+                        backgroundColor = MaterialTheme.colorScheme.background,
+                        alpha = Alpha.PatternBackground.conversation
+                    )
+                },
+                topBar = { containerColor ->
+                    TopBar(
+                        uiState = uiState,
+                        containerColor = containerColor,
+                        onUiEvent = onUiEvent,
+                        onManualIdentitySetup = { showIdentitySetupDialog = true }
+                    )
+                },
+                bottomBar = { containerColor ->
+                    BottomBar(
+                        uiState = uiState,
+                        containerColor = containerColor,
+                        onUiEvent = onUiEvent,
+                        onContactAttachmentClick = { showContactSelection = true }
+                    )
+                }
+            ) { innerPadding, listState ->
+                Content(
+                    uiState = uiState,
+                    listState = listState,
+                    innerPadding = innerPadding,
+                    targetMessageId = targetMessageId,
+                    selectedContextMessageId = messageContextAnchor?.messageId,
+                    onContextMessageRequested = { messageContextAnchor = it },
+                    onReactionBurstRequested = { reactionBurst = it },
+                    onRetryMessage = { messageId ->
+                        onUiEvent(DirectUiEvent.RetryMessage(messageId))
+                    },
+                    onSafetyWarningClick = { messageId, warning ->
+                        onUiEvent(
+                            DirectUiEvent.SafetyWarningClicked(
+                                messageId = messageId,
+                                warning = warning
+                            )
+                        )
+                    },
+                    onAttachmentVisible = { attachmentId ->
+                        onUiEvent(DirectUiEvent.AttachmentVisible(attachmentId))
+                    },
+                    onAttachmentClick = { messageId, attachmentId ->
+                        viewerMessageId = messageId
+                        viewerAttachmentId = attachmentId
+                        onUiEvent(DirectUiEvent.AttachmentVisible(attachmentId))
+                    },
+                    onContactClick = { contact -> pendingSharedContact = contact }
                 )
             }
         }
-    ) {
-        SparrowLazyScaffold(
-            modifier = Modifier.fillMaxSize(),
-            barColor = MaterialTheme.colorScheme.background,
-            background = {
-                PatternBackground(
-                    modifier = Modifier.fillMaxSize(),
-                    backgroundColor = MaterialTheme.colorScheme.background,
-                    alpha = Alpha.PatternBackground.conversation
-                )
-            },
-            topBar = { containerColor ->
-                TopBar(
-                    uiState = uiState,
-                    containerColor = containerColor,
-                    onUiEvent = onUiEvent,
-                    onManualIdentitySetup = { showIdentitySetupDialog = true }
-                )
-            },
-            bottomBar = { containerColor ->
-                BottomBar(
-                    uiState = uiState,
-                    containerColor = containerColor,
-                    onUiEvent = onUiEvent,
-                    onContactAttachmentClick = { showContactSelection = true }
+
+        feedbackOverlay?.let { feedback ->
+            SparrowOverlay(anchor = feedback.anchor) {
+                FeedbackOverlay(
+                    text = feedback.text,
+                    color = feedback.color,
+                    onDismiss = { feedbackOverlay = null }
                 )
             }
-        ) { innerPadding, listState ->
-            Content(
-                uiState = uiState,
-                listState = listState,
-                innerPadding = innerPadding,
-                targetMessageId = targetMessageId,
-                selectedContextMessageId = messageContextAnchor?.messageId,
-                onContextMessageRequested = { messageContextAnchor = it },
-                onReactionBurstRequested = { reactionBurst = it },
-                onRetryMessage = { messageId ->
-                    onUiEvent(DirectUiEvent.RetryMessage(messageId))
-                },
-                onSafetyWarningClick = { messageId, warning ->
-                    onUiEvent(
-                        DirectUiEvent.SafetyWarningClicked(
-                            messageId = messageId,
-                            warning = warning
-                        )
-                    )
-                },
-                onAttachmentVisible = { attachmentId ->
-                    onUiEvent(DirectUiEvent.AttachmentVisible(attachmentId))
-                },
-                onAttachmentClick = { messageId, attachmentId ->
-                    viewerMessageId = messageId
-                    viewerAttachmentId = attachmentId
-                    onUiEvent(DirectUiEvent.AttachmentVisible(attachmentId))
-                },
-                onContactClick = { contact -> pendingSharedContact = contact }
-            )
+        }
+
+        reactionBurst?.let { burst ->
+            SparrowOverlay(anchor = burst.anchor) {
+                MessageReactionBurstOverlay(
+                    burst = burst,
+                    onDismiss = { reactionBurst = null }
+                )
+            }
         }
     }
 
@@ -509,23 +544,24 @@ private fun Content(
     onContactClick: (SharedContact) -> Unit
 ) {
     val fillModifier = Modifier.fillMaxSize().padding(innerPadding)
-    val messageState =
+    val dissolvingListState =
         rememberDissolvingMessageListState(
             messages = uiState.messages,
-            idOf = MessageBubbleUi::id
+            idOf = { it.id },
+            shouldDissolve = { !it.isMine }
         )
 
     when {
         uiState.isLoading -> LoadingContent(modifier = fillModifier)
 
-        messageState.messages.isEmpty() -> EmptyContent(
+        dissolvingListState.messages.isEmpty() -> EmptyContent(
             contactName = uiState.contactName,
             securityState = uiState.contactSecurityState,
             modifier = fillModifier
         )
 
         else -> MessageList(
-            messageState = messageState,
+            dissolvingListState = dissolvingListState,
             listState = listState,
             targetMessageId = targetMessageId,
             selectedContextMessageId = selectedContextMessageId,
@@ -543,7 +579,7 @@ private fun Content(
 
 @Composable
 private fun MessageList(
-    messageState: DissolvingMessageListState<MessageBubbleUi>,
+    dissolvingListState: DissolvingMessageListState<MessageBubbleUi>,
     listState: LazyListState,
     targetMessageId: String?,
     selectedContextMessageId: String?,
@@ -556,7 +592,7 @@ private fun MessageList(
     onContactClick: (SharedContact) -> Unit,
     contentPadding: PaddingValues
 ) {
-    val messages = messageState.messages
+    val messages = dissolvingListState.messages
     val searchTargetState =
         rememberMessageSearchTargetState(
             targetMessageId = targetMessageId,
@@ -590,8 +626,8 @@ private fun MessageList(
     ) {
         items(items = messages, key = MessageBubbleUi::id) { message ->
             MessageDissolve(
-                isDissolving = messageState.isDissolving(message),
-                onFinished = { messageState.finishDissolve(message.id) }
+                messageId = message.id,
+                state = dissolvingListState
             ) {
                 var anchor by remember(message.id) { mutableStateOf<MessageContextAnchor?>(null) }
                 val isContextSelected = selectedContextMessageId == message.id
@@ -611,11 +647,11 @@ private fun MessageList(
                             anchor?.let(onContextMessageRequested)
                         }
                     },
-                    onReactionsClick = { boundsInRoot ->
+                    onReactionsClick = { anchor ->
                         onReactionBurstRequested(
                             MessageReactionBurst(
                                 reactions = message.reactions,
-                                boundsInRoot = boundsInRoot
+                                anchor = anchor
                             )
                         )
                     },

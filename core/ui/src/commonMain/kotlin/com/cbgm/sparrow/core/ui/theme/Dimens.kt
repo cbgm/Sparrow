@@ -49,6 +49,10 @@ object Dimens {
         val iconSize = 14.dp
     }
 
+    object MessageContext {
+        val blurRadius = 6.dp
+    }
+
     object MessageBubble {
         val iconSize = 14.dp
         val progressSize = 12.dp
@@ -84,11 +88,6 @@ object Dimens {
 
     object MessageDeletion {
         val maxBlurRadius = 10.dp
-
-        const val dissolveDurationMillis = 420
-        const val collapseDurationMillis = 140
-        const val collapseDelayMillis = dissolveDurationMillis - collapseDurationMillis
-        const val endScale = 0.92f
     }
 
     object MessageInput {
