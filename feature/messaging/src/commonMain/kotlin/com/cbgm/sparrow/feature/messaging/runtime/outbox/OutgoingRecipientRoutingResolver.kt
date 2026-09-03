@@ -17,6 +17,7 @@ import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivatedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivationAcknowledgementPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMessageDeletionPacket
+import com.cbgm.sparrow.core.protocol.packet.GroupMessageEditPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupVerificationReceiptPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupVerificationSnapshotPacket
@@ -83,6 +84,7 @@ class OutgoingRecipientRoutingResolver(
             is GroupAvatarUpdatedPacket -> groupId
             is GroupChatMessagePacket -> groupId
             is GroupMessageDeletionPacket -> groupId
+            is GroupMessageEditPacket -> groupId
             is GroupCreatedPacket -> groupId
             is GroupLeaveRequestPacket -> groupId
             is GroupMemberActivatedPacket -> groupId

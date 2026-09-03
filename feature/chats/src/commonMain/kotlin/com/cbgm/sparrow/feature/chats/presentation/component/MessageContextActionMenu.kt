@@ -11,9 +11,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.Reply
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -25,7 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.helper.darker
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -33,6 +33,7 @@ import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_copy
 import com.cbgm.sparrow.resources.feature_chats_delete_message
+import com.cbgm.sparrow.resources.feature_chats_edit_message
 import com.cbgm.sparrow.resources.feature_chats_reply
 import org.jetbrains.compose.resources.stringResource
 
@@ -41,37 +42,69 @@ internal fun MessageContextActionMenu(
     color: Color,
     onReplyClick: () -> Unit,
     onReactionClick: (String) -> Unit,
+    showEdit: Boolean,
+    onEditClick: () -> Unit,
     onCopyClick: () -> Unit,
     showDelete: Boolean,
     onDeleteClick: () -> Unit
 ) {
     Surface(
-        modifier = Modifier.width(200.dp),
+        modifier = Modifier.width(Dimens.ActionMenu.menuWidth),
         shape = MaterialTheme.shapes.extraSmall,
         color = color.darker(0.9f),
         shadowElevation = Dimens.ActionMenu.shadowElevation
     ) {
         Column {
-            MessageReactionItem(onReactionClick = onReactionClick)
+            Row(
+                modifier =
+                    Modifier
+                        .horizontalScroll(rememberScrollState())
+                        .padding(
+                            horizontal = MaterialTheme.spacing.base,
+                            vertical = MaterialTheme.spacing.micro
+                        ),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
+            ) {
+                listOf("👍", "❤️", "😂", "🔥", "💯", "💀", "😮", "😢", "🙏", "🤦‍♂️", "🤯", "🤔")
+                    .forEach { emoji ->
+                        Text(
+                            text = emoji,
+                            modifier = Modifier
+                                .clickable { onReactionClick(emoji) }
+                                .padding(MaterialTheme.spacing.micro),
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                    }
+            }
 
             HorizontalDivider(thickness = Dimens.Base.dividerThickness)
 
             MessageActionItem(
                 text = stringResource(Res.string.feature_chats_reply),
                 onClick = onReplyClick,
-                icon = Icons.Default.Reply
+                icon = Icons.AutoMirrored.Filled.Reply
             )
+
+            if (showEdit) {
+                HorizontalDivider(thickness = Dimens.Base.dividerThickness)
+
+                MessageActionItem(
+                    text = stringResource(Res.string.feature_chats_edit_message),
+                    onClick = onEditClick,
+                    icon = Icons.Default.Edit
+                )
+            }
 
             HorizontalDivider(thickness = Dimens.Base.dividerThickness)
 
             MessageActionItem(
                 text = stringResource(Res.string.feature_chats_copy),
                 onClick = onCopyClick,
-                Icons.Default.ContentCopy
+                icon = Icons.Default.ContentCopy
             )
 
             if (showDelete) {
-                HorizontalDivider(thickness = 0.5.dp)
+                HorizontalDivider(thickness = Dimens.Base.dividerThickness)
 
                 MessageActionItem(
                     text = stringResource(Res.string.feature_chats_delete_message),
@@ -79,30 +112,6 @@ internal fun MessageContextActionMenu(
                     icon = Icons.Default.DeleteOutline
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun MessageReactionItem(onReactionClick: (String) -> Unit) {
-    Row(
-        modifier =
-            Modifier
-                .horizontalScroll(rememberScrollState())
-                .padding(
-                    horizontal = MaterialTheme.spacing.base,
-                    vertical = MaterialTheme.spacing.micro
-                ),
-        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
-    ) {
-        listOf("👍", "❤️", "😂", "😮", "😢", "🙏").forEach { emoji ->
-            Text(
-                text = emoji,
-                modifier = Modifier
-                    .clickable { onReactionClick(emoji) }
-                    .padding(MaterialTheme.spacing.micro),
-                style = MaterialTheme.typography.bodyLarge
-            )
         }
     }
 }
@@ -145,6 +154,8 @@ private fun MessagePopUpMenuPreview() {
             color = MaterialTheme.colorScheme.surface,
             onReplyClick = {},
             onReactionClick = {},
+            showEdit = true,
+            onEditClick = {},
             onCopyClick = {},
             showDelete = true,
             onDeleteClick = {}

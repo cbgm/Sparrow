@@ -18,6 +18,12 @@ sealed interface DirectUiEvent {
 
     data object CancelReply : DirectUiEvent
 
+    data class EditMessage(
+        val messageId: String
+    ) : DirectUiEvent
+
+    data object CancelEdit : DirectUiEvent
+
     data class MessageReactionSelected(
         val messageId: String,
         val emoji: String

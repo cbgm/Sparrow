@@ -7,10 +7,13 @@ import com.cbgm.sparrow.core.protocol.message.GroupMessageContent
 import com.cbgm.sparrow.core.protocol.message.GroupMessageContentCodec
 import com.cbgm.sparrow.core.protocol.message.MessageDeletionPayload
 import com.cbgm.sparrow.core.protocol.message.MessageDeletionPayloadCodec
+import com.cbgm.sparrow.core.protocol.message.MessageEditPayload
+import com.cbgm.sparrow.core.protocol.message.MessageEditPayloadCodec
 import com.cbgm.sparrow.core.protocol.message.MessageReactionPayload
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.GroupChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMessageDeletionPacket
+import com.cbgm.sparrow.core.protocol.packet.GroupMessageEditPacket
 import com.cbgm.sparrow.core.protocol.packet.ReadReceiptPacket
 import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
@@ -56,6 +59,7 @@ class GroupOutgoingMessageProcessor(
     private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
     private val groupMessageContentCodec: GroupMessageContentCodec,
     private val messageDeletionPayloadCodec: MessageDeletionPayloadCodec,
+    private val messageEditPayloadCodec: MessageEditPayloadCodec,
     private val attachmentTransfer: MessageAttachmentDataSource
 ) {
     private val sendMutex = Mutex()
@@ -196,6 +200,68 @@ class GroupOutgoingMessageProcessor(
 
             attachmentTransfer.deleteForMessages(listOf(messageId))
             chatDao.deleteMessagesAndRefreshConversations(listOf(target))
+        }
+
+    suspend fun editMessage(
+        groupId: String,
+        messageId: String,
+        text: String,
+        invitations: List<GroupInvitationEntity>
+    ): Result<Unit> =
+        runCatching {
+            require(messageId.isNotBlank()) { "Message ID must not be blank" }
+            val normalizedText = text.trim()
+            require(normalizedText.isNotBlank()) { "Edited message text must not be blank" }
+            requireActiveMembership(groupId, invitations)
+
+            val target = chatDao.findMessageById(messageId) ?: error("Message was not found")
+            check(target.conversationId == groupId) { "Message does not belong to this group" }
+            check(target.transportMode == GROUP_END_TO_END_ENCRYPTED_MODE) { "Only user messages can be edited" }
+            check(target.isMine) { "Only your own messages can be edited" }
+            check(target.text.isNotBlank()) { "Only text messages can be edited" }
+            check(attachmentTransfer.protocolAttachments(messageId).isEmpty()) {
+                "Messages with attachments cannot be edited"
+            }
+            check(
+                messageRecipientStateDao
+                    .findByMessageId(messageId)
+                    .none { state -> state.deliveryStatus == MessageDeliveryStatus.READ.name }
+            ) { "Read messages cannot be edited" }
+
+            val recipients = findCurrentRecipients(groupId)
+            check(recipients.isNotEmpty()) { "Group has no active recipients" }
+
+            val editId = IdGenerator.generate(prefix = "group-edit")
+            val timestamp = SystemClock.nowEpochMilliseconds()
+            val plaintext = messageEditPayloadCodec.encode(MessageEditPayload(messageId, normalizedText))
+            val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+            val secured =
+                groupSecurityManager
+                    .encryptMessageEdit(
+                        groupId = groupId,
+                        editId = editId,
+                        editedAtEpochMilliseconds = timestamp,
+                        plaintext = plaintext,
+                        localSigningKeyPair = localSigningKeyPair
+                    ).getOrThrow()
+
+            recipients.forEach { contactId ->
+                protocolOutbox.enqueue(
+                    contactId,
+                    GroupMessageEditPacket(
+                        packetId = "group-edit-$editId-$contactId",
+                        groupId = groupId,
+                        epoch = secured.epoch,
+                        editId = editId,
+                        editedAtEpochMilliseconds = timestamp,
+                        nonce = secured.nonce.copyOf(),
+                        ciphertext = secured.ciphertext.copyOf(),
+                        senderSignature = secured.senderSignature.copyOf()
+                    )
+                ).getOrThrow()
+            }
+
+            chatDao.upsertMessage(target.copy(text = normalizedText))
         }
 
     suspend fun retry(messageId: String): Result<Unit> =

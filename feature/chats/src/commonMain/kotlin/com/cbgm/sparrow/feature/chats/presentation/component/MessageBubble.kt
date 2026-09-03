@@ -347,12 +347,8 @@ private fun MessageBubbleSurface(
             tailHeight = bubbleShapes.tailHeight,
             tailReturnOffset = bubbleShapes.tailReturnOffset
         )
-    val contentPadding =
-        if (hasInnerPadding) {
-            MaterialTheme.spacing.micro
-        } else {
-            MaterialTheme.spacing.zero
-        }
+
+    val contentPadding = if (hasInnerPadding) MaterialTheme.spacing.micro else MaterialTheme.spacing.zero
     val tailPadding = bubbleShapes.tailWidth + contentPadding
 
     Surface(
@@ -367,7 +363,7 @@ private fun MessageBubbleSurface(
     ) {
         Column {
             reply?.let { replyPreview ->
-                MessageReplyPreview(
+                MessageReplyInlay(
                     reply = replyPreview,
                     onClick = { onReplyPreviewClick(replyPreview.messageId) },
                     color = state.bubbleColor,
@@ -479,8 +475,8 @@ private fun DeliveryProgress(message: MessageBubbleUi) {
 
     val text =
         when {
-            progress.readCount > 0 -> "Read ${progress.readCount}/${progress.recipientCount}"
-            progress.deliveredCount > 0 -> "Delivered ${progress.deliveredCount}/${progress.recipientCount}"
+            progress.readCount > 0 -> "${progress.readCount}/${progress.recipientCount}"
+            progress.deliveredCount > 0 -> "${progress.deliveredCount}/${progress.recipientCount}"
             else -> "Sending…"
         }
 

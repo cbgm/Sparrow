@@ -12,6 +12,7 @@ import com.cbgm.sparrow.core.protocol.packet.GroupMemberPayload
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMembershipChangePayload
 import com.cbgm.sparrow.core.protocol.packet.GroupMessageDeletionPacket
+import com.cbgm.sparrow.core.protocol.packet.GroupMessageEditPacket
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.protocol.version.ProtocolVersion
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
@@ -516,6 +517,59 @@ class GroupSecurityManager internal constructor(
             )
         }
 
+    suspend fun encryptMessageEdit(
+        groupId: String,
+        editId: String,
+        editedAtEpochMilliseconds: Long,
+        plaintext: String,
+        localSigningKeyPair: LocalSigningKeyPair
+    ): Result<SecuredGroupMessageDto> =
+        runCatching {
+            val state = groupSecurityDao.findState(groupId) ?: error("Group security state was not found")
+            check(state.localSigningPublicKey.contentEquals(localSigningKeyPair.publicKey)) {
+                "Local signing identity is not a member of the current group epoch"
+            }
+            val groupKey =
+                groupKeyDataSource
+                    .load(groupId, state.currentEpoch)
+                    .getOrThrow()
+                    ?: error("Group key was not found")
+            val associatedData =
+                payloadEncoder.encodeMessageEditAssociatedData(
+                    version = ProtocolVersion.CURRENT,
+                    groupId = groupId,
+                    epoch = state.currentEpoch,
+                    editId = editId,
+                    editedAtEpochMilliseconds = editedAtEpochMilliseconds
+                )
+            val encrypted =
+                groupCrypto
+                    .encryptMessage(
+                        plaintext = plaintext.encodeToByteArray(),
+                        associatedData = associatedData,
+                        groupKey = groupKey
+                    ).getOrThrow()
+            val signaturePayload =
+                payloadEncoder.encodeMessageEditSignature(
+                    associatedData = associatedData,
+                    nonce = encrypted.nonce,
+                    ciphertext = encrypted.ciphertext
+                )
+            val signature =
+                groupCrypto
+                    .sign(
+                        payload = signaturePayload,
+                        signingPrivateKey = localSigningKeyPair.privateKey
+                    ).getOrThrow()
+
+            SecuredGroupMessageDto(
+                epoch = state.currentEpoch,
+                nonce = encrypted.nonce,
+                ciphertext = encrypted.ciphertext,
+                senderSignature = signature
+            )
+        }
+
     suspend fun decryptMessage(
         packet: GroupChatMessagePacket,
         senderContactId: String
@@ -636,6 +690,63 @@ class GroupSecurityManager internal constructor(
                     .decodeToString(throwOnInvalidSequence = true)
 
             require(plaintext.isNotBlank()) { "Decrypted group message deletion must not be blank" }
+            plaintext
+        }
+
+    suspend fun decryptMessageEdit(
+        packet: GroupMessageEditPacket,
+        senderContactId: String
+    ): Result<String> =
+        runCatching {
+            val state =
+                groupSecurityDao.findState(packet.groupId)
+                    ?: error("Group security state was not found")
+            check(packet.epoch == state.currentEpoch) {
+                "Group message edit uses epoch ${packet.epoch}, expected ${state.currentEpoch}"
+            }
+            val memberKey =
+                groupSecurityDao.findMemberKey(
+                    groupId = packet.groupId,
+                    epoch = packet.epoch,
+                    contactId = senderContactId
+                ) ?: error("Sender is not a member of the current group epoch")
+            val associatedData =
+                payloadEncoder.encodeMessageEditAssociatedData(
+                    version = packet.version,
+                    groupId = packet.groupId,
+                    epoch = packet.epoch,
+                    editId = packet.editId,
+                    editedAtEpochMilliseconds = packet.editedAtEpochMilliseconds
+                )
+            val signaturePayload =
+                payloadEncoder.encodeMessageEditSignature(
+                    associatedData = associatedData,
+                    nonce = packet.nonce,
+                    ciphertext = packet.ciphertext
+                )
+
+            groupCrypto
+                .verify(
+                    payload = signaturePayload,
+                    signature = packet.senderSignature,
+                    signingPublicKey = memberKey.signingPublicKey
+                ).getOrThrow()
+
+            val groupKey =
+                groupKeyDataSource
+                    .load(packet.groupId, packet.epoch)
+                    .getOrThrow()
+                    ?: error("Group key was not found")
+            val plaintext =
+                groupCrypto
+                    .decryptMessage(
+                        ciphertext = GroupCiphertext(packet.nonce, packet.ciphertext),
+                        associatedData = associatedData,
+                        groupKey = groupKey
+                    ).getOrThrow()
+                    .decodeToString(throwOnInvalidSequence = true)
+
+            require(plaintext.isNotBlank()) { "Decrypted group message edit must not be blank" }
             plaintext
         }
 

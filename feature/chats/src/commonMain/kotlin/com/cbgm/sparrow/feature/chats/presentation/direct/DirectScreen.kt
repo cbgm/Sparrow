@@ -18,6 +18,8 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Reply
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Schedule
@@ -84,6 +86,7 @@ import com.cbgm.sparrow.feature.chats.presentation.component.MessageReactionBurs
 import com.cbgm.sparrow.feature.chats.presentation.component.captureMessageContextAnchor
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toMessageAttachmentsUi
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toSharedContact
+import com.cbgm.sparrow.feature.chats.presentation.component.model.ComposerPreviewUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.component.rememberDissolvingMessageListState
 import com.cbgm.sparrow.feature.chats.presentation.component.rememberMessageJumpState
@@ -117,12 +120,14 @@ import com.cbgm.sparrow.resources.feature_chats_chat_verified_by_me_keys_descrip
 import com.cbgm.sparrow.resources.feature_chats_chat_verified_by_me_title
 import com.cbgm.sparrow.resources.feature_chats_chat_verified_e2ee
 import com.cbgm.sparrow.resources.feature_chats_chat_verified_keys_description
+import com.cbgm.sparrow.resources.feature_chats_edit_message
 import com.cbgm.sparrow.resources.feature_chats_loading_chat
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_incomplete_description
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_incomplete_title
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_required_description
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_required_title
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_setup_action
+import com.cbgm.sparrow.resources.feature_chats_reply_you
 import com.cbgm.sparrow.resources.feature_chats_start_conversation_with
 import org.jetbrains.compose.resources.stringResource
 
@@ -148,6 +153,16 @@ fun DirectScreen(
             ?.messageId
             ?.let { messageId -> uiState.messages.firstOrNull { it.id == messageId } }
     val contextMessageText = contextMessage?.textPart?.text?.takeIf { it.isNotBlank() }
+    val canEditContextMessage =
+        contextMessage?.let { message ->
+            message.isMine &&
+                message.deliveryStatus != MessageDeliveryStatus.READ &&
+                contextMessageText != null &&
+                message.fileParts.isEmpty() &&
+                message.imageVideoParts.isEmpty() &&
+                message.locationPart == null &&
+                message.contactPart == null
+        } == true
     val clipboardWriter = rememberClipboardWriter()
     val copiedText = stringResource(Res.string.common_copied)
     val contextMenuColor =
@@ -181,6 +196,12 @@ fun DirectScreen(
             onReactionClick = { emoji ->
                 contextMessage?.let { message ->
                     onUiEvent(DirectUiEvent.MessageReactionSelected(message.id, emoji))
+                }
+            },
+            showEdit = canEditContextMessage,
+            onEditClick = {
+                contextMessage?.let { message ->
+                    onUiEvent(DirectUiEvent.EditMessage(message.id))
                 }
             },
             onCopyClick = {
@@ -418,12 +439,6 @@ private fun TopBar(
     }
 }
 
-/**
- * Tracks the "share current location" flow as a single state instead of three
- * independent booleans. IDLE -> CAPTURING (waiting on device location) ->
- * AWAITING_SEND (location obtained, event dispatched) -> SENDING (uiState confirmed
- * the send started) -> IDLE once uiState.isSending flips back to false.
- */
 private enum class LocationSharePhase { IDLE, CAPTURING, AWAITING_SEND, SENDING }
 
 @Composable
@@ -480,18 +495,39 @@ private fun BottomBar(
                 onUiEvent(DirectUiEvent.OpenFilePicker(sessionId))
             }
         )
+    val composerPreview =
+        when {
+            uiState.editingMessageId != null ->
+                ComposerPreviewUi(
+                    type = ComposerPreviewUi.Type.EDIT,
+                    icon = Icons.Default.Edit,
+                    iconText = stringResource(Res.string.feature_chats_edit_message)
+                )
+
+            uiState.replyTo != null ->
+                ComposerPreviewUi(
+                    type = ComposerPreviewUi.Type.REPLY,
+                    iconText = uiState.replyTo.senderName.takeUnless { it.isNullOrBlank() }
+                        ?: stringResource(Res.string.feature_chats_reply_you),
+                    additionalText = " - ${uiState.replyTo.previewText}",
+                    icon = Icons.AutoMirrored.Filled.Reply
+                )
+
+            else -> null
+        }
     val canAddAttachment =
         !uiState.isLoading &&
             !uiState.isSending &&
             !isLocationInProgress &&
             uiState.composerState.isInputEnabled &&
+            composerPreview?.type != ComposerPreviewUi.Type.EDIT &&
             uiState.selectedMedia.size < maxAttachments
 
     MessageControl(
         containerColor = containerColor,
         state = MessageInputState(
             messageText = uiState.messageText,
-            replyTo = uiState.replyTo,
+            composerPreview = composerPreview,
             isTyping = uiState.isContactTyping,
             contactName = uiState.contactName,
             isInputEnabled = !uiState.isLoading && !uiState.isSending && uiState.composerState.isInputEnabled,
@@ -505,7 +541,13 @@ private fun BottomBar(
         actions = MessageInputActions(
             onValueChange = { onUiEvent(DirectUiEvent.MessageTextChanged(it)) },
             onSendClick = { onUiEvent(DirectUiEvent.SendClicked) },
-            onCancelReply = { onUiEvent(DirectUiEvent.CancelReply) },
+            onCancelPreview = {
+                when (composerPreview?.type) {
+                    ComposerPreviewUi.Type.REPLY -> onUiEvent(DirectUiEvent.CancelReply)
+                    ComposerPreviewUi.Type.EDIT -> onUiEvent(DirectUiEvent.CancelEdit)
+                    null -> Unit
+                }
+            },
             onSelectionClick = mediaPicker::launch,
             onMediaRemove = { mediaId ->
                 onUiEvent(
@@ -639,7 +681,12 @@ private fun MessageList(
                         onSafetyWarningClick(message.id, warning)
                     },
                     onAttachmentVisible = onAttachmentVisible,
-                    onAttachmentClick = { attachmentId -> onAttachmentClick(message.id, attachmentId) },
+                    onAttachmentClick = { attachmentId ->
+                        onAttachmentClick(
+                            message.id,
+                            attachmentId
+                        )
+                    },
                     onContactClick = onContactClick,
                     onReplyPreviewClick = replyJumpState.jumpTo,
                     onActionMenuVisibilityChange = { isVisible ->

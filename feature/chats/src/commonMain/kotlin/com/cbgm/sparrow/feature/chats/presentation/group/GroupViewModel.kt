@@ -11,11 +11,13 @@ import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachme
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.attachments.domain.usecase.LoadMessageAttachmentUseCase
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingMessageAttachment
+import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupChatContext
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.AcceptGroupInvitationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeclineGroupInvitationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeleteGroupMessageUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.EditGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.MarkGroupConversationReadUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupChatContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupMemberTypingUseCase
@@ -50,6 +52,7 @@ class GroupViewModel(
     private val retryMessage: RetryGroupMessageUseCase,
     private val toggleMessageReaction: ToggleGroupMessageReactionUseCase,
     private val deleteMessageUseCase: DeleteGroupMessageUseCase,
+    private val editMessageUseCase: EditGroupMessageUseCase,
     private val acceptInvitation: AcceptGroupInvitationUseCase,
     private val declineInvitation: DeclineGroupInvitationUseCase,
     observeMemberTyping: ObserveGroupMemberTypingUseCase,
@@ -65,6 +68,7 @@ class GroupViewModel(
     private val logger = SparrowLog.withTag("GroupViewModel")
     private val messageText = savedStateHandle.getMutableStateFlow(MESSAGE_TEXT_KEY, "")
     private val replyToMessageId = savedStateHandle.getMutableStateFlow(REPLY_TO_MESSAGE_ID_KEY, "")
+    private val editingMessageId = savedStateHandle.getMutableStateFlow(EDITING_MESSAGE_ID_KEY, "")
     private val errorMessage = MutableStateFlow<String?>(null)
     private val selectedMedia = MutableStateFlow<List<MediaSelection>>(emptyList())
     private val attachmentBytes = MutableStateFlow<Map<String, ByteArray>>(emptyMap())
@@ -91,10 +95,11 @@ class GroupViewModel(
             }
 
     private val composerDraft =
-        combine(messageText, replyToMessageId) { text, replyId ->
+        combine(messageText, replyToMessageId, editingMessageId) { text, replyId, editId ->
             GroupComposerDraft(
                 text = text,
-                replyToMessageId = replyId.takeIf(String::isNotBlank)
+                replyToMessageId = replyId.takeIf(String::isNotBlank),
+                editingMessageId = editId.takeIf(String::isNotBlank)
             )
         }
 
@@ -106,7 +111,15 @@ class GroupViewModel(
             selectedMedia,
             isSending
         ) { draft, error, typingIds, media, sending ->
-            GroupComposerContext(draft.text, error, draft.replyToMessageId, typingIds, media, sending)
+            GroupComposerContext(
+                draft.text,
+                error,
+                draft.replyToMessageId,
+                draft.editingMessageId,
+                typingIds,
+                media,
+                sending
+            )
         }
 
     val uiState: StateFlow<GroupUiState> =
@@ -132,7 +145,8 @@ class GroupViewModel(
                 attachmentBytes = loadedAttachmentBytes
             ).copy(
                 selectedMedia = composer.media,
-                isSending = composer.isSending
+                isSending = composer.isSending,
+                editingMessageId = composer.editingMessageId
             )
         }.stateIn(
             scope = viewModelScope,
@@ -150,6 +164,8 @@ class GroupViewModel(
             GroupUiEvent.SendClicked -> sendCurrentMessage()
             is GroupUiEvent.ReplyToMessage -> startReply(event.messageId)
             GroupUiEvent.CancelReply -> clearReply()
+            is GroupUiEvent.EditMessage -> startEdit(event.messageId)
+            GroupUiEvent.CancelEdit -> cancelEdit()
             is GroupUiEvent.MessageReactionSelected -> toggleReaction(event.messageId, event.emoji)
             is GroupUiEvent.DeleteMessage -> deleteMessage(event.messageId)
             is GroupUiEvent.MediaSelected -> updateMediaSelection(event.media)
@@ -195,6 +211,13 @@ class GroupViewModel(
 
     private fun sendCurrentMessage() {
         val text = messageText.value.trim()
+        val editMessageId = editingMessageId.value.takeIf(String::isNotBlank)
+        if (editMessageId != null) {
+            if (text.isEmpty()) return
+            editCurrentMessage(editMessageId, text)
+            return
+        }
+
         val selections = selectedMedia.value
         if (text.isEmpty() && selections.isEmpty()) return
 
@@ -296,18 +319,55 @@ class GroupViewModel(
     private suspend fun clearComposer() {
         messageText.value = ""
         replyToMessageId.value = ""
+        editingMessageId.value = ""
         selectedMedia.value = emptyList()
         typing.stopLocalTypingNow()
     }
 
     private fun startReply(messageId: String) {
         if (uiState.value.messages.none { message -> message.id == messageId }) return
+        editingMessageId.value = ""
         replyToMessageId.value = messageId
         errorMessage.value = null
     }
 
     private fun clearReply() {
         replyToMessageId.value = ""
+    }
+
+    private fun startEdit(messageId: String) {
+        val message = uiState.value.messages.firstOrNull { it.id == messageId } ?: return
+        val text = message.bubble.textPart?.text?.takeIf(String::isNotBlank) ?: return
+        if (!message.bubble.isMine || message.type != ChatMessageType.USER) return
+        if (message.bubble.deliveryProgress.readCount > 0) return
+        if (message.bubble.fileParts.isNotEmpty() || message.bubble.imageVideoParts.isNotEmpty() || message.bubble.locationPart != null || message.bubble.contactPart != null) return
+
+        replyToMessageId.value = ""
+        selectedMedia.value = emptyList()
+        editingMessageId.value = messageId
+        messageText.value = text
+        errorMessage.value = null
+    }
+
+    private fun cancelEdit() {
+        editingMessageId.value = ""
+        messageText.value = ""
+        errorMessage.value = null
+    }
+
+    private fun editCurrentMessage(messageId: String, text: String) {
+        if (isSending.value) return
+        errorMessage.value = null
+        viewModelScope.launch {
+            isSending.value = true
+            try {
+                editMessageUseCase(groupId, messageId, text)
+                    .onSuccess { clearComposer() }
+                    .onFailure { error -> errorMessage.value = error.message ?: "Message could not be edited" }
+            } finally {
+                isSending.value = false
+            }
+        }
     }
 
     private fun toggleReaction(messageId: String, emoji: String) {
@@ -372,13 +432,15 @@ class GroupViewModel(
 
     private data class GroupComposerDraft(
         val text: String,
-        val replyToMessageId: String?
+        val replyToMessageId: String?,
+        val editingMessageId: String?
     )
 
     private data class GroupComposerContext(
         val text: String,
         val error: String?,
         val replyToMessageId: String?,
+        val editingMessageId: String?,
         val typingIds: Set<String>,
         val media: List<MediaSelection>,
         val isSending: Boolean
@@ -387,5 +449,6 @@ class GroupViewModel(
     private companion object {
         const val MESSAGE_TEXT_KEY = "messageText"
         const val REPLY_TO_MESSAGE_ID_KEY = "replyToMessageId"
+        const val EDITING_MESSAGE_ID_KEY = "editingMessageId"
     }
 }

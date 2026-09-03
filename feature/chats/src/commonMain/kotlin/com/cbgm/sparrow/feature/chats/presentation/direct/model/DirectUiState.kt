@@ -13,6 +13,7 @@ data class DirectUiState(
     val messages: List<MessageBubbleUi> = emptyList(),
     val messageText: String = "",
     val replyTo: MessageReplyUi? = null,
+    val editingMessageId: String? = null,
     val selectedMedia: List<MediaSelection> = emptyList(),
     val isSending: Boolean = false,
     val isContactTyping: Boolean = false,
@@ -39,6 +40,7 @@ data class DirectUiState(
         if (messages != other.messages) return false
         if (messageText != other.messageText) return false
         if (replyTo != other.replyTo) return false
+        if (editingMessageId != other.editingMessageId) return false
         if (selectedMedia != other.selectedMedia) return false
         if (contactSecurityState != other.contactSecurityState) return false
         if (identitySetupMode != other.identitySetupMode) return false
@@ -59,6 +61,7 @@ data class DirectUiState(
         result = 31 * result + messages.hashCode()
         result = 31 * result + messageText.hashCode()
         result = 31 * result + (replyTo?.hashCode() ?: 0)
+        result = 31 * result + (editingMessageId?.hashCode() ?: 0)
         result = 31 * result + selectedMedia.hashCode()
         result = 31 * result + contactSecurityState.hashCode()
         result = 31 * result + identitySetupMode.hashCode()

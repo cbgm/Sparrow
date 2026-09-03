@@ -16,6 +16,7 @@ data class GroupUiState(
     val messages: List<GroupMessageUi> = emptyList(),
     val messageText: String = "",
     val replyTo: MessageReplyUi? = null,
+    val editingMessageId: String? = null,
     val selectedMedia: List<MediaSelection> = emptyList(),
     val isSending: Boolean = false,
     val isSomeoneTyping: Boolean = false,
@@ -49,6 +50,7 @@ data class GroupUiState(
         if (messages != other.messages) return false
         if (messageText != other.messageText) return false
         if (replyTo != other.replyTo) return false
+        if (editingMessageId != other.editingMessageId) return false
         if (selectedMedia != other.selectedMedia) return false
         if (typingDisplayName != other.typingDisplayName) return false
         if (errorMessage != other.errorMessage) return false
@@ -72,6 +74,7 @@ data class GroupUiState(
         result = 31 * result + messages.hashCode()
         result = 31 * result + messageText.hashCode()
         result = 31 * result + (replyTo?.hashCode() ?: 0)
+        result = 31 * result + (editingMessageId?.hashCode() ?: 0)
         result = 31 * result + selectedMedia.hashCode()
         result = 31 * result + typingDisplayName.hashCode()
         result = 31 * result + (errorMessage?.hashCode() ?: 0)

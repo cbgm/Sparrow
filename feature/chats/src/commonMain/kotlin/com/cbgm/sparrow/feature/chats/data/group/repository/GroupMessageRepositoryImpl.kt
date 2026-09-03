@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.data.group.repository
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupOutgoingMessageProcessor
@@ -23,24 +24,47 @@ class GroupMessageRepositoryImpl(
             invitations = groupInvitationDao.findByGroupId(groupId)
         )
 
-    override suspend fun toggleReaction(groupId: String, messageId: String, emoji: String): Result<Unit> =
-        outgoingMessageProcessor.toggleReaction(
-            groupId = groupId,
-            messageId = messageId,
-            emoji = emoji,
-            invitations = groupInvitationDao.findByGroupId(groupId)
-        )
+    override suspend fun toggleReaction(
+        groupId: String,
+        messageId: String,
+        emoji: String
+    ): Result<Unit> =
+        safeSuspendCall {
+            outgoingMessageProcessor.toggleReaction(
+                groupId = groupId,
+                messageId = messageId,
+                emoji = emoji,
+                invitations = groupInvitationDao.findByGroupId(groupId)
+            )
+        }
 
     override suspend fun deleteMessage(groupId: String, messageId: String): Result<Unit> =
-        outgoingMessageProcessor.deleteMessage(
+        safeSuspendCall {
+            outgoingMessageProcessor.deleteMessage(
+                groupId = groupId,
+                messageId = messageId,
+                invitations = groupInvitationDao.findByGroupId(groupId)
+            )
+        }
+
+    override suspend fun editMessage(
+        groupId: String,
+        messageId: String,
+        text: String
+    ): Result<Unit> = safeSuspendCall {
+        outgoingMessageProcessor.editMessage(
             groupId = groupId,
             messageId = messageId,
+            text = text,
             invitations = groupInvitationDao.findByGroupId(groupId)
         )
+    }
 
-    override suspend fun retry(messageId: String): Result<Unit> =
+    override suspend fun retry(messageId: String): Result<Unit> = safeSuspendCall {
         outgoingMessageProcessor.retry(messageId)
+    }
 
-    override suspend fun markConversationRead(groupId: String): Result<Unit> =
+    override suspend fun markConversationRead(groupId: String): Result<Unit> = safeSuspendCall {
         outgoingMessageProcessor.sendReadReceipts(groupId)
+    }
 }

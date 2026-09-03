@@ -1,18 +1,13 @@
 package com.cbgm.sparrow.feature.chats.presentation.component
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Reply
+import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -38,7 +33,7 @@ import com.cbgm.sparrow.resources.feature_chats_you
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-internal fun MessageReplyPreview(
+internal fun MessageReplyInlay(
     reply: MessageReplyUi,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
@@ -59,53 +54,12 @@ internal fun MessageReplyPreview(
         color = color.darker(0.9f),
         contentColor = MaterialTheme.colorScheme.primary
     ) {
-        ReplyPreviewContent(reply = reply, isMine = isMine)
+        Content(reply = reply, isMine = isMine)
     }
 }
 
 @Composable
-internal fun ComposerReplyPreview(
-    reply: MessageReplyUi,
-    onCancel: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(
-                horizontal = MaterialTheme.spacing.base,
-                vertical = MaterialTheme.spacing.micro
-            ),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
-    ) {
-        ComposerReplyPreviewContent(
-            reply = reply,
-            modifier = Modifier.weight(1f)
-        )
-
-        Surface(
-            modifier = Modifier
-                .size(Dimens.MediaSelection.previewRemoveButtonSize)
-                .clickable(onClick = onCancel),
-            shape = CircleShape,
-            border = BorderStroke(1.dp, color = MaterialTheme.colorScheme.primary),
-            color = Color.Transparent
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = null,
-                    modifier = Modifier.size(Dimens.MediaSelection.previewRemoveIconSize),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ReplyPreviewContent(
+private fun Content(
     reply: MessageReplyUi,
     modifier: Modifier = Modifier,
     isMine: Boolean
@@ -135,7 +89,7 @@ private fun ReplyPreviewContent(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            imageVector = Icons.Default.Reply,
+            imageVector = Icons.AutoMirrored.Filled.Reply,
             contentDescription = null,
             modifier = Modifier.size(Dimens.MessageBubble.iconSize)
         )
@@ -154,44 +108,6 @@ private fun ReplyPreviewContent(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
-}
-
-@Composable
-private fun ComposerReplyPreviewContent(
-    reply: MessageReplyUi,
-    modifier: Modifier = Modifier
-) {
-    val (sender, previewText) = rememberReplyPreviewData(reply)
-
-    Column(modifier = modifier) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Reply,
-                contentDescription = null,
-                modifier = Modifier.size(Dimens.MessageBubble.iconSize),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = sender,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-        previewText?.takeIf(String::isNotBlank)?.let { text ->
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -222,9 +138,9 @@ private fun rememberReplyPreviewData(reply: MessageReplyUi): Pair<String, String
 
 @Preview
 @Composable
-private fun MessageReplyPreviewPreview() {
+private fun MessageReplyPreview() {
     SparrowTheme {
-        MessageReplyPreview(
+        MessageReplyInlay(
             reply =
                 MessageReplyUi(
                     messageId = "message-1",
@@ -235,22 +151,6 @@ private fun MessageReplyPreviewPreview() {
                 ),
             color = MaterialTheme.colorScheme.surfaceContainer,
             isMine = false
-        )
-    }
-}
-
-@Preview
-@Composable
-private fun ComposerReplyPreviewPreview() {
-    SparrowTheme {
-        ComposerReplyPreview(
-            reply =
-                MessageReplyUi(
-                    messageId = "message-1",
-                    isMine = true,
-                    previewText = "The original message should only appear as a short excerpt in the composer"
-                ),
-            onCancel = {}
         )
     }
 }

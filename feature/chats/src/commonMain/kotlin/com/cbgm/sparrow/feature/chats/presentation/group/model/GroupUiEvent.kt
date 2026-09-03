@@ -18,6 +18,12 @@ sealed interface GroupUiEvent {
 
     data object CancelReply : GroupUiEvent
 
+    data class EditMessage(
+        val messageId: String
+    ) : GroupUiEvent
+
+    data object CancelEdit : GroupUiEvent
+
     data class MessageReactionSelected(
         val messageId: String,
         val emoji: String

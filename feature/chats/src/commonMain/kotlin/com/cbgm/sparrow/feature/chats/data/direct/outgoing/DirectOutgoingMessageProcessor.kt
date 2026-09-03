@@ -8,6 +8,7 @@ import com.cbgm.sparrow.core.protocol.message.MessageReactionPayload
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.ChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.MessageDeletionPacket
+import com.cbgm.sparrow.core.protocol.packet.MessageEditPacket
 import com.cbgm.sparrow.core.protocol.packet.ReadReceiptPacket
 import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
@@ -148,6 +149,40 @@ class DirectOutgoingMessageProcessor(
                 )
             protocolOutbox.enqueue(target.contactId, packet).getOrThrow()
             discardMessages(listOf(message))
+        }
+
+    suspend fun editMessage(conversationId: String, messageId: String, text: String): Result<Unit> =
+        runCatching {
+            require(messageId.isNotBlank()) { "Message ID must not be blank" }
+            val normalizedText = text.trim()
+            require(normalizedText.isNotBlank()) { "Edited message text must not be blank" }
+
+            val target = loadTarget(conversationId)
+            val message = chatDao.findMessageById(messageId) ?: error("Message was not found")
+            check(message.conversationId == conversationId) { "Message does not belong to this conversation" }
+            check(message.isMine) { "Only your own messages can be edited" }
+            check(message.deliveryStatus != MessageDeliveryStatus.READ.name) { "Read messages cannot be edited" }
+            check(message.text.isNotBlank()) { "Only text messages can be edited" }
+            check(attachmentTransfer.protocolAttachments(messageId).isEmpty()) {
+                "Messages with attachments cannot be edited"
+            }
+
+            if (message.deliveryStatus == MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION.name) {
+                chatDao.upsertMessage(message.copy(text = normalizedText))
+                return@runCatching
+            }
+
+            requireDirectChatAuthorization(target.contactId).getOrThrow()
+            protocolOutbox.enqueue(
+                target.contactId,
+                MessageEditPacket(
+                    packetId = IdGenerator.generate(prefix = "edit-packet"),
+                    messageId = messageId,
+                    editedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
+                    text = normalizedText
+                )
+            ).getOrThrow()
+            chatDao.upsertMessage(message.copy(text = normalizedText))
         }
 
     suspend fun queueUntilAuthorized(

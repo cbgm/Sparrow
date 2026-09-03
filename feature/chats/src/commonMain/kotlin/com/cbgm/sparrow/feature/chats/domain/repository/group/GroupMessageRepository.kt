@@ -14,6 +14,8 @@ interface GroupMessageRepository {
 
     suspend fun deleteMessage(groupId: String, messageId: String): Result<Unit>
 
+    suspend fun editMessage(groupId: String, messageId: String, text: String): Result<Unit>
+
     suspend fun retry(messageId: String): Result<Unit>
 
     suspend fun markConversationRead(groupId: String): Result<Unit>
