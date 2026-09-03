@@ -54,6 +54,7 @@ import com.cbgm.sparrow.core.ui.component.PatternBackground
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
+import com.cbgm.sparrow.core.ui.device.clipboard.rememberClipboardWriter
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -140,6 +141,8 @@ fun DirectScreen(
         messageContextAnchor
             ?.messageId
             ?.let { messageId -> uiState.messages.firstOrNull { it.id == messageId } }
+    val contextMessageText = contextMessage?.textPart?.text?.takeIf { it.isNotBlank() }
+    val clipboardWriter = rememberClipboardWriter()
 
     val activeContextAnchor =
         messageContextAnchor?.takeIf {
@@ -170,6 +173,9 @@ fun DirectScreen(
             contextMessage?.let { message ->
                 onUiEvent(DirectUiEvent.MessageReactionSelected(message.id, emoji))
             }
+        },
+        onCopyClick = {
+            contextMessageText?.let(clipboardWriter::copyText)
         },
         onDeleteClick = {
             contextMessage?.let { message ->

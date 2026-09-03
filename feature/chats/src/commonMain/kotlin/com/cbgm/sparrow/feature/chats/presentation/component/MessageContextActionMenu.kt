@@ -31,6 +31,7 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.feature_chats_copy
 import com.cbgm.sparrow.resources.feature_chats_delete_message
 import com.cbgm.sparrow.resources.feature_chats_reply
 import org.jetbrains.compose.resources.stringResource
@@ -64,7 +65,7 @@ internal fun MessageContextActionMenu(
             HorizontalDivider(thickness = Dimens.Base.dividerThickness)
 
             MessageActionItem(
-                text = "Copy",
+                text = stringResource(Res.string.feature_chats_copy),
                 onClick = onCopyClick,
                 Icons.Default.ContentCopy
             )

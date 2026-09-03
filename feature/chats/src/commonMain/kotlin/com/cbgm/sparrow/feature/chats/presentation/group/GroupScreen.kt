@@ -49,6 +49,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowBannerButton
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
+import com.cbgm.sparrow.core.ui.device.clipboard.rememberClipboardWriter
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -150,6 +151,8 @@ fun GroupScreen(
         messageContextAnchor
             ?.messageId
             ?.let { messageId -> uiState.messages.firstOrNull { it.id == messageId } }
+    val contextMessageText = contextMessage?.bubble?.textPart?.text?.takeIf { it.isNotBlank() }
+    val clipboardWriter = rememberClipboardWriter()
 
     val activeContextAnchor =
         messageContextAnchor?.takeIf {
@@ -180,6 +183,9 @@ fun GroupScreen(
             contextMessage?.let { message ->
                 onUiEvent(GroupUiEvent.MessageReactionSelected(message.id, emoji))
             }
+        },
+        onCopyClick = {
+            contextMessageText?.let(clipboardWriter::copyText)
         },
         onDeleteClick = {
             contextMessage?.let { message ->
