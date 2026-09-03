@@ -5,13 +5,13 @@ import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.core.protocol.message.GroupMessageContent
 import com.cbgm.sparrow.core.protocol.message.GroupMessageContentCodec
+import com.cbgm.sparrow.core.protocol.message.MessageDeletionPayload
 import com.cbgm.sparrow.core.protocol.message.MessageReactionPayload
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.GroupChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.ReadReceiptPacket
 import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
-import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
@@ -68,7 +68,7 @@ class GroupOutgoingMessageProcessor(
         replyToMessageId: String? = null,
         invitations: List<GroupInvitationEntity>
     ): Result<Unit> =
-        safeSuspendCall {
+        runCatching {
             sendMutex.withLock {
                 val normalizedText = requireMessageContent(text, attachments)
                 requireActiveMembership(groupId, invitations)
@@ -95,7 +95,7 @@ class GroupOutgoingMessageProcessor(
         emoji: String,
         invitations: List<GroupInvitationEntity>
     ): Result<Unit> =
-        safeSuspendCall {
+        runCatching {
             require(messageId.isNotBlank()) { "Message ID must not be blank" }
             require(emoji.isNotBlank()) { "Reaction emoji must not be blank" }
             requireActiveMembership(groupId, invitations)
@@ -147,8 +147,65 @@ class GroupOutgoingMessageProcessor(
             }
         }
 
+    suspend fun deleteMessage(
+        groupId: String,
+        messageId: String,
+        invitations: List<GroupInvitationEntity>
+    ): Result<Unit> =
+        runCatching {
+            require(messageId.isNotBlank()) { "Message ID must not be blank" }
+            requireActiveMembership(groupId, invitations)
+            val target = chatDao.findMessageById(messageId) ?: error("Message was not found")
+            check(target.conversationId == groupId) { "Message does not belong to this group" }
+            check(target.transportMode == GROUP_END_TO_END_ENCRYPTED_MODE) { "Only user messages can be deleted" }
+            check(target.isMine) { "Only your own messages can be deleted for everyone" }
+            val recipients = findCurrentEpochRecipients(groupId)
+            check(recipients.isNotEmpty()) { "Group has no active recipients" }
+
+            val eventId = IdGenerator.generate(prefix = "group-delete")
+            val timestamp = SystemClock.nowEpochMilliseconds()
+            val profilePicture =
+                localProfilePictureMetadataProvider
+                    .forMessage()
+                    .getOrElse { ProfilePictureMetadata() }
+            val plaintext =
+                groupMessageContentCodec.encode(
+                    GroupMessageContent(deletion = MessageDeletionPayload(messageId))
+                )
+            val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+            val secured =
+                groupSecurityManager.encryptMessage(
+                    groupId = groupId,
+                    messageId = eventId,
+                    sentAtEpochMilliseconds = timestamp,
+                    plaintext = plaintext,
+                    localSigningKeyPair = localSigningKeyPair,
+                    profilePicture = profilePicture
+                ).getOrThrow()
+
+            recipients.forEach { recipient ->
+                protocolOutbox.enqueue(
+                    recipient.contactId,
+                    GroupChatMessagePacket(
+                        packetId = "group-delete-$eventId-${recipient.contactId}",
+                        groupId = groupId,
+                        epoch = secured.epoch,
+                        messageId = eventId,
+                        sentAtEpochMilliseconds = timestamp,
+                        profilePicture = profilePicture,
+                        nonce = secured.nonce.copyOf(),
+                        ciphertext = secured.ciphertext.copyOf(),
+                        senderSignature = secured.senderSignature.copyOf()
+                    )
+                ).getOrThrow()
+            }
+
+            attachmentTransfer.deleteForMessages(listOf(messageId))
+            chatDao.deleteMessagesAndRefreshConversations(listOf(target))
+        }
+
     suspend fun retry(messageId: String): Result<Unit> =
-        safeSuspendCall {
+        runCatching {
             require(messageId.isNotBlank()) { "Message ID must not be blank" }
 
             val message = chatDao.findMessageById(messageId) ?: error("Message was not found")
@@ -177,7 +234,7 @@ class GroupOutgoingMessageProcessor(
         }
 
     suspend fun sendReadReceipts(groupId: String): Result<Unit> =
-        safeSuspendCall {
+        runCatching {
             require(groupId.isNotBlank()) { "Group ID must not be blank" }
             requireGroupConversation(groupId)
 

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Reply
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -30,6 +31,7 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.feature_chats_delete_message
 import com.cbgm.sparrow.resources.feature_chats_reply
 import org.jetbrains.compose.resources.stringResource
 
@@ -38,7 +40,9 @@ internal fun MessageContextActionMenu(
     color: Color,
     onReplyClick: () -> Unit,
     onReactionClick: (String) -> Unit,
-    onCopyClick: () -> Unit
+    onCopyClick: () -> Unit,
+    showDelete: Boolean,
+    onDeleteClick: () -> Unit
 ) {
     Surface(
         modifier = Modifier.width(200.dp),
@@ -64,6 +68,16 @@ internal fun MessageContextActionMenu(
                 onClick = onCopyClick,
                 Icons.Default.ContentCopy
             )
+
+            if (showDelete) {
+                HorizontalDivider(thickness = 0.5.dp)
+
+                MessageActionItem(
+                    text = stringResource(Res.string.feature_chats_delete_message),
+                    onClick = onDeleteClick,
+                    icon = Icons.Default.DeleteOutline
+                )
+            }
         }
     }
 }
@@ -130,7 +144,9 @@ private fun MessagePopUpMenuPreview() {
             color = MaterialTheme.colorScheme.surface,
             onReplyClick = {},
             onReactionClick = {},
-            onCopyClick = {}
+            onCopyClick = {},
+            showDelete = true,
+            onDeleteClick = {}
         )
     }
 }

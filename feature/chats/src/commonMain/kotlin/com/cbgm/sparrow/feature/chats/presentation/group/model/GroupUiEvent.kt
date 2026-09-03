@@ -23,6 +23,10 @@ sealed interface GroupUiEvent {
         val emoji: String
     ) : GroupUiEvent
 
+    data class DeleteMessage(
+        val messageId: String
+    ) : GroupUiEvent
+
     data class MediaSelected(
         val media: List<MediaSelection>
     ) : GroupUiEvent

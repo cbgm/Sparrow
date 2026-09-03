@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.feature.chats.data.group.repository
 
-import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupOutgoingMessageProcessor
@@ -15,7 +14,7 @@ class GroupMessageRepositoryImpl(
         text: String,
         attachments: List<OutgoingMessageAttachment>,
         replyToMessageId: String?
-    ): Result<Unit> = safeSuspendCall {
+    ): Result<Unit> =
         outgoingMessageProcessor.send(
             groupId = groupId,
             text = text,
@@ -23,22 +22,25 @@ class GroupMessageRepositoryImpl(
             replyToMessageId = replyToMessageId,
             invitations = groupInvitationDao.findByGroupId(groupId)
         )
-    }
 
-    override suspend fun toggleReaction(groupId: String, messageId: String, emoji: String): Result<Unit> = safeSuspendCall {
+    override suspend fun toggleReaction(groupId: String, messageId: String, emoji: String): Result<Unit> =
         outgoingMessageProcessor.toggleReaction(
             groupId = groupId,
             messageId = messageId,
             emoji = emoji,
             invitations = groupInvitationDao.findByGroupId(groupId)
         )
-    }
 
-    override suspend fun retry(messageId: String): Result<Unit> = safeSuspendCall {
+    override suspend fun deleteMessage(groupId: String, messageId: String): Result<Unit> =
+        outgoingMessageProcessor.deleteMessage(
+            groupId = groupId,
+            messageId = messageId,
+            invitations = groupInvitationDao.findByGroupId(groupId)
+        )
+
+    override suspend fun retry(messageId: String): Result<Unit> =
         outgoingMessageProcessor.retry(messageId)
-    }
 
-    override suspend fun markConversationRead(groupId: String): Result<Unit> = safeSuspendCall {
+    override suspend fun markConversationRead(groupId: String): Result<Unit> =
         outgoingMessageProcessor.sendReadReceipts(groupId)
-    }
 }

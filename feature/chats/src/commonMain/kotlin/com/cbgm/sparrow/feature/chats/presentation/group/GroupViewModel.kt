@@ -15,6 +15,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationStat
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupChatContext
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.AcceptGroupInvitationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeclineGroupInvitationUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeleteGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.MarkGroupConversationReadUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupChatContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupMemberTypingUseCase
@@ -48,6 +49,7 @@ class GroupViewModel(
     private val markConversationRead: MarkGroupConversationReadUseCase,
     private val retryMessage: RetryGroupMessageUseCase,
     private val toggleMessageReaction: ToggleGroupMessageReactionUseCase,
+    private val deleteMessageUseCase: DeleteGroupMessageUseCase,
     private val acceptInvitation: AcceptGroupInvitationUseCase,
     private val declineInvitation: DeclineGroupInvitationUseCase,
     observeMemberTyping: ObserveGroupMemberTypingUseCase,
@@ -149,6 +151,7 @@ class GroupViewModel(
             is GroupUiEvent.ReplyToMessage -> startReply(event.messageId)
             GroupUiEvent.CancelReply -> clearReply()
             is GroupUiEvent.MessageReactionSelected -> toggleReaction(event.messageId, event.emoji)
+            is GroupUiEvent.DeleteMessage -> deleteMessage(event.messageId)
             is GroupUiEvent.MediaSelected -> updateMediaSelection(event.media)
             is GroupUiEvent.OpenFilePicker -> navigator.navigateTo(AppRoute.FilePicker(event.sessionId))
             is GroupUiEvent.ShareCurrentLocation ->
@@ -311,6 +314,13 @@ class GroupViewModel(
         viewModelScope.launch {
             toggleMessageReaction(groupId, messageId, emoji)
                 .onFailure { error -> errorMessage.value = error.message ?: "Reaction could not be sent" }
+        }
+    }
+
+    private fun deleteMessage(messageId: String) {
+        viewModelScope.launch {
+            deleteMessageUseCase(groupId, messageId)
+                .onFailure { error -> errorMessage.value = error.message ?: "Message could not be deleted" }
         }
     }
 

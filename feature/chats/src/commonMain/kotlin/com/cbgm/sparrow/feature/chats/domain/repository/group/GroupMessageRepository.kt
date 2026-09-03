@@ -12,6 +12,8 @@ interface GroupMessageRepository {
 
     suspend fun toggleReaction(groupId: String, messageId: String, emoji: String): Result<Unit>
 
+    suspend fun deleteMessage(groupId: String, messageId: String): Result<Unit>
+
     suspend fun retry(messageId: String): Result<Unit>
 
     suspend fun markConversationRead(groupId: String): Result<Unit>

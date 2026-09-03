@@ -67,10 +67,12 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
 import com.cbgm.sparrow.feature.chats.presentation.component.AddSharedContactDialog
+import com.cbgm.sparrow.feature.chats.presentation.component.DissolvingMessageListState
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageBubble
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageContextAnchor
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageContextHost
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageControl
+import com.cbgm.sparrow.feature.chats.presentation.component.MessageDissolve
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageInputActions
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageInputState
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageReactionBurst
@@ -78,6 +80,7 @@ import com.cbgm.sparrow.feature.chats.presentation.component.captureMessageConte
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toMessageAttachmentsUi
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toSharedContact
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
+import com.cbgm.sparrow.feature.chats.presentation.component.rememberDissolvingMessageListState
 import com.cbgm.sparrow.feature.chats.presentation.component.rememberMessageJumpState
 import com.cbgm.sparrow.feature.chats.presentation.component.rememberMessageSearchTargetState
 import com.cbgm.sparrow.feature.chats.presentation.direct.component.IdentitySetupDialog
@@ -166,6 +169,11 @@ fun DirectScreen(
         onReactionClick = { emoji ->
             contextMessage?.let { message ->
                 onUiEvent(DirectUiEvent.MessageReactionSelected(message.id, emoji))
+            }
+        },
+        onDeleteClick = {
+            contextMessage?.let { message ->
+                onUiEvent(DirectUiEvent.DeleteMessage(message.id))
             }
         },
         reactionBurst = reactionBurst,
@@ -495,18 +503,23 @@ private fun Content(
     onContactClick: (SharedContact) -> Unit
 ) {
     val fillModifier = Modifier.fillMaxSize().padding(innerPadding)
+    val messageState =
+        rememberDissolvingMessageListState(
+            messages = uiState.messages,
+            idOf = MessageBubbleUi::id
+        )
 
     when {
         uiState.isLoading -> LoadingContent(modifier = fillModifier)
 
-        uiState.messages.isEmpty() -> EmptyContent(
+        messageState.messages.isEmpty() -> EmptyContent(
             contactName = uiState.contactName,
             securityState = uiState.contactSecurityState,
             modifier = fillModifier
         )
 
         else -> MessageList(
-            messages = uiState.messages,
+            messageState = messageState,
             listState = listState,
             targetMessageId = targetMessageId,
             selectedContextMessageId = selectedContextMessageId,
@@ -524,7 +537,7 @@ private fun Content(
 
 @Composable
 private fun MessageList(
-    messages: List<MessageBubbleUi>,
+    messageState: DissolvingMessageListState<MessageBubbleUi>,
     listState: LazyListState,
     targetMessageId: String?,
     selectedContextMessageId: String?,
@@ -537,6 +550,7 @@ private fun MessageList(
     onContactClick: (SharedContact) -> Unit,
     contentPadding: PaddingValues
 ) {
+    val messages = messageState.messages
     val searchTargetState =
         rememberMessageSearchTargetState(
             targetMessageId = targetMessageId,
@@ -569,43 +583,48 @@ private fun MessageList(
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
         items(items = messages, key = MessageBubbleUi::id) { message ->
-            var anchor by remember(message.id) { mutableStateOf<MessageContextAnchor?>(null) }
-            val isContextSelected = selectedContextMessageId == message.id
+            MessageDissolve(
+                isDissolving = messageState.isDissolving(message),
+                onFinished = { messageState.finishDissolve(message.id) }
+            ) {
+                var anchor by remember(message.id) { mutableStateOf<MessageContextAnchor?>(null) }
+                val isContextSelected = selectedContextMessageId == message.id
 
-            MessageBubble(
-                message = message,
-                onRetryClick = { onRetryMessage(message.id) },
-                onSafetyDetailsClick = { warning ->
-                    onSafetyWarningClick(message.id, warning)
-                },
-                onAttachmentVisible = onAttachmentVisible,
-                onAttachmentClick = { attachmentId -> onAttachmentClick(message.id, attachmentId) },
-                onContactClick = onContactClick,
-                onReplyPreviewClick = replyJumpState.jumpTo,
-                onActionMenuVisibilityChange = { isVisible ->
-                    if (isVisible) {
-                        anchor?.let(onContextMessageRequested)
-                    }
-                },
-                onReactionsClick = { boundsInRoot ->
-                    onReactionBurstRequested(
-                        MessageReactionBurst(
-                            reactions = message.reactions,
-                            boundsInRoot = boundsInRoot
+                MessageBubble(
+                    message = message,
+                    onRetryClick = { onRetryMessage(message.id) },
+                    onSafetyDetailsClick = { warning ->
+                        onSafetyWarningClick(message.id, warning)
+                    },
+                    onAttachmentVisible = onAttachmentVisible,
+                    onAttachmentClick = { attachmentId -> onAttachmentClick(message.id, attachmentId) },
+                    onContactClick = onContactClick,
+                    onReplyPreviewClick = replyJumpState.jumpTo,
+                    onActionMenuVisibilityChange = { isVisible ->
+                        if (isVisible) {
+                            anchor?.let(onContextMessageRequested)
+                        }
+                    },
+                    onReactionsClick = { boundsInRoot ->
+                        onReactionBurstRequested(
+                            MessageReactionBurst(
+                                reactions = message.reactions,
+                                boundsInRoot = boundsInRoot
+                            )
                         )
-                    )
-                },
-                modifier = Modifier
-                    .captureMessageContextAnchor(
-                        messageId = message.id,
-                        isMine = message.isMine,
-                        onAnchorChanged = { anchor = it }
-                    )
-                    .alpha(if (isContextSelected) 0f else 1f),
-                isSearchHighlighted =
-                    message.id == searchTargetState.highlightedMessageId ||
-                        message.id == replyJumpState.highlightedMessageId
-            )
+                    },
+                    modifier = Modifier
+                        .captureMessageContextAnchor(
+                            messageId = message.id,
+                            isMine = message.isMine,
+                            onAnchorChanged = { anchor = it }
+                        )
+                        .alpha(if (isContextSelected) 0f else 1f),
+                    isSearchHighlighted =
+                        message.id == searchTargetState.highlightedMessageId ||
+                            message.id == replyJumpState.highlightedMessageId
+                )
+            }
         }
     }
 }

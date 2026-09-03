@@ -444,6 +444,7 @@
     <string name="feature_chats_group_verify_admin_title">Verify group admin</string>
     <string name="feature_chats_group_verify_admin_description">Compare the safety number or scan the admin QR code. This verification belongs only to this group.</string>
     <string name="feature_chats_group_qr_identity_mismatch">The scanned QR code does not belong to the selected group member.</string>
+    <string name="feature_chats_delete_message">Delete</string>
     <string name="feature_chats_delete_conversation">Delete conversation</string>
     <string name="feature_chats_group_deleted_title">This group conversation was deleted</string>
     <string name="feature_chats_group_deleted_description">The group admin deleted this conversation. You can still read the existing history, but no new messages can be sent.</string>

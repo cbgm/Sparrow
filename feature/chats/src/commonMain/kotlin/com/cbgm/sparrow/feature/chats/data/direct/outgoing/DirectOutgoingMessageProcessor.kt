@@ -4,6 +4,7 @@ import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment
+import com.cbgm.sparrow.core.protocol.message.MessageDeletionPayload
 import com.cbgm.sparrow.core.protocol.message.MessageReactionPayload
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.ChatMessagePacket
@@ -122,6 +123,38 @@ class DirectOutgoingMessageProcessor(
                 profilePicture = localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
             )
             protocolOutbox.enqueue(target.contactId, packet).getOrThrow()
+        }
+
+    suspend fun deleteMessage(conversationId: String, messageId: String): Result<Unit> =
+        runCatching {
+            require(messageId.isNotBlank()) { "Message ID must not be blank" }
+            val target = loadTarget(conversationId)
+            val message = chatDao.findMessageById(messageId) ?: error("Message was not found")
+            check(message.conversationId == conversationId) { "Message does not belong to this conversation" }
+            check(message.isMine) { "Only your own messages can be deleted for everyone" }
+
+            if (message.deliveryStatus == MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION.name) {
+                discardMessages(listOf(message))
+                return@runCatching
+            }
+
+            requireDirectChatAuthorization(target.contactId).getOrThrow()
+
+            val packet =
+                ChatMessagePacket(
+                    packetId = IdGenerator.generate(prefix = "delete-packet"),
+                    messageId = IdGenerator.generate(prefix = "delete"),
+                    sentAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
+                    text = "",
+                    deletion = MessageDeletionPayload(messageId),
+                    senderPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow(),
+                    profilePicture =
+                        localProfilePictureMetadataProvider
+                            .forMessage()
+                            .getOrElse { ProfilePictureMetadata() }
+                )
+            protocolOutbox.enqueue(target.contactId, packet).getOrThrow()
+            discardMessages(listOf(message))
         }
 
     suspend fun queueUntilAuthorized(

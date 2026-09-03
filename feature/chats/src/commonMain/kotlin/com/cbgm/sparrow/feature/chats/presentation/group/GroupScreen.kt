@@ -64,10 +64,12 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMemberInvitationStatus
 import com.cbgm.sparrow.feature.chats.presentation.component.AddSharedContactDialog
+import com.cbgm.sparrow.feature.chats.presentation.component.DissolvingMessageListState
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageBubble
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageContextAnchor
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageContextHost
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageControl
+import com.cbgm.sparrow.feature.chats.presentation.component.MessageDissolve
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageInputActions
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageInputState
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageReactionBurst
@@ -76,6 +78,7 @@ import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toMessageAtt
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toSharedContact
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessagePartUi
+import com.cbgm.sparrow.feature.chats.presentation.component.rememberDissolvingMessageListState
 import com.cbgm.sparrow.feature.chats.presentation.component.rememberMessageJumpState
 import com.cbgm.sparrow.feature.chats.presentation.component.rememberMessageSearchTargetState
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMessageUi
@@ -176,6 +179,11 @@ fun GroupScreen(
         onReactionClick = { emoji ->
             contextMessage?.let { message ->
                 onUiEvent(GroupUiEvent.MessageReactionSelected(message.id, emoji))
+            }
+        },
+        onDeleteClick = {
+            contextMessage?.let { message ->
+                onUiEvent(GroupUiEvent.DeleteMessage(message.id))
             }
         },
         reactionBurst = reactionBurst,
@@ -496,17 +504,22 @@ private fun Content(
     onContactClick: (SharedContact) -> Unit
 ) {
     val fillModifier = Modifier.fillMaxSize().padding(innerPadding)
+    val messageState =
+        rememberDissolvingMessageListState(
+            messages = uiState.messages,
+            idOf = GroupMessageUi::id
+        )
 
     when {
         uiState.isLoading -> LoadingContent(modifier = fillModifier)
 
-        uiState.messages.isEmpty() -> EmptyContent(
+        messageState.messages.isEmpty() -> EmptyContent(
             title = uiState.title,
             modifier = fillModifier
         )
 
         else -> MessageList(
-            messages = uiState.messages,
+            messageState = messageState,
             listState = listState,
             targetMessageId = targetMessageId,
             selectedContextMessageId = selectedContextMessageId,
@@ -524,7 +537,7 @@ private fun Content(
 
 @Composable
 private fun MessageList(
-    messages: List<GroupMessageUi>,
+    messageState: DissolvingMessageListState<GroupMessageUi>,
     listState: LazyListState,
     targetMessageId: String?,
     selectedContextMessageId: String?,
@@ -537,6 +550,7 @@ private fun MessageList(
     onContactClick: (SharedContact) -> Unit,
     contentPadding: PaddingValues
 ) {
+    val messages = messageState.messages
     val searchTargetState =
         rememberMessageSearchTargetState(
             targetMessageId = targetMessageId,
@@ -569,27 +583,32 @@ private fun MessageList(
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
         items(items = messages, key = GroupMessageUi::id) { message ->
-            if (message.type == ChatMessageType.USER) {
-                GroupMessageBubble(
-                    message = message,
-                    onRetryMessage = onRetryMessage,
-                    onSafetyWarningClick = onSafetyWarningClick,
-                    onAttachmentVisible = onAttachmentVisible,
-                    onAttachmentClick = onAttachmentClick,
-                    onContactClick = onContactClick,
-                    onReplyPreviewClick = replyJumpState.jumpTo,
-                    onContextMessageRequested = onContextMessageRequested,
-                    onReactionBurstRequested = onReactionBurstRequested,
-                    isContextSelected = selectedContextMessageId == message.id,
-                    isSearchHighlighted =
-                        message.id == searchTargetState.highlightedMessageId ||
-                            message.id == replyJumpState.highlightedMessageId
-                )
-            } else {
-                MembershipSystemMessage(
-                    type = message.type,
-                    memberName = message.bubble.senderName
-                )
+            MessageDissolve(
+                isDissolving = messageState.isDissolving(message),
+                onFinished = { messageState.finishDissolve(message.id) }
+            ) {
+                if (message.type == ChatMessageType.USER) {
+                    GroupMessageBubble(
+                        message = message,
+                        onRetryMessage = onRetryMessage,
+                        onSafetyWarningClick = onSafetyWarningClick,
+                        onAttachmentVisible = onAttachmentVisible,
+                        onAttachmentClick = onAttachmentClick,
+                        onContactClick = onContactClick,
+                        onReplyPreviewClick = replyJumpState.jumpTo,
+                        onContextMessageRequested = onContextMessageRequested,
+                        onReactionBurstRequested = onReactionBurstRequested,
+                        isContextSelected = selectedContextMessageId == message.id,
+                        isSearchHighlighted =
+                            message.id == searchTargetState.highlightedMessageId ||
+                                message.id == replyJumpState.highlightedMessageId
+                    )
+                } else {
+                    MembershipSystemMessage(
+                        type = message.type,
+                        memberName = message.bubble.senderName
+                    )
+                }
             }
         }
     }

@@ -65,6 +65,7 @@ internal fun MessageContextHost(
     reactionBurst: MessageReactionBurst? = null,
     onReactionBurstDismiss: () -> Unit = {},
     onCopyClick: () -> Unit = {},
+    onDeleteClick: () -> Unit,
     preview: @Composable () -> Unit,
     content: @Composable () -> Unit
 ) {
@@ -109,6 +110,10 @@ internal fun MessageContextHost(
                     onDismiss()
                     onCopyClick()
                 },
+                onDeleteClick = {
+                    onDismiss()
+                    onDeleteClick()
+                },
                 preview = preview
             )
         }
@@ -129,6 +134,7 @@ internal fun MessageContextOverlay(
     onDismiss: () -> Unit,
     onReplyClick: () -> Unit,
     onReactionClick: (String) -> Unit,
+    onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier,
     onCopyClick: () -> Unit = {},
     preview: @Composable () -> Unit
@@ -161,7 +167,14 @@ internal fun MessageContextOverlay(
                 horizontalAlignment = if (anchor.isMine) Alignment.End else Alignment.Start
             ) {
                 Box(modifier = Modifier.width(previewWidth)) { preview() }
-                MessageContextActionMenu(menuColor, onReplyClick, onReactionClick, onCopyClick)
+                MessageContextActionMenu(
+                    color = menuColor,
+                    onReplyClick = onReplyClick,
+                    onReactionClick = onReactionClick,
+                    onCopyClick = onCopyClick,
+                    showDelete = anchor.isMine,
+                    onDeleteClick = onDeleteClick
+                )
             }
         }
     ) { measurables, constraints ->

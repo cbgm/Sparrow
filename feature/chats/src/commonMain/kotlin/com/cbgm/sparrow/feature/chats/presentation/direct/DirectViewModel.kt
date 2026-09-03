@@ -12,6 +12,7 @@ import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachme
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.attachments.domain.usecase.LoadMessageAttachmentUseCase
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingMessageAttachment
+import com.cbgm.sparrow.feature.chats.domain.usecase.direct.DeleteDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.MarkDirectConversationReadUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectChatContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectTypingUseCase
@@ -49,6 +50,7 @@ class DirectViewModel(
     private val markConversationRead: MarkDirectConversationReadUseCase,
     private val retryMessage: RetryDirectMessageUseCase,
     private val toggleMessageReaction: ToggleDirectMessageReactionUseCase,
+    private val deleteMessageUseCase: DeleteDirectMessageUseCase,
     private val ensureIdentityExchangeStarted: EnsureIdentityExchangeStartedUseCase,
     private val requireDirectChatAuthorization: RequireDirectChatAuthorizationUseCase,
     private val observeTyping: ObserveDirectTypingUseCase,
@@ -155,6 +157,7 @@ class DirectViewModel(
             is DirectUiEvent.ReplyToMessage -> startReply(event.messageId)
             DirectUiEvent.CancelReply -> clearReply()
             is DirectUiEvent.MessageReactionSelected -> toggleReaction(event.messageId, event.emoji)
+            is DirectUiEvent.DeleteMessage -> deleteMessage(event.messageId)
             is DirectUiEvent.MediaSelected -> updateMediaSelection(event.media)
             is DirectUiEvent.OpenFilePicker -> navigator.navigateTo(AppRoute.FilePicker(event.sessionId))
             is DirectUiEvent.ShareCurrentLocation -> sendAttachmentOnly(event.location.toOutgoingMessageAttachment())
@@ -370,6 +373,13 @@ class DirectViewModel(
         viewModelScope.launch {
             toggleMessageReaction(conversationId, messageId, emoji)
                 .onFailure { error -> errorMessage.value = error.message ?: "Reaction could not be sent" }
+        }
+    }
+
+    private fun deleteMessage(messageId: String) {
+        viewModelScope.launch {
+            deleteMessageUseCase(conversationId, messageId)
+                .onFailure { error -> errorMessage.value = error.message ?: "Message could not be deleted" }
         }
     }
 

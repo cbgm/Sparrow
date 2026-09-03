@@ -443,6 +443,7 @@
     <string name="feature_chats_group_verify_admin_title">Gruppenadmin verifizieren</string>
     <string name="feature_chats_group_verify_admin_description">Vergleiche die Sicherheitsnummer oder scanne den QR-Code des Admins. Diese Verifizierung gilt nur für diese Gruppe.</string>
     <string name="feature_chats_group_qr_identity_mismatch">Der gescannte QR-Code gehört nicht zum ausgewählten Gruppenmitglied.</string>
+    <string name="feature_chats_delete_message">Löschen</string>
     <string name="feature_chats_delete_conversation">Unterhaltung löschen</string>
     <string name="feature_chats_group_deleted_title">Diese Gruppenunterhaltung wurde gelöscht</string>
     <string name="feature_chats_group_deleted_description">Der Gruppenadmin hat diese Unterhaltung gelöscht. Der bisherige Verlauf bleibt lesbar, aber es können keine neuen Nachrichten gesendet werden.</string>

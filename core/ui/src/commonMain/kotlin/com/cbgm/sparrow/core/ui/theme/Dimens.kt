@@ -82,6 +82,15 @@ object Dimens {
         const val burstRadiusVariantCount = 4
     }
 
+    object MessageDeletion {
+        val maxBlurRadius = 10.dp
+
+        const val dissolveDurationMillis = 420
+        const val collapseDurationMillis = 140
+        const val collapseDelayMillis = dissolveDurationMillis - collapseDurationMillis
+        const val endScale = 0.92f
+    }
+
     object MessageInput {
         val buttonWidth = 42.dp
         val buttonHeight = 29.dp

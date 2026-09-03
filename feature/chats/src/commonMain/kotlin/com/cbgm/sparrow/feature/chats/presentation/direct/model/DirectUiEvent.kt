@@ -23,6 +23,10 @@ sealed interface DirectUiEvent {
         val emoji: String
     ) : DirectUiEvent
 
+    data class DeleteMessage(
+        val messageId: String
+    ) : DirectUiEvent
+
     data class MediaSelected(
         val media: List<MediaSelection>
     ) : DirectUiEvent
