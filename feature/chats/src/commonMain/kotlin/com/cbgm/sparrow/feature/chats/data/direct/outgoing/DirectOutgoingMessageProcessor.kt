@@ -4,10 +4,10 @@ import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment
-import com.cbgm.sparrow.core.protocol.message.MessageDeletionPayload
 import com.cbgm.sparrow.core.protocol.message.MessageReactionPayload
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.ChatMessagePacket
+import com.cbgm.sparrow.core.protocol.packet.MessageDeletionPacket
 import com.cbgm.sparrow.core.protocol.packet.ReadReceiptPacket
 import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
@@ -141,17 +141,10 @@ class DirectOutgoingMessageProcessor(
             requireDirectChatAuthorization(target.contactId).getOrThrow()
 
             val packet =
-                ChatMessagePacket(
+                MessageDeletionPacket(
                     packetId = IdGenerator.generate(prefix = "delete-packet"),
-                    messageId = IdGenerator.generate(prefix = "delete"),
-                    sentAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
-                    text = "",
-                    deletion = MessageDeletionPayload(messageId),
-                    senderPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow(),
-                    profilePicture =
-                        localProfilePictureMetadataProvider
-                            .forMessage()
-                            .getOrElse { ProfilePictureMetadata() }
+                    messageId = messageId,
+                    deletedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
                 )
             protocolOutbox.enqueue(target.contactId, packet).getOrThrow()
             discardMessages(listOf(message))

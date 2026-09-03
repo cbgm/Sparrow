@@ -7,6 +7,7 @@ import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationD
 import com.cbgm.sparrow.feature.chats.data.direct.delivery.DirectMessageDeliveryCoordinator
 import com.cbgm.sparrow.feature.chats.data.direct.delivery.DirectOutboxDeliveryHandler
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.DirectIncomingPacketProcessor
+import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessageDeletionPacketHandler
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessagePacketHandler
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectReceiptPacketHandler
 import com.cbgm.sparrow.feature.chats.data.direct.invitation.DirectInvitationConversationCoordinator
@@ -43,6 +44,7 @@ import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupLeaveRequ
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupMemberActivatedPacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupMemberActivationAcknowledgementPacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupMemberRemovedPacketHandler
+import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupMessageDeletionPacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupReadyAcknowledgementPacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupReceiptPacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupVerificationReceiptPacketHandler
@@ -175,6 +177,7 @@ private fun org.koin.core.module.Module.registerDirectData() {
     singleOf(::DirectOutgoingMessageProcessor)
     singleOf(::DirectPendingAuthorizationMessageCoordinator)
     singleOf(::DirectMessagePacketHandler)
+    singleOf(::DirectMessageDeletionPacketHandler)
     singleOf(::DirectReceiptPacketHandler)
     singleOf(::DirectIncomingPacketProcessor)
 }
@@ -240,6 +243,7 @@ private fun org.koin.core.module.Module.registerGroupData() {
     singleOf(::GroupVerificationSnapshotRequestPacketHandler)
     singleOf(::GroupVerificationSnapshotPacketHandler)
     singleOf(::GroupChatMessagePacketHandler)
+    singleOf(::GroupMessageDeletionPacketHandler)
     singleOf(::GroupPacketHandlerRegistry)
     singleOf(::GroupIncomingPacketProcessor)
 }

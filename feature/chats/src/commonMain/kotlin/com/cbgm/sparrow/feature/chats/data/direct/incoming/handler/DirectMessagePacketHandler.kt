@@ -37,19 +37,6 @@ class DirectMessagePacketHandler(
         packet: ChatMessagePacket
     ): Result<Unit> =
         runCatching {
-            packet.deletion?.let { deletion ->
-                val target = chatDao.findMessageById(deletion.messageId) ?: return@runCatching
-                check(target.conversationId == context.conversationId) {
-                    "Deleted message belongs to another conversation"
-                }
-                check(!target.isMine && target.senderContactId == context.contactId) {
-                    "Only the original sender can delete a direct message"
-                }
-                attachmentTransfer.deleteForMessages(listOf(deletion.messageId))
-                chatDao.deleteMessagesAndRefreshConversations(listOf(target))
-                return@runCatching
-            }
-
             packet.reaction?.let { reaction ->
                 val target = chatDao.findMessageById(reaction.messageId) ?: return@runCatching
                 check(target.conversationId == context.conversationId) { "Reaction target belongs to another conversation" }

@@ -6,9 +6,11 @@ import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.core.protocol.message.GroupMessageContent
 import com.cbgm.sparrow.core.protocol.message.GroupMessageContentCodec
 import com.cbgm.sparrow.core.protocol.message.MessageDeletionPayload
+import com.cbgm.sparrow.core.protocol.message.MessageDeletionPayloadCodec
 import com.cbgm.sparrow.core.protocol.message.MessageReactionPayload
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.GroupChatMessagePacket
+import com.cbgm.sparrow.core.protocol.packet.GroupMessageDeletionPacket
 import com.cbgm.sparrow.core.protocol.packet.ReadReceiptPacket
 import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
@@ -56,6 +58,7 @@ class GroupOutgoingMessageProcessor(
     private val deliveryCoordinator: GroupMessageDeliveryCoordinator,
     private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
     private val groupMessageContentCodec: GroupMessageContentCodec,
+    private val messageDeletionPayloadCodec: MessageDeletionPayloadCodec,
     private val attachmentTransfer: MessageAttachmentDataSource
 ) {
     private val sendMutex = Mutex()
@@ -164,35 +167,29 @@ class GroupOutgoingMessageProcessor(
 
             val eventId = IdGenerator.generate(prefix = "group-delete")
             val timestamp = SystemClock.nowEpochMilliseconds()
-            val profilePicture =
-                localProfilePictureMetadataProvider
-                    .forMessage()
-                    .getOrElse { ProfilePictureMetadata() }
             val plaintext =
-                groupMessageContentCodec.encode(
-                    GroupMessageContent(deletion = MessageDeletionPayload(messageId))
+                messageDeletionPayloadCodec.encode(
+                    MessageDeletionPayload(messageId)
                 )
             val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
             val secured =
-                groupSecurityManager.encryptMessage(
+                groupSecurityManager.encryptMessageDeletion(
                     groupId = groupId,
-                    messageId = eventId,
-                    sentAtEpochMilliseconds = timestamp,
+                    deletionId = eventId,
+                    deletedAtEpochMilliseconds = timestamp,
                     plaintext = plaintext,
-                    localSigningKeyPair = localSigningKeyPair,
-                    profilePicture = profilePicture
+                    localSigningKeyPair = localSigningKeyPair
                 ).getOrThrow()
 
             recipients.forEach { recipient ->
                 protocolOutbox.enqueue(
                     recipient.contactId,
-                    GroupChatMessagePacket(
+                    GroupMessageDeletionPacket(
                         packetId = "group-delete-$eventId-${recipient.contactId}",
                         groupId = groupId,
                         epoch = secured.epoch,
-                        messageId = eventId,
-                        sentAtEpochMilliseconds = timestamp,
-                        profilePicture = profilePicture,
+                        deletionId = eventId,
+                        deletedAtEpochMilliseconds = timestamp,
                         nonce = secured.nonce.copyOf(),
                         ciphertext = secured.ciphertext.copyOf(),
                         senderSignature = secured.senderSignature.copyOf()

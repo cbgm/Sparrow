@@ -65,22 +65,6 @@ class GroupChatMessagePacketHandler(
                     ).getOrThrow()
             val content = groupMessageContentCodec.decode(plaintext)
 
-            content.deletion?.let { deletion ->
-                val target = chatDao.findMessageById(deletion.messageId) ?: return@runCatching
-                check(target.conversationId == groupPacket.groupId) {
-                    "Deleted message belongs to another group"
-                }
-                check(target.transportMode == GROUP_END_TO_END_ENCRYPTED_MODE) {
-                    "Only user messages can be deleted"
-                }
-                check(!target.isMine && target.senderContactId == context.contactId) {
-                    "Only the original sender can delete a group message"
-                }
-                attachmentTransfer.deleteForMessages(listOf(deletion.messageId))
-                chatDao.deleteMessagesAndRefreshConversations(listOf(target))
-                return@runCatching
-            }
-
             content.reaction?.let { reaction ->
                 val target = chatDao.findMessageById(reaction.messageId) ?: return@runCatching
                 check(target.conversationId == groupPacket.groupId) { "Reaction target belongs to another group" }

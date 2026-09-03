@@ -16,22 +16,17 @@ data class GroupMessageContent(
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val replyToMessageId: String? = null,
     @EncodeDefault(EncodeDefault.Mode.NEVER)
-    val reaction: MessageReactionPayload? = null,
-    @EncodeDefault(EncodeDefault.Mode.NEVER)
-    val deletion: MessageDeletionPayload? = null
+    val reaction: MessageReactionPayload? = null
 ) {
     init {
-        require(text.isNotBlank() || attachments.isNotEmpty() || reaction != null || deletion != null) {
-            "Group message must contain text, attachments, a reaction, or a deletion"
-        }
-        require(reaction == null || deletion == null) {
-            "Group message must not contain both a reaction and a deletion"
+        require(text.isNotBlank() || attachments.isNotEmpty() || reaction != null) {
+            "Group message must contain text, attachments, or a reaction"
         }
         require(
-            (reaction == null && deletion == null) ||
+            reaction == null ||
                 (text.isBlank() && attachments.isEmpty() && replyToMessageId == null)
         ) {
-            "Group control content must not contain message content or a reply target"
+            "Group reaction content must not contain message content or a reply target"
         }
         require(attachments.size <= MessageAttachmentConstraints.MAX_ATTACHMENTS_PER_MESSAGE) {
             "Group message can contain at most ${MessageAttachmentConstraints.MAX_ATTACHMENTS_PER_MESSAGE} attachments"

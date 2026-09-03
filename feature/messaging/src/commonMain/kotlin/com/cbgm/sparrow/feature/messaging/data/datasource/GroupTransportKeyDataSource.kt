@@ -12,6 +12,7 @@ import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivatedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivationAcknowledgementPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
+import com.cbgm.sparrow.core.protocol.packet.GroupMessageDeletionPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupVerificationReceiptPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupVerificationSnapshotPacket
@@ -68,6 +69,7 @@ class GroupTransportKeyDataSource(
         when (this) {
             is GroupAvatarUpdatedPacket -> groupId
             is GroupChatMessagePacket -> groupId
+            is GroupMessageDeletionPacket -> groupId
             is GroupConversationDeletedPacket -> groupId
             is GroupCreatedPacket -> groupId
             is GroupInvitePacket -> groupId

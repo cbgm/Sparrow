@@ -212,6 +212,34 @@ class GroupProtocolPayloadEncoder {
             ByteArrays.withLengthPrefix(ciphertext)
         )
 
+    fun encodeMessageDeletionAssociatedData(
+        version: Int,
+        groupId: String,
+        epoch: Int,
+        deletionId: String,
+        deletedAtEpochMilliseconds: Long
+    ): ByteArray =
+        ByteArrays.concatenate(
+            MESSAGE_DELETION_ASSOCIATED_DATA_DOMAIN,
+            ByteArrays.encodeInt(version),
+            encodeString(groupId),
+            ByteArrays.encodeInt(epoch),
+            encodeString(deletionId),
+            ByteArrays.encodeLong(deletedAtEpochMilliseconds)
+        )
+
+    fun encodeMessageDeletionSignature(
+        associatedData: ByteArray,
+        nonce: ByteArray,
+        ciphertext: ByteArray
+    ): ByteArray =
+        ByteArrays.concatenate(
+            MESSAGE_DELETION_SIGNATURE_DOMAIN,
+            ByteArrays.withLengthPrefix(associatedData),
+            ByteArrays.withLengthPrefix(nonce),
+            ByteArrays.withLengthPrefix(ciphertext)
+        )
+
     private fun encodeGroupAvatar(metadata: GroupAvatarMetadata): ByteArray =
         ByteArrays.concatenate(
             ByteArrays.encodeLong(metadata.changedAtEpochMilliseconds),
@@ -277,6 +305,10 @@ class GroupProtocolPayloadEncoder {
         val WELCOME_DOMAIN = "sparrow.group-welcome.v1".encodeToByteArray()
         val MESSAGE_ASSOCIATED_DATA_DOMAIN = "sparrow.group-message.aad.v1".encodeToByteArray()
         val MESSAGE_SIGNATURE_DOMAIN = "sparrow.group-message.signature.v1".encodeToByteArray()
+        val MESSAGE_DELETION_ASSOCIATED_DATA_DOMAIN =
+            "sparrow.group-message-deletion.aad.v1".encodeToByteArray()
+        val MESSAGE_DELETION_SIGNATURE_DOMAIN =
+            "sparrow.group-message-deletion.signature.v1".encodeToByteArray()
 
         const val NULL_VALUE: Byte = 0
         const val NON_NULL_VALUE: Byte = 1

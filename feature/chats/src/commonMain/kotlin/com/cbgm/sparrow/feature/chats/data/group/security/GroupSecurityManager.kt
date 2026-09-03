@@ -11,6 +11,7 @@ import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberPayload
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMembershipChangePayload
+import com.cbgm.sparrow.core.protocol.packet.GroupMessageDeletionPacket
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.protocol.version.ProtocolVersion
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
@@ -462,6 +463,59 @@ class GroupSecurityManager internal constructor(
             )
         }
 
+    suspend fun encryptMessageDeletion(
+        groupId: String,
+        deletionId: String,
+        deletedAtEpochMilliseconds: Long,
+        plaintext: String,
+        localSigningKeyPair: LocalSigningKeyPair
+    ): Result<SecuredGroupMessageDto> =
+        runCatching {
+            val state = groupSecurityDao.findState(groupId) ?: error("Group security state was not found")
+            check(state.localSigningPublicKey.contentEquals(localSigningKeyPair.publicKey)) {
+                "Local signing identity is not a member of the current group epoch"
+            }
+            val groupKey =
+                groupKeyDataSource
+                    .load(groupId, state.currentEpoch)
+                    .getOrThrow()
+                    ?: error("Group key was not found")
+            val associatedData =
+                payloadEncoder.encodeMessageDeletionAssociatedData(
+                    version = ProtocolVersion.CURRENT,
+                    groupId = groupId,
+                    epoch = state.currentEpoch,
+                    deletionId = deletionId,
+                    deletedAtEpochMilliseconds = deletedAtEpochMilliseconds
+                )
+            val encrypted =
+                groupCrypto
+                    .encryptMessage(
+                        plaintext = plaintext.encodeToByteArray(),
+                        associatedData = associatedData,
+                        groupKey = groupKey
+                    ).getOrThrow()
+            val signaturePayload =
+                payloadEncoder.encodeMessageDeletionSignature(
+                    associatedData = associatedData,
+                    nonce = encrypted.nonce,
+                    ciphertext = encrypted.ciphertext
+                )
+            val signature =
+                groupCrypto
+                    .sign(
+                        payload = signaturePayload,
+                        signingPrivateKey = localSigningKeyPair.privateKey
+                    ).getOrThrow()
+
+            SecuredGroupMessageDto(
+                epoch = state.currentEpoch,
+                nonce = encrypted.nonce,
+                ciphertext = encrypted.ciphertext,
+                senderSignature = signature
+            )
+        }
+
     suspend fun decryptMessage(
         packet: GroupChatMessagePacket,
         senderContactId: String
@@ -521,6 +575,67 @@ class GroupSecurityManager internal constructor(
                     .decodeToString(throwOnInvalidSequence = true)
 
             require(plaintext.isNotBlank()) { "Decrypted group message must not be blank" }
+            plaintext
+        }
+
+    suspend fun decryptMessageDeletion(
+        packet: GroupMessageDeletionPacket,
+        senderContactId: String
+    ): Result<String> =
+        runCatching {
+            val state =
+                groupSecurityDao.findState(packet.groupId)
+                    ?: error("Group security state was not found")
+            check(packet.epoch == state.currentEpoch) {
+                "Group message deletion uses epoch ${packet.epoch}, expected ${state.currentEpoch}"
+            }
+            val memberKey =
+                groupSecurityDao.findMemberKey(
+                    groupId = packet.groupId,
+                    epoch = packet.epoch,
+                    contactId = senderContactId
+                ) ?: error("Sender is not a member of the current group epoch")
+            val associatedData =
+                payloadEncoder.encodeMessageDeletionAssociatedData(
+                    version = packet.version,
+                    groupId = packet.groupId,
+                    epoch = packet.epoch,
+                    deletionId = packet.deletionId,
+                    deletedAtEpochMilliseconds = packet.deletedAtEpochMilliseconds
+                )
+            val signaturePayload =
+                payloadEncoder.encodeMessageDeletionSignature(
+                    associatedData = associatedData,
+                    nonce = packet.nonce,
+                    ciphertext = packet.ciphertext
+                )
+
+            groupCrypto
+                .verify(
+                    payload = signaturePayload,
+                    signature = packet.senderSignature,
+                    signingPublicKey = memberKey.signingPublicKey
+                ).getOrThrow()
+
+            val groupKey =
+                groupKeyDataSource
+                    .load(packet.groupId, packet.epoch)
+                    .getOrThrow()
+                    ?: error("Group key was not found")
+            val plaintext =
+                groupCrypto
+                    .decryptMessage(
+                        ciphertext =
+                            GroupCiphertext(
+                                nonce = packet.nonce,
+                                ciphertext = packet.ciphertext
+                            ),
+                        associatedData = associatedData,
+                        groupKey = groupKey
+                    ).getOrThrow()
+                    .decodeToString(throwOnInvalidSequence = true)
+
+            require(plaintext.isNotBlank()) { "Decrypted group message deletion must not be blank" }
             plaintext
         }
 

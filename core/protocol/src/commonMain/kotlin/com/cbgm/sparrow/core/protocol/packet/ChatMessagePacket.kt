@@ -2,7 +2,6 @@ package com.cbgm.sparrow.core.protocol.packet
 
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentConstraints
-import com.cbgm.sparrow.core.protocol.message.MessageDeletionPayload
 import com.cbgm.sparrow.core.protocol.message.MessageReactionPayload
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.protocol.version.ProtocolVersion
@@ -32,8 +31,6 @@ data class ChatMessagePacket(
     val replyToMessageId: String? = null,
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val reaction: MessageReactionPayload? = null,
-    @EncodeDefault(EncodeDefault.Mode.NEVER)
-    val deletion: MessageDeletionPayload? = null,
     val senderPhoneNumber: String? = null,
     val profilePicture: ProfilePictureMetadata = ProfilePictureMetadata()
 ) : SparrowPacket {
@@ -54,19 +51,15 @@ data class ChatMessagePacket(
             "Message timestamp must not be negative"
         }
 
-        require(text.isNotBlank() || attachments.isNotEmpty() || reaction != null || deletion != null) {
-            "Message must contain text, an attachment, a reaction, or a deletion"
-        }
-
-        require(reaction == null || deletion == null) {
-            "Message packet must not contain both a reaction and a deletion"
+        require(text.isNotBlank() || attachments.isNotEmpty() || reaction != null) {
+            "Message must contain text, an attachment, or a reaction"
         }
 
         require(
-            (reaction == null && deletion == null) ||
+            reaction == null ||
                 (text.isBlank() && attachments.isEmpty() && replyToMessageId == null)
         ) {
-            "Control packets must not contain message content or a reply target"
+            "Reaction packets must not contain message content or a reply target"
         }
 
         require(attachments.size <= MessageAttachmentConstraints.MAX_ATTACHMENTS_PER_MESSAGE) {
