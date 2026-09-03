@@ -163,8 +163,10 @@ class MessageAttachmentDataSource(
     suspend fun deleteForMessages(messageIds: List<String>) {
         if (messageIds.isEmpty()) return
         val entities = attachmentDao.findByMessageIds(messageIds)
+        localAttachmentDataSource
+            .delete(entities.mapTo(mutableSetOf(), MessageAttachmentEntity::id))
+            .getOrThrow()
         entities.forEach { entity ->
-            entity.localFileName?.let { fileName -> runCatching { fileDataSource.delete(fileName) } }
             entity.deleteCapability?.let { deleteCapability ->
                 blobTransferDataSource.delete(
                     UploadedBlob(

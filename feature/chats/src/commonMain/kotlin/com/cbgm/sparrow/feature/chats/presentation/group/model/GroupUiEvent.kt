@@ -12,6 +12,21 @@ sealed interface GroupUiEvent {
 
     data object SendClicked : GroupUiEvent
 
+    data class ReplyToMessage(
+        val messageId: String
+    ) : GroupUiEvent
+
+    data object CancelReply : GroupUiEvent
+
+    data class MessageReactionSelected(
+        val messageId: String,
+        val emoji: String
+    ) : GroupUiEvent
+
+    data class DeleteMessage(
+        val messageId: String
+    ) : GroupUiEvent
+
     data class MediaSelected(
         val media: List<MediaSelection>
     ) : GroupUiEvent

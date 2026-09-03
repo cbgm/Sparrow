@@ -6,7 +6,7 @@ import androidx.navigation.toRoute
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.feature.chats.presentation.details.model.DetailsTarget
 import com.cbgm.sparrow.feature.chats.presentation.details.screen.DetailsRoute
-import com.cbgm.sparrow.feature.chats.presentation.direct.screen.DirectRoute
+import com.cbgm.sparrow.feature.chats.presentation.direct.DirectRoute
 import com.cbgm.sparrow.feature.chats.presentation.group.GroupRoute
 import com.cbgm.sparrow.feature.chats.presentation.verification.VerificationRoute
 import com.cbgm.sparrow.feature.safety.presentation.details.MessageSafetyDetailsRoute

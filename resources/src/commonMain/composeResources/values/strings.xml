@@ -112,6 +112,12 @@
     <string name="feature_chats_numbers_match">Numbers match</string>
     <string name="feature_chats_queued">Queued</string>
     <string name="feature_chats_waiting_for_invitation_acceptance">Waiting for invitation acceptance</string>
+    <string name="feature_chats_reply">Reply</string>
+    <string name="feature_chats_copy">Copy</string>
+    <string name="common_copied">Copied</string>
+    <string name="feature_chats_you">You</string>
+    <string name="feature_chats_attachment">Attachment</string>
+    <string name="feature_chats_original_message_unavailable">Original message unavailable</string>
     <string name="feature_chats_read">Read</string>
     <string name="feature_chats_safety_number_unavailable">Safety number unavailable</string>
     <string name="feature_chats_sending">Sending</string>
@@ -440,6 +446,7 @@
     <string name="feature_chats_group_verify_admin_title">Verify group admin</string>
     <string name="feature_chats_group_verify_admin_description">Compare the safety number or scan the admin QR code. This verification belongs only to this group.</string>
     <string name="feature_chats_group_qr_identity_mismatch">The scanned QR code does not belong to the selected group member.</string>
+    <string name="feature_chats_delete_message">Delete</string>
     <string name="feature_chats_delete_conversation">Delete conversation</string>
     <string name="feature_chats_group_deleted_title">This group conversation was deleted</string>
     <string name="feature_chats_group_deleted_description">The group admin deleted this conversation. You can still read the existing history, but no new messages can be sent.</string>

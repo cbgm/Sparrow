@@ -7,6 +7,7 @@ import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationD
 import com.cbgm.sparrow.feature.chats.data.direct.delivery.DirectMessageDeliveryCoordinator
 import com.cbgm.sparrow.feature.chats.data.direct.delivery.DirectOutboxDeliveryHandler
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.DirectIncomingPacketProcessor
+import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessageDeletionPacketHandler
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessagePacketHandler
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectReceiptPacketHandler
 import com.cbgm.sparrow.feature.chats.data.direct.invitation.DirectInvitationConversationCoordinator
@@ -43,6 +44,7 @@ import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupLeaveRequ
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupMemberActivatedPacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupMemberActivationAcknowledgementPacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupMemberRemovedPacketHandler
+import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupMessageDeletionPacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupReadyAcknowledgementPacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupReceiptPacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupVerificationReceiptPacketHandler
@@ -93,6 +95,7 @@ import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationR
 import com.cbgm.sparrow.feature.chats.domain.repository.overview.ConversationOverviewRepository
 import com.cbgm.sparrow.feature.chats.domain.usecase.contact.EncodeContactForSharingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.DeleteDirectConversationUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.direct.DeleteDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.GetOrCreateDirectConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.HandleAcceptedDirectInvitationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.HandleDeclinedDirectInvitationUseCase
@@ -106,11 +109,13 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.direct.QueueDirectMessageUn
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.RetryDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SendDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SetDirectTypingUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ToggleDirectMessageReactionUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.AcceptGroupInvitationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.AddGroupMembersUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.CreateGroupConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeclineGroupInvitationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeleteGroupConversationUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeleteGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.GetGroupLeaveRequirementUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.LeaveGroupUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.MarkGroupConversationReadUseCase
@@ -130,6 +135,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.SendGroupMessageUseCa
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupAvatarUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupTypingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SynchronizeGroupVerificationUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.ToggleGroupMessageReactionUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.TransferGroupAdminAndLeaveUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.VerifyGroupMemberUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.incoming.EstablishGroupMemberIdentityUseCase
@@ -141,7 +147,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.profile.ObserveRemoteProfil
 import com.cbgm.sparrow.feature.chats.presentation.ContactsFlowViewModel
 import com.cbgm.sparrow.feature.chats.presentation.create.CreateGroupViewModel
 import com.cbgm.sparrow.feature.chats.presentation.details.GroupVerificationViewModel
-import com.cbgm.sparrow.feature.chats.presentation.direct.screen.DirectViewModel
+import com.cbgm.sparrow.feature.chats.presentation.direct.DirectViewModel
 import com.cbgm.sparrow.feature.chats.presentation.group.GroupViewModel
 import com.cbgm.sparrow.feature.chats.presentation.overview.OverviewViewModel
 import com.cbgm.sparrow.feature.chats.presentation.verification.GroupMemberQrVerificationViewModel
@@ -171,6 +177,7 @@ private fun org.koin.core.module.Module.registerDirectData() {
     singleOf(::DirectOutgoingMessageProcessor)
     singleOf(::DirectPendingAuthorizationMessageCoordinator)
     singleOf(::DirectMessagePacketHandler)
+    singleOf(::DirectMessageDeletionPacketHandler)
     singleOf(::DirectReceiptPacketHandler)
     singleOf(::DirectIncomingPacketProcessor)
 }
@@ -236,6 +243,7 @@ private fun org.koin.core.module.Module.registerGroupData() {
     singleOf(::GroupVerificationSnapshotRequestPacketHandler)
     singleOf(::GroupVerificationSnapshotPacketHandler)
     singleOf(::GroupChatMessagePacketHandler)
+    singleOf(::GroupMessageDeletionPacketHandler)
     singleOf(::GroupPacketHandlerRegistry)
     singleOf(::GroupIncomingPacketProcessor)
 }
@@ -291,6 +299,8 @@ private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::ObserveDirectConversationUseCase)
     singleOf(::ObserveDirectChatContextUseCase)
     singleOf(::SendDirectMessageUseCase)
+    singleOf(::ToggleDirectMessageReactionUseCase)
+    singleOf(::DeleteDirectMessageUseCase)
     singleOf(::QueueDirectMessageUntilAuthorizedUseCase)
     singleOf(::RetryDirectMessageUseCase)
     singleOf(::MarkDirectConversationReadUseCase)
@@ -307,6 +317,8 @@ private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::ObserveGroupChatContextUseCase)
     singleOf(::ObserveGroupDetailsContextUseCase)
     singleOf(::SendGroupMessageUseCase)
+    singleOf(::ToggleGroupMessageReactionUseCase)
+    singleOf(::DeleteGroupMessageUseCase)
     singleOf(::RetryGroupMessageUseCase)
     singleOf(::MarkGroupConversationReadUseCase)
     singleOf(::DeleteGroupConversationUseCase)
@@ -377,7 +389,9 @@ private fun org.koin.core.module.Module.registerViewModels() {
             setGroupTyping = get(),
             observeMessageSafetyAssessments = get(),
             loadMessageAttachment = get(),
-            addDeviceContact = get()
+            addDeviceContact = get(),
+            toggleMessageReaction = get(),
+            deleteMessageUseCase = get()
         )
     }
 
@@ -423,7 +437,9 @@ private fun org.koin.core.module.Module.registerViewModels() {
             setTyping = get(),
             observeMessageSafetyAssessments = get(),
             loadMessageAttachment = get(),
-            addDeviceContact = get()
+            addDeviceContact = get(),
+            deleteMessageUseCase = get(),
+            toggleMessageReaction = get()
         )
     }
 }

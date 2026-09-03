@@ -129,6 +129,49 @@ class GroupProtocolPayloadEncoderTest {
     }
 
     @Test
+    fun messageDeletionEncodingUsesSeparateDomainAndBindsMetadata() {
+        val associatedData =
+            encoder.encodeMessageDeletionAssociatedData(
+                version = 1,
+                groupId = "group-1",
+                epoch = 2,
+                deletionId = "delete-1",
+                deletedAtEpochMilliseconds = 300L
+            )
+
+        assertFalse(
+            associatedData.contentEquals(
+                encoder.encodeMessageDeletionAssociatedData(
+                    version = 1,
+                    groupId = "group-1",
+                    epoch = 2,
+                    deletionId = "delete-2",
+                    deletedAtEpochMilliseconds = 300L
+                )
+            )
+        )
+        assertFalse(
+            associatedData.contentEquals(
+                encoder.encodeMessageAssociatedData(
+                    version = 1,
+                    groupId = "group-1",
+                    epoch = 2,
+                    messageId = "delete-1",
+                    sentAtEpochMilliseconds = 300L
+                )
+            )
+        )
+
+        val nonce = byteArrayOf(1)
+        val ciphertext = byteArrayOf(2)
+        assertFalse(
+            encoder
+                .encodeMessageDeletionSignature(associatedData, nonce, ciphertext)
+                .contentEquals(encoder.encodeMessageSignature(associatedData, nonce, ciphertext))
+        )
+    }
+
+    @Test
     fun welcomeEncodingIsDeterministicAndBindsMembership() {
         val packet = createWelcomePacket()
 

@@ -56,6 +56,7 @@ postgresql = "42.7.13"
 jedis = "5.2.0"
 material-icons = "1.7.3"
 mediapipe = "latest.release"
+haze = "2.0.0-beta01"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -157,6 +158,9 @@ firebase-analytics = { module = "com.google.firebase:firebase-analytics", versio
 firebase-admin = { module = "com.google.firebase:firebase-admin", version.ref = "firebase-admin" }
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
 mediapipe-tasks-text = { module = "com.google.mediapipe:tasks-text", version.ref = "mediapipe" }
+haze-core = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
+haze-blur = { module = "dev.chrisbanes.haze:haze-blur", version.ref = "haze" }
+haze-blur-materials = { module = "dev.chrisbanes.haze:haze-blur-materials", version.ref = "haze" }
 hikari = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
 jedis = { module = "redis.clients:jedis", version.ref = "jedis" }

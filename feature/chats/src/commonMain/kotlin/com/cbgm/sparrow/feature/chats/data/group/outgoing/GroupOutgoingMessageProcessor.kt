@@ -5,18 +5,22 @@ import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.core.protocol.message.GroupMessageContent
 import com.cbgm.sparrow.core.protocol.message.GroupMessageContentCodec
+import com.cbgm.sparrow.core.protocol.message.MessageDeletionPayload
+import com.cbgm.sparrow.core.protocol.message.MessageDeletionPayloadCodec
+import com.cbgm.sparrow.core.protocol.message.MessageReactionPayload
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.GroupChatMessagePacket
+import com.cbgm.sparrow.core.protocol.packet.GroupMessageDeletionPacket
 import com.cbgm.sparrow.core.protocol.packet.ReadReceiptPacket
 import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
+import com.cbgm.sparrow.data.database.dao.MessageReactionDao
 import com.cbgm.sparrow.data.database.dao.MessageRecipientStateDao
 import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
-import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
+import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
 import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachmentDto
@@ -43,14 +47,15 @@ import kotlinx.coroutines.sync.withLock
  */
 class GroupOutgoingMessageProcessor(
     private val chatDao: ChatDao,
-    private val groupSecurityDao: GroupSecurityDao,
     private val messageRecipientStateDao: MessageRecipientStateDao,
+    private val messageReactionDao: MessageReactionDao,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val protocolOutbox: ProtocolOutbox,
     private val groupSecurityManager: GroupSecurityManager,
     private val deliveryCoordinator: GroupMessageDeliveryCoordinator,
     private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
     private val groupMessageContentCodec: GroupMessageContentCodec,
+    private val messageDeletionPayloadCodec: MessageDeletionPayloadCodec,
     private val attachmentTransfer: MessageAttachmentDataSource
 ) {
     private val sendMutex = Mutex()
@@ -60,16 +65,17 @@ class GroupOutgoingMessageProcessor(
         groupId: String,
         text: String,
         attachments: List<OutgoingMessageAttachment> = emptyList(),
+        replyToMessageId: String? = null,
         invitations: List<GroupInvitationEntity>
     ): Result<Unit> =
         runCatching {
             sendMutex.withLock {
                 val normalizedText = requireMessageContent(text, attachments)
                 requireActiveMembership(groupId, invitations)
-                val recipients = findCurrentEpochRecipients(groupId)
+                val recipients = findCurrentRecipients(groupId)
                 check(recipients.isNotEmpty()) { "Group has no active recipients" }
 
-                val message = createQueuedMessage(groupId, normalizedText)
+                val message = createQueuedMessage(groupId, normalizedText, replyToMessageId)
                 val prepared = attachmentTransfer.prepareAttachments(attachments).getOrThrow()
                 try {
                     encryptAndEnqueue(message, recipients, prepared)
@@ -81,6 +87,115 @@ class GroupOutgoingMessageProcessor(
                     throw error
                 }
             }
+        }
+
+    suspend fun toggleReaction(
+        groupId: String,
+        messageId: String,
+        emoji: String,
+        invitations: List<GroupInvitationEntity>
+    ): Result<Unit> =
+        runCatching {
+            require(messageId.isNotBlank()) { "Message ID must not be blank" }
+            require(emoji.isNotBlank()) { "Reaction emoji must not be blank" }
+            requireActiveMembership(groupId, invitations)
+            val target = chatDao.findMessageById(messageId) ?: error("Message was not found")
+            check(target.conversationId == groupId) { "Message does not belong to this group" }
+            val recipients = findCurrentRecipients(groupId)
+            check(recipients.isNotEmpty()) { "Group has no active recipients" }
+
+            val existing = messageReactionDao.find(messageId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
+            val removed = existing != null
+            if (removed) {
+                messageReactionDao.delete(messageId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
+            } else {
+                messageReactionDao.upsert(
+                    MessageReactionEntity(messageId, groupId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
+                )
+            }
+
+            val eventId = IdGenerator.generate(prefix = "group-reaction")
+            val timestamp = SystemClock.nowEpochMilliseconds()
+            val profilePicture = localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
+            val plaintext = groupMessageContentCodec.encode(
+                GroupMessageContent(reaction = MessageReactionPayload(messageId, emoji, removed))
+            )
+            val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+            val secured = groupSecurityManager.encryptMessage(
+                groupId = groupId,
+                messageId = eventId,
+                sentAtEpochMilliseconds = timestamp,
+                plaintext = plaintext,
+                localSigningKeyPair = localSigningKeyPair,
+                profilePicture = profilePicture
+            ).getOrThrow()
+            recipients.forEach { contactId ->
+                protocolOutbox.enqueue(
+                    contactId,
+                    GroupChatMessagePacket(
+                        packetId = "group-reaction-$eventId-$contactId",
+                        groupId = groupId,
+                        epoch = secured.epoch,
+                        messageId = eventId,
+                        sentAtEpochMilliseconds = timestamp,
+                        profilePicture = profilePicture,
+                        nonce = secured.nonce.copyOf(),
+                        ciphertext = secured.ciphertext.copyOf(),
+                        senderSignature = secured.senderSignature.copyOf()
+                    )
+                ).getOrThrow()
+            }
+        }
+
+    suspend fun deleteMessage(
+        groupId: String,
+        messageId: String,
+        invitations: List<GroupInvitationEntity>
+    ): Result<Unit> =
+        runCatching {
+            require(messageId.isNotBlank()) { "Message ID must not be blank" }
+            requireActiveMembership(groupId, invitations)
+            val target = chatDao.findMessageById(messageId) ?: error("Message was not found")
+            check(target.conversationId == groupId) { "Message does not belong to this group" }
+            check(target.transportMode == GROUP_END_TO_END_ENCRYPTED_MODE) { "Only user messages can be deleted" }
+            check(target.isMine) { "Only your own messages can be deleted for everyone" }
+            val recipients = findCurrentRecipients(groupId)
+            check(recipients.isNotEmpty()) { "Group has no active recipients" }
+
+            val eventId = IdGenerator.generate(prefix = "group-delete")
+            val timestamp = SystemClock.nowEpochMilliseconds()
+            val plaintext =
+                messageDeletionPayloadCodec.encode(
+                    MessageDeletionPayload(messageId)
+                )
+            val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+            val secured =
+                groupSecurityManager.encryptMessageDeletion(
+                    groupId = groupId,
+                    deletionId = eventId,
+                    deletedAtEpochMilliseconds = timestamp,
+                    plaintext = plaintext,
+                    localSigningKeyPair = localSigningKeyPair
+                ).getOrThrow()
+
+            recipients.forEach { contactId ->
+                protocolOutbox.enqueue(
+                    contactId,
+                    GroupMessageDeletionPacket(
+                        packetId = "group-delete-$eventId-$contactId",
+                        groupId = groupId,
+                        epoch = secured.epoch,
+                        deletionId = eventId,
+                        deletedAtEpochMilliseconds = timestamp,
+                        nonce = secured.nonce.copyOf(),
+                        ciphertext = secured.ciphertext.copyOf(),
+                        senderSignature = secured.senderSignature.copyOf()
+                    )
+                ).getOrThrow()
+            }
+
+            attachmentTransfer.deleteForMessages(listOf(messageId))
+            chatDao.deleteMessagesAndRefreshConversations(listOf(target))
         }
 
     suspend fun retry(messageId: String): Result<Unit> =
@@ -191,13 +306,15 @@ class GroupOutgoingMessageProcessor(
 
     private fun createQueuedMessage(
         groupId: String,
-        text: String
+        text: String,
+        replyToMessageId: String?
     ): MessageEntity =
         MessageEntity(
             id = IdGenerator.generate(prefix = "group-message"),
             conversationId = groupId,
             packetId = null,
             text = text,
+            replyToMessageId = replyToMessageId,
             transportPayload = null,
             transportMode = GROUP_END_TO_END_ENCRYPTED_MODE,
             contentStatus = MessageContentStatus.READABLE.name,
@@ -207,21 +324,19 @@ class GroupOutgoingMessageProcessor(
             createdAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
         )
 
-    private suspend fun findCurrentEpochRecipients(groupId: String): List<GroupMemberKeyEntity> {
-        val state = groupSecurityDao.findState(groupId) ?: error("Group security state was not found")
-        return groupSecurityDao.findMemberKeys(
-            groupId = groupId,
-            epoch = state.currentEpoch
-        )
-    }
+    private suspend fun findCurrentRecipients(groupId: String): List<String> =
+        chatDao
+            .findConversationParticipants(groupId)
+            .map { participant -> participant.contactId }
+            .distinct()
 
     private suspend fun encryptAndEnqueue(
         message: MessageEntity,
-        recipients: List<GroupMemberKeyEntity>,
+        recipients: List<String>,
         prepared: List<PreparedMessageAttachmentDto>
     ) {
         val packets = createPackets(message, recipients, prepared)
-        val recipientStates = packets.map { (recipient, packet) -> packet.toMessageRecipientStateEntity(recipient) }
+        val recipientStates = packets.map { (contactId, packet) -> packet.toMessageRecipientStateEntity(contactId) }
 
         chatDao.upsertOutgoingGroupMessage(
             message = message,
@@ -237,8 +352,8 @@ class GroupOutgoingMessageProcessor(
         }
 
         val failures = mutableListOf<String>()
-        packets.forEach { (recipient, packet) ->
-            val error = protocolOutbox.enqueue(recipient.contactId, packet).exceptionOrNull()
+        packets.forEach { (contactId, packet) ->
+            val error = protocolOutbox.enqueue(contactId, packet).exceptionOrNull()
             if (error != null) {
                 runCatching {
                     deliveryCoordinator.applyPacketEvent(
@@ -251,7 +366,7 @@ class GroupOutgoingMessageProcessor(
                         "Could not persist failed group recipient state: packetId=${packet.packetId}"
                     }
                 }
-                failures += recipient.contactId.toFailureDescription(error)
+                failures += contactId.toFailureDescription(error)
             }
         }
         failures.throwIfNotEmpty("Group message enqueue")
@@ -259,9 +374,9 @@ class GroupOutgoingMessageProcessor(
 
     private suspend fun createPackets(
         message: MessageEntity,
-        recipients: List<GroupMemberKeyEntity>,
+        recipients: List<String>,
         prepared: List<PreparedMessageAttachmentDto>
-    ): Map<GroupMemberKeyEntity, GroupChatMessagePacket> {
+    ): Map<String, GroupChatMessagePacket> {
         val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
         val profilePicture =
             localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
@@ -269,7 +384,8 @@ class GroupOutgoingMessageProcessor(
             groupMessageContentCodec.encode(
                 GroupMessageContent(
                     text = message.text,
-                    attachments = prepared.map(PreparedMessageAttachmentDto::attachment)
+                    attachments = prepared.map(PreparedMessageAttachmentDto::attachment),
+                    replyToMessageId = message.replyToMessageId
                 )
             )
         val securedMessage =
@@ -283,9 +399,9 @@ class GroupOutgoingMessageProcessor(
                     profilePicture = profilePicture
                 ).getOrThrow()
 
-        return recipients.associateWith { recipient ->
+        return recipients.associateWith { contactId ->
             GroupChatMessagePacket(
-                packetId = packetId(message.id, recipient.contactId),
+                packetId = packetId(message.id, contactId),
                 groupId = message.conversationId,
                 epoch = securedMessage.epoch,
                 messageId = message.id,
@@ -299,11 +415,11 @@ class GroupOutgoingMessageProcessor(
     }
 
     private fun GroupChatMessagePacket.toMessageRecipientStateEntity(
-        recipient: GroupMemberKeyEntity
+        contactId: String
     ): MessageRecipientStateEntity =
         MessageRecipientStateEntity(
             messageId = messageId,
-            contactId = recipient.contactId,
+            contactId = contactId,
             packetId = packetId,
             deliveryStatus = MessageDeliveryStatus.QUEUED.name,
             lastError = null,

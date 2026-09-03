@@ -13,6 +13,7 @@ import com.cbgm.sparrow.feature.chats.data.mapper.toMessagePart
 import com.cbgm.sparrow.feature.chats.data.model.MessagePartDto
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.feature.chats.domain.model.MessageReaction
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversationState
@@ -25,7 +26,8 @@ internal fun ConversationWithMessagesDto.toGroupConversation(
     recipientStates: List<MessageRecipientStateEntity>,
     invitations: List<GroupInvitationEntity>,
     verificationRows: List<GroupVerificationPairEntity> = emptyList(),
-    partsByMessageId: Map<String, List<MessagePartDto>> = emptyMap()
+    partsByMessageId: Map<String, List<MessagePartDto>> = emptyMap(),
+    reactionsByMessageId: Map<String, List<MessageReaction>> = emptyMap()
 ): GroupConversation {
     val timeline = buildGroupLocalMembershipTimeline(messages, invitations)
     val visibleMessages = timeline.visibleMessages
@@ -44,7 +46,8 @@ internal fun ConversationWithMessagesDto.toGroupConversation(
                 .map { message ->
                     message.toGroupMessage(
                         recipientStates = statesByMessageId[message.id].orEmpty(),
-                        attachmentParts = partsByMessageId[message.id].orEmpty()
+                        attachmentParts = partsByMessageId[message.id].orEmpty(),
+                        reactions = reactionsByMessageId[message.id].orEmpty()
                     )
                 },
         unreadCount =
@@ -71,7 +74,8 @@ internal fun ConversationWithMessagesDto.toGroupConversation(
 
 private fun MessageEntity.toGroupMessage(
     recipientStates: List<MessageRecipientStateEntity>,
-    attachmentParts: List<MessagePartDto>
+    attachmentParts: List<MessagePartDto>,
+    reactions: List<MessageReaction>
 ): GroupMessage {
     val deliveryStatus =
         if (recipientStates.isEmpty()) {
@@ -89,6 +93,8 @@ private fun MessageEntity.toGroupMessage(
         security = transportMode.toMessageSecurity(),
         contentStatus = contentStatus.toMessageContentStatus(),
         deliveryStatus = if (isMine) deliveryStatus else MessageDeliveryStatus.NOT_APPLICABLE,
+        replyToMessageId = replyToMessageId,
+        reactions = reactions,
         type = GroupMembershipMessageFactory.typeOf(transportMode),
         senderContactId = senderContactId,
         deliveryProgress = recipientStates.toMessageDeliveryProgress(),

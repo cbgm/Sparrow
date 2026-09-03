@@ -2,12 +2,15 @@ package com.cbgm.sparrow.feature.chats.presentation.direct.mapper
 
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
+import com.cbgm.sparrow.feature.chats.domain.model.MessagePart
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessage
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toMessagePartsUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessagePartUi
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageReactionUi
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageReplyUi
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectComposerState
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
@@ -29,7 +32,8 @@ internal fun resolveContactName(
 
 internal fun DirectMessage.toMessageBubbleUi(
     safetyAssessments: Map<String, MessageSafetyAssessment>,
-    attachmentBytes: Map<String, ByteArray> = emptyMap()
+    attachmentBytes: Map<String, ByteArray> = emptyMap(),
+    reply: MessageReplyUi? = null
 ): MessageBubbleUi {
     val partsUi = parts.toMessagePartsUi(attachmentBytes)
 
@@ -45,6 +49,10 @@ internal fun DirectMessage.toMessageBubbleUi(
             } else {
                 safetyAssessments[id]?.toMessageSafetyWarningUi()
             },
+        reply = reply,
+        reactions = reactions.groupBy { it.emoji }.map { (emoji, values) ->
+            MessageReactionUi(emoji = emoji, count = values.size, reactedByMe = values.any { it.isMine })
+        },
         imageVideoParts = partsUi.filterIsInstance<MessagePartUi.ImageVideo>(),
         fileParts = partsUi.filterIsInstance<MessagePartUi.File>(),
         locationPart = partsUi.filterIsInstance<MessagePartUi.Location>().firstOrNull(),
@@ -52,6 +60,32 @@ internal fun DirectMessage.toMessageBubbleUi(
         textPart = partsUi.filterIsInstance<MessagePartUi.Text>().firstOrNull()
     )
 }
+
+private fun String?.toDirectReplyPreview(
+    messagesById: Map<String, DirectMessage>,
+    contactName: String
+): MessageReplyUi? =
+    this?.let { messageId ->
+        val target = messagesById[messageId]
+        MessageReplyUi(
+            messageId = messageId,
+            isMine = target?.isMine,
+            senderName = target?.takeUnless(DirectMessage::isMine)?.let { contactName },
+            previewText = target?.parts.toReplyPreviewText()
+        )
+    }
+
+private fun List<MessagePart>?.toReplyPreviewText(): String? =
+    this
+        ?.filterIsInstance<MessagePart.Text>()
+        ?.firstOrNull()
+        ?.text
+        ?.takeIf(String::isNotBlank)
+        ?: this
+            ?.filterIsInstance<MessagePart.File>()
+            ?.firstOrNull()
+            ?.fileName
+            ?.takeIf(String::isNotBlank)
 
 internal fun Contact?.toContactSecurityState(): ContactSecurityState {
     val identity = this?.sparrowIdentity ?: return ContactSecurityState.NO_REMOTE_PUBLIC_KEYS
@@ -96,7 +130,8 @@ internal fun toDirectUiState(
     currentError: String?,
     contactTyping: Boolean,
     safetyAssessments: Map<String, MessageSafetyAssessment>,
-    attachmentBytes: Map<String, ByteArray> = emptyMap()
+    attachmentBytes: Map<String, ByteArray> = emptyMap(),
+    currentReplyToMessageId: String? = null
 ): DirectUiState {
     val isChatAuthorized = isDirectChatAuthorized(contact, handshake, setupMode)
     val composerState =
@@ -107,16 +142,27 @@ internal fun toDirectUiState(
             setupMode = setupMode
         )
 
+    val contactName = resolveContactName(contact, fallbackContactName)
+    val conversationMessages = conversation?.messages.orEmpty()
+    val messagesById = conversationMessages.associateBy(DirectMessage::id)
+
     return DirectUiState(
         contactId = contactId,
-        contactName = resolveContactName(contact, fallbackContactName),
+        contactName = contactName,
         messages =
             buildList {
-                for (message in conversation?.messages.orEmpty().asReversed()) {
-                    add(message.toMessageBubbleUi(safetyAssessments, attachmentBytes))
+                for (message in conversationMessages.asReversed()) {
+                    add(
+                        message.toMessageBubbleUi(
+                            safetyAssessments = safetyAssessments,
+                            attachmentBytes = attachmentBytes,
+                            reply = message.replyToMessageId.toDirectReplyPreview(messagesById, contactName)
+                        )
+                    )
                 }
             },
         messageText = currentText,
+        replyTo = currentReplyToMessageId.toDirectReplyPreview(messagesById, contactName),
         isContactTyping = contactTyping,
         contactSecurityState = contact.toContactSecurityState(),
         identitySetupMode = setupMode,

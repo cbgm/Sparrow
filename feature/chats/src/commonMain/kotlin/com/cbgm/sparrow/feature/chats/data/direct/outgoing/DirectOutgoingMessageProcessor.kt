@@ -4,15 +4,19 @@ import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment
+import com.cbgm.sparrow.core.protocol.message.MessageReactionPayload
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.ChatMessagePacket
+import com.cbgm.sparrow.core.protocol.packet.MessageDeletionPacket
 import com.cbgm.sparrow.core.protocol.packet.ReadReceiptPacket
 import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
+import com.cbgm.sparrow.data.database.dao.MessageReactionDao
 import com.cbgm.sparrow.data.database.entity.MessageEntity
+import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
 import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachmentDto
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
@@ -37,6 +41,7 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthori
  */
 class DirectOutgoingMessageProcessor(
     private val chatDao: ChatDao,
+    private val messageReactionDao: MessageReactionDao,
     private val getContact: GetContactUseCase,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
     private val protocolOutbox: ProtocolOutbox,
@@ -50,7 +55,8 @@ class DirectOutgoingMessageProcessor(
     suspend fun send(
         conversationId: String,
         text: String,
-        attachments: List<OutgoingMessageAttachment> = emptyList()
+        attachments: List<OutgoingMessageAttachment> = emptyList(),
+        replyToMessageId: String? = null
     ): Result<Unit> =
         runCatching {
             val normalizedText = requireMessageContent(text, attachments)
@@ -66,14 +72,16 @@ class DirectOutgoingMessageProcessor(
                 messageId = messageId,
                 text = normalizedText,
                 prepared = prepared,
-                deliveryStatus = MessageDeliveryStatus.QUEUED
+                deliveryStatus = MessageDeliveryStatus.QUEUED,
+                replyToMessageId = replyToMessageId
             )
             val packet =
                 try {
                     createPacket(
                         messageId = messageId,
                         text = normalizedText,
-                        attachments = prepared.map(PreparedMessageAttachmentDto::attachment)
+                        attachments = prepared.map(PreparedMessageAttachmentDto::attachment),
+                        replyToMessageId = replyToMessageId
                     ).also { packet ->
                         linkPacket(messageId = messageId, packet = packet, contact = contact)
                     }
@@ -86,10 +94,67 @@ class DirectOutgoingMessageProcessor(
             enqueue(target.contactId, packet)
         }
 
+    suspend fun toggleReaction(conversationId: String, messageId: String, emoji: String): Result<Unit> =
+        runCatching {
+            require(messageId.isNotBlank()) { "Message ID must not be blank" }
+            require(emoji.isNotBlank()) { "Reaction emoji must not be blank" }
+            val target = loadTarget(conversationId)
+            requireDirectChatAuthorization(target.contactId).getOrThrow()
+            val message = chatDao.findMessageById(messageId) ?: error("Message was not found")
+            check(message.conversationId == conversationId) { "Message does not belong to this conversation" }
+
+            val existing = messageReactionDao.find(messageId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
+            val removed = existing != null
+            if (removed) {
+                messageReactionDao.delete(messageId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
+            } else {
+                messageReactionDao.upsert(
+                    MessageReactionEntity(messageId, conversationId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
+                )
+            }
+
+            val packet = ChatMessagePacket(
+                packetId = IdGenerator.generate(prefix = "reaction-packet"),
+                messageId = IdGenerator.generate(prefix = "reaction"),
+                sentAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
+                text = "",
+                reaction = MessageReactionPayload(messageId = messageId, emoji = emoji, removed = removed),
+                senderPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow(),
+                profilePicture = localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
+            )
+            protocolOutbox.enqueue(target.contactId, packet).getOrThrow()
+        }
+
+    suspend fun deleteMessage(conversationId: String, messageId: String): Result<Unit> =
+        runCatching {
+            require(messageId.isNotBlank()) { "Message ID must not be blank" }
+            val target = loadTarget(conversationId)
+            val message = chatDao.findMessageById(messageId) ?: error("Message was not found")
+            check(message.conversationId == conversationId) { "Message does not belong to this conversation" }
+            check(message.isMine) { "Only your own messages can be deleted for everyone" }
+
+            if (message.deliveryStatus == MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION.name) {
+                discardMessages(listOf(message))
+                return@runCatching
+            }
+
+            requireDirectChatAuthorization(target.contactId).getOrThrow()
+
+            val packet =
+                MessageDeletionPacket(
+                    packetId = IdGenerator.generate(prefix = "delete-packet"),
+                    messageId = messageId,
+                    deletedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+                )
+            protocolOutbox.enqueue(target.contactId, packet).getOrThrow()
+            discardMessages(listOf(message))
+        }
+
     suspend fun queueUntilAuthorized(
         conversationId: String,
         text: String,
-        attachments: List<OutgoingMessageAttachment> = emptyList()
+        attachments: List<OutgoingMessageAttachment> = emptyList(),
+        replyToMessageId: String? = null
     ): Result<Unit> =
         runCatching {
             val normalizedText = requireMessageContent(text, attachments)
@@ -102,7 +167,8 @@ class DirectOutgoingMessageProcessor(
                 messageId = IdGenerator.generate(prefix = "message"),
                 text = normalizedText,
                 prepared = prepared,
-                deliveryStatus = MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION
+                deliveryStatus = MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION,
+                replyToMessageId = replyToMessageId
             )
         }
 
@@ -191,7 +257,8 @@ class DirectOutgoingMessageProcessor(
             createPacket(
                 messageId = message.id,
                 text = message.text,
-                attachments = attachmentTransfer.protocolAttachments(message.id)
+                attachments = attachmentTransfer.protocolAttachments(message.id),
+                replyToMessageId = message.replyToMessageId
             )
         chatDao.upsertMessage(
             message.copy(
@@ -215,7 +282,8 @@ class DirectOutgoingMessageProcessor(
         messageId: String,
         text: String,
         prepared: List<PreparedMessageAttachmentDto>,
-        deliveryStatus: MessageDeliveryStatus
+        deliveryStatus: MessageDeliveryStatus,
+        replyToMessageId: String?
     ) {
         val createdAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
         val message =
@@ -224,6 +292,7 @@ class DirectOutgoingMessageProcessor(
                 conversationId = target.conversationId,
                 packetId = null,
                 text = text,
+                replyToMessageId = replyToMessageId,
                 transportPayload = null,
                 transportMode = contact.plannedTransportMode().name,
                 contentStatus = MessageContentStatus.READABLE.name,
@@ -281,7 +350,8 @@ class DirectOutgoingMessageProcessor(
     private suspend fun createPacket(
         messageId: String,
         text: String,
-        attachments: List<MessageAttachment>
+        attachments: List<MessageAttachment>,
+        replyToMessageId: String?
     ): ChatMessagePacket =
         ChatMessagePacket(
             packetId = IdGenerator.generate(prefix = "packet"),
@@ -289,6 +359,7 @@ class DirectOutgoingMessageProcessor(
             sentAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
             text = text,
             attachments = attachments,
+            replyToMessageId = replyToMessageId,
             senderPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow(),
             profilePicture = localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
         )

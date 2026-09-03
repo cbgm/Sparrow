@@ -6,6 +6,12 @@ object Dimens {
     object Base {
         val zero = 0.dp
         val progressIndicatorStrokeWidth = 2.dp
+        val dividerThickness = 0.5.dp
+    }
+
+    object ActionMenu {
+        val shadowElevation = 8.dp
+        val actionItemHeight = 36.dp
     }
 
     object SearchField {
@@ -43,6 +49,10 @@ object Dimens {
         val iconSize = 14.dp
     }
 
+    object MessageContext {
+        val blurRadius = 6.dp
+    }
+
     object MessageBubble {
         val iconSize = 14.dp
         val progressSize = 12.dp
@@ -50,6 +60,34 @@ object Dimens {
         val retrySize = 28.dp
         val retryIconSize = 16.dp
         val staticBubbleSize = 200.dp
+    }
+
+    object MessageReaction {
+        val cloudIconSlotSize = 20.dp
+        val cloudIconStep = 8.dp
+        val cloudSideOffsetY = 2.dp
+        val cloudContentPadding = 2.dp
+        val burstLayerSize = 72.dp
+        val burstSpreadRadius = 128.dp
+
+        const val burstItemDurationMillis = 560
+        const val burstStaggerWindowMillis = 140
+        const val burstStaggerMinMillis = 8
+        const val burstStaggerMaxMillis = 24
+        const val burstTravelEndFraction = 0.72f
+        const val burstFadeStartFraction = 0.58f
+        const val burstPeakScaleFraction = 0.52f
+        const val burstInitialScale = 0.5f
+        const val burstPeakScale = 2.25f
+        const val burstEndScale = 0.85f
+        const val burstRotationDegrees = 54f
+        const val burstRadiusBaseFactor = 0.72f
+        const val burstRadiusStepFactor = 0.11f
+        const val burstRadiusVariantCount = 4
+    }
+
+    object MessageDeletion {
+        val maxBlurRadius = 10.dp
     }
 
     object MessageInput {
@@ -69,7 +107,7 @@ object Dimens {
 
     object MediaSelection {
         val previewPlayIconSize = 16.dp
-        val previewRemoveButtonSize = 22.dp
+        val previewRemoveButtonSize = 20.dp
         val previewRemoveIconSize = 14.dp
         val previewSize = 50.dp
         val filePreviewWidth = 190.dp

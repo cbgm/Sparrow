@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 interface DirectConversationRepository {
     fun observe(conversationId: String): Flow<DirectConversation?>
 
-    suspend fun getOrCreate(contactId: String): String
+    suspend fun getOrCreate(contactId: String): Result<String>
 
     suspend fun findContactId(conversationId: String): Result<String?>
 

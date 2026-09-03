@@ -4,10 +4,14 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
 internal data class MessageSearchTargetState(
@@ -48,3 +52,38 @@ internal fun rememberMessageSearchTargetState(
 }
 
 private const val HIGHLIGHT_DURATION_MILLIS = 2_000L
+
+internal data class MessageJumpState(
+    val highlightedMessageId: String?,
+    val jumpTo: (String) -> Unit
+)
+
+@Composable
+internal fun rememberMessageJumpState(
+    messageIds: List<String>,
+    listState: LazyListState
+): MessageJumpState {
+    val scope = rememberCoroutineScope()
+    val currentMessageIds by rememberUpdatedState(messageIds)
+    var highlightedMessageId by remember { mutableStateOf<String?>(null) }
+    var requestVersion by remember { mutableIntStateOf(0) }
+
+    return MessageJumpState(
+        highlightedMessageId = highlightedMessageId,
+        jumpTo = { messageId ->
+            val targetIndex = currentMessageIds.indexOf(messageId)
+            if (targetIndex >= 0) {
+                requestVersion += 1
+                val version = requestVersion
+                scope.launch {
+                    listState.animateScrollToItem(targetIndex)
+                    highlightedMessageId = messageId
+                    delay(HIGHLIGHT_DURATION_MILLIS.milliseconds)
+                    if (requestVersion == version) {
+                        highlightedMessageId = null
+                    }
+                }
+            }
+        }
+    )
+}

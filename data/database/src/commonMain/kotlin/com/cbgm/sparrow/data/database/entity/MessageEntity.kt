@@ -37,6 +37,7 @@ data class MessageEntity(
     val conversationId: String,
     val packetId: String?,
     val text: String,
+    val replyToMessageId: String? = null,
     val transportPayload: String?,
     val transportMode: String,
     val contentStatus: String,

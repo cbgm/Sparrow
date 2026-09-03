@@ -15,12 +15,14 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationStat
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupChatContext
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.AcceptGroupInvitationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeclineGroupInvitationUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeleteGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.MarkGroupConversationReadUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupChatContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupMemberTypingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.RetryGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SendGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupTypingUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.ToggleGroupMessageReactionUseCase
 import com.cbgm.sparrow.feature.chats.presentation.group.mapper.toGroupUiState
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState
@@ -29,21 +31,16 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.AddDeviceContactUseCase
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyDetails
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.milliseconds
 
 class GroupViewModel(
     savedStateHandle: SavedStateHandle,
@@ -51,10 +48,12 @@ class GroupViewModel(
     private val sendMessage: SendGroupMessageUseCase,
     private val markConversationRead: MarkGroupConversationReadUseCase,
     private val retryMessage: RetryGroupMessageUseCase,
+    private val toggleMessageReaction: ToggleGroupMessageReactionUseCase,
+    private val deleteMessageUseCase: DeleteGroupMessageUseCase,
     private val acceptInvitation: AcceptGroupInvitationUseCase,
     private val declineInvitation: DeclineGroupInvitationUseCase,
-    private val observeMemberTyping: ObserveGroupMemberTypingUseCase,
-    private val setGroupTyping: SetGroupTypingUseCase,
+    observeMemberTyping: ObserveGroupMemberTypingUseCase,
+    setGroupTyping: SetGroupTypingUseCase,
     observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase,
     private val loadMessageAttachment: LoadMessageAttachmentUseCase,
     private val addDeviceContact: AddDeviceContactUseCase
@@ -65,16 +64,20 @@ class GroupViewModel(
         savedStateHandle.get<String>(AppRoute.GroupConversation::targetMessageId.name)
     private val logger = SparrowLog.withTag("GroupViewModel")
     private val messageText = savedStateHandle.getMutableStateFlow(MESSAGE_TEXT_KEY, "")
+    private val replyToMessageId = savedStateHandle.getMutableStateFlow(REPLY_TO_MESSAGE_ID_KEY, "")
     private val errorMessage = MutableStateFlow<String?>(null)
-    private val typingContactIds = MutableStateFlow<Set<String>>(emptySet())
     private val selectedMedia = MutableStateFlow<List<MediaSelection>>(emptyList())
     private val attachmentBytes = MutableStateFlow<Map<String, ByteArray>>(emptyMap())
     private val isSending = MutableStateFlow(false)
     private val loadingAttachmentIds = mutableSetOf<String>()
-    private val typingObserverJobs = mutableMapOf<String, Job>()
-    private val typingTimeoutJobs = mutableMapOf<String, Job>()
-    private var localTypingStopJob: Job? = null
-    private var isLocalTyping = false
+
+    private val typing =
+        GroupTypingController(
+            scope = viewModelScope,
+            observeMemberTyping = { contactId -> observeMemberTyping(groupId, contactId) },
+            sendTypingState = { isTyping -> setGroupTyping(groupId, isTyping) },
+            logTag = "GroupViewModel"
+        )
 
     private val groupContext = observeChatContext(groupId)
 
@@ -87,15 +90,23 @@ class GroupViewModel(
                 emit(GroupContextObservation.Failed(error.message ?: "Group conversation could not be loaded"))
             }
 
+    private val composerDraft =
+        combine(messageText, replyToMessageId) { text, replyId ->
+            GroupComposerDraft(
+                text = text,
+                replyToMessageId = replyId.takeIf(String::isNotBlank)
+            )
+        }
+
     private val composerContext =
         combine(
-            messageText,
+            composerDraft,
             errorMessage,
-            typingContactIds,
+            typing.typingContactIds,
             selectedMedia,
             isSending
-        ) { text, error, typingIds, media, sending ->
-            GroupComposerContext(text, error, typingIds, media, sending)
+        ) { draft, error, typingIds, media, sending ->
+            GroupComposerContext(draft.text, error, draft.replyToMessageId, typingIds, media, sending)
         }
 
     val uiState: StateFlow<GroupUiState> =
@@ -113,6 +124,7 @@ class GroupViewModel(
                 avatarBytes = presentation.context?.avatarBytes,
                 currentText = composer.text,
                 currentError = composer.error,
+                currentReplyToMessageId = composer.replyToMessageId,
                 observationError = presentation.errorMessage,
                 isLoading = presentation is GroupContextObservation.Loading,
                 typingContactIds = composer.typingIds,
@@ -129,17 +141,25 @@ class GroupViewModel(
         )
 
     init {
-        observeParticipants()
+        typing.start(groupContext.map { context -> context.administration.currentMemberContactIds })
     }
 
     fun onUiEvent(event: GroupUiEvent) {
         when (event) {
             is GroupUiEvent.MessageTextChanged -> onMessageTextChanged(event.text)
             GroupUiEvent.SendClicked -> sendCurrentMessage()
+            is GroupUiEvent.ReplyToMessage -> startReply(event.messageId)
+            GroupUiEvent.CancelReply -> clearReply()
+            is GroupUiEvent.MessageReactionSelected -> toggleReaction(event.messageId, event.emoji)
+            is GroupUiEvent.DeleteMessage -> deleteMessage(event.messageId)
             is GroupUiEvent.MediaSelected -> updateMediaSelection(event.media)
             is GroupUiEvent.OpenFilePicker -> navigator.navigateTo(AppRoute.FilePicker(event.sessionId))
-            is GroupUiEvent.ShareCurrentLocation -> sendCurrentLocation(event.location.toOutgoingMessageAttachment())
-            is GroupUiEvent.ShareContact -> sendContact(event.contact.toOutgoingMessageAttachment())
+            is GroupUiEvent.ShareCurrentLocation ->
+                sendAttachmentOnly(event.location.toOutgoingMessageAttachment(), fallbackError = "Location could not be sent")
+
+            is GroupUiEvent.ShareContact ->
+                sendAttachmentOnly(event.contact.toOutgoingMessageAttachment(), fallbackError = "Contact could not be sent")
+
             is GroupUiEvent.AddSharedContact -> addSharedContact(event.contact)
             is GroupUiEvent.AttachmentVisible -> loadAttachment(event.attachmentId)
             is GroupUiEvent.AttachmentError -> errorMessage.value = event.message
@@ -158,14 +178,7 @@ class GroupViewModel(
         }
     }
 
-    fun stopTyping() {
-        localTypingStopJob?.cancel()
-        localTypingStopJob = null
-        if (!isLocalTyping) return
-
-        isLocalTyping = false
-        sendTypingState(isTyping = false)
-    }
+    fun stopTyping() = typing.stopLocalTyping()
 
     fun markConversationRead() {
         viewModelScope.launch {
@@ -174,123 +187,57 @@ class GroupViewModel(
         }
     }
 
-    private fun observeParticipants() {
-        viewModelScope.launch {
-            groupContext
-                .map { context -> context.administration.currentMemberContactIds }
-                .distinctUntilChanged()
-                .collect(::updateTypingObservers)
-        }
-    }
-
-    private fun updateTypingObservers(contactIds: Set<String>) {
-        removeTypingObservers(typingObserverJobs.keys - contactIds)
-        (contactIds - typingObserverJobs.keys).forEach(::observeTypingForMember)
-    }
-
-    private fun removeTypingObservers(contactIds: Set<String>) {
-        contactIds.forEach { contactId ->
-            typingObserverJobs.remove(contactId)?.cancel()
-            typingTimeoutJobs.remove(contactId)?.cancel()
-            typingContactIds.update { it - contactId }
-        }
-    }
-
-    private fun observeTypingForMember(contactId: String) {
-        typingObserverJobs[contactId] =
-            viewModelScope.launch {
-                observeMemberTyping(groupId, contactId).collect { isTyping ->
-                    updateRemoteTyping(contactId, isTyping)
-                }
-            }
-    }
-
-    private fun updateRemoteTyping(contactId: String, isTyping: Boolean) {
-        typingTimeoutJobs.remove(contactId)?.cancel()
-        typingContactIds.update { current -> if (isTyping) current + contactId else current - contactId }
-        if (!isTyping) return
-
-        typingTimeoutJobs[contactId] =
-            viewModelScope.launch {
-                delay(REMOTE_TYPING_TIMEOUT_MILLISECONDS.milliseconds)
-                typingContactIds.update { it - contactId }
-            }
-    }
-
     private fun onMessageTextChanged(value: String) {
         messageText.value = value
         errorMessage.value = null
-        localTypingStopJob?.cancel()
-
-        if (value.isBlank()) {
-            stopTyping()
-            return
-        }
-
-        if (!isLocalTyping) {
-            isLocalTyping = true
-            sendTypingState(isTyping = true)
-        }
-        localTypingStopJob =
-            viewModelScope.launch {
-                delay(LOCAL_TYPING_TIMEOUT_MILLISECONDS.milliseconds)
-                stopTypingNow()
-            }
+        typing.onLocalTextChanged(value)
     }
 
     private fun sendCurrentMessage() {
-        if (!uiState.value.isMessageInputEnabled || isSending.value) return
         val text = messageText.value.trim()
         val selections = selectedMedia.value
         if (text.isEmpty() && selections.isEmpty()) return
 
-        viewModelScope.launch {
-            isSending.value = true
-            try {
-                val attachments = selections.map(MediaSelection::toOutgoingMessageAttachment)
-                sendMessage(groupId, text, attachments)
-                    .onSuccess {
-                        messageText.value = ""
-                        selectedMedia.value = emptyList()
-                        stopTypingNow()
-                    }
-                    .onFailure { error ->
-                        errorMessage.value = error.message ?: "Message could not be sent"
-                    }
-            } finally {
-                isSending.value = false
-            }
-        }
+        val attachments = selections.map(MediaSelection::toOutgoingMessageAttachment)
+        dispatchSend(
+            text = text,
+            attachments = attachments,
+            clearComposerOnSuccess = true,
+            fallbackError = "Message could not be sent"
+        )
     }
 
-    private fun sendCurrentLocation(locationAttachment: OutgoingMessageAttachment) {
+    /** Shared entry point for location and contact shares: text is always empty, one attachment. */
+    private fun sendAttachmentOnly(attachment: OutgoingMessageAttachment, fallbackError: String) {
+        dispatchSend(
+            text = "",
+            attachments = listOf(attachment),
+            clearComposerOnSuccess = false,
+            fallbackError = fallbackError
+        )
+    }
+
+    /**
+     * Guards on input-enabled/sending state, flips [isSending] for the duration, sends the
+     * payload, and clears either the whole composer or just the reply on success. Shared by
+     * [sendCurrentMessage] and [sendAttachmentOnly] so this bookkeeping lives in one place.
+     */
+    private fun dispatchSend(
+        text: String,
+        attachments: List<OutgoingMessageAttachment>,
+        clearComposerOnSuccess: Boolean,
+        fallbackError: String
+    ) {
         if (!uiState.value.isMessageInputEnabled || isSending.value) return
 
+        val replyTo = replyToMessageId.value.takeIf(String::isNotBlank)
         errorMessage.value = null
         viewModelScope.launch {
             isSending.value = true
             try {
-                sendMessage(groupId, "", listOf(locationAttachment))
-                    .onFailure { error ->
-                        errorMessage.value = error.message ?: "Location could not be sent"
-                    }
-            } finally {
-                isSending.value = false
-            }
-        }
-    }
-
-    private fun sendContact(contactAttachment: OutgoingMessageAttachment) {
-        if (!uiState.value.isMessageInputEnabled || isSending.value) return
-
-        errorMessage.value = null
-        viewModelScope.launch {
-            isSending.value = true
-            try {
-                sendMessage(groupId, "", listOf(contactAttachment))
-                    .onFailure { error ->
-                        errorMessage.value = error.message ?: "Contact could not be sent"
-                    }
+                sendMessage(groupId, text, attachments, replyTo)
+                    .onSuccess { if (clearComposerOnSuccess) clearComposer() else clearReply() }
+                    .onFailure { error -> errorMessage.value = error.message ?: fallbackError }
             } finally {
                 isSending.value = false
             }
@@ -346,6 +293,37 @@ class GroupViewModel(
         }
     }
 
+    private suspend fun clearComposer() {
+        messageText.value = ""
+        replyToMessageId.value = ""
+        selectedMedia.value = emptyList()
+        typing.stopLocalTypingNow()
+    }
+
+    private fun startReply(messageId: String) {
+        if (uiState.value.messages.none { message -> message.id == messageId }) return
+        replyToMessageId.value = messageId
+        errorMessage.value = null
+    }
+
+    private fun clearReply() {
+        replyToMessageId.value = ""
+    }
+
+    private fun toggleReaction(messageId: String, emoji: String) {
+        viewModelScope.launch {
+            toggleMessageReaction(groupId, messageId, emoji)
+                .onFailure { error -> errorMessage.value = error.message ?: "Reaction could not be sent" }
+        }
+    }
+
+    private fun deleteMessage(messageId: String) {
+        viewModelScope.launch {
+            deleteMessageUseCase(groupId, messageId)
+                .onFailure { error -> errorMessage.value = error.message ?: "Message could not be deleted" }
+        }
+    }
+
     private fun retryFailedMessage(messageId: String) {
         viewModelScope.launch {
             retryMessage(messageId)
@@ -366,21 +344,6 @@ class GroupViewModel(
                 .onSuccess { navigator.popBackStackTo(AppRoute.Main) }
                 .onFailure { error -> errorMessage.value = error.message ?: "Group invitation could not be declined" }
         }
-    }
-
-    private fun sendTypingState(isTyping: Boolean) {
-        viewModelScope.launch { sendTypingStateNow(isTyping) }
-    }
-
-    private suspend fun sendTypingStateNow(isTyping: Boolean) {
-        setGroupTyping(groupId, isTyping)
-            .onFailure { error -> logger.warn(error) { "Could not send group typing state" } }
-    }
-
-    private suspend fun stopTypingNow() {
-        if (!isLocalTyping) return
-        isLocalTyping = false
-        sendTypingStateNow(isTyping = false)
     }
 
     private sealed interface GroupContextObservation {
@@ -407,9 +370,15 @@ class GroupViewModel(
         }
     }
 
+    private data class GroupComposerDraft(
+        val text: String,
+        val replyToMessageId: String?
+    )
+
     private data class GroupComposerContext(
         val text: String,
         val error: String?,
+        val replyToMessageId: String?,
         val typingIds: Set<String>,
         val media: List<MediaSelection>,
         val isSending: Boolean
@@ -417,7 +386,6 @@ class GroupViewModel(
 
     private companion object {
         const val MESSAGE_TEXT_KEY = "messageText"
-        const val LOCAL_TYPING_TIMEOUT_MILLISECONDS = 1500
-        const val REMOTE_TYPING_TIMEOUT_MILLISECONDS = 3000
+        const val REPLY_TO_MESSAGE_ID_KEY = "replyToMessageId"
     }
 }

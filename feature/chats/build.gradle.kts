@@ -30,6 +30,9 @@ kotlin {
             implementation(libs.bundles.coroutines)
             implementation(libs.bundles.koin.compose)
             implementation(libs.okio)
+            implementation(libs.haze.core)
+            implementation(libs.haze.blur)
+            implementation(libs.haze.blur.materials)
         }
 
         androidMain.dependencies {

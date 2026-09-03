@@ -1,5 +1,7 @@
 package com.cbgm.sparrow.feature.chats.presentation.component
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -7,6 +9,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -24,12 +28,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.zIndex
 import com.cbgm.sparrow.core.ui.animation.rememberHighlightColor
+import com.cbgm.sparrow.core.ui.component.SparrowOverlayAnchor
+import com.cbgm.sparrow.core.ui.component.captureSparrowOverlayAnchor
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -42,9 +54,10 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.presentation.component.model.ImageVideoTypeUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessagePartUi
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageReactionUi
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageReplyUi
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 import com.cbgm.sparrow.resources.Res
-import com.cbgm.sparrow.resources.feature_chats_decryption_failed
 import com.cbgm.sparrow.resources.feature_chats_delivered
 import com.cbgm.sparrow.resources.feature_chats_encrypted
 import com.cbgm.sparrow.resources.feature_chats_failed
@@ -71,7 +84,11 @@ internal fun MessageBubble(
     onAttachmentVisible: (String) -> Unit = {},
     onAttachmentClick: (String) -> Unit = {},
     onContactClick: (SharedContact) -> Unit = {},
-    isSearchHighlighted: Boolean = false
+    onReplyPreviewClick: (String) -> Unit = {},
+    onActionMenuVisibilityChange: (Boolean) -> Unit = {},
+    onReactionsClick: (SparrowOverlayAnchor) -> Unit = {},
+    isSearchHighlighted: Boolean = false,
+    showMetadata: Boolean = true
 ) {
     val bubbleState = bubbleState(message)
     val safetyWarning = message.safetyWarning
@@ -86,28 +103,56 @@ internal fun MessageBubble(
         ) {
             SenderLabel(message = message)
 
-            BubbleBody(
-                message = message,
-                state = bubbleState,
-                isSearchHighlighted = isSearchHighlighted,
-                safetyWarning = safetyWarning,
-                onAttachmentVisible = onAttachmentVisible,
-                onAttachmentClick = onAttachmentClick,
-                onContactClick = onContactClick,
-                onSafetyDetailsClick = {
-                    if (safetyWarning != null) onSafetyDetailsClick(safetyWarning)
-                }
-            )
-            Metadata(
-                message = message,
-                onRetryClick = onRetryClick,
+            Box(
                 modifier =
-                    Modifier.padding(
-                        top = MaterialTheme.spacing.messageBubble.metadataTopPadding,
-                        start = MaterialTheme.spacing.micro,
-                        end = MaterialTheme.spacing.micro
-                    )
-            )
+                    if (message.reactions.isNotEmpty()) {
+                        Modifier.padding(bottom = MaterialTheme.spacing.base)
+                    } else {
+                        Modifier
+                    }
+            ) {
+                BubbleBody(
+                    message = message,
+                    state = bubbleState,
+                    isSearchHighlighted = isSearchHighlighted,
+                    safetyWarning = safetyWarning,
+                    onAttachmentVisible = onAttachmentVisible,
+                    onAttachmentClick = onAttachmentClick,
+                    onContactClick = onContactClick,
+                    onReplyPreviewClick = onReplyPreviewClick,
+                    onLongPress = { onActionMenuVisibilityChange(true) },
+                    onSafetyDetailsClick = {
+                        safetyWarning?.let(onSafetyDetailsClick)
+                    }
+                )
+
+                MessageReactions(
+                    reactions = message.reactions,
+                    onClick = onReactionsClick,
+                    modifier =
+                        Modifier
+                            .align(
+                                if (message.isMine) {
+                                    Alignment.BottomStart
+                                } else {
+                                    Alignment.BottomEnd
+                                }
+                            )
+                            .offset(y = MaterialTheme.spacing.base)
+                )
+            }
+            if (showMetadata) {
+                Metadata(
+                    message = message,
+                    onRetryClick = onRetryClick,
+                    modifier =
+                        Modifier.padding(
+                            top = MaterialTheme.spacing.messageBubble.metadataTopPadding,
+                            start = MaterialTheme.spacing.micro,
+                            end = MaterialTheme.spacing.micro
+                        )
+                )
+            }
         }
     }
 }
@@ -138,6 +183,22 @@ private fun SenderLabel(message: MessageBubbleUi) {
     )
 }
 
+/**
+ * Which single part of the message is actually rendered as the "primary" content bubble.
+ * Parts are checked in priority order; the reply preview (if any) is attached only to
+ * whichever one wins, matching the same priority used to decide what's shown at all.
+ */
+private enum class PrimaryContent { CONTACT, LOCATION, IMAGE_VIDEO, FILE, TEXT, NONE }
+
+private fun MessageBubbleUi.primaryContent(showTextBubble: Boolean): PrimaryContent = when {
+    contactPart != null -> PrimaryContent.CONTACT
+    locationPart != null -> PrimaryContent.LOCATION
+    imageVideoParts.isNotEmpty() -> PrimaryContent.IMAGE_VIDEO
+    fileParts.isNotEmpty() -> PrimaryContent.FILE
+    showTextBubble -> PrimaryContent.TEXT
+    else -> PrimaryContent.NONE
+}
+
 @Composable
 private fun BubbleBody(
     message: MessageBubbleUi,
@@ -147,12 +208,19 @@ private fun BubbleBody(
     onAttachmentVisible: (String) -> Unit = {},
     onAttachmentClick: (String) -> Unit = {},
     onContactClick: (SharedContact) -> Unit = {},
+    onReplyPreviewClick: (String) -> Unit = {},
+    onLongPress: () -> Unit = {},
     onSafetyDetailsClick: () -> Unit = {}
 ) {
     val showTextBubble =
         message.locationPart == null &&
             message.contactPart == null &&
             (state.text.isNotBlank() || state.isContentFailed || safetyWarning != null)
+
+    val reply = message.reply
+    val primaryContent = message.primaryContent(showTextBubble)
+
+    fun replyFor(target: PrimaryContent) = reply?.takeIf { primaryContent == target }
 
     Column(
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro),
@@ -163,7 +231,10 @@ private fun BubbleBody(
                 message = message,
                 state = state,
                 hasInnerPadding = false,
-                isSearchHighlighted = isSearchHighlighted
+                isSearchHighlighted = isSearchHighlighted,
+                reply = replyFor(PrimaryContent.CONTACT),
+                onReplyPreviewClick = onReplyPreviewClick,
+                onLongPress = onLongPress
             ) {
                 ContactMessageBubbleBody(
                     contactPart = contactPart,
@@ -178,7 +249,10 @@ private fun BubbleBody(
                 message = message,
                 state = state,
                 hasInnerPadding = false,
-                isSearchHighlighted = isSearchHighlighted
+                isSearchHighlighted = isSearchHighlighted,
+                reply = replyFor(PrimaryContent.LOCATION),
+                onReplyPreviewClick = onReplyPreviewClick,
+                onLongPress = onLongPress
             ) {
                 LocationMessageBubbleBody(
                     locationPart = locationPart,
@@ -192,7 +266,10 @@ private fun BubbleBody(
             MessageBubbleSurface(
                 message = message,
                 state = state,
-                isSearchHighlighted = isSearchHighlighted
+                isSearchHighlighted = isSearchHighlighted,
+                reply = replyFor(PrimaryContent.IMAGE_VIDEO),
+                onReplyPreviewClick = onReplyPreviewClick,
+                onLongPress = onLongPress
             ) {
                 PhotoVideoMessageBubbleBody(
                     imageVideoParts = message.imageVideoParts,
@@ -206,7 +283,10 @@ private fun BubbleBody(
             MessageBubbleSurface(
                 message = message,
                 state = state,
-                isSearchHighlighted = isSearchHighlighted
+                isSearchHighlighted = isSearchHighlighted,
+                reply = replyFor(PrimaryContent.FILE),
+                onReplyPreviewClick = onReplyPreviewClick,
+                onLongPress = onLongPress
             ) {
                 FileMessageBubbleBody(
                     fileParts = message.fileParts,
@@ -220,7 +300,10 @@ private fun BubbleBody(
                 message = message,
                 state = state,
                 hasInnerPadding = safetyWarning == null,
-                isSearchHighlighted = isSearchHighlighted
+                isSearchHighlighted = isSearchHighlighted,
+                reply = replyFor(PrimaryContent.TEXT),
+                onReplyPreviewClick = onReplyPreviewClick,
+                onLongPress = onLongPress
             ) {
                 TextMessageBubbleBody(
                     textPart =
@@ -244,6 +327,9 @@ private fun MessageBubbleSurface(
     isSearchHighlighted: Boolean,
     modifier: Modifier = Modifier,
     hasInnerPadding: Boolean = true,
+    reply: MessageReplyUi? = null,
+    onReplyPreviewClick: (String) -> Unit = {},
+    onLongPress: () -> Unit = {},
     content: @Composable () -> Unit
 ) {
     val bubbleShapes = MaterialTheme.shapes.messageBubble
@@ -253,47 +339,112 @@ private fun MessageBubbleSurface(
             baseColor = state.bubbleColor,
             highlightColor = MaterialTheme.colorScheme.primary.copy(alpha = Alpha.Subtle)
         )
+    val bubbleShape =
+        MessageBubbleShape(
+            isMine = message.isMine,
+            cornerRadius = bubbleShapes.cornerRadius,
+            tailWidth = bubbleShapes.tailWidth,
+            tailHeight = bubbleShapes.tailHeight,
+            tailReturnOffset = bubbleShapes.tailReturnOffset
+        )
+    val contentPadding =
+        if (hasInnerPadding) {
+            MaterialTheme.spacing.micro
+        } else {
+            MaterialTheme.spacing.zero
+        }
+    val tailPadding = bubbleShapes.tailWidth + contentPadding
 
     Surface(
-        modifier = modifier,
+        modifier = modifier
+            .combinedClickable(
+                onClick = {},
+                onLongClick = onLongPress
+            ),
         color = bubbleColor,
         contentColor = state.contentColor,
-        shape =
-            MessageBubbleShape(
-                isMine = message.isMine,
-                cornerRadius = bubbleShapes.cornerRadius,
-                tailWidth = bubbleShapes.tailWidth,
-                tailHeight = bubbleShapes.tailHeight,
-                tailReturnOffset = bubbleShapes.tailReturnOffset
-            )
+        shape = bubbleShape
     ) {
-        val additionalPadding =
-            if (hasInnerPadding) {
-                MaterialTheme.spacing.micro
-            } else {
-                MaterialTheme.spacing.zero
+        Column {
+            reply?.let { replyPreview ->
+                MessageReplyPreview(
+                    reply = replyPreview,
+                    onClick = { onReplyPreviewClick(replyPreview.messageId) },
+                    color = state.bubbleColor,
+                    isMine = message.isMine
+                )
             }
 
+            Box(
+                modifier =
+                    Modifier.absolutePadding(
+                        left = if (message.isMine) contentPadding else tailPadding,
+                        top = contentPadding,
+                        right = if (message.isMine) tailPadding else contentPadding,
+                        bottom = contentPadding
+                    )
+            ) {
+                content()
+            }
+        }
+    }
+}
+
+@Composable
+private fun MessageReactions(
+    reactions: List<MessageReactionUi>,
+    onClick: (SparrowOverlayAnchor) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (reactions.isEmpty()) return
+
+    val visibleReactions = reactions.take(3)
+    val iconSlotSize = Dimens.MessageReaction.cloudIconSlotSize
+    val iconStep = Dimens.MessageReaction.cloudIconStep
+    val cloudHeight = iconSlotSize + Dimens.MessageReaction.cloudSideOffsetY
+    val cloudWidth = iconSlotSize + iconStep * (visibleReactions.size - 1).toFloat()
+    var anchor by remember { mutableStateOf<SparrowOverlayAnchor?>(null) }
+
+    Surface(
+        modifier =
+            modifier
+                .captureSparrowOverlayAnchor { anchor = it }
+                .clickable { anchor?.let(onClick) },
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh
+    ) {
         Box(
             modifier =
-                Modifier.absolutePadding(
-                    left =
-                        if (message.isMine) {
-                            additionalPadding
-                        } else {
-                            bubbleShapes.tailWidth + additionalPadding
-                        },
-                    top = additionalPadding,
-                    right =
-                        if (message.isMine) {
-                            bubbleShapes.tailWidth + additionalPadding
-                        } else {
-                            additionalPadding
-                        },
-                    bottom = additionalPadding
-                )
+                Modifier
+                    .padding(Dimens.MessageReaction.cloudContentPadding)
+                    .width(cloudWidth)
+                    .height(cloudHeight)
         ) {
-            content()
+            visibleReactions.forEachIndexed { index, reaction ->
+                val yOffset =
+                    if (visibleReactions.size == 3 && index != 1) {
+                        Dimens.MessageReaction.cloudSideOffsetY
+                    } else {
+                        Dimens.Base.zero
+                    }
+
+                Box(
+                    modifier =
+                        Modifier
+                            .size(iconSlotSize)
+                            .offset(
+                                x = iconStep * index.toFloat(),
+                                y = yOffset
+                            )
+                            .zIndex(index.toFloat()),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = reaction.emoji,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
         }
     }
 }
@@ -341,13 +492,27 @@ private fun DeliveryProgress(message: MessageBubbleUi) {
 }
 
 @Composable
+private fun MetadataIcon(
+    imageVector: ImageVector,
+    modifier: Modifier = Modifier,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant
+) {
+    Icon(
+        imageVector = imageVector,
+        contentDescription = null,
+        modifier = modifier.size(Dimens.MessageBubble.iconSize),
+        tint = tint
+    )
+}
+
+@Composable
 private fun SecurityIndicator(message: MessageBubbleUi) {
     val text =
         when (message.contentStatus) {
             MessageContentStatus.INVALID_PACKET -> stringResource(Res.string.feature_chats_invalid_packet)
             MessageContentStatus.INVALID_PLAINTEXT_PACKET -> stringResource(Res.string.feature_chats_invalid_plaintext)
             MessageContentStatus.TRANSPORT_DECRYPTION_FAILED ->
-                stringResource(Res.string.feature_chats_decryption_failed)
+                stringResource(Res.string.feature_chats_unable_decrypt_secure_message)
 
             MessageContentStatus.READABLE ->
                 when (message.security) {
@@ -364,12 +529,7 @@ private fun SecurityIndicator(message: MessageBubbleUi) {
         }
 
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(Dimens.MessageBubble.iconSize),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        MetadataIcon(icon)
         Spacer(modifier = Modifier.width(MaterialTheme.spacing.base))
         Text(
             text = text,
@@ -386,28 +546,18 @@ private fun DeliveryIndicator(
 ) {
     when (deliveryStatus) {
         MessageDeliveryStatus.NOT_APPLICABLE -> Unit
-        MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION ->
-            DeliveryLabel(
-                text = stringResource(Res.string.feature_chats_waiting_for_invitation_acceptance),
-                icon = {
-                    Icon(
-                        imageVector = Icons.Default.Schedule,
-                        contentDescription = null,
-                        modifier = Modifier.size(Dimens.MessageBubble.iconSize)
-                    )
-                }
-            )
 
+        MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION,
         MessageDeliveryStatus.QUEUED ->
             DeliveryLabel(
-                text = stringResource(Res.string.feature_chats_queued),
-                icon = {
-                    Icon(
-                        imageVector = Icons.Default.Schedule,
-                        contentDescription = null,
-                        modifier = Modifier.size(Dimens.MessageBubble.iconSize)
-                    )
-                }
+                text = stringResource(
+                    if (deliveryStatus == MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION) {
+                        Res.string.feature_chats_waiting_for_invitation_acceptance
+                    } else {
+                        Res.string.feature_chats_queued
+                    }
+                ),
+                icon = { MetadataIcon(Icons.Default.Schedule) }
             )
 
         MessageDeliveryStatus.SENDING ->
@@ -442,13 +592,7 @@ private fun DeliveryIndicator(
 private fun CheckDeliveryLabel(text: String) {
     DeliveryLabel(
         text = text,
-        icon = {
-            Icon(
-                imageVector = Icons.Default.Check,
-                contentDescription = null,
-                modifier = Modifier.size(Dimens.MessageBubble.iconSize)
-            )
-        }
+        icon = { MetadataIcon(Icons.Default.Check) }
     )
 }
 
@@ -462,17 +606,10 @@ private fun DoubleCheckDeliveryLabel(
         textColor = color,
         icon = {
             Row {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = null,
-                    modifier = Modifier.size(Dimens.MessageBubble.iconSize),
-                    tint = color
-                )
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = null,
-                    modifier = Modifier.size(Dimens.MessageBubble.iconSize)
-                        .padding(start = MaterialTheme.spacing.messageBubble.stackedCheckStartPadding),
+                MetadataIcon(Icons.Default.Check, tint = color)
+                MetadataIcon(
+                    Icons.Default.Check,
+                    modifier = Modifier.padding(start = MaterialTheme.spacing.messageBubble.stackedCheckStartPadding),
                     tint = color
                 )
             }
@@ -483,12 +620,7 @@ private fun DoubleCheckDeliveryLabel(
 @Composable
 private fun FailedDelivery(onRetryClick: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            imageVector = Icons.Default.ErrorOutline,
-            contentDescription = null,
-            modifier = Modifier.size(Dimens.MessageBubble.iconSize),
-            tint = MaterialTheme.colorScheme.error
-        )
+        MetadataIcon(Icons.Default.ErrorOutline, tint = MaterialTheme.colorScheme.error)
         Spacer(modifier = Modifier.width(MaterialTheme.spacing.messageBubble.deliveryLabelGap))
         Text(
             text = stringResource(Res.string.feature_chats_failed),
@@ -572,7 +704,7 @@ internal data class BubbleState(
     val contentColor: Color
 )
 
-@Preview
+@Preview(heightDp = 300)
 @Composable
 private fun MessageBubblePreview() {
     SparrowTheme {
@@ -584,6 +716,13 @@ private fun MessageBubblePreview() {
                     security = MessageSecurity.END_TO_END_ENCRYPTED,
                     contentStatus = MessageContentStatus.READABLE,
                     deliveryStatus = MessageDeliveryStatus.DELIVERED,
+                    reactions =
+                        listOf(
+                            MessageReactionUi(emoji = "❤️", count = 2, reactedByMe = true),
+                            MessageReactionUi(emoji = "😂", count = 1, reactedByMe = false),
+                            MessageReactionUi(emoji = "👍", count = 3, reactedByMe = false),
+                            MessageReactionUi(emoji = "🔥", count = 1, reactedByMe = false)
+                        ),
                     textPart =
                         MessagePartUi.Text(
                             text = "Encrypted message",

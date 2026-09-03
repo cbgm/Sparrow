@@ -2,6 +2,7 @@ package com.cbgm.sparrow.core.protocol.packet
 
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentConstraints
+import com.cbgm.sparrow.core.protocol.message.MessageReactionPayload
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.protocol.version.ProtocolVersion
 import kotlinx.serialization.EncodeDefault
@@ -26,6 +27,10 @@ data class ChatMessagePacket(
     val text: String,
     @EncodeDefault(EncodeDefault.Mode.NEVER)
     val attachments: List<MessageAttachment> = emptyList(),
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val replyToMessageId: String? = null,
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val reaction: MessageReactionPayload? = null,
     val senderPhoneNumber: String? = null,
     val profilePicture: ProfilePictureMetadata = ProfilePictureMetadata()
 ) : SparrowPacket {
@@ -46,8 +51,15 @@ data class ChatMessagePacket(
             "Message timestamp must not be negative"
         }
 
-        require(text.isNotBlank() || attachments.isNotEmpty()) {
-            "Message must contain text or at least one attachment"
+        require(text.isNotBlank() || attachments.isNotEmpty() || reaction != null) {
+            "Message must contain text, an attachment, or a reaction"
+        }
+
+        require(
+            reaction == null ||
+                (text.isBlank() && attachments.isEmpty() && replyToMessageId == null)
+        ) {
+            "Reaction packets must not contain message content or a reply target"
         }
 
         require(attachments.size <= MessageAttachmentConstraints.MAX_ATTACHMENTS_PER_MESSAGE) {
@@ -56,6 +68,10 @@ data class ChatMessagePacket(
 
         require(attachments.map(MessageAttachment::attachmentId).distinct().size == attachments.size) {
             "Attachment IDs must be unique within a message"
+        }
+
+        require(replyToMessageId == null || replyToMessageId.isNotBlank()) {
+            "Reply message ID must not be blank"
         }
 
         require(senderPhoneNumber == null || senderPhoneNumber.isNotBlank()) {

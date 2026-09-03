@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.chats.presentation.direct.screen
+package com.cbgm.sparrow.feature.chats.presentation.direct
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -42,6 +42,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -49,13 +50,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
+import com.cbgm.sparrow.core.ui.component.FeedbackOverlay
+import com.cbgm.sparrow.core.ui.component.FeedbackOverlayData
 import com.cbgm.sparrow.core.ui.component.PatternBackground
-import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
-import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
+import com.cbgm.sparrow.core.ui.component.SparrowOverlay
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
-import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
+import com.cbgm.sparrow.core.ui.device.clipboard.rememberClipboardWriter
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -69,14 +71,24 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
 import com.cbgm.sparrow.feature.chats.presentation.component.AddSharedContactDialog
+import com.cbgm.sparrow.feature.chats.presentation.component.DissolvingMessageListState
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageBubble
+import com.cbgm.sparrow.feature.chats.presentation.component.MessageContextAnchor
+import com.cbgm.sparrow.feature.chats.presentation.component.MessageContextHost
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageControl
+import com.cbgm.sparrow.feature.chats.presentation.component.MessageDissolve
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageInputActions
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageInputState
+import com.cbgm.sparrow.feature.chats.presentation.component.MessageReactionBurst
+import com.cbgm.sparrow.feature.chats.presentation.component.MessageReactionBurstOverlay
+import com.cbgm.sparrow.feature.chats.presentation.component.captureMessageContextAnchor
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toMessageAttachmentsUi
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toSharedContact
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
+import com.cbgm.sparrow.feature.chats.presentation.component.rememberDissolvingMessageListState
+import com.cbgm.sparrow.feature.chats.presentation.component.rememberMessageJumpState
 import com.cbgm.sparrow.feature.chats.presentation.component.rememberMessageSearchTargetState
+import com.cbgm.sparrow.feature.chats.presentation.direct.component.IdentitySetupDialog
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectComposerState
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiState
@@ -86,8 +98,8 @@ import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionSource
 import com.cbgm.sparrow.feature.media.presentation.selection.rememberMediaSelectionLauncher
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 import com.cbgm.sparrow.resources.Res
-import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.base_verify
+import com.cbgm.sparrow.resources.common_copied
 import com.cbgm.sparrow.resources.feature_chats_chat_key_exchange_incomplete_description
 import com.cbgm.sparrow.resources.feature_chats_chat_key_exchange_incomplete_title
 import com.cbgm.sparrow.resources.feature_chats_chat_no_keys_description
@@ -105,17 +117,13 @@ import com.cbgm.sparrow.resources.feature_chats_chat_verified_by_me_keys_descrip
 import com.cbgm.sparrow.resources.feature_chats_chat_verified_by_me_title
 import com.cbgm.sparrow.resources.feature_chats_chat_verified_e2ee
 import com.cbgm.sparrow.resources.feature_chats_chat_verified_keys_description
-import com.cbgm.sparrow.resources.feature_chats_import_contact_identity
 import com.cbgm.sparrow.resources.feature_chats_loading_chat
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_incomplete_description
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_incomplete_title
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_required_description
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_required_title
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_setup_action
-import com.cbgm.sparrow.resources.feature_chats_manual_identity_setup_description
-import com.cbgm.sparrow.resources.feature_chats_manual_identity_setup_title
 import com.cbgm.sparrow.resources.feature_chats_start_conversation_with
-import com.cbgm.sparrow.resources.feature_identity_share_my_identity
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -131,60 +139,160 @@ fun DirectScreen(
     var viewerAttachmentId by rememberSaveable { mutableStateOf<String?>(null) }
     var showContactSelection by rememberSaveable { mutableStateOf(false) }
     var pendingSharedContact by remember { mutableStateOf<SharedContact?>(null) }
+    var messageContextAnchor by remember { mutableStateOf<MessageContextAnchor?>(null) }
+    var reactionBurst by remember { mutableStateOf<MessageReactionBurst?>(null) }
+    var feedbackOverlay by remember { mutableStateOf<FeedbackOverlayData?>(null) }
 
-    SparrowLazyScaffold(
-        modifier = modifier,
-        barColor = MaterialTheme.colorScheme.background,
-        background = {
-            PatternBackground(
-                modifier = Modifier.fillMaxSize(),
-                backgroundColor = MaterialTheme.colorScheme.background,
-                alpha = Alpha.PatternBackground.conversation
-            )
-        },
-        topBar = { containerColor ->
-            TopBar(
-                uiState = uiState,
-                containerColor = containerColor,
-                onUiEvent = onUiEvent,
-                onManualIdentitySetup = { showIdentitySetupDialog = true }
-            )
-        },
-        bottomBar = { containerColor ->
-            BottomBar(
-                uiState = uiState,
-                containerColor = containerColor,
-                onUiEvent = onUiEvent,
-                onContactAttachmentClick = { showContactSelection = true }
-            )
+    val contextMessage =
+        messageContextAnchor
+            ?.messageId
+            ?.let { messageId -> uiState.messages.firstOrNull { it.id == messageId } }
+    val contextMessageText = contextMessage?.textPart?.text?.takeIf { it.isNotBlank() }
+    val clipboardWriter = rememberClipboardWriter()
+    val copiedText = stringResource(Res.string.common_copied)
+    val contextMenuColor =
+        if (contextMessage?.isMine == true) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHigh
         }
-    ) { innerPadding, listState ->
-        Content(
-            uiState = uiState,
-            listState = listState,
-            innerPadding = innerPadding,
-            targetMessageId = targetMessageId,
-            onRetryMessage = { messageId ->
-                onUiEvent(DirectUiEvent.RetryMessage(messageId))
+
+    val activeContextAnchor =
+        messageContextAnchor?.takeIf {
+            contextMessage != null
+        }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        MessageContextHost(
+            anchor = activeContextAnchor,
+            menuColor = contextMenuColor,
+            onDismiss = {
+                messageContextAnchor = null
             },
-            onSafetyWarningClick = { messageId, warning ->
-                onUiEvent(
-                    DirectUiEvent.SafetyWarningClicked(
-                        messageId = messageId,
-                        warning = warning
+            onReplyClick = {
+                contextMessage?.let { message ->
+                    onUiEvent(
+                        DirectUiEvent.ReplyToMessage(
+                            message.id
+                        )
                     )
+                }
+            },
+            onReactionClick = { emoji ->
+                contextMessage?.let { message ->
+                    onUiEvent(DirectUiEvent.MessageReactionSelected(message.id, emoji))
+                }
+            },
+            onCopyClick = {
+                contextMessageText?.let(clipboardWriter::copyText)
+                activeContextAnchor?.let { contextAnchor ->
+                    feedbackOverlay =
+                        FeedbackOverlayData(
+                            anchor = contextAnchor.overlayAnchor,
+                            text = copiedText,
+                            color = contextMenuColor
+                        )
+                }
+            },
+            onDeleteClick = {
+                contextMessage?.let { message ->
+                    onUiEvent(DirectUiEvent.DeleteMessage(message.id))
+                }
+            },
+            modifier = Modifier.fillMaxSize(),
+            preview = {
+                contextMessage?.let { message ->
+                    MessageBubble(
+                        message = message,
+                        onRetryClick = {},
+                        onSafetyDetailsClick = {},
+                        onAttachmentVisible = {},
+                        onAttachmentClick = {},
+                        onContactClick = {},
+                        onReplyPreviewClick = {},
+                        isSearchHighlighted = false,
+                        showMetadata = false
+                    )
+                }
+            }
+        ) {
+            SparrowLazyScaffold(
+                modifier = Modifier.fillMaxSize(),
+                barColor = MaterialTheme.colorScheme.background,
+                background = {
+                    PatternBackground(
+                        modifier = Modifier.fillMaxSize(),
+                        backgroundColor = MaterialTheme.colorScheme.background,
+                        alpha = Alpha.PatternBackground.conversation
+                    )
+                },
+                topBar = { containerColor ->
+                    TopBar(
+                        uiState = uiState,
+                        containerColor = containerColor,
+                        onUiEvent = onUiEvent,
+                        onManualIdentitySetup = { showIdentitySetupDialog = true }
+                    )
+                },
+                bottomBar = { containerColor ->
+                    BottomBar(
+                        uiState = uiState,
+                        containerColor = containerColor,
+                        onUiEvent = onUiEvent,
+                        onContactAttachmentClick = { showContactSelection = true }
+                    )
+                }
+            ) { innerPadding, listState ->
+                Content(
+                    uiState = uiState,
+                    listState = listState,
+                    innerPadding = innerPadding,
+                    targetMessageId = targetMessageId,
+                    selectedContextMessageId = messageContextAnchor?.messageId,
+                    onContextMessageRequested = { messageContextAnchor = it },
+                    onReactionBurstRequested = { reactionBurst = it },
+                    onRetryMessage = { messageId ->
+                        onUiEvent(DirectUiEvent.RetryMessage(messageId))
+                    },
+                    onSafetyWarningClick = { messageId, warning ->
+                        onUiEvent(
+                            DirectUiEvent.SafetyWarningClicked(
+                                messageId = messageId,
+                                warning = warning
+                            )
+                        )
+                    },
+                    onAttachmentVisible = { attachmentId ->
+                        onUiEvent(DirectUiEvent.AttachmentVisible(attachmentId))
+                    },
+                    onAttachmentClick = { messageId, attachmentId ->
+                        viewerMessageId = messageId
+                        viewerAttachmentId = attachmentId
+                        onUiEvent(DirectUiEvent.AttachmentVisible(attachmentId))
+                    },
+                    onContactClick = { contact -> pendingSharedContact = contact }
                 )
-            },
-            onAttachmentVisible = { attachmentId ->
-                onUiEvent(DirectUiEvent.AttachmentVisible(attachmentId))
-            },
-            onAttachmentClick = { messageId, attachmentId ->
-                viewerMessageId = messageId
-                viewerAttachmentId = attachmentId
-                onUiEvent(DirectUiEvent.AttachmentVisible(attachmentId))
-            },
-            onContactClick = { contact -> pendingSharedContact = contact }
-        )
+            }
+        }
+
+        feedbackOverlay?.let { feedback ->
+            SparrowOverlay(anchor = feedback.anchor) {
+                FeedbackOverlay(
+                    text = feedback.text,
+                    color = feedback.color,
+                    onDismiss = { feedbackOverlay = null }
+                )
+            }
+        }
+
+        reactionBurst?.let { burst ->
+            SparrowOverlay(anchor = burst.anchor) {
+                MessageReactionBurstOverlay(
+                    burst = burst,
+                    onDismiss = { reactionBurst = null }
+                )
+            }
+        }
     }
 
     if (showIdentitySetupDialog) {
@@ -230,7 +338,8 @@ fun DirectScreen(
         )
     }
 
-    val currentViewerMessage = viewerMessageId?.let { messageId -> uiState.messages.firstOrNull { it.id == messageId } }
+    val currentViewerMessage =
+        viewerMessageId?.let { messageId -> uiState.messages.firstOrNull { it.id == messageId } }
     val currentViewerAttachmentId = viewerAttachmentId
     if (currentViewerMessage != null && currentViewerAttachmentId != null) {
         MessageAttachmentViewer(
@@ -309,53 +418,13 @@ private fun TopBar(
     }
 }
 
-@Composable
-private fun IdentitySetupDialog(
-    onShareIdentity: () -> Unit,
-    onImportIdentity: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    SparrowAlertDialog(
-        onDismissRequest = onDismiss,
-        title = stringResource(Res.string.feature_chats_manual_identity_setup_title),
-        text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(text = stringResource(Res.string.feature_chats_manual_identity_setup_description))
-                Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-                SparrowOutlinedButton(
-                    onClick = onShareIdentity,
-                    modifier = Modifier.fillMaxWidth(),
-                    text = stringResource(Res.string.feature_identity_share_my_identity)
-                )
-                SparrowOutlinedButton(
-                    onClick = onImportIdentity,
-                    modifier = Modifier.fillMaxWidth(),
-                    text = stringResource(Res.string.feature_chats_import_contact_identity)
-                )
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            SparrowSecondaryButton(
-                onClick = onDismiss,
-                text = stringResource(Res.string.base_cancel),
-                fillMaxWidth = false
-            )
-        }
-    )
-}
-
-@Preview
-@Composable
-private fun IdentitySetupDialogPreview() {
-    SparrowTheme {
-        IdentitySetupDialog(
-            onShareIdentity = {},
-            onImportIdentity = {},
-            onDismiss = {}
-        )
-    }
-}
+/**
+ * Tracks the "share current location" flow as a single state instead of three
+ * independent booleans. IDLE -> CAPTURING (waiting on device location) ->
+ * AWAITING_SEND (location obtained, event dispatched) -> SENDING (uiState confirmed
+ * the send started) -> IDLE once uiState.isSending flips back to false.
+ */
+private enum class LocationSharePhase { IDLE, CAPTURING, AWAITING_SEND, SENDING }
 
 @Composable
 private fun BottomBar(
@@ -364,30 +433,30 @@ private fun BottomBar(
     onUiEvent: (DirectUiEvent) -> Unit,
     onContactAttachmentClick: () -> Unit
 ) {
-    var isLocationInProgress by rememberSaveable { mutableStateOf(false) }
-    var isWaitingForLocationSend by rememberSaveable { mutableStateOf(false) }
-    var hasObservedLocationSend by rememberSaveable { mutableStateOf(false) }
+    var locationPhase by rememberSaveable { mutableStateOf(LocationSharePhase.IDLE) }
 
-    LaunchedEffect(uiState.isSending, isWaitingForLocationSend) {
-        if (isWaitingForLocationSend && uiState.isSending) {
-            hasObservedLocationSend = true
-        } else if (isWaitingForLocationSend && hasObservedLocationSend && !uiState.isSending) {
-            isLocationInProgress = false
-            isWaitingForLocationSend = false
-            hasObservedLocationSend = false
+    LaunchedEffect(uiState.isSending, locationPhase) {
+        locationPhase = when {
+            locationPhase == LocationSharePhase.AWAITING_SEND && uiState.isSending ->
+                LocationSharePhase.SENDING
+
+            locationPhase == LocationSharePhase.SENDING && !uiState.isSending ->
+                LocationSharePhase.IDLE
+
+            else -> locationPhase
         }
     }
+
+    val isLocationInProgress = locationPhase != LocationSharePhase.IDLE
 
     val currentLocationLauncher =
         rememberCurrentLocationLauncher(
             onLocation = { location ->
-                isWaitingForLocationSend = true
+                locationPhase = LocationSharePhase.AWAITING_SEND
                 onUiEvent(DirectUiEvent.ShareCurrentLocation(location))
             },
             onError = { error ->
-                isLocationInProgress = false
-                isWaitingForLocationSend = false
-                hasObservedLocationSend = false
+                locationPhase = LocationSharePhase.IDLE
                 onUiEvent(DirectUiEvent.AttachmentError(error))
             }
         )
@@ -422,6 +491,7 @@ private fun BottomBar(
         containerColor = containerColor,
         state = MessageInputState(
             messageText = uiState.messageText,
+            replyTo = uiState.replyTo,
             isTyping = uiState.isContactTyping,
             contactName = uiState.contactName,
             isInputEnabled = !uiState.isLoading && !uiState.isSending && uiState.composerState.isInputEnabled,
@@ -435,6 +505,7 @@ private fun BottomBar(
         actions = MessageInputActions(
             onValueChange = { onUiEvent(DirectUiEvent.MessageTextChanged(it)) },
             onSendClick = { onUiEvent(DirectUiEvent.SendClicked) },
+            onCancelReply = { onUiEvent(DirectUiEvent.CancelReply) },
             onSelectionClick = mediaPicker::launch,
             onMediaRemove = { mediaId ->
                 onUiEvent(
@@ -448,10 +519,8 @@ private fun BottomBar(
             onClickFile = { mediaPicker.launch(MediaSelectionSource.FILE_PICKER) },
             onClickContact = onContactAttachmentClick,
             onClickLocation = {
-                if (!isLocationInProgress) {
-                    isLocationInProgress = true
-                    isWaitingForLocationSend = false
-                    hasObservedLocationSend = false
+                if (locationPhase == LocationSharePhase.IDLE) {
+                    locationPhase = LocationSharePhase.CAPTURING
                     currentLocationLauncher.launch()
                 }
             }
@@ -465,27 +534,39 @@ private fun Content(
     listState: LazyListState,
     innerPadding: PaddingValues,
     targetMessageId: String?,
+    selectedContextMessageId: String?,
+    onContextMessageRequested: (MessageContextAnchor) -> Unit,
+    onReactionBurstRequested: (MessageReactionBurst) -> Unit,
     onRetryMessage: (String) -> Unit,
     onSafetyWarningClick: (String, MessageSafetyWarningUi) -> Unit,
     onAttachmentVisible: (String) -> Unit,
     onAttachmentClick: (String, String) -> Unit,
     onContactClick: (SharedContact) -> Unit
 ) {
-    when {
-        uiState.isLoading -> LoadingContent(
-            modifier = Modifier.fillMaxSize().padding(innerPadding)
+    val fillModifier = Modifier.fillMaxSize().padding(innerPadding)
+    val dissolvingListState =
+        rememberDissolvingMessageListState(
+            messages = uiState.messages,
+            idOf = { it.id },
+            shouldDissolve = { !it.isMine }
         )
 
-        uiState.messages.isEmpty() -> EmptyContent(
+    when {
+        uiState.isLoading -> LoadingContent(modifier = fillModifier)
+
+        dissolvingListState.messages.isEmpty() -> EmptyContent(
             contactName = uiState.contactName,
             securityState = uiState.contactSecurityState,
-            modifier = Modifier.fillMaxSize().padding(innerPadding)
+            modifier = fillModifier
         )
 
         else -> MessageList(
-            messages = uiState.messages,
+            dissolvingListState = dissolvingListState,
             listState = listState,
             targetMessageId = targetMessageId,
+            selectedContextMessageId = selectedContextMessageId,
+            onContextMessageRequested = onContextMessageRequested,
+            onReactionBurstRequested = onReactionBurstRequested,
             onRetryMessage = onRetryMessage,
             onSafetyWarningClick = onSafetyWarningClick,
             onAttachmentVisible = onAttachmentVisible,
@@ -498,9 +579,12 @@ private fun Content(
 
 @Composable
 private fun MessageList(
-    messages: List<MessageBubbleUi>,
+    dissolvingListState: DissolvingMessageListState<MessageBubbleUi>,
     listState: LazyListState,
     targetMessageId: String?,
+    selectedContextMessageId: String?,
+    onContextMessageRequested: (MessageContextAnchor) -> Unit,
+    onReactionBurstRequested: (MessageReactionBurst) -> Unit,
     onRetryMessage: (String) -> Unit,
     onSafetyWarningClick: (String, MessageSafetyWarningUi) -> Unit,
     onAttachmentVisible: (String) -> Unit,
@@ -508,9 +592,15 @@ private fun MessageList(
     onContactClick: (SharedContact) -> Unit,
     contentPadding: PaddingValues
 ) {
+    val messages = dissolvingListState.messages
     val searchTargetState =
         rememberMessageSearchTargetState(
             targetMessageId = targetMessageId,
+            messageIds = messages.map(MessageBubbleUi::id),
+            listState = listState
+        )
+    val replyJumpState =
+        rememberMessageJumpState(
             messageIds = messages.map(MessageBubbleUi::id),
             listState = listState
         )
@@ -535,17 +625,48 @@ private fun MessageList(
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
         items(items = messages, key = MessageBubbleUi::id) { message ->
-            MessageBubble(
-                message = message,
-                onRetryClick = { onRetryMessage(message.id) },
-                onSafetyDetailsClick = { warning ->
-                    onSafetyWarningClick(message.id, warning)
-                },
-                onAttachmentVisible = onAttachmentVisible,
-                onAttachmentClick = { attachmentId -> onAttachmentClick(message.id, attachmentId) },
-                onContactClick = onContactClick,
-                isSearchHighlighted = message.id == searchTargetState.highlightedMessageId
-            )
+            MessageDissolve(
+                messageId = message.id,
+                state = dissolvingListState
+            ) {
+                var anchor by remember(message.id) { mutableStateOf<MessageContextAnchor?>(null) }
+                val isContextSelected = selectedContextMessageId == message.id
+
+                MessageBubble(
+                    message = message,
+                    onRetryClick = { onRetryMessage(message.id) },
+                    onSafetyDetailsClick = { warning ->
+                        onSafetyWarningClick(message.id, warning)
+                    },
+                    onAttachmentVisible = onAttachmentVisible,
+                    onAttachmentClick = { attachmentId -> onAttachmentClick(message.id, attachmentId) },
+                    onContactClick = onContactClick,
+                    onReplyPreviewClick = replyJumpState.jumpTo,
+                    onActionMenuVisibilityChange = { isVisible ->
+                        if (isVisible) {
+                            anchor?.let(onContextMessageRequested)
+                        }
+                    },
+                    onReactionsClick = { anchor ->
+                        onReactionBurstRequested(
+                            MessageReactionBurst(
+                                reactions = message.reactions,
+                                anchor = anchor
+                            )
+                        )
+                    },
+                    modifier = Modifier
+                        .captureMessageContextAnchor(
+                            messageId = message.id,
+                            isMine = message.isMine,
+                            onAnchorChanged = { anchor = it }
+                        )
+                        .alpha(if (isContextSelected) 0f else 1f),
+                    isSearchHighlighted =
+                        message.id == searchTargetState.highlightedMessageId ||
+                            message.id == replyJumpState.highlightedMessageId
+                )
+            }
         }
     }
 }
@@ -617,13 +738,12 @@ private fun ErrorMessage(
 ) {
     Text(
         text = message,
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .padding(
-                    horizontal = MaterialTheme.spacing.small,
-                    vertical = MaterialTheme.spacing.base
-                ),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(
+                horizontal = MaterialTheme.spacing.small,
+                vertical = MaterialTheme.spacing.base
+            ),
         color = MaterialTheme.colorScheme.error,
         style = MaterialTheme.typography.bodySmall,
         textAlign = TextAlign.Center
@@ -734,40 +854,46 @@ private fun SecurityAction(
 private fun securityState(
     securityState: ContactSecurityState,
     identitySetupMode: DirectIdentitySetupMode
-): SecurityBannerState? =
-    when (securityState) {
+): SecurityBannerState? {
+    val isManualSetup = identitySetupMode == DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING
+
+    return when (securityState) {
         ContactSecurityState.NO_REMOTE_PUBLIC_KEYS ->
             errorBanner(
                 icon = Icons.Default.LockOpen,
-                title =
-                    if (identitySetupMode == DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING) {
-                        stringResource(Res.string.feature_chats_manual_identity_required_title)
+                title = stringResource(
+                    if (isManualSetup) {
+                        Res.string.feature_chats_manual_identity_required_title
                     } else {
-                        stringResource(Res.string.feature_chats_chat_unencrypted_title)
-                    },
-                description =
-                    if (identitySetupMode == DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING) {
-                        stringResource(Res.string.feature_chats_manual_identity_required_description)
-                    } else {
-                        stringResource(Res.string.feature_chats_chat_unencrypted_description)
+                        Res.string.feature_chats_chat_unencrypted_title
                     }
+                ),
+                description = stringResource(
+                    if (isManualSetup) {
+                        Res.string.feature_chats_manual_identity_required_description
+                    } else {
+                        Res.string.feature_chats_chat_unencrypted_description
+                    }
+                )
             )
 
         ContactSecurityState.ONE_WAY_KEYS ->
             errorBanner(
                 icon = Icons.Default.LockOpen,
-                title =
-                    if (identitySetupMode == DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING) {
-                        stringResource(Res.string.feature_chats_manual_identity_incomplete_title)
+                title = stringResource(
+                    if (isManualSetup) {
+                        Res.string.feature_chats_manual_identity_incomplete_title
                     } else {
-                        stringResource(Res.string.feature_chats_chat_key_exchange_incomplete_title)
-                    },
-                description =
-                    if (identitySetupMode == DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING) {
-                        stringResource(Res.string.feature_chats_manual_identity_incomplete_description)
-                    } else {
-                        stringResource(Res.string.feature_chats_chat_key_exchange_incomplete_description)
+                        Res.string.feature_chats_chat_key_exchange_incomplete_title
                     }
+                ),
+                description = stringResource(
+                    if (isManualSetup) {
+                        Res.string.feature_chats_manual_identity_incomplete_description
+                    } else {
+                        Res.string.feature_chats_chat_key_exchange_incomplete_description
+                    }
+                )
             )
 
         ContactSecurityState.MUTUAL_KEYS_UNVERIFIED ->
@@ -796,6 +922,7 @@ private fun securityState(
 
         ContactSecurityState.MUTUAL_KEYS_VERIFIED -> null
     }
+}
 
 @Composable
 private fun errorBanner(

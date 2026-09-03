@@ -15,6 +15,8 @@ data class MessageBubbleUi(
     val senderIsInContacts: Boolean = true,
     val deliveryProgress: DeliveryProgressUi = DeliveryProgressUi(),
     val safetyWarning: MessageSafetyWarningUi? = null,
+    val reply: MessageReplyUi? = null,
+    val reactions: List<MessageReactionUi> = emptyList(),
     val fileParts: List<MessagePartUi.File> = emptyList(),
     val imageVideoParts: List<MessagePartUi.ImageVideo> = emptyList(),
     val locationPart: MessagePartUi.Location? = null,
@@ -26,4 +28,17 @@ data class DeliveryProgressUi(
     val recipientCount: Int = 0,
     val deliveredCount: Int = 0,
     val readCount: Int = 0
+)
+
+data class MessageReplyUi(
+    val messageId: String,
+    val isMine: Boolean? = null,
+    val senderName: String? = null,
+    val previewText: String? = null
+)
+
+data class MessageReactionUi(
+    val emoji: String,
+    val count: Int,
+    val reactedByMe: Boolean
 )

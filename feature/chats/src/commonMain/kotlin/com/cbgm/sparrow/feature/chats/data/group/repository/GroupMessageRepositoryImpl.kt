@@ -12,12 +12,29 @@ class GroupMessageRepositoryImpl(
     override suspend fun send(
         groupId: String,
         text: String,
-        attachments: List<OutgoingMessageAttachment>
+        attachments: List<OutgoingMessageAttachment>,
+        replyToMessageId: String?
     ): Result<Unit> =
         outgoingMessageProcessor.send(
             groupId = groupId,
             text = text,
             attachments = attachments,
+            replyToMessageId = replyToMessageId,
+            invitations = groupInvitationDao.findByGroupId(groupId)
+        )
+
+    override suspend fun toggleReaction(groupId: String, messageId: String, emoji: String): Result<Unit> =
+        outgoingMessageProcessor.toggleReaction(
+            groupId = groupId,
+            messageId = messageId,
+            emoji = emoji,
+            invitations = groupInvitationDao.findByGroupId(groupId)
+        )
+
+    override suspend fun deleteMessage(groupId: String, messageId: String): Result<Unit> =
+        outgoingMessageProcessor.deleteMessage(
+            groupId = groupId,
+            messageId = messageId,
             invitations = groupInvitationDao.findByGroupId(groupId)
         )
 

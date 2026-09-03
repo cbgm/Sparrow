@@ -19,6 +19,7 @@ import com.cbgm.sparrow.core.protocol.packet.GroupVerificationReceiptPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupVerificationSnapshotPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupVerificationSnapshotRequestPacket
 import com.cbgm.sparrow.core.protocol.packet.MailboxRoutePacket
+import com.cbgm.sparrow.core.protocol.packet.MessageDeletionPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 
@@ -59,6 +60,13 @@ class OutgoingPacketTransportPolicy {
                             "Contact verification receipt requires an encrypted Sparrow transport"
                     )
                 }
+
+                is MessageDeletionPacket ->
+                    OutgoingTransportRequirement(
+                        requiresEncryption = true,
+                        encryptionUnavailableMessage =
+                            "Direct message deletion requires an encrypted Sparrow transport"
+                    )
 
                 is ChatMessagePacket ->
                     OutgoingTransportRequirement(

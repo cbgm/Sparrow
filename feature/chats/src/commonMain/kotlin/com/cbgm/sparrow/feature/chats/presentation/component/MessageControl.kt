@@ -19,6 +19,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.presentation.component.AttachmentBar
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageReplyUi
 import com.cbgm.sparrow.feature.media.presentation.component.MediaSelectionPreview
 import com.cbgm.sparrow.feature.media.presentation.component.previewMediaSelections
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
@@ -27,11 +28,9 @@ import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_chat_typing
 import org.jetbrains.compose.resources.stringResource
 
-/**
- * Bündelt alle reinen UI-Zustandswerte für die Nachrichteneingabe.
- */
 data class MessageInputState(
     val messageText: String = "",
+    val replyTo: MessageReplyUi? = null,
     val isTyping: Boolean = false,
     val contactName: String = "",
     val isInputEnabled: Boolean = true,
@@ -43,13 +42,10 @@ data class MessageInputState(
     val isFileEnabled: Boolean = true
 )
 
-/**
- * Bündelt alle Interaktionen und Klicks für die Nachrichteneingabe.
- * Jede Attachment-Aktion hat jetzt ihr eigenes, klares Lambda.
- */
 data class MessageInputActions(
     val onValueChange: (String) -> Unit,
     val onSendClick: () -> Unit,
+    val onCancelReply: () -> Unit = {},
     val onSelectionClick: (MediaSelectionSource) -> Unit = {},
     val onMediaRemove: (String) -> Unit = {},
     val onClickCamera: () -> Unit = {},
@@ -82,10 +78,10 @@ fun MessageControl(
         modifier = modifier.fillMaxWidth(),
         color = containerColor
     ) {
+        val basePaddingHorizontal = MaterialTheme.spacing.base
+
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = MaterialTheme.spacing.base)
+            modifier = Modifier.fillMaxWidth()
         ) {
             Text(
                 text = if (state.isTyping) {
@@ -99,7 +95,7 @@ fun MessageControl(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(
-                        horizontal = MaterialTheme.spacing.base.times(6),
+                        horizontal = basePaddingHorizontal + MaterialTheme.spacing.base.times(6),
                         vertical = MaterialTheme.spacing.micro
                     ),
                 style = MaterialTheme.typography.labelMedium,
@@ -107,11 +103,22 @@ fun MessageControl(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            state.replyTo?.let { reply ->
+                ComposerReplyPreview(
+                    reply = reply,
+                    onCancel = actions.onCancelReply,
+                    modifier = Modifier.padding(bottom = MaterialTheme.spacing.base)
+                )
+            }
             MediaSelectionPreview(
                 media = state.selectedMedia,
                 onClick = actions.onSelectionClick,
                 onRemove = actions.onMediaRemove,
-                modifier = Modifier.padding(bottom = MaterialTheme.spacing.base)
+                modifier = Modifier.padding(
+                    start = basePaddingHorizontal,
+                    end = basePaddingHorizontal,
+                    bottom = MaterialTheme.spacing.base
+                )
             )
             MessageInput(
                 value = state.messageText,
@@ -121,7 +128,8 @@ fun MessageControl(
                 sendEnabled = state.isSendEnabled,
                 hasAttachments = state.selectedMedia.isNotEmpty(),
                 onAttachmentClick = { isAttachmentBarVisible = !isAttachmentBarVisible },
-                isAttachmentVisible = isAttachmentBarVisible
+                isAttachmentVisible = isAttachmentBarVisible,
+                modifier = Modifier.padding(horizontal = basePaddingHorizontal)
             )
 
             if (isAttachmentBarVisible) {
@@ -148,7 +156,8 @@ fun MessageControl(
                     isGalleryEnabled = state.isGalleryEnabled,
                     isCameraEnabled = state.isCameraEnabled,
                     isFileEnabled = state.isFileEnabled,
-                    isLocationInProgress = state.isLocationInProgress
+                    isLocationInProgress = state.isLocationInProgress,
+                    modifier = Modifier.padding(horizontal = basePaddingHorizontal)
                 )
             }
         }
@@ -165,6 +174,13 @@ private fun MessageControlPreview() {
                 isTyping = false,
                 contactName = "Chris",
                 messageText = "Here are the files",
+                replyTo =
+                    MessageReplyUi(
+                        messageId = "message-1",
+                        isMine = false,
+                        senderName = "Alex",
+                        previewText = "Can you send the files?"
+                    ),
                 isInputEnabled = true,
                 isSendEnabled = true,
                 selectedMedia = previewMediaSelections(),
@@ -176,6 +192,7 @@ private fun MessageControlPreview() {
             actions = MessageInputActions(
                 onValueChange = {},
                 onSendClick = {},
+                onCancelReply = {},
                 onSelectionClick = {},
                 onMediaRemove = {},
                 onClickCamera = {},

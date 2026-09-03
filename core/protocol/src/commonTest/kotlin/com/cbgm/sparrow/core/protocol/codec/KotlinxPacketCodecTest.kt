@@ -130,6 +130,41 @@ class KotlinxPacketCodecTest {
     }
 
     @Test
+    fun chatMessageReplyRoundTrip() {
+        val original =
+            ChatMessagePacket(
+                packetId = "packet-reply-1",
+                messageId = "message-reply-1",
+                sentAtEpochMilliseconds = 123_456L,
+                text = "Reply",
+                replyToMessageId = "message-original-1"
+            )
+
+        val encoded = codec.encode(original).getOrThrow()
+        val decoded = codec.decode(encoded).getOrThrow()
+        val packet = assertIs<ChatMessagePacket>(decoded)
+
+        assertEquals("message-original-1", packet.replyToMessageId)
+        assertTrue("\"replyToMessageId\":\"message-original-1\"" in encoded.decodeToString())
+    }
+
+    @Test
+    fun replyFieldIsNotAddedToLegacyTextPacket() {
+        val encoded =
+            codec
+                .encode(
+                    ChatMessagePacket(
+                        packetId = "packet-no-reply",
+                        messageId = "message-no-reply",
+                        sentAtEpochMilliseconds = 123_456L,
+                        text = "Hello"
+                    )
+                ).getOrThrow()
+
+        assertFalse("\"replyToMessageId\"" in encoded.decodeToString())
+    }
+
+    @Test
     fun identityRoundTrip() {
         val original =
             IdentityPacket(
