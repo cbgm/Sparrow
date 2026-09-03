@@ -5,18 +5,22 @@ import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.core.protocol.message.GroupMessageContent
 import com.cbgm.sparrow.core.protocol.message.GroupMessageContentCodec
+import com.cbgm.sparrow.core.protocol.message.MessageReactionPayload
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.GroupChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.ReadReceiptPacket
 import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
+import com.cbgm.sparrow.data.database.dao.MessageReactionDao
 import com.cbgm.sparrow.data.database.dao.MessageRecipientStateDao
 import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
+import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
 import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachmentDto
@@ -45,6 +49,7 @@ class GroupOutgoingMessageProcessor(
     private val chatDao: ChatDao,
     private val groupSecurityDao: GroupSecurityDao,
     private val messageRecipientStateDao: MessageRecipientStateDao,
+    private val messageReactionDao: MessageReactionDao,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val protocolOutbox: ProtocolOutbox,
     private val groupSecurityManager: GroupSecurityManager,
@@ -63,7 +68,7 @@ class GroupOutgoingMessageProcessor(
         replyToMessageId: String? = null,
         invitations: List<GroupInvitationEntity>
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             sendMutex.withLock {
                 val normalizedText = requireMessageContent(text, attachments)
                 requireActiveMembership(groupId, invitations)
@@ -84,8 +89,66 @@ class GroupOutgoingMessageProcessor(
             }
         }
 
+    suspend fun toggleReaction(
+        groupId: String,
+        messageId: String,
+        emoji: String,
+        invitations: List<GroupInvitationEntity>
+    ): Result<Unit> =
+        safeSuspendCall {
+            require(messageId.isNotBlank()) { "Message ID must not be blank" }
+            require(emoji.isNotBlank()) { "Reaction emoji must not be blank" }
+            requireActiveMembership(groupId, invitations)
+            val target = chatDao.findMessageById(messageId) ?: error("Message was not found")
+            check(target.conversationId == groupId) { "Message does not belong to this group" }
+            val recipients = findCurrentEpochRecipients(groupId)
+            check(recipients.isNotEmpty()) { "Group has no active recipients" }
+
+            val existing = messageReactionDao.find(messageId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
+            val removed = existing != null
+            if (removed) {
+                messageReactionDao.delete(messageId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
+            } else {
+                messageReactionDao.upsert(
+                    MessageReactionEntity(messageId, groupId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
+                )
+            }
+
+            val eventId = IdGenerator.generate(prefix = "group-reaction")
+            val timestamp = SystemClock.nowEpochMilliseconds()
+            val profilePicture = localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
+            val plaintext = groupMessageContentCodec.encode(
+                GroupMessageContent(reaction = MessageReactionPayload(messageId, emoji, removed))
+            )
+            val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+            val secured = groupSecurityManager.encryptMessage(
+                groupId = groupId,
+                messageId = eventId,
+                sentAtEpochMilliseconds = timestamp,
+                plaintext = plaintext,
+                localSigningKeyPair = localSigningKeyPair,
+                profilePicture = profilePicture
+            ).getOrThrow()
+            recipients.forEach { recipient ->
+                protocolOutbox.enqueue(
+                    recipient.contactId,
+                    GroupChatMessagePacket(
+                        packetId = "group-reaction-$eventId-${recipient.contactId}",
+                        groupId = groupId,
+                        epoch = secured.epoch,
+                        messageId = eventId,
+                        sentAtEpochMilliseconds = timestamp,
+                        profilePicture = profilePicture,
+                        nonce = secured.nonce.copyOf(),
+                        ciphertext = secured.ciphertext.copyOf(),
+                        senderSignature = secured.senderSignature.copyOf()
+                    )
+                ).getOrThrow()
+            }
+        }
+
     suspend fun retry(messageId: String): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             require(messageId.isNotBlank()) { "Message ID must not be blank" }
 
             val message = chatDao.findMessageById(messageId) ?: error("Message was not found")
@@ -114,7 +177,7 @@ class GroupOutgoingMessageProcessor(
         }
 
     suspend fun sendReadReceipts(groupId: String): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             require(groupId.isNotBlank()) { "Group ID must not be blank" }
             requireGroupConversation(groupId)
 

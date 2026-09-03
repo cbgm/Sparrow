@@ -10,9 +10,11 @@ import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProces
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.ContactDao
+import com.cbgm.sparrow.data.database.dao.MessageReactionDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.ConversationType
 import com.cbgm.sparrow.data.database.entity.MessageEntity
+import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
 import com.cbgm.sparrow.feature.attachments.runtime.MessageAttachmentCacheCoordinator
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
@@ -22,6 +24,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 class DirectMessagePacketHandler(
     private val chatDao: ChatDao,
     private val contactDao: ContactDao,
+    private val messageReactionDao: MessageReactionDao,
     private val protocolOutbox: ProtocolOutbox,
     private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor,
     private val attachmentTransfer: MessageAttachmentDataSource,
@@ -34,6 +37,18 @@ class DirectMessagePacketHandler(
         packet: ChatMessagePacket
     ): Result<Unit> =
         runCatching {
+            packet.reaction?.let { reaction ->
+                val target = chatDao.findMessageById(reaction.messageId) ?: return@runCatching
+                check(target.conversationId == context.conversationId) { "Reaction target belongs to another conversation" }
+                if (reaction.removed) {
+                    messageReactionDao.delete(reaction.messageId, context.contactId, reaction.emoji)
+                } else {
+                    messageReactionDao.upsert(
+                        MessageReactionEntity(reaction.messageId, context.conversationId, context.contactId, reaction.emoji)
+                    )
+                }
+                return@runCatching
+            }
             validateMessage(context, packet)
             remoteProfilePictureMetadataProcessor
                 .apply(context.contactId, packet.profilePicture)

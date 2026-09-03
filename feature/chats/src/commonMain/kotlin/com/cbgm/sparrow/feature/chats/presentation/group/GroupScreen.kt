@@ -70,6 +70,7 @@ import com.cbgm.sparrow.feature.chats.presentation.component.MessageContextHost
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageControl
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageInputActions
 import com.cbgm.sparrow.feature.chats.presentation.component.MessageInputState
+import com.cbgm.sparrow.feature.chats.presentation.component.MessageReactionBurst
 import com.cbgm.sparrow.feature.chats.presentation.component.captureMessageContextAnchor
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toMessageAttachmentsUi
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toSharedContact
@@ -140,6 +141,7 @@ fun GroupScreen(
     var showContactSelection by rememberSaveable { mutableStateOf(false) }
     var pendingSharedContact by remember { mutableStateOf<SharedContact?>(null) }
     var messageContextAnchor by remember { mutableStateOf<MessageContextAnchor?>(null) }
+    var reactionBurst by remember { mutableStateOf<MessageReactionBurst?>(null) }
 
     val contextMessage =
         messageContextAnchor
@@ -171,6 +173,13 @@ fun GroupScreen(
                 )
             }
         },
+        onReactionClick = { emoji ->
+            contextMessage?.let { message ->
+                onUiEvent(GroupUiEvent.MessageReactionSelected(message.id, emoji))
+            }
+        },
+        reactionBurst = reactionBurst,
+        onReactionBurstDismiss = { reactionBurst = null },
         modifier = modifier,
         preview = {
             contextMessage?.let { message ->
@@ -183,6 +192,7 @@ fun GroupScreen(
                     onContactClick = {},
                     onReplyPreviewClick = {},
                     onContextMessageRequested = {},
+                    onReactionBurstRequested = {},
                     isContextSelected = false,
                     isSearchHighlighted = false,
                     showMetadata = false,
@@ -224,6 +234,7 @@ fun GroupScreen(
                 targetMessageId = targetMessageId,
                 selectedContextMessageId = messageContextAnchor?.messageId,
                 onContextMessageRequested = { messageContextAnchor = it },
+                onReactionBurstRequested = { reactionBurst = it },
                 onRetryMessage = { messageId ->
                     onUiEvent(GroupUiEvent.RetryMessage(messageId))
                 },
@@ -477,6 +488,7 @@ private fun Content(
     targetMessageId: String?,
     selectedContextMessageId: String?,
     onContextMessageRequested: (MessageContextAnchor) -> Unit,
+    onReactionBurstRequested: (MessageReactionBurst) -> Unit,
     onRetryMessage: (String) -> Unit,
     onSafetyWarningClick: (String, String?, MessageSafetyWarningUi) -> Unit,
     onAttachmentVisible: (String) -> Unit,
@@ -499,6 +511,7 @@ private fun Content(
             targetMessageId = targetMessageId,
             selectedContextMessageId = selectedContextMessageId,
             onContextMessageRequested = onContextMessageRequested,
+            onReactionBurstRequested = onReactionBurstRequested,
             onRetryMessage = onRetryMessage,
             onSafetyWarningClick = onSafetyWarningClick,
             onAttachmentVisible = onAttachmentVisible,
@@ -516,6 +529,7 @@ private fun MessageList(
     targetMessageId: String?,
     selectedContextMessageId: String?,
     onContextMessageRequested: (MessageContextAnchor) -> Unit,
+    onReactionBurstRequested: (MessageReactionBurst) -> Unit,
     onRetryMessage: (String) -> Unit,
     onSafetyWarningClick: (String, String?, MessageSafetyWarningUi) -> Unit,
     onAttachmentVisible: (String) -> Unit,
@@ -565,6 +579,7 @@ private fun MessageList(
                     onContactClick = onContactClick,
                     onReplyPreviewClick = replyJumpState.jumpTo,
                     onContextMessageRequested = onContextMessageRequested,
+                    onReactionBurstRequested = onReactionBurstRequested,
                     isContextSelected = selectedContextMessageId == message.id,
                     isSearchHighlighted =
                         message.id == searchTargetState.highlightedMessageId ||
@@ -590,6 +605,7 @@ private fun GroupMessageBubble(
     onContactClick: (SharedContact) -> Unit,
     onReplyPreviewClick: (String) -> Unit,
     onContextMessageRequested: (MessageContextAnchor) -> Unit,
+    onReactionBurstRequested: (MessageReactionBurst) -> Unit,
     isContextSelected: Boolean,
     modifier: Modifier = Modifier,
     isSearchHighlighted: Boolean = false,
@@ -625,6 +641,14 @@ private fun GroupMessageBubble(
             onContactClick = onContactClick,
             onReplyPreviewClick = onReplyPreviewClick,
             onActionMenuVisibilityChange = onActionMenuVisibilityChange,
+            onReactionsClick = { boundsInRoot ->
+                onReactionBurstRequested(
+                    MessageReactionBurst(
+                        reactions = message.bubble.reactions,
+                        boundsInRoot = boundsInRoot
+                    )
+                )
+            },
             modifier = modifier.then(contextModifier),
             isSearchHighlighted = isSearchHighlighted,
             showMetadata = showMetadata
@@ -653,6 +677,14 @@ private fun GroupMessageBubble(
             onContactClick = onContactClick,
             onReplyPreviewClick = onReplyPreviewClick,
             onActionMenuVisibilityChange = onActionMenuVisibilityChange,
+            onReactionsClick = { boundsInRoot ->
+                onReactionBurstRequested(
+                    MessageReactionBurst(
+                        reactions = message.bubble.reactions,
+                        boundsInRoot = boundsInRoot
+                    )
+                )
+            },
             modifier = Modifier.weight(1f),
             isSearchHighlighted = isSearchHighlighted,
             showMetadata = showMetadata

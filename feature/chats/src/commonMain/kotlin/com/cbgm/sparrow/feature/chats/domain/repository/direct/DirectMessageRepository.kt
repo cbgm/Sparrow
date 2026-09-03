@@ -17,6 +17,8 @@ interface DirectMessageRepository {
         replyToMessageId: String? = null
     ): Result<Unit>
 
+    suspend fun toggleReaction(conversationId: String, messageId: String, emoji: String): Result<Unit>
+
     suspend fun retry(messageId: String): Result<Unit>
 
     suspend fun releaseWaitingForAuthorization(contactId: String): Result<Unit>

@@ -21,6 +21,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.ObserveGroupMemberTyp
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.RetryGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SendGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupTypingUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.ToggleGroupMessageReactionUseCase
 import com.cbgm.sparrow.feature.chats.presentation.group.mapper.toGroupUiState
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState
@@ -46,6 +47,7 @@ class GroupViewModel(
     private val sendMessage: SendGroupMessageUseCase,
     private val markConversationRead: MarkGroupConversationReadUseCase,
     private val retryMessage: RetryGroupMessageUseCase,
+    private val toggleMessageReaction: ToggleGroupMessageReactionUseCase,
     private val acceptInvitation: AcceptGroupInvitationUseCase,
     private val declineInvitation: DeclineGroupInvitationUseCase,
     observeMemberTyping: ObserveGroupMemberTypingUseCase,
@@ -146,6 +148,7 @@ class GroupViewModel(
             GroupUiEvent.SendClicked -> sendCurrentMessage()
             is GroupUiEvent.ReplyToMessage -> startReply(event.messageId)
             GroupUiEvent.CancelReply -> clearReply()
+            is GroupUiEvent.MessageReactionSelected -> toggleReaction(event.messageId, event.emoji)
             is GroupUiEvent.MediaSelected -> updateMediaSelection(event.media)
             is GroupUiEvent.OpenFilePicker -> navigator.navigateTo(AppRoute.FilePicker(event.sessionId))
             is GroupUiEvent.ShareCurrentLocation ->
@@ -302,6 +305,13 @@ class GroupViewModel(
 
     private fun clearReply() {
         replyToMessageId.value = ""
+    }
+
+    private fun toggleReaction(messageId: String, emoji: String) {
+        viewModelScope.launch {
+            toggleMessageReaction(groupId, messageId, emoji)
+                .onFailure { error -> errorMessage.value = error.message ?: "Reaction could not be sent" }
+        }
     }
 
     private fun retryFailedMessage(messageId: String) {

@@ -19,6 +19,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.direct.QueueDirectMessageUn
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.RetryDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SendDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SetDirectTypingUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ToggleDirectMessageReactionUseCase
 import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.toDirectUiState
 import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.withProfilePicture
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectComposerState
@@ -47,6 +48,7 @@ class DirectViewModel(
     private val queueMessageUntilAuthorized: QueueDirectMessageUntilAuthorizedUseCase,
     private val markConversationRead: MarkDirectConversationReadUseCase,
     private val retryMessage: RetryDirectMessageUseCase,
+    private val toggleMessageReaction: ToggleDirectMessageReactionUseCase,
     private val ensureIdentityExchangeStarted: EnsureIdentityExchangeStartedUseCase,
     private val requireDirectChatAuthorization: RequireDirectChatAuthorizationUseCase,
     private val observeTyping: ObserveDirectTypingUseCase,
@@ -152,6 +154,7 @@ class DirectViewModel(
             DirectUiEvent.SendClicked -> sendCurrentMessage()
             is DirectUiEvent.ReplyToMessage -> startReply(event.messageId)
             DirectUiEvent.CancelReply -> clearReply()
+            is DirectUiEvent.MessageReactionSelected -> toggleReaction(event.messageId, event.emoji)
             is DirectUiEvent.MediaSelected -> updateMediaSelection(event.media)
             is DirectUiEvent.OpenFilePicker -> navigator.navigateTo(AppRoute.FilePicker(event.sessionId))
             is DirectUiEvent.ShareCurrentLocation -> sendAttachmentOnly(event.location.toOutgoingMessageAttachment())
@@ -361,6 +364,13 @@ class DirectViewModel(
 
     private fun clearReply() {
         replyToMessageId.value = ""
+    }
+
+    private fun toggleReaction(messageId: String, emoji: String) {
+        viewModelScope.launch {
+            toggleMessageReaction(conversationId, messageId, emoji)
+                .onFailure { error -> errorMessage.value = error.message ?: "Reaction could not be sent" }
+        }
     }
 
     private fun retryFailedMessage(messageId: String) {

@@ -60,7 +60,10 @@ internal fun MessageContextHost(
     menuColor: Color,
     onDismiss: () -> Unit,
     onReplyClick: () -> Unit,
+    onReactionClick: (String) -> Unit,
     modifier: Modifier = Modifier,
+    reactionBurst: MessageReactionBurst? = null,
+    onReactionBurstDismiss: () -> Unit = {},
     onCopyClick: () -> Unit = {},
     preview: @Composable () -> Unit,
     content: @Composable () -> Unit
@@ -98,11 +101,22 @@ internal fun MessageContextHost(
                     onDismiss()
                     onReplyClick()
                 },
+                onReactionClick = { emoji ->
+                    onDismiss()
+                    onReactionClick(emoji)
+                },
                 onCopyClick = {
                     onDismiss()
                     onCopyClick()
                 },
                 preview = preview
+            )
+        }
+
+        reactionBurst?.let { burst ->
+            MessageReactionBurstOverlay(
+                burst = burst,
+                onDismiss = onReactionBurstDismiss
             )
         }
     }
@@ -114,6 +128,7 @@ internal fun MessageContextOverlay(
     menuColor: Color,
     onDismiss: () -> Unit,
     onReplyClick: () -> Unit,
+    onReactionClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     onCopyClick: () -> Unit = {},
     preview: @Composable () -> Unit
@@ -146,7 +161,7 @@ internal fun MessageContextOverlay(
                 horizontalAlignment = if (anchor.isMine) Alignment.End else Alignment.Start
             ) {
                 Box(modifier = Modifier.width(previewWidth)) { preview() }
-                MessageContextActionMenu(menuColor, onReplyClick, onCopyClick)
+                MessageContextActionMenu(menuColor, onReplyClick, onReactionClick, onCopyClick)
             }
         }
     ) { measurables, constraints ->

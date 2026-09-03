@@ -106,6 +106,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.direct.QueueDirectMessageUn
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.RetryDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SendDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SetDirectTypingUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ToggleDirectMessageReactionUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.AcceptGroupInvitationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.AddGroupMembersUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.CreateGroupConversationUseCase
@@ -130,6 +131,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.SendGroupMessageUseCa
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupAvatarUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupTypingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SynchronizeGroupVerificationUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.group.ToggleGroupMessageReactionUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.TransferGroupAdminAndLeaveUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.VerifyGroupMemberUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.incoming.EstablishGroupMemberIdentityUseCase
@@ -291,6 +293,7 @@ private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::ObserveDirectConversationUseCase)
     singleOf(::ObserveDirectChatContextUseCase)
     singleOf(::SendDirectMessageUseCase)
+    singleOf(::ToggleDirectMessageReactionUseCase)
     singleOf(::QueueDirectMessageUntilAuthorizedUseCase)
     singleOf(::RetryDirectMessageUseCase)
     singleOf(::MarkDirectConversationReadUseCase)
@@ -307,6 +310,7 @@ private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::ObserveGroupChatContextUseCase)
     singleOf(::ObserveGroupDetailsContextUseCase)
     singleOf(::SendGroupMessageUseCase)
+    singleOf(::ToggleGroupMessageReactionUseCase)
     singleOf(::RetryGroupMessageUseCase)
     singleOf(::MarkGroupConversationReadUseCase)
     singleOf(::DeleteGroupConversationUseCase)
@@ -377,7 +381,8 @@ private fun org.koin.core.module.Module.registerViewModels() {
             setGroupTyping = get(),
             observeMessageSafetyAssessments = get(),
             loadMessageAttachment = get(),
-            addDeviceContact = get()
+            addDeviceContact = get(),
+            toggleMessageReaction = get()
         )
     }
 
@@ -423,7 +428,8 @@ private fun org.koin.core.module.Module.registerViewModels() {
             setTyping = get(),
             observeMessageSafetyAssessments = get(),
             loadMessageAttachment = get(),
-            addDeviceContact = get()
+            addDeviceContact = get(),
+            toggleMessageReaction = get()
         )
     }
 }

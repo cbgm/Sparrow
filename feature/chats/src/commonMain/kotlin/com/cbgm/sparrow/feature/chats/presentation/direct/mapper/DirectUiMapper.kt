@@ -9,6 +9,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessage
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toMessagePartsUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessagePartUi
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageReactionUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageReplyUi
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectComposerState
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiState
@@ -49,6 +50,9 @@ internal fun DirectMessage.toMessageBubbleUi(
                 safetyAssessments[id]?.toMessageSafetyWarningUi()
             },
         reply = reply,
+        reactions = reactions.groupBy { it.emoji }.map { (emoji, values) ->
+            MessageReactionUi(emoji = emoji, count = values.size, reactedByMe = values.any { it.isMine })
+        },
         imageVideoParts = partsUi.filterIsInstance<MessagePartUi.ImageVideo>(),
         fileParts = partsUi.filterIsInstance<MessagePartUi.File>(),
         locationPart = partsUi.filterIsInstance<MessagePartUi.Location>().firstOrNull(),

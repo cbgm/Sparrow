@@ -10,6 +10,8 @@ interface GroupMessageRepository {
         replyToMessageId: String? = null
     ): Result<Unit>
 
+    suspend fun toggleReaction(groupId: String, messageId: String, emoji: String): Result<Unit>
+
     suspend fun retry(messageId: String): Result<Unit>
 
     suspend fun markConversationRead(groupId: String): Result<Unit>

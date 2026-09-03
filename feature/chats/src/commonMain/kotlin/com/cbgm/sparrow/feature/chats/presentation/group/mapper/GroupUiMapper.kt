@@ -11,6 +11,7 @@ import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toMessagePar
 import com.cbgm.sparrow.feature.chats.presentation.component.model.DeliveryProgressUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessagePartUi
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageReactionUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageReplyUi
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMemberProgressUi
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMessageUi
@@ -103,6 +104,9 @@ internal fun GroupMessage.toGroupMessageUi(
                         safetyAssessments[id]?.toMessageSafetyWarningUi()
                     },
                 reply = reply,
+                reactions = reactions.groupBy { it.emoji }.map { (emoji, values) ->
+                    MessageReactionUi(emoji = emoji, count = values.size, reactedByMe = values.any { it.isMine })
+                },
                 imageVideoParts = partsUi.filterIsInstance<MessagePartUi.ImageVideo>(),
                 fileParts = partsUi.filterIsInstance<MessagePartUi.File>(),
                 locationPart = partsUi.filterIsInstance<MessagePartUi.Location>().firstOrNull(),

@@ -28,12 +28,17 @@ data class Spacing(
     val messageBubble: MessageBubbleSpacing = MessageBubbleSpacing(),
     val identityScreen: IdentityScreenSpacing = IdentityScreenSpacing(),
     val contactsScreen: ContactsScreenSpacing = ContactsScreenSpacing(),
-    val textField: FieldSpacing = FieldSpacing()
+    val textField: FieldSpacing = FieldSpacing(),
+    val actionItem: ActionItem = ActionItem()
 ) {
     operator fun times(multiplier: Int): Dp = base * multiplier
 
     operator fun times(multiplier: Float): Dp = base * multiplier.toInt()
 }
+
+data class ActionItem(
+    val horizontalPadding: Dp = 12.dp
+)
 
 data class FieldSpacing(
     val horizontalPadding: Dp = 12.dp,

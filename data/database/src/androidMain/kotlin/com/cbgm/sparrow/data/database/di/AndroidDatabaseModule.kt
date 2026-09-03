@@ -71,6 +71,10 @@ val androidDatabaseModule =
         }
 
         single {
+            get<SparrowDatabase>().messageReactionDao()
+        }
+
+        single {
             get<SparrowDatabase>().messageSearchDao()
         }
 

@@ -4,6 +4,7 @@ import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment
+import com.cbgm.sparrow.core.protocol.message.MessageReactionPayload
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.ChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.ReadReceiptPacket
@@ -12,7 +13,9 @@ import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvide
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
+import com.cbgm.sparrow.data.database.dao.MessageReactionDao
 import com.cbgm.sparrow.data.database.entity.MessageEntity
+import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
 import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachmentDto
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
@@ -37,6 +40,7 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthori
  */
 class DirectOutgoingMessageProcessor(
     private val chatDao: ChatDao,
+    private val messageReactionDao: MessageReactionDao,
     private val getContact: GetContactUseCase,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
     private val protocolOutbox: ProtocolOutbox,
@@ -87,6 +91,37 @@ class DirectOutgoingMessageProcessor(
                     throw error
                 }
             enqueue(target.contactId, packet)
+        }
+
+    suspend fun toggleReaction(conversationId: String, messageId: String, emoji: String): Result<Unit> =
+        runCatching {
+            require(messageId.isNotBlank()) { "Message ID must not be blank" }
+            require(emoji.isNotBlank()) { "Reaction emoji must not be blank" }
+            val target = loadTarget(conversationId)
+            requireDirectChatAuthorization(target.contactId).getOrThrow()
+            val message = chatDao.findMessageById(messageId) ?: error("Message was not found")
+            check(message.conversationId == conversationId) { "Message does not belong to this conversation" }
+
+            val existing = messageReactionDao.find(messageId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
+            val removed = existing != null
+            if (removed) {
+                messageReactionDao.delete(messageId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
+            } else {
+                messageReactionDao.upsert(
+                    MessageReactionEntity(messageId, conversationId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
+                )
+            }
+
+            val packet = ChatMessagePacket(
+                packetId = IdGenerator.generate(prefix = "reaction-packet"),
+                messageId = IdGenerator.generate(prefix = "reaction"),
+                sentAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
+                text = "",
+                reaction = MessageReactionPayload(messageId = messageId, emoji = emoji, removed = removed),
+                senderPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow(),
+                profilePicture = localProfilePictureMetadataProvider.forMessage().getOrElse { ProfilePictureMetadata() }
+            )
+            protocolOutbox.enqueue(target.contactId, packet).getOrThrow()
         }
 
     suspend fun queueUntilAuthorized(

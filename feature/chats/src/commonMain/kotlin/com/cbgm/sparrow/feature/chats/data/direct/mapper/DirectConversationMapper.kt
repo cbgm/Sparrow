@@ -7,12 +7,14 @@ import com.cbgm.sparrow.feature.chats.data.mapper.toMessagePart
 import com.cbgm.sparrow.feature.chats.data.model.MessagePartDto
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.feature.chats.domain.model.MessageReaction
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessage
 
 internal fun ConversationWithMessagesDto.toDirectConversation(
-    partsByMessageId: Map<String, List<MessagePartDto>> = emptyMap()
+    partsByMessageId: Map<String, List<MessagePartDto>> = emptyMap(),
+    reactionsByMessageId: Map<String, List<MessageReaction>> = emptyMap()
 ): DirectConversation =
     DirectConversation(
         id = conversation.id,
@@ -23,7 +25,8 @@ internal fun ConversationWithMessagesDto.toDirectConversation(
                 .map { message ->
                     message.toDirectMessage(
                         contactId = requireNotNull(conversation.contactId),
-                        attachmentParts = partsByMessageId[message.id].orEmpty()
+                        attachmentParts = partsByMessageId[message.id].orEmpty(),
+                        reactions = reactionsByMessageId[message.id].orEmpty()
                     )
                 },
         unreadCount =
@@ -36,7 +39,8 @@ internal fun ConversationWithMessagesDto.toDirectConversation(
 
 private fun MessageEntity.toDirectMessage(
     contactId: String,
-    attachmentParts: List<MessagePartDto>
+    attachmentParts: List<MessagePartDto>,
+    reactions: List<MessageReaction>
 ): DirectMessage =
     DirectMessage(
         id = id,
@@ -52,6 +56,7 @@ private fun MessageEntity.toDirectMessage(
                 MessageDeliveryStatus.NOT_APPLICABLE
             },
         replyToMessageId = replyToMessageId,
+        reactions = reactions,
         parts =
             buildList {
                 text

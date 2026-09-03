@@ -10,7 +10,9 @@ import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProcessor
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
+import com.cbgm.sparrow.data.database.dao.MessageReactionDao
 import com.cbgm.sparrow.data.database.entity.MessageEntity
+import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
 import com.cbgm.sparrow.feature.attachments.runtime.MessageAttachmentCacheCoordinator
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_END_TO_END_ENCRYPTED_MODE
@@ -20,6 +22,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 
 class GroupChatMessagePacketHandler(
     private val chatDao: ChatDao,
+    private val messageReactionDao: MessageReactionDao,
     private val protocolOutbox: ProtocolOutbox,
     private val groupSecurityManager: GroupSecurityManager,
     private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor,
@@ -61,6 +64,19 @@ class GroupChatMessagePacketHandler(
                         senderContactId = context.contactId
                     ).getOrThrow()
             val content = groupMessageContentCodec.decode(plaintext)
+
+            content.reaction?.let { reaction ->
+                val target = chatDao.findMessageById(reaction.messageId) ?: return@runCatching
+                check(target.conversationId == groupPacket.groupId) { "Reaction target belongs to another group" }
+                if (reaction.removed) {
+                    messageReactionDao.delete(reaction.messageId, context.contactId, reaction.emoji)
+                } else {
+                    messageReactionDao.upsert(
+                        MessageReactionEntity(reaction.messageId, groupPacket.groupId, context.contactId, reaction.emoji)
+                    )
+                }
+                return@runCatching
+            }
 
             if (existingMessage != null) {
                 attachmentTransfer.persistIncoming(groupPacket.messageId, content.attachments)

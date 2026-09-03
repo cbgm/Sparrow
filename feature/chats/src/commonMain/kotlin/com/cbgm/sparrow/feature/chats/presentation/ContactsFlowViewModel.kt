@@ -25,6 +25,7 @@ class ContactsFlowViewModel(
                     contactId = event.contactId,
                     contactName = event.contactName
                 )
+
             ContactsFlowUiEvent.ImportContactClicked -> openImportContact()
         }
     }
@@ -37,6 +38,7 @@ class ContactsFlowViewModel(
             when (observeIdentitySetupMode().first()) {
                 DirectIdentitySetupMode.AUTOMATIC_INVITATION ->
                     openAutomaticContact(contactId, contactName)
+
                 DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING ->
                     openManualContact(contactId, contactName)
             }
@@ -59,29 +61,31 @@ class ContactsFlowViewModel(
         contactId: String,
         contactName: String
     ) {
-        val conversationId = getOrCreateDirectConversation(contactId)
-        ensureIdentityExchangeStarted(contactId)
-        navigator.navigateTo(
-            AppRoute.Chat(
-                conversationId = conversationId,
-                contactId = contactId,
-                contactName = contactName
+        getOrCreateDirectConversation(contactId).onSuccess { conversationId ->
+            ensureIdentityExchangeStarted(contactId)
+            navigator.navigateTo(
+                AppRoute.Chat(
+                    conversationId = conversationId,
+                    contactId = contactId,
+                    contactName = contactName
+                )
             )
-        )
+        }
     }
 
     private suspend fun openDirectConversation(
         contactId: String,
         contactName: String
     ) {
-        val conversationId = getOrCreateDirectConversation(contactId)
-        navigator.navigateTo(
-            AppRoute.Chat(
-                conversationId = conversationId,
-                contactId = contactId,
-                contactName = contactName
+        getOrCreateDirectConversation(contactId).onSuccess { conversationId ->
+            navigator.navigateTo(
+                AppRoute.Chat(
+                    conversationId = conversationId,
+                    contactId = contactId,
+                    contactName = contactName
+                )
             )
-        )
+        }
     }
 
     private fun openImportContact() {

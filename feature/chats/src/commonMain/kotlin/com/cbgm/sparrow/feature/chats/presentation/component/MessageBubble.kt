@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.component
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -8,6 +9,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -25,12 +28,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.cbgm.sparrow.core.ui.animation.rememberHighlightColor
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
@@ -44,6 +57,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.presentation.component.model.ImageVideoTypeUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessagePartUi
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageReactionUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageReplyUi
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 import com.cbgm.sparrow.resources.Res
@@ -63,6 +77,7 @@ import com.cbgm.sparrow.resources.feature_chats_unable_decrypt_secure_message
 import com.cbgm.sparrow.resources.feature_chats_unable_read_plaintext
 import com.cbgm.sparrow.resources.feature_chats_waiting_for_invitation_acceptance
 import org.jetbrains.compose.resources.stringResource
+import kotlin.math.roundToInt
 
 @Composable
 internal fun MessageBubble(
@@ -75,6 +90,7 @@ internal fun MessageBubble(
     onContactClick: (SharedContact) -> Unit = {},
     onReplyPreviewClick: (String) -> Unit = {},
     onActionMenuVisibilityChange: (Boolean) -> Unit = {},
+    onReactionsClick: (IntRect) -> Unit = {},
     isSearchHighlighted: Boolean = false,
     showMetadata: Boolean = true
 ) {
@@ -91,20 +107,44 @@ internal fun MessageBubble(
         ) {
             SenderLabel(message = message)
 
-            BubbleBody(
-                message = message,
-                state = bubbleState,
-                isSearchHighlighted = isSearchHighlighted,
-                safetyWarning = safetyWarning,
-                onAttachmentVisible = onAttachmentVisible,
-                onAttachmentClick = onAttachmentClick,
-                onContactClick = onContactClick,
-                onReplyPreviewClick = onReplyPreviewClick,
-                onLongPress = { onActionMenuVisibilityChange(true) },
-                onSafetyDetailsClick = {
-                    safetyWarning?.let(onSafetyDetailsClick)
-                }
-            )
+            Box(
+                modifier =
+                    if (message.reactions.isNotEmpty()) {
+                        Modifier.padding(bottom = MaterialTheme.spacing.base)
+                    } else {
+                        Modifier
+                    }
+            ) {
+                BubbleBody(
+                    message = message,
+                    state = bubbleState,
+                    isSearchHighlighted = isSearchHighlighted,
+                    safetyWarning = safetyWarning,
+                    onAttachmentVisible = onAttachmentVisible,
+                    onAttachmentClick = onAttachmentClick,
+                    onContactClick = onContactClick,
+                    onReplyPreviewClick = onReplyPreviewClick,
+                    onLongPress = { onActionMenuVisibilityChange(true) },
+                    onSafetyDetailsClick = {
+                        safetyWarning?.let(onSafetyDetailsClick)
+                    }
+                )
+
+                MessageReactions(
+                    reactions = message.reactions,
+                    onClick = onReactionsClick,
+                    modifier =
+                        Modifier
+                            .align(
+                                if (message.isMine) {
+                                    Alignment.BottomStart
+                                } else {
+                                    Alignment.BottomEnd
+                                }
+                            )
+                            .offset(y = 16.dp)
+                )
+            }
             if (showMetadata) {
                 Metadata(
                     message = message,
@@ -353,6 +393,74 @@ private fun MessageBubbleSurface(
         }
     }
 }
+
+@Composable
+private fun MessageReactions(
+    reactions: List<MessageReactionUi>,
+    onClick: (IntRect) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (reactions.isEmpty()) return
+
+    val visibleReactions = reactions.take(3)
+    val iconSlotSize = Dimens.MessageReaction.cloudIconSlotSize
+    val iconStep = Dimens.MessageReaction.cloudIconStep
+    val cloudHeight = iconSlotSize + Dimens.MessageReaction.cloudSideOffsetY
+    val cloudWidth = iconSlotSize + iconStep * (visibleReactions.size - 1).toFloat()
+    var boundsInRoot by remember { mutableStateOf<IntRect?>(null) }
+
+    Surface(
+        modifier =
+            modifier
+                .onGloballyPositioned { coordinates ->
+                    boundsInRoot = coordinates.boundsInRoot().toIntRect()
+                }
+                .clickable { boundsInRoot?.let(onClick) },
+        color = Color.Transparent
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .padding(Dimens.MessageReaction.cloudContentPadding)
+                    .width(cloudWidth)
+                    .height(cloudHeight)
+        ) {
+            visibleReactions.forEachIndexed { index, reaction ->
+                val yOffset =
+                    if (visibleReactions.size == 3 && index != 1) {
+                        Dimens.MessageReaction.cloudSideOffsetY
+                    } else {
+                        Dimens.Base.zero
+                    }
+
+                Box(
+                    modifier =
+                        Modifier
+                            .size(iconSlotSize)
+                            .offset(
+                                x = iconStep * index.toFloat(),
+                                y = yOffset
+                            )
+                            .zIndex(index.toFloat()),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = reaction.emoji,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun Rect.toIntRect(): IntRect =
+    IntRect(
+        left = left.roundToInt(),
+        top = top.roundToInt(),
+        right = right.roundToInt(),
+        bottom = bottom.roundToInt()
+    )
 
 @Composable
 private fun Metadata(
@@ -621,6 +729,13 @@ private fun MessageBubblePreview() {
                     security = MessageSecurity.END_TO_END_ENCRYPTED,
                     contentStatus = MessageContentStatus.READABLE,
                     deliveryStatus = MessageDeliveryStatus.DELIVERED,
+                    reactions =
+                        listOf(
+                            MessageReactionUi(emoji = "❤️", count = 2, reactedByMe = true),
+                            MessageReactionUi(emoji = "😂", count = 1, reactedByMe = false),
+                            MessageReactionUi(emoji = "👍", count = 3, reactedByMe = false),
+                            MessageReactionUi(emoji = "🔥", count = 1, reactedByMe = false)
+                        ),
                     textPart =
                         MessagePartUi.Text(
                             text = "Encrypted message",
