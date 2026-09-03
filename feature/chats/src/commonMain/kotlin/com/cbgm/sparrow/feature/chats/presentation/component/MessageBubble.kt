@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.chats.presentation.component
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -409,13 +410,18 @@ private fun MessageReactions(
     val cloudWidth = iconSlotSize + iconStep * (visibleReactions.size - 1).toFloat()
     var boundsInRoot by remember { mutableStateOf<IntRect?>(null) }
 
+    val interactionSource = remember { MutableInteractionSource() }
+
     Surface(
-        modifier =
-            modifier
-                .onGloballyPositioned { coordinates ->
-                    boundsInRoot = coordinates.boundsInRoot().toIntRect()
-                }
-                .clickable { boundsInRoot?.let(onClick) },
+        modifier = modifier
+            .onGloballyPositioned { coordinates ->
+                boundsInRoot = coordinates.boundsInRoot().toIntRect()
+            }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = { boundsInRoot?.let(onClick) }
+            ),
         color = Color.Transparent
     ) {
         Box(
