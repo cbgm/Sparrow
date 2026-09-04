@@ -341,12 +341,14 @@ interface ChatDao {
             LIMIT 1
         ) AS lastMessageTimestamp,
         (
-            SELECT COUNT(*)
-            FROM messages
-            WHERE messages.conversationId = conversations.id
-              AND messages.isMine = 0
-              AND messages.readReceiptSent = 0
-              AND messages.contentStatus = 'READABLE'
+            (
+                SELECT COUNT(*)
+                FROM messages
+                WHERE messages.conversationId = conversations.id
+                  AND messages.isMine = 0
+                  AND messages.readReceiptSent = 0
+                  AND messages.contentStatus = 'READABLE'
+            ) + conversations.unseenLocalMessageCount
         ) AS unreadCount,
         conversations.updatedAtEpochMilliseconds AS updatedAtEpochMilliseconds
     FROM conversations
@@ -373,6 +375,24 @@ interface ChatDao {
         localDeletionTransportMode: String,
         localMembershipStartedTransportMode: String
     ): Flow<List<ConversationSummaryDto>>
+
+    @Query(
+        """
+        UPDATE conversations
+        SET unseenLocalMessageCount = unseenLocalMessageCount + 1
+        WHERE id = :conversationId
+        """
+    )
+    suspend fun incrementUnseenLocalMessageCount(conversationId: String): Int
+
+    @Query(
+        """
+        UPDATE conversations
+        SET unseenLocalMessageCount = 0
+        WHERE id = :conversationId
+        """
+    )
+    suspend fun clearUnseenLocalMessageCount(conversationId: String): Int
 
     @Query("DELETE FROM messages WHERE conversationId = :conversationId")
     suspend fun deleteConversationMessages(conversationId: String)

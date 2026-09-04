@@ -74,6 +74,14 @@ class DirectConversationRepositoryImpl(
             requireNotNull(conversation.contactId) { "Direct conversation has no contact" }
         }
 
+    override suspend fun findConversationId(contactId: String): Result<String?> =
+        safeSuspendCall {
+            chatDao
+                .findConversationByContactId(contactId)
+                ?.takeIf { conversation -> conversation.type == DIRECT_CONVERSATION_TYPE }
+                ?.id
+        }
+
     override suspend fun delete(conversationId: String): Result<Unit> =
         safeSuspendCall {
             val conversation = chatDao.findConversationById(conversationId) ?: return@safeSuspendCall
