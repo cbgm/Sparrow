@@ -42,6 +42,7 @@ internal actual fun VideoThumbnail(
 ) {
     MediaImage(
         data = media.thumbnailBytes,
+        localFilePath = null,
         cacheKey = "media-thumbnail:${media.id}",
         contentDescription = null,
         modifier = modifier,
@@ -56,6 +57,17 @@ internal actual fun VideoPlayer(
     isActive: Boolean,
     modifier: Modifier
 ) {
+    val localFilePath = media.localFilePath
+    if (localFilePath != null) {
+        VideoPlayerContent(
+            media = media,
+            url = NSURL.fileURLWithPath(localFilePath),
+            isActive = isActive,
+            modifier = modifier
+        )
+        return
+    }
+
     val bytes = media.bytes
     if (bytes == null) {
         Box(modifier = modifier.fillMaxSize().background(Color.Black))
@@ -89,28 +101,43 @@ internal actual fun VideoPlayer(
                 contentScale = ContentScale.Fit
             )
 
-        is VideoFileState.Ready -> {
-            val player = remember(media.id, state.url) { AVPlayer(uRL = state.url) }
-
-            UIKitView(
-                factory = {
-                    VideoView(
-                        frame = CGRectZero.readValue(),
-                        player = player
-                    )
-                },
-                modifier = modifier.fillMaxSize(),
-                update = { view ->
-                    if (isActive) {
-                        view.play()
-                    } else {
-                        view.pause()
-                    }
-                },
-                onRelease = VideoView::release
+        is VideoFileState.Ready ->
+            VideoPlayerContent(
+                media = media,
+                url = state.url,
+                isActive = isActive,
+                modifier = modifier
             )
-        }
     }
+}
+
+@OptIn(ExperimentalForeignApi::class)
+@Composable
+private fun VideoPlayerContent(
+    media: MediaItem,
+    url: NSURL,
+    isActive: Boolean,
+    modifier: Modifier
+) {
+    val player = remember(media.id, url) { AVPlayer(uRL = url) }
+
+    UIKitView(
+        factory = {
+            VideoView(
+                frame = CGRectZero.readValue(),
+                player = player
+            )
+        },
+        modifier = modifier.fillMaxSize(),
+        update = { view ->
+            if (isActive) {
+                view.play()
+            } else {
+                view.pause()
+            }
+        },
+        onRelease = VideoView::release
+    )
 }
 
 @OptIn(ExperimentalForeignApi::class)

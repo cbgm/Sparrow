@@ -87,7 +87,7 @@ class GroupConversationViewModel(
     private val editingMessageId = savedStateHandle.getMutableStateFlow(EDITING_MESSAGE_ID_KEY, "")
     private val mutableErrorMessage = MutableStateFlow<String?>(null)
     private val selectedMedia = MutableStateFlow<List<MediaSelection>>(emptyList())
-    private val attachmentBytes = MutableStateFlow<Map<String, ByteArray>>(emptyMap())
+    private val attachmentPayloadBytes = MutableStateFlow<Map<String, ByteArray>>(emptyMap())
     private val isSending = MutableStateFlow(false)
     private val contextMessageId = MutableStateFlow<String?>(null)
     private val locationShareState = MutableStateFlow(LocationShareState.IDLE)
@@ -133,9 +133,9 @@ class GroupConversationViewModel(
     val conversationState: StateFlow<GroupConversationUiState> =
         combine(
             presentationContext,
-            attachmentBytes,
+            attachmentPayloadBytes,
             observeMessageSafetyAssessments()
-        ) { presentation, loadedAttachmentBytes, safetyAssessments ->
+        ) { presentation, loadedAttachmentPayloadBytes, safetyAssessments ->
             toGroupConversationUiState(
                 conversation = presentation.context?.conversation,
                 contacts = presentation.context?.contacts.orEmpty(),
@@ -143,7 +143,7 @@ class GroupConversationViewModel(
                 avatarBytes = presentation.context?.avatarBytes,
                 isLoading = presentation is GroupContextObservation.Loading,
                 safetyAssessments = safetyAssessments,
-                attachmentBytes = loadedAttachmentBytes
+                attachmentPayloadBytes = loadedAttachmentPayloadBytes
             )
         }.stateIn(
             scope = viewModelScope,
@@ -443,16 +443,25 @@ class GroupConversationViewModel(
     }
 
     private fun loadAttachment(attachmentId: String) {
-        if (attachmentId.isBlank() || attachmentBytes.value.containsKey(attachmentId)) return
+        if (attachmentId.isBlank() || attachmentPayloadBytes.value.containsKey(attachmentId)) return
         if (!loadingAttachmentIds.add(attachmentId)) return
 
         viewModelScope.launch {
             loadMessageAttachment(attachmentId)
-                .onSuccess { bytes -> attachmentBytes.value = attachmentBytes.value + (attachmentId to bytes) }
+                .onSuccess { bytes ->
+                    if (requiresAttachmentPayloadInState(attachmentId)) {
+                        attachmentPayloadBytes.value += (attachmentId to bytes)
+                    }
+                }
                 .onFailure { error -> logger.warn(error) { "Could not load message attachment $attachmentId" } }
             loadingAttachmentIds.remove(attachmentId)
         }
     }
+
+    private fun requiresAttachmentPayloadInState(attachmentId: String): Boolean =
+        conversationState.value.messages.any { message ->
+            message.locationPart?.id == attachmentId || message.contactPart?.id == attachmentId
+        }
 
     private suspend fun clearComposer() {
         messageText.value = ""

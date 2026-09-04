@@ -148,13 +148,15 @@ private fun MediaViewerPage(
     onEnsureMediaLoaded: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LaunchedEffect(media.id, media.bytes) {
-        if (media.bytes == null) {
+    val isLoaded = media.localFilePath != null || media.bytes != null
+
+    LaunchedEffect(media.id, media.localFilePath, media.bytes) {
+        if (!isLoaded) {
             onEnsureMediaLoaded(media.id)
         }
     }
 
-    if (media.bytes == null) {
+    if (!isLoaded) {
         Box(
             modifier = modifier
                 .fillMaxSize()
@@ -167,6 +169,7 @@ private fun MediaViewerPage(
         MediaType.IMAGE ->
             MediaImage(
                 data = media.bytes,
+                localFilePath = media.localFilePath,
                 cacheKey = "media-full:${media.id}",
                 contentDescription = null,
                 modifier = modifier.fillMaxSize(),

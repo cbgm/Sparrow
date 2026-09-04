@@ -15,6 +15,7 @@ internal fun MessageAttachmentUi.ImageVideoAttachmentUi.toMediaItem(): MediaItem
                 else -> error("Unsupported image/video attachment type: $type")
             },
         mimeType = mimeType,
+        localFilePath = localFilePath,
         bytes = bytes,
         width = width,
         height = height,

@@ -15,5 +15,6 @@ internal fun MessageAttachmentUi.ImageVideoAttachmentUi.toMediaExportItem(): Med
                 else -> error("Unsupported image/video attachment type: $type")
             },
         mimeType = mimeType,
-        bytes = requireNotNull(bytes) { "Media attachment must be loaded before export" }
+        localFilePath = localFilePath,
+        bytes = bytes
     )

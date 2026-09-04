@@ -4,12 +4,15 @@ data class MediaExportItem(
     val id: String,
     val type: MediaContentType,
     val mimeType: String,
-    val bytes: ByteArray
+    val localFilePath: String? = null,
+    val bytes: ByteArray? = null
 ) {
     init {
         require(id.isNotBlank()) { "Media export ID must not be blank" }
         require(mimeType.isNotBlank()) { "Media export MIME type must not be blank" }
-        require(bytes.isNotEmpty()) { "Media export bytes must not be empty" }
+        require(localFilePath?.isNotBlank() == true || bytes?.isNotEmpty() == true) {
+            "Media export requires a local file or bytes"
+        }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -21,6 +24,7 @@ data class MediaExportItem(
         if (id != other.id) return false
         if (type != other.type) return false
         if (mimeType != other.mimeType) return false
+        if (localFilePath != other.localFilePath) return false
         if (!bytes.contentEquals(other.bytes)) return false
 
         return true
@@ -30,7 +34,8 @@ data class MediaExportItem(
         var result = id.hashCode()
         result = 31 * result + type.hashCode()
         result = 31 * result + mimeType.hashCode()
-        result = 31 * result + bytes.contentHashCode()
+        result = 31 * result + (localFilePath?.hashCode() ?: 0)
+        result = 31 * result + (bytes?.contentHashCode() ?: 0)
         return result
     }
 }

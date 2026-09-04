@@ -39,7 +39,7 @@ internal fun toGroupConversationUiState(
     isLoading: Boolean,
     typingContactIds: Set<String>,
     safetyAssessments: Map<String, MessageSafetyAssessment>,
-    attachmentBytes: Map<String, ByteArray> = emptyMap(),
+    attachmentPayloadBytes: Map<String, ByteArray> = emptyMap(),
     currentReplyToMessageId: String? = null
 ): GroupConversationUiState =
     toGroupConversationUiState(
@@ -49,7 +49,7 @@ internal fun toGroupConversationUiState(
         avatarBytes = avatarBytes,
         isLoading = isLoading,
         safetyAssessments = safetyAssessments,
-        attachmentBytes = attachmentBytes
+        attachmentPayloadBytes = attachmentPayloadBytes
     )
 
 internal fun toGroupConversationUiState(
@@ -59,7 +59,7 @@ internal fun toGroupConversationUiState(
     avatarBytes: ByteArray?,
     isLoading: Boolean,
     safetyAssessments: Map<String, MessageSafetyAssessment>,
-    attachmentBytes: Map<String, ByteArray> = emptyMap()
+    attachmentPayloadBytes: Map<String, ByteArray> = emptyMap()
 ): GroupConversationUiState {
     val contactsById = contacts.associateBy(Contact::id)
 
@@ -70,7 +70,7 @@ internal fun toGroupConversationUiState(
             contactsById = contactsById,
             profilePictures = profilePictures,
             safetyAssessments = safetyAssessments,
-            attachmentBytes = attachmentBytes
+            attachmentPayloadBytes = attachmentPayloadBytes
         ),
         isLoading = isLoading,
         state = conversation?.state ?: GroupConversationState.READY,
@@ -99,10 +99,10 @@ internal fun GroupMessage.toMessageBubbleUi(
     senderIsInContacts: Boolean,
     senderProfilePictureBytes: ByteArray?,
     safetyAssessments: Map<String, MessageSafetyAssessment>,
-    attachmentBytes: Map<String, ByteArray> = emptyMap(),
+    attachmentPayloadBytes: Map<String, ByteArray> = emptyMap(),
     reply: MessageReplyUi? = null
 ): MessageBubbleUi {
-    val partsUi = parts.toMessagePartsUi(attachmentBytes)
+    val partsUi = parts.toMessagePartsUi(attachmentPayloadBytes)
 
     return MessageBubbleUi(
         id = id,
@@ -180,7 +180,7 @@ private fun GroupConversation?.toMessageBubbleUi(
     contactsById: Map<String, Contact>,
     profilePictures: Map<String, ByteArray?>,
     safetyAssessments: Map<String, MessageSafetyAssessment>,
-    attachmentBytes: Map<String, ByteArray>
+    attachmentPayloadBytes: Map<String, ByteArray>
 ): List<MessageBubbleUi> {
     val messages = this?.messages.orEmpty()
     val messagesById = messages.associateBy(GroupMessage::id)
@@ -197,7 +197,7 @@ private fun GroupConversation?.toMessageBubbleUi(
                     senderIsInContacts = senderIsInContacts,
                     senderProfilePictureBytes = senderContactId?.let(profilePictures::get),
                     safetyAssessments = safetyAssessments,
-                    attachmentBytes = attachmentBytes,
+                    attachmentPayloadBytes = attachmentPayloadBytes,
                     reply = message.replyToMessageId.toGroupReplyPreview(messagesById, contactsById)
                 )
             )

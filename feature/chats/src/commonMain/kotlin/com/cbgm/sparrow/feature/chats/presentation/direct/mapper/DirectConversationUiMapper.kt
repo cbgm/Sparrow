@@ -33,10 +33,10 @@ internal fun resolveContactName(
 
 internal fun DirectMessage.toMessageBubbleUi(
     safetyAssessments: Map<String, MessageSafetyAssessment>,
-    attachmentBytes: Map<String, ByteArray> = emptyMap(),
+    attachmentPayloadBytes: Map<String, ByteArray> = emptyMap(),
     reply: MessageReplyUi? = null
 ): MessageBubbleUi {
-    val partsUi = parts.toMessagePartsUi(attachmentBytes)
+    val partsUi = parts.toMessagePartsUi(attachmentPayloadBytes)
 
     return MessageBubbleUi(
         id = id,
@@ -135,7 +135,7 @@ internal fun toDirectConversationUiState(
     handshake: IdentityHandshakeState?,
     setupMode: DirectIdentitySetupMode,
     safetyAssessments: Map<String, MessageSafetyAssessment>,
-    attachmentBytes: Map<String, ByteArray> = emptyMap()
+    attachmentPayloadBytes: Map<String, ByteArray> = emptyMap()
 ): DirectConversationUiState {
     val isChatAuthorized = isDirectChatAuthorized(contact, handshake, setupMode)
     val composerState =
@@ -159,7 +159,7 @@ internal fun toDirectConversationUiState(
                     add(
                         message.toMessageBubbleUi(
                             safetyAssessments = safetyAssessments,
-                            attachmentBytes = attachmentBytes,
+                            attachmentPayloadBytes = attachmentPayloadBytes,
                             reply = message.replyToMessageId.toDirectReplyPreview(messagesById, contactName)
                         )
                     )
