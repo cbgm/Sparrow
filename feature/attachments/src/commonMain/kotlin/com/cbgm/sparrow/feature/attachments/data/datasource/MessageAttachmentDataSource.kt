@@ -11,8 +11,13 @@ import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.UploadedBlob
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment as ProtocolMessageAttachment
 
 class MessageAttachmentDataSource(
@@ -26,32 +31,31 @@ class MessageAttachmentDataSource(
     suspend fun prepareAttachments(
         attachments: List<OutgoingMessageAttachment>,
         retentionMilliseconds: Long = MessageAttachmentPolicy.DEFAULT_RETENTION_MILLISECONDS
-    ): Result<List<PreparedMessageAttachmentDto>> =
-        runCatching {
-            require(retentionMilliseconds > 0L) { "Attachment retention must be positive" }
-            MessageAttachmentPolicy.requireValid(attachments)
-            val prepared = mutableListOf<PreparedMessageAttachmentDto>()
-            try {
-                attachments.forEach { item ->
-                    prepared +=
-                        prepareAttachment(
-                            attachmentId = item.id,
-                            type = item.type,
-                            bytes = item.bytes,
-                            mimeType = item.mimeType,
-                            retentionMilliseconds = retentionMilliseconds,
-                            fileName = item.fileName,
-                            width = item.width,
-                            height = item.height,
-                            durationMilliseconds = item.durationMilliseconds
-                        )
-                }
-                prepared
-            } catch (error: Throwable) {
-                cleanupPrepared(prepared)
-                throw error
+    ): List<PreparedMessageAttachmentDto> {
+        require(retentionMilliseconds > 0L) { "Attachment retention must be positive" }
+        MessageAttachmentPolicy.requireValid(attachments)
+
+        val prepared = mutableListOf<PreparedMessageAttachmentDto>()
+        return try {
+            attachments.forEach { item ->
+                prepared += prepareAttachment(
+                    attachmentId = item.id,
+                    type = item.type,
+                    bytes = item.bytes,
+                    mimeType = item.mimeType,
+                    retentionMilliseconds = retentionMilliseconds,
+                    fileName = item.fileName,
+                    width = item.width,
+                    height = item.height,
+                    durationMilliseconds = item.durationMilliseconds
+                )
             }
+            prepared
+        } catch (error: Throwable) {
+            cleanupPrepared(prepared)
+            throw error
         }
+    }
 
     private suspend fun prepareAttachment(
         attachmentId: String,
@@ -65,34 +69,32 @@ class MessageAttachmentDataSource(
         durationMilliseconds: Long? = null
     ): PreparedMessageAttachmentDto {
         val uploaded = blobTransferDataSource.upload(bytes, retentionMilliseconds).getOrThrow()
-        val localFileName =
-            runCatching { fileDataSource.write(bytes) }
-                .getOrElse { error ->
-                    blobTransferDataSource.delete(uploaded)
-                    throw error
-                }
+
+        val localFileName = try {
+            fileDataSource.write(bytes)
+        } catch (error: Throwable) {
+            blobTransferDataSource.delete(uploaded)
+            throw error
+        }
+
         return PreparedMessageAttachmentDto(
-            attachment =
-                ProtocolMessageAttachment(
-                    attachmentId = attachmentId,
-                    type = type,
-                    mimeType = mimeType,
-                    byteSize = bytes.size.toLong(),
-                    blob = uploaded.reference,
-                    fileName = fileName,
-                    width = width,
-                    height = height,
-                    durationMilliseconds = durationMilliseconds
-                ),
+            attachment = ProtocolMessageAttachment(
+                attachmentId = attachmentId,
+                type = type,
+                mimeType = mimeType,
+                byteSize = bytes.size.toLong(),
+                blob = uploaded.reference,
+                fileName = fileName,
+                width = width,
+                height = height,
+                durationMilliseconds = durationMilliseconds
+            ),
             deleteCapability = uploaded.deleteCapability,
             localFileName = localFileName
         )
     }
 
-    suspend fun persistOutgoing(
-        messageId: String,
-        prepared: List<PreparedMessageAttachmentDto>
-    ) {
+    suspend fun persistOutgoing(messageId: String, prepared: List<PreparedMessageAttachmentDto>) {
         if (prepared.isEmpty()) return
         attachmentDao.upsertAll(
             prepared.mapIndexed { index, item ->
@@ -101,10 +103,7 @@ class MessageAttachmentDataSource(
         )
     }
 
-    suspend fun persistIncoming(
-        messageId: String,
-        attachments: List<ProtocolMessageAttachment>
-    ) {
+    suspend fun persistIncoming(messageId: String, attachments: List<ProtocolMessageAttachment>) {
         if (attachments.isEmpty()) return
         attachmentDao.upsertAll(
             attachments.mapIndexed { index, attachment ->
@@ -119,25 +118,28 @@ class MessageAttachmentDataSource(
     }
 
     suspend fun protocolAttachments(messageId: String): List<ProtocolMessageAttachment> =
-        attachmentDao.findByMessageId(messageId).map { entity -> entity.toProtocolMessageAttachment() }
+        attachmentDao.findByMessageId(messageId).map { it.toProtocolMessageAttachment() }
 
     suspend fun cacheIncoming(messageId: String) {
-        attachmentDao.findByMessageId(messageId)
-            .forEach { entity ->
-                loadBytes(entity.id)
-                    .onFailure { error ->
-                        logger.warn(error) { "Could not cache message attachment ${entity.id}" }
+        coroutineScope {
+            attachmentDao.findByMessageId(messageId)
+                .map { entity ->
+                    async {
+                        try {
+                            loadBytes(entity.id)
+                        } catch (e: Exception) {
+                            logger.warn(e) { "Could not cache message attachment ${entity.id}" }
+                        }
                     }
-            }
+                }.awaitAll()
+        }
     }
 
-    suspend fun loadBytes(attachmentId: String): Result<ByteArray> =
-        runCatching {
+    suspend fun loadBytes(attachmentId: String): ByteArray =
+        withContext(Dispatchers.IO) {
             val entity = attachmentDao.findById(attachmentId) ?: error("Message attachment was not found")
-            val bytes =
-                entity.localFileName
-                    ?.let(fileDataSource::read)
-                    ?: downloadAndCache(entity)
+            val bytes = entity.localFileName?.let { fileDataSource.read(it) } ?: downloadAndCache(entity)
+
             localAttachmentDataSource.saveIncomingConversationCopy(entity, bytes)
             bytes
         }
@@ -163,9 +165,11 @@ class MessageAttachmentDataSource(
     suspend fun deleteForMessages(messageIds: List<String>) {
         if (messageIds.isEmpty()) return
         val entities = attachmentDao.findByMessageIds(messageIds)
+
         localAttachmentDataSource
             .delete(entities.mapTo(mutableSetOf(), MessageAttachmentEntity::id))
             .getOrThrow()
+
         entities.forEach { entity ->
             entity.deleteCapability?.let { deleteCapability ->
                 blobTransferDataSource.delete(
@@ -183,14 +187,15 @@ class MessageAttachmentDataSource(
 
     suspend fun cleanupPrepared(prepared: List<PreparedMessageAttachmentDto>) {
         prepared.forEach { item ->
-            runCatching { fileDataSource.delete(item.localFileName) }
-            blobTransferDataSource.delete(
-                UploadedBlob(
-                    reference = item.attachment.blob,
-                    deleteCapability = item.deleteCapability
-                )
-            ).onFailure { error ->
-                logger.warn(error) { "Could not clean up prepared attachment ${item.attachment.attachmentId}" }
+            try {
+                item.localFileName.let { fileDataSource.delete(it) }
+                item.deleteCapability.let { capability ->
+                    blobTransferDataSource.delete(
+                        UploadedBlob(reference = item.attachment.blob, deleteCapability = capability)
+                    )
+                }
+            } catch (e: Exception) {
+                logger.warn(e) { "Failed to cleanup prepared attachment during rollback" }
             }
         }
     }

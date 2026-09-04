@@ -87,6 +87,7 @@ fun GroupConversationScreen(
     membershipState: GroupMembershipUiState,
     errorMessage: String?,
     onUiEvent: (GroupConversationUiEvent) -> Unit,
+    onForwardMessageRequested: (String) -> Unit,
     modifier: Modifier = Modifier,
     targetMessageId: String? = null
 ) {
@@ -125,6 +126,9 @@ fun GroupConversationScreen(
                 contextMessage?.id?.let { messageId ->
                     onUiEvent(GroupConversationUiEvent.ReplyToMessage(messageId))
                 }
+            },
+            onForwardClick = {
+                contextMessage?.id?.let(onForwardMessageRequested)
             },
             onReactionClick = { emoji ->
                 contextMessage?.id?.let { messageId ->

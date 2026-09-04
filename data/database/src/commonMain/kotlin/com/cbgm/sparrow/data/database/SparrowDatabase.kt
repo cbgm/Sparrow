@@ -63,7 +63,7 @@ import com.cbgm.sparrow.data.database.entity.RemoteMailboxRouteEntity
         LocalMailboxCredentialEntity::class,
         RemoteMailboxRouteEntity::class
     ],
-    version = 33,
+    version = 34,
     autoMigrations = [
         AutoMigration(from = 26, to = 27),
         AutoMigration(from = 27, to = 28),
@@ -71,7 +71,8 @@ import com.cbgm.sparrow.data.database.entity.RemoteMailboxRouteEntity
         AutoMigration(from = 29, to = 30),
         AutoMigration(from = 30, to = 31),
         AutoMigration(from = 31, to = 32),
-        AutoMigration(from = 32, to = 33)
+        AutoMigration(from = 32, to = 33),
+        AutoMigration(from = 33, to = 34)
     ],
     exportSchema = true
 )

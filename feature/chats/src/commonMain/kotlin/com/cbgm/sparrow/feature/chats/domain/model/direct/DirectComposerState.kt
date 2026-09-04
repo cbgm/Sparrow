@@ -45,14 +45,20 @@ fun resolveDirectComposerState(
         DirectIdentitySetupMode.AUTOMATIC_INVITATION ->
             when {
                 isChatAuthorized -> DirectComposerState.READY
-                handshake == IdentityHandshakeState.INVITE_SENT -> DirectComposerState.REINVITE_PENDING
-                handshake in REINVITE_RETRY_STATES -> DirectComposerState.REINVITE_REQUIRED
+                handshake.isDirectReinvitePending() -> DirectComposerState.REINVITE_PENDING
+                handshake.isDirectReinviteRetryState() -> DirectComposerState.REINVITE_REQUIRED
                 else -> DirectComposerState.DISABLED
             }
     }
 }
 
-private val REINVITE_RETRY_STATES =
+fun IdentityHandshakeState?.isDirectReinvitePending(): Boolean =
+    this == IdentityHandshakeState.INVITE_SENT
+
+fun IdentityHandshakeState?.isDirectReinviteRetryState(): Boolean =
+    this in DIRECT_REINVITE_RETRY_STATES
+
+private val DIRECT_REINVITE_RETRY_STATES =
     setOf(
         IdentityHandshakeState.CONVERSATION_DELETED,
         IdentityHandshakeState.DECLINED,

@@ -13,14 +13,14 @@ import com.cbgm.sparrow.feature.media.presentation.model.MediaItem
 import com.cbgm.sparrow.feature.media.presentation.model.MediaType
 
 internal fun List<MessagePart>.toMessagePartsUi(
-    attachmentBytes: Map<String, ByteArray>
+    attachmentPayloadBytes: Map<String, ByteArray>
 ): List<MessagePartUi> =
     map { part ->
-        part.toMessagePartUi(attachmentBytes)
+        part.toMessagePartUi(attachmentPayloadBytes)
     }
 
 private fun MessagePart.toMessagePartUi(
-    attachmentBytes: Map<String, ByteArray>
+    attachmentPayloadBytes: Map<String, ByteArray>
 ): MessagePartUi =
     when (this) {
         is MessagePart.Text ->
@@ -43,8 +43,7 @@ private fun MessagePart.toMessagePartUi(
                 width = width,
                 height = height,
                 durationMilliseconds = durationMilliseconds,
-                localFilePath = localFilePath,
-                bytes = attachmentBytes[id]
+                localFilePath = localFilePath
             )
 
         is MessagePart.File ->
@@ -53,20 +52,19 @@ private fun MessagePart.toMessagePartUi(
                 mimeType = mimeType,
                 byteSize = byteSize,
                 fileName = fileName,
-                localFilePath = localFilePath,
-                bytes = attachmentBytes[id]
+                localFilePath = localFilePath
             )
 
         is MessagePart.Location ->
             MessagePartUi.Location(
                 id = id,
-                location = attachmentBytes[id]?.let(LocationAttachmentPayload::decode)
+                location = attachmentPayloadBytes[id]?.let(LocationAttachmentPayload::decode)
             )
 
         is MessagePart.Contact ->
             MessagePartUi.Contact(
                 id = id,
-                contact = attachmentBytes[id]?.let(ContactAttachmentPayload::decode)
+                contact = attachmentPayloadBytes[id]?.let(ContactAttachmentPayload::decode)
             )
     }
 
@@ -79,7 +77,7 @@ fun MessagePartUi.ImageVideo.toMediaItem(): MediaItem =
                 ImageVideoTypeUi.VIDEO -> MediaType.VIDEO
             },
         mimeType = mimeType,
-        bytes = bytes,
+        localFilePath = localFilePath,
         width = width,
         height = height,
         durationMilliseconds = durationMilliseconds
@@ -102,8 +100,7 @@ internal fun MessageBubbleUi.toMessageAttachmentsUi(): List<MessageAttachmentUi>
                     width = part.width,
                     height = part.height,
                     durationMilliseconds = part.durationMilliseconds,
-                    localFilePath = part.localFilePath,
-                    bytes = part.bytes
+                    localFilePath = part.localFilePath
                 )
             )
         }
@@ -115,8 +112,7 @@ internal fun MessageBubbleUi.toMessageAttachmentsUi(): List<MessageAttachmentUi>
                     mimeType = part.mimeType,
                     byteSize = part.byteSize,
                     fileName = part.fileName,
-                    localFilePath = part.localFilePath,
-                    bytes = part.bytes
+                    localFilePath = part.localFilePath
                 )
             )
         }

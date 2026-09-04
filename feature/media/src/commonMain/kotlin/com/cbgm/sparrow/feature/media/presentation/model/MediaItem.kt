@@ -14,6 +14,7 @@ data class MediaItem(
     val id: String,
     val type: MediaType,
     val mimeType: String,
+    val localFilePath: String? = null,
     val bytes: ByteArray? = null,
     val thumbnailBytes: ByteArray? = null,
     val width: Int? = null,
@@ -32,6 +33,7 @@ data class MediaItem(
         if (id != other.id) return false
         if (type != other.type) return false
         if (mimeType != other.mimeType) return false
+        if (localFilePath != other.localFilePath) return false
         if (!bytes.contentEquals(other.bytes)) return false
         if (!thumbnailBytes.contentEquals(other.thumbnailBytes)) return false
 
@@ -45,6 +47,7 @@ data class MediaItem(
         result = 31 * result + id.hashCode()
         result = 31 * result + type.hashCode()
         result = 31 * result + mimeType.hashCode()
+        result = 31 * result + (localFilePath?.hashCode() ?: 0)
         result = 31 * result + (bytes?.contentHashCode() ?: 0)
         result = 31 * result + (thumbnailBytes?.contentHashCode() ?: 0)
         return result

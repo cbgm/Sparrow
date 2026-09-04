@@ -16,6 +16,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -31,6 +32,8 @@ import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.media.domain.model.ProfilePictureCropRegion
 import com.cbgm.sparrow.feature.media.presentation.avatar.crop.ProfilePictureCropCanvas
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.decodeToImageBitmap
 
 @Composable
@@ -40,9 +43,12 @@ internal fun ProfilePictureCropScreen(
     onConfirm: (ProfilePictureCropRegion) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val image =
-        remember(sourceBytes) {
-            runCatching { sourceBytes.decodeToImageBitmap() }.getOrNull()
+    val image by
+        produceState<ImageBitmap?>(initialValue = null, sourceBytes) {
+            value =
+                withContext(Dispatchers.Default) {
+                    runCatching { sourceBytes.decodeToImageBitmap() }.getOrNull()
+                }
         }
 
     ProfilePictureCropContent(

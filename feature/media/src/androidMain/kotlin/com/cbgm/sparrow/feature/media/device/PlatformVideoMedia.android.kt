@@ -37,19 +37,20 @@ internal actual fun VideoThumbnail(
 ) {
     val fallback = rememberSparrowFallbackPainter()
     val context = LocalContext.current
+    val localFilePath = media.localFilePath
     val bytes = media.bytes
     val request =
-        remember(media.id, bytes, media.mimeType) {
-            bytes?.let {
-                ImageRequest.Builder(context)
-                    .data(it)
-                    .memoryCacheKey("media-thumbnail:${media.id}")
-                    .videoFrameMillis(0)
-                    .decoderFactory { result, options, _ ->
-                        VideoFrameDecoder(result.source, options)
-                    }
-                    .build()
-            }
+        remember(media.id, localFilePath, bytes, media.mimeType) {
+            val source = localFilePath?.let(::File) ?: bytes ?: return@remember null
+            ImageRequest.Builder(context)
+                .data(source)
+                .memoryCacheKey("media-thumbnail:${media.id}")
+                .diskCacheKey("media-thumbnail:${media.id}")
+                .videoFrameMillis(0)
+                .decoderFactory { result, options, _ ->
+                    VideoFrameDecoder(result.source, options)
+                }
+                .build()
         }
 
     AsyncImage(
@@ -70,6 +71,17 @@ internal actual fun VideoPlayer(
     modifier: Modifier
 ) {
     val context = LocalContext.current
+    val localFilePath = media.localFilePath
+    if (localFilePath != null) {
+        VideoView(
+            media = media,
+            path = localFilePath,
+            isActive = isActive,
+            modifier = modifier
+        )
+        return
+    }
+
     val bytes = media.bytes
     if (bytes == null) {
         SparrowImage(

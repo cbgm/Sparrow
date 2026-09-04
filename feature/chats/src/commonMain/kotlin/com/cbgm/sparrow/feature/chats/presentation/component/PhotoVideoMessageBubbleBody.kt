@@ -97,8 +97,10 @@ private fun MessageMediaPreview(
     onAttachmentVisible: (String) -> Unit,
     onAttachmentClick: (String) -> Unit
 ) {
-    LaunchedEffect(imageVideoPart.id, imageVideoPart.bytes) {
-        if (imageVideoPart.bytes == null) onAttachmentVisible(imageVideoPart.id)
+    val isLoaded = imageVideoPart.localFilePath != null
+
+    LaunchedEffect(imageVideoPart.id, imageVideoPart.localFilePath) {
+        if (!isLoaded) onAttachmentVisible(imageVideoPart.id)
     }
 
     Surface(
@@ -116,7 +118,7 @@ private fun MessageMediaPreview(
                 contentScale = ContentScale.Crop
             )
 
-            if (imageVideoPart.bytes == null) {
+            if (!isLoaded) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center

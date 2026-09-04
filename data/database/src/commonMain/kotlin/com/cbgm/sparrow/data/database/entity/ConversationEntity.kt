@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.data.database.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -35,5 +36,7 @@ data class ConversationEntity(
     val type: String,
     val title: String?,
     val createdAtEpochMilliseconds: Long,
-    val updatedAtEpochMilliseconds: Long
+    val updatedAtEpochMilliseconds: Long,
+    @ColumnInfo(defaultValue = "0")
+    val unseenLocalMessageCount: Int = 0
 )

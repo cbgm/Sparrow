@@ -8,8 +8,10 @@ import kotlin.test.assertEquals
 class GroupMessageDeliveryStateMachineTest {
     @Test
     fun groupStatusIsDerivedFromRecipientStates() {
-        assertAggregate(MessageDeliveryStatus.SENT, MessageDeliveryStatus.SENT, MessageDeliveryStatus.DELIVERED, MessageDeliveryStatus.READ)
-        assertAggregate(MessageDeliveryStatus.DELIVERED, MessageDeliveryStatus.DELIVERED, MessageDeliveryStatus.READ)
+        assertAggregate(MessageDeliveryStatus.SENT, MessageDeliveryStatus.SENT, MessageDeliveryStatus.DELIVERED)
+        assertAggregate(MessageDeliveryStatus.DELIVERED, MessageDeliveryStatus.DELIVERED, MessageDeliveryStatus.DELIVERED)
+        assertAggregate(MessageDeliveryStatus.READ, MessageDeliveryStatus.SENT, MessageDeliveryStatus.DELIVERED, MessageDeliveryStatus.READ)
+        assertAggregate(MessageDeliveryStatus.READ, MessageDeliveryStatus.DELIVERED, MessageDeliveryStatus.READ)
         assertAggregate(MessageDeliveryStatus.READ, MessageDeliveryStatus.READ, MessageDeliveryStatus.READ)
     }
 

@@ -11,12 +11,15 @@ import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachme
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.attachments.domain.usecase.LoadMessageAttachmentUseCase
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingMessageAttachment
+import com.cbgm.sparrow.feature.chats.domain.model.ForwardingTarget
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareEvent
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareState
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareStateMachine
 import com.cbgm.sparrow.feature.chats.domain.model.MessageComposerPolicy
+import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupChatContext
+import com.cbgm.sparrow.feature.chats.domain.usecase.ForwardMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.AcceptGroupInvitationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeclineGroupInvitationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeleteGroupMessageUseCase
@@ -50,6 +53,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
@@ -70,7 +74,8 @@ class GroupConversationViewModel(
     setGroupTyping: SetGroupTypingUseCase,
     observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase,
     private val loadMessageAttachment: LoadMessageAttachmentUseCase,
-    private val addDeviceContact: AddDeviceContactUseCase
+    private val addDeviceContact: AddDeviceContactUseCase,
+    private val forwardMessageUseCase: ForwardMessageUseCase
 ) : BaseViewModel() {
     private val groupId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.GroupConversation::conversationId.name)
@@ -82,7 +87,7 @@ class GroupConversationViewModel(
     private val editingMessageId = savedStateHandle.getMutableStateFlow(EDITING_MESSAGE_ID_KEY, "")
     private val mutableErrorMessage = MutableStateFlow<String?>(null)
     private val selectedMedia = MutableStateFlow<List<MediaSelection>>(emptyList())
-    private val attachmentBytes = MutableStateFlow<Map<String, ByteArray>>(emptyMap())
+    private val attachmentPayloadBytes = MutableStateFlow<Map<String, ByteArray>>(emptyMap())
     private val isSending = MutableStateFlow(false)
     private val contextMessageId = MutableStateFlow<String?>(null)
     private val locationShareState = MutableStateFlow(LocationShareState.IDLE)
@@ -128,9 +133,9 @@ class GroupConversationViewModel(
     val conversationState: StateFlow<GroupConversationUiState> =
         combine(
             presentationContext,
-            attachmentBytes,
+            attachmentPayloadBytes,
             observeMessageSafetyAssessments()
-        ) { presentation, loadedAttachmentBytes, safetyAssessments ->
+        ) { presentation, loadedAttachmentPayloadBytes, safetyAssessments ->
             toGroupConversationUiState(
                 conversation = presentation.context?.conversation,
                 contacts = presentation.context?.contacts.orEmpty(),
@@ -138,7 +143,7 @@ class GroupConversationViewModel(
                 avatarBytes = presentation.context?.avatarBytes,
                 isLoading = presentation is GroupContextObservation.Loading,
                 safetyAssessments = safetyAssessments,
-                attachmentBytes = loadedAttachmentBytes
+                attachmentPayloadBytes = loadedAttachmentPayloadBytes
             )
         }.stateIn(
             scope = viewModelScope,
@@ -246,6 +251,7 @@ class GroupConversationViewModel(
             GroupConversationUiEvent.CancelEdit -> cancelEdit()
             is GroupConversationUiEvent.MessageReactionSelected -> toggleReaction(event.messageId, event.emoji)
             is GroupConversationUiEvent.DeleteMessage -> deleteMessage(event.messageId)
+            is GroupConversationUiEvent.ForwardMessage -> forwardMessage(event.messageId, event.target)
             is GroupConversationUiEvent.MediaSelected -> updateMediaSelection(event.media)
             is GroupConversationUiEvent.OpenFilePicker -> navigator.navigateTo(AppRoute.FilePicker(event.sessionId))
             GroupConversationUiEvent.LocationCaptureStarted -> transitionLocationShare(LocationShareEvent.CAPTURE_STARTED)
@@ -283,6 +289,29 @@ class GroupConversationViewModel(
         viewModelScope.launch {
             markConversationRead(groupId)
                 .onFailure { error -> logger.warn(error) { "Could not mark group conversation as read" } }
+        }
+    }
+
+    private fun forwardMessage(
+        messageId: String,
+        target: ForwardingTarget
+    ) {
+        viewModelScope.launch {
+            val message =
+                groupContext
+                    .first()
+                    .conversation
+                    ?.messages
+                    ?.firstOrNull { message -> message.id == messageId }
+                    ?.takeIf { message -> message.type == ChatMessageType.USER }
+                    ?: return@launch
+
+            forwardMessageUseCase(
+                parts = message.parts,
+                target = target
+            ).onFailure { error ->
+                setError(error.message ?: "Message could not be forwarded")
+            }
         }
     }
 
@@ -414,16 +443,25 @@ class GroupConversationViewModel(
     }
 
     private fun loadAttachment(attachmentId: String) {
-        if (attachmentId.isBlank() || attachmentBytes.value.containsKey(attachmentId)) return
+        if (attachmentId.isBlank() || attachmentPayloadBytes.value.containsKey(attachmentId)) return
         if (!loadingAttachmentIds.add(attachmentId)) return
 
         viewModelScope.launch {
             loadMessageAttachment(attachmentId)
-                .onSuccess { bytes -> attachmentBytes.value = attachmentBytes.value + (attachmentId to bytes) }
+                .onSuccess { bytes ->
+                    if (requiresAttachmentPayloadInState(attachmentId)) {
+                        attachmentPayloadBytes.value += (attachmentId to bytes)
+                    }
+                }
                 .onFailure { error -> logger.warn(error) { "Could not load message attachment $attachmentId" } }
             loadingAttachmentIds.remove(attachmentId)
         }
     }
+
+    private fun requiresAttachmentPayloadInState(attachmentId: String): Boolean =
+        conversationState.value.messages.any { message ->
+            message.locationPart?.id == attachmentId || message.contactPart?.id == attachmentId
+        }
 
     private suspend fun clearComposer() {
         messageText.value = ""

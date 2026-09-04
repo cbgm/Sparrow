@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.InsertDriveFile
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
@@ -195,8 +195,10 @@ private fun MessageVisualAttachment(
     onAttachmentVisible: (String) -> Unit,
     onAttachmentClick: (String) -> Unit
 ) {
-    LaunchedEffect(attachment.id, attachment.bytes) {
-        if (attachment.bytes == null) onAttachmentVisible(attachment.id)
+    val isLoaded = attachment.localFilePath != null || attachment.bytes != null
+
+    LaunchedEffect(attachment.id, attachment.localFilePath, attachment.bytes) {
+        if (!isLoaded) onAttachmentVisible(attachment.id)
     }
 
     Surface(
@@ -214,7 +216,7 @@ private fun MessageVisualAttachment(
                 contentScale = ContentScale.Crop
             )
 
-            if (attachment.bytes == null) {
+            if (!isLoaded) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -296,7 +298,7 @@ private fun MessageFileList(
                         )
                     } else {
                         Icon(
-                            imageVector = Icons.Default.InsertDriveFile,
+                            imageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
                             contentDescription = null,
                             modifier = Modifier.size(Dimens.MessageAttachment.filePreviewIconSize)
                         )

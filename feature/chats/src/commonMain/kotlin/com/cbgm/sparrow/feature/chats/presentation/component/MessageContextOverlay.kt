@@ -57,6 +57,7 @@ internal fun MessageContextHost(
     menuColor: Color,
     onDismiss: () -> Unit,
     onReplyClick: () -> Unit,
+    onForwardClick: () -> Unit,
     onReactionClick: (String) -> Unit,
     showEdit: Boolean,
     onEditClick: () -> Unit,
@@ -104,6 +105,10 @@ internal fun MessageContextHost(
                         onDismiss()
                         onReplyClick()
                     },
+                    onForwardClick = {
+                        onDismiss()
+                        onForwardClick()
+                    },
                     onReactionClick = { emoji ->
                         onDismiss()
                         onReactionClick(emoji)
@@ -135,6 +140,7 @@ private fun MessageContextOverlay(
     menuColor: Color,
     onDismiss: () -> Unit,
     onReplyClick: () -> Unit,
+    onForwardClick: () -> Unit,
     onReactionClick: (String) -> Unit,
     showEdit: Boolean,
     onEditClick: () -> Unit,
@@ -170,6 +176,7 @@ private fun MessageContextOverlay(
                 MessageContextActionMenu(
                     color = menuColor,
                     onReplyClick = onReplyClick,
+                    onForwardClick = onForwardClick,
                     onReactionClick = onReactionClick,
                     showEdit = showEdit,
                     onEditClick = onEditClick,

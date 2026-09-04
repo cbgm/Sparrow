@@ -33,6 +33,7 @@ fun MediaThumbnail(
         MediaType.IMAGE ->
             MediaImage(
                 data = media.thumbnailBytes ?: media.bytes,
+                localFilePath = media.localFilePath.takeIf { media.thumbnailBytes == null },
                 cacheKey = thumbnailCacheKey,
                 contentDescription = contentDescription,
                 modifier = modifier,
@@ -44,6 +45,7 @@ fun MediaThumbnail(
             if (explicitThumbnail != null) {
                 MediaImage(
                     data = explicitThumbnail,
+                    localFilePath = null,
                     cacheKey = thumbnailCacheKey,
                     contentDescription = contentDescription,
                     modifier = modifier,

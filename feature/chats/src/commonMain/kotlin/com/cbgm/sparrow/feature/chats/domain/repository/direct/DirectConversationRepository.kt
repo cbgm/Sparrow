@@ -10,5 +10,7 @@ interface DirectConversationRepository {
 
     suspend fun findContactId(conversationId: String): Result<String?>
 
+    suspend fun findConversationId(contactId: String): Result<String?>
+
     suspend fun delete(conversationId: String): Result<Unit>
 }

@@ -90,7 +90,7 @@ private fun MessageMediaViewer(
 
     val loadState =
         attachments.map { attachment ->
-            attachment.id to (attachment.bytes != null)
+            attachment.id to (attachment.localFilePath != null || attachment.bytes != null)
         }
 
     LaunchedEffect(
@@ -100,7 +100,10 @@ private fun MessageMediaViewer(
     ) {
         if (!canSaveToCameraRoll || !savePending) return@LaunchedEffect
 
-        val unloadedAttachments = attachments.filter { attachment -> attachment.bytes == null }
+        val unloadedAttachments =
+            attachments.filter { attachment ->
+                attachment.localFilePath == null && attachment.bytes == null
+            }
 
         if (unloadedAttachments.isNotEmpty()) {
             unloadedAttachments.forEach { attachment ->
