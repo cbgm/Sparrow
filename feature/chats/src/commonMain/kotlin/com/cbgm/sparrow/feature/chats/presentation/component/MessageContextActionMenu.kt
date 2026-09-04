@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Forward
 import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DeleteOutline
@@ -34,6 +35,7 @@ import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_copy
 import com.cbgm.sparrow.resources.feature_chats_delete_message
 import com.cbgm.sparrow.resources.feature_chats_edit_message
+import com.cbgm.sparrow.resources.feature_chats_forward
 import com.cbgm.sparrow.resources.feature_chats_reply
 import org.jetbrains.compose.resources.stringResource
 
@@ -41,6 +43,7 @@ import org.jetbrains.compose.resources.stringResource
 internal fun MessageContextActionMenu(
     color: Color,
     onReplyClick: () -> Unit,
+    onForwardClick: () -> Unit,
     onReactionClick: (String) -> Unit,
     showEdit: Boolean,
     onEditClick: () -> Unit,
@@ -83,6 +86,14 @@ internal fun MessageContextActionMenu(
                 text = stringResource(Res.string.feature_chats_reply),
                 onClick = onReplyClick,
                 icon = Icons.AutoMirrored.Filled.Reply
+            )
+
+            HorizontalDivider(thickness = Dimens.Base.dividerThickness)
+
+            MessageActionItem(
+                text = stringResource(Res.string.feature_chats_forward),
+                onClick = onForwardClick,
+                icon = Icons.AutoMirrored.Filled.Forward
             )
 
             if (showEdit) {
@@ -153,6 +164,7 @@ private fun MessagePopUpMenuPreview() {
         MessageContextActionMenu(
             color = MaterialTheme.colorScheme.surface,
             onReplyClick = {},
+            onForwardClick = {},
             onReactionClick = {},
             showEdit = true,
             onEditClick = {},

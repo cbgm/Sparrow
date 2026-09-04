@@ -87,6 +87,7 @@ fun DirectConversationScreen(
     typingState: TypingUiState,
     errorMessage: String?,
     onUiEvent: (DirectConversationUiEvent) -> Unit,
+    onForwardMessageRequested: (String) -> Unit,
     modifier: Modifier = Modifier,
     targetMessageId: String? = null
 ) {
@@ -125,6 +126,9 @@ fun DirectConversationScreen(
                 contextState.message?.id?.let { messageId ->
                     onUiEvent(DirectConversationUiEvent.ReplyToMessage(messageId))
                 }
+            },
+            onForwardClick = {
+                contextState.message?.id?.let(onForwardMessageRequested)
             },
             onReactionClick = { emoji ->
                 contextState.message?.id?.let { messageId ->

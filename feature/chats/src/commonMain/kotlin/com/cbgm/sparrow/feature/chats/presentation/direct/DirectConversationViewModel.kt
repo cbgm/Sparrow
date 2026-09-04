@@ -3,7 +3,6 @@ package com.cbgm.sparrow.feature.chats.presentation.direct
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
@@ -12,19 +11,21 @@ import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachme
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.attachments.domain.usecase.LoadMessageAttachmentUseCase
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toOutgoingMessageAttachment
+import com.cbgm.sparrow.feature.chats.domain.model.ForwardingTarget
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareEvent
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareState
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareStateMachine
 import com.cbgm.sparrow.feature.chats.domain.model.MessageComposerPolicy
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectComposerState
+import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessageDispatchResult
+import com.cbgm.sparrow.feature.chats.domain.usecase.ForwardMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.DeleteDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.EditDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.MarkDirectConversationReadUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectChatContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectTypingUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.direct.QueueDirectMessageUntilAuthorizedUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.RetryDirectMessageUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SendDirectMessageUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SendOrQueueDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SetDirectTypingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ToggleDirectMessageReactionUseCase
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
@@ -36,11 +37,8 @@ import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.toDirectReplyPr
 import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.withProfilePicture
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversationUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversationUiState
-import com.cbgm.sparrow.feature.contacts.domain.model.DirectChatAuthorizationRequiredException
 import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactResult
 import com.cbgm.sparrow.feature.contacts.domain.usecase.AddDeviceContactUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.EnsureIdentityExchangeStartedUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyDetails
@@ -49,26 +47,25 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class DirectConversationViewModel(
     savedStateHandle: SavedStateHandle,
     observeChatContext: ObserveDirectChatContextUseCase,
-    private val sendMessage: SendDirectMessageUseCase,
-    private val queueMessageUntilAuthorized: QueueDirectMessageUntilAuthorizedUseCase,
+    private val sendOrQueueDirectMessage: SendOrQueueDirectMessageUseCase,
     private val markConversationRead: MarkDirectConversationReadUseCase,
     private val retryMessage: RetryDirectMessageUseCase,
     private val toggleMessageReaction: ToggleDirectMessageReactionUseCase,
     private val deleteMessageUseCase: DeleteDirectMessageUseCase,
     private val editMessageUseCase: EditDirectMessageUseCase,
-    private val ensureIdentityExchangeStarted: EnsureIdentityExchangeStartedUseCase,
-    private val requireDirectChatAuthorization: RequireDirectChatAuthorizationUseCase,
     private val observeTyping: ObserveDirectTypingUseCase,
     private val setTyping: SetDirectTypingUseCase,
     observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase,
     private val loadMessageAttachment: LoadMessageAttachmentUseCase,
-    private val addDeviceContact: AddDeviceContactUseCase
+    private val addDeviceContact: AddDeviceContactUseCase,
+    private val forwardMessageUseCase: ForwardMessageUseCase
 ) : BaseViewModel() {
     private val conversationId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.Chat::conversationId.name)
@@ -225,6 +222,7 @@ class DirectConversationViewModel(
             DirectConversationUiEvent.CancelEdit -> cancelEdit()
             is DirectConversationUiEvent.MessageReactionSelected -> toggleReaction(event.messageId, event.emoji)
             is DirectConversationUiEvent.DeleteMessage -> deleteMessage(event.messageId)
+            is DirectConversationUiEvent.ForwardMessage -> forwardMessage(event.messageId, event.target)
             is DirectConversationUiEvent.MediaSelected -> updateMediaSelection(event.media)
             is DirectConversationUiEvent.OpenFilePicker -> navigator.navigateTo(AppRoute.FilePicker(event.sessionId))
             DirectConversationUiEvent.LocationCaptureStarted -> transitionLocationShare(LocationShareEvent.CAPTURE_STARTED)
@@ -259,6 +257,28 @@ class DirectConversationViewModel(
         viewModelScope.launch {
             markConversationRead(conversationId)
                 .onFailure { error -> logger.warn(error) { "Could not mark direct conversation as read" } }
+        }
+    }
+
+    private fun forwardMessage(
+        messageId: String,
+        target: ForwardingTarget
+    ) {
+        viewModelScope.launch {
+            val message =
+                conversationContext
+                    .first()
+                    .conversation
+                    ?.messages
+                    ?.firstOrNull { message -> message.id == messageId }
+                    ?: return@launch
+
+            forwardMessageUseCase(
+                parts = message.parts,
+                target = target
+            ).onFailure { error ->
+                setError(error.message ?: "Message could not be forwarded")
+            }
         }
     }
 
@@ -332,76 +352,34 @@ class DirectConversationViewModel(
             if (isLocationShare) transitionLocationShare(LocationShareEvent.SEND_STARTED)
             isSending.value = true
             try {
-                when (directComposerState) {
-                    DirectComposerState.REINVITE_REQUIRED ->
-                        queueMessageAndStartReinvite(text, attachments, replyTo, clearComposerOnSuccess)
-
-                    DirectComposerState.REINVITE_PENDING ->
-                        queueMessageForPendingReinvite(text, attachments, replyTo, clearComposerOnSuccess)
-
-                    DirectComposerState.READY ->
-                        sendAuthorizedMessage(text, attachments, replyTo, clearComposerOnSuccess)
-
-                    DirectComposerState.DISABLED -> Unit
+                sendOrQueueDirectMessage(
+                    contactId = contactId,
+                    conversationId = conversationId,
+                    text = text,
+                    attachments = attachments,
+                    replyToMessageId = replyTo
+                ).onSuccess { result ->
+                    if (clearComposerOnSuccess) clearComposer() else clearReply()
+                    if (result is DirectMessageDispatchResult.QueuedWithIdentityExchangeFailure) {
+                        setError(
+                            result.throwable.message
+                                ?: "Contact invitation could not be started"
+                        )
+                    }
+                }.onFailure { error ->
+                    val fallbackMessage =
+                        if (directComposerState == DirectComposerState.READY) {
+                            "Message could not be sent"
+                        } else {
+                            "Message could not be queued"
+                        }
+                    setError(error.message ?: fallbackMessage)
                 }
             } finally {
                 isSending.value = false
                 if (isLocationShare) transitionLocationShare(LocationShareEvent.COMPLETED)
             }
         }
-    }
-
-    private suspend fun queueMessageAndStartReinvite(
-        text: String,
-        attachments: List<OutgoingMessageAttachment>,
-        replyToMessageId: String?,
-        clearComposerOnSuccess: Boolean = true
-    ) {
-        queueMessageUntilAuthorized(conversationId, text, attachments, replyToMessageId)
-            .onSuccess {
-                if (clearComposerOnSuccess) clearComposer() else clearReply()
-                ensureIdentityExchangeStarted(contactId)
-                    .onFailure { error ->
-                        setError(error.message ?: "Contact invitation could not be started")
-                    }
-            }.onFailure { error ->
-                setError(error.message ?: "Message could not be queued")
-            }
-    }
-
-    private suspend fun queueMessageForPendingReinvite(
-        text: String,
-        attachments: List<OutgoingMessageAttachment>,
-        replyToMessageId: String?,
-        clearComposerOnSuccess: Boolean = true
-    ) {
-        queueMessageUntilAuthorized(conversationId, text, attachments, replyToMessageId)
-            .onSuccess { if (clearComposerOnSuccess) clearComposer() else clearReply() }
-            .onFailure { error -> setError(error.message ?: "Message could not be queued") }
-    }
-
-    private suspend fun sendAuthorizedMessage(
-        text: String,
-        attachments: List<OutgoingMessageAttachment>,
-        replyToMessageId: String?,
-        clearComposerOnSuccess: Boolean = true
-    ) {
-        val authorizationError = requireDirectChatAuthorization(contactId).exceptionOrNull()
-        if (authorizationError != null) {
-            if (
-                conversationState.value.identitySetupMode == DirectIdentitySetupMode.AUTOMATIC_INVITATION &&
-                authorizationError is DirectChatAuthorizationRequiredException
-            ) {
-                queueMessageAndStartReinvite(text, attachments, replyToMessageId, clearComposerOnSuccess)
-            } else {
-                setError(authorizationError.message ?: "Message could not be sent")
-            }
-            return
-        }
-
-        sendMessage(conversationId, text, attachments, replyToMessageId)
-            .onSuccess { if (clearComposerOnSuccess) clearComposer() else clearReply() }
-            .onFailure { error -> setError(error.message ?: "Message could not be sent") }
     }
 
     private fun addSharedContact(contact: SharedContact) {

@@ -113,6 +113,12 @@
     <string name="feature_chats_queued">Queued</string>
     <string name="feature_chats_waiting_for_invitation_acceptance">Waiting for invitation acceptance</string>
     <string name="feature_chats_reply">Reply</string>
+    <string name="feature_chats_forward">Forward</string>
+    <string name="feature_chats_forward_to">Forward to</string>
+    <string name="feature_chats_forward_search_placeholder">Search chats and contacts</string>
+    <string name="feature_chats_forward_chats">Chats</string>
+    <string name="feature_chats_forward_contacts">Contacts</string>
+    <string name="feature_chats_forward_no_targets">No chats or contacts found</string>
     <string name="feature_chats_edit_message">Edit</string>
     <string name="feature_chats_editing_message">Editing message</string>
     <string name="feature_chats_copy">Copy</string>

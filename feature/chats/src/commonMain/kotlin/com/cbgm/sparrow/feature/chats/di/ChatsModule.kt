@@ -95,6 +95,12 @@ import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupMessageReposi
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationActionRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.overview.ConversationOverviewRepository
+import com.cbgm.sparrow.feature.chats.domain.usecase.ForwardDirectMessageUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.ForwardMessageUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.ForwardToContactUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.ForwardToDirectConversationUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.ForwardToGroupConversationUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.PrepareForwardMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.contact.EncodeContactForSharingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.DeleteDirectConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.DeleteDirectMessageUseCase
@@ -111,6 +117,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectTypingU
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.QueueDirectMessageUntilAuthorizedUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.RetryDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SendDirectMessageUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SendOrQueueDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SetDirectTypingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ToggleDirectMessageReactionUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.AcceptGroupInvitationUseCase
@@ -152,12 +159,12 @@ import com.cbgm.sparrow.feature.chats.presentation.ContactsFlowViewModel
 import com.cbgm.sparrow.feature.chats.presentation.create.CreateGroupViewModel
 import com.cbgm.sparrow.feature.chats.presentation.details.GroupVerificationViewModel
 import com.cbgm.sparrow.feature.chats.presentation.direct.DirectConversationViewModel
+import com.cbgm.sparrow.feature.chats.presentation.forwarding.ForwardingSelectionViewModel
 import com.cbgm.sparrow.feature.chats.presentation.group.GroupConversationViewModel
 import com.cbgm.sparrow.feature.chats.presentation.overview.OverviewViewModel
 import com.cbgm.sparrow.feature.chats.presentation.verification.GroupMemberQrVerificationViewModel
 import com.cbgm.sparrow.feature.contacts.domain.usecase.EnsureIdentityExchangeStartedUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
@@ -300,11 +307,18 @@ private fun org.koin.core.module.Module.registerRepositories() {
 }
 
 private fun org.koin.core.module.Module.registerUseCases() {
+    singleOf(::PrepareForwardMessageUseCase)
+    singleOf(::ForwardDirectMessageUseCase)
+    singleOf(::ForwardToDirectConversationUseCase)
+    singleOf(::ForwardToGroupConversationUseCase)
+    singleOf(::ForwardToContactUseCase)
+    singleOf(::ForwardMessageUseCase)
     singleOf(::EncodeContactForSharingUseCase)
     singleOf(::GetOrCreateDirectConversationUseCase)
     singleOf(::ObserveDirectConversationUseCase)
     singleOf(::ObserveDirectChatContextUseCase)
     singleOf(::SendDirectMessageUseCase)
+    singleOf(::SendOrQueueDirectMessageUseCase)
     singleOf(::ToggleDirectMessageReactionUseCase)
     singleOf(::DeleteDirectMessageUseCase)
     singleOf(::EditDirectMessageUseCase)
@@ -385,6 +399,13 @@ private fun org.koin.core.module.Module.registerViewModels() {
     }
 
     viewModel {
+        ForwardingSelectionViewModel(
+            observeConversationContext = get(),
+            observeContactsWithProfilePictures = get()
+        )
+    }
+
+    viewModel {
         GroupConversationViewModel(
             savedStateHandle = get(),
             observeChatContext = get(),
@@ -400,7 +421,8 @@ private fun org.koin.core.module.Module.registerViewModels() {
             setGroupTyping = get(),
             observeMessageSafetyAssessments = get(),
             loadMessageAttachment = get(),
-            addDeviceContact = get()
+            addDeviceContact = get(),
+            forwardMessageUseCase = get()
         )
     }
 
@@ -436,20 +458,18 @@ private fun org.koin.core.module.Module.registerViewModels() {
         DirectConversationViewModel(
             savedStateHandle = get(),
             observeChatContext = get(),
-            sendMessage = get(),
-            queueMessageUntilAuthorized = get(),
+            sendOrQueueDirectMessage = get(),
             markConversationRead = get(),
             retryMessage = get(),
             toggleMessageReaction = get(),
             deleteMessageUseCase = get(),
             editMessageUseCase = get(),
-            ensureIdentityExchangeStarted = get<EnsureIdentityExchangeStartedUseCase>(),
-            requireDirectChatAuthorization = get<RequireDirectChatAuthorizationUseCase>(),
             observeTyping = get(),
             setTyping = get(),
             observeMessageSafetyAssessments = get(),
             loadMessageAttachment = get(),
-            addDeviceContact = get()
+            addDeviceContact = get(),
+            forwardMessageUseCase = get()
         )
     }
 }
