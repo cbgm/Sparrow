@@ -43,8 +43,8 @@ object GroupMessageDeliveryStateMachine {
 
     fun aggregate(states: List<MessageDeliveryStatus>): MessageDeliveryStatus {
         if (states.isEmpty()) return MessageDeliveryStatus.NOT_APPLICABLE
-        if (states.all { it == MessageDeliveryStatus.READ }) return MessageDeliveryStatus.READ
-        if (states.all { it == MessageDeliveryStatus.DELIVERED || it == MessageDeliveryStatus.READ }) {
+        if (states.any { it == MessageDeliveryStatus.READ }) return MessageDeliveryStatus.READ
+        if (states.all { it == MessageDeliveryStatus.DELIVERED }) {
             return MessageDeliveryStatus.DELIVERED
         }
         if (states.any { it == MessageDeliveryStatus.SENDING }) return MessageDeliveryStatus.SENDING
