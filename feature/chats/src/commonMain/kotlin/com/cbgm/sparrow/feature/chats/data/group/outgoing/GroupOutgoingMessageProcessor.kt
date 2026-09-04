@@ -17,6 +17,7 @@ import com.cbgm.sparrow.core.protocol.packet.GroupMessageEditPacket
 import com.cbgm.sparrow.core.protocol.packet.ReadReceiptPacket
 import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.MessageReactionDao
@@ -72,7 +73,7 @@ class GroupOutgoingMessageProcessor(
         replyToMessageId: String? = null,
         invitations: List<GroupInvitationEntity>
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             sendMutex.withLock {
                 val normalizedText = requireMessageContent(text, attachments)
                 requireActiveMembership(groupId, invitations)
@@ -80,7 +81,7 @@ class GroupOutgoingMessageProcessor(
                 check(recipients.isNotEmpty()) { "Group has no active recipients" }
 
                 val message = createQueuedMessage(groupId, normalizedText, replyToMessageId)
-                val prepared = attachmentTransfer.prepareAttachments(attachments).getOrThrow()
+                val prepared = attachmentTransfer.prepareAttachments(attachments)
                 try {
                     encryptAndEnqueue(message, recipients, prepared)
                 } catch (error: Throwable) {
@@ -99,7 +100,7 @@ class GroupOutgoingMessageProcessor(
         emoji: String,
         invitations: List<GroupInvitationEntity>
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             require(messageId.isNotBlank()) { "Message ID must not be blank" }
             require(emoji.isNotBlank()) { "Reaction emoji must not be blank" }
             requireActiveMembership(groupId, invitations)
@@ -156,7 +157,7 @@ class GroupOutgoingMessageProcessor(
         messageId: String,
         invitations: List<GroupInvitationEntity>
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             require(messageId.isNotBlank()) { "Message ID must not be blank" }
             requireActiveMembership(groupId, invitations)
             val target = chatDao.findMessageById(messageId) ?: error("Message was not found")
@@ -208,7 +209,7 @@ class GroupOutgoingMessageProcessor(
         text: String,
         invitations: List<GroupInvitationEntity>
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             require(messageId.isNotBlank()) { "Message ID must not be blank" }
             val normalizedText = text.trim()
             require(normalizedText.isNotBlank()) { "Edited message text must not be blank" }
@@ -265,7 +266,7 @@ class GroupOutgoingMessageProcessor(
         }
 
     suspend fun retry(messageId: String): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             require(messageId.isNotBlank()) { "Message ID must not be blank" }
 
             val message = chatDao.findMessageById(messageId) ?: error("Message was not found")
@@ -294,7 +295,7 @@ class GroupOutgoingMessageProcessor(
         }
 
     suspend fun sendReadReceipts(groupId: String): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             require(groupId.isNotBlank()) { "Group ID must not be blank" }
             requireGroupConversation(groupId)
 

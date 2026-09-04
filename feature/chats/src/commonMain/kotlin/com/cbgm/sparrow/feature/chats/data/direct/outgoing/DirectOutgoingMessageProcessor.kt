@@ -13,6 +13,7 @@ import com.cbgm.sparrow.core.protocol.packet.ReadReceiptPacket
 import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.MessageReactionDao
@@ -59,14 +60,14 @@ class DirectOutgoingMessageProcessor(
         attachments: List<OutgoingMessageAttachment> = emptyList(),
         replyToMessageId: String? = null
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             val normalizedText = requireMessageContent(text, attachments)
             val target = loadTarget(conversationId)
             requireDirectChatAuthorization(target.contactId).getOrThrow()
 
             val contact = getContact(target.contactId).getOrThrow() ?: error("Contact was not found")
             val messageId = IdGenerator.generate(prefix = "message")
-            val prepared = attachmentTransfer.prepareAttachments(attachments).getOrThrow()
+            val prepared = attachmentTransfer.prepareAttachments(attachments)
             persistPreparedMessage(
                 target = target,
                 contact = contact,
@@ -191,11 +192,11 @@ class DirectOutgoingMessageProcessor(
         attachments: List<OutgoingMessageAttachment> = emptyList(),
         replyToMessageId: String? = null
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             val normalizedText = requireMessageContent(text, attachments)
             val target = loadTarget(conversationId)
             val contact = getContact(target.contactId).getOrThrow() ?: error("Contact was not found")
-            val prepared = attachmentTransfer.prepareAttachments(attachments).getOrThrow()
+            val prepared = attachmentTransfer.prepareAttachments(attachments)
             persistPreparedMessage(
                 target = target,
                 contact = contact,
@@ -208,7 +209,7 @@ class DirectOutgoingMessageProcessor(
         }
 
     suspend fun releaseWaitingForAuthorization(contactId: String): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             requireDirectChatAuthorization(contactId).getOrThrow()
             val contact = getContact(contactId).getOrThrow() ?: error("Contact was not found")
             val nowEpochMilliseconds = SystemClock.nowEpochMilliseconds()
@@ -230,12 +231,12 @@ class DirectOutgoingMessageProcessor(
         }
 
     suspend fun discardWaitingForAuthorization(contactId: String): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             discardMessages(findWaitingMessages(contactId))
         }
 
     suspend fun retry(messageId: String): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             require(messageId.isNotBlank()) { "Message ID must not be blank" }
 
             val message = chatDao.findMessageById(messageId) ?: error("Message was not found")
@@ -259,7 +260,7 @@ class DirectOutgoingMessageProcessor(
         }
 
     suspend fun sendReadReceipts(conversationId: String): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             require(conversationId.isNotBlank()) { "Conversation ID must not be blank" }
             loadTarget(conversationId)
 
