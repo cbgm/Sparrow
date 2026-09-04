@@ -6,8 +6,8 @@ import androidx.navigation.toRoute
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.feature.chats.presentation.details.model.DetailsTarget
 import com.cbgm.sparrow.feature.chats.presentation.details.screen.DetailsRoute
-import com.cbgm.sparrow.feature.chats.presentation.direct.DirectRoute
-import com.cbgm.sparrow.feature.chats.presentation.group.GroupRoute
+import com.cbgm.sparrow.feature.chats.presentation.direct.DirectConversationRoute
+import com.cbgm.sparrow.feature.chats.presentation.group.GroupConversationRoute
 import com.cbgm.sparrow.feature.chats.presentation.verification.VerificationRoute
 import com.cbgm.sparrow.feature.safety.presentation.details.MessageSafetyDetailsRoute
 import com.cbgm.sparrow.feature.search.presentation.overview.MessageSearchRoute
@@ -37,7 +37,7 @@ fun NavGraphBuilder.chatsNavGraph() {
     ) { backStackEntry ->
         val destination = backStackEntry.toRoute<AppRoute.Chat>()
 
-        DirectRoute(
+        DirectConversationRoute(
             contactId = destination.contactId,
             targetMessageId = destination.targetMessageId
         )
@@ -48,7 +48,7 @@ fun NavGraphBuilder.chatsNavGraph() {
         exitTransition = { slideOutToRight() }
     ) { backStackEntry ->
         val destination = backStackEntry.toRoute<AppRoute.GroupConversation>()
-        GroupRoute(
+        GroupConversationRoute(
             conversationId = destination.conversationId,
             targetMessageId = destination.targetMessageId
         )

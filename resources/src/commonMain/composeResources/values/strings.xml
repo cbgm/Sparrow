@@ -113,6 +113,8 @@
     <string name="feature_chats_queued">Queued</string>
     <string name="feature_chats_waiting_for_invitation_acceptance">Waiting for invitation acceptance</string>
     <string name="feature_chats_reply">Reply</string>
+    <string name="feature_chats_edit_message">Edit</string>
+    <string name="feature_chats_editing_message">Editing message</string>
     <string name="feature_chats_copy">Copy</string>
     <string name="common_copied">Copied</string>
     <string name="feature_chats_you">You</string>
@@ -126,7 +128,7 @@
     <string name="feature_chats_unable_decrypt_secure_message">Unable to decrypt secure message</string>
     <string name="feature_chats_unable_read_plaintext">Unable to read plaintext message</string>
     <string name="feature_chats_no_messages_yet">No messages yet</string>">
-
+    <string name="feature_chats_reply_you">You</string>
     <!-- Feature: contactimport -->
     <string name="feature_contactimport_camera_permission_required">Camera permission is required to scan a QR code.</string>
     <string name="feature_contactimport_encryption_key">Encryption key</string>

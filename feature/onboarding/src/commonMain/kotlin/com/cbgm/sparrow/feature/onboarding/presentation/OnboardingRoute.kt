@@ -25,7 +25,7 @@ fun OnboardingRoute(
     viewModel: OnboardingViewModel = koinViewModel(),
     identityViewModel: IdentityViewModel = koinViewModel()
 ) {
-    val state by viewModel.state.collectAsStateWithLifecycle()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val identityState by identityViewModel.uiState.collectAsStateWithLifecycle()
     var hintRequestId by remember { mutableIntStateOf(0) }
 

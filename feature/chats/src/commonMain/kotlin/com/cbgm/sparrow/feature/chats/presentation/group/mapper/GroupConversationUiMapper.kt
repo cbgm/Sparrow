@@ -7,21 +7,27 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationStat
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessage
+import com.cbgm.sparrow.feature.chats.domain.model.group.resolveComposerState
+import com.cbgm.sparrow.feature.chats.domain.model.isEditable
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toMessagePartsUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.DeliveryProgressUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessagePartUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageReactionUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageReplyUi
+import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiState
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMemberProgressUi
+import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMembershipUiState
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMessageUi
-import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyAssessment
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyWarningUi
+import kotlin.collections.component1
+import kotlin.collections.component2
 
-internal fun toGroupUiState(
+@Suppress("UNUSED_PARAMETER")
+internal fun toGroupConversationUiState(
     conversation: GroupConversation?,
     administration: GroupAdministrationState,
     contacts: List<Contact>,
@@ -35,87 +41,112 @@ internal fun toGroupUiState(
     safetyAssessments: Map<String, MessageSafetyAssessment>,
     attachmentBytes: Map<String, ByteArray> = emptyMap(),
     currentReplyToMessageId: String? = null
-): GroupUiState {
-    val contactsById = contacts.associateBy(Contact::id)
-    val groupState = conversation?.state ?: GroupConversationState.READY
-    val conversationMessages = conversation?.messages.orEmpty()
-    val messagesById = conversationMessages.associateBy(GroupMessage::id)
+): GroupConversationUiState =
+    toGroupConversationUiState(
+        conversation = conversation,
+        contacts = contacts,
+        profilePictures = profilePictures,
+        avatarBytes = avatarBytes,
+        isLoading = isLoading,
+        safetyAssessments = safetyAssessments,
+        attachmentBytes = attachmentBytes
+    )
 
-    return GroupUiState(
+internal fun toGroupConversationUiState(
+    conversation: GroupConversation?,
+    contacts: List<Contact>,
+    profilePictures: Map<String, ByteArray?>,
+    avatarBytes: ByteArray?,
+    isLoading: Boolean,
+    safetyAssessments: Map<String, MessageSafetyAssessment>,
+    attachmentBytes: Map<String, ByteArray> = emptyMap()
+): GroupConversationUiState {
+    val contactsById = contacts.associateBy(Contact::id)
+
+    return GroupConversationUiState(
         title = conversation?.title.orEmpty(),
         avatarBytes = avatarBytes,
-        messages =
-            conversation.toGroupMessagesUi(
-                contactsById = contactsById,
-                profilePictures = profilePictures,
-                safetyAssessments = safetyAssessments,
-                attachmentBytes = attachmentBytes
-            ),
-        messageText = currentText,
-        replyTo = currentReplyToMessageId.toGroupReplyPreview(messagesById, contactsById),
-        isSomeoneTyping = typingContactIds.isNotEmpty(),
-        typingDisplayName = typingContactIds.toTypingDisplayName(contactsById),
-        errorMessage = currentError ?: observationError,
+        messages = conversation.toMessageBubbleUi(
+            contactsById = contactsById,
+            profilePictures = profilePictures,
+            safetyAssessments = safetyAssessments,
+            attachmentBytes = attachmentBytes
+        ),
         isLoading = isLoading,
-        isMessageInputEnabled = conversation.isMessageInputEnabled(groupState),
-        state = groupState,
-        memberCount = administration.activeMemberCount + (conversation?.pendingParticipantCount ?: 0),
+        state = conversation?.state ?: GroupConversationState.READY,
+        composerState = conversation.resolveComposerState()
+    )
+}
+
+internal fun toGroupMembershipUiState(
+    conversation: GroupConversation?,
+    administration: GroupAdministrationState,
+    contacts: List<Contact>
+): GroupMembershipUiState {
+    val contactsById = contacts.associateBy(Contact::id)
+    val pendingMemberCount = conversation?.pendingParticipantCount ?: 0
+
+    return GroupMembershipUiState(
+        memberCount = administration.activeMemberCount + pendingMemberCount,
         readyMemberCount = administration.activeMemberCount,
-        pendingMemberCount = conversation?.pendingParticipantCount ?: 0,
-        showInvitationActions = groupState == GroupConversationState.INVITED,
+        pendingMemberCount = pendingMemberCount,
         memberProgress = conversation.toGroupMemberProgressUi(contactsById)
     )
 }
 
-internal fun GroupMessage.toGroupMessageUi(
+internal fun GroupMessage.toMessageBubbleUi(
     senderName: String?,
     senderIsInContacts: Boolean,
     senderProfilePictureBytes: ByteArray?,
     safetyAssessments: Map<String, MessageSafetyAssessment>,
     attachmentBytes: Map<String, ByteArray> = emptyMap(),
     reply: MessageReplyUi? = null
-): GroupMessageUi {
+): MessageBubbleUi {
     val partsUi = parts.toMessagePartsUi(attachmentBytes)
 
-    return GroupMessageUi(
-        bubble =
-            MessageBubbleUi(
-                id = id,
-                isMine = isMine,
-                security = security,
-                contentStatus = contentStatus,
-                deliveryStatus = deliveryStatus,
-                senderName = senderName,
-                senderIsInContacts = senderIsInContacts,
-                deliveryProgress =
-                    DeliveryProgressUi(
-                        recipientCount = deliveryProgress.recipientCount,
-                        deliveredCount = deliveryProgress.deliveredCount,
-                        readCount = deliveryProgress.readCount
-                    ),
-                safetyWarning =
-                    if (
-                        isMine ||
-                        type != ChatMessageType.USER ||
-                        contentStatus != MessageContentStatus.READABLE
-                    ) {
-                        null
-                    } else {
-                        safetyAssessments[id]?.toMessageSafetyWarningUi()
-                    },
-                reply = reply,
-                reactions = reactions.groupBy { it.emoji }.map { (emoji, values) ->
-                    MessageReactionUi(emoji = emoji, count = values.size, reactedByMe = values.any { it.isMine })
-                },
-                imageVideoParts = partsUi.filterIsInstance<MessagePartUi.ImageVideo>(),
-                fileParts = partsUi.filterIsInstance<MessagePartUi.File>(),
-                locationPart = partsUi.filterIsInstance<MessagePartUi.Location>().firstOrNull(),
-                contactPart = partsUi.filterIsInstance<MessagePartUi.Contact>().firstOrNull(),
-                textPart = partsUi.filterIsInstance<MessagePartUi.Text>().firstOrNull()
+    return MessageBubbleUi(
+        id = id,
+        isMine = isMine,
+        security = security,
+        contentStatus = contentStatus,
+        deliveryStatus = deliveryStatus,
+        canEdit = isEditable(),
+        senderName = senderName,
+        senderIsInContacts = senderIsInContacts,
+        deliveryProgress =
+            DeliveryProgressUi(
+                recipientCount = deliveryProgress.recipientCount,
+                deliveredCount = deliveryProgress.deliveredCount,
+                readCount = deliveryProgress.readCount
             ),
-        type = type,
-        senderContactId = senderContactId,
-        senderProfilePictureBytes = senderProfilePictureBytes
+        safetyWarning =
+            if (
+                isMine ||
+                type != ChatMessageType.USER ||
+                contentStatus != MessageContentStatus.READABLE
+            ) {
+                null
+            } else {
+                safetyAssessments[id]?.toMessageSafetyWarningUi()
+            },
+        reply = reply,
+        reactions = reactions.groupBy { it.emoji }.map { (emoji, values) ->
+            MessageReactionUi(
+                emoji = emoji,
+                count = values.size,
+                reactedByMe = values.any { it.isMine }
+            )
+        },
+        imageVideoParts = partsUi.filterIsInstance<MessagePartUi.ImageVideo>(),
+        fileParts = partsUi.filterIsInstance<MessagePartUi.File>(),
+        locationPart = partsUi.filterIsInstance<MessagePartUi.Location>().firstOrNull(),
+        contactPart = partsUi.filterIsInstance<MessagePartUi.Contact>().firstOrNull(),
+        textPart = partsUi.filterIsInstance<MessagePartUi.Text>().firstOrNull(),
+        groupExtension = GroupMessageUi(
+            type = type,
+            senderContactId = senderContactId,
+            senderProfilePictureBytes = senderProfilePictureBytes
+        )
     )
 }
 
@@ -133,12 +164,24 @@ internal fun Contact?.displayNameForChat(isInContacts: Boolean): String {
     }
 }
 
-private fun GroupConversation?.toGroupMessagesUi(
+internal fun String?.toGroupReplyPreview(
+    conversation: GroupConversation?,
+    contacts: List<Contact>
+): MessageReplyUi? {
+    val contactsById = contacts.associateBy(Contact::id)
+    val messagesById = conversation?.messages.orEmpty().associateBy(GroupMessage::id)
+    return toGroupReplyPreview(messagesById, contactsById)
+}
+
+internal fun Set<String>.toTypingDisplayName(contacts: List<Contact>): String =
+    toTypingDisplayName(contacts.associateBy(Contact::id))
+
+private fun GroupConversation?.toMessageBubbleUi(
     contactsById: Map<String, Contact>,
     profilePictures: Map<String, ByteArray?>,
     safetyAssessments: Map<String, MessageSafetyAssessment>,
     attachmentBytes: Map<String, ByteArray>
-): List<GroupMessageUi> {
+): List<MessageBubbleUi> {
     val messages = this?.messages.orEmpty()
     val messagesById = messages.associateBy(GroupMessage::id)
 
@@ -146,9 +189,10 @@ private fun GroupConversation?.toGroupMessagesUi(
         for (message in messages.asReversed()) {
             val senderContactId = message.senderContactId
             val sender = senderContactId?.let(contactsById::get)
-            val senderIsInContacts = sender?.deviceContactLinkStatus == DeviceContactLinkStatus.LINKED
+            val senderIsInContacts =
+                sender?.deviceContactLinkStatus == DeviceContactLinkStatus.LINKED
             add(
-                message.toGroupMessageUi(
+                message.toMessageBubbleUi(
                     senderName = sender.displayNameForChat(senderIsInContacts),
                     senderIsInContacts = senderIsInContacts,
                     senderProfilePictureBytes = senderContactId?.let(profilePictures::get),
@@ -210,15 +254,6 @@ private fun GroupConversation?.toGroupMemberProgressUi(
                 status = member.status
             )
         }
-
-private fun GroupConversation?.isMessageInputEnabled(state: GroupConversationState): Boolean {
-    this ?: return false
-    return isReady || (!isIncomingInvitation && state.canQueueMessagesWhilePreparing())
-}
-
-private fun GroupConversationState.canQueueMessagesWhilePreparing(): Boolean =
-    this == GroupConversationState.WAITING_FOR_MEMBERS ||
-        this == GroupConversationState.DISTRIBUTING_KEYS
 
 private fun Set<String>.toTypingDisplayName(contactsById: Map<String, Contact>): String =
     mapNotNull(contactsById::get)

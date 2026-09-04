@@ -7,8 +7,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupConversationUiState
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupUiEvent
-import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupUiState
 import com.cbgm.sparrow.feature.contacts.presentation.overview.ContactsScreen
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsScreenMode
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsUiEvent
@@ -16,7 +16,7 @@ import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsUiS
 
 @Composable
 fun CreateGroupScreen(
-    uiState: CreateGroupUiState,
+    uiState: CreateGroupConversationUiState,
     onUiEvent: (CreateGroupUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -29,7 +29,7 @@ fun CreateGroupScreen(
 
 @Composable
 private fun Content(
-    uiState: CreateGroupUiState,
+    uiState: CreateGroupConversationUiState,
     onUiEvent: (CreateGroupUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -77,7 +77,7 @@ private fun Content(
 private fun CreateGroupScreenPreview() {
     SparrowTheme {
         CreateGroupScreen(
-            uiState = CreateGroupUiState(),
+            uiState = CreateGroupConversationUiState(),
             onUiEvent = {}
         )
     }

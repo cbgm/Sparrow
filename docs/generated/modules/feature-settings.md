@@ -21,6 +21,7 @@ Generated automatically by `./gradlew architectureReport`.
 
 - `androidMain`
 - `commonMain`
+- `commonTest`
 
 ## Dependencies
 

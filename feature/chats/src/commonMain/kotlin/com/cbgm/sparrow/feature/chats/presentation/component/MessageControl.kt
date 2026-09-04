@@ -3,6 +3,8 @@ package com.cbgm.sparrow.feature.chats.presentation.component
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -19,7 +21,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.presentation.component.AttachmentBar
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageReplyUi
+import com.cbgm.sparrow.feature.chats.presentation.component.model.ComposerPreviewUi
 import com.cbgm.sparrow.feature.media.presentation.component.MediaSelectionPreview
 import com.cbgm.sparrow.feature.media.presentation.component.previewMediaSelections
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
@@ -30,7 +32,7 @@ import org.jetbrains.compose.resources.stringResource
 
 data class MessageInputState(
     val messageText: String = "",
-    val replyTo: MessageReplyUi? = null,
+    val composerPreview: ComposerPreviewUi? = null,
     val isTyping: Boolean = false,
     val contactName: String = "",
     val isInputEnabled: Boolean = true,
@@ -45,7 +47,7 @@ data class MessageInputState(
 data class MessageInputActions(
     val onValueChange: (String) -> Unit,
     val onSendClick: () -> Unit,
-    val onCancelReply: () -> Unit = {},
+    val onCancelPreview: () -> Unit = {},
     val onSelectionClick: (MediaSelectionSource) -> Unit = {},
     val onMediaRemove: (String) -> Unit = {},
     val onClickCamera: () -> Unit = {},
@@ -64,6 +66,14 @@ fun MessageControl(
 ) {
     var isAttachmentBarVisible by remember { mutableStateOf(false) }
     var locationProgressWasVisible by remember { mutableStateOf(false) }
+
+    val isEditing = state.composerPreview?.type == ComposerPreviewUi.Type.EDIT
+
+    LaunchedEffect(isEditing) {
+        if (isEditing) {
+            isAttachmentBarVisible = false
+        }
+    }
 
     LaunchedEffect(state.isLocationInProgress) {
         if (state.isLocationInProgress) {
@@ -103,10 +113,10 @@ fun MessageControl(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            state.replyTo?.let { reply ->
-                ComposerReplyPreview(
-                    reply = reply,
-                    onCancel = actions.onCancelReply,
+            state.composerPreview?.let { preview ->
+                ComposerPreview(
+                    previewUi = preview,
+                    onCancel = actions.onCancelPreview,
                     modifier = Modifier.padding(bottom = MaterialTheme.spacing.base)
                 )
             }
@@ -127,6 +137,8 @@ fun MessageControl(
                 inputEnabled = state.isInputEnabled,
                 sendEnabled = state.isSendEnabled,
                 hasAttachments = state.selectedMedia.isNotEmpty(),
+                attachmentsEnabled = !isEditing,
+                isEditing = isEditing,
                 onAttachmentClick = { isAttachmentBarVisible = !isAttachmentBarVisible },
                 isAttachmentVisible = isAttachmentBarVisible,
                 modifier = Modifier.padding(horizontal = basePaddingHorizontal)
@@ -174,12 +186,12 @@ private fun MessageControlPreview() {
                 isTyping = false,
                 contactName = "Chris",
                 messageText = "Here are the files",
-                replyTo =
-                    MessageReplyUi(
-                        messageId = "message-1",
-                        isMine = false,
-                        senderName = "Alex",
-                        previewText = "Can you send the files?"
+                composerPreview =
+                    ComposerPreviewUi(
+                        icon = Icons.AutoMirrored.Filled.Reply,
+                        iconText = "Reply",
+                        additionalText = "The original message should only appear as a short excerpt in the composer",
+                        type = ComposerPreviewUi.Type.REPLY
                     ),
                 isInputEnabled = true,
                 isSendEnabled = true,
@@ -192,7 +204,7 @@ private fun MessageControlPreview() {
             actions = MessageInputActions(
                 onValueChange = {},
                 onSendClick = {},
-                onCancelReply = {},
+                onCancelPreview = {},
                 onSelectionClick = {},
                 onMediaRemove = {},
                 onClickCamera = {},

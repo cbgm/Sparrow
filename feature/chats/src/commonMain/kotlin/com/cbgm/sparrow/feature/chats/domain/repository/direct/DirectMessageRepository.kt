@@ -21,6 +21,8 @@ interface DirectMessageRepository {
 
     suspend fun deleteMessage(conversationId: String, messageId: String): Result<Unit>
 
+    suspend fun editMessage(conversationId: String, messageId: String, text: String): Result<Unit>
+
     suspend fun retry(messageId: String): Result<Unit>
 
     suspend fun releaseWaitingForAuthorization(contactId: String): Result<Unit>

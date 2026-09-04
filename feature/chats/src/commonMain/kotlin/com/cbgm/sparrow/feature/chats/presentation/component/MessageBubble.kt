@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.chats.presentation.component
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -85,8 +87,71 @@ internal fun MessageBubble(
     onAttachmentClick: (String) -> Unit = {},
     onContactClick: (SharedContact) -> Unit = {},
     onReplyPreviewClick: (String) -> Unit = {},
-    onActionMenuVisibilityChange: (Boolean) -> Unit = {},
+    onContextMessageRequested: (MessageContextAnchor) -> Unit = {},
     onReactionsClick: (SparrowOverlayAnchor) -> Unit = {},
+    isSearchHighlighted: Boolean = false,
+    showMetadata: Boolean = true,
+    isContextSelected: Boolean = false,
+    contextMenuEnabled: Boolean = true,
+    leadingContent: (@Composable () -> Unit)? = null
+) {
+    var anchor by remember(message.id) { mutableStateOf<MessageContextAnchor?>(null) }
+
+    val contextModifier =
+        modifier
+            .captureMessageContextAnchor(
+                messageId = message.id,
+                isMine = message.isMine,
+                onAnchorChanged = { anchor = it }
+            )
+            .alpha(if (isContextSelected) 0f else 1f)
+
+    val onLongPress: () -> Unit = {
+        if (contextMenuEnabled) anchor?.let(onContextMessageRequested)
+    }
+
+    val content: @Composable (Modifier) -> Unit = { contentModifier ->
+        MessageBubbleContent(
+            message = message,
+            onRetryClick = onRetryClick,
+            onSafetyDetailsClick = onSafetyDetailsClick,
+            onAttachmentVisible = onAttachmentVisible,
+            onAttachmentClick = onAttachmentClick,
+            onContactClick = onContactClick,
+            onReplyPreviewClick = onReplyPreviewClick,
+            onLongPress = onLongPress,
+            onReactionsClick = onReactionsClick,
+            modifier = contentModifier,
+            isSearchHighlighted = isSearchHighlighted,
+            showMetadata = showMetadata
+        )
+    }
+
+    if (leadingContent != null) {
+        Row(
+            modifier = contextModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Bottom
+        ) {
+            leadingContent()
+            content(Modifier.weight(1f))
+        }
+    } else {
+        content(contextModifier)
+    }
+}
+
+@Composable
+private fun MessageBubbleContent(
+    message: MessageBubbleUi,
+    onRetryClick: () -> Unit,
+    onSafetyDetailsClick: (MessageSafetyWarningUi) -> Unit,
+    onAttachmentVisible: (String) -> Unit,
+    onAttachmentClick: (String) -> Unit,
+    onContactClick: (SharedContact) -> Unit,
+    onReplyPreviewClick: (String) -> Unit,
+    onLongPress: () -> Unit,
+    onReactionsClick: (SparrowOverlayAnchor) -> Unit,
+    modifier: Modifier = Modifier,
     isSearchHighlighted: Boolean = false,
     showMetadata: Boolean = true
 ) {
@@ -120,7 +185,7 @@ internal fun MessageBubble(
                     onAttachmentClick = onAttachmentClick,
                     onContactClick = onContactClick,
                     onReplyPreviewClick = onReplyPreviewClick,
-                    onLongPress = { onActionMenuVisibilityChange(true) },
+                    onLongPress = onLongPress,
                     onSafetyDetailsClick = {
                         safetyWarning?.let(onSafetyDetailsClick)
                     }
@@ -138,7 +203,7 @@ internal fun MessageBubble(
                                     Alignment.BottomEnd
                                 }
                             )
-                            .offset(y = MaterialTheme.spacing.base)
+                            .offset(y = MaterialTheme.spacing.small)
                 )
             }
             if (showMetadata) {
@@ -183,11 +248,6 @@ private fun SenderLabel(message: MessageBubbleUi) {
     )
 }
 
-/**
- * Which single part of the message is actually rendered as the "primary" content bubble.
- * Parts are checked in priority order; the reply preview (if any) is attached only to
- * whichever one wins, matching the same priority used to decide what's shown at all.
- */
 private enum class PrimaryContent { CONTACT, LOCATION, IMAGE_VIDEO, FILE, TEXT, NONE }
 
 private fun MessageBubbleUi.primaryContent(showTextBubble: Boolean): PrimaryContent = when {
@@ -347,12 +407,9 @@ private fun MessageBubbleSurface(
             tailHeight = bubbleShapes.tailHeight,
             tailReturnOffset = bubbleShapes.tailReturnOffset
         )
+
     val contentPadding =
-        if (hasInnerPadding) {
-            MaterialTheme.spacing.micro
-        } else {
-            MaterialTheme.spacing.zero
-        }
+        if (hasInnerPadding) MaterialTheme.spacing.micro else MaterialTheme.spacing.zero
     val tailPadding = bubbleShapes.tailWidth + contentPadding
 
     Surface(
@@ -367,7 +424,7 @@ private fun MessageBubbleSurface(
     ) {
         Column {
             reply?.let { replyPreview ->
-                MessageReplyPreview(
+                MessageReplyInlay(
                     reply = replyPreview,
                     onClick = { onReplyPreviewClick(replyPreview.messageId) },
                     color = state.bubbleColor,
@@ -405,20 +462,24 @@ private fun MessageReactions(
     val cloudWidth = iconSlotSize + iconStep * (visibleReactions.size - 1).toFloat()
     var anchor by remember { mutableStateOf<SparrowOverlayAnchor?>(null) }
 
+    val interactionSource = remember { MutableInteractionSource() }
+
     Surface(
         modifier =
             modifier
                 .captureSparrowOverlayAnchor { anchor = it }
-                .clickable { anchor?.let(onClick) },
-        shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = { anchor?.let(onClick) }
+                ),
+        color = Color.Transparent
     ) {
         Box(
-            modifier =
-                Modifier
-                    .padding(Dimens.MessageReaction.cloudContentPadding)
-                    .width(cloudWidth)
-                    .height(cloudHeight)
+            modifier = Modifier
+                .padding(Dimens.MessageReaction.cloudContentPadding)
+                .width(cloudWidth)
+                .height(cloudHeight)
         ) {
             visibleReactions.forEachIndexed { index, reaction ->
                 val yOffset =
@@ -479,8 +540,8 @@ private fun DeliveryProgress(message: MessageBubbleUi) {
 
     val text =
         when {
-            progress.readCount > 0 -> "Read ${progress.readCount}/${progress.recipientCount}"
-            progress.deliveredCount > 0 -> "Delivered ${progress.deliveredCount}/${progress.recipientCount}"
+            progress.readCount > 0 -> "${progress.readCount}/${progress.recipientCount}"
+            progress.deliveredCount > 0 -> "${progress.deliveredCount}/${progress.recipientCount}"
             else -> "Sending…"
         }
 

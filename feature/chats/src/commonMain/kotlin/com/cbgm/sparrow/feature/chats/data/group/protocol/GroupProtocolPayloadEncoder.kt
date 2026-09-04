@@ -240,6 +240,34 @@ class GroupProtocolPayloadEncoder {
             ByteArrays.withLengthPrefix(ciphertext)
         )
 
+    fun encodeMessageEditAssociatedData(
+        version: Int,
+        groupId: String,
+        epoch: Int,
+        editId: String,
+        editedAtEpochMilliseconds: Long
+    ): ByteArray =
+        ByteArrays.concatenate(
+            MESSAGE_EDIT_ASSOCIATED_DATA_DOMAIN,
+            ByteArrays.encodeInt(version),
+            encodeString(groupId),
+            ByteArrays.encodeInt(epoch),
+            encodeString(editId),
+            ByteArrays.encodeLong(editedAtEpochMilliseconds)
+        )
+
+    fun encodeMessageEditSignature(
+        associatedData: ByteArray,
+        nonce: ByteArray,
+        ciphertext: ByteArray
+    ): ByteArray =
+        ByteArrays.concatenate(
+            MESSAGE_EDIT_SIGNATURE_DOMAIN,
+            ByteArrays.withLengthPrefix(associatedData),
+            ByteArrays.withLengthPrefix(nonce),
+            ByteArrays.withLengthPrefix(ciphertext)
+        )
+
     private fun encodeGroupAvatar(metadata: GroupAvatarMetadata): ByteArray =
         ByteArrays.concatenate(
             ByteArrays.encodeLong(metadata.changedAtEpochMilliseconds),
@@ -309,6 +337,10 @@ class GroupProtocolPayloadEncoder {
             "sparrow.group-message-deletion.aad.v1".encodeToByteArray()
         val MESSAGE_DELETION_SIGNATURE_DOMAIN =
             "sparrow.group-message-deletion.signature.v1".encodeToByteArray()
+        val MESSAGE_EDIT_ASSOCIATED_DATA_DOMAIN =
+            "sparrow.group-message-edit.aad.v1".encodeToByteArray()
+        val MESSAGE_EDIT_SIGNATURE_DOMAIN =
+            "sparrow.group-message-edit.signature.v1".encodeToByteArray()
 
         const val NULL_VALUE: Byte = 0
         const val NON_NULL_VALUE: Byte = 1

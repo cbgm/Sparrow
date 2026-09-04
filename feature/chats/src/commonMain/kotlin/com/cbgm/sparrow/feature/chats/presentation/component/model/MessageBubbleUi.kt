@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.chats.presentation.component.model
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
+import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMessageUi
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 
 data class MessageBubbleUi(
@@ -11,6 +12,8 @@ data class MessageBubbleUi(
     val security: MessageSecurity,
     val contentStatus: MessageContentStatus,
     val deliveryStatus: MessageDeliveryStatus,
+    val groupExtension: GroupMessageUi? = null,
+    val canEdit: Boolean = false,
     val senderName: String? = null,
     val senderIsInContacts: Boolean = true,
     val deliveryProgress: DeliveryProgressUi = DeliveryProgressUi(),

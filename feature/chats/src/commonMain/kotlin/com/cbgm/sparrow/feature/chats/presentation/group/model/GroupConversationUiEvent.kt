@@ -5,71 +5,89 @@ import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 
-sealed interface GroupUiEvent {
+sealed interface GroupConversationUiEvent {
     data class MessageTextChanged(
         val text: String
-    ) : GroupUiEvent
+    ) : GroupConversationUiEvent
 
-    data object SendClicked : GroupUiEvent
+    data object SendClicked : GroupConversationUiEvent
 
     data class ReplyToMessage(
         val messageId: String
-    ) : GroupUiEvent
+    ) : GroupConversationUiEvent
 
-    data object CancelReply : GroupUiEvent
+    data object CancelReply : GroupConversationUiEvent
+
+    data class EditMessage(
+        val messageId: String
+    ) : GroupConversationUiEvent
+
+    data object CancelEdit : GroupConversationUiEvent
+
+    data class MessageContextRequested(
+        val messageId: String
+    ) : GroupConversationUiEvent
+
+    data object MessageContextDismissed : GroupConversationUiEvent
 
     data class MessageReactionSelected(
         val messageId: String,
         val emoji: String
-    ) : GroupUiEvent
+    ) : GroupConversationUiEvent
 
     data class DeleteMessage(
         val messageId: String
-    ) : GroupUiEvent
+    ) : GroupConversationUiEvent
 
     data class MediaSelected(
         val media: List<MediaSelection>
-    ) : GroupUiEvent
+    ) : GroupConversationUiEvent
 
     data class OpenFilePicker(
         val sessionId: String
-    ) : GroupUiEvent
+    ) : GroupConversationUiEvent
+
+    data object LocationCaptureStarted : GroupConversationUiEvent
 
     data class ShareCurrentLocation(
         val location: CurrentLocation
-    ) : GroupUiEvent
+    ) : GroupConversationUiEvent
+
+    data class LocationCaptureFailed(
+        val message: String
+    ) : GroupConversationUiEvent
 
     data class ShareContact(
         val contact: SharedContact
-    ) : GroupUiEvent
+    ) : GroupConversationUiEvent
 
     data class AddSharedContact(
         val contact: SharedContact
-    ) : GroupUiEvent
+    ) : GroupConversationUiEvent
 
     data class AttachmentVisible(
         val attachmentId: String
-    ) : GroupUiEvent
+    ) : GroupConversationUiEvent
 
     data class AttachmentError(
         val message: String
-    ) : GroupUiEvent
+    ) : GroupConversationUiEvent
 
-    data object HeaderClicked : GroupUiEvent
+    data object HeaderClicked : GroupConversationUiEvent
 
     data class RetryMessage(
         val messageId: String
-    ) : GroupUiEvent
+    ) : GroupConversationUiEvent
 
     data class SafetyWarningClicked(
         val messageId: String,
         val contactId: String?,
         val warning: MessageSafetyWarningUi
-    ) : GroupUiEvent
+    ) : GroupConversationUiEvent
 
-    data object BackClicked : GroupUiEvent
+    data object BackClicked : GroupConversationUiEvent
 
-    data object AcceptInvitation : GroupUiEvent
+    data object AcceptInvitation : GroupConversationUiEvent
 
-    data object DeclineInvitation : GroupUiEvent
+    data object DeclineInvitation : GroupConversationUiEvent
 }

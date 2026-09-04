@@ -8,6 +8,7 @@ import com.cbgm.sparrow.core.protocol.handler.ProtocolPacketHandler
 import com.cbgm.sparrow.core.protocol.handler.TypedProtocolPacketHandler
 import com.cbgm.sparrow.core.protocol.message.GroupMessageContentCodec
 import com.cbgm.sparrow.core.protocol.message.MessageDeletionPayloadCodec
+import com.cbgm.sparrow.core.protocol.message.MessageEditPayloadCodec
 import com.cbgm.sparrow.core.protocol.phone.DefaultPhoneNumberNormalizer
 import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
 import kotlinx.serialization.json.Json
@@ -26,6 +27,10 @@ val protocolModule =
 
         single {
             MessageDeletionPayloadCodec(json = get())
+        }
+
+        single {
+            MessageEditPayloadCodec(json = get())
         }
 
         single<PacketCodec> {

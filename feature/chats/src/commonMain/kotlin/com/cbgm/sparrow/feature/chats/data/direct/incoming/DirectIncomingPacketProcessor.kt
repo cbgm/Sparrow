@@ -3,9 +3,11 @@ package com.cbgm.sparrow.feature.chats.data.direct.incoming
 import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.packet.ChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.MessageDeletionPacket
+import com.cbgm.sparrow.core.protocol.packet.MessageEditPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessageDeletionPacketHandler
+import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessageEditPacketHandler
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessagePacketHandler
 import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacketDto
 import com.cbgm.sparrow.feature.contacts.domain.model.DirectChatAuthorizationRequiredException
@@ -15,10 +17,11 @@ class DirectIncomingPacketProcessor(
     private val conversationDataSource: DirectConversationDataSource,
     private val messagePacketHandler: DirectMessagePacketHandler,
     private val deletionPacketHandler: DirectMessageDeletionPacketHandler,
+    private val editPacketHandler: DirectMessageEditPacketHandler,
     private val requireDirectChatAuthorization: RequireDirectChatAuthorizationUseCase
 ) {
     fun canProcess(packet: SparrowPacket): Boolean =
-        packet is ChatMessagePacket || packet is MessageDeletionPacket
+        packet is ChatMessagePacket || packet is MessageDeletionPacket || packet is MessageEditPacket
 
     suspend fun process(incoming: DecodedIncomingPacketDto): Result<Unit> {
         val authorization = requireDirectChatAuthorization(incoming.contactId)
@@ -35,6 +38,7 @@ class DirectIncomingPacketProcessor(
         return when (val packet = incoming.packet) {
             is ChatMessagePacket -> messagePacketHandler.handle(context, packet)
             is MessageDeletionPacket -> deletionPacketHandler.handle(context, packet)
+            is MessageEditPacket -> editPacketHandler.handle(context, packet)
             else -> error("DirectIncomingPacketProcessor received a non-direct packet")
         }
     }

@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Attachment
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -60,17 +61,16 @@ internal fun MessageInput(
     inputEnabled: Boolean,
     sendEnabled: Boolean,
     hasAttachments: Boolean,
+    modifier: Modifier = Modifier,
+    attachmentsEnabled: Boolean = true,
+    isEditing: Boolean = false,
     isAttachmentVisible: Boolean,
-    onAttachmentClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onAttachmentClick: () -> Unit
 ) {
     var textLineCount by remember { mutableIntStateOf(1) }
 
     val isMultiline = textLineCount > 1
 
-    /*
-     * NEVER CHANGE THESE DURING THE MORPH.
-     */
     val buttonWidth = Dimens.MessageInput.buttonWidth
     val buttonHeight = Dimens.MessageInput.buttonHeight
 
@@ -85,6 +85,7 @@ internal fun MessageInput(
     ) {
         FilledIconButton(
             onClick = onAttachmentClick,
+            enabled = attachmentsEnabled,
             modifier = Modifier
                 .padding(end = MaterialTheme.spacing.base)
                 .requiredSize(buttonHeight)
@@ -119,6 +120,7 @@ internal fun MessageInput(
             isRound = isMultiline,
             onSendClick = onSendClick,
             enabled = sendEnabled && (value.isNotBlank() || hasAttachments),
+            isEditing = isEditing,
             modifier = Modifier.align(
                 if (isMultiline) {
                     Alignment.Bottom
@@ -175,21 +177,9 @@ private fun SendButton(
     isRound: Boolean,
     onSendClick: () -> Unit,
     enabled: Boolean,
+    isEditing: Boolean,
     modifier: Modifier = Modifier
 ) {
-    /*
-     * Single-line icon:
-     *
-     * centered inside the original 56dp button body.
-     *
-     * Multiline:
-     *
-     * centered inside the rightmost 38dp circle.
-     *
-     * This animation is entirely internal and cannot affect
-     * TextField measurement.
-     */
-
     val messageInputShapes = MaterialTheme.shapes.messageInput
 
     val morphProgress by animateFloatAsState(
@@ -225,13 +215,6 @@ private fun SendButton(
         buttonHeight = buttonHeight,
         modifier = modifier
     ) {
-        /*
-         * ALWAYS exactly:
-         *
-         * 56 + 16 = 72dp wide
-         *
-         * NEVER animates.
-         */
         Box(
             modifier = Modifier
                 .width(buttonWidth)
@@ -257,7 +240,7 @@ private fun SendButton(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Send,
+                    imageVector = if (isEditing) Icons.Default.Check else Icons.AutoMirrored.Filled.Send,
                     contentDescription = null,
                     tint =
                         if (enabled) {
@@ -274,25 +257,6 @@ private fun SendButton(
     }
 }
 
-/**
- * Fixed send-button layout.
- *
- * The Row always sees:
- *
- *     buttonWidth + endSpacing
- *
- * The actual blue canvas is:
- *
- *     buttonWidth + overlap
- *
- * and is placed overlap dp to the LEFT.
- *
- * Therefore:
- *
- * - overlap never changes
- * - right spacing never changes
- * - TextField width never changes
- */
 @Composable
 private fun SendButtonSlot(
     buttonWidth: Dp,
@@ -324,16 +288,6 @@ private fun SendButtonSlot(
             width = constraints.constrainWidth(slotWidthPx),
             height = constraints.constrainHeight(buttonHeightPx)
         ) {
-            /*
-             * 72dp canvas placed at -16dp:
-             *
-             * left  = -16
-             * right = 56
-             *
-             * slot width = 64
-             *
-             * therefore exactly 8dp remains on the right.
-             */
             placeable.place(x = 0, y = 0)
         }
     }

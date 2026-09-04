@@ -12,6 +12,7 @@ object Dimens {
     object ActionMenu {
         val shadowElevation = 8.dp
         val actionItemHeight = 36.dp
+        val menuWidth = 200.dp
     }
 
     object SearchField {

@@ -14,6 +14,7 @@ import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupMemberAct
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupMemberActivationAcknowledgementPacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupMemberRemovedPacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupMessageDeletionPacketHandler
+import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupMessageEditPacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupPacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupReadyAcknowledgementPacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupVerificationReceiptPacketHandler
@@ -37,7 +38,8 @@ class GroupPacketHandlerRegistry internal constructor(
     verificationSnapshotRequest: GroupVerificationSnapshotRequestPacketHandler,
     verificationSnapshot: GroupVerificationSnapshotPacketHandler,
     chatMessage: GroupChatMessagePacketHandler,
-    messageDeletion: GroupMessageDeletionPacketHandler
+    messageDeletion: GroupMessageDeletionPacketHandler,
+    messageEdit: GroupMessageEditPacketHandler
 ) {
     private val handlers: List<GroupPacketHandler> =
         listOf(
@@ -57,7 +59,8 @@ class GroupPacketHandlerRegistry internal constructor(
             verificationSnapshotRequest,
             verificationSnapshot,
             chatMessage,
-            messageDeletion
+            messageDeletion,
+            messageEdit
         )
 
     fun find(packet: SparrowPacket): GroupPacketHandler? =

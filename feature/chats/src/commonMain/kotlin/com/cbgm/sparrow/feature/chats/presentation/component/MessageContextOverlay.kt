@@ -57,17 +57,24 @@ internal fun MessageContextHost(
     menuColor: Color,
     onDismiss: () -> Unit,
     onReplyClick: () -> Unit,
-    modifier: Modifier = Modifier,
     onReactionClick: (String) -> Unit,
+    showEdit: Boolean,
+    onEditClick: () -> Unit,
     onCopyClick: () -> Unit,
     onDeleteClick: () -> Unit,
+    modifier: Modifier = Modifier,
     preview: @Composable () -> Unit,
     content: @Composable () -> Unit
 ) {
     val hazeState = rememberHazeState()
 
     Box(modifier = modifier.fillMaxSize()) {
-        Box(modifier = Modifier.fillMaxSize().hazeSource(hazeState)) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .hazeSource(hazeState)
+        ) {
             content()
         }
 
@@ -77,16 +84,16 @@ internal fun MessageContextHost(
                     .fillMaxSize()
                     .hazeBlur(
                         input = HazeInput.Sources(hazeState),
-                        style = HazeMaterials.regular().then {
-                            blurRadius(Dimens.MessageContext.blurRadius)
-                            noiseFactor(CONTEXT_BLUR_NOISE_FACTOR)
-                        },
+                        style =
+                            HazeMaterials.regular().then {
+                                blurRadius(Dimens.MessageContext.blurRadius)
+                                noiseFactor(CONTEXT_BLUR_NOISE_FACTOR)
+                            },
                         performanceMode = HazePerformanceMode.Quality,
                         expandLayerBounds = false
                     )
             )
 
-            // Das SparrowOverlay spannt den anchorBounds-Scope für uns auf
             SparrowOverlay(anchor = contextAnchor.overlayAnchor) {
                 MessageContextOverlay(
                     anchorBounds = anchorBounds,
@@ -100,6 +107,11 @@ internal fun MessageContextHost(
                     onReactionClick = { emoji ->
                         onDismiss()
                         onReactionClick(emoji)
+                    },
+                    showEdit = showEdit,
+                    onEditClick = {
+                        onDismiss()
+                        onEditClick()
                     },
                     onCopyClick = {
                         onDismiss()
@@ -124,6 +136,8 @@ private fun MessageContextOverlay(
     onDismiss: () -> Unit,
     onReplyClick: () -> Unit,
     onReactionClick: (String) -> Unit,
+    showEdit: Boolean,
+    onEditClick: () -> Unit,
     onCopyClick: () -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -136,13 +150,14 @@ private fun MessageContextOverlay(
     val previewWidth = with(density) { anchorBounds.width.toDp() }
 
     Layout(
-        modifier = modifier
-            .fillMaxSize()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onDismiss
-            ),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismiss
+                ),
         content = {
             Column(
                 verticalArrangement = Arrangement.spacedBy(spacing.messageList.horizontalPadding),
@@ -156,6 +171,8 @@ private fun MessageContextOverlay(
                     color = menuColor,
                     onReplyClick = onReplyClick,
                     onReactionClick = onReactionClick,
+                    showEdit = showEdit,
+                    onEditClick = onEditClick,
                     onCopyClick = onCopyClick,
                     showDelete = isMine,
                     onDeleteClick = onDeleteClick

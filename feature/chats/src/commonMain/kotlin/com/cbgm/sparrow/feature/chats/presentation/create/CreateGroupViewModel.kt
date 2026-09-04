@@ -4,10 +4,10 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.CreateGroupConversationUseCase
-import com.cbgm.sparrow.feature.chats.presentation.create.mapper.toCreateGroupUiState
+import com.cbgm.sparrow.feature.chats.presentation.create.mapper.toCreateGroupConversationUiState
+import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupConversationUiState
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupEffect
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupUiEvent
-import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactsWithProfilePictures
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsWithProfilePicturesUseCase
 import kotlinx.coroutines.channels.Channel
@@ -41,13 +41,13 @@ class CreateGroupViewModel(
             )
         }
 
-    val uiState: StateFlow<CreateGroupUiState> =
+    val uiState: StateFlow<CreateGroupConversationUiState> =
         combine(
             contactsPresentationFlow(),
             formState,
             actionState
         ) { snapshot, form, action ->
-            snapshot.contacts.contacts.toCreateGroupUiState(
+            snapshot.contacts.contacts.toCreateGroupConversationUiState(
                 profilePictures = snapshot.contacts.profilePictures,
                 title = form.title,
                 searchQuery = form.searchQuery,
@@ -58,7 +58,7 @@ class CreateGroupViewModel(
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-            initialValue = CreateGroupUiState()
+            initialValue = CreateGroupConversationUiState()
         )
 
     private val _effects = Channel<CreateGroupEffect>(capacity = Channel.BUFFERED)
