@@ -9,13 +9,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun DirectRoute(
+fun DirectConversationRoute(
     contactId: String,
     modifier: Modifier = Modifier,
     targetMessageId: String? = null,
-    viewModel: DirectViewModel = koinViewModel()
+    viewModel: DirectConversationViewModel = koinViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val conversationState by viewModel.conversationState.collectAsStateWithLifecycle()
+    val composerState by viewModel.composerState.collectAsStateWithLifecycle()
+    val contextState by viewModel.contextState.collectAsStateWithLifecycle()
+    val typingState by viewModel.typingState.collectAsStateWithLifecycle()
+    val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
 
     LaunchedEffect(contactId) {
         viewModel.markConversationRead()
@@ -26,7 +30,7 @@ fun DirectRoute(
     }
 
     val incomingMessageIds =
-        uiState.messages
+        conversationState.messages
             .asSequence()
             .filterNot { message -> message.isMine }
             .map { message -> message.id }
@@ -38,8 +42,12 @@ fun DirectRoute(
         }
     }
 
-    DirectScreen(
-        uiState = uiState,
+    DirectConversationScreen(
+        uiState = conversationState,
+        composerState = composerState,
+        contextState = contextState,
+        typingState = typingState,
+        errorMessage = errorMessage,
         onUiEvent = viewModel::onUiEvent,
         targetMessageId = targetMessageId,
         modifier = modifier

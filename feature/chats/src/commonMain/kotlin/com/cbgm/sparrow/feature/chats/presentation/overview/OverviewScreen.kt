@@ -42,6 +42,7 @@ import com.cbgm.sparrow.feature.chats.presentation.overview.model.ConversationLi
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiState
 import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.feature_chats_attachment
 import com.cbgm.sparrow.resources.feature_chats_delete_conversation
 import com.cbgm.sparrow.resources.feature_chats_no_conversations_hint
 import com.cbgm.sparrow.resources.feature_chats_no_conversations_yet
@@ -172,8 +173,12 @@ private fun ConversationItem(
             supportingContent = {
                 Text(
                     text =
-                        conversation.lastMessage.takeIf { it.isNotBlank() }
-                            ?: stringResource(Res.string.feature_chats_no_messages_yet),
+                        when {
+                            conversation.lastMessage.isNotBlank() -> conversation.lastMessage
+                            !conversation.isGroup && conversation.hasMessages ->
+                                stringResource(Res.string.feature_chats_attachment)
+                            else -> stringResource(Res.string.feature_chats_no_messages_yet)
+                        },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodySmall,

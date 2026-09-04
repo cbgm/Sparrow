@@ -35,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -86,8 +87,71 @@ internal fun MessageBubble(
     onAttachmentClick: (String) -> Unit = {},
     onContactClick: (SharedContact) -> Unit = {},
     onReplyPreviewClick: (String) -> Unit = {},
-    onActionMenuVisibilityChange: (Boolean) -> Unit = {},
+    onContextMessageRequested: (MessageContextAnchor) -> Unit = {},
     onReactionsClick: (SparrowOverlayAnchor) -> Unit = {},
+    isSearchHighlighted: Boolean = false,
+    showMetadata: Boolean = true,
+    isContextSelected: Boolean = false,
+    contextMenuEnabled: Boolean = true,
+    leadingContent: (@Composable () -> Unit)? = null
+) {
+    var anchor by remember(message.id) { mutableStateOf<MessageContextAnchor?>(null) }
+
+    val contextModifier =
+        modifier
+            .captureMessageContextAnchor(
+                messageId = message.id,
+                isMine = message.isMine,
+                onAnchorChanged = { anchor = it }
+            )
+            .alpha(if (isContextSelected) 0f else 1f)
+
+    val onLongPress: () -> Unit = {
+        if (contextMenuEnabled) anchor?.let(onContextMessageRequested)
+    }
+
+    val content: @Composable (Modifier) -> Unit = { contentModifier ->
+        MessageBubbleContent(
+            message = message,
+            onRetryClick = onRetryClick,
+            onSafetyDetailsClick = onSafetyDetailsClick,
+            onAttachmentVisible = onAttachmentVisible,
+            onAttachmentClick = onAttachmentClick,
+            onContactClick = onContactClick,
+            onReplyPreviewClick = onReplyPreviewClick,
+            onLongPress = onLongPress,
+            onReactionsClick = onReactionsClick,
+            modifier = contentModifier,
+            isSearchHighlighted = isSearchHighlighted,
+            showMetadata = showMetadata
+        )
+    }
+
+    if (leadingContent != null) {
+        Row(
+            modifier = contextModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Bottom
+        ) {
+            leadingContent()
+            content(Modifier.weight(1f))
+        }
+    } else {
+        content(contextModifier)
+    }
+}
+
+@Composable
+private fun MessageBubbleContent(
+    message: MessageBubbleUi,
+    onRetryClick: () -> Unit,
+    onSafetyDetailsClick: (MessageSafetyWarningUi) -> Unit,
+    onAttachmentVisible: (String) -> Unit,
+    onAttachmentClick: (String) -> Unit,
+    onContactClick: (SharedContact) -> Unit,
+    onReplyPreviewClick: (String) -> Unit,
+    onLongPress: () -> Unit,
+    onReactionsClick: (SparrowOverlayAnchor) -> Unit,
+    modifier: Modifier = Modifier,
     isSearchHighlighted: Boolean = false,
     showMetadata: Boolean = true
 ) {
@@ -121,7 +185,7 @@ internal fun MessageBubble(
                     onAttachmentClick = onAttachmentClick,
                     onContactClick = onContactClick,
                     onReplyPreviewClick = onReplyPreviewClick,
-                    onLongPress = { onActionMenuVisibilityChange(true) },
+                    onLongPress = onLongPress,
                     onSafetyDetailsClick = {
                         safetyWarning?.let(onSafetyDetailsClick)
                     }

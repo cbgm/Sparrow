@@ -7,17 +7,17 @@ Select a module to open its generated detail page with source sets, file counts,
 | Module | Group | Kotlin | Tests | Resources | Dependencies | Dependents |
 |---|---|---:|---:|---:|---:|---:|
 | [`:androidApp`](modules/androidApp.md) | `androidApp` | 2 | 0 | 11 | 1 | 0 |
-| [`:core`](modules/core.md) | `core` | 17 | 0 | 1 | 0 | 17 |
+| [`:core`](modules/core.md) | `core` | 18 | 0 | 1 | 0 | 17 |
 | [`:core:crypto`](modules/core-crypto.md) | `core` | 40 | 5 | 1 | 0 | 8 |
 | [`:core:embedding`](modules/core-embedding.md) | `core` | 21 | 1 | 0 | 2 | 5 |
-| [`:core:protocol`](modules/core-protocol.md) | `core` | 75 | 11 | 1 | 1 | 8 |
-| [`:core:ui`](modules/core-ui.md) | `core` | 39 | 1 | 0 | 1 | 13 |
+| [`:core:protocol`](modules/core-protocol.md) | `core` | 89 | 16 | 1 | 1 | 8 |
+| [`:core:ui`](modules/core-ui.md) | `core` | 45 | 1 | 0 | 1 | 13 |
 | [`:data`](modules/data.md) | `data` | 0 | 0 | 0 | 0 | 0 |
-| [`:data:database`](modules/data-database.md) | `data` | 52 | 0 | 1 | 2 | 7 |
+| [`:data:database`](modules/data-database.md) | `data` | 54 | 0 | 1 | 2 | 7 |
 | [`:data:datastore`](modules/data-datastore.md) | `data` | 4 | 0 | 1 | 0 | 6 |
 | [`:feature`](modules/feature.md) | `feature` | 0 | 0 | 0 | 0 | 0 |
 | [`:feature:attachments`](modules/feature-attachments.md) | `feature` | 60 | 1 | 1 | 7 | 3 |
-| [`:feature:chats`](modules/feature-chats.md) | `feature` | 277 | 18 | 1 | 12 | 4 |
+| [`:feature:chats`](modules/feature-chats.md) | `feature` | 316 | 18 | 1 | 12 | 4 |
 | [`:feature:contactimport`](modules/feature-contactimport.md) | `feature` | 27 | 1 | 1 | 4 | 3 |
 | [`:feature:contacts`](modules/feature-contacts.md) | `feature` | 152 | 4 | 1 | 5 | 6 |
 | [`:feature:identity`](modules/feature-identity.md) | `feature` | 70 | 5 | 1 | 5 | 7 |

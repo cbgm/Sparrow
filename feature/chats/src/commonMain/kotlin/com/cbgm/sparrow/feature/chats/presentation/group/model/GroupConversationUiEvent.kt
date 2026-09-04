@@ -1,88 +1,93 @@
-package com.cbgm.sparrow.feature.chats.presentation.direct.model
+package com.cbgm.sparrow.feature.chats.presentation.group.model
 
 import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 
-sealed interface DirectUiEvent {
+sealed interface GroupConversationUiEvent {
     data class MessageTextChanged(
         val text: String
-    ) : DirectUiEvent
+    ) : GroupConversationUiEvent
 
-    data object SendClicked : DirectUiEvent
+    data object SendClicked : GroupConversationUiEvent
 
     data class ReplyToMessage(
         val messageId: String
-    ) : DirectUiEvent
+    ) : GroupConversationUiEvent
 
-    data object CancelReply : DirectUiEvent
+    data object CancelReply : GroupConversationUiEvent
 
     data class EditMessage(
         val messageId: String
-    ) : DirectUiEvent
+    ) : GroupConversationUiEvent
 
-    data object CancelEdit : DirectUiEvent
+    data object CancelEdit : GroupConversationUiEvent
 
     data class MessageContextRequested(
         val messageId: String
-    ) : DirectUiEvent
+    ) : GroupConversationUiEvent
 
-    data object MessageContextDismissed : DirectUiEvent
+    data object MessageContextDismissed : GroupConversationUiEvent
 
     data class MessageReactionSelected(
         val messageId: String,
         val emoji: String
-    ) : DirectUiEvent
+    ) : GroupConversationUiEvent
 
     data class DeleteMessage(
         val messageId: String
-    ) : DirectUiEvent
+    ) : GroupConversationUiEvent
 
     data class MediaSelected(
         val media: List<MediaSelection>
-    ) : DirectUiEvent
+    ) : GroupConversationUiEvent
 
     data class OpenFilePicker(
         val sessionId: String
-    ) : DirectUiEvent
+    ) : GroupConversationUiEvent
+
+    data object LocationCaptureStarted : GroupConversationUiEvent
 
     data class ShareCurrentLocation(
         val location: CurrentLocation
-    ) : DirectUiEvent
+    ) : GroupConversationUiEvent
+
+    data class LocationCaptureFailed(
+        val message: String
+    ) : GroupConversationUiEvent
 
     data class ShareContact(
         val contact: SharedContact
-    ) : DirectUiEvent
+    ) : GroupConversationUiEvent
 
     data class AddSharedContact(
         val contact: SharedContact
-    ) : DirectUiEvent
+    ) : GroupConversationUiEvent
 
     data class AttachmentVisible(
         val attachmentId: String
-    ) : DirectUiEvent
+    ) : GroupConversationUiEvent
 
     data class AttachmentError(
         val message: String
-    ) : DirectUiEvent
+    ) : GroupConversationUiEvent
 
-    data object HeaderClicked : DirectUiEvent
+    data object HeaderClicked : GroupConversationUiEvent
 
     data class RetryMessage(
         val messageId: String
-    ) : DirectUiEvent
+    ) : GroupConversationUiEvent
 
     data class SafetyWarningClicked(
         val messageId: String,
+        val contactId: String?,
         val warning: MessageSafetyWarningUi
-    ) : DirectUiEvent
+    ) : GroupConversationUiEvent
 
-    data object VerifyIdentityClicked : DirectUiEvent
+    data object BackClicked : GroupConversationUiEvent
 
-    data object ShareIdentityClicked : DirectUiEvent
+    data object AcceptInvitation : GroupConversationUiEvent
 
-    data object ImportIdentityClicked : DirectUiEvent
-
-    data object BackClicked : DirectUiEvent
+    data object DeclineInvitation : GroupConversationUiEvent
 }

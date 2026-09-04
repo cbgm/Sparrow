@@ -36,6 +36,7 @@ internal fun ConversationOverview.toConversationListItem(
         contactName = displayName,
         avatarBytes = avatarBytes,
         lastMessage = lastMessageText.orEmpty(),
+        hasMessages = lastMessageTimestamp != null,
         timestamp = lastMessageTimestamp?.let(::formatMessageTimestamp).orEmpty(),
         unreadCount = unreadCount,
         isGroup = type == ConversationOverviewType.GROUP

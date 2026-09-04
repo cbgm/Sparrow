@@ -10,8 +10,8 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `core` |
 | Directory | `core` |
 | Build file | `core/build.gradle.kts` |
-| Kotlin files | 17 |
-| Production Kotlin files | 17 |
+| Kotlin files | 18 |
+| Production Kotlin files | 18 |
 | Test Kotlin files | 0 |
 | Resource files | 1 |
 | Direct dependencies | 0 |
@@ -21,6 +21,7 @@ Generated automatically by `./gradlew architectureReport`.
 
 - `androidMain`
 - `commonMain`
+- `commonTest`
 - `iosMain`
 
 ## Dependencies

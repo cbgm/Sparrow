@@ -151,8 +151,8 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.profile.ObserveRemoteProfil
 import com.cbgm.sparrow.feature.chats.presentation.ContactsFlowViewModel
 import com.cbgm.sparrow.feature.chats.presentation.create.CreateGroupViewModel
 import com.cbgm.sparrow.feature.chats.presentation.details.GroupVerificationViewModel
-import com.cbgm.sparrow.feature.chats.presentation.direct.DirectViewModel
-import com.cbgm.sparrow.feature.chats.presentation.group.GroupViewModel
+import com.cbgm.sparrow.feature.chats.presentation.direct.DirectConversationViewModel
+import com.cbgm.sparrow.feature.chats.presentation.group.GroupConversationViewModel
 import com.cbgm.sparrow.feature.chats.presentation.overview.OverviewViewModel
 import com.cbgm.sparrow.feature.chats.presentation.verification.GroupMemberQrVerificationViewModel
 import com.cbgm.sparrow.feature.contacts.domain.usecase.EnsureIdentityExchangeStartedUseCase
@@ -385,7 +385,7 @@ private fun org.koin.core.module.Module.registerViewModels() {
     }
 
     viewModel {
-        GroupViewModel(
+        GroupConversationViewModel(
             savedStateHandle = get(),
             observeChatContext = get(),
             sendMessage = get(),
@@ -433,7 +433,7 @@ private fun org.koin.core.module.Module.registerViewModels() {
     }
 
     viewModel {
-        DirectViewModel(
+        DirectConversationViewModel(
             savedStateHandle = get(),
             observeChatContext = get(),
             sendMessage = get(),

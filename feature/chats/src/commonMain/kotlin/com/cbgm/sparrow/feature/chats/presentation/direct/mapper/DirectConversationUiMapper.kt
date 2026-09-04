@@ -6,13 +6,14 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessagePart
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessage
+import com.cbgm.sparrow.feature.chats.domain.model.direct.resolveDirectComposerState
+import com.cbgm.sparrow.feature.chats.domain.model.isEditable
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toMessagePartsUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessagePartUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageReactionUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageReplyUi
-import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectComposerState
-import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectUiState
+import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversationUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.IdentityHandshakeState
@@ -43,6 +44,7 @@ internal fun DirectMessage.toMessageBubbleUi(
         security = security,
         contentStatus = contentStatus,
         deliveryStatus = deliveryStatus,
+        canEdit = isEditable(),
         safetyWarning =
             if (isMine || contentStatus != MessageContentStatus.READABLE) {
                 null
@@ -60,6 +62,12 @@ internal fun DirectMessage.toMessageBubbleUi(
         textPart = partsUi.filterIsInstance<MessagePartUi.Text>().firstOrNull()
     )
 }
+
+internal fun String?.toDirectReplyPreview(
+    conversation: DirectConversation?,
+    contactName: String
+): MessageReplyUi? =
+    toDirectReplyPreview(conversation?.messages.orEmpty().associateBy(DirectMessage::id), contactName)
 
 private fun String?.toDirectReplyPreview(
     messagesById: Map<String, DirectMessage>,
@@ -119,20 +127,16 @@ internal fun isDirectChatAuthorized(
             contact?.sparrowIdentity?.keyExchangeStatus == KeyExchangeStatus.MUTUAL
     }
 
-internal fun toDirectUiState(
+internal fun toDirectConversationUiState(
     contactId: String,
     fallbackContactName: String,
     conversation: DirectConversation?,
     contact: Contact?,
     handshake: IdentityHandshakeState?,
     setupMode: DirectIdentitySetupMode,
-    currentText: String,
-    currentError: String?,
-    contactTyping: Boolean,
     safetyAssessments: Map<String, MessageSafetyAssessment>,
-    attachmentBytes: Map<String, ByteArray> = emptyMap(),
-    currentReplyToMessageId: String? = null
-): DirectUiState {
+    attachmentBytes: Map<String, ByteArray> = emptyMap()
+): DirectConversationUiState {
     val isChatAuthorized = isDirectChatAuthorized(contact, handshake, setupMode)
     val composerState =
         resolveDirectComposerState(
@@ -146,7 +150,7 @@ internal fun toDirectUiState(
     val conversationMessages = conversation?.messages.orEmpty()
     val messagesById = conversationMessages.associateBy(DirectMessage::id)
 
-    return DirectUiState(
+    return DirectConversationUiState(
         contactId = contactId,
         contactName = contactName,
         messages =
@@ -161,51 +165,13 @@ internal fun toDirectUiState(
                     )
                 }
             },
-        messageText = currentText,
-        replyTo = currentReplyToMessageId.toDirectReplyPreview(messagesById, contactName),
-        isContactTyping = contactTyping,
         contactSecurityState = contact.toContactSecurityState(),
         identitySetupMode = setupMode,
         isLoading = contact == null,
         isChatAuthorized = isChatAuthorized,
-        composerState = composerState,
-        errorMessage = currentError
+        composerState = composerState
     )
 }
 
-internal fun resolveDirectComposerState(
-    hasConversation: Boolean,
-    isChatAuthorized: Boolean,
-    handshake: IdentityHandshakeState?,
-    setupMode: DirectIdentitySetupMode
-): DirectComposerState {
-    if (!hasConversation) return DirectComposerState.DISABLED
-
-    return when (setupMode) {
-        DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING ->
-            if (isChatAuthorized) {
-                DirectComposerState.READY
-            } else {
-                DirectComposerState.DISABLED
-            }
-
-        DirectIdentitySetupMode.AUTOMATIC_INVITATION ->
-            when {
-                isChatAuthorized -> DirectComposerState.READY
-                handshake == IdentityHandshakeState.INVITE_SENT -> DirectComposerState.REINVITE_PENDING
-                handshake in REINVITE_RETRY_STATES -> DirectComposerState.REINVITE_REQUIRED
-                else -> DirectComposerState.DISABLED
-            }
-    }
-}
-
-private val REINVITE_RETRY_STATES =
-    setOf(
-        IdentityHandshakeState.CONVERSATION_DELETED,
-        IdentityHandshakeState.DECLINED,
-        IdentityHandshakeState.EXPIRED,
-        IdentityHandshakeState.FAILED
-    )
-
-internal fun DirectUiState.withProfilePicture(profilePictureBytes: ByteArray?): DirectUiState =
+internal fun DirectConversationUiState.withProfilePicture(profilePictureBytes: ByteArray?): DirectConversationUiState =
     copy(profilePictureBytes = profilePictureBytes)
