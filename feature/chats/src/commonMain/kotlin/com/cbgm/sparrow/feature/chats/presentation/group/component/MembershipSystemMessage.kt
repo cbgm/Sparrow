@@ -63,7 +63,7 @@ internal fun MembershipSystemMessage(
                         } else {
                             Icons.Default.PersonRemove
                         },
-                    modifier = Modifier.size(Dimens.GroupScreen.noticeIconSize),
+                    modifier = Modifier.size(Dimens.GroupConversationScreen.noticeIconSize),
                     contentDescription = null
                 )
                 Text(

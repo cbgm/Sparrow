@@ -16,10 +16,13 @@ import com.cbgm.sparrow.feature.chats.domain.model.LocationShareEvent
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareState
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareStateMachine
 import com.cbgm.sparrow.feature.chats.domain.model.MessageComposerPolicy
+import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryCursor
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupChatContext
+import com.cbgm.sparrow.feature.chats.domain.usecase.FindMessageHistoryCursorUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.ForwardMessageUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.LoadOlderMessagesUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.AcceptGroupInvitationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeclineGroupInvitationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeleteGroupMessageUseCase
@@ -34,6 +37,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.ToggleGroupMessageRea
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageComposerUiState
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageContextUiState
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageHistoryUiState
 import com.cbgm.sparrow.feature.chats.presentation.component.model.TypingUiState
 import com.cbgm.sparrow.feature.chats.presentation.group.mapper.toGroupConversationUiState
 import com.cbgm.sparrow.feature.chats.presentation.group.mapper.toGroupMembershipUiState
@@ -47,18 +51,23 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.AddDeviceContactUseCase
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyDetails
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class GroupConversationViewModel(
     savedStateHandle: SavedStateHandle,
     observeChatContext: ObserveGroupChatContextUseCase,
@@ -75,7 +84,9 @@ class GroupConversationViewModel(
     observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase,
     private val loadMessageAttachment: LoadMessageAttachmentUseCase,
     private val addDeviceContact: AddDeviceContactUseCase,
-    private val forwardMessageUseCase: ForwardMessageUseCase
+    private val forwardMessageUseCase: ForwardMessageUseCase,
+    private val loadOlderMessageHistory: LoadOlderMessagesUseCase,
+    private val findMessageHistoryCursor: FindMessageHistoryCursorUseCase
 ) : BaseViewModel() {
     private val groupId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.GroupConversation::conversationId.name)
@@ -92,6 +103,10 @@ class GroupConversationViewModel(
     private val contextMessageId = MutableStateFlow<String?>(null)
     private val locationShareState = MutableStateFlow(LocationShareState.IDLE)
     private val loadingAttachmentIds = mutableSetOf<String>()
+    private val historyCursor = MutableStateFlow<MessageHistoryCursor?>(null)
+    private val observedHistoryCursor = MutableStateFlow<MessageHistoryCursor?>(null)
+    private val isLoadingOlderMessages = MutableStateFlow(false)
+    private val hasMoreMessages = MutableStateFlow(true)
 
     private val typing =
         GroupTypingController(
@@ -101,7 +116,15 @@ class GroupConversationViewModel(
             logTag = "GroupConversationViewModel"
         )
 
-    private val groupContext = observeChatContext(groupId)
+    private val groupContext =
+        historyCursor.flatMapLatest { cursor ->
+            observeChatContext(
+                groupId = groupId,
+                oldestCursor = cursor
+            ).onEach {
+                observedHistoryCursor.value = cursor
+            }
+        }
 
     private val presentationContext: Flow<GroupContextObservation> =
         groupContext
@@ -226,6 +249,23 @@ class GroupConversationViewModel(
             initialValue = TypingUiState()
         )
 
+    val historyState: StateFlow<MessageHistoryUiState> =
+        combine(
+            isLoadingOlderMessages,
+            hasMoreMessages,
+            observedHistoryCursor
+        ) { isLoadingOlder, hasMore, loadedCursor ->
+            MessageHistoryUiState(
+                isLoadingOlder = isLoadingOlder,
+                hasMore = hasMore,
+                loadedThroughMessageId = loadedCursor?.messageId
+            )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = MessageHistoryUiState()
+        )
+
     val errorMessage: StateFlow<String?> =
         combine(mutableErrorMessage, presentationContext) { currentError, presentation ->
             currentError ?: presentation.errorMessage
@@ -237,12 +277,15 @@ class GroupConversationViewModel(
 
     init {
         typing.start(groupContext.map { context -> context.administration.currentMemberContactIds })
+        ensureTargetMessageLoaded()
     }
 
     fun onUiEvent(event: GroupConversationUiEvent) {
         when (event) {
             is GroupConversationUiEvent.MessageTextChanged -> onMessageTextChanged(event.text)
             GroupConversationUiEvent.SendClicked -> sendCurrentMessage()
+            GroupConversationUiEvent.LoadOlderMessages -> loadOlderMessages()
+            is GroupConversationUiEvent.MessageHistoryTargetRequested -> loadMessageHistoryTarget(event.messageId)
             is GroupConversationUiEvent.ReplyToMessage -> startReply(event.messageId)
             GroupConversationUiEvent.CancelReply -> clearReply()
             is GroupConversationUiEvent.EditMessage -> startEdit(event.messageId)
@@ -289,6 +332,57 @@ class GroupConversationViewModel(
         viewModelScope.launch {
             markConversationRead(groupId)
                 .onFailure { error -> logger.warn(error) { "Could not mark group conversation as read" } }
+        }
+    }
+
+    private fun loadOlderMessages() {
+        if (isLoadingOlderMessages.value || !hasMoreMessages.value) return
+
+        isLoadingOlderMessages.value = true
+        viewModelScope.launch {
+            try {
+                loadOlderMessageHistory(
+                    conversationId = groupId,
+                    currentOldestCursor = historyCursor.value
+                ).onSuccess { result ->
+                    result.oldestCursor?.let { cursor -> historyCursor.value = cursor }
+                    hasMoreMessages.value = result.hasMore
+                }.onFailure { error ->
+                    logger.warn(error) { "Could not load older group messages" }
+                }
+            } finally {
+                isLoadingOlderMessages.value = false
+            }
+        }
+    }
+
+    private fun loadMessageHistoryTarget(messageId: String) {
+        viewModelScope.launch {
+            findMessageHistoryCursor(groupId, messageId)
+                .onSuccess { cursor ->
+                    cursor ?: return@onSuccess
+                    val currentCursor = historyCursor.value
+                    if (currentCursor == null || cursor.isOlderThan(currentCursor)) {
+                        historyCursor.value = cursor
+                    }
+                }.onFailure { error ->
+                    logger.warn(error) { "Could not load message history target $messageId" }
+                }
+        }
+    }
+
+    private fun ensureTargetMessageLoaded() {
+        val messageId = targetMessageId ?: return
+        viewModelScope.launch {
+            conversationState.filter { state -> !state.isLoading }.first()
+            if (conversationState.value.messages.any { message -> message.id == messageId }) return@launch
+
+            findMessageHistoryCursor(groupId, messageId)
+                .onSuccess { cursor ->
+                    cursor?.let { historyCursor.value = it }
+                }.onFailure { error ->
+                    logger.warn(error) { "Could not load target group message $messageId" }
+                }
         }
     }
 
@@ -450,7 +544,7 @@ class GroupConversationViewModel(
             loadMessageAttachment(attachmentId)
                 .onSuccess { bytes ->
                     if (requiresAttachmentPayloadInState(attachmentId)) {
-                        attachmentPayloadBytes.value += (attachmentId to bytes)
+                        attachmentPayloadBytes.value = attachmentPayloadBytes.value + (attachmentId to bytes)
                     }
                 }
                 .onFailure { error -> logger.warn(error) { "Could not load message attachment $attachmentId" } }

@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.chats.domain.usecase.direct
 
 import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureProvider
 import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
+import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryCursor
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectChatContext
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectConversationRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
@@ -22,10 +23,11 @@ class ObserveDirectChatContextUseCase(
 ) {
     operator fun invoke(
         conversationId: String,
-        contactId: String
+        contactId: String,
+        oldestCursor: MessageHistoryCursor? = null
     ): Flow<DirectChatContext> =
         combine(
-            conversationRepository.observe(conversationId),
+            conversationRepository.observe(conversationId, oldestCursor),
             contactRepository
                 .observeContacts()
                 .map { contacts -> contacts.firstOrNull { contact -> contact.id == contactId } }

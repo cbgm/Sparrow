@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.chats.domain.usecase.group
 
 import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureProvider
+import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryCursor
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupChatContext
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
@@ -27,10 +28,13 @@ class ObserveGroupChatContextUseCase(
     private val remoteProfilePictureProvider: RemoteProfilePictureProvider,
     private val avatarRepository: GroupAvatarRepository
 ) {
-    operator fun invoke(groupId: String): Flow<GroupChatContext> {
+    operator fun invoke(
+        groupId: String,
+        oldestCursor: MessageHistoryCursor? = null
+    ): Flow<GroupChatContext> {
         val conversationFlow =
             conversationRepository
-                .observe(groupId)
+                .observe(groupId, oldestCursor)
                 .map<GroupConversation?, ConversationSnapshot> { conversation ->
                     ConversationSnapshot(conversation = conversation)
                 }.catch { error ->

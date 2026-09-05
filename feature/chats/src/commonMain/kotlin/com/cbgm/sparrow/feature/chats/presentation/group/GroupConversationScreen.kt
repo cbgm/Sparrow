@@ -61,6 +61,7 @@ import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toSharedCont
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageComposerUiState
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageContextUiState
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageHistoryUiState
 import com.cbgm.sparrow.feature.chats.presentation.component.model.TypingUiState
 import com.cbgm.sparrow.feature.chats.presentation.component.rememberDissolvingMessageListState
 import com.cbgm.sparrow.feature.chats.presentation.direct.component.ErrorMessage
@@ -85,6 +86,7 @@ fun GroupConversationScreen(
     contextState: MessageContextUiState<MessageBubbleUi>,
     typingState: TypingUiState,
     membershipState: GroupMembershipUiState,
+    historyState: MessageHistoryUiState,
     errorMessage: String?,
     onUiEvent: (GroupConversationUiEvent) -> Unit,
     onForwardMessageRequested: (String) -> Unit,
@@ -181,12 +183,12 @@ fun GroupConversationScreen(
                                     SparrowAvatar(
                                         name = message.senderName.orEmpty(),
                                         pictureBytes = message.groupExtension?.senderProfilePictureBytes,
-                                        size = Dimens.GroupScreen.typingAvatarSize
+                                        size = Dimens.GroupConversationScreen.avatarSize
                                     )
 
                                     Spacer(
                                         modifier = Modifier.width(
-                                            MaterialTheme.spacing.groupScreen.senderGap
+                                            MaterialTheme.spacing.groupConversationScreen.senderGap
                                         )
                                     )
                                 }
@@ -232,6 +234,11 @@ fun GroupConversationScreen(
                     innerPadding = innerPadding,
                     targetMessageId = targetMessageId,
                     selectedContextMessageId = messageContextAnchor?.messageId,
+                    historyState = historyState,
+                    onLoadOlderMessages = { onUiEvent(GroupConversationUiEvent.LoadOlderMessages) },
+                    onMessageHistoryTargetRequested = { messageId ->
+                        onUiEvent(GroupConversationUiEvent.MessageHistoryTargetRequested(messageId))
+                    },
                     onContextMessageRequested = { anchor ->
                         messageContextAnchor = anchor
                         onUiEvent(GroupConversationUiEvent.MessageContextRequested(anchor.messageId))
@@ -358,7 +365,7 @@ private fun TopBar(
                     SparrowAvatar(
                         name = uiState.title,
                         pictureBytes = uiState.avatarBytes,
-                        size = Dimens.GroupScreen.topBarAvatarSize
+                        size = Dimens.GroupConversationScreen.topBarAvatarSize
                     )
                     Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
                     Column {
@@ -430,6 +437,9 @@ private fun Content(
     innerPadding: PaddingValues,
     targetMessageId: String?,
     selectedContextMessageId: String?,
+    historyState: MessageHistoryUiState,
+    onLoadOlderMessages: () -> Unit,
+    onMessageHistoryTargetRequested: (String) -> Unit,
     onContextMessageRequested: (MessageContextAnchor) -> Unit,
     onReactionBurstRequested: (MessageReactionBurst) -> Unit,
     onRetryMessage: (String) -> Unit,
@@ -466,7 +476,18 @@ private fun Content(
             onAttachmentVisible = onAttachmentVisible,
             onAttachmentClick = onAttachmentClick,
             onContactClick = onContactClick,
-            contentPadding = innerPadding
+            contentPadding = innerPadding,
+            historyState = historyState,
+            onLoadOlderMessages = onLoadOlderMessages,
+            onMessageHistoryTargetRequested = onMessageHistoryTargetRequested,
+            itemLeadingContent = { message ->
+                SparrowAvatar(
+                    name = message.senderName.orEmpty(),
+                    pictureBytes = message.groupExtension?.senderProfilePictureBytes,
+                    size = Dimens.GroupConversationScreen.avatarSize,
+                    modifier = Modifier.padding(end = MaterialTheme.spacing.groupConversationScreen.senderGap)
+                )
+            }
         )
     }
 }

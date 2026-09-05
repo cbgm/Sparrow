@@ -11,43 +11,57 @@ internal data class GroupLocalMembershipTimelineDto(
 
 internal fun buildGroupLocalMembershipTimeline(
     messages: List<MessageEntity>,
-    invitations: List<GroupInvitationEntity>
+    invitations: List<GroupInvitationEntity>,
+    localMembershipHistory: List<MessageEntity> = messages
 ): GroupLocalMembershipTimelineDto {
-    val orderedMessages =
-        messages.sortedWith(
-            compareBy<MessageEntity>(MessageEntity::createdAtEpochMilliseconds)
-                .thenBy(MessageEntity::id)
-        )
-    val latestStartAt =
-        orderedMessages
-            .filter { message -> GroupMembershipMessageFactory.isLocalMembershipStart(message.transportMode) }
-            .maxOfOrNull(MessageEntity::createdAtEpochMilliseconds)
-    val latestEndAt =
-        orderedMessages
-            .filter { message -> GroupMembershipMessageFactory.isLocalMembershipEnd(message.transportMode) }
-            .maxOfOrNull(MessageEntity::createdAtEpochMilliseconds)
+    val orderedMessages = messages.sortedWith(MESSAGE_ORDER)
+    val orderedMembershipHistory = localMembershipHistory.sortedWith(MESSAGE_ORDER)
+    val latestBoundary =
+        orderedMembershipHistory
+            .filter { message -> message.isLocalMembershipBoundary() }
+            .maxWithOrNull(MESSAGE_ORDER)
     val locallyInactive =
-        latestEndAt != null &&
-            (latestStartAt == null || latestEndAt > latestStartAt)
+        latestBoundary?.let { message ->
+            GroupMembershipMessageFactory.isLocalMembershipEnd(message.transportMode)
+        } == true
+    val latestEndAt =
+        orderedMembershipHistory
+            .filter { message -> GroupMembershipMessageFactory.isLocalMembershipEnd(message.transportMode) }
+            .maxWithOrNull(MESSAGE_ORDER)
+            ?.createdAtEpochMilliseconds
 
     val currentInvitations =
-        if (locallyInactive) {
+        if (locallyInactive && latestEndAt != null) {
             invitations.filter { invitation ->
-                invitation.createdAtEpochMilliseconds > requireNotNull(latestEndAt)
+                invitation.createdAtEpochMilliseconds > latestEndAt
             }
         } else {
             invitations
         }
 
+    val initiallyActive =
+        orderedMessages
+            .firstOrNull()
+            ?.let { firstLoadedMessage ->
+                orderedMembershipHistory
+                    .asSequence()
+                    .filter { message -> message.isLocalMembershipBoundary() }
+                    .filter { message -> MESSAGE_ORDER.compare(message, firstLoadedMessage) < 0 }
+                    .maxWithOrNull(MESSAGE_ORDER)
+                    ?.let { previousBoundary ->
+                        !GroupMembershipMessageFactory.isLocalMembershipEnd(previousBoundary.transportMode)
+                    }
+            } ?: true
+
     return GroupLocalMembershipTimelineDto(
-        visibleMessages = orderedMessages.visibleDuringMembershipPeriods(),
+        visibleMessages = orderedMessages.visibleDuringMembershipPeriods(initiallyActive),
         currentInvitations = currentInvitations,
         isLocallyInactive = locallyInactive && currentInvitations.isEmpty()
     )
 }
 
-private fun List<MessageEntity>.visibleDuringMembershipPeriods(): List<MessageEntity> {
-    var active = true
+private fun List<MessageEntity>.visibleDuringMembershipPeriods(initiallyActive: Boolean): List<MessageEntity> {
+    var active = initiallyActive
     return buildList {
         this@visibleDuringMembershipPeriods.forEach { message ->
             when {
@@ -66,3 +80,11 @@ private fun List<MessageEntity>.visibleDuringMembershipPeriods(): List<MessageEn
         }
     }
 }
+
+private fun MessageEntity.isLocalMembershipBoundary(): Boolean =
+    GroupMembershipMessageFactory.isLocalMembershipStart(transportMode) ||
+        GroupMembershipMessageFactory.isLocalMembershipEnd(transportMode)
+
+private val MESSAGE_ORDER =
+    compareBy<MessageEntity>(MessageEntity::createdAtEpochMilliseconds)
+        .thenBy(MessageEntity::id)

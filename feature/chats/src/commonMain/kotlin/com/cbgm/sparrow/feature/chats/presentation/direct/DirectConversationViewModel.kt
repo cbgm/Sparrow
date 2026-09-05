@@ -16,9 +16,12 @@ import com.cbgm.sparrow.feature.chats.domain.model.LocationShareEvent
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareState
 import com.cbgm.sparrow.feature.chats.domain.model.LocationShareStateMachine
 import com.cbgm.sparrow.feature.chats.domain.model.MessageComposerPolicy
+import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryCursor
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectComposerState
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessageDispatchResult
+import com.cbgm.sparrow.feature.chats.domain.usecase.FindMessageHistoryCursorUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.ForwardMessageUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.LoadOlderMessagesUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.DeleteDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.EditDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.MarkDirectConversationReadUseCase
@@ -31,6 +34,7 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ToggleDirectMessageR
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageComposerUiState
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageContextUiState
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageHistoryUiState
 import com.cbgm.sparrow.feature.chats.presentation.component.model.TypingUiState
 import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.toDirectConversationUiState
 import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.toDirectReplyPreview
@@ -42,15 +46,20 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.AddDeviceContactUseCase
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyDetails
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class DirectConversationViewModel(
     savedStateHandle: SavedStateHandle,
     observeChatContext: ObserveDirectChatContextUseCase,
@@ -65,7 +74,9 @@ class DirectConversationViewModel(
     observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase,
     private val loadMessageAttachment: LoadMessageAttachmentUseCase,
     private val addDeviceContact: AddDeviceContactUseCase,
-    private val forwardMessageUseCase: ForwardMessageUseCase
+    private val forwardMessageUseCase: ForwardMessageUseCase,
+    private val loadOlderMessageHistory: LoadOlderMessagesUseCase,
+    private val findMessageHistoryCursor: FindMessageHistoryCursorUseCase
 ) : BaseViewModel() {
     private val conversationId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.Chat::conversationId.name)
@@ -86,8 +97,21 @@ class DirectConversationViewModel(
     private val contextMessageId = MutableStateFlow<String?>(null)
     private val locationShareState = MutableStateFlow(LocationShareState.IDLE)
     private val loadingAttachmentIds = mutableSetOf<String>()
+    private val historyCursor = MutableStateFlow<MessageHistoryCursor?>(null)
+    private val observedHistoryCursor = MutableStateFlow<MessageHistoryCursor?>(null)
+    private val isLoadingOlderMessages = MutableStateFlow(false)
+    private val hasMoreMessages = MutableStateFlow(true)
 
-    private val conversationContext = observeChatContext(conversationId, contactId)
+    private val conversationContext =
+        historyCursor.flatMapLatest { cursor ->
+            observeChatContext(
+                conversationId = conversationId,
+                contactId = contactId,
+                oldestCursor = cursor
+            ).onEach {
+                observedHistoryCursor.value = cursor
+            }
+        }
 
     private val typingController =
         TypingIndicatorController(
@@ -202,18 +226,38 @@ class DirectConversationViewModel(
             initialValue = TypingUiState(displayName = fallbackContactName)
         )
 
+    val historyState: StateFlow<MessageHistoryUiState> =
+        combine(
+            isLoadingOlderMessages,
+            hasMoreMessages,
+            observedHistoryCursor
+        ) { isLoadingOlder, hasMore, loadedCursor ->
+            MessageHistoryUiState(
+                isLoadingOlder = isLoadingOlder,
+                hasMore = hasMore,
+                loadedThroughMessageId = loadedCursor?.messageId
+            )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000L),
+            initialValue = MessageHistoryUiState()
+        )
+
     val errorMessage: StateFlow<String?> = mutableErrorMessage.asStateFlow()
 
     init {
         viewModelScope.launch {
             observeTyping(contactId).collect(typingController::onIncomingTypingChanged)
         }
+        ensureTargetMessageLoaded()
     }
 
     fun onUiEvent(event: DirectConversationUiEvent) {
         when (event) {
             is DirectConversationUiEvent.MessageTextChanged -> onMessageTextChanged(event.text)
             DirectConversationUiEvent.SendClicked -> sendCurrentMessage()
+            DirectConversationUiEvent.LoadOlderMessages -> loadOlderMessages()
+            is DirectConversationUiEvent.MessageHistoryTargetRequested -> loadMessageHistoryTarget(event.messageId)
             is DirectConversationUiEvent.ReplyToMessage -> startReply(event.messageId)
             DirectConversationUiEvent.CancelReply -> clearReply()
             is DirectConversationUiEvent.EditMessage -> startEdit(event.messageId)
@@ -257,6 +301,57 @@ class DirectConversationViewModel(
         viewModelScope.launch {
             markConversationRead(conversationId)
                 .onFailure { error -> logger.warn(error) { "Could not mark direct conversation as read" } }
+        }
+    }
+
+    private fun loadOlderMessages() {
+        if (isLoadingOlderMessages.value || !hasMoreMessages.value) return
+
+        isLoadingOlderMessages.value = true
+        viewModelScope.launch {
+            try {
+                loadOlderMessageHistory(
+                    conversationId = conversationId,
+                    currentOldestCursor = historyCursor.value
+                ).onSuccess { result ->
+                    result.oldestCursor?.let { cursor -> historyCursor.value = cursor }
+                    hasMoreMessages.value = result.hasMore
+                }.onFailure { error ->
+                    logger.warn(error) { "Could not load older direct messages" }
+                }
+            } finally {
+                isLoadingOlderMessages.value = false
+            }
+        }
+    }
+
+    private fun loadMessageHistoryTarget(messageId: String) {
+        viewModelScope.launch {
+            findMessageHistoryCursor(conversationId, messageId)
+                .onSuccess { cursor ->
+                    cursor ?: return@onSuccess
+                    val currentCursor = historyCursor.value
+                    if (currentCursor == null || cursor.isOlderThan(currentCursor)) {
+                        historyCursor.value = cursor
+                    }
+                }.onFailure { error ->
+                    logger.warn(error) { "Could not load message history target $messageId" }
+                }
+        }
+    }
+
+    private fun ensureTargetMessageLoaded() {
+        val messageId = targetMessageId ?: return
+        viewModelScope.launch {
+            conversationState.filter { state -> !state.isLoading }.first()
+            if (conversationState.value.messages.any { message -> message.id == messageId }) return@launch
+
+            findMessageHistoryCursor(conversationId, messageId)
+                .onSuccess { cursor ->
+                    cursor?.let { historyCursor.value = it }
+                }.onFailure { error ->
+                    logger.warn(error) { "Could not load target direct message $messageId" }
+                }
         }
     }
 

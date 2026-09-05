@@ -27,6 +27,11 @@ object Dimens {
         val pagerHeight = 90.dp
     }
 
+    object MessageList {
+        val loadingStroke = 2.dp
+        val loadingSize = 20.dp
+    }
+
     object Avatar {
         val defaultSize = 48.dp
     }
@@ -170,13 +175,13 @@ object Dimens {
         val sectionIconSize = 22.dp
     }
 
-    object GroupScreen {
+    object GroupConversationScreen {
         val topBarAvatarSize = 36.dp
-        val typingAvatarSize = 28.dp
+        val avatarSize = 28.dp
         val noticeIconSize = 15.dp
     }
 
-    object DirectScreen {
+    object DirectConversationScreen {
         val topBarAvatarSize = 36.dp
         val invitationIconSize = 16.dp
         val statusIconSize = 14.dp
