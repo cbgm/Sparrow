@@ -29,7 +29,7 @@ class LocalAttachmentDataSource(
     ) {
         if (entity.type == MessageAttachmentType.LOCATION.name || entity.type == MessageAttachmentType.CONTACT.name) return
 
-        runCatching {
+        try {
             val message = chatDao.findMessageById(entity.messageId) ?: return
             if (message.isMine) return
 
@@ -45,7 +45,7 @@ class LocalAttachmentDataSource(
             message.senderContactId?.let { senderContactId ->
                 fileDataSource.deleteLegacyContactAttachment(senderContactId, entity.id)
             }
-        }.onFailure { error ->
+        } catch (error: Throwable) {
             logger.warn(error) { "Could not save Sparrow conversation copy for attachment ${entity.id}" }
         }
     }
@@ -72,30 +72,28 @@ class LocalAttachmentDataSource(
                     }.sortedBy { summary -> summary.displayName.lowercase() }
             }
 
-    suspend fun delete(attachmentIds: Set<String>): Result<Unit> =
-        runCatching {
-            if (attachmentIds.isEmpty()) return@runCatching
+    suspend fun delete(attachmentIds: Set<String>) {
+        if (attachmentIds.isEmpty()) return
 
-            val rows = attachmentDao.findLocalRowsByIds(attachmentIds.toList())
-            for (row in rows) {
-                deleteLocalCopies(row)
-            }
-
-            if (rows.isNotEmpty()) {
-                attachmentDao.clearLocalFileNames(rows.map { row -> row.attachment.id })
-            }
+        val rows = attachmentDao.findLocalRowsByIds(attachmentIds.toList())
+        for (row in rows) {
+            deleteLocalCopies(row)
         }
 
-    suspend fun deleteForConversation(conversationId: String): Result<Unit> =
-        runCatching {
-            require(conversationId.isNotBlank()) { "Conversation ID must not be blank" }
-            attachmentDao.findByConversationId(conversationId).forEach { entity ->
-                entity.localFileName?.let(fileDataSource::delete)
-                deleteLegacyCopy(entity)
-            }
-            fileDataSource.deleteSavedConversation(conversationId)
-            attachmentDao.clearLocalFileNamesForConversation(conversationId)
+        if (rows.isNotEmpty()) {
+            attachmentDao.clearLocalFileNames(rows.map { row -> row.attachment.id })
         }
+    }
+
+    suspend fun deleteForConversation(conversationId: String) {
+        require(conversationId.isNotBlank()) { "Conversation ID must not be blank" }
+        attachmentDao.findByConversationId(conversationId).forEach { entity ->
+            entity.localFileName?.let(fileDataSource::delete)
+            deleteLegacyCopy(entity)
+        }
+        fileDataSource.deleteSavedConversation(conversationId)
+        attachmentDao.clearLocalFileNamesForConversation(conversationId)
+    }
 
     private suspend fun deleteLocalCopies(row: LocalMessageAttachmentRowDto) {
         row.attachment.localFileName?.let(fileDataSource::delete)

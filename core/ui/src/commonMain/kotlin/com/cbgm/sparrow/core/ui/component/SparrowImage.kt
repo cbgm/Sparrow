@@ -36,14 +36,23 @@ fun SparrowImage(
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Fit,
     alignment: Alignment = Alignment.Center,
-    error: Painter? = null
+    error: Painter? = null,
+    memoryCacheKey: String? = null,
+    showLoadingBackground: Boolean = true
 ) {
     val fallbackPainter = error ?: rememberSparrowFallbackPainter()
+    val imageModel = rememberSparrowImageModel(model, memoryCacheKey)
+    val imageModifier =
+        if (showLoadingBackground) {
+            modifier.background(FunctionalColors.MediaBackground)
+        } else {
+            modifier
+        }
 
     AsyncImage(
-        model = model,
+        model = imageModel,
         contentDescription = contentDescription,
-        modifier = modifier.background(FunctionalColors.MediaBackground),
+        modifier = imageModifier,
         contentScale = contentScale,
         alignment = alignment,
         placeholder = null,
@@ -52,9 +61,12 @@ fun SparrowImage(
     )
 }
 
-/**
- * Small deterministic bitmap fallback used whenever an image or media thumbnail cannot be loaded.
- */
+@Composable
+internal expect fun rememberSparrowImageModel(
+    model: Any?,
+    memoryCacheKey: String?
+): Any?
+
 @Composable
 fun rememberSparrowFallbackPainter(): Painter {
     val background = FunctionalColors.MediaBackground

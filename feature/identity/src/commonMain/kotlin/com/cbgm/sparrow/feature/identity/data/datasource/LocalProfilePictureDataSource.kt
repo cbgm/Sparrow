@@ -17,28 +17,23 @@ class LocalProfilePictureDataSource(
             )
         }
 
-    suspend fun get(): Result<LocalProfilePicture> =
-        runCatching {
-            LocalProfilePicture(
-                changedAtEpochMilliseconds = dataStore.getLong(PROFILE_PICTURE_CHANGED_AT),
-                bytes = fileDataSource.readLocal()
-            )
-        }
+    suspend fun get(): LocalProfilePicture = LocalProfilePicture(
+        changedAtEpochMilliseconds = dataStore.getLong(PROFILE_PICTURE_CHANGED_AT),
+        bytes = fileDataSource.readLocal()
+    )
 
     suspend fun save(
         bytes: ByteArray,
         changedAtEpochMilliseconds: Long
-    ): Result<Unit> =
-        runCatching {
-            fileDataSource.writeLocal(bytes)
-            dataStore.edit { putLong(PROFILE_PICTURE_CHANGED_AT, changedAtEpochMilliseconds) }
-        }
+    ) {
+        fileDataSource.writeLocal(bytes)
+        dataStore.edit { putLong(PROFILE_PICTURE_CHANGED_AT, changedAtEpochMilliseconds) }
+    }
 
-    suspend fun remove(changedAtEpochMilliseconds: Long): Result<Unit> =
-        runCatching {
-            fileDataSource.deleteLocal()
-            dataStore.edit { putLong(PROFILE_PICTURE_CHANGED_AT, changedAtEpochMilliseconds) }
-        }
+    suspend fun remove(changedAtEpochMilliseconds: Long) {
+        fileDataSource.deleteLocal()
+        dataStore.edit { putLong(PROFILE_PICTURE_CHANGED_AT, changedAtEpochMilliseconds) }
+    }
 
     private companion object {
         const val PROFILE_PICTURE_CHANGED_AT = "identity.profile_picture.changed_at"

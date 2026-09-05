@@ -19,34 +19,33 @@ class ContactRoutingReconciliationDataSource(
     private val reconcileMutex = Mutex()
     private var lastReconcileAtEpochMilliseconds: Long = 0L
 
-    suspend fun reconcileKnownContacts(): Result<Unit> =
-        runCatching {
-            if (!shouldReconcileNow()) return@runCatching
+    suspend fun reconcileKnownContacts() {
+        if (!shouldReconcileNow()) return
 
-            val contacts = contactDao.observeAll().first()
-            val bootstrapRoutingIds =
-                contacts
-                    .flatMap { contact ->
-                        contact.phoneNumbers.mapNotNull { phoneNumber ->
-                            routingIdGenerator
-                                .deriveFromPhoneNumber(phoneNumber.value)
-                                .getOrNull()
-                        }
-                    }.distinct()
+        val contacts = contactDao.observeAll().first()
+        val bootstrapRoutingIds =
+            contacts
+                .flatMap { contact ->
+                    contact.phoneNumbers.mapNotNull { phoneNumber ->
+                        routingIdGenerator
+                            .deriveFromPhoneNumber(phoneNumber.value)
+                            .getOrNull()
+                    }
+                }.distinct()
 
-            bootstrapRoutingIds.forEach { routingId ->
-                val mappedContactId =
-                    contactRoutingIdDao.findContactIdByRoutingId(routingId)
-                        ?: return@forEach
-                val matchingContactId =
-                    findMatchingContactId(routingId, contacts)
-                        ?: return@forEach
-                if (matchingContactId == mappedContactId) return@forEach
+        bootstrapRoutingIds.forEach { routingId ->
+            val mappedContactId =
+                contactRoutingIdDao.findContactIdByRoutingId(routingId)
+                    ?: return@forEach
+            val matchingContactId =
+                findMatchingContactId(routingId, contacts)
+                    ?: return@forEach
+            if (matchingContactId == mappedContactId) return@forEach
 
-                persistBootstrapMapping(matchingContactId, routingId)
-                deleteAnonymousBootstrapPlaceholder(mappedContactId)
-            }
+            persistBootstrapMapping(matchingContactId, routingId)
+            deleteAnonymousBootstrapPlaceholder(mappedContactId)
         }
+    }
 
     private suspend fun shouldReconcileNow(): Boolean =
         reconcileMutex.withLock {

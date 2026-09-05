@@ -15,6 +15,7 @@ import com.cbgm.sparrow.core.protocol.packet.GroupMessageDeletionPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMessageEditPacket
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.protocol.version.ProtocolVersion
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.data.database.entity.GroupSecurityStateEntity
@@ -30,7 +31,7 @@ class GroupSecurityManager internal constructor(
     private val groupWelcomeSecurity: GroupWelcomeSecurity
 ) {
     suspend fun findOwnedGroupEpoch(groupId: String): Result<Int?> =
-        runCatching {
+        safeSuspendCall {
             groupSecurityDao.findState(groupId)?.let { state ->
                 check(state.localRole.isGroupAdminRole()) {
                     "Only a group admin may change group membership"
@@ -40,18 +41,18 @@ class GroupSecurityManager internal constructor(
         }
 
     suspend fun isLocalAdmin(groupId: String): Result<Boolean?> =
-        runCatching {
+        safeSuspendCall {
             groupSecurityDao.findState(groupId)?.localRole?.isGroupAdminRole()
         }
 
     suspend fun findCurrentEpoch(groupId: String): Result<Int?> =
-        runCatching { groupSecurityDao.findState(groupId)?.currentEpoch }
+        safeSuspendCall { groupSecurityDao.findState(groupId)?.currentEpoch }
 
     suspend fun findLocalRole(groupId: String): Result<String?> =
-        runCatching { groupSecurityDao.findState(groupId)?.localRole }
+        safeSuspendCall { groupSecurityDao.findState(groupId)?.localRole }
 
     suspend fun isLocalMembershipRetired(groupId: String): Result<Boolean> =
-        runCatching {
+        safeSuspendCall {
             groupSecurityDao.findState(groupId)?.localRole == GROUP_LEFT_ROLE
         }
 
@@ -59,8 +60,8 @@ class GroupSecurityManager internal constructor(
         groupId: String,
         contactId: String
     ): Result<GroupMemberKeyEntity?> =
-        runCatching {
-            val state = groupSecurityDao.findState(groupId) ?: return@runCatching null
+        safeSuspendCall {
+            val state = groupSecurityDao.findState(groupId) ?: return@safeSuspendCall null
             groupSecurityDao.findMemberKey(
                 groupId = groupId,
                 epoch = state.currentEpoch,
@@ -73,7 +74,7 @@ class GroupSecurityManager internal constructor(
         contactId: String,
         signingPublicKey: ByteArray
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             val state = groupSecurityDao.findState(groupId)
                 ?: error("Group security state was not found")
             val memberKey =
@@ -93,9 +94,9 @@ class GroupSecurityManager internal constructor(
     suspend fun isOwnedGroup(groupId: String): Result<Boolean?> = isLocalAdmin(groupId)
 
     suspend fun deleteLocalGroup(groupId: String): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             require(groupId.isNotBlank()) { "Group ID must not be blank" }
-            groupKeyDataSource.deleteGroup(groupId).getOrThrow()
+            groupKeyDataSource.deleteGroup(groupId)
             groupSecurityDao.deleteGroup(groupId)
         }
 
@@ -103,11 +104,11 @@ class GroupSecurityManager internal constructor(
         groupId: String,
         retiredAtEpochMilliseconds: Long
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             require(groupId.isNotBlank()) { "Group ID must not be blank" }
             require(retiredAtEpochMilliseconds >= 0L) { "Retirement timestamp must not be negative" }
-            groupKeyDataSource.deleteGroup(groupId).getOrThrow()
-            val state = groupSecurityDao.findState(groupId) ?: return@runCatching
+            groupKeyDataSource.deleteGroup(groupId)
+            val state = groupSecurityDao.findState(groupId) ?: return@safeSuspendCall
             check(
                 groupSecurityDao.updateLocalRole(
                     groupId = groupId,
@@ -118,11 +119,11 @@ class GroupSecurityManager internal constructor(
         }
 
     suspend fun clearRetiredMembershipBeforeRejoin(groupId: String): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             require(groupId.isNotBlank()) { "Group ID must not be blank" }
-            val state = groupSecurityDao.findState(groupId) ?: return@runCatching
-            if (state.localRole != GROUP_LEFT_ROLE) return@runCatching
-            groupKeyDataSource.deleteGroup(groupId).getOrThrow()
+            val state = groupSecurityDao.findState(groupId) ?: return@safeSuspendCall
+            if (state.localRole != GROUP_LEFT_ROLE) return@safeSuspendCall
+            groupKeyDataSource.deleteGroup(groupId)
             groupSecurityDao.deleteGroup(groupId)
         }
 
@@ -131,7 +132,7 @@ class GroupSecurityManager internal constructor(
         ownerContactId: String,
         localSigningPublicKey: ByteArray
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             val state = groupSecurityDao.findState(packet.groupId)
             if (packet.epoch > GroupMemberRemovedPacket.PENDING_INVITATION_EPOCH) {
                 state?.let { activeState ->
@@ -156,7 +157,7 @@ class GroupSecurityManager internal constructor(
                 }
             }
 
-            groupKeyDataSource.deleteGroup(packet.groupId).getOrThrow()
+            groupKeyDataSource.deleteGroup(packet.groupId)
             groupSecurityDao.deleteGroup(packet.groupId)
         }
 
@@ -169,7 +170,7 @@ class GroupSecurityManager internal constructor(
         recipients: List<GroupWelcomeRecipientDto>,
         localSigningKeyPair: LocalSigningKeyPair
     ): Result<CreatedGroupSecurityDto> =
-        runCatching {
+        safeSuspendCall {
             val existingState = groupSecurityDao.findState(groupId)
             val state =
                 if (existingState == null) {
@@ -203,12 +204,11 @@ class GroupSecurityManager internal constructor(
                                 groupId = groupId,
                                 epoch = INITIAL_EPOCH,
                                 groupKey = generatedKey
-                            ).getOrThrow()
+                            )
                     }
                 } else {
                     groupKeyDataSource
                         .load(groupId, INITIAL_EPOCH)
-                        .getOrThrow()
                         ?: error("Existing owner group key was not found")
                 }
 
@@ -261,7 +261,7 @@ class GroupSecurityManager internal constructor(
         localSigningKeyPair: LocalSigningKeyPair,
         membershipChange: GroupMembershipChangePayload? = null
     ): Result<CreatedGroupSecurityDto> =
-        runCatching {
+        safeSuspendCall {
             val existingState =
                 groupSecurityDao.findState(groupId)
                     ?: error("Group security state was not found")
@@ -282,7 +282,7 @@ class GroupSecurityManager internal constructor(
                     groupId = groupId,
                     epoch = nextEpoch,
                     groupKey = groupKey
-                ).getOrThrow()
+                )
 
             val nextState =
                 existingState.copy(
@@ -329,7 +329,7 @@ class GroupSecurityManager internal constructor(
                 .deleteBefore(
                     groupId = groupId,
                     epoch = nextEpoch
-                ).getOrThrow()
+                )
 
             CreatedGroupSecurityDto(welcomePacketsByContactId = packets)
         }
@@ -364,11 +364,10 @@ class GroupSecurityManager internal constructor(
         epoch: Int,
         keyConfirmation: ByteArray
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             val groupKey =
                 groupKeyDataSource
                     .load(groupId, epoch)
-                    .getOrThrow()
                     ?: error("Group key was not found")
             check(createKeyConfirmation(groupId, epoch, groupKey).contentEquals(keyConfirmation)) {
                 "Group key confirmation does not match"
@@ -417,7 +416,7 @@ class GroupSecurityManager internal constructor(
         localSigningKeyPair: LocalSigningKeyPair,
         profilePicture: ProfilePictureMetadata = ProfilePictureMetadata()
     ): Result<SecuredGroupMessageDto> =
-        runCatching {
+        safeSuspendCall {
             val state = groupSecurityDao.findState(groupId) ?: error("Group security state was not found")
             check(state.localSigningPublicKey.contentEquals(localSigningKeyPair.publicKey)) {
                 "Local signing identity is not a member of the current group epoch"
@@ -425,7 +424,6 @@ class GroupSecurityManager internal constructor(
             val groupKey =
                 groupKeyDataSource
                     .load(groupId, state.currentEpoch)
-                    .getOrThrow()
                     ?: error("Group key was not found")
             val associatedData =
                 payloadEncoder.encodeMessageAssociatedData(
@@ -471,7 +469,7 @@ class GroupSecurityManager internal constructor(
         plaintext: String,
         localSigningKeyPair: LocalSigningKeyPair
     ): Result<SecuredGroupMessageDto> =
-        runCatching {
+        safeSuspendCall {
             val state = groupSecurityDao.findState(groupId) ?: error("Group security state was not found")
             check(state.localSigningPublicKey.contentEquals(localSigningKeyPair.publicKey)) {
                 "Local signing identity is not a member of the current group epoch"
@@ -479,7 +477,6 @@ class GroupSecurityManager internal constructor(
             val groupKey =
                 groupKeyDataSource
                     .load(groupId, state.currentEpoch)
-                    .getOrThrow()
                     ?: error("Group key was not found")
             val associatedData =
                 payloadEncoder.encodeMessageDeletionAssociatedData(
@@ -524,7 +521,7 @@ class GroupSecurityManager internal constructor(
         plaintext: String,
         localSigningKeyPair: LocalSigningKeyPair
     ): Result<SecuredGroupMessageDto> =
-        runCatching {
+        safeSuspendCall {
             val state = groupSecurityDao.findState(groupId) ?: error("Group security state was not found")
             check(state.localSigningPublicKey.contentEquals(localSigningKeyPair.publicKey)) {
                 "Local signing identity is not a member of the current group epoch"
@@ -532,7 +529,6 @@ class GroupSecurityManager internal constructor(
             val groupKey =
                 groupKeyDataSource
                     .load(groupId, state.currentEpoch)
-                    .getOrThrow()
                     ?: error("Group key was not found")
             val associatedData =
                 payloadEncoder.encodeMessageEditAssociatedData(
@@ -574,7 +570,7 @@ class GroupSecurityManager internal constructor(
         packet: GroupChatMessagePacket,
         senderContactId: String
     ): Result<String> =
-        runCatching {
+        safeSuspendCall {
             val state =
                 groupSecurityDao.findState(packet.groupId)
                     ?: error("Group security state was not found")
@@ -613,7 +609,6 @@ class GroupSecurityManager internal constructor(
             val groupKey =
                 groupKeyDataSource
                     .load(packet.groupId, packet.epoch)
-                    .getOrThrow()
                     ?: error("Group key was not found")
             val plaintext =
                 groupCrypto
@@ -636,7 +631,7 @@ class GroupSecurityManager internal constructor(
         packet: GroupMessageDeletionPacket,
         senderContactId: String
     ): Result<String> =
-        runCatching {
+        safeSuspendCall {
             val state =
                 groupSecurityDao.findState(packet.groupId)
                     ?: error("Group security state was not found")
@@ -674,7 +669,6 @@ class GroupSecurityManager internal constructor(
             val groupKey =
                 groupKeyDataSource
                     .load(packet.groupId, packet.epoch)
-                    .getOrThrow()
                     ?: error("Group key was not found")
             val plaintext =
                 groupCrypto
@@ -697,7 +691,7 @@ class GroupSecurityManager internal constructor(
         packet: GroupMessageEditPacket,
         senderContactId: String
     ): Result<String> =
-        runCatching {
+        safeSuspendCall {
             val state =
                 groupSecurityDao.findState(packet.groupId)
                     ?: error("Group security state was not found")
@@ -735,7 +729,6 @@ class GroupSecurityManager internal constructor(
             val groupKey =
                 groupKeyDataSource
                     .load(packet.groupId, packet.epoch)
-                    .getOrThrow()
                     ?: error("Group key was not found")
             val plaintext =
                 groupCrypto

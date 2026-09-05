@@ -22,73 +22,69 @@ class AndroidPrivateKeyStorage(
     override suspend fun saveIdentityPrivateKeys(
         encryptionPrivateKey: UByteArray,
         signingPrivateKey: UByteArray
-    ): Result<Unit> =
-        runCatching {
-            val wrappingKey = getOrCreateWrappingKey()
-            val encryptedEncryptionKey = encrypt(encryptionPrivateKey.toByteArray(), wrappingKey)
-            val encryptedSigningKey = encrypt(signingPrivateKey.toByteArray(), wrappingKey)
+    ) {
+        val wrappingKey = getOrCreateWrappingKey()
+        val encryptedEncryptionKey = encrypt(encryptionPrivateKey.toByteArray(), wrappingKey)
+        val encryptedSigningKey = encrypt(signingPrivateKey.toByteArray(), wrappingKey)
 
-            dataStore.edit {
-                putString(ENCRYPTION_PRIVATE_KEY_CIPHERTEXT, encryptedEncryptionKey.cipherText.toBase64())
-                putString(ENCRYPTION_PRIVATE_KEY_IV, encryptedEncryptionKey.iv.toBase64())
-                putString(SIGNING_PRIVATE_KEY_CIPHERTEXT, encryptedSigningKey.cipherText.toBase64())
-                putString(SIGNING_PRIVATE_KEY_IV, encryptedSigningKey.iv.toBase64())
-            }
+        dataStore.edit {
+            putString(ENCRYPTION_PRIVATE_KEY_CIPHERTEXT, encryptedEncryptionKey.cipherText.toBase64())
+            putString(ENCRYPTION_PRIVATE_KEY_IV, encryptedEncryptionKey.iv.toBase64())
+            putString(SIGNING_PRIVATE_KEY_CIPHERTEXT, encryptedSigningKey.cipherText.toBase64())
+            putString(SIGNING_PRIVATE_KEY_IV, encryptedSigningKey.iv.toBase64())
         }
+    }
 
     @OptIn(ExperimentalUnsignedTypes::class)
-    override suspend fun hasIdentityPrivateKeys(): Result<Boolean> =
-        runCatching {
-            val stored =
-                dataStore.containsString(ENCRYPTION_PRIVATE_KEY_CIPHERTEXT) &&
-                    dataStore.containsString(ENCRYPTION_PRIVATE_KEY_IV) &&
-                    dataStore.containsString(SIGNING_PRIVATE_KEY_CIPHERTEXT) &&
-                    dataStore.containsString(SIGNING_PRIVATE_KEY_IV)
+    override suspend fun hasIdentityPrivateKeys(): Boolean {
+        val stored =
+            dataStore.containsString(ENCRYPTION_PRIVATE_KEY_CIPHERTEXT) &&
+                dataStore.containsString(ENCRYPTION_PRIVATE_KEY_IV) &&
+                dataStore.containsString(SIGNING_PRIVATE_KEY_CIPHERTEXT) &&
+                dataStore.containsString(SIGNING_PRIVATE_KEY_IV)
 
-            stored &&
-                getExistingWrappingKey() != null &&
-                loadEncryptionPrivateKey().getOrNull() != null &&
-                loadSigningPrivateKey().getOrNull() != null
-        }
+        return stored &&
+            getExistingWrappingKey() != null &&
+            loadEncryptionPrivateKey() != null &&
+            loadSigningPrivateKey() != null
+    }
 
     @OptIn(ExperimentalUnsignedTypes::class)
-    override suspend fun loadEncryptionPrivateKey(): Result<UByteArray?> =
+    override suspend fun loadEncryptionPrivateKey(): UByteArray? =
         loadPrivateKey(
             cipherTextKey = ENCRYPTION_PRIVATE_KEY_CIPHERTEXT,
             ivKey = ENCRYPTION_PRIVATE_KEY_IV
         )
 
     @OptIn(ExperimentalUnsignedTypes::class)
-    override suspend fun loadSigningPrivateKey(): Result<UByteArray?> =
+    override suspend fun loadSigningPrivateKey(): UByteArray? =
         loadPrivateKey(
             cipherTextKey = SIGNING_PRIVATE_KEY_CIPHERTEXT,
             ivKey = SIGNING_PRIVATE_KEY_IV
         )
 
-    override suspend fun deleteIdentityPrivateKeys(): Result<Unit> =
-        runCatching {
-            dataStore.edit {
-                removeString(ENCRYPTION_PRIVATE_KEY_CIPHERTEXT)
-                removeString(ENCRYPTION_PRIVATE_KEY_IV)
-                removeString(SIGNING_PRIVATE_KEY_CIPHERTEXT)
-                removeString(SIGNING_PRIVATE_KEY_IV)
-            }
-            if (keyStore.containsAlias(WRAPPING_KEY_ALIAS)) {
-                keyStore.deleteEntry(WRAPPING_KEY_ALIAS)
-            }
+    override suspend fun deleteIdentityPrivateKeys() {
+        dataStore.edit {
+            removeString(ENCRYPTION_PRIVATE_KEY_CIPHERTEXT)
+            removeString(ENCRYPTION_PRIVATE_KEY_IV)
+            removeString(SIGNING_PRIVATE_KEY_CIPHERTEXT)
+            removeString(SIGNING_PRIVATE_KEY_IV)
         }
+        if (keyStore.containsAlias(WRAPPING_KEY_ALIAS)) {
+            keyStore.deleteEntry(WRAPPING_KEY_ALIAS)
+        }
+    }
 
     @OptIn(ExperimentalUnsignedTypes::class)
     private suspend fun loadPrivateKey(
         cipherTextKey: String,
         ivKey: String
-    ): Result<UByteArray?> =
-        runCatching {
-            val cipherText = dataStore.getString(cipherTextKey)?.fromBase64() ?: return@runCatching null
-            val iv = dataStore.getString(ivKey)?.fromBase64() ?: return@runCatching null
-            val wrappingKey = getExistingWrappingKey() ?: return@runCatching null
-            decrypt(cipherText, iv, wrappingKey).toUByteArray()
-        }
+    ): UByteArray? {
+        val cipherText = dataStore.getString(cipherTextKey)?.fromBase64() ?: return null
+        val iv = dataStore.getString(ivKey)?.fromBase64() ?: return null
+        val wrappingKey = getExistingWrappingKey() ?: return null
+        return decrypt(cipherText, iv, wrappingKey).toUByteArray()
+    }
 
     private fun getOrCreateWrappingKey(): SecretKey =
         getExistingWrappingKey()

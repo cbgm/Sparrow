@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.identity.data.repository
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.identity.data.datasource.RemoteProfilePictureDataSource
 import com.cbgm.sparrow.feature.identity.domain.model.RemoteProfilePicture
 import com.cbgm.sparrow.feature.identity.domain.repository.RemoteProfilePictureRepository
@@ -14,9 +15,9 @@ class RemoteProfilePictureRepositoryImpl(
     }
 
     override suspend fun get(contactId: String): Result<RemoteProfilePicture> =
-        runCatching {
+        safeSuspendCall {
             require(contactId.isNotBlank()) { "Contact ID must not be blank" }
-            dataSource.get(contactId).getOrThrow()
+            dataSource.get(contactId)
         }
 
     override suspend fun save(
@@ -24,27 +25,25 @@ class RemoteProfilePictureRepositoryImpl(
         bytes: ByteArray,
         changedAtEpochMilliseconds: Long
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             require(contactId.isNotBlank()) { "Contact ID must not be blank" }
             require(bytes.isNotEmpty()) { "Remote profile picture must not be empty" }
-            dataSource
-                .save(
-                    contactId = contactId,
-                    bytes = bytes,
-                    changedAtEpochMilliseconds = changedAtEpochMilliseconds
-                ).getOrThrow()
+            dataSource.save(
+                contactId = contactId,
+                bytes = bytes,
+                changedAtEpochMilliseconds = changedAtEpochMilliseconds
+            )
         }
 
     override suspend fun remove(
         contactId: String,
         changedAtEpochMilliseconds: Long
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             require(contactId.isNotBlank()) { "Contact ID must not be blank" }
-            dataSource
-                .remove(
-                    contactId = contactId,
-                    changedAtEpochMilliseconds = changedAtEpochMilliseconds
-                ).getOrThrow()
+            dataSource.remove(
+                contactId = contactId,
+                changedAtEpochMilliseconds = changedAtEpochMilliseconds
+            )
         }
 }

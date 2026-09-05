@@ -17,30 +17,27 @@ class ContactByRoutingIdDataSource(
     private val routingIdGenerator: RoutingIdGenerator,
     private val groupRoutingDataSource: GroupRoutingDataSource
 ) {
-    suspend fun resolveContactId(routingId: String): Result<String?> =
-        runCatching {
-            require(routingId.isNotBlank()) { "Routing ID must not be blank" }
+    suspend fun resolveContactId(routingId: String): String? {
+        require(routingId.isNotBlank()) { "Routing ID must not be blank" }
 
-            if (routingId.isBootstrap()) {
-                contactRoutingIdDao.findContactIdByRoutingId(routingId)?.let { contactId ->
-                    return@runCatching contactId
-                }
+        if (routingId.isBootstrap()) {
+            contactRoutingIdDao.findContactIdByRoutingId(routingId)?.let { contactId ->
+                return contactId
             }
-
-            val contacts = contactDao.observeAll().first()
-            findMatchingContactId(routingId, contacts)?.let { contactId ->
-                persistBootstrapMapping(contactId, routingId)
-                return@runCatching contactId
-            }
-
-            if (!routingId.isBootstrap()) {
-                return@runCatching groupRoutingDataSource
-                    .resolveContactId(routingId)
-                    .getOrThrow()
-            }
-
-            createBootstrapPlaceholder(routingId)
         }
+
+        val contacts = contactDao.observeAll().first()
+        findMatchingContactId(routingId, contacts)?.let { contactId ->
+            persistBootstrapMapping(contactId, routingId)
+            return contactId
+        }
+
+        if (!routingId.isBootstrap()) {
+            return groupRoutingDataSource.resolveContactId(routingId)
+        }
+
+        return createBootstrapPlaceholder(routingId)
+    }
 
     private suspend fun findMatchingContactId(
         routingId: String,

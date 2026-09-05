@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.messaging.data.repository
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectTypingRepository
 import com.cbgm.sparrow.feature.messaging.data.datasource.ContactRoutingDataSource
 import com.cbgm.sparrow.feature.transport.websocket.WebSocketTransportClient
@@ -13,7 +14,12 @@ class DirectTypingRepositoryImpl(
     override fun observe(contactId: String): Flow<Boolean> =
         webSocketTransportClient.incomingTypingEvents
             .transform { event ->
-                val routingId = contactRoutingDataSource.resolve(contactId).getOrNull() ?: return@transform
+                val routingId =
+                    try {
+                        contactRoutingDataSource.resolve(contactId)
+                    } catch (_: Throwable) {
+                        return@transform
+                    }
                 if (event.senderId == routingId) {
                     emit(event.isTyping)
                 }
@@ -23,15 +29,11 @@ class DirectTypingRepositoryImpl(
         contactId: String,
         isTyping: Boolean
     ): Result<Unit> =
-        contactRoutingDataSource
-            .resolve(contactId)
-            .fold(
-                onSuccess = { routingId ->
-                    webSocketTransportClient.sendTypingState(
-                        recipientId = routingId,
-                        isTyping = isTyping
-                    )
-                },
-                onFailure = Result.Companion::failure
-            )
+        safeSuspendCall {
+            val routingId = contactRoutingDataSource.resolve(contactId)
+            webSocketTransportClient.sendTypingState(
+                recipientId = routingId,
+                isTyping = isTyping
+            ).getOrThrow()
+        }
 }

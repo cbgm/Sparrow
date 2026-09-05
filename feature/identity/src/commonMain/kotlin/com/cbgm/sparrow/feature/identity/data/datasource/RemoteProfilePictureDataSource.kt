@@ -20,33 +20,28 @@ class RemoteProfilePictureDataSource(
             )
         }
 
-    suspend fun get(contactId: String): Result<RemoteProfilePicture> =
-        runCatching {
-            RemoteProfilePicture(
-                contactId = contactId,
-                changedAtEpochMilliseconds = dataStore.getLong(changedAtKey(contactId)),
-                bytes = fileDataSource.readRemote(fileName(contactId))
-            )
-        }
+    suspend fun get(contactId: String): RemoteProfilePicture = RemoteProfilePicture(
+        contactId = contactId,
+        changedAtEpochMilliseconds = dataStore.getLong(changedAtKey(contactId)),
+        bytes = fileDataSource.readRemote(fileName(contactId))
+    )
 
     suspend fun save(
         contactId: String,
         bytes: ByteArray,
         changedAtEpochMilliseconds: Long
-    ): Result<Unit> =
-        runCatching {
-            fileDataSource.writeRemote(fileName(contactId), bytes)
-            dataStore.edit { putLong(changedAtKey(contactId), changedAtEpochMilliseconds) }
-        }
+    ) {
+        fileDataSource.writeRemote(fileName(contactId), bytes)
+        dataStore.edit { putLong(changedAtKey(contactId), changedAtEpochMilliseconds) }
+    }
 
     suspend fun remove(
         contactId: String,
         changedAtEpochMilliseconds: Long
-    ): Result<Unit> =
-        runCatching {
-            fileDataSource.deleteRemote(fileName(contactId))
-            dataStore.edit { putLong(changedAtKey(contactId), changedAtEpochMilliseconds) }
-        }
+    ) {
+        fileDataSource.deleteRemote(fileName(contactId))
+        dataStore.edit { putLong(changedAtKey(contactId), changedAtEpochMilliseconds) }
+    }
 
     private fun changedAtKey(contactId: String): String =
         "$REMOTE_PROFILE_PICTURE_CHANGED_AT_PREFIX$contactId"

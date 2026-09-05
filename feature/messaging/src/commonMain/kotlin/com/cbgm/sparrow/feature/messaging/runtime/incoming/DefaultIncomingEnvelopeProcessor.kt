@@ -4,6 +4,7 @@ import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.handler.IncomingMessageHandler
 import com.cbgm.sparrow.core.protocol.handler.IncomingMessageRejectedException
 import com.cbgm.sparrow.core.protocol.identity.LocalEncryptionKeyPairProvider
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.messaging.data.datasource.ContactByRoutingIdDataSource
 import com.cbgm.sparrow.feature.messaging.data.datasource.ContactRoutingReconciliationDataSource
 
@@ -20,16 +21,14 @@ class DefaultIncomingEnvelopeProcessor(
         senderRoutingId: String,
         encodedTransportPayload: String
     ): Result<IncomingEnvelopeProcessingResult> =
-        runCatching {
+        safeSuspendCall {
             val contactId =
-                contactByRoutingIdDataSource
-                    .resolveContactId(senderRoutingId)
-                    .getOrThrow()
+                contactByRoutingIdDataSource.resolveContactId(senderRoutingId)
                     ?: run {
                         logger.warn {
                             "Incoming envelope ignored: unknown sender $senderRoutingId"
                         }
-                        return@runCatching IncomingEnvelopeProcessingResult.UnknownSender
+                        return@safeSuspendCall IncomingEnvelopeProcessingResult.UnknownSender
                     }
 
             val keyPair =
@@ -48,16 +47,16 @@ class DefaultIncomingEnvelopeProcessor(
                 logger.warn {
                     "Incoming envelope rejected permanently: envelopeId=$envelopeId, reason=${error.message}"
                 }
-                return@runCatching IncomingEnvelopeProcessingResult.Rejected
+                return@safeSuspendCall IncomingEnvelopeProcessingResult.Rejected
             }
 
-            contactRoutingReconciliationDataSource
-                .reconcileKnownContacts()
-                .onFailure { error ->
-                    logger.warn {
-                        "Contact routing reconciliation failed after envelope $envelopeId: ${error.message}"
-                    }
+            try {
+                contactRoutingReconciliationDataSource.reconcileKnownContacts()
+            } catch (error: Throwable) {
+                logger.warn {
+                    "Contact routing reconciliation failed after envelope $envelopeId: ${error.message}"
                 }
+            }
 
             logger.debug {
                 "Incoming envelope stored: envelopeId=$envelopeId, contactId=$contactId"

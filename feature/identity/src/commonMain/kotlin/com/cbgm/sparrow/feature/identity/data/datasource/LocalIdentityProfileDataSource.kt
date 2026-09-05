@@ -8,34 +8,30 @@ class LocalIdentityProfileDataSource(
 ) {
     fun observePhoneNumber(): Flow<String?> = dataStore.observeString(LOCAL_PHONE_NUMBER)
 
-    suspend fun loadPhoneName(): Result<Pair<String, String>?> =
-        runCatching {
-            val phone = dataStore.getString(LOCAL_PHONE_NUMBER)
-            val name = dataStore.getString(LOCAL_NAME)
-            if (phone == null || name == null) null else phone to name
-        }
+    suspend fun loadPhoneName(): Pair<String, String>? {
+        val phone = dataStore.getString(LOCAL_PHONE_NUMBER)
+        val name = dataStore.getString(LOCAL_NAME)
+        return if (phone == null || name == null) null else phone to name
+    }
 
-    suspend fun loadPhoneNumber(): Result<String?> =
-        runCatching { dataStore.getString(LOCAL_PHONE_NUMBER) }
+    suspend fun loadPhoneNumber(): String? = dataStore.getString(LOCAL_PHONE_NUMBER)
 
     suspend fun savePhoneName(
         phoneNumber: String,
         name: String
-    ): Result<Unit> =
-        runCatching {
-            dataStore.edit {
-                putString(LOCAL_PHONE_NUMBER, phoneNumber)
-                putString(LOCAL_NAME, name)
-            }
+    ) {
+        dataStore.edit {
+            putString(LOCAL_PHONE_NUMBER, phoneNumber)
+            putString(LOCAL_NAME, name)
         }
+    }
 
-    suspend fun deletePhoneName(): Result<Unit> =
-        runCatching {
-            dataStore.edit {
-                removeString(LOCAL_PHONE_NUMBER)
-                removeString(LOCAL_NAME)
-            }
+    suspend fun deletePhoneName() {
+        dataStore.edit {
+            removeString(LOCAL_PHONE_NUMBER)
+            removeString(LOCAL_NAME)
         }
+    }
 
     private companion object {
         const val PREFIX = "identity.profile."

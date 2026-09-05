@@ -7,8 +7,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -29,20 +32,28 @@ fun SparrowAvatar(
         shape = MaterialTheme.shapes.circle,
         color = MaterialTheme.colorScheme.secondaryContainer
     ) {
-        if (pictureBytes != null && pictureBytes.isNotEmpty()) {
-            SparrowImage(
-                model = pictureBytes,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = name.toInitials(),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
             )
-        } else {
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    text = name.toInitials(),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
+
+            if (pictureBytes != null && pictureBytes.isNotEmpty()) {
+                val memoryCacheKey =
+                    remember(pictureBytes) {
+                        "avatar:${size.value}:${pictureBytes.size}:${pictureBytes.contentHashCode()}"
+                    }
+
+                SparrowImage(
+                    model = pictureBytes,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                    error = remember { ColorPainter(Color.Transparent) },
+                    memoryCacheKey = memoryCacheKey,
+                    showLoadingBackground = false
                 )
             }
         }

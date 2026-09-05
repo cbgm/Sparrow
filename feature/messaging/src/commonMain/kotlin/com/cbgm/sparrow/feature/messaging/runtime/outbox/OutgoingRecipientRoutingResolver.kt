@@ -43,22 +43,21 @@ class OutgoingRecipientRoutingResolver(
             is GroupInviteReceivedPacket,
             is GroupJoinRequestPacket,
             is GroupInviteDeclinedPacket ->
-                contactRoutingDataSource.resolveBootstrap(contactId).getOrThrow()
+                contactRoutingDataSource.resolveBootstrap(contactId)
 
             is GroupConversationDeletedPacket ->
                 if (packet.epoch == GroupConversationDeletedPacket.PENDING_GROUP_EPOCH) {
-                    contactRoutingDataSource.resolveBootstrap(contactId).getOrThrow()
+                    contactRoutingDataSource.resolveBootstrap(contactId)
                 } else {
-                    groupRoutingDataSource.resolve(packet.groupId, contactId).getOrThrow()
+                    groupRoutingDataSource.resolve(packet.groupId, contactId)
                 }
 
             is GroupMemberRemovedPacket ->
                 if (packet.epoch == GroupMemberRemovedPacket.PENDING_INVITATION_EPOCH) {
-                    contactRoutingDataSource.resolveBootstrap(contactId).getOrThrow()
+                    contactRoutingDataSource.resolveBootstrap(contactId)
                 } else {
                     groupRoutingDataSource
                         .resolveRemovedMember(packet.removedMemberSigningPublicKey)
-                        .getOrThrow()
                 }
 
             is DeliveryReceiptPacket -> resolveReceipt(packet.messageId, contactId)
@@ -66,8 +65,8 @@ class OutgoingRecipientRoutingResolver(
 
             else ->
                 packet.groupIdForRouting()
-                    ?.let { groupId -> groupRoutingDataSource.resolve(groupId, contactId).getOrThrow() }
-                    ?: contactRoutingDataSource.resolve(contactId).getOrThrow()
+                    ?.let { groupId -> groupRoutingDataSource.resolve(groupId, contactId) }
+                    ?: contactRoutingDataSource.resolve(contactId)
         }
 
     private suspend fun resolveReceipt(
@@ -76,8 +75,7 @@ class OutgoingRecipientRoutingResolver(
     ): String =
         groupRoutingDataSource
             .resolveForMessage(messageId, contactId)
-            .getOrThrow()
-            ?: contactRoutingDataSource.resolve(contactId).getOrThrow()
+            ?: contactRoutingDataSource.resolve(contactId)
 
     private fun SparrowPacket.groupIdForRouting(): String? =
         when (this) {

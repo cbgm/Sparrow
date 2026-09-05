@@ -33,13 +33,20 @@ class DeveloperErrorLogStorageDataSource(
             for (command in commands) {
                 when (command) {
                     is Command.Record -> {
-                        runCatching { persist(command.error) }
+                        try {
+                            persist(command.error)
+                        } catch (_: Throwable) {
+                            // Error logging must never terminate the storage actor.
+                        }
                     }
 
                     is Command.Clear -> {
-                        runCatching { clearPersistedErrors() }
-                            .onSuccess { command.completion.complete(Unit) }
-                            .onFailure { error -> command.completion.completeExceptionally(error) }
+                        try {
+                            clearPersistedErrors()
+                            command.completion.complete(Unit)
+                        } catch (error: Throwable) {
+                            command.completion.completeExceptionally(error)
+                        }
                     }
                 }
             }
@@ -103,9 +110,11 @@ class DeveloperErrorLogStorageDataSource(
     private fun decodeErrors(value: String?): List<DeveloperErrorDto> {
         if (value.isNullOrBlank()) return emptyList()
 
-        return runCatching {
+        return try {
             json.decodeFromString(serializer, value)
-        }.getOrDefault(emptyList())
+        } catch (_: Throwable) {
+            emptyList()
+        }
     }
 
     private sealed interface Command {
