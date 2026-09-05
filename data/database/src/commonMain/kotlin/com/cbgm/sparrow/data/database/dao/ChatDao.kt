@@ -10,6 +10,7 @@ import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.data.database.model.ConversationSummaryDto
 import com.cbgm.sparrow.data.database.model.ConversationWithMessagesDto
+import com.cbgm.sparrow.data.database.model.MessageCursorDto
 import com.cbgm.sparrow.data.database.model.UnreadIncomingMessageDto
 import kotlinx.coroutines.flow.Flow
 
@@ -127,11 +128,95 @@ interface ChatDao {
         """
         SELECT * FROM messages
         WHERE conversationId = :conversationId
-        ORDER BY createdAtEpochMilliseconds DESC
+        ORDER BY createdAtEpochMilliseconds DESC, id DESC
         LIMIT :limit
         """
     )
     fun observeRecentMessages(conversationId: String, limit: Int): Flow<List<MessageEntity>>
+
+    @Query(
+        """
+        SELECT * FROM messages
+        WHERE conversationId = :conversationId
+          AND (
+              createdAtEpochMilliseconds > :fromTimestamp
+              OR (
+                  createdAtEpochMilliseconds = :fromTimestamp
+                  AND id >= :fromMessageId
+              )
+          )
+        ORDER BY createdAtEpochMilliseconds DESC, id DESC
+        """
+    )
+    fun observeMessagesFromCursor(
+        conversationId: String,
+        fromTimestamp: Long,
+        fromMessageId: String
+    ): Flow<List<MessageEntity>>
+
+    @Query(
+        """
+        SELECT id, createdAtEpochMilliseconds
+        FROM messages
+        WHERE conversationId = :conversationId
+        ORDER BY createdAtEpochMilliseconds DESC, id DESC
+        LIMIT :limit
+        """
+    )
+    suspend fun findRecentMessageCursors(
+        conversationId: String,
+        limit: Int
+    ): List<MessageCursorDto>
+
+    @Query(
+        """
+        SELECT id, createdAtEpochMilliseconds
+        FROM messages
+        WHERE conversationId = :conversationId
+          AND (
+              createdAtEpochMilliseconds < :beforeTimestamp
+              OR (
+                  createdAtEpochMilliseconds = :beforeTimestamp
+                  AND id < :beforeMessageId
+              )
+          )
+        ORDER BY createdAtEpochMilliseconds DESC, id DESC
+        LIMIT :limit
+        """
+    )
+    suspend fun findMessageCursorsBefore(
+        conversationId: String,
+        beforeTimestamp: Long,
+        beforeMessageId: String,
+        limit: Int
+    ): List<MessageCursorDto>
+
+    @Query(
+        """
+        SELECT id, createdAtEpochMilliseconds
+        FROM messages
+        WHERE conversationId = :conversationId
+          AND id = :messageId
+        LIMIT 1
+        """
+    )
+    suspend fun findMessageCursor(
+        conversationId: String,
+        messageId: String
+    ): MessageCursorDto?
+
+    @Query(
+        """
+        SELECT * FROM messages
+        WHERE conversationId = :conversationId
+          AND transportMode IN (:transportModes)
+        ORDER BY createdAtEpochMilliseconds ASC, id ASC
+        """
+    )
+    fun observeMessagesByTransportModes(
+        conversationId: String,
+        transportModes: List<String>
+    ): Flow<List<MessageEntity>>
 
     @Query("SELECT * FROM conversation_participants WHERE conversationId = :conversationId")
     fun observeConversationParticipants(conversationId: String): Flow<List<ConversationParticipantEntity>>

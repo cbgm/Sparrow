@@ -13,6 +13,12 @@ sealed interface GroupConversationUiEvent {
 
     data object SendClicked : GroupConversationUiEvent
 
+    data object LoadOlderMessages : GroupConversationUiEvent
+
+    data class MessageHistoryTargetRequested(
+        val messageId: String
+    ) : GroupConversationUiEvent
+
     data class ReplyToMessage(
         val messageId: String
     ) : GroupConversationUiEvent

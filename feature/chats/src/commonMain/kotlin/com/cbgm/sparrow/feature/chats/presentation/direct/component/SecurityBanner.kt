@@ -95,14 +95,14 @@ internal fun SecurityBanner(
         Row(
             modifier = Modifier.padding(
                 horizontal = MaterialTheme.spacing.small,
-                vertical = MaterialTheme.spacing.directScreen.securityBannerVerticalPadding
+                vertical = MaterialTheme.spacing.directConversationScreen.securityBannerVerticalPadding
             ),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = state.icon,
                 contentDescription = null,
-                modifier = Modifier.size(Dimens.DirectScreen.invitationIconSize)
+                modifier = Modifier.size(Dimens.DirectConversationScreen.invitationIconSize)
             )
             Column(
                 modifier = Modifier.padding(start = MaterialTheme.spacing.small).weight(1f)
@@ -114,7 +114,7 @@ internal fun SecurityBanner(
                 )
                 Text(
                     text = state.description,
-                    modifier = Modifier.padding(top = MaterialTheme.spacing.directScreen.securityDescriptionTopPadding),
+                    modifier = Modifier.padding(top = MaterialTheme.spacing.directConversationScreen.securityDescriptionTopPadding),
                     style = MaterialTheme.typography.labelSmall
                 )
             }
@@ -265,7 +265,7 @@ private fun VerifiedSecurityIndicator(modifier: Modifier = Modifier) {
         Row(
             modifier = Modifier.padding(
                 horizontal = MaterialTheme.spacing.small,
-                vertical = MaterialTheme.spacing.directScreen.verifiedBannerVerticalPadding
+                vertical = MaterialTheme.spacing.directConversationScreen.verifiedBannerVerticalPadding
             ),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
@@ -273,10 +273,10 @@ private fun VerifiedSecurityIndicator(modifier: Modifier = Modifier) {
             Icon(
                 imageVector = Icons.Default.Lock,
                 contentDescription = null,
-                modifier = Modifier.size(Dimens.DirectScreen.statusIconSize),
+                modifier = Modifier.size(Dimens.DirectConversationScreen.statusIconSize),
                 tint = MaterialTheme.colorScheme.onTertiaryContainer
             )
-            Spacer(modifier = Modifier.width(MaterialTheme.spacing.directScreen.verifiedContentGap))
+            Spacer(modifier = Modifier.width(MaterialTheme.spacing.directConversationScreen.verifiedContentGap))
             Text(
                 text = stringResource(Res.string.feature_chats_chat_verified_e2ee),
                 style = MaterialTheme.typography.labelSmall,

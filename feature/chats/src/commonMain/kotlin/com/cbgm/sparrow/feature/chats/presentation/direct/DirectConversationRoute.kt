@@ -29,6 +29,7 @@ fun DirectConversationRoute(
     val composerState by viewModel.composerState.collectAsStateWithLifecycle()
     val contextState by viewModel.contextState.collectAsStateWithLifecycle()
     val typingState by viewModel.typingState.collectAsStateWithLifecycle()
+    val historyState by viewModel.historyState.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
 
     LaunchedEffect(contactId) {
@@ -60,6 +61,7 @@ fun DirectConversationRoute(
             composerState = composerState,
             contextState = contextState,
             typingState = typingState,
+            historyState = historyState,
             errorMessage = errorMessage,
             onUiEvent = viewModel::onUiEvent,
             onForwardMessageRequested = { messageId -> forwardingMessageId = messageId },

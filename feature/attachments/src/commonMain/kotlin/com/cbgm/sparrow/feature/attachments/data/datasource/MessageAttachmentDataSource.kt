@@ -118,7 +118,7 @@ class MessageAttachmentDataSource(
     }
 
     suspend fun protocolAttachments(messageId: String): List<ProtocolMessageAttachment> =
-        attachmentDao.findByMessageId(messageId).map { it.toProtocolMessageAttachment() }
+        attachmentDao.findByMessageId(messageId).map { entity -> entity.toProtocolMessageAttachment() }
 
     suspend fun cacheIncoming(messageId: String) {
         coroutineScope {
@@ -127,8 +127,8 @@ class MessageAttachmentDataSource(
                     async {
                         try {
                             loadBytes(entity.id)
-                        } catch (e: Exception) {
-                            logger.warn(e) { "Could not cache message attachment ${entity.id}" }
+                        } catch (error: Exception) {
+                            logger.warn(error) { "Could not cache message attachment ${entity.id}" }
                         }
                     }
                 }.awaitAll()
@@ -138,7 +138,7 @@ class MessageAttachmentDataSource(
     suspend fun loadBytes(attachmentId: String): ByteArray =
         withContext(Dispatchers.IO) {
             val entity = attachmentDao.findById(attachmentId) ?: error("Message attachment was not found")
-            val bytes = entity.localFileName?.let { fileDataSource.read(it) } ?: downloadAndCache(entity)
+            val bytes = entity.localFileName?.let(fileDataSource::read) ?: downloadAndCache(entity)
 
             localAttachmentDataSource.saveIncomingConversationCopy(entity, bytes)
             bytes
@@ -162,13 +162,24 @@ class MessageAttachmentDataSource(
                 attachments.toMessageAttachmentsByMessageId(fileDataSource::resolveCacheFilePath)
             }
 
+    fun observeFromMessageCursor(
+        conversationId: String,
+        fromTimestamp: Long,
+        fromMessageId: String
+    ): Flow<Map<String, List<MessageAttachment>>> =
+        attachmentDao
+            .observeFromMessageCursor(
+                conversationId = conversationId,
+                fromTimestamp = fromTimestamp,
+                fromMessageId = fromMessageId
+            ).map { attachments ->
+                attachments.toMessageAttachmentsByMessageId(fileDataSource::resolveCacheFilePath)
+            }
+
     suspend fun deleteForMessages(messageIds: List<String>) {
         if (messageIds.isEmpty()) return
         val entities = attachmentDao.findByMessageIds(messageIds)
-
-        localAttachmentDataSource
-            .delete(entities.mapTo(mutableSetOf(), MessageAttachmentEntity::id))
-            .getOrThrow()
+        localAttachmentDataSource.delete(entities.mapTo(mutableSetOf(), MessageAttachmentEntity::id)).getOrThrow()
 
         entities.forEach { entity ->
             entity.deleteCapability?.let { deleteCapability ->
@@ -191,7 +202,10 @@ class MessageAttachmentDataSource(
                 item.localFileName.let { fileDataSource.delete(it) }
                 item.deleteCapability.let { capability ->
                     blobTransferDataSource.delete(
-                        UploadedBlob(reference = item.attachment.blob, deleteCapability = capability)
+                        UploadedBlob(
+                            reference = item.attachment.blob,
+                            deleteCapability = capability
+                        )
                     )
                 }
             } catch (e: Exception) {

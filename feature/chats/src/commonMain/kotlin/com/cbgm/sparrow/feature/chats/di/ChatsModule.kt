@@ -85,6 +85,8 @@ import com.cbgm.sparrow.feature.chats.data.incoming.IncomingPacketRouter
 import com.cbgm.sparrow.feature.chats.data.incoming.ReceiptIncomingPacketRouter
 import com.cbgm.sparrow.feature.chats.data.outbox.ChatOutboxDeliveryStateRouter
 import com.cbgm.sparrow.feature.chats.data.overview.repository.ConversationOverviewRepositoryImpl
+import com.cbgm.sparrow.feature.chats.data.repository.MessageHistoryRepositoryImpl
+import com.cbgm.sparrow.feature.chats.domain.repository.MessageHistoryRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectConversationRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectMessageRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupAvatarRepository
@@ -95,11 +97,13 @@ import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupMessageReposi
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationActionRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.overview.ConversationOverviewRepository
+import com.cbgm.sparrow.feature.chats.domain.usecase.FindMessageHistoryCursorUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.ForwardDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.ForwardMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.ForwardToContactUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.ForwardToDirectConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.ForwardToGroupConversationUseCase
+import com.cbgm.sparrow.feature.chats.domain.usecase.LoadOlderMessagesUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.PrepareForwardMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.contact.EncodeContactForSharingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.DeleteDirectConversationUseCase
@@ -304,6 +308,9 @@ private fun org.koin.core.module.Module.registerRepositories() {
     singleOf(::ConversationOverviewRepositoryImpl) {
         bind<ConversationOverviewRepository>()
     }
+    singleOf(::MessageHistoryRepositoryImpl) {
+        bind<MessageHistoryRepository>()
+    }
 }
 
 private fun org.koin.core.module.Module.registerUseCases() {
@@ -313,6 +320,8 @@ private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::ForwardToGroupConversationUseCase)
     singleOf(::ForwardToContactUseCase)
     singleOf(::ForwardMessageUseCase)
+    singleOf(::LoadOlderMessagesUseCase)
+    singleOf(::FindMessageHistoryCursorUseCase)
     singleOf(::EncodeContactForSharingUseCase)
     singleOf(::GetOrCreateDirectConversationUseCase)
     singleOf(::ObserveDirectConversationUseCase)
@@ -422,7 +431,9 @@ private fun org.koin.core.module.Module.registerViewModels() {
             observeMessageSafetyAssessments = get(),
             loadMessageAttachment = get(),
             addDeviceContact = get(),
-            forwardMessageUseCase = get()
+            forwardMessageUseCase = get(),
+            loadOlderMessageHistory = get(),
+            findMessageHistoryCursor = get()
         )
     }
 
@@ -469,7 +480,9 @@ private fun org.koin.core.module.Module.registerViewModels() {
             observeMessageSafetyAssessments = get(),
             loadMessageAttachment = get(),
             addDeviceContact = get(),
-            forwardMessageUseCase = get()
+            forwardMessageUseCase = get(),
+            loadOlderMessageHistory = get(),
+            findMessageHistoryCursor = get()
         )
     }
 }

@@ -30,6 +30,7 @@ fun GroupConversationRoute(
     val contextState by viewModel.contextState.collectAsStateWithLifecycle()
     val typingState by viewModel.typingState.collectAsStateWithLifecycle()
     val membershipState by viewModel.membershipState.collectAsStateWithLifecycle()
+    val historyState by viewModel.historyState.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
 
     val newestMessageId = conversationState.messages.firstOrNull()?.id
@@ -50,6 +51,7 @@ fun GroupConversationRoute(
             contextState = contextState,
             typingState = typingState,
             membershipState = membershipState,
+            historyState = historyState,
             errorMessage = errorMessage,
             onUiEvent = viewModel::onUiEvent,
             onForwardMessageRequested = { messageId -> forwardingMessageId = messageId },

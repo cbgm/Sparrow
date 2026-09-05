@@ -62,6 +62,7 @@ import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toSharedCont
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageComposerUiState
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageContextUiState
+import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageHistoryUiState
 import com.cbgm.sparrow.feature.chats.presentation.component.model.TypingUiState
 import com.cbgm.sparrow.feature.chats.presentation.component.rememberDissolvingMessageListState
 import com.cbgm.sparrow.feature.chats.presentation.direct.component.ErrorMessage
@@ -85,6 +86,7 @@ fun DirectConversationScreen(
     composerState: MessageComposerUiState,
     contextState: MessageContextUiState<MessageBubbleUi>,
     typingState: TypingUiState,
+    historyState: MessageHistoryUiState,
     errorMessage: String?,
     onUiEvent: (DirectConversationUiEvent) -> Unit,
     onForwardMessageRequested: (String) -> Unit,
@@ -209,6 +211,11 @@ fun DirectConversationScreen(
                     innerPadding = innerPadding,
                     targetMessageId = targetMessageId,
                     selectedContextMessageId = messageContextAnchor?.messageId,
+                    historyState = historyState,
+                    onLoadOlderMessages = { onUiEvent(DirectConversationUiEvent.LoadOlderMessages) },
+                    onMessageHistoryTargetRequested = { messageId ->
+                        onUiEvent(DirectConversationUiEvent.MessageHistoryTargetRequested(messageId))
+                    },
                     onContextMessageRequested = { anchor ->
                         messageContextAnchor = anchor
                         onUiEvent(DirectConversationUiEvent.MessageContextRequested(anchor.messageId))
@@ -347,7 +354,7 @@ private fun TopBar(
                     SparrowAvatar(
                         name = uiState.contactName,
                         pictureBytes = uiState.profilePictureBytes,
-                        size = Dimens.DirectScreen.topBarAvatarSize
+                        size = Dimens.DirectConversationScreen.topBarAvatarSize
                     )
                     Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
                     Text(
@@ -415,6 +422,9 @@ private fun Content(
     innerPadding: PaddingValues,
     targetMessageId: String?,
     selectedContextMessageId: String?,
+    historyState: MessageHistoryUiState,
+    onLoadOlderMessages: () -> Unit,
+    onMessageHistoryTargetRequested: (String) -> Unit,
     onContextMessageRequested: (MessageContextAnchor) -> Unit,
     onReactionBurstRequested: (MessageReactionBurst) -> Unit,
     onRetryMessage: (String) -> Unit,
@@ -452,7 +462,10 @@ private fun Content(
             onAttachmentVisible = onAttachmentVisible,
             onAttachmentClick = onAttachmentClick,
             onContactClick = onContactClick,
-            contentPadding = innerPadding
+            contentPadding = innerPadding,
+            historyState = historyState,
+            onLoadOlderMessages = onLoadOlderMessages,
+            onMessageHistoryTargetRequested = onMessageHistoryTargetRequested
         )
     }
 }

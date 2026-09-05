@@ -35,6 +35,28 @@ interface MessageAttachmentDao {
 
     @Query(
         """
+        SELECT message_attachments.*
+        FROM message_attachments
+        INNER JOIN messages ON messages.id = message_attachments.messageId
+        WHERE messages.conversationId = :conversationId
+          AND (
+              messages.createdAtEpochMilliseconds > :fromTimestamp
+              OR (
+                  messages.createdAtEpochMilliseconds = :fromTimestamp
+                  AND messages.id >= :fromMessageId
+              )
+          )
+        ORDER BY messages.createdAtEpochMilliseconds ASC, messages.id ASC, message_attachments.position ASC
+        """
+    )
+    fun observeFromMessageCursor(
+        conversationId: String,
+        fromTimestamp: Long,
+        fromMessageId: String
+    ): Flow<List<MessageAttachmentEntity>>
+
+    @Query(
+        """
         SELECT *
         FROM message_attachments
         WHERE messageId = :messageId

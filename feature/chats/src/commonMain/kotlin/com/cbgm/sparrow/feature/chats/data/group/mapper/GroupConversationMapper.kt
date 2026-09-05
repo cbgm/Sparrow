@@ -27,9 +27,15 @@ internal fun ConversationWithMessagesDto.toGroupConversation(
     invitations: List<GroupInvitationEntity>,
     verificationRows: List<GroupVerificationPairEntity> = emptyList(),
     partsByMessageId: Map<String, List<MessagePartDto>> = emptyMap(),
-    reactionsByMessageId: Map<String, List<MessageReaction>> = emptyMap()
+    reactionsByMessageId: Map<String, List<MessageReaction>> = emptyMap(),
+    localMembershipHistory: List<MessageEntity> = messages
 ): GroupConversation {
-    val timeline = buildGroupLocalMembershipTimeline(messages, invitations)
+    val timeline =
+        buildGroupLocalMembershipTimeline(
+            messages = messages,
+            invitations = invitations,
+            localMembershipHistory = localMembershipHistory
+        )
     val visibleMessages = timeline.visibleMessages
     val statesByMessageId = recipientStates.groupBy(MessageRecipientStateEntity::messageId)
     val groupState =

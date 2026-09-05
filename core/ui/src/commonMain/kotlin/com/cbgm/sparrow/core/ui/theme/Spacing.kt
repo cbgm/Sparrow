@@ -22,8 +22,8 @@ data class Spacing(
     val importIdentityScreen: ImportIdentityScreenSpacing = ImportIdentityScreenSpacing(),
     val overviewScreen: OverviewScreenSpacing = OverviewScreenSpacing(),
     val messageList: MessageListSpacing = MessageListSpacing(),
-    val directScreen: DirectScreenSpacing = DirectScreenSpacing(),
-    val groupScreen: GroupScreenSpacing = GroupScreenSpacing(),
+    val directConversationScreen: DirectConversationScreenSpacing = DirectConversationScreenSpacing(),
+    val groupConversationScreen: GroupConversationScreenSpacing = GroupConversationScreenSpacing(),
     val groupDetailsScreen: GroupDetailsScreenSpacing = GroupDetailsScreenSpacing(),
     val messageBubble: MessageBubbleSpacing = MessageBubbleSpacing(),
     val identityScreen: IdentityScreenSpacing = IdentityScreenSpacing(),
@@ -71,14 +71,14 @@ data class MessageListSpacing(
     val horizontalPadding: Dp = 12.dp
 )
 
-data class DirectScreenSpacing(
+data class DirectConversationScreenSpacing(
     val securityBannerVerticalPadding: Dp = 10.dp,
     val securityDescriptionTopPadding: Dp = 2.dp,
     val verifiedBannerVerticalPadding: Dp = 6.dp,
     val verifiedContentGap: Dp = 6.dp
 )
 
-data class GroupScreenSpacing(
+data class GroupConversationScreenSpacing(
     val senderGap: Dp = 6.dp
 )
 
