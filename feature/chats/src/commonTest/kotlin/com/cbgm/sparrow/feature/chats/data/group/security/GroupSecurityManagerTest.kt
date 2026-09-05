@@ -70,7 +70,7 @@ class GroupSecurityManagerTest {
             manager.deleteLocalGroup(GROUP_ID).getOrThrow()
 
             assertNull(manager.isOwnedGroup(GROUP_ID).getOrThrow())
-            assertNull(keyStorage.load(GROUP_ID, EPOCH).getOrThrow())
+            assertNull(keyStorage.load(GROUP_ID, EPOCH))
         }
 
     @Test
@@ -103,7 +103,7 @@ class GroupSecurityManagerTest {
             manager.retireLocalMembership(GROUP_ID, 200L).getOrThrow()
 
             assertFalse(manager.isOwnedGroup(GROUP_ID).getOrThrow() ?: true)
-            assertNull(keyStorage.load(GROUP_ID, EPOCH).getOrThrow())
+            assertNull(keyStorage.load(GROUP_ID, EPOCH))
             assertEquals(GROUP_LEFT_ROLE, dao.findState(GROUP_ID)?.localRole)
             assertContentEquals(
                 REMOTE_SIGNING_KEY,
@@ -348,7 +348,7 @@ class GroupSecurityManagerTest {
                     localSigningPublicKey = LOCAL_SIGNING_KEY
                 ).getOrThrow()
 
-            assertEquals(null, keyStorage.load(GROUP_ID, EPOCH).getOrThrow())
+            assertEquals(null, keyStorage.load(GROUP_ID, EPOCH))
             assertEquals(null, dao.findState(GROUP_ID))
         }
 
@@ -433,7 +433,7 @@ class GroupSecurityManagerTest {
                 )
             )
             dao.upsertMemberKeys(listOf(memberKey(epoch = EPOCH)))
-            keyStorage.save(GROUP_ID, EPOCH, GROUP_KEY).getOrThrow()
+            keyStorage.save(GROUP_ID, EPOCH, GROUP_KEY)
 
             val nextEpoch = EPOCH + 1
             manager
@@ -528,7 +528,7 @@ class GroupSecurityManagerTest {
                 )
             )
         )
-        keyStorage.save(GROUP_ID, EPOCH, GROUP_KEY).getOrThrow()
+        keyStorage.save(GROUP_ID, EPOCH, GROUP_KEY)
     }
 
     private fun memberKey(epoch: Int): GroupMemberKeyEntity =
@@ -633,33 +633,30 @@ class GroupSecurityManagerTest {
             groupId: String,
             epoch: Int,
             groupKey: ByteArray
-        ): Result<Unit> =
-            runCatching {
-                values[groupId to epoch] = groupKey.copyOf()
-            }
+        ) {
+            values[groupId to epoch] = groupKey.copyOf()
+        }
 
         override suspend fun load(
             groupId: String,
             epoch: Int
-        ): Result<ByteArray?> = Result.success(values[groupId to epoch]?.copyOf())
+        ): ByteArray? = values[groupId to epoch]?.copyOf()
 
         override suspend fun deleteBefore(
             groupId: String,
             epoch: Int
-        ): Result<Unit> =
-            runCatching {
-                values.keys
-                    .filter { (storedGroupId, storedEpoch) ->
-                        storedGroupId == groupId && storedEpoch < epoch
-                    }.forEach { key -> values.remove(key) }
-            }
+        ) {
+            values.keys
+                .filter { (storedGroupId, storedEpoch) ->
+                    storedGroupId == groupId && storedEpoch < epoch
+                }.forEach { key -> values.remove(key) }
+        }
 
-        override suspend fun deleteGroup(groupId: String): Result<Unit> =
-            runCatching {
-                values.keys
-                    .filter { (storedGroupId, _) -> storedGroupId == groupId }
-                    .forEach { key -> values.remove(key) }
-            }
+        override suspend fun deleteGroup(groupId: String) {
+            values.keys
+                .filter { (storedGroupId, _) -> storedGroupId == groupId }
+                .forEach { key -> values.remove(key) }
+        }
     }
 
     private class InMemoryGroupSecurityDao : GroupSecurityDao {

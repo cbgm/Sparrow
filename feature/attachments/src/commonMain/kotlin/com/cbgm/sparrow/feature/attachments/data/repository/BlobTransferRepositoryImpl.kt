@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.attachments.data.repository
 
 import com.cbgm.sparrow.core.protocol.attachment.EncryptedBlobReference
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.attachments.data.datasource.BlobTransferDataSource
 import com.cbgm.sparrow.feature.attachments.domain.model.UploadedBlob
 import com.cbgm.sparrow.feature.attachments.domain.repository.BlobTransferRepository
@@ -12,11 +13,11 @@ class BlobTransferRepositoryImpl(
         plaintext: ByteArray,
         retentionMilliseconds: Long
     ): Result<UploadedBlob> =
-        dataSource.upload(plaintext, retentionMilliseconds)
+        safeSuspendCall { dataSource.upload(plaintext, retentionMilliseconds) }
 
     override suspend fun download(reference: EncryptedBlobReference): Result<ByteArray> =
-        dataSource.download(reference)
+        safeSuspendCall { dataSource.download(reference) }
 
     override suspend fun delete(uploadedBlob: UploadedBlob): Result<Unit> =
-        dataSource.delete(uploadedBlob)
+        safeSuspendCall { dataSource.delete(uploadedBlob) }
 }

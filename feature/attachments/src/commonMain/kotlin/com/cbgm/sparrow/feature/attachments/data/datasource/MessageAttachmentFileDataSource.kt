@@ -127,7 +127,7 @@ class MessageAttachmentFileDataSource(
         fileSystem.list(savedDirectory).firstOrNull { candidate ->
             val marker = candidate / LEGACY_CONTACT_ID_MARKER
             fileSystem.exists(marker) &&
-                runCatching { fileSystem.read(marker) { readUtf8() } }.getOrNull() == contactId
+                readUtf8OrNull(marker) == contactId
         }
 
     private fun resolveConversationDirectory(
@@ -148,7 +148,7 @@ class MessageAttachmentFileDataSource(
 
         val existingId =
             if (fileSystem.exists(preferredMarker)) {
-                runCatching { fileSystem.read(preferredMarker) { readUtf8() } }.getOrNull()
+                readUtf8OrNull(preferredMarker)
             } else {
                 null
             }
@@ -174,7 +174,14 @@ class MessageAttachmentFileDataSource(
         fileSystem.list(savedDirectory).firstOrNull { candidate ->
             val marker = candidate / CONVERSATION_ID_MARKER
             fileSystem.exists(marker) &&
-                runCatching { fileSystem.read(marker) { readUtf8() } }.getOrNull() == conversationId
+                readUtf8OrNull(marker) == conversationId
+        }
+
+    private fun readUtf8OrNull(path: Path): String? =
+        try {
+            fileSystem.read(path) { readUtf8() }
+        } catch (_: Throwable) {
+            null
         }
 
     private fun String.toSafeCachePath(): Path {

@@ -23,69 +23,65 @@ class AndroidGroupKeyDataSource(
         groupId: String,
         epoch: Int,
         groupKey: ByteArray
-    ): Result<Unit> =
-        runCatching {
-            requireGroupReference(groupId, epoch)
-            require(groupKey.size == GROUP_KEY_SIZE) { "Group key must be $GROUP_KEY_SIZE bytes" }
+    ) {
+        requireGroupReference(groupId, epoch)
+        require(groupKey.size == GROUP_KEY_SIZE) { "Group key must be $GROUP_KEY_SIZE bytes" }
 
-            val storageId = storageId(groupId, epoch)
-            val cipher =
-                Cipher.getInstance(AES_GCM_TRANSFORMATION).apply {
-                    init(Cipher.ENCRYPT_MODE, getOrCreateWrappingKey())
-                    updateAAD(storageId.encodeToByteArray())
-                }
-            val encrypted = cipher.doFinal(groupKey)
-            dataStore.edit {
-                putString(ciphertextKey(storageId), encrypted.toBase64())
-                putString(ivKey(storageId), cipher.iv.toBase64())
+        val storageId = storageId(groupId, epoch)
+        val cipher =
+            Cipher.getInstance(AES_GCM_TRANSFORMATION).apply {
+                init(Cipher.ENCRYPT_MODE, getOrCreateWrappingKey())
+                updateAAD(storageId.encodeToByteArray())
             }
+        val encrypted = cipher.doFinal(groupKey)
+        dataStore.edit {
+            putString(ciphertextKey(storageId), encrypted.toBase64())
+            putString(ivKey(storageId), cipher.iv.toBase64())
         }
+    }
 
     override suspend fun load(
         groupId: String,
         epoch: Int
-    ): Result<ByteArray?> =
-        runCatching {
-            requireGroupReference(groupId, epoch)
-            val storageId = storageId(groupId, epoch)
-            val encrypted = dataStore.getString(ciphertextKey(storageId)) ?: return@runCatching null
-            val iv = dataStore.getString(ivKey(storageId)) ?: return@runCatching null
-            val wrappingKey = getExistingWrappingKey() ?: return@runCatching null
-            val groupKey =
-                Cipher
-                    .getInstance(AES_GCM_TRANSFORMATION)
-                    .apply {
-                        init(
-                            Cipher.DECRYPT_MODE,
-                            wrappingKey,
-                            GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv.fromBase64())
-                        )
-                        updateAAD(storageId.encodeToByteArray())
-                    }.doFinal(encrypted.fromBase64())
-            check(groupKey.size == GROUP_KEY_SIZE) { "Stored group key has an invalid length" }
-            groupKey
-        }
+    ): ByteArray? {
+        requireGroupReference(groupId, epoch)
+        val storageId = storageId(groupId, epoch)
+        val encrypted = dataStore.getString(ciphertextKey(storageId)) ?: return null
+        val iv = dataStore.getString(ivKey(storageId)) ?: return null
+        val wrappingKey = getExistingWrappingKey() ?: return null
+        val groupKey =
+            Cipher
+                .getInstance(AES_GCM_TRANSFORMATION)
+                .apply {
+                    init(
+                        Cipher.DECRYPT_MODE,
+                        wrappingKey,
+                        GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv.fromBase64())
+                    )
+                    updateAAD(storageId.encodeToByteArray())
+                }.doFinal(encrypted.fromBase64())
+        check(groupKey.size == GROUP_KEY_SIZE) { "Stored group key has an invalid length" }
+        return groupKey
+    }
 
     override suspend fun deleteBefore(
         groupId: String,
         epoch: Int
-    ): Result<Unit> =
-        runCatching {
-            requireGroupReference(groupId, epoch)
-            val keys = dataStore.keys("$ENTRY_PREFIX$groupId:")
-            dataStore.edit {
-                keys
-                    .filter { key -> key.epochOrNull()?.let { storedEpoch -> storedEpoch < epoch } == true }
-                    .forEach(::removeString)
-            }
+    ) {
+        requireGroupReference(groupId, epoch)
+        val keys = dataStore.keys("$ENTRY_PREFIX$groupId:")
+        dataStore.edit {
+            keys
+                .filter { key -> key.epochOrNull()?.let { storedEpoch -> storedEpoch < epoch } == true }
+                .forEach(::removeString)
         }
+    }
 
-    override suspend fun deleteGroup(groupId: String): Result<Unit> =
-        runCatching {
-            require(groupId.isNotBlank()) { "Group ID must not be blank" }
-            val keys = dataStore.keys("$ENTRY_PREFIX$groupId:")
-            dataStore.edit { keys.forEach(::removeString) }
-        }
+    override suspend fun deleteGroup(groupId: String) {
+        require(groupId.isNotBlank()) { "Group ID must not be blank" }
+        val keys = dataStore.keys("$ENTRY_PREFIX$groupId:")
+        dataStore.edit { keys.forEach(::removeString) }
+    }
 
     private fun getOrCreateWrappingKey(): SecretKey =
         getExistingWrappingKey()

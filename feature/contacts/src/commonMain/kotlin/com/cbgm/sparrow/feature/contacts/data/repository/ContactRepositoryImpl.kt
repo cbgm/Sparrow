@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.contacts.data.repository
 
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.data.database.entity.ContactEntity
@@ -28,7 +29,7 @@ class ContactRepositoryImpl(
     private val phoneNumberNormalizer: PhoneNumberNormalizer
 ) : ContactRepository {
     override suspend fun importContact(request: ImportContactRequest): Result<Contact> =
-        runCatching {
+        safeSuspendCall {
             require(request.encryptionPublicKey.isNotEmpty()) {
                 "Encryption public key must not be empty"
             }
@@ -119,7 +120,7 @@ class ContactRepositoryImpl(
                             IdentityImportTrust.UNVERIFIED -> RemoteIdentityOrigin.LOCAL_IMPORT
                             IdentityImportTrust.VERIFIED_IN_PERSON -> RemoteIdentityOrigin.TRUSTED_QR_IMPORT
                         }
-                ).getOrThrow()
+                )
 
             loadContactOrThrow(
                 contactId = contactId,
@@ -128,7 +129,7 @@ class ContactRepositoryImpl(
         }
 
     override suspend fun importDeviceContact(request: ImportDeviceContactRequest): Result<Contact> =
-        runCatching {
+        safeSuspendCall {
             require(request.deviceContactId.isNotBlank()) {
                 "Device contact ID must not be blank"
             }
@@ -206,7 +207,7 @@ class ContactRepositoryImpl(
         }
 
     override suspend fun getContact(contactId: String): Result<Contact?> =
-        runCatching {
+        safeSuspendCall {
             require(contactId.isNotBlank()) {
                 "Contact ID must not be blank"
             }
@@ -218,7 +219,7 @@ class ContactRepositoryImpl(
         }
 
     override suspend fun findBySigningPublicKey(signingPublicKey: ByteArray): Result<Contact?> =
-        runCatching {
+        safeSuspendCall {
             require(signingPublicKey.isNotEmpty()) {
                 "Signing public key must not be empty"
             }
@@ -230,7 +231,7 @@ class ContactRepositoryImpl(
         }
 
     override suspend fun findOrCreateByPhoneNumber(phoneNumber: String): Result<Contact> =
-        runCatching {
+        safeSuspendCall {
             val value =
                 phoneNumber
                     .trim()
@@ -244,7 +245,7 @@ class ContactRepositoryImpl(
             contactDao
                 .findByNormalizedPhoneNumber(normalizedPhoneNumber = normalizedValue)
                 ?.toContact()
-                ?.let { contact -> return@runCatching contact }
+                ?.let { contact -> return@safeSuspendCall contact }
 
             val now = SystemClock.nowEpochMilliseconds()
             val contactId = IdGenerator.generate()
@@ -295,7 +296,7 @@ class ContactRepositoryImpl(
         displayName: String?,
         phoneNumber: String?
     ): Result<Contact> =
-        runCatching {
+        safeSuspendCall {
             require(contactId.isNotBlank()) {
                 "Contact ID must not be blank"
             }
@@ -349,7 +350,7 @@ class ContactRepositoryImpl(
         }
 
     override suspend fun markVerified(contactId: String): Result<Contact> =
-        runCatching {
+        safeSuspendCall {
             require(contactId.isNotBlank()) {
                 "Contact ID must not be blank"
             }
@@ -390,7 +391,7 @@ class ContactRepositoryImpl(
         }
 
     override suspend fun markKeyExchangeMutual(contactId: String): Result<Contact> =
-        runCatching {
+        safeSuspendCall {
             require(contactId.isNotBlank()) {
                 "Contact ID must not be blank"
             }
@@ -422,7 +423,7 @@ class ContactRepositoryImpl(
         }
 
     override suspend fun resetKeyExchange(contactId: String): Result<Contact> =
-        runCatching {
+        safeSuspendCall {
             require(contactId.isNotBlank()) {
                 "Contact ID must not be blank"
             }
@@ -464,7 +465,7 @@ class ContactRepositoryImpl(
         deviceContactId: String,
         status: DeviceContactLinkStatus
     ): Result<Contact?> {
-        return runCatching {
+        return safeSuspendCall {
             require(deviceContactId.isNotBlank()) {
                 "Device contact ID must not be blank"
             }
@@ -472,7 +473,7 @@ class ContactRepositoryImpl(
             val existing =
                 contactDao.findByDeviceContactId(
                     deviceContactId = deviceContactId
-                ) ?: return@runCatching null
+                ) ?: return@safeSuspendCall null
 
             contactDao.upsertContact(
                 contact =

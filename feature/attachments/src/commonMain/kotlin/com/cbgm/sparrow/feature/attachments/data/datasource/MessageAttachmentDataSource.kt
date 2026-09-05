@@ -68,7 +68,7 @@ class MessageAttachmentDataSource(
         height: Int? = null,
         durationMilliseconds: Long? = null
     ): PreparedMessageAttachmentDto {
-        val uploaded = blobTransferDataSource.upload(bytes, retentionMilliseconds).getOrThrow()
+        val uploaded = blobTransferDataSource.upload(bytes, retentionMilliseconds)
 
         val localFileName = try {
             fileDataSource.write(bytes)
@@ -145,7 +145,7 @@ class MessageAttachmentDataSource(
         }
 
     private suspend fun downloadAndCache(entity: MessageAttachmentEntity): ByteArray {
-        val bytes = blobTransferDataSource.download(entity.toEncryptedBlobReference()).getOrThrow()
+        val bytes = blobTransferDataSource.download(entity.toEncryptedBlobReference())
         val localFileName = fileDataSource.write(bytes)
         check(attachmentDao.updateLocalFileName(entity.id, localFileName) == 1) {
             "Message attachment disappeared while it was cached"
@@ -179,16 +179,18 @@ class MessageAttachmentDataSource(
     suspend fun deleteForMessages(messageIds: List<String>) {
         if (messageIds.isEmpty()) return
         val entities = attachmentDao.findByMessageIds(messageIds)
-        localAttachmentDataSource.delete(entities.mapTo(mutableSetOf(), MessageAttachmentEntity::id)).getOrThrow()
+        localAttachmentDataSource.delete(entities.mapTo(mutableSetOf(), MessageAttachmentEntity::id))
 
         entities.forEach { entity ->
             entity.deleteCapability?.let { deleteCapability ->
-                blobTransferDataSource.delete(
-                    UploadedBlob(
-                        reference = entity.toEncryptedBlobReference(),
-                        deleteCapability = deleteCapability
+                try {
+                    blobTransferDataSource.delete(
+                        UploadedBlob(
+                            reference = entity.toEncryptedBlobReference(),
+                            deleteCapability = deleteCapability
+                        )
                     )
-                ).onFailure { error ->
+                } catch (error: Throwable) {
                     logger.warn(error) { "Could not delete remote attachment blob ${entity.blobId}" }
                 }
             }

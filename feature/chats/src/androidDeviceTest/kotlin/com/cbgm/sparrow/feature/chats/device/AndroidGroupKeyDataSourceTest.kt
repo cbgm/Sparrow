@@ -22,19 +22,19 @@ class AndroidGroupKeyDataSourceTest {
             val firstKey = ByteArray(32) { 1 }
             val secondKey = ByteArray(32) { 2 }
 
-            dataSource.save(groupId, 1, firstKey).getOrThrow()
-            dataSource.save(groupId, 2, secondKey).getOrThrow()
+            dataSource.save(groupId, 1, firstKey)
+            dataSource.save(groupId, 2, secondKey)
 
-            assertContentEquals(firstKey, dataSource.load(groupId, 1).getOrThrow())
-            assertContentEquals(secondKey, dataSource.load(groupId, 2).getOrThrow())
+            assertContentEquals(firstKey, dataSource.load(groupId, 1))
+            assertContentEquals(secondKey, dataSource.load(groupId, 2))
 
-            dataSource.deleteBefore(groupId, 2).getOrThrow()
+            dataSource.deleteBefore(groupId, 2)
 
-            assertNull(dataSource.load(groupId, 1).getOrThrow())
-            assertContentEquals(secondKey, dataSource.load(groupId, 2).getOrThrow())
+            assertNull(dataSource.load(groupId, 1))
+            assertContentEquals(secondKey, dataSource.load(groupId, 2))
 
-            dataSource.deleteGroup(groupId).getOrThrow()
+            dataSource.deleteGroup(groupId)
 
-            assertNull(dataSource.load(groupId, 2).getOrThrow())
+            assertNull(dataSource.load(groupId, 2))
         }
 }

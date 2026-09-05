@@ -62,9 +62,9 @@ class IdentityRepositoryImplTest {
              * Device-test data can survive between test executions,
              * so tests should never assume storage is empty.
              */
-            privateKeyStorage.deleteIdentityPrivateKeys().getOrThrow()
+            privateKeyStorage.deleteIdentityPrivateKeys()
 
-            publicIdentityDataSource.delete().getOrThrow()
+            publicIdentityDataSource.delete()
 
             try {
                 /**
@@ -156,9 +156,9 @@ class IdentityRepositoryImplTest {
                  * We do not expose these through IdentityRepository.
                  */
                 val loadedEncryptionPrivateKey =
-                    privateKeyStorage.loadEncryptionPrivateKey().getOrThrow()
+                    privateKeyStorage.loadEncryptionPrivateKey()
 
-                val loadedSigningPrivateKey = privateKeyStorage.loadSigningPrivateKey().getOrThrow()
+                val loadedSigningPrivateKey = privateKeyStorage.loadSigningPrivateKey()
 
                 assertNotNull(
                     loadedEncryptionPrivateKey,
@@ -175,9 +175,9 @@ class IdentityRepositoryImplTest {
                  *
                  * This runs even if an assertion fails.
                  */
-                privateKeyStorage.deleteIdentityPrivateKeys().getOrThrow()
+                privateKeyStorage.deleteIdentityPrivateKeys()
 
-                publicIdentityDataSource.delete().getOrThrow()
+                publicIdentityDataSource.delete()
             }
         }
 
@@ -200,9 +200,9 @@ class IdentityRepositoryImplTest {
             /**
              * Start from a clean state.
              */
-            privateKeyStorage.deleteIdentityPrivateKeys().getOrThrow()
+            privateKeyStorage.deleteIdentityPrivateKeys()
 
-            publicIdentityDataSource.delete().getOrThrow()
+            publicIdentityDataSource.delete()
 
             try {
                 val repository =
@@ -227,13 +227,11 @@ class IdentityRepositoryImplTest {
                 val firstEncryptionPrivateKey =
                     privateKeyStorage
                         .loadEncryptionPrivateKey()
-                        .getOrThrow()
                         ?.copyOf()
 
                 val firstSigningPrivateKey =
                     privateKeyStorage
                         .loadSigningPrivateKey()
-                        .getOrThrow()
                         ?.copyOf()
 
                 assertNotNull(
@@ -287,12 +285,10 @@ class IdentityRepositoryImplTest {
                 val encryptionPrivateKeyAfterSecondAttempt =
                     privateKeyStorage
                         .loadEncryptionPrivateKey()
-                        .getOrThrow()
 
                 val signingPrivateKeyAfterSecondAttempt =
                     privateKeyStorage
                         .loadSigningPrivateKey()
-                        .getOrThrow()
 
                 assertNotNull(
                     encryptionPrivateKeyAfterSecondAttempt,
@@ -322,9 +318,9 @@ class IdentityRepositoryImplTest {
                 /**
                  * Always clean up test data.
                  */
-                privateKeyStorage.deleteIdentityPrivateKeys().getOrThrow()
+                privateKeyStorage.deleteIdentityPrivateKeys()
 
-                publicIdentityDataSource.delete().getOrThrow()
+                publicIdentityDataSource.delete()
             }
         }
 
@@ -339,8 +335,8 @@ class IdentityRepositoryImplTest {
             val privateKeyStorage = AndroidPrivateKeyStorage(dataStore = dataStore)
             val publicIdentityDataSource = SparrowDataStorePublicIdentityDataSource(dataStore = dataStore)
 
-            privateKeyStorage.deleteIdentityPrivateKeys().getOrThrow()
-            publicIdentityDataSource.delete().getOrThrow()
+            privateKeyStorage.deleteIdentityPrivateKeys()
+            publicIdentityDataSource.delete()
 
             try {
                 val keyGenerator = SodiumIdentityKeyGenerator()
@@ -351,7 +347,7 @@ class IdentityRepositoryImplTest {
                     .saveIdentityPrivateKeys(
                         encryptionPrivateKey = privateIdentity.encryptionPrivateKey,
                         signingPrivateKey = privateIdentity.signingPrivateKey
-                    ).getOrThrow()
+                    )
 
                 publicIdentityDataSource
                     .save(
@@ -359,7 +355,7 @@ class IdentityRepositoryImplTest {
                             encryptionPublicKey = unrelatedPublicIdentity.encryptionPublicKey.toByteArray(),
                             signingPublicKey = unrelatedPublicIdentity.signingPublicKey.toByteArray()
                         )
-                    ).getOrThrow()
+                    )
 
                 val repository =
                     IdentityRepositoryImpl(
@@ -376,8 +372,8 @@ class IdentityRepositoryImplTest {
                     "A public identity that does not match the stored private signing key must be incomplete"
                 )
             } finally {
-                privateKeyStorage.deleteIdentityPrivateKeys().getOrThrow()
-                publicIdentityDataSource.delete().getOrThrow()
+                privateKeyStorage.deleteIdentityPrivateKeys()
+                publicIdentityDataSource.delete()
             }
         }
 

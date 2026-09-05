@@ -23,6 +23,7 @@ import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvide
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProcessor
 import com.cbgm.sparrow.core.protocol.version.ProtocolVersion
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ContactDao
@@ -82,7 +83,7 @@ class IdentityInvitationRepositoryImpl(
     private val mutex = Mutex()
 
     override suspend fun start(contactId: String): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             require(contactId.isNotBlank()) {
                 "Contact ID must not be blank"
             }
@@ -278,7 +279,7 @@ class IdentityInvitationRepositoryImpl(
             .distinctUntilChanged()
 
     override suspend fun markViewed(direction: IdentityInvitationDirection): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             invitationDao.markDirectionViewed(
                 direction = direction.name,
                 viewedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
@@ -286,7 +287,7 @@ class IdentityInvitationRepositoryImpl(
         }
 
     override suspend fun deleteDeclinedOutgoing(invitationId: String): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             require(invitationId.isNotBlank()) { "Invitation ID must not be blank" }
             val changed =
                 invitationDao.hideByIdAndState(
@@ -339,7 +340,7 @@ class IdentityInvitationRepositoryImpl(
     }
 
     override suspend fun getContactId(invitationId: String): Result<String> =
-        runCatching {
+        safeSuspendCall {
             require(invitationId.isNotBlank()) {
                 "Invitation ID must not be blank"
             }
@@ -348,7 +349,7 @@ class IdentityInvitationRepositoryImpl(
         }
 
     override suspend fun accept(invitationId: String): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             mutex.withLock {
                 var invitation = requireInvitation(invitationId, IdentityInvitationDirection.INCOMING)
                 ensureNotExpired(invitation)
@@ -431,7 +432,7 @@ class IdentityInvitationRepositoryImpl(
                         contactId = invitation.contactId,
                         expectedRemoteEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
                         expectedRemoteSigningPublicKey = invitation.remoteSigningPublicKey
-                    ).getOrThrow()
+                    )
                 invitationDao.upsert(
                     requireNotNull(invitationDao.findById(invitationId)).copy(
                         state = IdentityHandshakeState.WAITING_FOR_READY.name,
@@ -442,7 +443,7 @@ class IdentityInvitationRepositoryImpl(
         }
 
     override suspend fun decline(invitationId: String): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             mutex.withLock {
                 val invitation = requireInvitation(invitationId, IdentityInvitationDirection.INCOMING)
                 if (invitation.state == IdentityHandshakeState.DECLINED.name) {
@@ -495,7 +496,7 @@ class IdentityInvitationRepositoryImpl(
         }
 
     override suspend fun cancelForManualSetup(contactId: String): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             require(contactId.isNotBlank()) {
                 "Contact ID must not be blank"
             }
@@ -548,7 +549,7 @@ class IdentityInvitationRepositoryImpl(
         contactId: String,
         mode: DirectIdentitySetupMode
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             require(contactId.isNotBlank()) {
                 "Contact ID must not be blank"
             }
@@ -578,7 +579,7 @@ class IdentityInvitationRepositoryImpl(
         }
 
     override suspend fun revokeDirectChatAuthorization(contactId: String): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             require(contactId.isNotBlank()) {
                 "Contact ID must not be blank"
             }
@@ -628,7 +629,7 @@ class IdentityInvitationRepositoryImpl(
         blockedContactIds: Set<String>,
         blockUnknownContactInvites: Boolean
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             mutex.withLock {
                 requirePacketId(
                     actualPacketId = packet.packetId,
@@ -830,7 +831,7 @@ class IdentityInvitationRepositoryImpl(
         context: IncomingPacketContext,
         packet: ContactInviteAcceptedPacket
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             mutex.withLock {
                 requirePacketId(
                     actualPacketId = packet.packetId,
@@ -927,13 +928,13 @@ class IdentityInvitationRepositoryImpl(
                         encryptionPublicKey = packet.responderEncryptionPublicKey,
                         signingPublicKey = packet.responderSigningPublicKey,
                         origin = RemoteIdentityOrigin.CONTACT_INVITATION
-                    ).getOrThrow()
+                    )
                 contactKeyExchangeDataSource
                     .acceptRemoteIdentityForHandshake(
                         contactId = context.contactId,
                         expectedRemoteEncryptionPublicKey = packet.responderEncryptionPublicKey,
                         expectedRemoteSigningPublicKey = packet.responderSigningPublicKey
-                    ).getOrThrow()
+                    )
                 val now = SystemClock.nowEpochMilliseconds()
                 queueReadyReplay(
                     contactId = context.contactId,
@@ -944,7 +945,7 @@ class IdentityInvitationRepositoryImpl(
                         contactId = context.contactId,
                         expectedRemoteEncryptionPublicKey = packet.responderEncryptionPublicKey,
                         expectedRemoteSigningPublicKey = packet.responderSigningPublicKey
-                    ).getOrThrow()
+                    )
 
                 invitationDao.upsert(
                     invitation.copy(
@@ -959,11 +960,11 @@ class IdentityInvitationRepositoryImpl(
                     )
                 )
 
-                contactVerificationDataSource
-                    .sendReceiptIfLocallyVerified(context.contactId)
-                    .onFailure { error ->
-                        logger.warn(error) { "Could not queue contact verification receipt" }
-                    }
+                try {
+                    contactVerificationDataSource.sendReceiptIfLocallyVerified(context.contactId)
+                } catch (error: Throwable) {
+                    logger.warn(error) { "Could not queue contact verification receipt" }
+                }
             }
         }
 
@@ -971,7 +972,7 @@ class IdentityInvitationRepositoryImpl(
         context: IncomingPacketContext,
         packet: ContactReadyPacket
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             mutex.withLock {
                 requirePacketId(
                     actualPacketId = packet.packetId,
@@ -1047,7 +1048,7 @@ class IdentityInvitationRepositoryImpl(
                         contactId = invitation.contactId,
                         expectedRemoteEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
                         expectedRemoteSigningPublicKey = invitation.remoteSigningPublicKey
-                    ).getOrThrow()
+                    )
 
                 invitationDao.upsert(
                     invitation.copy(
@@ -1059,11 +1060,11 @@ class IdentityInvitationRepositoryImpl(
                     )
                 )
 
-                contactVerificationDataSource
-                    .sendReceiptIfLocallyVerified(invitation.contactId)
-                    .onFailure { error ->
-                        logger.warn(error) { "Could not queue contact verification receipt" }
-                    }
+                try {
+                    contactVerificationDataSource.sendReceiptIfLocallyVerified(invitation.contactId)
+                } catch (error: Throwable) {
+                    logger.warn(error) { "Could not queue contact verification receipt" }
+                }
             }
         }
 
@@ -1071,7 +1072,7 @@ class IdentityInvitationRepositoryImpl(
         context: IncomingPacketContext,
         packet: ContactInviteDeclinedPacket
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             mutex.withLock {
                 require(packet.invitationId.isNotBlank()) {
                     "Invitation ID must not be blank"
@@ -1155,7 +1156,7 @@ class IdentityInvitationRepositoryImpl(
         context: IncomingPacketContext,
         packet: DirectChatAuthorizationRevokedPacket
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             mutex.withLock {
                 requirePacketId(
                     actualPacketId = packet.packetId,
@@ -1452,7 +1453,7 @@ class IdentityInvitationRepositoryImpl(
                 contactId = invitation.contactId,
                 remoteEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
                 remoteSigningPublicKey = invitation.remoteSigningPublicKey
-            ).getOrThrow()
+            )
     }
 
     private suspend fun stageIncomingInvitationIdentity(
@@ -1483,7 +1484,7 @@ class IdentityInvitationRepositoryImpl(
                 encryptionPublicKey = remoteEncryptionPublicKey,
                 signingPublicKey = remoteSigningPublicKey,
                 origin = RemoteIdentityOrigin.CONTACT_INVITATION
-            ).getOrThrow()
+            )
     }
 
     private suspend fun requireCompatiblePinnedIdentity(
@@ -1741,7 +1742,7 @@ class IdentityInvitationRepositoryImpl(
                 contactId = invitation.contactId,
                 expectedRemoteEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
                 expectedRemoteSigningPublicKey = invitation.remoteSigningPublicKey
-            ).getOrThrow()
+            )
         invitationDao.upsert(
             invitation.copy(
                 state = IdentityHandshakeState.WAITING_FOR_READY.name,

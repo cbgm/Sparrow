@@ -5,22 +5,15 @@ interface PrivateKeyStorage {
     suspend fun saveIdentityPrivateKeys(
         encryptionPrivateKey: UByteArray,
         signingPrivateKey: UByteArray
-    ): Result<Unit>
+    )
 
-    suspend fun hasIdentityPrivateKeys(): Result<Boolean>
-
-    @OptIn(ExperimentalUnsignedTypes::class)
-    suspend fun loadEncryptionPrivateKey(): Result<UByteArray?>
+    suspend fun hasIdentityPrivateKeys(): Boolean
 
     @OptIn(ExperimentalUnsignedTypes::class)
-    suspend fun loadSigningPrivateKey(): Result<UByteArray?>
+    suspend fun loadEncryptionPrivateKey(): UByteArray?
 
-    /**
-     * Deletes all locally stored encrypted identity private-key blobs.
-     *
-     * Used when:
-     * - identity creation must be rolled back
-     * - the user explicitly resets their identity later
-     */
-    suspend fun deleteIdentityPrivateKeys(): Result<Unit>
+    @OptIn(ExperimentalUnsignedTypes::class)
+    suspend fun loadSigningPrivateKey(): UByteArray?
+
+    suspend fun deleteIdentityPrivateKeys()
 }

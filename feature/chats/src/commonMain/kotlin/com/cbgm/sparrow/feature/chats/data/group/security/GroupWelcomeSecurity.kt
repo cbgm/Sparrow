@@ -4,6 +4,7 @@ import com.cbgm.sparrow.core.crypto.group.GroupCrypto
 import com.cbgm.sparrow.core.protocol.identity.LocalEncryptionKeyPair
 import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.data.database.entity.GroupSecurityStateEntity
@@ -24,7 +25,7 @@ internal class GroupWelcomeSecurity(
         localEncryptionKeyPair: LocalEncryptionKeyPair,
         localSigningPublicKey: ByteArray
     ): Result<OpenedGroupWelcomeDto> =
-        runCatching {
+        safeSuspendCall {
             val existingState = groupSecurityDao.findState(packet.groupId)
             if (existingState == null) {
                 check(packet.epoch >= INITIAL_EPOCH) {
@@ -114,7 +115,6 @@ internal class GroupWelcomeSecurity(
                 } else {
                     groupKeyDataSource
                         .load(packet.groupId, packet.epoch)
-                        .getOrThrow()
                         ?: error("Existing group key was not found")
                 }
 
@@ -132,7 +132,7 @@ internal class GroupWelcomeSecurity(
         memberKeys: List<GroupMemberKeyEntity>,
         receivedAtEpochMilliseconds: Long
     ): Result<Unit> =
-        runCatching {
+        safeSuspendCall {
             val packet = openedWelcome.packet
             val localMember =
                 packet.members.single { member ->
@@ -155,7 +155,7 @@ internal class GroupWelcomeSecurity(
                     groupId = packet.groupId,
                     epoch = packet.epoch,
                     groupKey = openedWelcome.groupKey
-                ).getOrThrow()
+                )
 
             val existingState = groupSecurityDao.findState(packet.groupId)
             val joinedState =
@@ -191,7 +191,7 @@ internal class GroupWelcomeSecurity(
                 .deleteBefore(
                     groupId = packet.groupId,
                     epoch = packet.epoch
-                ).getOrThrow()
+                )
         }
 
     private companion object {

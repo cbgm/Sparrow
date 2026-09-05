@@ -39,101 +39,98 @@ class BlobTransferDataSource(
     suspend fun upload(
         plaintext: ByteArray,
         retentionMilliseconds: Long
-    ): Result<UploadedBlob> =
-        runCatching {
-            require(plaintext.isNotEmpty()) { "Attachment blob must not be empty" }
-            require(retentionMilliseconds > 0L) { "Blob retention must be positive" }
+    ): UploadedBlob {
+        require(plaintext.isNotEmpty()) { "Attachment blob must not be empty" }
+        require(retentionMilliseconds > 0L) { "Blob retention must be positive" }
 
-            val blobId = IdGenerator.generate(prefix = "blob")
-            val readCapability = capability()
-            val deleteCapability = capability()
-            val associatedData = associatedData(blobId)
-            val encrypted = blobCipher.encrypt(plaintext, associatedData).getOrThrow()
-            check(encrypted.ciphertext.size.toLong() <= EncryptedBlobReference.MAX_BLOB_CIPHERTEXT_BYTES) {
-                "Encrypted blob exceeds the supported client size"
-            }
-            val now = SystemClock.nowEpochMilliseconds()
-            check(retentionMilliseconds <= Long.MAX_VALUE - now) { "Blob retention overflows its expiry" }
-            val expiresAt = now + retentionMilliseconds
-            val ticket =
-                webSocketTransportClient
-                    .requestBlobUploadTicket(
-                        request =
-                            GatewayBlobUploadTicketRequest(
-                                requestId = IdGenerator.generate(prefix = "blob-ticket"),
-                                blobId = blobId,
-                                maximumBytes = encrypted.ciphertext.size.toLong(),
-                                readCapabilitySha256 = cryptoHash.sha256(readCapability.encodeToByteArray())
-                                    .hex(),
-                                deleteCapabilitySha256 = cryptoHash.sha256(deleteCapability.encodeToByteArray())
-                                    .hex(),
-                                blobExpiresAtEpochMilliseconds = expiresAt
-                            ),
-                        timeoutMilliseconds = TICKET_TIMEOUT_MILLISECONDS
-                    ).getOrThrow()
-
-            val endpoint = resolveBlobEndpoint(ticket.nodeId)
-            val response =
-                httpClient.put("${endpoint.trimEnd('/')}/v1/blobs/$blobId") {
-                    bearerAuth(ticket.uploadToken)
-                    contentType(ContentType.Application.OctetStream)
-                    setBody(encrypted.ciphertext)
-                }
-            check(response.status.isSuccess()) {
-                "Blob upload failed with HTTP ${response.status.value}"
-            }
-
-            UploadedBlob(
-                reference =
-                    EncryptedBlobReference(
-                        nodeId = ticket.nodeId,
-                        blobId = blobId,
-                        readCapability = readCapability,
-                        ciphertextByteSize = encrypted.ciphertext.size.toLong(),
-                        expiresAtEpochMilliseconds = ticket.blobExpiresAtEpochMilliseconds,
-                        encryptionKey = encrypted.key,
-                        nonce = encrypted.nonce,
-                        ciphertextSha256 = cryptoHash.sha256(encrypted.ciphertext)
-                    ),
-                deleteCapability = deleteCapability
-            )
+        val blobId = IdGenerator.generate(prefix = "blob")
+        val readCapability = capability()
+        val deleteCapability = capability()
+        val associatedData = associatedData(blobId)
+        val encrypted = blobCipher.encrypt(plaintext, associatedData).getOrThrow()
+        check(encrypted.ciphertext.size.toLong() <= EncryptedBlobReference.MAX_BLOB_CIPHERTEXT_BYTES) {
+            "Encrypted blob exceeds the supported client size"
         }
-
-    suspend fun download(reference: EncryptedBlobReference): Result<ByteArray> =
-        runCatching {
-            val endpoint = resolveBlobEndpoint(reference.nodeId)
-            val response =
-                httpClient.get("${endpoint.trimEnd('/')}/v1/blobs/${reference.blobId}") {
-                    bearerAuth(reference.readCapability)
-                }
-            check(response.status.isSuccess()) {
-                "Blob download failed with HTTP ${response.status.value}"
-            }
-            val ciphertext = response.readExactly(reference.ciphertextByteSize)
-            check(cryptoHash.sha256(ciphertext).contentEquals(reference.ciphertextSha256)) {
-                "Blob ciphertext hash mismatch"
-            }
-            blobCipher
-                .decrypt(
-                    ciphertext = ciphertext,
-                    key = reference.encryptionKey,
-                    nonce = reference.nonce,
-                    associatedData = associatedData(reference.blobId)
+        val now = SystemClock.nowEpochMilliseconds()
+        check(retentionMilliseconds <= Long.MAX_VALUE - now) { "Blob retention overflows its expiry" }
+        val expiresAt = now + retentionMilliseconds
+        val ticket =
+            webSocketTransportClient
+                .requestBlobUploadTicket(
+                    request =
+                        GatewayBlobUploadTicketRequest(
+                            requestId = IdGenerator.generate(prefix = "blob-ticket"),
+                            blobId = blobId,
+                            maximumBytes = encrypted.ciphertext.size.toLong(),
+                            readCapabilitySha256 = cryptoHash.sha256(readCapability.encodeToByteArray())
+                                .hex(),
+                            deleteCapabilitySha256 = cryptoHash.sha256(deleteCapability.encodeToByteArray())
+                                .hex(),
+                            blobExpiresAtEpochMilliseconds = expiresAt
+                        ),
+                    timeoutMilliseconds = TICKET_TIMEOUT_MILLISECONDS
                 ).getOrThrow()
+
+        val endpoint = resolveBlobEndpoint(ticket.nodeId)
+        val response =
+            httpClient.put("${endpoint.trimEnd('/')}/v1/blobs/$blobId") {
+                bearerAuth(ticket.uploadToken)
+                contentType(ContentType.Application.OctetStream)
+                setBody(encrypted.ciphertext)
+            }
+        check(response.status.isSuccess()) {
+            "Blob upload failed with HTTP ${response.status.value}"
         }
 
-    suspend fun delete(uploadedBlob: UploadedBlob): Result<Unit> =
-        runCatching {
-            val reference = uploadedBlob.reference
-            val endpoint = resolveBlobEndpoint(reference.nodeId)
-            val response =
-                httpClient.delete("${endpoint.trimEnd('/')}/v1/blobs/${reference.blobId}") {
-                    bearerAuth(uploadedBlob.deleteCapability)
-                }
-            check(response.status.isSuccess() || response.status.value == HTTP_NOT_FOUND) {
-                "Blob delete failed with HTTP ${response.status.value}"
+        return UploadedBlob(
+            reference =
+                EncryptedBlobReference(
+                    nodeId = ticket.nodeId,
+                    blobId = blobId,
+                    readCapability = readCapability,
+                    ciphertextByteSize = encrypted.ciphertext.size.toLong(),
+                    expiresAtEpochMilliseconds = ticket.blobExpiresAtEpochMilliseconds,
+                    encryptionKey = encrypted.key,
+                    nonce = encrypted.nonce,
+                    ciphertextSha256 = cryptoHash.sha256(encrypted.ciphertext)
+                ),
+            deleteCapability = deleteCapability
+        )
+    }
+
+    suspend fun download(reference: EncryptedBlobReference): ByteArray {
+        val endpoint = resolveBlobEndpoint(reference.nodeId)
+        val response =
+            httpClient.get("${endpoint.trimEnd('/')}/v1/blobs/${reference.blobId}") {
+                bearerAuth(reference.readCapability)
             }
+        check(response.status.isSuccess()) {
+            "Blob download failed with HTTP ${response.status.value}"
         }
+        val ciphertext = response.readExactly(reference.ciphertextByteSize)
+        check(cryptoHash.sha256(ciphertext).contentEquals(reference.ciphertextSha256)) {
+            "Blob ciphertext hash mismatch"
+        }
+        return blobCipher
+            .decrypt(
+                ciphertext = ciphertext,
+                key = reference.encryptionKey,
+                nonce = reference.nonce,
+                associatedData = associatedData(reference.blobId)
+            ).getOrThrow()
+    }
+
+    suspend fun delete(uploadedBlob: UploadedBlob) {
+        val reference = uploadedBlob.reference
+        val endpoint = resolveBlobEndpoint(reference.nodeId)
+        val response =
+            httpClient.delete("${endpoint.trimEnd('/')}/v1/blobs/${reference.blobId}") {
+                bearerAuth(uploadedBlob.deleteCapability)
+            }
+        check(response.status.isSuccess() || response.status.value == HTTP_NOT_FOUND) {
+            "Blob delete failed with HTTP ${response.status.value}"
+        }
+    }
 
     private suspend fun HttpResponse.readExactly(expectedBytes: Long): ByteArray {
         require(expectedBytes in 1..EncryptedBlobReference.MAX_BLOB_CIPHERTEXT_BYTES) {

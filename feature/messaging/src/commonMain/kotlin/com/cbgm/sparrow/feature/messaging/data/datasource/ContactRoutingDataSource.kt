@@ -12,20 +12,16 @@ class ContactRoutingDataSource(
     private val contactRoutingIdDao: ContactRoutingIdDao,
     private val routingIdGenerator: RoutingIdGenerator
 ) {
-    suspend fun resolve(contactId: String): Result<String> =
-        runCatching {
-            val contact = requireContact(contactId)
-            if (contact.publicIdentity?.keyExchangeStatus == KeyExchangeStatus.MUTUAL.name) {
-                return@runCatching contact.canonicalRoutingId()
-            }
-
-            persistAndReturnBootstrapRoutingId(contact)
+    suspend fun resolve(contactId: String): String {
+        val contact = requireContact(contactId)
+        if (contact.publicIdentity?.keyExchangeStatus == KeyExchangeStatus.MUTUAL.name) {
+            return contact.canonicalRoutingId()
         }
 
-    suspend fun resolveBootstrap(contactId: String): Result<String> =
-        runCatching {
-            persistAndReturnBootstrapRoutingId(requireContact(contactId))
-        }
+        return persistAndReturnBootstrapRoutingId(contact)
+    }
+
+    suspend fun resolveBootstrap(contactId: String): String = persistAndReturnBootstrapRoutingId(requireContact(contactId))
 
     private suspend fun requireContact(contactId: String): ContactWithPublicIdentityDto {
         require(contactId.isNotBlank()) { "Contact ID must not be blank" }

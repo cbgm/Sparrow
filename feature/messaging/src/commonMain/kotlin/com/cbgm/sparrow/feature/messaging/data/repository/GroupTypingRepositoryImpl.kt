@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.messaging.data.repository
 
+import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupTypingRepository
 import com.cbgm.sparrow.feature.messaging.data.datasource.GroupRoutingDataSource
 import com.cbgm.sparrow.feature.transport.websocket.WebSocketTransportClient
@@ -17,10 +18,11 @@ class GroupTypingRepositoryImpl(
         webSocketTransportClient.incomingTypingEvents
             .transform { event ->
                 val routingId =
-                    groupRoutingDataSource
-                        .resolve(groupId, contactId)
-                        .getOrNull()
-                        ?: return@transform
+                    try {
+                        groupRoutingDataSource.resolve(groupId, contactId)
+                    } catch (_: Throwable) {
+                        return@transform
+                    }
                 if (event.senderId == routingId) {
                     emit(event.isTyping)
                 }
@@ -30,12 +32,8 @@ class GroupTypingRepositoryImpl(
         groupId: String,
         isTyping: Boolean
     ): Result<Unit> =
-        runCatching {
-            val recipientRoutingIds =
-                groupRoutingDataSource
-                    .resolveMembers(groupId)
-                    .getOrThrow()
-                    .values
+        safeSuspendCall {
+            val recipientRoutingIds = groupRoutingDataSource.resolveMembers(groupId).values
 
             var firstFailure: Throwable? = null
             recipientRoutingIds.forEach { routingId ->

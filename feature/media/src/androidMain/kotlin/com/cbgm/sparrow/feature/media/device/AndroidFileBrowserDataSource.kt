@@ -27,62 +27,58 @@ class AndroidFileBrowserDataSource(
             ) == PackageManager.PERMISSION_GRANTED
         }
 
-    override suspend fun setRootDirectory(reference: String): Result<Unit> =
-        runCatching {
-            require(reference.isBlank() || resolveInsideStorage(reference).isDirectory) {
-                "Directory does not exist"
-            }
+    override suspend fun setRootDirectory(reference: String) {
+        require(reference.isBlank() || resolveInsideStorage(reference).isDirectory) {
+            "Directory does not exist"
         }
+    }
 
-    override suspend fun getRootDirectory(): Result<FileBrowserDirectoryDto> =
-        runCatching {
-            requireAccess()
-            val root = storageRoot()
-            check(root.exists() && root.isDirectory) { "Internal storage is not available" }
-            FileBrowserDirectoryDto(
-                reference = root.canonicalPath,
-                displayName = "Internal storage"
+    override suspend fun getRootDirectory(): FileBrowserDirectoryDto {
+        requireAccess()
+        val root = storageRoot()
+        check(root.exists() && root.isDirectory) { "Internal storage is not available" }
+        return FileBrowserDirectoryDto(
+            reference = root.canonicalPath,
+            displayName = "Internal storage"
+        )
+    }
+
+    override suspend fun listDirectory(reference: String): List<FileBrowserEntryDto> {
+        requireAccess()
+        val directory = resolveInsideStorage(reference)
+        require(directory.isDirectory) { "Directory does not exist" }
+
+        return directory.listFiles()
+            ?.asSequence()
+            ?.filter { file -> file.canRead() }
+            ?.map { file -> file.toFileBrowserEntryDto() }
+            ?.sortedWith(
+                compareByDescending<FileBrowserEntryDto> { entry -> entry.isDirectory }
+                    .thenBy(String.CASE_INSENSITIVE_ORDER) { entry -> entry.displayName }
             )
-        }
-
-    override suspend fun listDirectory(reference: String): Result<List<FileBrowserEntryDto>> =
-        runCatching {
-            requireAccess()
-            val directory = resolveInsideStorage(reference)
-            require(directory.isDirectory) { "Directory does not exist" }
-
-            directory.listFiles()
-                ?.asSequence()
-                ?.filter { file -> file.canRead() }
-                ?.map { file -> file.toFileBrowserEntryDto() }
-                ?.sortedWith(
-                    compareByDescending<FileBrowserEntryDto> { entry -> entry.isDirectory }
-                        .thenBy(String.CASE_INSENSITIVE_ORDER) { entry -> entry.displayName }
-                )
-                ?.toList()
-                ?: emptyList()
-        }
+            ?.toList()
+            ?: emptyList()
+    }
 
     override suspend fun readFile(
         reference: String,
         maxByteSize: Long
-    ): Result<FileBrowserContentDto> =
-        runCatching {
-            requireAccess()
-            require(maxByteSize > 0L) { "Invalid file size limit" }
-            val file = resolveInsideStorage(reference)
-            require(file.isFile && file.canRead()) { "File is not readable" }
-            val size = file.length()
-            require(size <= maxByteSize) {
-                "${file.name} is too large (${size.toReadableByteSize()}, maximum ${maxByteSize.toReadableByteSize()})"
-            }
-            FileBrowserContentDto(
-                sourceReference = file.canonicalPath,
-                displayName = file.name.ifBlank { "file" },
-                mimeType = mimeType(file),
-                bytes = file.readBytes()
-            )
+    ): FileBrowserContentDto {
+        requireAccess()
+        require(maxByteSize > 0L) { "Invalid file size limit" }
+        val file = resolveInsideStorage(reference)
+        require(file.isFile && file.canRead()) { "File is not readable" }
+        val size = file.length()
+        require(size <= maxByteSize) {
+            "${file.name} is too large (${size.toReadableByteSize()}, maximum ${maxByteSize.toReadableByteSize()})"
         }
+        return FileBrowserContentDto(
+            sourceReference = file.canonicalPath,
+            displayName = file.name.ifBlank { "file" },
+            mimeType = mimeType(file),
+            bytes = file.readBytes()
+        )
+    }
 
     private fun requireAccess() {
         check(hasFileAccess()) { "File access permission is required" }

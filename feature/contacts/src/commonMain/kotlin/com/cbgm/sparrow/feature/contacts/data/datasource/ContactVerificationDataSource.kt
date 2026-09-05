@@ -28,114 +28,111 @@ class ContactVerificationDataSource(
 ) {
     private val mutex = Mutex()
 
-    suspend fun verify(contactId: String): Result<Unit> =
-        runCatching {
-            require(contactId.isNotBlank()) {
-                "Contact ID must not be blank"
-            }
-
-            mutex.withLock {
-                val contact = contactDao.findById(contactId) ?: error("Contact not found: $contactId")
-                val identity = contact.publicIdentity ?: error("Contact has no Sparrow identity")
-                val updatedAt = SystemClock.nowEpochMilliseconds()
-                val updatedRows =
-                    contactDao.updateVerificationStatusIfKeysMatch(
-                        contactId = contactId,
-                        expectedEncryptionPublicKey = identity.encryptionPublicKey,
-                        expectedSigningPublicKey = identity.signingPublicKey,
-                        verificationStatus = ContactVerificationStatus.VERIFIED.name,
-                        updatedAtEpochMilliseconds = updatedAt
-                    )
-
-                check(updatedRows == 1) {
-                    "Contact identity changed before verification was saved"
-                }
-
-                sendReceiptIfLocallyVerifiedLocked(contactId)
-            }
+    suspend fun verify(contactId: String) {
+        require(contactId.isNotBlank()) {
+            "Contact ID must not be blank"
         }
 
-    suspend fun sendReceiptIfLocallyVerified(contactId: String): Result<Unit> =
-        runCatching {
-            require(contactId.isNotBlank()) {
-                "Contact ID must not be blank"
+        mutex.withLock {
+            val contact = contactDao.findById(contactId) ?: error("Contact not found: $contactId")
+            val identity = contact.publicIdentity ?: error("Contact has no Sparrow identity")
+            val updatedAt = SystemClock.nowEpochMilliseconds()
+            val updatedRows =
+                contactDao.updateVerificationStatusIfKeysMatch(
+                    contactId = contactId,
+                    expectedEncryptionPublicKey = identity.encryptionPublicKey,
+                    expectedSigningPublicKey = identity.signingPublicKey,
+                    verificationStatus = ContactVerificationStatus.VERIFIED.name,
+                    updatedAtEpochMilliseconds = updatedAt
+                )
+
+            check(updatedRows == 1) {
+                "Contact identity changed before verification was saved"
             }
 
-            mutex.withLock {
-                sendReceiptIfLocallyVerifiedLocked(contactId)
-            }
+            sendReceiptIfLocallyVerifiedLocked(contactId)
         }
+    }
+
+    suspend fun sendReceiptIfLocallyVerified(contactId: String) {
+        require(contactId.isNotBlank()) {
+            "Contact ID must not be blank"
+        }
+
+        mutex.withLock {
+            sendReceiptIfLocallyVerifiedLocked(contactId)
+        }
+    }
 
     suspend fun receiveReceipt(
         context: IncomingPacketContext,
         packet: ContactVerificationReceiptPacket
-    ): Result<Unit> =
-        runCatching {
-            mutex.withLock {
-                check(context.transportMode == SEALED_BOX_TRANSPORT_MODE) {
-                    "Contact verification receipt must be received through encrypted transport"
-                }
-                check(packet.packetId == "contact-verification-receipt-${packet.receiptId}") {
-                    "Verification receipt packet ID does not match its receipt ID"
-                }
-                require(
-                    packet.verifiedAtEpochMilliseconds <=
-                        context.receivedAtEpochMilliseconds + MAX_CLOCK_SKEW_MILLISECONDS
-                ) {
-                    "Verification receipt was created too far in the future"
-                }
+    ) {
+        mutex.withLock {
+            check(context.transportMode == SEALED_BOX_TRANSPORT_MODE) {
+                "Contact verification receipt must be received through encrypted transport"
+            }
+            check(packet.packetId == "contact-verification-receipt-${packet.receiptId}") {
+                "Verification receipt packet ID does not match its receipt ID"
+            }
+            require(
+                packet.verifiedAtEpochMilliseconds <=
+                    context.receivedAtEpochMilliseconds + MAX_CLOCK_SKEW_MILLISECONDS
+            ) {
+                "Verification receipt was created too far in the future"
+            }
 
-                val contact = contactDao.findById(context.contactId) ?: error("Contact was not found")
-                val identity = contact.publicIdentity ?: error("Contact has no Sparrow identity")
+            val contact = contactDao.findById(context.contactId) ?: error("Contact was not found")
+            val identity = contact.publicIdentity ?: error("Contact has no Sparrow identity")
 
-                check(identity.keyExchangeStatus == KeyExchangeStatus.MUTUAL.name) {
-                    "Verification receipt requires mutual key exchange"
-                }
-                check(identity.encryptionPublicKey.contentEquals(packet.senderEncryptionPublicKey)) {
-                    "Verification receipt sender encryption key does not match the contact"
-                }
-                check(identity.signingPublicKey.contentEquals(packet.senderSigningPublicKey)) {
-                    "Verification receipt sender signing key does not match the contact"
-                }
+            check(identity.keyExchangeStatus == KeyExchangeStatus.MUTUAL.name) {
+                "Verification receipt requires mutual key exchange"
+            }
+            check(identity.encryptionPublicKey.contentEquals(packet.senderEncryptionPublicKey)) {
+                "Verification receipt sender encryption key does not match the contact"
+            }
+            check(identity.signingPublicKey.contentEquals(packet.senderSigningPublicKey)) {
+                "Verification receipt sender signing key does not match the contact"
+            }
 
-                val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
-                check(localIdentity.encryptionPublicKey.contentEquals(packet.verifiedEncryptionPublicKey)) {
-                    "Verification receipt refers to a different local encryption key"
-                }
-                check(localIdentity.signingPublicKey.contentEquals(packet.verifiedSigningPublicKey)) {
-                    "Verification receipt refers to a different local signing key"
-                }
+            val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
+            check(localIdentity.encryptionPublicKey.contentEquals(packet.verifiedEncryptionPublicKey)) {
+                "Verification receipt refers to a different local encryption key"
+            }
+            check(localIdentity.signingPublicKey.contentEquals(packet.verifiedSigningPublicKey)) {
+                "Verification receipt refers to a different local signing key"
+            }
 
-                val payload =
-                    payloadEncoder.encodeReceipt(
-                        packetId = packet.packetId,
-                        version = packet.version,
-                        receiptId = packet.receiptId,
-                        verifiedAtEpochMilliseconds = packet.verifiedAtEpochMilliseconds,
-                        senderEncryptionPublicKey = packet.senderEncryptionPublicKey,
-                        senderSigningPublicKey = packet.senderSigningPublicKey,
-                        verifiedEncryptionPublicKey = packet.verifiedEncryptionPublicKey,
-                        verifiedSigningPublicKey = packet.verifiedSigningPublicKey
-                    )
+            val payload =
+                payloadEncoder.encodeReceipt(
+                    packetId = packet.packetId,
+                    version = packet.version,
+                    receiptId = packet.receiptId,
+                    verifiedAtEpochMilliseconds = packet.verifiedAtEpochMilliseconds,
+                    senderEncryptionPublicKey = packet.senderEncryptionPublicKey,
+                    senderSigningPublicKey = packet.senderSigningPublicKey,
+                    verifiedEncryptionPublicKey = packet.verifiedEncryptionPublicKey,
+                    verifiedSigningPublicKey = packet.verifiedSigningPublicKey
+                )
 
-                detachedSignatureCrypto
-                    .verify(payload, identity.signingPublicKey, packet.signature)
-                    .getOrThrow()
+            detachedSignatureCrypto
+                .verify(payload, identity.signingPublicKey, packet.signature)
+                .getOrThrow()
 
-                val updatedRows =
-                    contactDao.markVerifiedByContactIfKeysMatch(
-                        contactId = context.contactId,
-                        expectedEncryptionPublicKey = packet.senderEncryptionPublicKey,
-                        expectedSigningPublicKey = packet.senderSigningPublicKey,
-                        mutualStatus = KeyExchangeStatus.MUTUAL.name,
-                        updatedAtEpochMilliseconds = context.receivedAtEpochMilliseconds
-                    )
+            val updatedRows =
+                contactDao.markVerifiedByContactIfKeysMatch(
+                    contactId = context.contactId,
+                    expectedEncryptionPublicKey = packet.senderEncryptionPublicKey,
+                    expectedSigningPublicKey = packet.senderSigningPublicKey,
+                    mutualStatus = KeyExchangeStatus.MUTUAL.name,
+                    updatedAtEpochMilliseconds = context.receivedAtEpochMilliseconds
+                )
 
-                check(updatedRows == 1) {
-                    "Contact identity changed before verification receipt was applied"
-                }
+            check(updatedRows == 1) {
+                "Contact identity changed before verification receipt was applied"
             }
         }
+    }
 
     private suspend fun sendReceiptIfLocallyVerifiedLocked(contactId: String) {
         val contact = contactDao.findById(contactId) ?: error("Contact not found: $contactId")

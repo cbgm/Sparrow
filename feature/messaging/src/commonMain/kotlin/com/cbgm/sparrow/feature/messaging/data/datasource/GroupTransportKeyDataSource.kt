@@ -30,26 +30,25 @@ class GroupTransportKeyDataSource(
     suspend fun resolveEncryptionPublicKey(
         packet: SparrowPacket,
         contactId: String
-    ): Result<ByteArray?> =
-        runCatching {
-            require(contactId.isNotBlank()) { "Contact ID must not be blank" }
-            val groupId = resolveGroupId(packet) ?: return@runCatching null
-            if (
-                packet is GroupMemberRemovedPacket &&
-                packet.epoch > GroupMemberRemovedPacket.PENDING_INVITATION_EPOCH
-            ) {
-                return@runCatching groupSecurityDao
-                    .findLatestMemberKey(groupId, contactId)
-                    ?.encryptionPublicKey
-                    ?.copyOf()
-            }
-
-            val state = groupSecurityDao.findState(groupId) ?: return@runCatching null
-            groupSecurityDao
-                .findMemberKey(groupId, state.currentEpoch, contactId)
+    ): ByteArray? {
+        require(contactId.isNotBlank()) { "Contact ID must not be blank" }
+        val groupId = resolveGroupId(packet) ?: return null
+        if (
+            packet is GroupMemberRemovedPacket &&
+            packet.epoch > GroupMemberRemovedPacket.PENDING_INVITATION_EPOCH
+        ) {
+            return groupSecurityDao
+                .findLatestMemberKey(groupId, contactId)
                 ?.encryptionPublicKey
                 ?.copyOf()
         }
+
+        val state = groupSecurityDao.findState(groupId) ?: return null
+        return groupSecurityDao
+            .findMemberKey(groupId, state.currentEpoch, contactId)
+            ?.encryptionPublicKey
+            ?.copyOf()
+    }
 
     private suspend fun resolveGroupId(packet: SparrowPacket): String? =
         packet.groupIdOrNull()
