@@ -38,6 +38,13 @@ sealed interface MessagePartUi {
         val text: String,
         val isContentFailed: Boolean
     ) : MessagePartUi
+
+    data class Voice(
+        val durationMilliseconds: Long,
+        val playbackPositionMilliseconds: Long = 0L,
+        val isPlaying: Boolean = false,
+        val waveform: List<Float> = emptyList()
+    )
 }
 
 enum class ImageVideoTypeUi {

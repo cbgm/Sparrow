@@ -24,6 +24,7 @@ data class MessageBubbleUi(
     val imageVideoParts: List<MessagePartUi.ImageVideo> = emptyList(),
     val locationPart: MessagePartUi.Location? = null,
     val contactPart: MessagePartUi.Contact? = null,
+    val voicePart: MessagePartUi.Voice? = null,
     val textPart: MessagePartUi.Text? = null
 )
 

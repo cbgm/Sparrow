@@ -22,6 +22,7 @@ import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.presentation.component.AttachmentBar
 import com.cbgm.sparrow.feature.chats.presentation.component.model.ComposerPreviewUi
+import com.cbgm.sparrow.feature.chats.presentation.component.model.VoiceComposerUiState
 import com.cbgm.sparrow.feature.media.presentation.component.MediaSelectionPreview
 import com.cbgm.sparrow.feature.media.presentation.component.previewMediaSelections
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
@@ -66,12 +67,14 @@ fun MessageControl(
 ) {
     var isAttachmentBarVisible by remember { mutableStateOf(false) }
     var locationProgressWasVisible by remember { mutableStateOf(false) }
+    var isVoiceComposerVisible by remember { mutableStateOf(false) }
 
     val isEditing = state.composerPreview?.type == ComposerPreviewUi.Type.EDIT
 
     LaunchedEffect(isEditing) {
         if (isEditing) {
             isAttachmentBarVisible = false
+            isVoiceComposerVisible = false
         }
     }
 
@@ -120,31 +123,49 @@ fun MessageControl(
                     modifier = Modifier.padding(bottom = MaterialTheme.spacing.base)
                 )
             }
-            MediaSelectionPreview(
-                media = state.selectedMedia,
-                onClick = actions.onSelectionClick,
-                onRemove = actions.onMediaRemove,
-                modifier = Modifier.padding(
-                    start = basePaddingHorizontal,
-                    end = basePaddingHorizontal,
-                    bottom = MaterialTheme.spacing.base
+            if (!isVoiceComposerVisible) {
+                MediaSelectionPreview(
+                    media = state.selectedMedia,
+                    onClick = actions.onSelectionClick,
+                    onRemove = actions.onMediaRemove,
+                    modifier = Modifier.padding(
+                        start = basePaddingHorizontal,
+                        end = basePaddingHorizontal,
+                        bottom = MaterialTheme.spacing.base
+                    )
                 )
-            )
-            MessageInput(
-                value = state.messageText,
-                onValueChange = actions.onValueChange,
-                onSendClick = actions.onSendClick,
-                inputEnabled = state.isInputEnabled,
-                sendEnabled = state.isSendEnabled,
-                hasAttachments = state.selectedMedia.isNotEmpty(),
-                attachmentsEnabled = !isEditing,
-                isEditing = isEditing,
-                onAttachmentClick = { isAttachmentBarVisible = !isAttachmentBarVisible },
-                isAttachmentVisible = isAttachmentBarVisible,
-                modifier = Modifier.padding(horizontal = basePaddingHorizontal)
-            )
 
-            if (isAttachmentBarVisible) {
+                MessageInput(
+                    value = state.messageText,
+                    onValueChange = actions.onValueChange,
+                    onSendClick = actions.onSendClick,
+                    onVoiceClick = {
+                        isAttachmentBarVisible = false
+                        isVoiceComposerVisible = true
+                    },
+                    inputEnabled = state.isInputEnabled,
+                    sendEnabled = state.isSendEnabled,
+                    hasAttachments = state.selectedMedia.isNotEmpty(),
+                    attachmentsEnabled = !isEditing,
+                    isEditing = isEditing,
+                    onAttachmentClick = { isAttachmentBarVisible = !isAttachmentBarVisible },
+                    isAttachmentVisible = isAttachmentBarVisible,
+                    modifier = Modifier.padding(horizontal = basePaddingHorizontal)
+                )
+            } else {
+                VoiceMessageInput(
+                    state = VoiceComposerUiState(),
+                    inputEnabled = state.isInputEnabled,
+                    onRecordClick = {},
+                    onStopClick = {},
+                    onPlayPauseClick = {},
+                    onSendClick = {},
+                    onCancelClick = { isVoiceComposerVisible = false },
+                    modifier = Modifier.padding(horizontal = basePaddingHorizontal)
+                )
+            }
+
+            if (isAttachmentBarVisible && !isVoiceComposerVisible) {
                 AttachmentBar(
                     onClickCamera = {
                         isAttachmentBarVisible = false

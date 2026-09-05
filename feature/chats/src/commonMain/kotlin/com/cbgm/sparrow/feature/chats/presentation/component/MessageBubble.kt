@@ -86,6 +86,7 @@ internal fun MessageBubble(
     onAttachmentVisible: (String) -> Unit = {},
     onAttachmentClick: (String) -> Unit = {},
     onContactClick: (SharedContact) -> Unit = {},
+    onVoicePlayPauseClick: (String) -> Unit = {},
     onReplyPreviewClick: (String) -> Unit = {},
     onContextMessageRequested: (MessageContextAnchor) -> Unit = {},
     onReactionsClick: (SparrowOverlayAnchor) -> Unit = {},
@@ -118,6 +119,7 @@ internal fun MessageBubble(
             onAttachmentVisible = onAttachmentVisible,
             onAttachmentClick = onAttachmentClick,
             onContactClick = onContactClick,
+            onVoicePlayPauseClick = onVoicePlayPauseClick,
             onReplyPreviewClick = onReplyPreviewClick,
             onLongPress = onLongPress,
             onReactionsClick = onReactionsClick,
@@ -148,6 +150,7 @@ private fun MessageBubbleContent(
     onAttachmentVisible: (String) -> Unit,
     onAttachmentClick: (String) -> Unit,
     onContactClick: (SharedContact) -> Unit,
+    onVoicePlayPauseClick: (String) -> Unit,
     onReplyPreviewClick: (String) -> Unit,
     onLongPress: () -> Unit,
     onReactionsClick: (SparrowOverlayAnchor) -> Unit,
@@ -184,6 +187,7 @@ private fun MessageBubbleContent(
                     onAttachmentVisible = onAttachmentVisible,
                     onAttachmentClick = onAttachmentClick,
                     onContactClick = onContactClick,
+                    onVoicePlayPauseClick = onVoicePlayPauseClick,
                     onReplyPreviewClick = onReplyPreviewClick,
                     onLongPress = onLongPress,
                     onSafetyDetailsClick = {
@@ -248,9 +252,10 @@ private fun SenderLabel(message: MessageBubbleUi) {
     )
 }
 
-private enum class PrimaryContent { CONTACT, LOCATION, IMAGE_VIDEO, FILE, TEXT, NONE }
+private enum class PrimaryContent { VOICE, CONTACT, LOCATION, IMAGE_VIDEO, FILE, TEXT, NONE }
 
 private fun MessageBubbleUi.primaryContent(showTextBubble: Boolean): PrimaryContent = when {
+    voicePart != null -> PrimaryContent.VOICE
     contactPart != null -> PrimaryContent.CONTACT
     locationPart != null -> PrimaryContent.LOCATION
     imageVideoParts.isNotEmpty() -> PrimaryContent.IMAGE_VIDEO
@@ -268,12 +273,14 @@ private fun BubbleBody(
     onAttachmentVisible: (String) -> Unit = {},
     onAttachmentClick: (String) -> Unit = {},
     onContactClick: (SharedContact) -> Unit = {},
+    onVoicePlayPauseClick: (String) -> Unit = {},
     onReplyPreviewClick: (String) -> Unit = {},
     onLongPress: () -> Unit = {},
     onSafetyDetailsClick: () -> Unit = {}
 ) {
     val showTextBubble =
-        message.locationPart == null &&
+        message.voicePart == null &&
+            message.locationPart == null &&
             message.contactPart == null &&
             (state.text.isNotBlank() || state.isContentFailed || safetyWarning != null)
 
@@ -286,6 +293,22 @@ private fun BubbleBody(
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro),
         horizontalAlignment = if (message.isMine) Alignment.End else Alignment.Start
     ) {
+        message.voicePart?.let { voicePart ->
+            MessageBubbleSurface(
+                message = message,
+                state = state,
+                isSearchHighlighted = isSearchHighlighted,
+                reply = replyFor(PrimaryContent.VOICE),
+                onReplyPreviewClick = onReplyPreviewClick,
+                onLongPress = onLongPress
+            ) {
+                VoiceMessageBubbleBody(
+                    voice = voicePart,
+                    onPlayPauseClick = { onVoicePlayPauseClick(message.id) }
+                )
+            }
+        }
+
         message.contactPart?.let { contactPart ->
             MessageBubbleSurface(
                 message = message,

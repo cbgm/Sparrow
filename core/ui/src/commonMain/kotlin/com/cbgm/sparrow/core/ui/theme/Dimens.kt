@@ -97,11 +97,11 @@ object Dimens {
     }
 
     object MessageInput {
-        val buttonWidth = 42.dp
+        val sendButtonWidth = 42.dp
         val buttonHeight = 29.dp
+        val composerHeight = 30.5.dp
         val overlap = 10.dp
-        val attachmentIconSize = 16.dp
-        val sendIconSize = 18.dp
+        val iconSize = 16.dp
     }
 
     object MessageAttachment {

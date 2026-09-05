@@ -1,30 +1,22 @@
 package com.cbgm.sparrow.feature.chats.presentation.component
 
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Attachment
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -36,28 +28,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.constrainHeight
-import androidx.compose.ui.unit.constrainWidth
-import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
-import com.cbgm.sparrow.core.ui.theme.messageInput
 import com.cbgm.sparrow.core.ui.theme.spacing
-
-private const val ShapeAnimationDuration = 220
 
 @Composable
 internal fun MessageInput(
     value: String,
     onValueChange: (String) -> Unit,
     onSendClick: () -> Unit,
+    onVoiceClick: () -> Unit,
     inputEnabled: Boolean,
     sendEnabled: Boolean,
     hasAttachments: Boolean,
@@ -71,7 +55,7 @@ internal fun MessageInput(
 
     val isMultiline = textLineCount > 1
 
-    val buttonWidth = Dimens.MessageInput.buttonWidth
+    val buttonWidth = Dimens.MessageInput.sendButtonWidth
     val buttonHeight = Dimens.MessageInput.buttonHeight
 
     Row(
@@ -83,29 +67,18 @@ internal fun MessageInput(
             .imePadding(),
         verticalAlignment = Alignment.Bottom
     ) {
-        FilledIconButton(
+        RoundedInputButton(
             onClick = onAttachmentClick,
             enabled = attachmentsEnabled,
             modifier = Modifier
-                .padding(end = MaterialTheme.spacing.base)
-                .requiredSize(buttonHeight)
-                .align(Alignment.Bottom),
-            shape = CircleShape,
-            colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
-            )
-        ) {
-            Icon(
-                imageVector = if (!isAttachmentVisible) {
-                    Icons.Filled.AttachFile
-                } else {
-                    Icons.Filled.Attachment
-                },
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(Dimens.MessageInput.attachmentIconSize)
-            )
-        }
+                .padding(end = MaterialTheme.spacing.base),
+            icon = if (!isAttachmentVisible) {
+                Icons.Filled.AttachFile
+            } else {
+                Icons.Filled.Attachment
+            }
+        )
+
         MessageField(
             messageText = value,
             onMessageTextChanged = onValueChange,
@@ -128,6 +101,12 @@ internal fun MessageInput(
                     Alignment.CenterVertically
                 }
             )
+        )
+        VoiceButton(
+            buttonHeight = buttonHeight,
+            onVoiceClick = onVoiceClick,
+            enabled = !isEditing,
+            modifier = Modifier.align(Alignment.Bottom)
         )
     }
 }
@@ -171,125 +150,29 @@ private fun MessageField(
 }
 
 @Composable
-private fun SendButton(
-    buttonWidth: Dp,
+internal fun VoiceButton(
     buttonHeight: Dp,
-    isRound: Boolean,
-    onSendClick: () -> Unit,
+    onVoiceClick: () -> Unit,
     enabled: Boolean,
-    isEditing: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val messageInputShapes = MaterialTheme.shapes.messageInput
-
-    val morphProgress by animateFloatAsState(
-        targetValue =
-            if (isRound) {
-                1f
-            } else {
-                0f
-            },
-        animationSpec =
-            tween(
-                durationMillis = ShapeAnimationDuration
-            ),
-        label = "SendButtonMorph"
-    )
-
-    val iconAreaWidth by animateDpAsState(
-        targetValue =
-            if (isRound) {
-                buttonHeight
-            } else {
-                buttonWidth
-            },
-        animationSpec =
-            tween(
-                durationMillis = ShapeAnimationDuration
-            ),
-        label = "SendIconAreaWidth"
-    )
-
-    SendButtonSlot(
-        buttonWidth = buttonWidth,
-        buttonHeight = buttonHeight,
+    FilledIconButton(
+        onClick = onVoiceClick,
+        enabled = enabled,
         modifier = modifier
-    ) {
-        Box(
-            modifier = Modifier
-                .width(buttonWidth)
-                .height(buttonHeight)
-                .clip(
-                    MorphingSendButtonShape(
-                        progress = morphProgress,
-                        notchRadius = messageInputShapes.buttonNotchRadius,
-                        rightCornerRadius = messageInputShapes.buttonRightCornerRadius
-                    )
-                )
-                .background(MaterialTheme.colorScheme.surfaceContainer)
-                .clickable(
-                    enabled = enabled,
-                    onClick = onSendClick
-                ),
-            contentAlignment = Alignment.CenterEnd
-        ) {
-            Box(
-                modifier = Modifier
-                    .width(iconAreaWidth)
-                    .height(buttonHeight),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = if (isEditing) Icons.Default.Check else Icons.AutoMirrored.Filled.Send,
-                    contentDescription = null,
-                    tint =
-                        if (enabled) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.primary.copy(alpha = Alpha.MessageInput.buttonBackground)
-                        },
-                    modifier = Modifier
-                        .padding(start = MaterialTheme.spacing.base.div(2))
-                        .size(Dimens.MessageInput.sendIconSize)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SendButtonSlot(
-    buttonWidth: Dp,
-    buttonHeight: Dp,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    Layout(
-        content = content,
-        modifier = modifier
-            .width(buttonWidth)
-            .height(buttonHeight)
-    ) { measurables, constraints ->
-
-        val canvasWidthPx = (buttonWidth).roundToPx()
-
-        val buttonHeightPx = buttonHeight.roundToPx()
-
-        val slotWidthPx = (buttonWidth).roundToPx()
-
-        val placeable = measurables.single().measure(
-            Constraints.fixed(
-                width = canvasWidthPx,
-                height = buttonHeightPx
-            )
+            .padding(start = MaterialTheme.spacing.base)
+            .requiredSize(buttonHeight),
+        shape = CircleShape,
+        colors = IconButtonDefaults.filledIconButtonColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
-
-        layout(
-            width = constraints.constrainWidth(slotWidthPx),
-            height = constraints.constrainHeight(buttonHeightPx)
-        ) {
-            placeable.place(x = 0, y = 0)
-        }
+    ) {
+        Icon(
+            imageVector = Icons.Default.Mic,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(Dimens.MessageInput.iconSize)
+        )
     }
 }
 
@@ -301,6 +184,7 @@ private fun MessageInputPreview() {
             value = "Hello",
             onValueChange = {},
             onSendClick = {},
+            onVoiceClick = {},
             inputEnabled = true,
             sendEnabled = true,
             hasAttachments = false,
@@ -320,6 +204,7 @@ private fun MultilineMessageInputPreview() {
                     "onto a second line.",
             onValueChange = {},
             onSendClick = {},
+            onVoiceClick = {},
             onAttachmentClick = {},
             isAttachmentVisible = true,
             inputEnabled = true,
