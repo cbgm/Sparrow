@@ -29,10 +29,13 @@ private fun MessageAttachmentEntity.toMessageAttachment(
         height = height,
         durationMilliseconds = durationMilliseconds,
         localFilePath =
-            if (attachmentType == MessageAttachmentType.FILE) {
-                localFileName?.let(resolveLocalFilePath)
-            } else {
-                null
+            when (attachmentType) {
+                MessageAttachmentType.IMAGE,
+                MessageAttachmentType.VIDEO,
+                MessageAttachmentType.FILE -> localFileName?.let(resolveLocalFilePath)
+
+                MessageAttachmentType.LOCATION,
+                MessageAttachmentType.CONTACT -> null
             }
     )
 }
