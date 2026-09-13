@@ -202,29 +202,10 @@ private fun TranscriptionHint(state: VoiceTranscriptionState) {
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(start = MaterialTheme.spacing.base)
     ) {
-        when (state) {
-            is VoiceTranscriptionState.Transcribing -> {
-                val progressPercent = state.progressPercent
-                if (progressPercent != null) {
-                    CircularProgressIndicator(
-                        progress = { progressPercent / 100f },
-                        modifier = Modifier.size(Dimens.MessageBubble.progressSize),
-                        strokeWidth = Dimens.MessageBubble.progressStrokeWidth
-                    )
-                } else {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(Dimens.MessageBubble.progressSize),
-                        strokeWidth = Dimens.MessageBubble.progressStrokeWidth
-                    )
-                }
-            }
-
-            else ->
-                CircularProgressIndicator(
-                    modifier = Modifier.size(Dimens.MessageBubble.progressSize),
-                    strokeWidth = Dimens.MessageBubble.progressStrokeWidth
-                )
-        }
+        CircularProgressIndicator(
+            modifier = Modifier.size(Dimens.MessageBubble.progressSize),
+            strokeWidth = Dimens.MessageBubble.progressStrokeWidth
+        )
         Text(
             text =
                 when (state) {

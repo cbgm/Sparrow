@@ -9,8 +9,12 @@ import com.cbgm.sparrow.feature.voice.domain.model.VoiceMessageTarget
 import com.cbgm.sparrow.feature.voice.domain.model.VoiceTranscriptionState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -37,29 +41,56 @@ class TranscribeVoiceMessageUseCase(
             }
 
             phase = VoiceTranscriptionPhase.TRANSCRIBING
-            var lastProgressPercent = 0
-            send(VoiceTranscriptionState.Transcribing())
+            val nativeProgress = MutableStateFlow(0)
+            var displayedProgress = 1
+            send(VoiceTranscriptionState.Transcribing(progressPercent = displayedProgress))
 
-            val transcript = runPhase(phase, TRANSCRIPTION_TIMEOUT_MILLISECONDS) {
-                transcribeVoiceAudio(
-                    bytes = bytes,
-                    onProgress = { progressPercent ->
-                        val normalizedProgress = progressPercent.coerceIn(0, 100)
-                        if (normalizedProgress > 0 && normalizedProgress != lastProgressPercent) {
-                            lastProgressPercent = normalizedProgress
-                            trySend(
-                                VoiceTranscriptionState.Transcribing(
-                                    progressPercent = normalizedProgress
-                                )
-                            )
+            val progressJob = launch {
+                while (true) {
+                    delay(progressTickDelayMilliseconds(displayedProgress).milliseconds)
+
+                    val checkpoint = nativeProgress.value.coerceIn(0, MAX_IN_FLIGHT_PROGRESS_PERCENT)
+                    val nextProgress =
+                        if (checkpoint > displayedProgress) {
+                            checkpoint
+                        } else {
+                            (displayedProgress + 1).coerceAtMost(MAX_IN_FLIGHT_PROGRESS_PERCENT)
                         }
+
+                    if (nextProgress != displayedProgress) {
+                        displayedProgress = nextProgress
+                        send(
+                            VoiceTranscriptionState.Transcribing(
+                                progressPercent = displayedProgress
+                            )
+                        )
                     }
-                ).getOrThrow()
+
+                    // whisper.cpp's real progress callback advances only when an internal
+                    // audio seek window completes. Interpolate slowly between checkpoints
+                    // so the UI never looks frozen, while reserving 100% for completion.
+                }
             }
 
-            if (lastProgressPercent < 100) {
-                send(VoiceTranscriptionState.Transcribing(progressPercent = 100))
-            }
+            val transcript =
+                try {
+                    runPhase(phase, TRANSCRIPTION_TIMEOUT_MILLISECONDS) {
+                        transcribeVoiceAudio(
+                            bytes = bytes,
+                            onProgress = { progressPercent ->
+                                val normalizedProgress =
+                                    progressPercent.coerceIn(0, MAX_IN_FLIGHT_PROGRESS_PERCENT)
+                                if (normalizedProgress > nativeProgress.value) {
+                                    nativeProgress.value = normalizedProgress
+                                }
+                            }
+                        ).getOrThrow()
+                    }
+                } finally {
+                    progressJob.cancelAndJoin()
+                }
+
+            send(VoiceTranscriptionState.Transcribing(progressPercent = 100))
 
             check(transcript.text.isNotBlank()) { "No speech could be transcribed" }
             saveTranscript(
@@ -105,10 +136,17 @@ class TranscribeVoiceMessageUseCase(
             throw VoiceTranscriptionPhaseException(phase, error)
         }
 
+    private fun progressTickDelayMilliseconds(progressPercent: Int): Long =
+        PROGRESS_TICK_BASE_DELAY_MILLISECONDS +
+            progressPercent * PROGRESS_TICK_PER_PERCENT_DELAY_MILLISECONDS
+
     private companion object {
         const val DOWNLOAD_TIMEOUT_MILLISECONDS = 60_000L
         const val PREPARE_TIMEOUT_MILLISECONDS = 210_000L
         const val TRANSCRIPTION_TIMEOUT_MILLISECONDS = 180_000L
+        const val MAX_IN_FLIGHT_PROGRESS_PERCENT = 99
+        const val PROGRESS_TICK_BASE_DELAY_MILLISECONDS = 350L
+        const val PROGRESS_TICK_PER_PERCENT_DELAY_MILLISECONDS = 15L
     }
 }
 
