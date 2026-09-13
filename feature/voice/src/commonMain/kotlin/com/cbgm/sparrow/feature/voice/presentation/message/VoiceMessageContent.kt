@@ -203,12 +203,21 @@ private fun TranscriptionHint(state: VoiceTranscriptionState) {
         modifier = Modifier.padding(start = MaterialTheme.spacing.base)
     ) {
         when (state) {
-            is VoiceTranscriptionState.Transcribing ->
-                CircularProgressIndicator(
-                    progress = { state.progressPercent / 100f },
-                    modifier = Modifier.size(Dimens.MessageBubble.progressSize),
-                    strokeWidth = Dimens.MessageBubble.progressStrokeWidth
-                )
+            is VoiceTranscriptionState.Transcribing -> {
+                val progressPercent = state.progressPercent
+                if (progressPercent != null) {
+                    CircularProgressIndicator(
+                        progress = { progressPercent / 100f },
+                        modifier = Modifier.size(Dimens.MessageBubble.progressSize),
+                        strokeWidth = Dimens.MessageBubble.progressStrokeWidth
+                    )
+                } else {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(Dimens.MessageBubble.progressSize),
+                        strokeWidth = Dimens.MessageBubble.progressStrokeWidth
+                    )
+                }
+            }
 
             else ->
                 CircularProgressIndicator(
@@ -224,7 +233,9 @@ private fun TranscriptionHint(state: VoiceTranscriptionState) {
                     VoiceTranscriptionState.Preparing ->
                         stringResource(Res.string.feature_voice_transcription_preparing)
                     is VoiceTranscriptionState.Transcribing ->
-                        "${stringResource(Res.string.feature_voice_transcribing)} ${state.progressPercent}%"
+                        state.progressPercent?.let { progressPercent ->
+                            "${stringResource(Res.string.feature_voice_transcribing)} $progressPercent%"
+                        } ?: stringResource(Res.string.feature_voice_transcribing)
                     else -> ""
                 },
             style = MaterialTheme.typography.labelLarge,

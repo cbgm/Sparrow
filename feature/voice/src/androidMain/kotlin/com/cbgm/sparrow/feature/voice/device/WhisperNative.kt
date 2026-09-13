@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.voice.device
 
 internal fun interface WhisperProgressCallback {
+    @Suppress("unused")
     fun onProgress(progressPercent: Int)
 }
 
@@ -30,6 +31,7 @@ internal class WhisperNative {
         segmentIndex: Int
     ): Long
 
+    @Suppress("unused")
     external fun freeModel(modelHandle: Long)
 
     private companion object {

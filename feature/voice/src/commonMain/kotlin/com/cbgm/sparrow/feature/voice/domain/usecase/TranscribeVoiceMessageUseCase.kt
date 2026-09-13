@@ -37,16 +37,15 @@ class TranscribeVoiceMessageUseCase(
             }
 
             phase = VoiceTranscriptionPhase.TRANSCRIBING
-            var lastProgressPercent = -1
-            send(VoiceTranscriptionState.Transcribing(progressPercent = 0))
-            lastProgressPercent = 0
+            var lastProgressPercent = 0
+            send(VoiceTranscriptionState.Transcribing())
 
             val transcript = runPhase(phase, TRANSCRIPTION_TIMEOUT_MILLISECONDS) {
                 transcribeVoiceAudio(
                     bytes = bytes,
                     onProgress = { progressPercent ->
                         val normalizedProgress = progressPercent.coerceIn(0, 100)
-                        if (normalizedProgress != lastProgressPercent) {
+                        if (normalizedProgress > 0 && normalizedProgress != lastProgressPercent) {
                             lastProgressPercent = normalizedProgress
                             trySend(
                                 VoiceTranscriptionState.Transcribing(
@@ -82,11 +81,7 @@ class TranscribeVoiceMessageUseCase(
         } catch (error: Throwable) {
             if (error is CancellationException && error !is TimeoutCancellationException) throw error
             val resolved =
-                if (error is VoiceTranscriptionPhaseException) {
-                    error
-                } else {
-                    VoiceTranscriptionPhaseException(phase, error)
-                }
+                error as? VoiceTranscriptionPhaseException ?: VoiceTranscriptionPhaseException(phase, error)
             logger.error(resolved) { "Voice transcription failed during ${resolved.phase}" }
             send(VoiceTranscriptionState.Error(resolved))
         }

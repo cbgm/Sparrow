@@ -43,7 +43,6 @@ internal class AndroidVoiceTranscriptionRepository(
                 val handle = checkNotNull(modelHandle.takeIf { it != 0L }) {
                     "Voice transcription has not been prepared"
                 }
-                onProgress(0)
                 val fallbackText =
                     whisperNative.transcribe(
                         modelHandle = handle,

@@ -32,26 +32,34 @@ struct TranscriptionDeadline {
     bool timedOut = false;
 };
 
-struct ProgressCallbackData {
+struct ProgressCallbackContext {
     JNIEnv *env;
     jobject callback;
     jmethodID onProgressMethod;
-    int lastProgress = -1;
+    int64_t audioDurationTicks;
+    int lastProgress;
+
+    ProgressCallbackContext(
+        JNIEnv *envValue,
+        jobject callbackValue,
+        jmethodID onProgressMethodValue,
+        int64_t audioDurationTicksValue
+    )
+        : env(envValue),
+          callback(callbackValue),
+          onProgressMethod(onProgressMethodValue),
+          audioDurationTicks(audioDurationTicksValue),
+          lastProgress(-1) {}
 };
 
-void reportProgress(
-    struct whisper_context *,
-    struct whisper_state *,
-    int progress,
-    void *userData
-) {
-    auto *callbackData = static_cast<ProgressCallbackData *>(userData);
+void reportProgressValue(ProgressCallbackContext *callbackData, int progress) {
     if (callbackData == nullptr || callbackData->callback == nullptr || callbackData->onProgressMethod == nullptr) {
         return;
     }
 
-    const int normalizedProgress = std::clamp(progress, 0, 100);
-    if (normalizedProgress == callbackData->lastProgress) return;
+    // Reserve 100 for Kotlin after whisper_full() actually returns successfully.
+    const int normalizedProgress = std::clamp(progress, 0, 99);
+    if (normalizedProgress <= callbackData->lastProgress) return;
 
     callbackData->lastProgress = normalizedProgress;
     callbackData->env->CallVoidMethod(
@@ -59,6 +67,52 @@ void reportProgress(
         callbackData->onProgressMethod,
         static_cast<jint>(normalizedProgress)
     );
+}
+
+void reportChunkProgress(
+    struct whisper_context *,
+    struct whisper_state *,
+    int progress,
+    void *userData
+) {
+    // For short clips whisper.cpp commonly reports only 0 and 100 here.
+    // Those values do not represent useful in-flight progress, so only use
+    // intermediate values as a fallback for longer recordings.
+    if (progress <= 0 || progress >= 100) return;
+    reportProgressValue(
+        static_cast<ProgressCallbackContext *>(userData),
+        progress
+    );
+}
+
+void reportSegmentProgress(
+    struct whisper_context *,
+    struct whisper_state *state,
+    int nNewSegments,
+    void *userData
+) {
+    auto *callbackData = static_cast<ProgressCallbackContext *>(userData);
+    if (callbackData == nullptr || state == nullptr || callbackData->audioDurationTicks <= 0) {
+        return;
+    }
+
+    const int segmentCount = whisper_full_n_segments_from_state(state);
+    const int firstNewSegment = std::max(0, segmentCount - nNewSegments);
+    int64_t latestEndTick = 0;
+
+    for (int segmentIndex = firstNewSegment; segmentIndex < segmentCount; ++segmentIndex) {
+        latestEndTick = std::max(
+            latestEndTick,
+            whisper_full_get_segment_t1_from_state(state, segmentIndex)
+        );
+    }
+
+    if (latestEndTick <= 0) return;
+
+    const int segmentProgress = static_cast<int>(
+        (latestEndTick * 100) / callbackData->audioDurationTicks
+    );
+    reportProgressValue(callbackData, std::clamp(segmentProgress, 1, 99));
 }
 
 bool abortOnDeadline(void *userData) {
@@ -144,11 +198,17 @@ Java_com_cbgm_sparrow_feature_voice_device_WhisperNative_transcribe(
         env->DeleteLocalRef(progressCallbackClass);
     }
 
-    ProgressCallbackData progressCallbackData {
+    const int64_t audioDurationTicks = std::max<int64_t>(
+        1,
+        (static_cast<int64_t>(sampleCount) * 100) / WHISPER_SAMPLE_RATE_HZ
+    );
+
+    ProgressCallbackContext progressCallbackContext(
         env,
         progressCallback,
-        onProgressMethod
-    };
+        onProgressMethod,
+        audioDurationTicks
+    );
 
     whisper_full_params params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
     params.print_progress = false;
@@ -164,8 +224,10 @@ Java_com_cbgm_sparrow_feature_voice_device_WhisperNative_transcribe(
     params.n_threads = transcriptionThreadCount();
     params.abort_callback = abortOnDeadline;
     params.abort_callback_user_data = &deadline;
-    params.progress_callback = reportProgress;
-    params.progress_callback_user_data = &progressCallbackData;
+    params.progress_callback = reportChunkProgress;
+    params.progress_callback_user_data = &progressCallbackContext;
+    params.new_segment_callback = reportSegmentProgress;
+    params.new_segment_callback_user_data = &progressCallbackContext;
 
     const int result = whisper_full(context, params, samples.data(), sampleCount);
     if (result != 0) {
@@ -236,4 +298,18 @@ Java_com_cbgm_sparrow_feature_voice_device_WhisperNative_segmentEndMilliseconds(
     whisper_context *context = asContext(modelHandle);
     if (context == nullptr) return 0;
     return static_cast<jlong>(whisper_full_get_segment_t1(context, segmentIndex) * 10);
+}
+
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_cbgm_sparrow_feature_voice_device_WhisperNative_freeModel(
+    JNIEnv *,
+    jobject,
+    jlong modelHandle
+) {
+    whisper_context *context = asContext(modelHandle);
+    if (context != nullptr) {
+        whisper_free(context);
+    }
 }
