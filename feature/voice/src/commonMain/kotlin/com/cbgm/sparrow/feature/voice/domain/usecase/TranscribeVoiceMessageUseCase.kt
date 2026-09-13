@@ -10,7 +10,7 @@ import com.cbgm.sparrow.feature.voice.domain.model.VoiceTranscriptionState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.withTimeout
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -22,24 +22,44 @@ class TranscribeVoiceMessageUseCase(
 ) {
     private val logger = SparrowLog.withTag("VoiceTranscription")
 
-    operator fun invoke(target: VoiceMessageTarget): Flow<VoiceTranscriptionState> = flow {
-        var phase = "downloading"
+    operator fun invoke(target: VoiceMessageTarget): Flow<VoiceTranscriptionState> = channelFlow {
+        var phase = VoiceTranscriptionPhase.DOWNLOADING
         try {
-            emit(VoiceTranscriptionState.Downloading)
+            send(VoiceTranscriptionState.Downloading)
             val bytes = runPhase(phase, DOWNLOAD_TIMEOUT_MILLISECONDS) {
                 loadAttachmentBytes(target.attachmentTarget).getOrThrow()
             }
 
-            phase = "preparing"
-            emit(VoiceTranscriptionState.Preparing)
+            phase = VoiceTranscriptionPhase.PREPARING
+            send(VoiceTranscriptionState.Preparing)
             runPhase(phase, PREPARE_TIMEOUT_MILLISECONDS) {
                 prepareVoiceTranscription().getOrThrow()
             }
 
-            phase = "transcribing"
-            emit(VoiceTranscriptionState.Transcribing)
+            phase = VoiceTranscriptionPhase.TRANSCRIBING
+            var lastProgressPercent = -1
+            send(VoiceTranscriptionState.Transcribing(progressPercent = 0))
+            lastProgressPercent = 0
+
             val transcript = runPhase(phase, TRANSCRIPTION_TIMEOUT_MILLISECONDS) {
-                transcribeVoiceAudio(bytes).getOrThrow()
+                transcribeVoiceAudio(
+                    bytes = bytes,
+                    onProgress = { progressPercent ->
+                        val normalizedProgress = progressPercent.coerceIn(0, 100)
+                        if (normalizedProgress != lastProgressPercent) {
+                            lastProgressPercent = normalizedProgress
+                            trySend(
+                                VoiceTranscriptionState.Transcribing(
+                                    progressPercent = normalizedProgress
+                                )
+                            )
+                        }
+                    }
+                ).getOrThrow()
+            }
+
+            if (lastProgressPercent < 100) {
+                send(VoiceTranscriptionState.Transcribing(progressPercent = 100))
             }
 
             check(transcript.text.isNotBlank()) { "No speech could be transcribed" }
@@ -58,18 +78,22 @@ class TranscribeVoiceMessageUseCase(
                     )
             ).getOrThrow()
 
-            emit(VoiceTranscriptionState.Success(transcript))
+            send(VoiceTranscriptionState.Success(transcript))
         } catch (error: Throwable) {
             if (error is CancellationException && error !is TimeoutCancellationException) throw error
             val resolved =
-                error as? VoiceTranscriptionPhaseException ?: VoiceTranscriptionPhaseException(phase, error)
+                if (error is VoiceTranscriptionPhaseException) {
+                    error
+                } else {
+                    VoiceTranscriptionPhaseException(phase, error)
+                }
             logger.error(resolved) { "Voice transcription failed during ${resolved.phase}" }
-            emit(VoiceTranscriptionState.Error(resolved))
+            send(VoiceTranscriptionState.Error(resolved))
         }
     }
 
     private suspend fun <T> runPhase(
-        phase: String,
+        phase: VoiceTranscriptionPhase,
         timeoutMilliseconds: Long,
         block: suspend () -> T
     ): T =
@@ -93,7 +117,13 @@ class TranscribeVoiceMessageUseCase(
     }
 }
 
-class VoiceTranscriptionPhaseException(
-    val phase: String,
+private enum class VoiceTranscriptionPhase {
+    DOWNLOADING,
+    PREPARING,
+    TRANSCRIBING
+}
+
+private class VoiceTranscriptionPhaseException(
+    val phase: VoiceTranscriptionPhase,
     cause: Throwable
 ) : IllegalStateException("Voice transcription failed during $phase: ${cause.message}", cause)

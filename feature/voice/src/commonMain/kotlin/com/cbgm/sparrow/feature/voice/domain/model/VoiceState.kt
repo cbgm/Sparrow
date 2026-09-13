@@ -27,7 +27,13 @@ sealed interface VoiceTranscriptionState {
 
     data object Preparing : VoiceTranscriptionState
 
-    data object Transcribing : VoiceTranscriptionState
+    data class Transcribing(
+        val progressPercent: Int
+    ) : VoiceTranscriptionState {
+        init {
+            require(progressPercent in 0..100) { "Transcription progress must be between 0 and 100" }
+        }
+    }
 
     data class Success(
         val transcript: VoiceTranscript

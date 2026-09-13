@@ -1,11 +1,16 @@
 package com.cbgm.sparrow.feature.voice.device
 
+internal fun interface WhisperProgressCallback {
+    fun onProgress(progressPercent: Int)
+}
+
 internal class WhisperNative {
     external fun loadModel(modelPath: String): Long
 
     external fun transcribe(
         modelHandle: Long,
-        samples: FloatArray
+        samples: FloatArray,
+        progressCallback: WhisperProgressCallback
     ): String
 
     external fun segmentCount(modelHandle: Long): Int

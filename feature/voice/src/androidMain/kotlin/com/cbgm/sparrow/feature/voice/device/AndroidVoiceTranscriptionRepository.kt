@@ -30,7 +30,10 @@ internal class AndroidVoiceTranscriptionRepository(
             logger.error(error) { "Could not prepare voice transcription" }
         }
 
-    override suspend fun transcribe(bytes: ByteArray): Result<VoiceTranscript> = safeSuspendCall {
+    override suspend fun transcribe(
+        bytes: ByteArray,
+        onProgress: (Int) -> Unit
+    ): Result<VoiceTranscript> = safeSuspendCall {
         require(bytes.isNotEmpty()) { "Voice message is empty" }
 
         val wave = bytes.toPcmWaveAudio()
@@ -40,7 +43,16 @@ internal class AndroidVoiceTranscriptionRepository(
                 val handle = checkNotNull(modelHandle.takeIf { it != 0L }) {
                     "Voice transcription has not been prepared"
                 }
-                val fallbackText = whisperNative.transcribe(handle, samples).trim()
+                onProgress(0)
+                val fallbackText =
+                    whisperNative.transcribe(
+                        modelHandle = handle,
+                        samples = samples,
+                        progressCallback = WhisperProgressCallback { progressPercent ->
+                            onProgress(progressPercent.coerceIn(0, 100))
+                        }
+                    ).trim()
+                onProgress(100)
                 val cues = whisperNative.readTranscriptCues(handle).normalizeEdges()
                 val text = cues.joinToString(separator = "") { cue -> cue.text }
                 val resolvedText = text.ifBlank { fallbackText }

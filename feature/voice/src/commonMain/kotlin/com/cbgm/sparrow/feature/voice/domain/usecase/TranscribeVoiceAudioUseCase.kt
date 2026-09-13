@@ -6,5 +6,12 @@ import com.cbgm.sparrow.feature.voice.domain.repository.VoiceTranscriptionReposi
 class TranscribeVoiceAudioUseCase(
     private val repository: VoiceTranscriptionRepository
 ) {
-    suspend operator fun invoke(bytes: ByteArray): Result<VoiceTranscript> = repository.transcribe(bytes)
+    suspend operator fun invoke(
+        bytes: ByteArray,
+        onProgress: (Int) -> Unit
+    ): Result<VoiceTranscript> =
+        repository.transcribe(
+            bytes = bytes,
+            onProgress = onProgress
+        )
 }

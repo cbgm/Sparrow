@@ -24,13 +24,42 @@ constexpr int WHISPER_SAMPLE_RATE_HZ = 16000;
 constexpr int DEFAULT_THREAD_COUNT = 4;
 constexpr int MAX_THREAD_COUNT = 8;
 constexpr int MIN_TRANSCRIPTION_TIMEOUT_SECONDS = 60;
-constexpr int MAX_TRANSCRIPTION_TIMEOUT_SECONDS = 600;
+constexpr int MAX_TRANSCRIPTION_TIMEOUT_SECONDS = 180;
 constexpr int TIMEOUT_MULTIPLIER = 10;
 
 struct TranscriptionDeadline {
     std::chrono::steady_clock::time_point deadline;
     bool timedOut = false;
 };
+
+struct ProgressCallbackData {
+    JNIEnv *env;
+    jobject callback;
+    jmethodID onProgressMethod;
+    int lastProgress = -1;
+};
+
+void reportProgress(
+    struct whisper_context *,
+    struct whisper_state *,
+    int progress,
+    void *userData
+) {
+    auto *callbackData = static_cast<ProgressCallbackData *>(userData);
+    if (callbackData == nullptr || callbackData->callback == nullptr || callbackData->onProgressMethod == nullptr) {
+        return;
+    }
+
+    const int normalizedProgress = std::clamp(progress, 0, 100);
+    if (normalizedProgress == callbackData->lastProgress) return;
+
+    callbackData->lastProgress = normalizedProgress;
+    callbackData->env->CallVoidMethod(
+        callbackData->callback,
+        callbackData->onProgressMethod,
+        static_cast<jint>(normalizedProgress)
+    );
+}
 
 bool abortOnDeadline(void *userData) {
     auto *deadline = static_cast<TranscriptionDeadline *>(userData);
@@ -81,7 +110,8 @@ Java_com_cbgm_sparrow_feature_voice_device_WhisperNative_transcribe(
     JNIEnv *env,
     jobject,
     jlong modelHandle,
-    jfloatArray samplesArray
+    jfloatArray samplesArray,
+    jobject progressCallback
 ) {
     whisper_context *context = asContext(modelHandle);
     if (context == nullptr || samplesArray == nullptr) {
@@ -104,6 +134,22 @@ Java_com_cbgm_sparrow_feature_voice_device_WhisperNative_transcribe(
             std::chrono::seconds(transcriptionTimeoutSeconds(sampleCount))
     };
 
+    jclass progressCallbackClass =
+        progressCallback == nullptr ? nullptr : env->GetObjectClass(progressCallback);
+    jmethodID onProgressMethod =
+        progressCallbackClass == nullptr
+            ? nullptr
+            : env->GetMethodID(progressCallbackClass, "onProgress", "(I)V");
+    if (progressCallbackClass != nullptr) {
+        env->DeleteLocalRef(progressCallbackClass);
+    }
+
+    ProgressCallbackData progressCallbackData {
+        env,
+        progressCallback,
+        onProgressMethod
+    };
+
     whisper_full_params params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
     params.print_progress = false;
     params.print_realtime = false;
@@ -118,6 +164,8 @@ Java_com_cbgm_sparrow_feature_voice_device_WhisperNative_transcribe(
     params.n_threads = transcriptionThreadCount();
     params.abort_callback = abortOnDeadline;
     params.abort_callback_user_data = &deadline;
+    params.progress_callback = reportProgress;
+    params.progress_callback_user_data = &progressCallbackData;
 
     const int result = whisper_full(context, params, samples.data(), sampleCount);
     if (result != 0) {

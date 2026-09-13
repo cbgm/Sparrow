@@ -30,7 +30,11 @@ class IosVoiceTranscriptionRepository : VoiceTranscriptionRepository {
             }
         }.onFailure { error -> logger.error(error) { "Could not prepare voice transcription" } }
 
-    override suspend fun transcribe(bytes: ByteArray): Result<VoiceTranscript> = safeSuspendCall {
+    override suspend fun transcribe(
+        bytes: ByteArray,
+        onProgress: (Int) -> Unit
+    ): Result<VoiceTranscript> = safeSuspendCall {
+        onProgress(0)
         val wave = bytes.toPcmWaveAudio()
         val recognizer = checkNotNull(SFSpeechRecognizer()) { "Speech recognizer is unavailable" }
         val request = SFSpeechAudioBufferRecognitionRequest()
@@ -39,50 +43,53 @@ class IosVoiceTranscriptionRepository : VoiceTranscriptionRepository {
         request.appendAudioPCMBuffer(wave.toAudioBuffer())
         request.endAudio()
 
-        suspendCancellableCoroutine { continuation ->
-            var task: SFSpeechRecognitionTask? = null
-            var finished = false
+        val transcript =
+            suspendCancellableCoroutine { continuation ->
+                var task: SFSpeechRecognitionTask? = null
+                var finished = false
 
-            fun finish(result: Result<VoiceTranscript>) {
-                if (finished) return
-                finished = true
-                task?.cancel()
-                if (!continuation.isActive) return
-                result.fold(
-                    onSuccess = continuation::resume,
-                    onFailure = continuation::resumeWithException
-                )
-            }
-
-            task =
-                recognizer.recognitionTaskWithRequest(request) { result, error ->
-                    if (error != null) {
-                        finish(Result.failure(IllegalStateException(error.localizedDescription)))
-                        return@recognitionTaskWithRequest
-                    }
-
-                    val transcript = result?.bestTranscription?.formattedString?.trim().orEmpty()
-                    if (transcript.isNotBlank()) {
-                        finish(
-                            Result.success(
-                                VoiceTranscript(
-                                    text = transcript,
-                                    cues =
-                                        listOf(
-                                            VoiceTranscriptCue(
-                                                text = transcript,
-                                                startMilliseconds = 0L,
-                                                endMilliseconds = wave.durationMilliseconds
-                                            )
-                                        )
-                                )
-                            )
-                        )
-                    }
+                fun finish(result: Result<VoiceTranscript>) {
+                    if (finished) return
+                    finished = true
+                    task?.cancel()
+                    if (!continuation.isActive) return
+                    result.fold(
+                        onSuccess = continuation::resume,
+                        onFailure = continuation::resumeWithException
+                    )
                 }
 
-            continuation.invokeOnCancellation { task?.cancel() }
-        }
+                task =
+                    recognizer.recognitionTaskWithRequest(request) { result, error ->
+                        if (error != null) {
+                            finish(Result.failure(IllegalStateException(error.localizedDescription)))
+                            return@recognitionTaskWithRequest
+                        }
+
+                        val text = result?.bestTranscription?.formattedString?.trim().orEmpty()
+                        if (text.isNotBlank()) {
+                            finish(
+                                Result.success(
+                                    VoiceTranscript(
+                                        text = text,
+                                        cues =
+                                            listOf(
+                                                VoiceTranscriptCue(
+                                                    text = text,
+                                                    startMilliseconds = 0L,
+                                                    endMilliseconds = wave.durationMilliseconds
+                                                )
+                                            )
+                                    )
+                                )
+                            )
+                        }
+                    }
+
+                continuation.invokeOnCancellation { task?.cancel() }
+            }
+        onProgress(100)
+        transcript
     }.onFailure { error -> logger.error(error) { "Could not transcribe voice message" } }
 
     private suspend fun requestSpeechAuthorization(): Boolean =

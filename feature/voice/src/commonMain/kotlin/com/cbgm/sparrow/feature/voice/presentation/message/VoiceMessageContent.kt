@@ -202,10 +202,20 @@ private fun TranscriptionHint(state: VoiceTranscriptionState) {
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(start = MaterialTheme.spacing.base)
     ) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(Dimens.MessageBubble.progressSize),
-            strokeWidth = Dimens.MessageBubble.progressStrokeWidth
-        )
+        when (state) {
+            is VoiceTranscriptionState.Transcribing ->
+                CircularProgressIndicator(
+                    progress = { state.progressPercent / 100f },
+                    modifier = Modifier.size(Dimens.MessageBubble.progressSize),
+                    strokeWidth = Dimens.MessageBubble.progressStrokeWidth
+                )
+
+            else ->
+                CircularProgressIndicator(
+                    modifier = Modifier.size(Dimens.MessageBubble.progressSize),
+                    strokeWidth = Dimens.MessageBubble.progressStrokeWidth
+                )
+        }
         Text(
             text =
                 when (state) {
@@ -213,8 +223,8 @@ private fun TranscriptionHint(state: VoiceTranscriptionState) {
                         stringResource(Res.string.feature_voice_transcription_downloading)
                     VoiceTranscriptionState.Preparing ->
                         stringResource(Res.string.feature_voice_transcription_preparing)
-                    VoiceTranscriptionState.Transcribing ->
-                        stringResource(Res.string.feature_voice_transcribing)
+                    is VoiceTranscriptionState.Transcribing ->
+                        "${stringResource(Res.string.feature_voice_transcribing)} ${state.progressPercent}%"
                     else -> ""
                 },
             style = MaterialTheme.typography.labelLarge,
