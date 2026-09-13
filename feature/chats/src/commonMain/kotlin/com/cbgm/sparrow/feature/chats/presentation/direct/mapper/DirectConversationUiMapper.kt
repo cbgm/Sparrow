@@ -18,7 +18,6 @@ import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.IdentityHandshakeState
 import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
-import com.cbgm.sparrow.feature.media.presentation.voice.model.VoiceMessageUiState
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyAssessment
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyWarningUi
 
@@ -34,13 +33,9 @@ internal fun resolveContactName(
 
 internal fun DirectMessage.toMessageBubbleUi(
     safetyAssessments: Map<String, MessageSafetyAssessment>,
-    voiceState: VoiceMessageUiState = VoiceMessageUiState(),
     reply: MessageReplyUi? = null
 ): MessageBubbleUi {
-    val partsUi =
-        parts.toMessagePartsUi(
-            voiceState = voiceState
-        )
+    val partsUi = parts.toMessagePartsUi()
 
     return MessageBubbleUi(
         id = id,
@@ -139,8 +134,7 @@ internal fun toDirectConversationUiState(
     contact: Contact?,
     handshake: IdentityHandshakeState?,
     setupMode: DirectIdentitySetupMode,
-    safetyAssessments: Map<String, MessageSafetyAssessment>,
-    voiceState: VoiceMessageUiState = VoiceMessageUiState()
+    safetyAssessments: Map<String, MessageSafetyAssessment>
 ): DirectConversationUiState {
     val isChatAuthorized = isDirectChatAuthorized(contact, handshake, setupMode)
     val composerState =
@@ -164,7 +158,6 @@ internal fun toDirectConversationUiState(
                     add(
                         message.toMessageBubbleUi(
                             safetyAssessments = safetyAssessments,
-                            voiceState = voiceState,
                             reply = message.replyToMessageId.toDirectReplyPreview(messagesById, contactName)
                         )
                     )

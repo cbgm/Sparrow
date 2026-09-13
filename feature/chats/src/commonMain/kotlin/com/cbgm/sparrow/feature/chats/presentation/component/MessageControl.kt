@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -35,13 +36,14 @@ import com.cbgm.sparrow.feature.media.presentation.component.MediaSelectionPrevi
 import com.cbgm.sparrow.feature.media.presentation.component.previewMediaSelections
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionSource
-import com.cbgm.sparrow.feature.media.presentation.voice.VoiceComposer
-import com.cbgm.sparrow.feature.media.presentation.voice.model.VoiceComposerPhase
-import com.cbgm.sparrow.feature.media.presentation.voice.model.VoiceComposerUiState
+import com.cbgm.sparrow.feature.voice.domain.model.VoiceComposerPhase
+import com.cbgm.sparrow.feature.voice.presentation.composer.VoiceComposer
+import com.cbgm.sparrow.feature.voice.presentation.composer.VoiceComposerViewModel
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_chat_recording_voice
 import com.cbgm.sparrow.resources.feature_chats_chat_typing
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.viewmodel.koinViewModel
 
 data class MessageInputState(
     val messageText: String = "",
@@ -54,8 +56,7 @@ data class MessageInputState(
     val selectedMedia: List<MediaSelection> = emptyList(),
     val isGalleryEnabled: Boolean = true,
     val isCameraEnabled: Boolean = true,
-    val isFileEnabled: Boolean = true,
-    val voiceState: VoiceComposerUiState = VoiceComposerUiState()
+    val isFileEnabled: Boolean = true
 )
 
 data class MessageInputActions(
@@ -69,11 +70,7 @@ data class MessageInputActions(
     val onClickGallery: () -> Unit = {},
     val onClickContact: () -> Unit = {},
     val onClickLocation: () -> Unit = {},
-    val onVoiceRecordClick: () -> Unit = {},
-    val onVoiceStopClick: () -> Unit = {},
-    val onVoicePlayPauseClick: () -> Unit = {},
-    val onVoiceSendClick: () -> Unit = {},
-    val onVoiceCancelClick: () -> Unit = {}
+    val onVoiceSendClick: () -> Unit = {}
 )
 
 @Composable
@@ -228,6 +225,9 @@ private fun VoiceComposerContent(
     onDismiss: () -> Unit,
     modifier: Modifier
 ) {
+    val voiceViewModel = koinViewModel<VoiceComposerViewModel>()
+    val voiceState by voiceViewModel.uiState.collectAsStateWithLifecycle()
+
     Row(
         modifier =
             modifier
@@ -237,11 +237,11 @@ private fun VoiceComposerContent(
         verticalAlignment = Alignment.Bottom
     ) {
         VoiceComposer(
-            state = state.voiceState,
+            state = voiceState,
             inputEnabled = state.isInputEnabled,
-            onRecordClick = actions.onVoiceRecordClick,
-            onStopClick = actions.onVoiceStopClick,
-            onPlayPauseClick = actions.onVoicePlayPauseClick,
+            onRecordClick = voiceViewModel::startRecording,
+            onStopClick = voiceViewModel::stopRecording,
+            onPlayPauseClick = voiceViewModel::togglePreview,
             modifier = Modifier.weight(1f)
         )
 
@@ -255,7 +255,7 @@ private fun VoiceComposerContent(
             },
             enabled =
                 state.isInputEnabled &&
-                    state.voiceState.phase == VoiceComposerPhase.RECORDED,
+                    voiceState.phase == VoiceComposerPhase.RECORDED,
             isEditing = false,
             modifier = Modifier.align(Alignment.CenterVertically)
         )
@@ -266,7 +266,7 @@ private fun VoiceComposerContent(
                     .padding(start = MaterialTheme.spacing.base)
                     .align(Alignment.CenterVertically),
             onClick = {
-                actions.onVoiceCancelClick()
+                voiceViewModel.cancel()
                 onDismiss()
             },
             icon = Icons.Default.Close

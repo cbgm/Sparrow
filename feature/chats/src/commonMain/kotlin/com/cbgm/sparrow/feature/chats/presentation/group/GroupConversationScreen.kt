@@ -199,7 +199,6 @@ fun GroupConversationScreen(
                         onSafetyDetailsClick = {},
                         onAttachmentClick = {},
                         onContactClick = {},
-                        voiceTranscriptionEnabled = uiState.voiceTranscriptionEnabled,
                         onReplyPreviewClick = {},
                         onContextMessageRequested = {},
                         onReactionsClick = {},
@@ -287,30 +286,7 @@ fun GroupConversationScreen(
                                 )
                         }
                     },
-                    onContactClick = { contact -> pendingSharedContact = contact },
-                    onVoicePlayPauseClick = {
-                        onUiEvent(
-                            GroupConversationUiEvent.VoicePlayPauseClicked(
-                                it
-                            )
-                        )
-                    },
-                    onVoiceTranscribeClick = {
-                        onUiEvent(
-                            GroupConversationUiEvent.VoiceTranscribeClicked(
-                                it
-                            )
-                        )
-                    },
-                    onVoiceSeekStart = { onUiEvent(GroupConversationUiEvent.VoiceSeekStarted(it)) },
-                    onVoiceSeekEnd = { attachmentId, positionMilliseconds ->
-                        onUiEvent(
-                            GroupConversationUiEvent.VoiceSeekFinished(
-                                attachmentId = attachmentId,
-                                positionMilliseconds = positionMilliseconds
-                            )
-                        )
-                    }
+                    onContactClick = { contact -> pendingSharedContact = contact }
                 )
             }
         }
@@ -353,7 +329,6 @@ fun GroupConversationScreen(
     GroupPinnedMessageOverlay(
         visible = showPinnedMessage,
         message = uiState.pinnedMessage,
-        voiceTranscriptionEnabled = uiState.voiceTranscriptionEnabled,
         onDismissRequest = { showPinnedMessage = false },
         onAttachmentClick = { _, attachmentId ->
             uiState.pinnedMessage?.let { message ->
@@ -364,7 +339,6 @@ fun GroupConversationScreen(
                     )
             }
         },
-        onUiEvent = onUiEvent,
         onContactClick = { contact -> pendingSharedContact = contact }
     )
 
@@ -425,10 +399,8 @@ private fun senderAvatarOrNull(message: MessageBubbleUi): (@Composable () -> Uni
 private fun GroupPinnedMessageOverlay(
     visible: Boolean,
     message: MessageBubbleUi?,
-    voiceTranscriptionEnabled: Boolean,
     onDismissRequest: () -> Unit,
     onAttachmentClick: (String, String) -> Unit,
-    onUiEvent: (GroupConversationUiEvent) -> Unit,
     onContactClick: (SharedContact) -> Unit
 ) {
     SparrowOverlayHost(
@@ -441,28 +413,10 @@ private fun GroupPinnedMessageOverlay(
             GroupPinnedMessageContent(
                 message = pinnedMessage,
                 onBack = dismissOverlay,
-                voiceTranscriptionEnabled = voiceTranscriptionEnabled,
                 onAttachmentClick = { attachmentId ->
                     onAttachmentClick(pinnedMessage.id, attachmentId)
                 },
                 onContactClick = onContactClick,
-                onVoicePlayPauseClick = {
-                    onUiEvent(GroupConversationUiEvent.VoicePlayPauseClicked(it))
-                },
-                onVoiceTranscribeClick = {
-                    onUiEvent(GroupConversationUiEvent.VoiceTranscribeClicked(it))
-                },
-                onVoiceSeekStart = {
-                    onUiEvent(GroupConversationUiEvent.VoiceSeekStarted(it))
-                },
-                onVoiceSeekEnd = { attachmentId, positionMilliseconds ->
-                    onUiEvent(
-                        GroupConversationUiEvent.VoiceSeekFinished(
-                            attachmentId = attachmentId,
-                            positionMilliseconds = positionMilliseconds
-                        )
-                    )
-                },
                 modifier = Modifier.fillMaxSize()
             )
         }
@@ -557,11 +511,7 @@ private fun BottomBar(
         onLocationCaptured = { onUiEvent(GroupConversationUiEvent.ShareCurrentLocation(it)) },
         onLocationCaptureFailed = { onUiEvent(GroupConversationUiEvent.LocationCaptureFailed(it)) },
         onAttachmentError = { onUiEvent(GroupConversationUiEvent.AttachmentError(it)) },
-        onVoiceRecordClick = { onUiEvent(GroupConversationUiEvent.VoiceRecordClicked) },
-        onVoiceStopClick = { onUiEvent(GroupConversationUiEvent.VoiceStopClicked) },
-        onVoicePlayPauseClick = { onUiEvent(GroupConversationUiEvent.VoicePreviewPlayPauseClicked) },
-        onVoiceSendClick = { onUiEvent(GroupConversationUiEvent.VoiceSendClicked) },
-        onVoiceCancelClick = { onUiEvent(GroupConversationUiEvent.VoiceComposerCancelled) }
+        onVoiceSendClick = { onUiEvent(GroupConversationUiEvent.VoiceSendClicked) }
     )
 }
 
@@ -580,11 +530,7 @@ private fun Content(
     onRetryMessage: (String) -> Unit,
     onSafetyWarningClick: (String, String?, MessageSafetyWarningUi) -> Unit,
     onAttachmentClick: (String, String) -> Unit,
-    onContactClick: (SharedContact) -> Unit,
-    onVoicePlayPauseClick: (String) -> Unit,
-    onVoiceTranscribeClick: (String) -> Unit,
-    onVoiceSeekStart: (String) -> Unit,
-    onVoiceSeekEnd: (String, Long) -> Unit
+    onContactClick: (SharedContact) -> Unit
 ) {
     val fillModifier = Modifier.fillMaxSize().padding(innerPadding)
     val dissolvingMessageState =
@@ -613,11 +559,6 @@ private fun Content(
             onSafetyWarningClick = onSafetyWarningClick,
             onAttachmentClick = onAttachmentClick,
             onContactClick = onContactClick,
-            onVoicePlayPauseClick = onVoicePlayPauseClick,
-            onVoiceTranscribeClick = onVoiceTranscribeClick,
-            voiceTranscriptionEnabled = uiState.voiceTranscriptionEnabled,
-            onVoiceSeekStart = onVoiceSeekStart,
-            onVoiceSeekEnd = onVoiceSeekEnd,
             contentPadding = innerPadding,
             historyState = historyState,
             onLoadOlderMessages = onLoadOlderMessages,

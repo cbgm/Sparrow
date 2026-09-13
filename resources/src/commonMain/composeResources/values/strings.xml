@@ -608,9 +608,11 @@
     <string name="feature_media_file_picker_file_access">Allow file access</string>
     <string name="feature_media_file_picker_file_access_body">Sparrow needs file access to show the folders and files on this device.</string>
     <string name="feature_chats_add_shared_contact_description">Do you want to add this shared contact to your contacts?</string>
-    <string name="feature_media_voice_tap_to_record">Tap to record</string>
-    <string name="feature_media_voice_transcribe">Transcribe</string>
-    <string name="feature_media_voice_transcribing">Transcribing…</string>
+    <string name="feature_voice_tap_to_record">Tap to record</string>
+    <string name="feature_voice_transcribe">Transcribe</string>
+    <string name="feature_voice_transcribing">Transcribing…</string>
+    <string name="feature_voice_transcription_downloading">Downloading voice message…</string>
+    <string name="feature_voice_transcription_preparing">Preparing transcription…</string>
     <string name="feature_settings_voice_transcription">Voice transcription</string>
     <string name="feature_settings_voice_transcription_subtitle">Create and show local transcripts for voice messages</string>
     <string name="feature_chats_pin_message">Pin message</string>

@@ -26,6 +26,7 @@ kotlin {
             implementation(projects.feature.attachments)
             implementation(projects.feature.identity)
             implementation(projects.feature.media)
+            implementation(projects.feature.voice)
             implementation(projects.feature.linkpreview)
             implementation(projects.feature.safety)
 

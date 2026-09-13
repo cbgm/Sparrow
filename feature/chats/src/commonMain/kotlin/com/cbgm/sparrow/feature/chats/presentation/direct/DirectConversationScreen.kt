@@ -179,7 +179,6 @@ fun DirectConversationScreen(
                         onSafetyDetailsClick = {},
                         onAttachmentClick = {},
                         onContactClick = {},
-                        voiceTranscriptionEnabled = uiState.voiceTranscriptionEnabled,
                         onReplyPreviewClick = {},
                         isSearchHighlighted = false,
                         showMetadata = false
@@ -247,24 +246,7 @@ fun DirectConversationScreen(
                         viewerMessageId = messageId
                         viewerAttachmentId = attachmentId
                     },
-                    onContactClick = { contact -> pendingSharedContact = contact },
-                    onVoicePlayPauseClick = { attachmentId ->
-                        onUiEvent(DirectConversationUiEvent.VoicePlayPauseClicked(attachmentId))
-                    },
-                    onVoiceTranscribeClick = { attachmentId ->
-                        onUiEvent(DirectConversationUiEvent.VoiceTranscribeClicked(attachmentId))
-                    },
-                    onVoiceSeekStart = { attachmentId ->
-                        onUiEvent(DirectConversationUiEvent.VoiceSeekStarted(attachmentId))
-                    },
-                    onVoiceSeekEnd = { attachmentId, positionMilliseconds ->
-                        onUiEvent(
-                            DirectConversationUiEvent.VoiceSeekFinished(
-                                attachmentId = attachmentId,
-                                positionMilliseconds = positionMilliseconds
-                            )
-                        )
-                    }
+                    onContactClick = { contact -> pendingSharedContact = contact }
                 )
             }
         }
@@ -429,11 +411,7 @@ private fun BottomBar(
         onLocationCaptured = { onUiEvent(DirectConversationUiEvent.ShareCurrentLocation(it)) },
         onLocationCaptureFailed = { onUiEvent(DirectConversationUiEvent.LocationCaptureFailed(it)) },
         onAttachmentError = { onUiEvent(DirectConversationUiEvent.AttachmentError(it)) },
-        onVoiceRecordClick = { onUiEvent(DirectConversationUiEvent.VoiceRecordClicked) },
-        onVoiceStopClick = { onUiEvent(DirectConversationUiEvent.VoiceStopClicked) },
-        onVoicePlayPauseClick = { onUiEvent(DirectConversationUiEvent.VoicePreviewPlayPauseClicked) },
-        onVoiceSendClick = { onUiEvent(DirectConversationUiEvent.VoiceSendClicked) },
-        onVoiceCancelClick = { onUiEvent(DirectConversationUiEvent.VoiceComposerCancelled) }
+        onVoiceSendClick = { onUiEvent(DirectConversationUiEvent.VoiceSendClicked) }
     )
 }
 
@@ -452,11 +430,7 @@ private fun Content(
     onRetryMessage: (String) -> Unit,
     onSafetyWarningClick: (String, MessageSafetyWarningUi) -> Unit,
     onAttachmentClick: (String, String) -> Unit,
-    onContactClick: (SharedContact) -> Unit,
-    onVoicePlayPauseClick: (String) -> Unit,
-    onVoiceTranscribeClick: (String) -> Unit,
-    onVoiceSeekStart: (String) -> Unit,
-    onVoiceSeekEnd: (String, Long) -> Unit
+    onContactClick: (SharedContact) -> Unit
 ) {
     val fillModifier = Modifier.fillMaxSize().padding(innerPadding)
     val dissolvingListState =
@@ -491,11 +465,6 @@ private fun Content(
             },
             onAttachmentClick = onAttachmentClick,
             onContactClick = onContactClick,
-            onVoicePlayPauseClick = onVoicePlayPauseClick,
-            onVoiceTranscribeClick = onVoiceTranscribeClick,
-            voiceTranscriptionEnabled = uiState.voiceTranscriptionEnabled,
-            onVoiceSeekStart = onVoiceSeekStart,
-            onVoiceSeekEnd = onVoiceSeekEnd,
             contentPadding = innerPadding,
             historyState = historyState,
             onLoadOlderMessages = onLoadOlderMessages,

@@ -612,9 +612,11 @@
     <string name="feature_media_file_picker_file_access">Dateizugriff erlauben</string>
     <string name="feature_media_file_picker_file_access_body">Sparrow benötigt Dateizugriff, um die Ordner und Dateien auf diesem Gerät anzuzeigen.</string>
     <string name="feature_chats_add_shared_contact_description">Möchtest du diesen geteilten Kontakt zu deinen Kontakten hinzufügen?</string>
-    <string name="feature_media_voice_tap_to_record">Zum Aufnehmen tippen</string>
-    <string name="feature_media_voice_transcribe">Transkribieren</string>
-    <string name="feature_media_voice_transcribing">Wird transkribiert…</string>
+    <string name="feature_voice_tap_to_record">Zum Aufnehmen tippen</string>
+    <string name="feature_voice_transcribe">Transkribieren</string>
+    <string name="feature_voice_transcribing">Wird transkribiert…</string>
+    <string name="feature_voice_transcription_downloading">Sprachnachricht wird heruntergeladen…</string>
+    <string name="feature_voice_transcription_preparing">Transkription wird vorbereitet…</string>
     <string name="feature_settings_voice_transcription">Sprachnachrichten transkribieren</string>
     <string name="feature_settings_voice_transcription_subtitle">Lokale Transkripte für Sprachnachrichten erstellen und anzeigen</string>
     <string name="feature_chats_pin_message">Nachricht anheften</string>

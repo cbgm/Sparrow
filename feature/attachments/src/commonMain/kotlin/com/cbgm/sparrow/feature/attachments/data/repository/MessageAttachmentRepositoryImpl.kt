@@ -12,11 +12,11 @@ import com.cbgm.sparrow.feature.attachments.data.model.AttachmentContentPayloadD
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentStorageSummary
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentTarget
+import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentTranscript
 import com.cbgm.sparrow.feature.attachments.domain.model.LocalAttachment
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentRepository
 import com.cbgm.sparrow.feature.attachments.util.ContactAttachmentPayload
 import com.cbgm.sparrow.feature.attachments.util.LocationAttachmentPayload
-import com.cbgm.sparrow.feature.media.domain.model.VoiceTranscription
 import kotlinx.coroutines.flow.Flow
 
 internal class MessageAttachmentRepositoryImpl(
@@ -38,16 +38,35 @@ internal class MessageAttachmentRepositoryImpl(
             logger.error(error) { "Could not load attachment content ${target.id}" }
         }
 
-    override suspend fun loadBytes(attachmentId: String): Result<ByteArray> = safeSuspendCall {
-        messageAttachmentDataSource.loadBytes(attachmentId)
-    }
+    override suspend fun loadBytes(attachmentId: String): Result<ByteArray> =
+        safeSuspendCall {
+            messageAttachmentDataSource.loadBytes(attachmentId)
+        }.onFailure { error ->
+            logger.error(error) { "Could not load attachment bytes $attachmentId" }
+        }
+
+    override suspend fun loadBytes(target: AttachmentTarget): Result<ByteArray> =
+        safeSuspendCall {
+            attachmentContentDataSource.loadBytes(target)
+        }.onFailure { error ->
+            logger.error(error) { "Could not load attachment bytes ${target.id}" }
+        }
 
     override suspend fun saveTranscript(
         attachmentId: String,
-        transcription: VoiceTranscription
-    ): Result<Unit> = safeSuspendCall {
-        messageAttachmentDataSource.updateTranscript(attachmentId, transcription.toPersistedTranscript())
-    }
+        transcription: AttachmentTranscript
+    ): Result<Unit> =
+        safeSuspendCall {
+            messageAttachmentDataSource.updateTranscript(
+                attachmentId = attachmentId,
+                transcript = transcription.toPersistedTranscript()
+            )
+        }.onFailure { error ->
+            logger.error(error) { "Could not save attachment transcript $attachmentId" }
+        }
+
+    override fun observeTranscript(attachmentId: String): Flow<AttachmentTranscript?> =
+        messageAttachmentDataSource.observeTranscript(attachmentId)
 
     override fun observeLocalAttachments(conversationId: String): Flow<List<LocalAttachment>> =
         localAttachmentDataSource.observeByConversation(conversationId)

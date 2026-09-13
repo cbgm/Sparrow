@@ -5,8 +5,10 @@ import com.cbgm.sparrow.core.protocol.attachment.EncryptedBlobReference
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
 import com.cbgm.sparrow.data.database.entity.MessageAttachmentEntity
+import com.cbgm.sparrow.feature.attachments.data.mapper.toAttachmentTranscript
 import com.cbgm.sparrow.feature.attachments.data.mapper.toMessageAttachmentsByMessageId
 import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachmentDto
+import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentTranscript
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
@@ -152,6 +154,10 @@ class MessageAttachmentDataSource(
             "Message attachment disappeared while its transcript was saved"
         }
     }
+
+    fun observeTranscript(attachmentId: String): Flow<AttachmentTranscript?> =
+        attachmentDao.observeById(attachmentId)
+            .map { entity -> entity?.transcript?.toAttachmentTranscript() }
 
     suspend fun resolveLocalFilePath(attachmentId: String): String? =
         withContext(Dispatchers.IO) {

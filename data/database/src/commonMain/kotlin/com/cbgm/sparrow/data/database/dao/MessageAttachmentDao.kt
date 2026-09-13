@@ -150,6 +150,9 @@ interface MessageAttachmentDao {
     suspend fun clearLocalFileNamesForConversation(conversationId: String): Int
 
     @Query("SELECT * FROM message_attachments WHERE id = :attachmentId LIMIT 1")
+    fun observeById(attachmentId: String): Flow<MessageAttachmentEntity?>
+
+    @Query("SELECT * FROM message_attachments WHERE id = :attachmentId LIMIT 1")
     suspend fun findById(attachmentId: String): MessageAttachmentEntity?
 
     @Query(

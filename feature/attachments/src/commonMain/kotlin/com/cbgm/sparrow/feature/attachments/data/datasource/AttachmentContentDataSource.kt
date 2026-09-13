@@ -17,6 +17,12 @@ internal class AttachmentContentDataSource(
             is AttachmentSource.GroupPin -> loadPinnedAttachment(source.groupId, target)
         }
 
+    suspend fun loadBytes(target: AttachmentTarget): ByteArray =
+        when (val source = target.source) {
+            AttachmentSource.Message -> messageAttachmentDataSource.loadBytes(target.id)
+            is AttachmentSource.GroupPin -> groupPinnedAttachmentProvider.load(source.groupId, target.id)
+        }
+
     private suspend fun loadMessageAttachment(target: AttachmentTarget): AttachmentContentPayloadDto =
         when (target.type) {
             MessageAttachmentType.IMAGE,

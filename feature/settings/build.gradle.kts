@@ -22,7 +22,7 @@ kotlin {
             implementation(projects.feature.identity)
             implementation(projects.feature.avatar)
             implementation(projects.feature.autoreply)
-            implementation(projects.feature.media)
+            implementation(projects.feature.voice)
             implementation(projects.feature.search)
             implementation(projects.feature.safety)
 

@@ -3,7 +3,6 @@ package com.cbgm.sparrow.feature.chats.presentation.component.model
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentSource
 import com.cbgm.sparrow.feature.linkpreview.presentation.model.TextContentPart
 import com.cbgm.sparrow.feature.linkpreview.presentation.model.toTextContentParts
-import com.cbgm.sparrow.feature.media.domain.model.VoiceTranscriptCue
 
 sealed interface MessagePartUi {
     data class ImageVideo(
@@ -47,12 +46,7 @@ sealed interface MessagePartUi {
         val mimeType: String = "audio/wav",
         val byteSize: Long = 0L,
         val durationMilliseconds: Long,
-        val playbackPositionMilliseconds: Long = 0L,
-        val isPlaying: Boolean = false,
-        val waveform: List<Float> = emptyList(),
-        val transcript: String? = null,
-        val transcriptCues: List<VoiceTranscriptCue> = emptyList(),
-        val isTranscribing: Boolean = false
+        val attachmentSource: AttachmentSource = AttachmentSource.Message
     ) : MessagePartUi
 }
 

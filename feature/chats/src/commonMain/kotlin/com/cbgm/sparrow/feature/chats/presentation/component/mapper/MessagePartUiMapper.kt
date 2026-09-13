@@ -8,22 +8,14 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessagePart
 import com.cbgm.sparrow.feature.chats.presentation.component.model.ImageVideoTypeUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessagePartUi
-import com.cbgm.sparrow.feature.media.presentation.voice.model.VoiceMessageUiState
 
 internal fun List<MessagePart>.toMessagePartsUi(
-    attachmentSource: AttachmentSource = AttachmentSource.Message,
-    voiceState: VoiceMessageUiState = VoiceMessageUiState()
+    attachmentSource: AttachmentSource = AttachmentSource.Message
 ): List<MessagePartUi> =
-    map { part ->
-        part.toMessagePartUi(
-            attachmentSource = attachmentSource,
-            voiceState = voiceState
-        )
-    }
+    map { part -> part.toMessagePartUi(attachmentSource) }
 
 private fun MessagePart.toMessagePartUi(
-    attachmentSource: AttachmentSource,
-    voiceState: VoiceMessageUiState
+    attachmentSource: AttachmentSource
 ): MessagePartUi =
     when (this) {
         is MessagePart.Text ->
@@ -70,22 +62,14 @@ private fun MessagePart.toMessagePartUi(
                 attachmentSource = attachmentSource
             )
 
-        is MessagePart.Voice -> {
-            val playbackState = voiceState.playback
-            val isActive = playbackState.attachmentId == id
+        is MessagePart.Voice ->
             MessagePartUi.Voice(
                 id = id,
                 mimeType = mimeType,
                 byteSize = byteSize,
                 durationMilliseconds = durationMilliseconds,
-                playbackPositionMilliseconds =
-                    if (isActive) playbackState.positionMilliseconds else 0L,
-                isPlaying = isActive && playbackState.isPlaying,
-                transcript = transcript,
-                transcriptCues = transcriptCues,
-                isTranscribing = voiceState.transcribingAttachmentId == id
+                attachmentSource = attachmentSource
             )
-        }
     }
 
 internal fun MessageBubbleUi.toMessageAttachmentsUi(): List<MessageAttachmentUi> =

@@ -19,6 +19,7 @@ import com.cbgm.sparrow.feature.safety.di.safetyModule
 import com.cbgm.sparrow.feature.search.di.searchModule
 import com.cbgm.sparrow.feature.settings.di.settingsModule
 import com.cbgm.sparrow.feature.transport.di.transportModule
+import com.cbgm.sparrow.feature.voice.di.voiceModule
 import com.cbgm.sparrow.navigation.di.navigationModule
 import com.cbgm.sparrow.notification.di.notificationModule
 import com.cbgm.sparrow.startup.di.startupModule
@@ -38,6 +39,7 @@ internal val commonApplicationModules: List<Module> =
         autoReplyModule,
         avatarModule,
         mediaModule,
+        voiceModule,
         chatsModule,
         transportModule,
         linkPreviewModule,

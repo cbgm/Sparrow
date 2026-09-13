@@ -482,17 +482,13 @@ private fun org.koin.core.module.Module.registerViewModels() {
             observeMemberIndicator = get(),
             setGroupIndicator = get(),
             observeMessageSafetyAssessments = get(),
-            loadMessageAttachment = get(),
-            loadGroupPinnedAttachment = get(),
             addDeviceContact = get(),
             forwardMessageUseCase = get(),
             loadOlderMessageHistory = get(),
             findMessageHistoryCursor = get(),
-            transcribeVoiceAudio = get(),
-            observeVoiceTranscriptionEnabled = get(),
-            saveMessageAttachmentTranscript = get(),
-            voiceRecorder = get(),
-            voicePlayer = get()
+            getRecordedVoiceAttachment = get(),
+            resetVoiceComposer = get(),
+            observeVoiceRecordingActive = get()
         )
     }
 
@@ -540,16 +536,13 @@ private fun org.koin.core.module.Module.registerViewModels() {
             observeIndicator = get(),
             setIndicator = get(),
             observeMessageSafetyAssessments = get(),
-            loadMessageAttachment = get(),
             addDeviceContact = get(),
             forwardMessageUseCase = get(),
             loadOlderMessageHistory = get(),
             findMessageHistoryCursor = get(),
-            transcribeVoiceAudio = get(),
-            observeVoiceTranscriptionEnabled = get(),
-            saveMessageAttachmentTranscript = get(),
-            voiceRecorder = get(),
-            voicePlayer = get()
+            getRecordedVoiceAttachment = get(),
+            resetVoiceComposer = get(),
+            observeVoiceRecordingActive = get()
         )
     }
 }

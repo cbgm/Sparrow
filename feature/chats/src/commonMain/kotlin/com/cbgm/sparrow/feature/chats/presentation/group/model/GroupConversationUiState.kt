@@ -13,8 +13,7 @@ data class GroupConversationUiState(
     val isLocalAdmin: Boolean = false,
     val isLoading: Boolean = true,
     val state: GroupConversationState = GroupConversationState.READY,
-    val composerState: GroupComposerState = GroupComposerState.DISABLED,
-    val voiceTranscriptionEnabled: Boolean = false
+    val composerState: GroupComposerState = GroupComposerState.DISABLED
 )
 
 fun GroupConversationUiState.findMessage(id: String?) =

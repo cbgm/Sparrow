@@ -1,7 +1,5 @@
 package com.cbgm.sparrow.feature.chats.domain.model
 
-import com.cbgm.sparrow.feature.media.domain.model.VoiceTranscriptCue
-
 sealed interface MessagePart {
     data class Text(
         val text: String
@@ -39,9 +37,7 @@ sealed interface MessagePart {
         val id: String,
         val mimeType: String,
         val byteSize: Long,
-        val durationMilliseconds: Long,
-        val transcript: String? = null,
-        val transcriptCues: List<VoiceTranscriptCue> = emptyList()
+        val durationMilliseconds: Long
     ) : MessagePart
 }
 

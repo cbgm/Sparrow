@@ -13,8 +13,7 @@ data class DirectConversationUiState(
     val identitySetupMode: DirectIdentitySetupMode = DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING,
     val isLoading: Boolean = true,
     val isChatAuthorized: Boolean = false,
-    val composerState: DirectComposerState = DirectComposerState.DISABLED,
-    val voiceTranscriptionEnabled: Boolean = false
+    val composerState: DirectComposerState = DirectComposerState.DISABLED
 )
 
 fun DirectConversationUiState.findMessage(id: String?) =

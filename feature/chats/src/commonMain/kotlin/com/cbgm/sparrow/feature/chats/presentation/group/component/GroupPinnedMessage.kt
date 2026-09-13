@@ -45,7 +45,8 @@ import com.cbgm.sparrow.feature.chats.presentation.component.PhotoVideoMessageBu
 import com.cbgm.sparrow.feature.chats.presentation.component.TextMessageBubbleBody
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessagePartUi
-import com.cbgm.sparrow.feature.media.presentation.voice.VoiceMessageContent
+import com.cbgm.sparrow.feature.voice.domain.model.VoiceMessageTarget
+import com.cbgm.sparrow.feature.voice.presentation.message.VoiceMessageContent
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_attachment
 import com.cbgm.sparrow.resources.feature_chats_pinned_message
@@ -130,13 +131,8 @@ internal fun GroupPinnedMessageContent(
     message: MessageBubbleUi,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    voiceTranscriptionEnabled: Boolean = false,
     onAttachmentClick: (String) -> Unit = {},
-    onContactClick: (SharedContact) -> Unit = {},
-    onVoicePlayPauseClick: (String) -> Unit = {},
-    onVoiceTranscribeClick: (String) -> Unit = {},
-    onVoiceSeekStart: (String) -> Unit = {},
-    onVoiceSeekEnd: (String, Long) -> Unit = { _, _ -> }
+    onContactClick: (SharedContact) -> Unit = {}
 ) {
     SparrowScrollScaffold(
         modifier = modifier.fillMaxSize(),
@@ -170,20 +166,12 @@ internal fun GroupPinnedMessageContent(
 
             message.voicePart?.let { voicePart ->
                 VoiceMessageContent(
-                    durationMilliseconds = voicePart.durationMilliseconds,
-                    playbackPositionMilliseconds = voicePart.playbackPositionMilliseconds,
-                    isPlaying = voicePart.isPlaying,
-                    waveform = voicePart.waveform,
-                    transcript = voicePart.transcript,
-                    transcriptCues = voicePart.transcriptCues,
-                    isTranscribing = voicePart.isTranscribing,
-                    transcriptionEnabled = voiceTranscriptionEnabled,
-                    onPlayPauseClick = { onVoicePlayPauseClick(voicePart.id) },
-                    onTranscribeClick = { onVoiceTranscribeClick(voicePart.id) },
-                    onSeekStart = { onVoiceSeekStart(voicePart.id) },
-                    onSeekEnd = { positionMilliseconds ->
-                        onVoiceSeekEnd(voicePart.id, positionMilliseconds)
-                    },
+                    target =
+                        VoiceMessageTarget(
+                            attachmentId = voicePart.id,
+                            durationMilliseconds = voicePart.durationMilliseconds,
+                            source = voicePart.attachmentSource
+                        ),
                     modifier = Modifier.fillMaxWidth()
                 )
             }

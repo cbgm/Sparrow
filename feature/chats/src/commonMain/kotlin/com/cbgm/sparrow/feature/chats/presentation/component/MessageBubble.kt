@@ -58,8 +58,9 @@ import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubble
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessagePartUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageReactionUi
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageReplyUi
-import com.cbgm.sparrow.feature.media.presentation.voice.VoiceMessageContent
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
+import com.cbgm.sparrow.feature.voice.domain.model.VoiceMessageTarget
+import com.cbgm.sparrow.feature.voice.presentation.message.VoiceMessageContent
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_delivered
 import com.cbgm.sparrow.resources.feature_chats_encrypted
@@ -86,11 +87,6 @@ internal fun MessageBubble(
     onSafetyDetailsClick: (MessageSafetyWarningUi) -> Unit = {},
     onAttachmentClick: (String) -> Unit = {},
     onContactClick: (SharedContact) -> Unit = {},
-    onVoicePlayPauseClick: (String) -> Unit = {},
-    onVoiceTranscribeClick: (String) -> Unit = {},
-    voiceTranscriptionEnabled: Boolean = false,
-    onVoiceSeekStart: (String) -> Unit = {},
-    onVoiceSeekEnd: (String, Long) -> Unit = { _, _ -> },
     onReplyPreviewClick: (String) -> Unit = {},
     onContextMessageRequested: (MessageContextAnchor) -> Unit = {},
     onReactionsClick: (SparrowOverlayAnchor) -> Unit = {},
@@ -122,11 +118,6 @@ internal fun MessageBubble(
             onSafetyDetailsClick = onSafetyDetailsClick,
             onAttachmentClick = onAttachmentClick,
             onContactClick = onContactClick,
-            onVoicePlayPauseClick = onVoicePlayPauseClick,
-            onVoiceTranscribeClick = onVoiceTranscribeClick,
-            voiceTranscriptionEnabled = voiceTranscriptionEnabled,
-            onVoiceSeekStart = onVoiceSeekStart,
-            onVoiceSeekEnd = onVoiceSeekEnd,
             onReplyPreviewClick = onReplyPreviewClick,
             onLongPress = onLongPress,
             onReactionsClick = onReactionsClick,
@@ -156,11 +147,6 @@ private fun MessageBubbleContent(
     onSafetyDetailsClick: (MessageSafetyWarningUi) -> Unit,
     onAttachmentClick: (String) -> Unit,
     onContactClick: (SharedContact) -> Unit,
-    onVoicePlayPauseClick: (String) -> Unit,
-    onVoiceTranscribeClick: (String) -> Unit,
-    voiceTranscriptionEnabled: Boolean,
-    onVoiceSeekStart: (String) -> Unit,
-    onVoiceSeekEnd: (String, Long) -> Unit,
     onReplyPreviewClick: (String) -> Unit,
     onLongPress: () -> Unit,
     onReactionsClick: (SparrowOverlayAnchor) -> Unit,
@@ -196,11 +182,6 @@ private fun MessageBubbleContent(
                     safetyWarning = safetyWarning,
                     onAttachmentClick = onAttachmentClick,
                     onContactClick = onContactClick,
-                    onVoicePlayPauseClick = onVoicePlayPauseClick,
-                    onVoiceTranscribeClick = onVoiceTranscribeClick,
-                    voiceTranscriptionEnabled = voiceTranscriptionEnabled,
-                    onVoiceSeekStart = onVoiceSeekStart,
-                    onVoiceSeekEnd = onVoiceSeekEnd,
                     onReplyPreviewClick = onReplyPreviewClick,
                     onLongPress = onLongPress,
                     onSafetyDetailsClick = {
@@ -285,11 +266,6 @@ private fun BubbleBody(
     safetyWarning: MessageSafetyWarningUi? = null,
     onAttachmentClick: (String) -> Unit = {},
     onContactClick: (SharedContact) -> Unit = {},
-    onVoicePlayPauseClick: (String) -> Unit = {},
-    onVoiceTranscribeClick: (String) -> Unit = {},
-    voiceTranscriptionEnabled: Boolean = false,
-    onVoiceSeekStart: (String) -> Unit = {},
-    onVoiceSeekEnd: (String, Long) -> Unit = { _, _ -> },
     onReplyPreviewClick: (String) -> Unit = {},
     onLongPress: () -> Unit = {},
     onSafetyDetailsClick: () -> Unit = {}
@@ -319,20 +295,12 @@ private fun BubbleBody(
                 onLongPress = onLongPress
             ) {
                 VoiceMessageContent(
-                    durationMilliseconds = voicePart.durationMilliseconds,
-                    playbackPositionMilliseconds = voicePart.playbackPositionMilliseconds,
-                    isPlaying = voicePart.isPlaying,
-                    waveform = voicePart.waveform,
-                    transcript = voicePart.transcript,
-                    transcriptCues = voicePart.transcriptCues,
-                    isTranscribing = voicePart.isTranscribing,
-                    transcriptionEnabled = voiceTranscriptionEnabled,
-                    onPlayPauseClick = { onVoicePlayPauseClick(voicePart.id) },
-                    onTranscribeClick = { onVoiceTranscribeClick(voicePart.id) },
-                    onSeekStart = { onVoiceSeekStart(voicePart.id) },
-                    onSeekEnd = { positionMilliseconds ->
-                        onVoiceSeekEnd(voicePart.id, positionMilliseconds)
-                    }
+                    target =
+                        VoiceMessageTarget(
+                            attachmentId = voicePart.id,
+                            durationMilliseconds = voicePart.durationMilliseconds,
+                            source = voicePart.attachmentSource
+                        )
                 )
             }
         }

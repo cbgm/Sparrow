@@ -36,11 +36,7 @@ fun ChatComposerBar(
     onLocationCaptured: (CurrentLocation) -> Unit,
     onLocationCaptureFailed: (String) -> Unit,
     onAttachmentError: (String) -> Unit,
-    onVoiceRecordClick: () -> Unit,
-    onVoiceStopClick: () -> Unit,
-    onVoicePlayPauseClick: () -> Unit,
-    onVoiceSendClick: () -> Unit,
-    onVoiceCancelClick: () -> Unit
+    onVoiceSendClick: () -> Unit
 ) {
     val currentLocationLauncher =
         rememberCurrentLocationLauncher(
@@ -102,8 +98,7 @@ fun ChatComposerBar(
                 selectedMedia = composerState.selectedMedia,
                 isGalleryEnabled = composerState.availability.canAddAttachment,
                 isCameraEnabled = composerState.availability.canAddAttachment,
-                isFileEnabled = composerState.availability.canAddAttachment,
-                voiceState = composerState.voiceState
+                isFileEnabled = composerState.availability.canAddAttachment
             ),
         actions =
             MessageInputActions(
@@ -128,11 +123,7 @@ fun ChatComposerBar(
                     onLocationCaptureStarted()
                     currentLocationLauncher.launch()
                 },
-                onVoiceRecordClick = onVoiceRecordClick,
-                onVoiceStopClick = onVoiceStopClick,
-                onVoicePlayPauseClick = onVoicePlayPauseClick,
-                onVoiceSendClick = onVoiceSendClick,
-                onVoiceCancelClick = onVoiceCancelClick
+                onVoiceSendClick = onVoiceSendClick
             )
     )
 }

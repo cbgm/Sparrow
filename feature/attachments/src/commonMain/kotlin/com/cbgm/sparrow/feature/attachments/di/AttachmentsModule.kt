@@ -14,10 +14,12 @@ import com.cbgm.sparrow.feature.attachments.domain.usecase.DeleteBlobUseCase
 import com.cbgm.sparrow.feature.attachments.domain.usecase.DeleteConversationLocalAttachmentsUseCase
 import com.cbgm.sparrow.feature.attachments.domain.usecase.DeleteLocalAttachmentsUseCase
 import com.cbgm.sparrow.feature.attachments.domain.usecase.DownloadBlobUseCase
+import com.cbgm.sparrow.feature.attachments.domain.usecase.LoadAttachmentBytesUseCase
 import com.cbgm.sparrow.feature.attachments.domain.usecase.LoadAttachmentContentUseCase
 import com.cbgm.sparrow.feature.attachments.domain.usecase.LoadMessageAttachmentUseCase
 import com.cbgm.sparrow.feature.attachments.domain.usecase.ObserveAttachmentStorageSummariesUseCase
 import com.cbgm.sparrow.feature.attachments.domain.usecase.ObserveLocalAttachmentsUseCase
+import com.cbgm.sparrow.feature.attachments.domain.usecase.ObserveMessageAttachmentTranscriptUseCase
 import com.cbgm.sparrow.feature.attachments.domain.usecase.SaveMessageAttachmentTranscriptUseCase
 import com.cbgm.sparrow.feature.attachments.domain.usecase.UploadBlobUseCase
 import com.cbgm.sparrow.feature.attachments.presentation.AttachmentViewModel
@@ -57,10 +59,16 @@ val attachmentsModule =
             LoadMessageAttachmentUseCase(repository = get<MessageAttachmentRepository>())
         }
         factory {
+            LoadAttachmentBytesUseCase(repository = get<MessageAttachmentRepository>())
+        }
+        factory {
             LoadAttachmentContentUseCase(repository = get<MessageAttachmentRepository>())
         }
         factory {
             SaveMessageAttachmentTranscriptUseCase(repository = get<MessageAttachmentRepository>())
+        }
+        factory {
+            ObserveMessageAttachmentTranscriptUseCase(repository = get<MessageAttachmentRepository>())
         }
         factory {
             ObserveLocalAttachmentsUseCase(repository = get<MessageAttachmentRepository>())

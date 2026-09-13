@@ -8,8 +8,6 @@ import com.cbgm.sparrow.core.ui.locale.AppLanguage
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.ObserveActiveAutoReplyUseCase
-import com.cbgm.sparrow.feature.media.domain.usecase.ObserveVoiceTranscriptionEnabledUseCase
-import com.cbgm.sparrow.feature.media.domain.usecase.SetVoiceTranscriptionEnabledUseCase
 import com.cbgm.sparrow.feature.search.domain.usecase.SetSemanticSearchEnabledUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetAppLanguageUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetBuildInfoUseCase
@@ -24,6 +22,8 @@ import com.cbgm.sparrow.feature.settings.presentation.overview.model.DEVELOPER_M
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsEffect
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsUiState
+import com.cbgm.sparrow.feature.voice.domain.usecase.ObserveVoiceTranscriptionEnabledUseCase
+import com.cbgm.sparrow.feature.voice.domain.usecase.SetVoiceTranscriptionEnabledUseCase
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

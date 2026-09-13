@@ -55,7 +55,7 @@ android {
 
     externalNativeBuild {
         cmake {
-            path = file("../feature/media/src/androidMain/cpp/CMakeLists.txt")
+            path = file("../feature/voice/src/androidMain/cpp/CMakeLists.txt")
         }
     }
 

@@ -1,18 +1,12 @@
 package com.cbgm.sparrow.feature.media.di
 
-import com.cbgm.sparrow.feature.media.data.datasource.VoiceTranscriptionSettingsDataSource
 import com.cbgm.sparrow.feature.media.data.repository.FileBrowserRepositoryImpl
-import com.cbgm.sparrow.feature.media.data.repository.VoiceTranscriptionSettingsRepositoryImpl
 import com.cbgm.sparrow.feature.media.domain.repository.FileBrowserRepository
-import com.cbgm.sparrow.feature.media.domain.repository.VoiceTranscriptionSettingsRepository
 import com.cbgm.sparrow.feature.media.domain.usecase.BrowseFileDirectoryUseCase
 import com.cbgm.sparrow.feature.media.domain.usecase.CheckFileBrowserAccessUseCase
 import com.cbgm.sparrow.feature.media.domain.usecase.GetFileBrowserRootUseCase
-import com.cbgm.sparrow.feature.media.domain.usecase.ObserveVoiceTranscriptionEnabledUseCase
 import com.cbgm.sparrow.feature.media.domain.usecase.ReadFileBrowserEntryUseCase
 import com.cbgm.sparrow.feature.media.domain.usecase.SetFileBrowserRootUseCase
-import com.cbgm.sparrow.feature.media.domain.usecase.SetVoiceTranscriptionEnabledUseCase
-import com.cbgm.sparrow.feature.media.domain.usecase.TranscribeVoiceAudioUseCase
 import com.cbgm.sparrow.feature.media.presentation.filepicker.FilePickerLauncher
 import com.cbgm.sparrow.feature.media.presentation.filepicker.FilePickerSessionController
 import com.cbgm.sparrow.feature.media.presentation.filepicker.FilePickerViewModel
@@ -32,16 +26,8 @@ val mediaModule =
         factory { BrowseFileDirectoryUseCase(repository = get()) }
         factory { ReadFileBrowserEntryUseCase(repository = get()) }
 
-        single { VoiceTranscriptionSettingsDataSource(dataStore = get()) }
-        single<VoiceTranscriptionSettingsRepository> {
-            VoiceTranscriptionSettingsRepositoryImpl(dataSource = get())
-        }
-        factory { ObserveVoiceTranscriptionEnabledUseCase(repository = get()) }
-        factory { SetVoiceTranscriptionEnabledUseCase(repository = get()) }
-
         singleOf(::FilePickerSessionController)
         singleOf(::FilePickerLauncher)
-        factory { TranscribeVoiceAudioUseCase(repository = get()) }
         viewModel {
             FilePickerViewModel(
                 savedStateHandle = get(),
