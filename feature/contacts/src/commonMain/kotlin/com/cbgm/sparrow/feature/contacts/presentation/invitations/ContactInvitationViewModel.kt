@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.feature.contacts.domain.usecase.DeclineInvitationAndBlockContactUseCase
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.mapper.toContactInvitationUiState
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.mapper.toContactInvitationsUiData
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.mapper.toInvitationDirection
@@ -14,12 +15,11 @@ import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactI
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiState
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationsUiData
-import com.cbgm.sparrow.feature.invite.domain.usecase.AcceptDirectInvitationUseCase
-import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineAndBlockDirectInvitationUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.AcceptInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.DeleteDeclinedOutgoingInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.MarkInvitationsViewedUseCase
-import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveDirectInvitationsContextUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationsContextUseCase
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -34,10 +34,10 @@ import kotlinx.coroutines.launch
 
 class ContactInvitationViewModel(
     savedStateHandle: SavedStateHandle,
-    observeInvitationsContext: ObserveDirectInvitationsContextUseCase,
-    private val acceptDirectInvitation: AcceptDirectInvitationUseCase,
+    observeInvitationsContext: ObserveInvitationsContextUseCase,
+    private val acceptInvitation: AcceptInvitationUseCase,
     private val declineInvitation: DeclineInvitationUseCase,
-    private val declineAndBlockDirectInvitation: DeclineAndBlockDirectInvitationUseCase,
+    private val declineInvitationAndBlockContact: DeclineInvitationAndBlockContactUseCase,
     private val deleteDeclinedOutgoingInvitation: DeleteDeclinedOutgoingInvitationUseCase,
     private val markInvitationsViewed: MarkInvitationsViewedUseCase
 ) : BaseViewModel() {
@@ -122,7 +122,7 @@ class ContactInvitationViewModel(
             invitationId = invitationId,
             closeWhenScreenBecomesEmpty = true
         ) {
-            acceptDirectInvitation(invitationId)
+            acceptInvitation(invitationId)
         }
     }
 
@@ -140,7 +140,7 @@ class ContactInvitationViewModel(
             invitationId = invitationId,
             closeWhenScreenBecomesEmpty = true
         ) {
-            declineAndBlockDirectInvitation(invitationId)
+            declineInvitationAndBlockContact(invitationId)
         }
     }
 

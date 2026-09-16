@@ -4,11 +4,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
-class ObservePendingDirectInvitationCountUseCase(
-    private val observePendingDirectInvitations: ObservePendingDirectInvitationsUseCase
+class ObservePendingInvitationCountUseCase(
+    private val observePendingInvitations: ObservePendingInvitationsUseCase
 ) {
     operator fun invoke(): Flow<Int> =
-        observePendingDirectInvitations()
+        observePendingInvitations()
             .map { invitations -> invitations.size }
             .distinctUntilChanged()
 }

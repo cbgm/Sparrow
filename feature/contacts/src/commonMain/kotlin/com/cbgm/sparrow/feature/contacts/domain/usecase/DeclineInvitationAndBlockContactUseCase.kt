@@ -1,9 +1,10 @@
-package com.cbgm.sparrow.feature.invite.domain.usecase
+package com.cbgm.sparrow.feature.contacts.domain.usecase
 
 import com.cbgm.sparrow.core.security.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.invite.domain.repository.DirectIdentityExchangeRepository
+import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineInvitationUseCase
 
-class DeclineAndBlockDirectInvitationUseCase(
+class DeclineInvitationAndBlockContactUseCase(
     private val directIdentityExchangeRepository: DirectIdentityExchangeRepository,
     private val declineInvitation: DeclineInvitationUseCase,
     private val contactBlocklistRepository: ContactBlocklistRepository

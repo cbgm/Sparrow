@@ -1,8 +1,6 @@
 package com.cbgm.sparrow.feature.invite.di
 
-import com.cbgm.sparrow.feature.invite.domain.usecase.AcceptDirectInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.AcceptInvitationUseCase
-import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineAndBlockDirectInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.DeleteDeclinedOutgoingInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.HandleContactInviteAcceptedPacketUseCase
@@ -10,20 +8,19 @@ import com.cbgm.sparrow.feature.invite.domain.usecase.HandleContactInviteDecline
 import com.cbgm.sparrow.feature.invite.domain.usecase.HandleContactInvitePacketUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.HandleContactReadyPacketUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.MarkInvitationsViewedUseCase
-import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveDirectInvitationsContextUseCase
-import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveDirectInvitationsUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveIdentityHandshakeStateUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationsContextUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationsUseCase
-import com.cbgm.sparrow.feature.invite.domain.usecase.ObservePendingDirectInvitationCountUseCase
-import com.cbgm.sparrow.feature.invite.domain.usecase.ObservePendingDirectInvitationsUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.ObservePendingInvitationCountUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.ObservePendingInvitationsUseCase
 import org.koin.dsl.module
 
 val inviteModule =
     module {
-        factory { AcceptInvitationUseCase(repository = get()) }
+        factory { AcceptInvitationUseCase(repository = get(), policy = get()) }
         factory { DeclineInvitationUseCase(repository = get()) }
         factory { MarkInvitationsViewedUseCase(repository = get()) }
-        factory { ObserveInvitationsUseCase(repository = get()) }
+        factory { ObserveInvitationsUseCase(repository = get(), policy = get()) }
         factory { DeleteDeclinedOutgoingInvitationUseCase(repository = get()) }
 
         factory {
@@ -38,33 +35,12 @@ val inviteModule =
         factory { HandleContactInviteDeclinedPacketUseCase(directIdentityExchangeRepository = get()) }
 
         factory {
-            AcceptDirectInvitationUseCase(
-                directIdentityExchangeRepository = get(),
-                acceptInvitation = get(),
-                modeRepository = get(),
-                contactBlocklistRepository = get()
-            )
-        }
-        factory {
-            DeclineAndBlockDirectInvitationUseCase(
-                directIdentityExchangeRepository = get(),
-                declineInvitation = get(),
-                contactBlocklistRepository = get()
-            )
-        }
-        factory {
-            ObserveDirectInvitationsUseCase(
+            ObservePendingInvitationsUseCase(
                 observeInvitations = get(),
-                contactBlocklistRepository = get()
+                policy = get()
             )
         }
-        factory {
-            ObservePendingDirectInvitationsUseCase(
-                observeDirectInvitations = get(),
-                modeRepository = get()
-            )
-        }
-        factory { ObservePendingDirectInvitationCountUseCase(observePendingDirectInvitations = get()) }
+        factory { ObservePendingInvitationCountUseCase(observePendingInvitations = get()) }
         factory { ObserveIdentityHandshakeStateUseCase(directIdentityExchangeRepository = get()) }
-        factory { ObserveDirectInvitationsContextUseCase(observeDirectInvitations = get()) }
+        factory { ObserveInvitationsContextUseCase(observeInvitations = get()) }
     }
