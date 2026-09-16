@@ -13,6 +13,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
+            implementation(projects.core)
             implementation(projects.core.protocol)
             implementation(projects.core.ui)
             implementation(projects.feature.avatar)

@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.contacts.data.policy
+package com.cbgm.sparrow.feature.invite.data.policy
 
 import com.cbgm.sparrow.core.security.ContactBlocklistRepository
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode

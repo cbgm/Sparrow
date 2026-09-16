@@ -12,7 +12,6 @@ import com.cbgm.sparrow.feature.contacts.adapter.IdentityPacketHandler
 import com.cbgm.sparrow.feature.contacts.data.datasource.ContactKeyExchangeDataSource
 import com.cbgm.sparrow.feature.contacts.data.datasource.ContactVerificationDataSource
 import com.cbgm.sparrow.feature.contacts.data.invitation.InvitationResultObserver
-import com.cbgm.sparrow.feature.contacts.data.policy.InvitationPolicyProviderImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactKeyExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactVerificationRepositoryImpl
@@ -53,7 +52,6 @@ import com.cbgm.sparrow.feature.contacts.util.ContactVerificationPayloadEncoder
 import com.cbgm.sparrow.feature.contacts.util.IdentityInvitationPayloadEncoder
 import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
 import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPacketProcessor
-import com.cbgm.sparrow.feature.invite.domain.policy.InvitationPolicyProvider
 import com.cbgm.sparrow.feature.invite.domain.repository.InvitationRepository
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
@@ -132,12 +130,6 @@ val contactsModule =
         }
         single<InvitationPacketProcessor> {
             InvitationPacketProcessorImpl(coordinator = get())
-        }
-        single<InvitationPolicyProvider> {
-            InvitationPolicyProviderImpl(
-                modeRepository = get(),
-                contactBlocklistRepository = get()
-            )
         }
         singleOf(::InvitationResultObserver)
         factory { HandleContactReadyPacketUseCase(directIdentityExchangeRepository = get()) }

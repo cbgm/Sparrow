@@ -3,11 +3,13 @@ package com.cbgm.sparrow.feature.invite.di
 import com.cbgm.sparrow.core.protocol.handler.TypedProtocolPacketHandler
 import com.cbgm.sparrow.feature.invite.data.event.InvitationResultStreamImpl
 import com.cbgm.sparrow.feature.invite.data.policy.InvitationPolicyImpl
+import com.cbgm.sparrow.feature.invite.data.policy.InvitationPolicyProviderImpl
 import com.cbgm.sparrow.feature.invite.data.protocol.handler.IncomingInvitationPacketHandler
 import com.cbgm.sparrow.feature.invite.data.protocol.handler.InvitationAcceptedPacketHandler
 import com.cbgm.sparrow.feature.invite.data.protocol.handler.InvitationDeclinedPacketHandler
 import com.cbgm.sparrow.feature.invite.domain.event.InvitationResultStream
 import com.cbgm.sparrow.feature.invite.domain.policy.InvitationPolicy
+import com.cbgm.sparrow.feature.invite.domain.policy.InvitationPolicyProvider
 import com.cbgm.sparrow.feature.invite.domain.usecase.AcceptInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineAndBlockInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineInvitationUseCase
@@ -27,6 +29,12 @@ import org.koin.dsl.module
 
 val inviteModule =
     module {
+        single<InvitationPolicyProvider> {
+            InvitationPolicyProviderImpl(
+                modeRepository = get(),
+                contactBlocklistRepository = get()
+            )
+        }
         single<InvitationPolicy> {
             InvitationPolicyImpl(
                 repository = get(),
