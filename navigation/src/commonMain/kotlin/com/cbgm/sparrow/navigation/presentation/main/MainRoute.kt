@@ -16,6 +16,6 @@ fun MainRoute(
         invitationCount = invitationCount,
         isMessageSearchAvailable = isMessageSearchAvailable,
         onOpenSearch = viewModel::openMessageSearch,
-        onOpenInvitations = viewModel::openContactInvitations
+        onOpenInvitations = viewModel::openInvitations
     )
 }

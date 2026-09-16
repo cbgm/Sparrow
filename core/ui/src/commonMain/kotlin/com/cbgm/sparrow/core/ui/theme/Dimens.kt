@@ -192,7 +192,7 @@ object Dimens {
         val animationSize = 180.dp
     }
 
-    object ContactInvitationsScreen {
+    object InvitationsScreen {
         val avatarSize = 40.dp
         val progressSize = 20.dp
         val actionIconSize = 24.dp

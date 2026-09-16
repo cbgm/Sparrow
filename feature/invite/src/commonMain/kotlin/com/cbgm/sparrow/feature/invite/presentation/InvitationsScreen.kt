@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.contacts.presentation.invitations
+package com.cbgm.sparrow.feature.invite.presentation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -51,36 +51,36 @@ import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
-import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationDirection
-import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationStatus
-import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationTab
-import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUi
-import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiEvent
-import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiState
+import com.cbgm.sparrow.feature.invite.presentation.model.InvitationTab
+import com.cbgm.sparrow.feature.invite.presentation.model.InvitationUi
+import com.cbgm.sparrow.feature.invite.presentation.model.InvitationUiDirection
+import com.cbgm.sparrow.feature.invite.presentation.model.InvitationUiEvent
+import com.cbgm.sparrow.feature.invite.presentation.model.InvitationUiState
+import com.cbgm.sparrow.feature.invite.presentation.model.InvitationUiStatus
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_unknown
-import com.cbgm.sparrow.resources.feature_contacts_accept_invitation
-import com.cbgm.sparrow.resources.feature_contacts_block_invitation
-import com.cbgm.sparrow.resources.feature_contacts_decline_invitation
-import com.cbgm.sparrow.resources.feature_contacts_delete_outgoing_invitation
-import com.cbgm.sparrow.resources.feature_contacts_invitation_status_declined
-import com.cbgm.sparrow.resources.feature_contacts_invitation_status_expired
-import com.cbgm.sparrow.resources.feature_contacts_invitation_status_failed
-import com.cbgm.sparrow.resources.feature_contacts_invitation_status_pending
-import com.cbgm.sparrow.resources.feature_contacts_invitations_incoming
-import com.cbgm.sparrow.resources.feature_contacts_invitations_incoming_empty
-import com.cbgm.sparrow.resources.feature_contacts_invitations_outgoing
-import com.cbgm.sparrow.resources.feature_contacts_invitations_outgoing_empty
-import com.cbgm.sparrow.resources.feature_contacts_invitations_title
+import com.cbgm.sparrow.resources.feature_invite_accept_invitation
+import com.cbgm.sparrow.resources.feature_invite_block_invitation
+import com.cbgm.sparrow.resources.feature_invite_decline_invitation
+import com.cbgm.sparrow.resources.feature_invite_delete_outgoing_invitation
+import com.cbgm.sparrow.resources.feature_invite_invitation_status_declined
+import com.cbgm.sparrow.resources.feature_invite_invitation_status_expired
+import com.cbgm.sparrow.resources.feature_invite_invitation_status_failed
+import com.cbgm.sparrow.resources.feature_invite_invitation_status_pending
+import com.cbgm.sparrow.resources.feature_invite_invitations_incoming
+import com.cbgm.sparrow.resources.feature_invite_invitations_incoming_empty
+import com.cbgm.sparrow.resources.feature_invite_invitations_outgoing
+import com.cbgm.sparrow.resources.feature_invite_invitations_outgoing_empty
+import com.cbgm.sparrow.resources.feature_invite_invitations_title
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ContactInvitationsScreen(
-    uiState: ContactInvitationUiState,
+fun InvitationsScreen(
+    uiState: InvitationUiState,
     snackbarHostState: SnackbarHostState,
-    onUiEvent: (ContactInvitationUiEvent) -> Unit,
+    onUiEvent: (InvitationUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     SparrowLazyScaffold(
@@ -91,12 +91,12 @@ fun ContactInvitationsScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = stringResource(Res.string.feature_contacts_invitations_title),
+                        text = stringResource(Res.string.feature_invite_invitations_title),
                         style = MaterialTheme.typography.titleSmall
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { onUiEvent(ContactInvitationUiEvent.CloseClicked) }) {
+                    IconButton(onClick = { onUiEvent(InvitationUiEvent.CloseClicked) }) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = null
@@ -124,7 +124,7 @@ fun ContactInvitationsScreen(
                 hasUnreadIncomingUpdates = uiState.hasUnreadIncomingUpdates,
                 hasUnreadOutgoingUpdates = uiState.hasUnreadOutgoingUpdates,
                 onTabSelected = { tab ->
-                    onUiEvent(ContactInvitationUiEvent.TabSelected(tab))
+                    onUiEvent(InvitationUiEvent.TabSelected(tab))
                 }
             )
 
@@ -148,7 +148,7 @@ fun ContactInvitationsScreen(
                 ) {
                     items(
                         items = uiState.selectedInvitations,
-                        key = ContactInvitationUi::invitationId
+                        key = InvitationUi::invitationId
                     ) { invitation ->
                         InvitationItem(
                             invitation = invitation,
@@ -166,10 +166,10 @@ fun ContactInvitationsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun InvitationTabs(
-    selectedTab: ContactInvitationTab,
+    selectedTab: InvitationTab,
     hasUnreadIncomingUpdates: Boolean,
     hasUnreadOutgoingUpdates: Boolean,
-    onTabSelected: (ContactInvitationTab) -> Unit
+    onTabSelected: (InvitationTab) -> Unit
 ) {
     PrimaryTabRow(
         selectedTabIndex = selectedTab.ordinal,
@@ -178,22 +178,22 @@ private fun InvitationTabs(
                 modifier = Modifier
                     .tabIndicatorOffset(selectedTabIndex = selectedTab.ordinal)
                     .fillMaxWidth()
-                    .height(Dimens.ContactInvitationsScreen.tabIndicatorHeight)
+                    .height(Dimens.InvitationsScreen.tabIndicatorHeight)
                     .background(MaterialTheme.colorScheme.onSurfaceVariant) // Set your indicator color
             )
         }
     ) {
         InvitationTab(
-            title = stringResource(Res.string.feature_contacts_invitations_incoming),
-            selected = selectedTab == ContactInvitationTab.INCOMING,
+            title = stringResource(Res.string.feature_invite_invitations_incoming),
+            selected = selectedTab == InvitationTab.INCOMING,
             hasUnreadUpdate = hasUnreadIncomingUpdates,
-            onClick = { onTabSelected(ContactInvitationTab.INCOMING) }
+            onClick = { onTabSelected(InvitationTab.INCOMING) }
         )
         InvitationTab(
-            title = stringResource(Res.string.feature_contacts_invitations_outgoing),
-            selected = selectedTab == ContactInvitationTab.OUTGOING,
+            title = stringResource(Res.string.feature_invite_invitations_outgoing),
+            selected = selectedTab == InvitationTab.OUTGOING,
             hasUnreadUpdate = hasUnreadOutgoingUpdates,
-            onClick = { onTabSelected(ContactInvitationTab.OUTGOING) }
+            onClick = { onTabSelected(InvitationTab.OUTGOING) }
         )
     }
 }
@@ -225,13 +225,13 @@ private fun InvitationTab(
 
 @Composable
 private fun InvitationItem(
-    invitation: ContactInvitationUi,
+    invitation: InvitationUi,
     isProcessing: Boolean,
     actionsEnabled: Boolean,
-    onUiEvent: (ContactInvitationUiEvent) -> Unit
+    onUiEvent: (InvitationUiEvent) -> Unit
 ) {
     when (invitation.direction) {
-        ContactInvitationDirection.INCOMING ->
+        InvitationUiDirection.INCOMING ->
             IncomingInvitationItem(
                 invitation = invitation,
                 isProcessing = isProcessing,
@@ -239,7 +239,7 @@ private fun InvitationItem(
                 onUiEvent = onUiEvent
             )
 
-        ContactInvitationDirection.OUTGOING ->
+        InvitationUiDirection.OUTGOING ->
             OutgoingInvitationItem(
                 invitation = invitation,
                 isProcessing = isProcessing,
@@ -251,10 +251,10 @@ private fun InvitationItem(
 
 @Composable
 private fun IncomingInvitationItem(
-    invitation: ContactInvitationUi,
+    invitation: InvitationUi,
     isProcessing: Boolean,
     actionsEnabled: Boolean,
-    onUiEvent: (ContactInvitationUiEvent) -> Unit
+    onUiEvent: (InvitationUiEvent) -> Unit
 ) {
     SparrowSwipeRevealItem(
         enabled = actionsEnabled,
@@ -264,36 +264,36 @@ private fun IncomingInvitationItem(
                     backgroundColor = MaterialTheme.colorScheme.tertiaryContainer,
                     contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
                     onClick = {
-                        onUiEvent(ContactInvitationUiEvent.AcceptClicked(invitation.invitationId))
+                        onUiEvent(InvitationUiEvent.AcceptClicked(invitation.invitationId))
                     }
                 ) {
                     InvitationSwipeActionContent(
                         icon = Icons.Default.Check,
-                        label = stringResource(Res.string.feature_contacts_accept_invitation)
+                        label = stringResource(Res.string.feature_invite_accept_invitation)
                     )
                 },
                 SwipeRevealAction(
                     backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     contentColor = MaterialTheme.colorScheme.onSurface,
                     onClick = {
-                        onUiEvent(ContactInvitationUiEvent.DeclineClicked(invitation.invitationId))
+                        onUiEvent(InvitationUiEvent.DeclineClicked(invitation.invitationId))
                     }
                 ) {
                     InvitationSwipeActionContent(
                         icon = Icons.Default.Close,
-                        label = stringResource(Res.string.feature_contacts_decline_invitation)
+                        label = stringResource(Res.string.feature_invite_decline_invitation)
                     )
                 },
                 SwipeRevealAction(
                     backgroundColor = MaterialTheme.colorScheme.error,
                     contentColor = MaterialTheme.colorScheme.onError,
                     onClick = {
-                        onUiEvent(ContactInvitationUiEvent.DeclineAndBlockClicked(invitation.invitationId))
+                        onUiEvent(InvitationUiEvent.DeclineAndBlockClicked(invitation.invitationId))
                     }
                 ) {
                     InvitationSwipeActionContent(
                         icon = Icons.Default.Block,
-                        label = stringResource(Res.string.feature_contacts_block_invitation)
+                        label = stringResource(Res.string.feature_invite_block_invitation)
                     )
                 }
             )
@@ -308,12 +308,12 @@ private fun IncomingInvitationItem(
 
 @Composable
 private fun OutgoingInvitationItem(
-    invitation: ContactInvitationUi,
+    invitation: InvitationUi,
     isProcessing: Boolean,
     actionsEnabled: Boolean,
-    onUiEvent: (ContactInvitationUiEvent) -> Unit
+    onUiEvent: (InvitationUiEvent) -> Unit
 ) {
-    if (invitation.status == ContactInvitationStatus.DECLINED) {
+    if (invitation.status == InvitationUiStatus.DECLINED) {
         SparrowSwipeRevealItem(
             enabled = actionsEnabled,
             actions =
@@ -323,7 +323,7 @@ private fun OutgoingInvitationItem(
                         contentColor = MaterialTheme.colorScheme.onError,
                         onClick = {
                             onUiEvent(
-                                ContactInvitationUiEvent.DeleteDeclinedOutgoingClicked(
+                                InvitationUiEvent.DeleteDeclinedOutgoingClicked(
                                     invitation.invitationId
                                 )
                             )
@@ -331,7 +331,7 @@ private fun OutgoingInvitationItem(
                     ) {
                         InvitationSwipeActionContent(
                             icon = Icons.Default.DeleteOutline,
-                            label = stringResource(Res.string.feature_contacts_delete_outgoing_invitation)
+                            label = stringResource(Res.string.feature_invite_delete_outgoing_invitation)
                         )
                     }
                 )
@@ -364,13 +364,13 @@ private fun InvitationDivider() {
 
 @Composable
 private fun EmptyInvitations(
-    selectedTab: ContactInvitationTab,
+    selectedTab: InvitationTab,
     modifier: Modifier = Modifier
 ) {
     val message =
         when (selectedTab) {
-            ContactInvitationTab.INCOMING -> Res.string.feature_contacts_invitations_incoming_empty
-            ContactInvitationTab.OUTGOING -> Res.string.feature_contacts_invitations_outgoing_empty
+            InvitationTab.INCOMING -> Res.string.feature_invite_invitations_incoming_empty
+            InvitationTab.OUTGOING -> Res.string.feature_invite_invitations_outgoing_empty
         }
 
     Column(
@@ -381,7 +381,7 @@ private fun EmptyInvitations(
         Icon(
             imageVector = Icons.Outlined.MarkEmailUnread,
             contentDescription = null,
-            modifier = Modifier.size(Dimens.ContactInvitationsScreen.avatarSize),
+            modifier = Modifier.size(Dimens.InvitationsScreen.avatarSize),
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
@@ -395,13 +395,13 @@ private fun EmptyInvitations(
 
 @Composable
 private fun InvitationRow(
-    invitation: ContactInvitationUi,
+    invitation: InvitationUi,
     isProcessing: Boolean,
     modifier: Modifier = Modifier
 ) {
     val displayName =
-        invitation.contactName
-            ?: invitation.contactPhoneNumber
+        invitation.peerDisplayName
+            ?: invitation.peerSecondaryText
             ?: stringResource(Res.string.base_unknown)
 
     ListItem(
@@ -409,7 +409,7 @@ private fun InvitationRow(
         leadingContent = {
             SparrowAvatar(
                 name = displayName,
-                target = AvatarTarget.User(invitation.contactId)
+                target = AvatarTarget.User(invitation.peerId)
             )
         },
         headlineContent = {
@@ -424,8 +424,8 @@ private fun InvitationRow(
         },
         supportingContent = {
             Column {
-                invitation.contactPhoneNumber
-                    ?.takeIf { invitation.contactName != null }
+                invitation.peerSecondaryText
+                    ?.takeIf { invitation.peerDisplayName != null }
                     ?.let { phoneNumber ->
                         Text(
                             text = phoneNumber,
@@ -435,7 +435,7 @@ private fun InvitationRow(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                if (invitation.direction == ContactInvitationDirection.OUTGOING) {
+                if (invitation.direction == InvitationUiDirection.OUTGOING) {
                     InvitationStatus(invitation.status)
                 }
             }
@@ -443,7 +443,7 @@ private fun InvitationRow(
         trailingContent = {
             if (isProcessing) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(Dimens.ContactInvitationsScreen.progressSize),
+                    modifier = Modifier.size(Dimens.InvitationsScreen.progressSize),
                     strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
                 )
             }
@@ -453,7 +453,7 @@ private fun InvitationRow(
 }
 
 @Composable
-private fun InvitationStatus(status: ContactInvitationStatus) {
+private fun InvitationStatus(status: InvitationUiStatus) {
     val presentation = statusPresentation(status)
     Text(
         text = stringResource(presentation.label),
@@ -464,29 +464,29 @@ private fun InvitationStatus(status: ContactInvitationStatus) {
 }
 
 @Composable
-private fun statusPresentation(status: ContactInvitationStatus): InvitationStatusPresentation =
+private fun statusPresentation(status: InvitationUiStatus): InvitationStatusPresentation =
     when (status) {
-        ContactInvitationStatus.PENDING ->
+        InvitationUiStatus.PENDING ->
             InvitationStatusPresentation(
-                label = Res.string.feature_contacts_invitation_status_pending,
+                label = Res.string.feature_invite_invitation_status_pending,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-        ContactInvitationStatus.DECLINED ->
+        InvitationUiStatus.DECLINED ->
             InvitationStatusPresentation(
-                label = Res.string.feature_contacts_invitation_status_declined,
+                label = Res.string.feature_invite_invitation_status_declined,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-        ContactInvitationStatus.EXPIRED ->
+        InvitationUiStatus.EXPIRED ->
             InvitationStatusPresentation(
-                label = Res.string.feature_contacts_invitation_status_expired,
+                label = Res.string.feature_invite_invitation_status_expired,
                 color = MaterialTheme.colorScheme.secondary
             )
 
-        ContactInvitationStatus.FAILED ->
+        InvitationUiStatus.FAILED ->
             InvitationStatusPresentation(
-                label = Res.string.feature_contacts_invitation_status_failed,
+                label = Res.string.feature_invite_invitation_status_failed,
                 color = MaterialTheme.colorScheme.error
             )
     }
@@ -503,7 +503,7 @@ private fun InvitationSwipeActionContent(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(Dimens.ContactInvitationsScreen.actionIconSize)
+            modifier = Modifier.size(Dimens.InvitationsScreen.actionIconSize)
         )
         Text(
             text = label,
@@ -520,32 +520,32 @@ private data class InvitationStatusPresentation(
 
 @Preview
 @Composable
-private fun ContactInvitationsScreenPreview() {
+private fun InvitationsScreenPreview() {
     SparrowTheme {
-        ContactInvitationsScreen(
+        InvitationsScreen(
             uiState =
-                ContactInvitationUiState(
-                    selectedTab = ContactInvitationTab.OUTGOING,
+                InvitationUiState(
+                    selectedTab = InvitationTab.OUTGOING,
                     outgoingInvitations =
                         listOf(
-                            ContactInvitationUi(
+                            InvitationUi(
                                 invitationId = "pending",
-                                contactId = "alice",
-                                contactName = "Alice",
-                                contactPhoneNumber = "+49 123 456",
-                                direction = ContactInvitationDirection.OUTGOING,
-                                status = ContactInvitationStatus.PENDING,
+                                peerId = "alice",
+                                peerDisplayName = "Alice",
+                                peerSecondaryText = "+49 123 456",
+                                direction = InvitationUiDirection.OUTGOING,
+                                status = InvitationUiStatus.PENDING,
                                 expiresAtEpochMilliseconds = Long.MAX_VALUE,
                                 updatedAtEpochMilliseconds = 1,
                                 hasUnreadUpdate = false
                             ),
-                            ContactInvitationUi(
+                            InvitationUi(
                                 invitationId = "declined",
-                                contactId = "bob",
-                                contactName = "Bob",
-                                contactPhoneNumber = null,
-                                direction = ContactInvitationDirection.OUTGOING,
-                                status = ContactInvitationStatus.DECLINED,
+                                peerId = "bob",
+                                peerDisplayName = "Bob",
+                                peerSecondaryText = null,
+                                direction = InvitationUiDirection.OUTGOING,
+                                status = InvitationUiStatus.DECLINED,
                                 expiresAtEpochMilliseconds = Long.MAX_VALUE,
                                 updatedAtEpochMilliseconds = 2,
                                 hasUnreadUpdate = true

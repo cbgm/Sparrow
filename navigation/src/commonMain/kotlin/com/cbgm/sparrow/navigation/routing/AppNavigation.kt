@@ -25,6 +25,7 @@ import com.cbgm.sparrow.navigation.routing.graph.attachmentsNavGraph
 import com.cbgm.sparrow.navigation.routing.graph.chatsNavGraph
 import com.cbgm.sparrow.navigation.routing.graph.contactsNavGraph
 import com.cbgm.sparrow.navigation.routing.graph.identityNavGraph
+import com.cbgm.sparrow.navigation.routing.graph.inviteNavGraph
 import com.cbgm.sparrow.navigation.routing.graph.mainNavGraph
 import com.cbgm.sparrow.navigation.routing.graph.mediaNavGraph
 import com.cbgm.sparrow.navigation.routing.graph.settingsNavGraph
@@ -170,6 +171,7 @@ fun AppNavigation(
             attachmentsNavGraph()
             mediaNavGraph()
             contactsNavGraph()
+            inviteNavGraph()
             identityNavGraph()
             settingsNavGraph()
         }

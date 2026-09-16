@@ -19,8 +19,10 @@ import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationsContextU
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationsUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObservePendingInvitationCountUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObservePendingInvitationsUseCase
+import com.cbgm.sparrow.feature.invite.presentation.InvitationViewModel
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
+import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val inviteModule =
@@ -58,6 +60,18 @@ val inviteModule =
         }
         factory { ObservePendingInvitationCountUseCase(observePendingInvitations = get()) }
         factory { ObserveInvitationsContextUseCase(observeInvitations = get()) }
+
+        viewModel {
+            InvitationViewModel(
+                savedStateHandle = get(),
+                observeInvitationsContext = get(),
+                acceptInvitation = get(),
+                declineInvitation = get(),
+                declineAndBlockInvitation = get(),
+                deleteDeclinedOutgoingInvitation = get(),
+                markInvitationsViewed = get()
+            )
+        }
 
         singleOf(::IncomingInvitationPacketHandler) {
             bind<TypedProtocolPacketHandler>()

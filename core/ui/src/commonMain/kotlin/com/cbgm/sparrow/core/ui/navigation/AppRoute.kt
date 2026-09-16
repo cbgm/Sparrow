@@ -110,7 +110,7 @@ sealed interface AppRoute {
     data object BlockedContacts : AppRoute
 
     @Serializable
-    data class ContactInvitations(
+    data class Invitations(
         val showOutgoing: Boolean = false
     ) : AppRoute
 }

@@ -44,7 +44,6 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.UnblockContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.VerifyContactUseCase
 import com.cbgm.sparrow.feature.contacts.presentation.blocklist.BlockedContactsViewModel
 import com.cbgm.sparrow.feature.contacts.presentation.details.ContactDetailsViewModel
-import com.cbgm.sparrow.feature.contacts.presentation.invitations.ContactInvitationViewModel
 import com.cbgm.sparrow.feature.contacts.presentation.overview.ContactsViewModel
 import com.cbgm.sparrow.feature.contacts.util.ContactVerificationPayloadEncoder
 import com.cbgm.sparrow.feature.contacts.util.IdentityInvitationPayloadEncoder
@@ -293,18 +292,6 @@ val contactsModule =
                 contactBlocklistRepository = get(),
                 directIdentityExchangeRepository = get(),
                 identityExchangeRepository = get()
-            )
-        }
-
-        viewModel {
-            ContactInvitationViewModel(
-                savedStateHandle = get(),
-                observeInvitationsContext = get(),
-                acceptInvitation = get(),
-                declineInvitation = get(),
-                declineAndBlockInvitation = get(),
-                deleteDeclinedOutgoingInvitation = get(),
-                markInvitationsViewed = get()
             )
         }
 

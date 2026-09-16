@@ -38,7 +38,7 @@ class MainViewModel(
         }
     }
 
-    fun openContactInvitations() {
-        navigator.navigateTo(AppRoute.ContactInvitations())
+    fun openInvitations() {
+        navigator.navigateTo(AppRoute.Invitations())
     }
 }

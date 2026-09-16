@@ -1,25 +1,25 @@
-package com.cbgm.sparrow.feature.contacts.presentation.invitations
+package com.cbgm.sparrow.feature.invite.presentation
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
-import com.cbgm.sparrow.feature.contacts.presentation.invitations.mapper.toContactInvitationUiState
-import com.cbgm.sparrow.feature.contacts.presentation.invitations.mapper.toContactInvitationsUiData
-import com.cbgm.sparrow.feature.contacts.presentation.invitations.mapper.toInvitationDirection
-import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationEffect
-import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationTab
-import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUi
-import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiEvent
-import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiState
-import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationsUiData
 import com.cbgm.sparrow.feature.invite.domain.usecase.AcceptInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineAndBlockInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.DeleteDeclinedOutgoingInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.MarkInvitationsViewedUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationsContextUseCase
+import com.cbgm.sparrow.feature.invite.presentation.mapper.toInvitationDirection
+import com.cbgm.sparrow.feature.invite.presentation.mapper.toInvitationUiState
+import com.cbgm.sparrow.feature.invite.presentation.mapper.toInvitationsUiData
+import com.cbgm.sparrow.feature.invite.presentation.model.InvitationEffect
+import com.cbgm.sparrow.feature.invite.presentation.model.InvitationTab
+import com.cbgm.sparrow.feature.invite.presentation.model.InvitationUi
+import com.cbgm.sparrow.feature.invite.presentation.model.InvitationUiEvent
+import com.cbgm.sparrow.feature.invite.presentation.model.InvitationUiState
+import com.cbgm.sparrow.feature.invite.presentation.model.InvitationsUiData
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -33,7 +33,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class ContactInvitationViewModel(
+class InvitationViewModel(
     savedStateHandle: SavedStateHandle,
     observeInvitationsContext: ObserveInvitationsContextUseCase,
     private val acceptInvitation: AcceptInvitationUseCase,
@@ -43,32 +43,32 @@ class ContactInvitationViewModel(
     private val markInvitationsViewed: MarkInvitationsViewedUseCase
 ) : BaseViewModel() {
     private val initialTab =
-        if (savedStateHandle.requireRouteArgument<Boolean>(AppRoute.ContactInvitations::showOutgoing.name)) {
-            ContactInvitationTab.OUTGOING
+        if (savedStateHandle.requireRouteArgument<Boolean>(AppRoute.Invitations::showOutgoing.name)) {
+            InvitationTab.OUTGOING
         } else {
-            ContactInvitationTab.INCOMING
+            InvitationTab.INCOMING
         }
 
     private val selectedTab = MutableStateFlow(initialTab)
 
     private val invitations =
         observeInvitationsContext()
-            .map { context -> context.toContactInvitationsUiData() }
+            .map { context -> context.toInvitationsUiData() }
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-                initialValue = ContactInvitationsUiData()
+                initialValue = InvitationsUiData()
             )
 
     private val processingInvitationId = MutableStateFlow<String?>(null)
 
-    val uiState: StateFlow<ContactInvitationUiState> =
+    val uiState: StateFlow<InvitationUiState> =
         combine(
             selectedTab,
             invitations,
             processingInvitationId
         ) { tab, invitationData, processingId ->
-            toContactInvitationUiState(
+            toInvitationUiState(
                 selectedTab = tab,
                 invitations = invitationData,
                 processingInvitationId = processingId
@@ -76,10 +76,10 @@ class ContactInvitationViewModel(
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-            initialValue = ContactInvitationUiState(selectedTab = initialTab)
+            initialValue = InvitationUiState(selectedTab = initialTab)
         )
 
-    private val _effects = Channel<ContactInvitationEffect>(capacity = Channel.BUFFERED)
+    private val _effects = Channel<InvitationEffect>(capacity = Channel.BUFFERED)
     val effects = _effects.receiveAsFlow()
 
     init {
@@ -87,14 +87,14 @@ class ContactInvitationViewModel(
         observeIncomingInvitations()
     }
 
-    fun onUiEvent(event: ContactInvitationUiEvent) {
+    fun onUiEvent(event: InvitationUiEvent) {
         when (event) {
-            ContactInvitationUiEvent.CloseClicked -> navigator.popBackStack()
-            is ContactInvitationUiEvent.TabSelected -> selectedTab.value = event.tab
-            is ContactInvitationUiEvent.AcceptClicked -> accept(event.invitationId)
-            is ContactInvitationUiEvent.DeclineClicked -> decline(event.invitationId)
-            is ContactInvitationUiEvent.DeclineAndBlockClicked -> declineAndBlock(event.invitationId)
-            is ContactInvitationUiEvent.DeleteDeclinedOutgoingClicked -> deleteDeclinedOutgoing(event.invitationId)
+            InvitationUiEvent.CloseClicked -> navigator.popBackStack()
+            is InvitationUiEvent.TabSelected -> selectedTab.value = event.tab
+            is InvitationUiEvent.AcceptClicked -> accept(event.invitationId)
+            is InvitationUiEvent.DeclineClicked -> decline(event.invitationId)
+            is InvitationUiEvent.DeclineAndBlockClicked -> declineAndBlock(event.invitationId)
+            is InvitationUiEvent.DeleteDeclinedOutgoingClicked -> deleteDeclinedOutgoing(event.invitationId)
         }
     }
 
@@ -106,10 +106,10 @@ class ContactInvitationViewModel(
             ) { tab, invitationData ->
                 val selected =
                     when (tab) {
-                        ContactInvitationTab.INCOMING -> invitationData.incoming
-                        ContactInvitationTab.OUTGOING -> invitationData.outgoing
+                        InvitationTab.INCOMING -> invitationData.incoming
+                        InvitationTab.OUTGOING -> invitationData.outgoing
                     }
-                tab to selected.any(ContactInvitationUi::hasUnreadUpdate)
+                tab to selected.any(InvitationUi::hasUnreadUpdate)
             }.distinctUntilChanged()
                 .collect { (tab, hasUnreadUpdate) ->
                     if (hasUnreadUpdate) {
@@ -125,7 +125,7 @@ class ContactInvitationViewModel(
                 selectedTab,
                 invitations
             ) { tab, invitationData ->
-                tab == ContactInvitationTab.INCOMING && invitationData.incoming.isEmpty()
+                tab == InvitationTab.INCOMING && invitationData.incoming.isEmpty()
             }.drop(1)
                 .distinctUntilChanged()
                 .filter { isEmpty -> isEmpty }
@@ -170,7 +170,7 @@ class ContactInvitationViewModel(
             val result = operation()
             result.onFailure { error ->
                 _effects.send(
-                    ContactInvitationEffect.ShowError(
+                    InvitationEffect.ShowError(
                         message = error.message ?: "Invitation could not be updated"
                     )
                 )

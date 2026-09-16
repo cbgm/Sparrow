@@ -217,23 +217,19 @@
 
     <string name="feature_contacts_contact_invitation_title">Kontaktanfrage</string>
     <string name="feature_contacts_contact_invitation_description">%1$s möchte Sparrow-Identitäten austauschen.</string>
-    <string name="feature_contacts_invitation_unverified_warning">Das Annehmen aktiviert verschlüsselte Nachrichten, beweist aber nicht, dass diese Identität zur erwarteten Person gehört. Vergleiche die Sicherheitsnummer separat.</string>
-    <string name="feature_contacts_accept_invitation">Annehmen</string>
-    <string name="feature_contacts_decline_invitation">Ablehnen</string>
-    <string name="feature_contacts_invitations_title">Einladungen</string>
-    <string name="feature_contacts_invitations_incoming">Eingehend</string>
-    <string name="feature_contacts_invitations_outgoing">Ausgehend</string>
-    <string name="feature_contacts_invitations_incoming_empty">Keine eingehenden Einladungen</string>
-    <string name="feature_contacts_invitations_outgoing_empty">Keine ausgehenden Einladungen</string>
-    <string name="feature_contacts_invitation_status_pending">Wartet auf Antwort</string>
-    <string name="feature_contacts_invitation_status_declined">Abgelehnt</string>
-    <string name="feature_contacts_invitation_status_expired">Abgelaufen</string>
-    <string name="feature_contacts_invitation_status_failed">Konnte nicht gesendet werden</string>
-    <string name="feature_contacts_delete_outgoing_invitation">Löschen</string>
-    <string name="feature_contacts_invitations_empty">Keine offenen Einladungen</string>
-    <string name="feature_contacts_open_invitations">Einladungen öffnen</string>
-    <string name="feature_contacts_close_invitations">Einladungen schließen</string>
-    <string name="feature_contacts_block_invitation">Ablehnen und blockieren</string>
+    <string name="feature_invite_accept_invitation">Annehmen</string>
+    <string name="feature_invite_decline_invitation">Ablehnen</string>
+    <string name="feature_invite_invitations_title">Einladungen</string>
+    <string name="feature_invite_invitations_incoming">Eingehend</string>
+    <string name="feature_invite_invitations_outgoing">Ausgehend</string>
+    <string name="feature_invite_invitations_incoming_empty">Keine eingehenden Einladungen</string>
+    <string name="feature_invite_invitations_outgoing_empty">Keine ausgehenden Einladungen</string>
+    <string name="feature_invite_invitation_status_pending">Wartet auf Antwort</string>
+    <string name="feature_invite_invitation_status_declined">Abgelehnt</string>
+    <string name="feature_invite_invitation_status_expired">Abgelaufen</string>
+    <string name="feature_invite_invitation_status_failed">Konnte nicht gesendet werden</string>
+    <string name="feature_invite_delete_outgoing_invitation">Löschen</string>
+    <string name="feature_invite_block_invitation">Ablehnen und blockieren</string>
 
     <!-- Feature: identity -->
     <string name="feature_identity_approve_number_create_identity">Nummer bestätigen und erstellen</string>
@@ -482,7 +478,6 @@
     <string name="feature_contacts_phone_number">Telefonnummer</string>
     <string name="feature_contacts_block_phone_number">Nummer blockieren</string>
     <string name="feature_contacts_choose_existing_contact">Oder bestehenden Kontakt auswählen</string>
-    <string name="feature_contacts_invitation_phone_number">Telefonnummer: %1$s</string>
     <string name="feature_contacts_no_contacts_to_block">Es gibt keine weiteren Kontakte zum Blockieren.</string>
     <string name="feature_contacts_unblock_contact">Entsperren</string>
     <string name="feature_contacts_decline_and_block">Ablehnen &amp; blockieren</string>
