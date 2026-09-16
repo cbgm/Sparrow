@@ -2,11 +2,12 @@ package com.cbgm.sparrow.feature.chats.data.group.outgoing
 
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipBroadcastDataSource
 
 internal class GroupPacketBroadcaster(
     private val protocolOutbox: ProtocolOutbox
-) {
-    suspend fun enqueueAll(packetsByContactId: Map<String, SparrowPacket>): Result<Unit> =
+) : GroupMembershipBroadcastDataSource {
+    override suspend fun enqueueAll(packetsByContactId: Map<String, SparrowPacket>): Result<Unit> =
         runCatching {
             val failures = mutableListOf<String>()
             packetsByContactId.forEach { (contactId, packet) ->

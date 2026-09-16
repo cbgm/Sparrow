@@ -1,30 +1,30 @@
-package com.cbgm.sparrow.feature.chats.data.group.membership
+package com.cbgm.sparrow.feature.membership.data.coordinator
 
 import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentityProvider
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupPacketBroadcaster
-import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_ADMIN_ROLE
-import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
-import com.cbgm.sparrow.feature.chats.data.group.security.isGroupAdminRole
-import com.cbgm.sparrow.feature.chats.data.group.verification.GroupVerificationCoordinator
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipIdentity
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipBroadcastDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipVerificationDataSource
+import com.cbgm.sparrow.feature.membership.data.model.GROUP_ADMIN_ROLE
+import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 
-internal class GroupMemberPromotionCoordinator(
+class GroupMemberPromotionCoordinator(
     private val chatDao: ChatDao,
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
-    private val groupSecurityManager: GroupSecurityManager,
-    private val groupVerificationCoordinator: GroupVerificationCoordinator,
+    private val groupSecurityManager: GroupMembershipSecurityDataSource,
+    private val groupVerificationCoordinator: GroupMembershipVerificationDataSource,
     private val membershipLock: GroupMembershipLock,
     private val identity: GroupMembershipIdentity,
     private val epochCoordinator: GroupEpochCoordinator,
-    private val packetBroadcaster: GroupPacketBroadcaster
+    private val packetBroadcaster: GroupMembershipBroadcastDataSource
 ) {
     suspend fun promoteMember(
         groupId: String,

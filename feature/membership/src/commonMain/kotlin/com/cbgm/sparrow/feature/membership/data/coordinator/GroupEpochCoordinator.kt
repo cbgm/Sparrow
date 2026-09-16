@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.chats.data.group.membership
+package com.cbgm.sparrow.feature.membership.data.coordinator
 
 import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentity
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberPayload
@@ -7,19 +7,19 @@ import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
-import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_MEMBER_ROLE
-import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_OWNER_ROLE
-import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
-import com.cbgm.sparrow.feature.chats.data.group.security.GroupWelcomeRecipientDto
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipIdentity
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
+import com.cbgm.sparrow.feature.membership.data.model.GROUP_MEMBER_ROLE
+import com.cbgm.sparrow.feature.membership.data.model.GROUP_OWNER_ROLE
+import com.cbgm.sparrow.feature.membership.data.model.GroupWelcomeRecipientDto
 import com.cbgm.sparrow.feature.membership.data.requireGroupPhoneNumber
 
-internal class GroupEpochCoordinator(
+class GroupEpochCoordinator(
     private val chatDao: ChatDao,
     private val groupInvitationDao: GroupInvitationDao,
     private val groupSecurityDao: GroupSecurityDao,
-    private val groupSecurityManager: GroupSecurityManager,
+    private val groupSecurityManager: GroupMembershipSecurityDataSource,
     private val identity: GroupMembershipIdentity
 ) {
     suspend fun findCurrentParticipants(groupId: String): List<ConversationParticipantEntity> {

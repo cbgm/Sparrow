@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.chats.data.group.membership
+package com.cbgm.sparrow.feature.membership.data.coordinator
 
 import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentityProvider
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair
@@ -15,37 +15,38 @@ import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
 import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
-import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
-import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupPacketBroadcaster
-import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupMembershipPacketProtocol
-import com.cbgm.sparrow.feature.chats.data.group.security.CreatedGroupSecurityDto
-import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_MEMBER_ROLE
-import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
-import com.cbgm.sparrow.feature.chats.data.group.verification.GroupVerificationCoordinator
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipIdentity
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipBroadcastDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipMessageDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtocolDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipVerificationDataSource
 import com.cbgm.sparrow.feature.membership.data.groupMembershipDisplayName
 import com.cbgm.sparrow.feature.membership.data.hasMutualGroupIdentity
+import com.cbgm.sparrow.feature.membership.data.model.CreatedGroupSecurityDto
+import com.cbgm.sparrow.feature.membership.data.model.GROUP_MEMBER_ROLE
 import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
 import com.cbgm.sparrow.feature.membership.data.requireGroupPhoneNumber
 
 @Suppress("LongParameterList")
-internal class GroupMembershipActivationCoordinator(
+class GroupMembershipActivationCoordinator(
     private val chatDao: ChatDao,
     private val groupInvitationDao: GroupInvitationDao,
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
-    private val membershipPacketProtocol: GroupMembershipPacketProtocol,
-    private val groupSecurityManager: GroupSecurityManager,
-    private val groupVerificationCoordinator: GroupVerificationCoordinator,
+    private val membershipPacketProtocol: GroupMembershipProtocolDataSource,
+    private val groupSecurityManager: GroupMembershipSecurityDataSource,
+    private val groupVerificationCoordinator: GroupMembershipVerificationDataSource,
     private val membershipLock: GroupMembershipLock,
     private val identity: GroupMembershipIdentity,
     private val epochCoordinator: GroupEpochCoordinator,
-    private val packetBroadcaster: GroupPacketBroadcaster
+    private val packetBroadcaster: GroupMembershipBroadcastDataSource,
+    private val membershipMessageDataSource: GroupMembershipMessageDataSource
 ) {
     suspend fun receiveReadyAcknowledgement(
         memberContactId: String,
@@ -219,7 +220,7 @@ internal class GroupMembershipActivationCoordinator(
     ) {
         if (!chatDao.hasMessages(packet.groupId)) return
         chatDao.upsertMessage(
-            GroupMembershipMessageFactory.memberAdded(
+            membershipMessageDataSource.memberAdded(
                 conversationId = packet.groupId,
                 epoch = packet.epoch,
                 contactId = contact.id,

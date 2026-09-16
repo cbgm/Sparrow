@@ -3,7 +3,7 @@ package com.cbgm.sparrow.feature.chats.data.group.incoming.handler
 import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipCoordinator
+import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMembershipCoordinator
 
 class GroupLeaveRequestPacketHandler(
     private val membershipCoordinator: GroupMembershipCoordinator

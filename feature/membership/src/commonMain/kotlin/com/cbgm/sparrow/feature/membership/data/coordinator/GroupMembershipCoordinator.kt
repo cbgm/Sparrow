@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.chats.data.group.membership
+package com.cbgm.sparrow.feature.membership.data.coordinator
 
 import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivationAcknowledgementPacket
@@ -11,7 +11,7 @@ import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
  * The facade keeps packet handlers and repositories on one obvious red line while delegating the
  * actual invitation, activation, administration and deletion rules to focused coordinators.
  */
-class GroupMembershipCoordinator internal constructor(
+class GroupMembershipCoordinator(
     private val invitations: GroupInvitationCoordinator,
     private val activation: GroupMembershipActivationCoordinator,
     private val administration: GroupMembershipAdministrationCoordinator,

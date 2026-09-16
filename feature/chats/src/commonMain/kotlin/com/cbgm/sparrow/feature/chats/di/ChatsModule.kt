@@ -64,15 +64,7 @@ import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupTitleUpda
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupVerificationReceiptPacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupVerificationSnapshotPacketHandler
 import com.cbgm.sparrow.feature.chats.data.group.incoming.handler.GroupVerificationSnapshotRequestPacketHandler
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupEpochCoordinator
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupInvitationCoordinator
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupLeaveCoordinator
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMemberPromotionCoordinator
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMemberRemovalCoordinator
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipActivationCoordinator
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipAdministrationCoordinator
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipCoordinator
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipDeletionCoordinator
+import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
 import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupOutgoingMessageProcessor
 import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupPacketBroadcaster
 import com.cbgm.sparrow.feature.chats.data.group.pin.GroupPinBroadcaster
@@ -83,7 +75,6 @@ import com.cbgm.sparrow.feature.chats.data.group.repository.GroupAvatarRepositor
 import com.cbgm.sparrow.feature.chats.data.group.repository.GroupConversationRepositoryImpl
 import com.cbgm.sparrow.feature.chats.data.group.repository.GroupDescriptionRepositoryImpl
 import com.cbgm.sparrow.feature.chats.data.group.repository.GroupKeyRepositoryImpl
-import com.cbgm.sparrow.feature.chats.data.group.repository.GroupMembershipRepositoryImpl
 import com.cbgm.sparrow.feature.chats.data.group.repository.GroupMessageRepositoryImpl
 import com.cbgm.sparrow.feature.chats.data.group.repository.GroupPinRepositoryImpl
 import com.cbgm.sparrow.feature.chats.data.group.repository.GroupTitleRepositoryImpl
@@ -183,6 +174,22 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.EnsureIdentityExchangeSt
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipIdentity
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
+import com.cbgm.sparrow.feature.membership.data.coordinator.GroupEpochCoordinator
+import com.cbgm.sparrow.feature.membership.data.coordinator.GroupInvitationCoordinator
+import com.cbgm.sparrow.feature.membership.data.coordinator.GroupLeaveCoordinator
+import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMemberPromotionCoordinator
+import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMemberRemovalCoordinator
+import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMembershipActivationCoordinator
+import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMembershipAdministrationCoordinator
+import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMembershipCoordinator
+import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMembershipDeletionCoordinator
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipBroadcastDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipCleanupDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipMessageDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtocolDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipVerificationDataSource
+import com.cbgm.sparrow.feature.membership.data.repository.GroupMembershipRepositoryImpl
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
 import com.cbgm.sparrow.feature.membership.domain.usecase.AcceptGroupInvitationUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.AddGroupMembersUseCase
@@ -248,17 +255,19 @@ private fun org.koin.core.module.Module.registerGroupData() {
             localProfilePictureMetadataProvider = get()
         )
     }
+    single<GroupMembershipProtocolDataSource> { get<GroupMembershipPacketProtocol>() }
     singleOf(::GroupWelcomeSecurity)
-    singleOf(::GroupSecurityManager)
+    singleOf(::GroupSecurityManager) { bind<GroupMembershipSecurityDataSource>() }
     singleOf(::GroupVerificationPayloadEncoder)
     singleOf(::GroupVerificationState)
     singleOf(::GroupVerificationSnapshotSender)
-    singleOf(::GroupVerificationCoordinator)
+    singleOf(::GroupVerificationCoordinator) { bind<GroupMembershipVerificationDataSource>() }
     singleOf(::GroupOutgoingMessageProcessor)
-    singleOf(::GroupPacketBroadcaster)
+    singleOf(::GroupPacketBroadcaster) { bind<GroupMembershipBroadcastDataSource>() }
     singleOf(::GroupMembershipLock)
-    singleOf(::GroupLocalCleanupDataSource)
+    singleOf(::GroupLocalCleanupDataSource) { bind<GroupMembershipCleanupDataSource>() }
     singleOf(::GroupMembershipIdentity)
+    single<GroupMembershipMessageDataSource> { GroupMembershipMessageFactory }
     singleOf(::GroupEpochCoordinator)
     singleOf(::GroupMembershipActivationCoordinator)
     singleOf(::GroupMemberPromotionCoordinator)

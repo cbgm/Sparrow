@@ -10,6 +10,8 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
+            implementation(projects.core)
+            implementation(projects.core.protocol)
             implementation(projects.data.database)
             implementation(projects.feature.contacts)
             implementation(libs.bundles.coroutines)

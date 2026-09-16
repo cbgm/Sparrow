@@ -16,13 +16,14 @@ import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
 import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtocolDataSource
 
 class GroupMembershipPacketProtocol(
     private val groupCrypto: GroupCrypto,
     private val payloadEncoder: GroupProtocolPayloadEncoder,
     private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider? = null
-) {
-    suspend fun createConversationDeleted(
+) : GroupMembershipProtocolDataSource {
+    override suspend fun createConversationDeleted(
         invitationId: String,
         groupId: String,
         epoch: Int,
@@ -61,7 +62,7 @@ class GroupMembershipPacketProtocol(
             signingPublicKey = expectedOwnerSigningPublicKey
         )
 
-    suspend fun createInvite(
+    override suspend fun createInvite(
         invitationId: String,
         groupId: String,
         title: String,
@@ -157,7 +158,7 @@ class GroupMembershipPacketProtocol(
             memberSigningKeyPair = memberSigningKeyPair
         )
 
-    suspend fun createJoinRequest(
+    override suspend fun createJoinRequest(
         invitationId: String,
         groupId: String,
         challenge: ByteArray,
@@ -202,7 +203,7 @@ class GroupMembershipPacketProtocol(
             signingPublicKey = packet.memberSigningPublicKey
         )
 
-    suspend fun createDecline(
+    override suspend fun createDecline(
         invitationId: String,
         groupId: String,
         challenge: ByteArray,
@@ -235,7 +236,7 @@ class GroupMembershipPacketProtocol(
             signingPublicKey = packet.memberSigningPublicKey
         )
 
-    suspend fun createLeaveRequest(
+    override suspend fun createLeaveRequest(
         invitationId: String,
         groupId: String,
         epoch: Int,
@@ -265,7 +266,7 @@ class GroupMembershipPacketProtocol(
             unsignedPacket.copy(memberSignature = signature)
         }
 
-    suspend fun verifyLeaveRequest(
+    override suspend fun verifyLeaveRequest(
         packet: GroupLeaveRequestPacket,
         expectedMemberSigningPublicKey: ByteArray
     ): Result<Unit> =
@@ -302,7 +303,7 @@ class GroupMembershipPacketProtocol(
             unsignedPacket.copy(memberSignature = signature)
         }
 
-    suspend fun verifyReadyAcknowledgement(
+    override suspend fun verifyReadyAcknowledgement(
         packet: GroupReadyAcknowledgementPacket,
         expectedMemberSigningPublicKey: ByteArray
     ): Result<Unit> =
@@ -312,7 +313,7 @@ class GroupMembershipPacketProtocol(
             signingPublicKey = expectedMemberSigningPublicKey
         )
 
-    suspend fun createMemberActivated(
+    override suspend fun createMemberActivated(
         groupId: String,
         epoch: Int,
         member: GroupMemberPayload,
@@ -402,11 +403,11 @@ class GroupMembershipPacketProtocol(
             signingPublicKey = expectedMemberSigningPublicKey
         )
 
-    suspend fun createMemberRemoved(
+    override suspend fun createMemberRemoved(
         invitationId: String,
         groupId: String,
         epoch: Int,
-        reason: String = GroupMemberRemovedPacket.REASON_REMOVED_BY_OWNER,
+        reason: String,
         challenge: ByteArray,
         removedMemberSigningPublicKey: ByteArray,
         removedAtEpochMilliseconds: Long,

@@ -4,8 +4,9 @@ import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipMessageDataSource
 
-internal object GroupMembershipMessageFactory {
+internal object GroupMembershipMessageFactory : GroupMembershipMessageDataSource {
     const val MEMBER_ADDED_TRANSPORT_MODE = "SYSTEM_GROUP_MEMBER_ADDED"
     const val MEMBER_REMOVED_TRANSPORT_MODE = "SYSTEM_GROUP_MEMBER_REMOVED"
     const val LOCAL_MEMBERSHIP_REMOVED_TRANSPORT_MODE = "SYSTEM_LOCAL_GROUP_MEMBERSHIP_REMOVED"
@@ -14,13 +15,13 @@ internal object GroupMembershipMessageFactory {
     const val LOCAL_MEMBERSHIP_LEFT_TRANSPORT_MODE = "SYSTEM_LOCAL_GROUP_MEMBERSHIP_LEFT"
     const val LOCAL_CONVERSATION_DELETED_TRANSPORT_MODE = "SYSTEM_LOCAL_CONVERSATION_DELETED"
 
-    fun memberAdded(
+    override fun memberAdded(
         conversationId: String,
         epoch: Int,
         contactId: String,
         contactName: String,
         createdAtEpochMilliseconds: Long,
-        eventId: String = "$epoch-$contactId"
+        eventId: String
     ): MessageEntity =
         systemMessage(
             id = "group-member-added-$conversationId-$eventId",
@@ -31,13 +32,13 @@ internal object GroupMembershipMessageFactory {
             createdAtEpochMilliseconds = createdAtEpochMilliseconds
         )
 
-    fun memberRemoved(
+    override fun memberRemoved(
         conversationId: String,
         epoch: Int,
         contactId: String,
         contactName: String,
         createdAtEpochMilliseconds: Long,
-        eventId: String = "$epoch-$contactId"
+        eventId: String
     ): MessageEntity =
         systemMessage(
             id = "group-member-removed-$conversationId-$eventId",
@@ -78,13 +79,13 @@ internal object GroupMembershipMessageFactory {
             createdAtEpochMilliseconds = createdAtEpochMilliseconds
         )
 
-    fun memberLeft(
+    override fun memberLeft(
         conversationId: String,
         epoch: Int,
         contactId: String,
         contactName: String,
         createdAtEpochMilliseconds: Long,
-        eventId: String = "$epoch-$contactId"
+        eventId: String
     ): MessageEntity =
         systemMessage(
             id = "group-member-left-$conversationId-$eventId",
@@ -95,7 +96,7 @@ internal object GroupMembershipMessageFactory {
             createdAtEpochMilliseconds = createdAtEpochMilliseconds
         )
 
-    fun localMembershipLeft(
+    override fun localMembershipLeft(
         conversationId: String,
         invitationId: String,
         epoch: Int,
@@ -110,7 +111,7 @@ internal object GroupMembershipMessageFactory {
             createdAtEpochMilliseconds = createdAtEpochMilliseconds
         )
 
-    fun localConversationDeletedMarker(
+    override fun localConversationDeletedMarker(
         conversationId: String,
         createdAtEpochMilliseconds: Long
     ): MessageEntity =

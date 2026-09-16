@@ -6,9 +6,9 @@ import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.feature.chats.data.group.avatar.GroupAvatarBroadcaster
 import com.cbgm.sparrow.feature.chats.data.group.description.GroupDescriptionBroadcaster
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipCoordinator
 import com.cbgm.sparrow.feature.chats.data.group.pin.GroupPinBroadcaster
 import com.cbgm.sparrow.feature.chats.data.group.title.GroupTitleBroadcaster
+import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMembershipCoordinator
 
 class GroupReadyAcknowledgementPacketHandler internal constructor(
     private val membershipCoordinator: GroupMembershipCoordinator,

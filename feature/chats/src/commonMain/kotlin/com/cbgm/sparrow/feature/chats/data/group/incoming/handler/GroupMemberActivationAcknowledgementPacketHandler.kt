@@ -4,9 +4,9 @@ import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivationAcknowledgementPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipCoordinator
 import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupMembershipPacketProtocol
 import com.cbgm.sparrow.feature.chats.data.group.security.isGroupAdminRole
+import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMembershipCoordinator
 
 class GroupMemberActivationAcknowledgementPacketHandler(
     private val groupSecurityDao: GroupSecurityDao,

@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.chats.data.group.membership
+package com.cbgm.sparrow.feature.membership.data.coordinator
 
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
@@ -6,26 +6,26 @@ import com.cbgm.sparrow.core.protocol.packet.GroupConversationDeletedPacket
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
 import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
-import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupLocalCleanupDataSource
-import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupPacketBroadcaster
-import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupMembershipPacketProtocol
-import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_LEFT_ROLE
-import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipBroadcastDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipCleanupDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtocolDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
+import com.cbgm.sparrow.feature.membership.data.model.GROUP_LEFT_ROLE
 import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationDirection
 import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
 
 @Suppress("LongParameterList")
-internal class GroupMembershipDeletionCoordinator(
+class GroupMembershipDeletionCoordinator(
     private val groupInvitationDao: GroupInvitationDao,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val protocolOutbox: ProtocolOutbox,
-    private val membershipPacketProtocol: GroupMembershipPacketProtocol,
-    private val groupSecurityManager: GroupSecurityManager,
-    private val packetBroadcaster: GroupPacketBroadcaster,
+    private val membershipPacketProtocol: GroupMembershipProtocolDataSource,
+    private val groupSecurityManager: GroupMembershipSecurityDataSource,
+    private val packetBroadcaster: GroupMembershipBroadcastDataSource,
     private val administration: GroupMembershipAdministrationCoordinator,
     private val membershipLock: GroupMembershipLock,
-    private val localCleanupDataSource: GroupLocalCleanupDataSource
+    private val localCleanupDataSource: GroupMembershipCleanupDataSource
 ) {
     suspend fun deleteGroupConversation(groupId: String): Result<Unit> =
         runCatching {

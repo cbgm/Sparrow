@@ -21,6 +21,7 @@ import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.data.database.entity.GroupSecurityStateEntity
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupKeyDataSource
 import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupProtocolPayloadEncoder
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
 
 class GroupSecurityManager internal constructor(
     private val groupCrypto: GroupCrypto,
@@ -29,8 +30,8 @@ class GroupSecurityManager internal constructor(
     private val groupSecurityDao: GroupSecurityDao,
     private val groupKeyDataSource: GroupKeyDataSource,
     private val groupWelcomeSecurity: GroupWelcomeSecurity
-) {
-    suspend fun findOwnedGroupEpoch(groupId: String): Result<Int?> =
+) : GroupMembershipSecurityDataSource {
+    override suspend fun findOwnedGroupEpoch(groupId: String): Result<Int?> =
         safeSuspendCall {
             groupSecurityDao.findState(groupId)?.let { state ->
                 check(state.localRole.isGroupAdminRole()) {
@@ -45,10 +46,10 @@ class GroupSecurityManager internal constructor(
             groupSecurityDao.findState(groupId)?.localRole?.isGroupAdminRole()
         }
 
-    suspend fun findCurrentEpoch(groupId: String): Result<Int?> =
+    override suspend fun findCurrentEpoch(groupId: String): Result<Int?> =
         safeSuspendCall { groupSecurityDao.findState(groupId)?.currentEpoch }
 
-    suspend fun findLocalRole(groupId: String): Result<String?> =
+    override suspend fun findLocalRole(groupId: String): Result<String?> =
         safeSuspendCall { groupSecurityDao.findState(groupId)?.localRole }
 
     suspend fun isLocalMembershipRetired(groupId: String): Result<Boolean> =
@@ -56,7 +57,7 @@ class GroupSecurityManager internal constructor(
             groupSecurityDao.findState(groupId)?.localRole == GROUP_LEFT_ROLE
         }
 
-    suspend fun findRemoteMemberKey(
+    override suspend fun findRemoteMemberKey(
         groupId: String,
         contactId: String
     ): Result<GroupMemberKeyEntity?> =
@@ -161,7 +162,7 @@ class GroupSecurityManager internal constructor(
             groupSecurityDao.deleteGroup(packet.groupId)
         }
 
-    suspend fun createOwnedGroup(
+    override suspend fun createOwnedGroup(
         groupId: String,
         title: String,
         createdAtEpochMilliseconds: Long,
@@ -250,7 +251,7 @@ class GroupSecurityManager internal constructor(
             CreatedGroupSecurityDto(welcomePacketsByContactId = packets)
         }
 
-    suspend fun rotateOwnedGroup(
+    override suspend fun rotateOwnedGroup(
         groupId: String,
         title: String,
         createdAtEpochMilliseconds: Long,
@@ -259,7 +260,7 @@ class GroupSecurityManager internal constructor(
         memberKeys: List<GroupMemberKeyEntity>,
         recipients: List<GroupWelcomeRecipientDto>,
         localSigningKeyPair: LocalSigningKeyPair,
-        membershipChange: GroupMembershipChangePayload? = null
+        membershipChange: GroupMembershipChangePayload?
     ): Result<CreatedGroupSecurityDto> =
         safeSuspendCall {
             val existingState =
@@ -334,7 +335,7 @@ class GroupSecurityManager internal constructor(
             CreatedGroupSecurityDto(welcomePacketsByContactId = packets)
         }
 
-    fun welcomePacketId(
+    override fun welcomePacketId(
         groupId: String,
         invitationId: String,
         epoch: Int
@@ -359,7 +360,7 @@ class GroupSecurityManager internal constructor(
         )
     }
 
-    suspend fun verifyKeyConfirmation(
+    override suspend fun verifyKeyConfirmation(
         groupId: String,
         epoch: Int,
         keyConfirmation: ByteArray

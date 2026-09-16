@@ -6,6 +6,7 @@ import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
 import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipCleanupDataSource
 
 internal class GroupLocalCleanupDataSource(
     private val chatDao: ChatDao,
@@ -16,8 +17,8 @@ internal class GroupLocalCleanupDataSource(
     private val groupTitleDataSource: GroupTitleDataSource,
     private val groupDescriptionDataSource: GroupDescriptionDataSource,
     private val groupPinDataSource: GroupPinDataSource
-) {
-    suspend fun endMembership(message: MessageEntity) {
+) : GroupMembershipCleanupDataSource {
+    override suspend fun endMembership(message: MessageEntity) {
         chatDao.applyLocalGroupRemoval(message)
         groupSecurityManager
             .retireLocalMembership(
@@ -28,7 +29,7 @@ internal class GroupLocalCleanupDataSource(
         groupInvitationDao.deleteByGroupId(message.conversationId)
     }
 
-    suspend fun deleteConversationHistory(
+    override suspend fun deleteConversationHistory(
         groupId: String,
         deletedAtEpochMilliseconds: Long
     ) {
@@ -46,7 +47,7 @@ internal class GroupLocalCleanupDataSource(
         groupPinDataSource.delete(groupId)
     }
 
-    suspend fun delete(
+    override suspend fun delete(
         groupId: String,
         deletedAtEpochMilliseconds: Long
     ) {

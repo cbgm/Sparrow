@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.chats.data.group.membership
+package com.cbgm.sparrow.feature.membership.data.coordinator
 
 import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentityProvider
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
@@ -10,36 +10,37 @@ import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
 import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
-import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupLocalCleanupDataSource
-import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
-import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupPacketBroadcaster
-import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupMembershipPacketProtocol
-import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_ADMIN_ROLE
-import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
-import com.cbgm.sparrow.feature.chats.data.group.security.isGroupAdminRole
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipIdentity
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipBroadcastDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipCleanupDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipMessageDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtocolDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
+import com.cbgm.sparrow.feature.membership.data.model.GROUP_ADMIN_ROLE
 import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationDirection
+import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
 
 @Suppress("LongParameterList")
-internal class GroupLeaveCoordinator(
+class GroupLeaveCoordinator(
     private val chatDao: ChatDao,
     private val groupInvitationDao: GroupInvitationDao,
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
     private val protocolOutbox: ProtocolOutbox,
-    private val membershipPacketProtocol: GroupMembershipPacketProtocol,
-    private val groupSecurityManager: GroupSecurityManager,
+    private val membershipPacketProtocol: GroupMembershipProtocolDataSource,
+    private val groupSecurityManager: GroupMembershipSecurityDataSource,
     private val membershipLock: GroupMembershipLock,
     private val identity: GroupMembershipIdentity,
     private val epochCoordinator: GroupEpochCoordinator,
-    private val localCleanupDataSource: GroupLocalCleanupDataSource,
-    private val packetBroadcaster: GroupPacketBroadcaster
+    private val localCleanupDataSource: GroupMembershipCleanupDataSource,
+    private val packetBroadcaster: GroupMembershipBroadcastDataSource,
+    private val membershipMessageDataSource: GroupMembershipMessageDataSource
 ) {
     suspend fun getLeaveRequirement(groupId: String): Result<GroupLeaveRequirement> =
         runCatching {
@@ -259,7 +260,7 @@ internal class GroupLeaveCoordinator(
         endedAtEpochMilliseconds: Long
     ) {
         localCleanupDataSource.endMembership(
-            GroupMembershipMessageFactory.localMembershipLeft(
+            membershipMessageDataSource.localMembershipLeft(
                 conversationId = groupId,
                 invitationId = referenceId,
                 epoch = epoch,

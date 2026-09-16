@@ -1,12 +1,12 @@
-package com.cbgm.sparrow.feature.chats.data.group.repository
+package com.cbgm.sparrow.feature.membership.data.repository
 
 import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipCoordinator
-import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_LEFT_ROLE
-import com.cbgm.sparrow.feature.chats.data.group.security.isGroupAdminRole
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
+import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMembershipCoordinator
+import com.cbgm.sparrow.feature.membership.data.model.GROUP_LEFT_ROLE
 import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationDirection
+import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupInvitationOwnerIdentity
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement

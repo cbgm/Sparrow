@@ -16,6 +16,7 @@ import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.feature.chats.data.group.security.isGroupAdminRole
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipVerificationDataSource
 import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -32,10 +33,10 @@ class GroupVerificationCoordinator internal constructor(
     private val protocolOutbox: ProtocolOutbox,
     private val verificationState: GroupVerificationState,
     private val snapshotSender: GroupVerificationSnapshotSender
-) {
+) : GroupMembershipVerificationDataSource {
     private val mutex = Mutex()
 
-    suspend fun initializeOwnedGroup(groupId: String): Result<Unit> =
+    override suspend fun initializeOwnedGroup(groupId: String): Result<Unit> =
         runCatching {
             require(groupId.isNotBlank()) { "Group ID must not be blank" }
 
@@ -74,7 +75,7 @@ class GroupVerificationCoordinator internal constructor(
             }
         }
 
-    suspend fun onOwnedMembershipChanged(groupId: String): Result<Unit> =
+    override suspend fun onOwnedMembershipChanged(groupId: String): Result<Unit> =
         runCatching {
             mutex.withLock {
                 val securityState = groupSecurityDao.findState(groupId)

@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.chats.data.group.delivery
 
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupInvitationCoordinator
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
+import com.cbgm.sparrow.feature.membership.data.coordinator.GroupInvitationCoordinator
 
 class GroupOutboxDeliveryHandler internal constructor(
     private val deliveryCoordinator: GroupMessageDeliveryCoordinator,
