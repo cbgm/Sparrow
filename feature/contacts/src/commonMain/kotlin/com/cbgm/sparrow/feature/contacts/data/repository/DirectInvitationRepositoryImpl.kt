@@ -41,12 +41,12 @@ import com.cbgm.sparrow.feature.contacts.domain.model.DirectChatAuthorizationReq
 import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.RemoteIdentityOrigin
 import com.cbgm.sparrow.feature.contacts.util.IdentityInvitationPayloadEncoder
-import com.cbgm.sparrow.feature.invite.domain.model.ContactInvitation
-import com.cbgm.sparrow.feature.invite.domain.model.ContactInvitationStatus
 import com.cbgm.sparrow.feature.invite.domain.model.IdentityHandshakeState
-import com.cbgm.sparrow.feature.invite.domain.model.IdentityInvitationDirection
-import com.cbgm.sparrow.feature.invite.domain.model.PendingContactInvitation
+import com.cbgm.sparrow.feature.invite.domain.model.Invitation
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationStatus
 import com.cbgm.sparrow.feature.invite.domain.repository.DirectInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.repository.InvitationRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
@@ -77,7 +77,8 @@ class DirectInvitationRepositoryImpl(
     private val contactVerificationDataSource: ContactVerificationDataSource,
     private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
     private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor
-) : DirectInvitationRepository {
+) : DirectInvitationRepository,
+    InvitationRepository {
     private val logger = SparrowLog.withTag("DirectInvitationRepositoryImpl")
 
     private val mutex = Mutex()
@@ -169,7 +170,7 @@ class DirectInvitationRepositoryImpl(
                     IdentityInvitationEntity(
                         invitationId = invitationId,
                         contactId = contactId,
-                        direction = IdentityInvitationDirection.OUTGOING.name,
+                        direction = InvitationDirection.OUTGOING.name,
                         state = IdentityHandshakeState.INVITE_SENT.name,
                         remoteDisplayName = contact.contact.displayName,
                         inviteChallenge = challenge.copyOf(),
@@ -199,25 +200,9 @@ class DirectInvitationRepositoryImpl(
             }
         }
 
-    override fun observePendingIncoming(): Flow<List<PendingContactInvitation>> =
-        observeInvitations(IdentityInvitationDirection.INCOMING)
-            .map { invitations ->
-                invitations
-                    .filter { invitation -> invitation.status == ContactInvitationStatus.PENDING }
-                    .map { invitation ->
-                        PendingContactInvitation(
-                            invitationId = invitation.invitationId,
-                            contactId = invitation.contactId,
-                            contactName = invitation.contactName,
-                            contactPhoneNumber = invitation.contactPhoneNumber,
-                            expiresAtEpochMilliseconds = invitation.expiresAtEpochMilliseconds
-                        )
-                    }
-            }
-
     override fun observeInvitations(
-        direction: IdentityInvitationDirection
-    ): Flow<List<ContactInvitation>> =
+        direction: InvitationDirection
+    ): Flow<List<Invitation>> =
         invitationDao
             .observeByDirectionAndStates(
                 direction = direction.name,
@@ -231,10 +216,10 @@ class DirectInvitationRepositoryImpl(
                                 if (storedInvitation.hiddenAtEpochMilliseconds != null) continue
 
                                 val invitation = expirePendingInvitationIfNeeded(storedInvitation, now)
-                                val status = invitation.toContactInvitationStatus() ?: continue
+                                val status = invitation.toInvitationStatus() ?: continue
                                 if (
-                                    direction == IdentityInvitationDirection.INCOMING &&
-                                    status != ContactInvitationStatus.PENDING
+                                    direction == InvitationDirection.INCOMING &&
+                                    status != InvitationStatus.PENDING
                                 ) {
                                     continue
                                 }
@@ -242,7 +227,7 @@ class DirectInvitationRepositoryImpl(
                                     continue
                                 }
 
-                                toContactInvitation(invitation, direction, status)?.let(::add)
+                                toInvitation(invitation, direction, status)?.let(::add)
                             }
                         }
                     )
@@ -271,14 +256,14 @@ class DirectInvitationRepositoryImpl(
             .map { invitations ->
                 invitations
                     .filter { invitation ->
-                        invitation.direction == IdentityInvitationDirection.OUTGOING.name &&
+                        invitation.direction == InvitationDirection.OUTGOING.name &&
                             invitation.state == IdentityHandshakeState.DECLINED.name
                     }
                     .mapTo(mutableSetOf(), IdentityInvitationEntity::contactId)
             }
             .distinctUntilChanged()
 
-    override suspend fun markViewed(direction: IdentityInvitationDirection): Result<Unit> =
+    override suspend fun markViewed(direction: InvitationDirection): Result<Unit> =
         safeSuspendCall {
             invitationDao.markDirectionViewed(
                 direction = direction.name,
@@ -292,7 +277,7 @@ class DirectInvitationRepositoryImpl(
             val changed =
                 invitationDao.hideByIdAndState(
                     invitationId = invitationId,
-                    direction = IdentityInvitationDirection.OUTGOING.name,
+                    direction = InvitationDirection.OUTGOING.name,
                     state = IdentityHandshakeState.DECLINED.name,
                     hiddenAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
                 )
@@ -351,7 +336,7 @@ class DirectInvitationRepositoryImpl(
     override suspend fun accept(invitationId: String): Result<Unit> =
         safeSuspendCall {
             mutex.withLock {
-                var invitation = requireInvitation(invitationId, IdentityInvitationDirection.INCOMING)
+                var invitation = requireInvitation(invitationId, InvitationDirection.INCOMING)
                 ensureNotExpired(invitation)
                 invitation = rebindIncomingInvitation(invitation)
 
@@ -445,7 +430,7 @@ class DirectInvitationRepositoryImpl(
     override suspend fun decline(invitationId: String): Result<Unit> =
         safeSuspendCall {
             mutex.withLock {
-                val invitation = requireInvitation(invitationId, IdentityInvitationDirection.INCOMING)
+                val invitation = requireInvitation(invitationId, InvitationDirection.INCOMING)
                 if (invitation.state == IdentityHandshakeState.DECLINED.name) {
                     resendPersistedPacket(declinedPacketId(invitation.invitationId))
                     return@withLock
@@ -514,7 +499,7 @@ class DirectInvitationRepositoryImpl(
                     } ?: return@withLock
 
                 when {
-                    invitation.direction == IdentityInvitationDirection.INCOMING.name &&
+                    invitation.direction == InvitationDirection.INCOMING.name &&
                         state == IdentityHandshakeState.AWAITING_ACCEPTANCE -> {
                         queueDecline(
                             contactId = invitation.contactId,
@@ -531,7 +516,7 @@ class DirectInvitationRepositoryImpl(
                         )
                     }
 
-                    invitation.direction == IdentityInvitationDirection.OUTGOING.name &&
+                    invitation.direction == InvitationDirection.OUTGOING.name &&
                         state == IdentityHandshakeState.INVITE_SENT -> {
                         invitationDao.upsert(
                             invitation.copy(
@@ -596,7 +581,7 @@ class DirectInvitationRepositoryImpl(
                 }
 
                 if (
-                    invitation.direction == IdentityInvitationDirection.INCOMING.name &&
+                    invitation.direction == InvitationDirection.INCOMING.name &&
                     state == IdentityHandshakeState.AWAITING_ACCEPTANCE
                 ) {
                     queueDecline(
@@ -724,7 +709,7 @@ class DirectInvitationRepositoryImpl(
                 }
 
                 invitationDao.findById(packet.invitationId)?.let { existing ->
-                    check(existing.direction == IdentityInvitationDirection.INCOMING.name) {
+                    check(existing.direction == InvitationDirection.INCOMING.name) {
                         "Invitation replay changed its direction"
                     }
                     check(existing.contactId == contactId) {
@@ -809,7 +794,7 @@ class DirectInvitationRepositoryImpl(
                     IdentityInvitationEntity(
                         invitationId = packet.invitationId,
                         contactId = contactId,
-                        direction = IdentityInvitationDirection.INCOMING.name,
+                        direction = InvitationDirection.INCOMING.name,
                         state = IdentityHandshakeState.AWAITING_ACCEPTANCE.name,
                         remoteDisplayName = remoteDisplayName,
                         inviteChallenge = packet.inviteChallenge.copyOf(),
@@ -838,7 +823,7 @@ class DirectInvitationRepositoryImpl(
                     expectedPrefix = "contact-invite-accepted",
                     invitationId = packet.invitationId
                 )
-                val invitation = requireInvitation(packet.invitationId, IdentityInvitationDirection.OUTGOING)
+                val invitation = requireInvitation(packet.invitationId, InvitationDirection.OUTGOING)
                 check(invitation.contactId == context.contactId) {
                     "Acceptance contact does not match invitation"
                 }
@@ -983,7 +968,7 @@ class DirectInvitationRepositoryImpl(
                     "ContactReadyPacket must be received through encrypted transport"
                 }
 
-                var invitation = requireInvitation(packet.invitationId, IdentityInvitationDirection.INCOMING)
+                var invitation = requireInvitation(packet.invitationId, InvitationDirection.INCOMING)
                 val originalContactId = invitation.contactId
                 invitation = rebindIncomingInvitation(invitation)
                 check(
@@ -1115,7 +1100,7 @@ class DirectInvitationRepositoryImpl(
                     return@withLock
                 }
 
-                check(invitation.direction == IdentityInvitationDirection.OUTGOING.name) {
+                check(invitation.direction == InvitationDirection.OUTGOING.name) {
                     "Invitation direction does not match this operation"
                 }
                 check(invitation.contactId == context.contactId) {
@@ -1642,7 +1627,7 @@ class DirectInvitationRepositoryImpl(
 
     private suspend fun resumeActiveHandshake(invitation: IdentityInvitationEntity): Boolean {
         if (
-            invitation.direction == IdentityInvitationDirection.INCOMING.name &&
+            invitation.direction == InvitationDirection.INCOMING.name &&
             (
                 invitation.state == IdentityHandshakeState.ACCEPTANCE_SENT.name ||
                     invitation.state == IdentityHandshakeState.WAITING_FOR_READY.name
@@ -1653,7 +1638,7 @@ class DirectInvitationRepositoryImpl(
         }
 
         if (
-            invitation.direction == IdentityInvitationDirection.OUTGOING.name &&
+            invitation.direction == InvitationDirection.OUTGOING.name &&
             invitation.state == IdentityHandshakeState.INVITE_SENT.name
         ) {
             val packetId = invitePacketId(invitation.invitationId)
@@ -1842,7 +1827,7 @@ class DirectInvitationRepositoryImpl(
 
     private suspend fun requireInvitation(
         invitationId: String,
-        direction: IdentityInvitationDirection
+        direction: InvitationDirection
     ): IdentityInvitationEntity {
         require(invitationId.isNotBlank()) {
             "Invitation ID must not be blank"
@@ -1992,14 +1977,14 @@ class DirectInvitationRepositoryImpl(
                 wakeAt?.takeIf { it > now }
             }.minOrNull()
 
-    private fun visibleInvitationStates(direction: IdentityInvitationDirection): List<String> =
+    private fun visibleInvitationStates(direction: InvitationDirection): List<String> =
         when (direction) {
-            IdentityInvitationDirection.INCOMING ->
+            InvitationDirection.INCOMING ->
                 listOf(
                     IdentityHandshakeState.AWAITING_ACCEPTANCE.name,
                     IdentityHandshakeState.ACCEPTANCE_SENT.name
                 )
-            IdentityInvitationDirection.OUTGOING ->
+            InvitationDirection.OUTGOING ->
                 listOf(
                     IdentityHandshakeState.INVITE_SENT.name,
                     IdentityHandshakeState.DECLINED.name,
@@ -2030,30 +2015,30 @@ class DirectInvitationRepositoryImpl(
         return expired
     }
 
-    private fun IdentityInvitationEntity.toContactInvitationStatus(): ContactInvitationStatus? =
+    private fun IdentityInvitationEntity.toInvitationStatus(): InvitationStatus? =
         when (state) {
             IdentityHandshakeState.INVITE_SENT.name,
             IdentityHandshakeState.AWAITING_ACCEPTANCE.name,
-            IdentityHandshakeState.ACCEPTANCE_SENT.name -> ContactInvitationStatus.PENDING
-            IdentityHandshakeState.DECLINED.name -> ContactInvitationStatus.DECLINED
-            IdentityHandshakeState.EXPIRED.name -> ContactInvitationStatus.EXPIRED
-            IdentityHandshakeState.FAILED.name -> ContactInvitationStatus.FAILED
+            IdentityHandshakeState.ACCEPTANCE_SENT.name -> InvitationStatus.PENDING
+            IdentityHandshakeState.DECLINED.name -> InvitationStatus.DECLINED
+            IdentityHandshakeState.EXPIRED.name -> InvitationStatus.EXPIRED
+            IdentityHandshakeState.FAILED.name -> InvitationStatus.FAILED
             else -> null
         }
 
     private fun isVisibleInvitationHistory(
-        status: ContactInvitationStatus,
+        status: InvitationStatus,
         updatedAtEpochMilliseconds: Long,
         now: Long
     ): Boolean =
-        status == ContactInvitationStatus.PENDING ||
+        status == InvitationStatus.PENDING ||
             now - updatedAtEpochMilliseconds < INVITATION_HISTORY_RETENTION_MILLISECONDS
 
-    private suspend fun toContactInvitation(
+    private suspend fun toInvitation(
         invitation: IdentityInvitationEntity,
-        direction: IdentityInvitationDirection,
-        status: ContactInvitationStatus
-    ): ContactInvitation? {
+        direction: InvitationDirection,
+        status: InvitationStatus
+    ): Invitation? {
         val contact = contactDao.findById(invitation.contactId) ?: return null
         val invitationDisplayName =
             invitation.remoteDisplayName
@@ -2071,15 +2056,15 @@ class DirectInvitationRepositoryImpl(
 
         val viewedAtEpochMilliseconds = invitation.viewedAtEpochMilliseconds
 
-        return ContactInvitation(
+        return Invitation(
             invitationId = invitation.invitationId,
-            contactId = invitation.contactId,
-            contactName =
+            peerId = invitation.contactId,
+            peerDisplayName =
                 contact.contact.displayName
                     ?.takeIf(String::isNotBlank)
                     ?.takeUnless { displayName -> displayName == contactPhoneNumber }
                     ?: invitationDisplayName?.takeIf { invitationPhoneNumber == null },
-            contactPhoneNumber = contactPhoneNumber,
+            peerSecondaryText = contactPhoneNumber,
             direction = direction,
             status = status,
             expiresAtEpochMilliseconds = invitation.expiresAtEpochMilliseconds,

@@ -6,7 +6,8 @@ import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.feature.invite.domain.repository.DirectInvitationRepository
 
 class AcceptContactInvitationUseCase(
-    private val identityInvitationRepository: DirectInvitationRepository,
+    private val directInvitationRepository: DirectInvitationRepository,
+    private val acceptInvitation: AcceptInvitationUseCase,
     private val modeRepository: DirectIdentitySetupModeRepository,
     private val contactBlocklistRepository: ContactBlocklistRepository
 ) {
@@ -17,7 +18,7 @@ class AcceptContactInvitationUseCase(
             }
 
             val contactId =
-                identityInvitationRepository
+                directInvitationRepository
                     .getContactId(invitationId)
                     .getOrThrow()
 
@@ -25,6 +26,6 @@ class AcceptContactInvitationUseCase(
                 "Blocked contacts cannot be accepted"
             }
 
-            identityInvitationRepository.accept(invitationId).getOrThrow()
+            acceptInvitation(invitationId).getOrThrow()
         }
 }

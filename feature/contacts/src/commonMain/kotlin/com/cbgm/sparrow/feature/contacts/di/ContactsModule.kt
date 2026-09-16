@@ -50,6 +50,7 @@ import com.cbgm.sparrow.feature.contacts.presentation.overview.ContactsViewModel
 import com.cbgm.sparrow.feature.contacts.util.ContactVerificationPayloadEncoder
 import com.cbgm.sparrow.feature.contacts.util.IdentityInvitationPayloadEncoder
 import com.cbgm.sparrow.feature.invite.domain.repository.DirectInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.repository.InvitationRepository
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
@@ -120,6 +121,9 @@ val contactsModule =
         }
 
         single<DirectInvitationRepository> {
+            get<DirectInvitationRepositoryImpl>()
+        }
+        single<InvitationRepository> {
             get<DirectInvitationRepositoryImpl>()
         }
 

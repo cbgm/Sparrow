@@ -1,10 +1,8 @@
 package com.cbgm.sparrow.feature.invite.domain.usecase
 
-import com.cbgm.sparrow.feature.invite.domain.repository.DirectInvitationRepository
-
 class DeclineContactInvitationUseCase(
-    private val identityInvitationRepository: DirectInvitationRepository
+    private val declineInvitation: DeclineInvitationUseCase
 ) {
     suspend operator fun invoke(invitationId: String): Result<Unit> =
-        identityInvitationRepository.decline(invitationId)
+        declineInvitation(invitationId)
 }

@@ -1,19 +1,19 @@
 package com.cbgm.sparrow.feature.invite.domain.usecase
 
-import com.cbgm.sparrow.feature.invite.domain.model.ContactInvitationsContext
-import com.cbgm.sparrow.feature.invite.domain.model.IdentityInvitationDirection
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationsContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
 class ObserveContactInvitationsContextUseCase(
     private val observeContactInvitations: ObserveContactInvitationsUseCase
 ) {
-    operator fun invoke(): Flow<ContactInvitationsContext> =
+    operator fun invoke(): Flow<InvitationsContext> =
         combine(
-            observeContactInvitations(IdentityInvitationDirection.INCOMING),
-            observeContactInvitations(IdentityInvitationDirection.OUTGOING)
+            observeContactInvitations(InvitationDirection.INCOMING),
+            observeContactInvitations(InvitationDirection.OUTGOING)
         ) { incoming, outgoing ->
-            ContactInvitationsContext(
+            InvitationsContext(
                 incoming = incoming,
                 outgoing = outgoing
             )

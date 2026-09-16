@@ -51,12 +51,12 @@ import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
+import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationDirection
+import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationStatus
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationTab
+import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUi
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiState
-import com.cbgm.sparrow.feature.invite.domain.model.ContactInvitation
-import com.cbgm.sparrow.feature.invite.domain.model.ContactInvitationStatus
-import com.cbgm.sparrow.feature.invite.domain.model.IdentityInvitationDirection
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_unknown
 import com.cbgm.sparrow.resources.feature_contacts_accept_invitation
@@ -148,7 +148,7 @@ fun ContactInvitationsScreen(
                 ) {
                     items(
                         items = uiState.selectedInvitations,
-                        key = ContactInvitation::invitationId
+                        key = ContactInvitationUi::invitationId
                     ) { invitation ->
                         InvitationItem(
                             invitation = invitation,
@@ -225,13 +225,13 @@ private fun InvitationTab(
 
 @Composable
 private fun InvitationItem(
-    invitation: ContactInvitation,
+    invitation: ContactInvitationUi,
     isProcessing: Boolean,
     actionsEnabled: Boolean,
     onUiEvent: (ContactInvitationUiEvent) -> Unit
 ) {
     when (invitation.direction) {
-        IdentityInvitationDirection.INCOMING ->
+        ContactInvitationDirection.INCOMING ->
             IncomingInvitationItem(
                 invitation = invitation,
                 isProcessing = isProcessing,
@@ -239,7 +239,7 @@ private fun InvitationItem(
                 onUiEvent = onUiEvent
             )
 
-        IdentityInvitationDirection.OUTGOING ->
+        ContactInvitationDirection.OUTGOING ->
             OutgoingInvitationItem(
                 invitation = invitation,
                 isProcessing = isProcessing,
@@ -251,7 +251,7 @@ private fun InvitationItem(
 
 @Composable
 private fun IncomingInvitationItem(
-    invitation: ContactInvitation,
+    invitation: ContactInvitationUi,
     isProcessing: Boolean,
     actionsEnabled: Boolean,
     onUiEvent: (ContactInvitationUiEvent) -> Unit
@@ -308,7 +308,7 @@ private fun IncomingInvitationItem(
 
 @Composable
 private fun OutgoingInvitationItem(
-    invitation: ContactInvitation,
+    invitation: ContactInvitationUi,
     isProcessing: Boolean,
     actionsEnabled: Boolean,
     onUiEvent: (ContactInvitationUiEvent) -> Unit
@@ -395,7 +395,7 @@ private fun EmptyInvitations(
 
 @Composable
 private fun InvitationRow(
-    invitation: ContactInvitation,
+    invitation: ContactInvitationUi,
     isProcessing: Boolean,
     modifier: Modifier = Modifier
 ) {
@@ -435,7 +435,7 @@ private fun InvitationRow(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                if (invitation.direction == IdentityInvitationDirection.OUTGOING) {
+                if (invitation.direction == ContactInvitationDirection.OUTGOING) {
                     InvitationStatus(invitation.status)
                 }
             }
@@ -528,23 +528,23 @@ private fun ContactInvitationsScreenPreview() {
                     selectedTab = ContactInvitationTab.OUTGOING,
                     outgoingInvitations =
                         listOf(
-                            ContactInvitation(
+                            ContactInvitationUi(
                                 invitationId = "pending",
                                 contactId = "alice",
                                 contactName = "Alice",
                                 contactPhoneNumber = "+49 123 456",
-                                direction = IdentityInvitationDirection.OUTGOING,
+                                direction = ContactInvitationDirection.OUTGOING,
                                 status = ContactInvitationStatus.PENDING,
                                 expiresAtEpochMilliseconds = Long.MAX_VALUE,
                                 updatedAtEpochMilliseconds = 1,
                                 hasUnreadUpdate = false
                             ),
-                            ContactInvitation(
+                            ContactInvitationUi(
                                 invitationId = "declined",
                                 contactId = "bob",
                                 contactName = "Bob",
                                 contactPhoneNumber = null,
-                                direction = IdentityInvitationDirection.OUTGOING,
+                                direction = ContactInvitationDirection.OUTGOING,
                                 status = ContactInvitationStatus.DECLINED,
                                 expiresAtEpochMilliseconds = Long.MAX_VALUE,
                                 updatedAtEpochMilliseconds = 2,

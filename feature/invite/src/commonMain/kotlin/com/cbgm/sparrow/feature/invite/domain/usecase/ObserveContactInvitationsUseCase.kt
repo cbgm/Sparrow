@@ -1,23 +1,22 @@
 package com.cbgm.sparrow.feature.invite.domain.usecase
 
 import com.cbgm.sparrow.core.security.ContactBlocklistRepository
-import com.cbgm.sparrow.feature.invite.domain.model.ContactInvitation
-import com.cbgm.sparrow.feature.invite.domain.model.IdentityInvitationDirection
-import com.cbgm.sparrow.feature.invite.domain.repository.DirectInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.model.Invitation
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
 class ObserveContactInvitationsUseCase(
-    private val repository: DirectInvitationRepository,
+    private val observeInvitations: ObserveInvitationsUseCase,
     private val contactBlocklistRepository: ContactBlocklistRepository
 ) {
-    operator fun invoke(direction: IdentityInvitationDirection): Flow<List<ContactInvitation>> =
+    operator fun invoke(direction: InvitationDirection): Flow<List<Invitation>> =
         combine(
-            repository.observeInvitations(direction),
+            observeInvitations(direction),
             contactBlocklistRepository.observeBlockedContactIds()
         ) { invitations, blockedContactIds ->
-            if (direction == IdentityInvitationDirection.INCOMING) {
-                invitations.filterNot { invitation -> invitation.contactId in blockedContactIds }
+            if (direction == InvitationDirection.INCOMING) {
+                invitations.filterNot { invitation -> invitation.peerId in blockedContactIds }
             } else {
                 invitations
             }
