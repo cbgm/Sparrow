@@ -3,7 +3,7 @@ package com.cbgm.sparrow.feature.invite.domain.usecase
 import com.cbgm.sparrow.core.security.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.invite.domain.repository.DirectInvitationRepository
 
-class DeclineAndBlockContactInvitationUseCase(
+class DeclineAndBlockDirectInvitationUseCase(
     private val directInvitationRepository: DirectInvitationRepository,
     private val declineInvitation: DeclineInvitationUseCase,
     private val contactBlocklistRepository: ContactBlocklistRepository

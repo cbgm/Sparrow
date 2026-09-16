@@ -6,7 +6,7 @@ import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
-class ObserveContactInvitationsUseCase(
+class ObserveDirectInvitationsUseCase(
     private val observeInvitations: ObserveInvitationsUseCase,
     private val contactBlocklistRepository: ContactBlocklistRepository
 ) {

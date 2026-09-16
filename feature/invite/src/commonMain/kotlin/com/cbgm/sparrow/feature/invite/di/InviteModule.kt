@@ -1,23 +1,21 @@
 package com.cbgm.sparrow.feature.invite.di
 
-import com.cbgm.sparrow.feature.invite.domain.usecase.AcceptContactInvitationUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.AcceptDirectInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.AcceptInvitationUseCase
-import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineAndBlockContactInvitationUseCase
-import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineContactInvitationUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineAndBlockDirectInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.DeleteDeclinedOutgoingInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.HandleContactInviteAcceptedPacketUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.HandleContactInviteDeclinedPacketUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.HandleContactInvitePacketUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.HandleContactReadyPacketUseCase
-import com.cbgm.sparrow.feature.invite.domain.usecase.MarkContactInvitationsViewedUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.MarkInvitationsViewedUseCase
-import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveContactInvitationsContextUseCase
-import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveContactInvitationsUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveDirectInvitationsContextUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveDirectInvitationsUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveIdentityHandshakeStateUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationsUseCase
-import com.cbgm.sparrow.feature.invite.domain.usecase.ObservePendingContactInvitationCountUseCase
-import com.cbgm.sparrow.feature.invite.domain.usecase.ObservePendingContactInvitationsUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.ObservePendingDirectInvitationCountUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.ObservePendingDirectInvitationsUseCase
 import org.koin.dsl.module
 
 val inviteModule =
@@ -40,36 +38,33 @@ val inviteModule =
         factory { HandleContactInviteDeclinedPacketUseCase(identityInvitationRepository = get()) }
 
         factory {
-            AcceptContactInvitationUseCase(
+            AcceptDirectInvitationUseCase(
                 directInvitationRepository = get(),
                 acceptInvitation = get(),
                 modeRepository = get(),
                 contactBlocklistRepository = get()
             )
         }
-        factory { DeclineContactInvitationUseCase(declineInvitation = get()) }
         factory {
-            DeclineAndBlockContactInvitationUseCase(
+            DeclineAndBlockDirectInvitationUseCase(
                 directInvitationRepository = get(),
                 declineInvitation = get(),
                 contactBlocklistRepository = get()
             )
         }
-        factory { MarkContactInvitationsViewedUseCase(markInvitationsViewed = get()) }
         factory {
-            ObserveContactInvitationsUseCase(
+            ObserveDirectInvitationsUseCase(
                 observeInvitations = get(),
                 contactBlocklistRepository = get()
             )
         }
         factory {
-            ObservePendingContactInvitationsUseCase(
-                invitationRepository = get(),
-                modeRepository = get(),
-                contactBlocklistRepository = get()
+            ObservePendingDirectInvitationsUseCase(
+                observeDirectInvitations = get(),
+                modeRepository = get()
             )
         }
-        factory { ObservePendingContactInvitationCountUseCase(observePendingContactInvitations = get()) }
+        factory { ObservePendingDirectInvitationCountUseCase(observePendingDirectInvitations = get()) }
         factory { ObserveIdentityHandshakeStateUseCase(identityInvitationRepository = get()) }
-        factory { ObserveContactInvitationsContextUseCase(observeContactInvitations = get()) }
+        factory { ObserveDirectInvitationsContextUseCase(observeDirectInvitations = get()) }
     }

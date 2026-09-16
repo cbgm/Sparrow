@@ -5,13 +5,13 @@ import com.cbgm.sparrow.feature.invite.domain.model.InvitationsContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
-class ObserveContactInvitationsContextUseCase(
-    private val observeContactInvitations: ObserveContactInvitationsUseCase
+class ObserveDirectInvitationsContextUseCase(
+    private val observeDirectInvitations: ObserveDirectInvitationsUseCase
 ) {
     operator fun invoke(): Flow<InvitationsContext> =
         combine(
-            observeContactInvitations(InvitationDirection.INCOMING),
-            observeContactInvitations(InvitationDirection.OUTGOING)
+            observeDirectInvitations(InvitationDirection.INCOMING),
+            observeDirectInvitations(InvitationDirection.OUTGOING)
         ) { incoming, outgoing ->
             InvitationsContext(
                 incoming = incoming,

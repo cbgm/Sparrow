@@ -8,7 +8,7 @@ val navigationModule =
     module {
         viewModel {
             MainViewModel(
-                observePendingContactInvitationCount = get(),
+                observePendingDirectInvitationCount = get(),
                 observeSemanticSearchState = get()
             )
         }

@@ -301,9 +301,9 @@ val contactsModule =
             ContactInvitationViewModel(
                 savedStateHandle = get(),
                 observeInvitationsContext = get(),
-                acceptContactInvitation = get(),
-                declineContactInvitation = get(),
-                declineAndBlockContactInvitation = get(),
+                acceptDirectInvitation = get(),
+                declineInvitation = get(),
+                declineAndBlockDirectInvitation = get(),
                 deleteDeclinedOutgoingInvitation = get(),
                 markInvitationsViewed = get()
             )

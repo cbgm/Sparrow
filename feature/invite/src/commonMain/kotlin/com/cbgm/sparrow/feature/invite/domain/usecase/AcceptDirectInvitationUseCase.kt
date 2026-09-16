@@ -5,7 +5,7 @@ import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.feature.invite.domain.repository.DirectInvitationRepository
 
-class AcceptContactInvitationUseCase(
+class AcceptDirectInvitationUseCase(
     private val directInvitationRepository: DirectInvitationRepository,
     private val acceptInvitation: AcceptInvitationUseCase,
     private val modeRepository: DirectIdentitySetupModeRepository,

@@ -14,12 +14,12 @@ import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactI
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiState
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationsUiData
-import com.cbgm.sparrow.feature.invite.domain.usecase.AcceptContactInvitationUseCase
-import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineAndBlockContactInvitationUseCase
-import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineContactInvitationUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.AcceptDirectInvitationUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineAndBlockDirectInvitationUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.DeleteDeclinedOutgoingInvitationUseCase
-import com.cbgm.sparrow.feature.invite.domain.usecase.MarkContactInvitationsViewedUseCase
-import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveContactInvitationsContextUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.MarkInvitationsViewedUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveDirectInvitationsContextUseCase
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -34,12 +34,12 @@ import kotlinx.coroutines.launch
 
 class ContactInvitationViewModel(
     savedStateHandle: SavedStateHandle,
-    observeInvitationsContext: ObserveContactInvitationsContextUseCase,
-    private val acceptContactInvitation: AcceptContactInvitationUseCase,
-    private val declineContactInvitation: DeclineContactInvitationUseCase,
-    private val declineAndBlockContactInvitation: DeclineAndBlockContactInvitationUseCase,
+    observeInvitationsContext: ObserveDirectInvitationsContextUseCase,
+    private val acceptDirectInvitation: AcceptDirectInvitationUseCase,
+    private val declineInvitation: DeclineInvitationUseCase,
+    private val declineAndBlockDirectInvitation: DeclineAndBlockDirectInvitationUseCase,
     private val deleteDeclinedOutgoingInvitation: DeleteDeclinedOutgoingInvitationUseCase,
-    private val markInvitationsViewed: MarkContactInvitationsViewedUseCase
+    private val markInvitationsViewed: MarkInvitationsViewedUseCase
 ) : BaseViewModel() {
     private val initialTab =
         if (savedStateHandle.requireRouteArgument<Boolean>(AppRoute.ContactInvitations::showOutgoing.name)) {
@@ -122,7 +122,7 @@ class ContactInvitationViewModel(
             invitationId = invitationId,
             closeWhenScreenBecomesEmpty = true
         ) {
-            acceptContactInvitation(invitationId)
+            acceptDirectInvitation(invitationId)
         }
     }
 
@@ -131,7 +131,7 @@ class ContactInvitationViewModel(
             invitationId = invitationId,
             closeWhenScreenBecomesEmpty = true
         ) {
-            declineContactInvitation(invitationId)
+            declineInvitation(invitationId)
         }
     }
 
@@ -140,7 +140,7 @@ class ContactInvitationViewModel(
             invitationId = invitationId,
             closeWhenScreenBecomesEmpty = true
         ) {
-            declineAndBlockContactInvitation(invitationId)
+            declineAndBlockDirectInvitation(invitationId)
         }
     }
 
