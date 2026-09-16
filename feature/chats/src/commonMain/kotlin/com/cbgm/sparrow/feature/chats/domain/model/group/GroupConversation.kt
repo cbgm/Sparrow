@@ -1,5 +1,7 @@
 package com.cbgm.sparrow.feature.chats.domain.model.group
 
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberInvitationState
+
 data class GroupConversation(
     val id: String,
     val title: String,

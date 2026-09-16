@@ -1,11 +1,11 @@
-package com.cbgm.sparrow.feature.chats.domain.usecase.group
+package com.cbgm.sparrow.feature.membership.domain.usecase
 
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupInvitationOwnerIdentity
-import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupMembershipRepository
 import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.SparrowIdentity
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactKeyExchangeRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
+import com.cbgm.sparrow.feature.membership.domain.model.GroupInvitationOwnerIdentity
+import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
 
 class AcceptGroupInvitationUseCase(
     private val membershipRepository: GroupMembershipRepository,

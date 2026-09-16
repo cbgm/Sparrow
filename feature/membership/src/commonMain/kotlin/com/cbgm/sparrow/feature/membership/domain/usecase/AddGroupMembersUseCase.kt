@@ -1,6 +1,6 @@
-package com.cbgm.sparrow.feature.chats.domain.usecase.group
+package com.cbgm.sparrow.feature.membership.domain.usecase
 
-import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupMembershipRepository
+import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
 
 class AddGroupMembersUseCase(
     private val repository: GroupMembershipRepository

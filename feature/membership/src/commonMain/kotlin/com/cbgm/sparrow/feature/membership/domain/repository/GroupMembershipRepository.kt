@@ -1,8 +1,8 @@
-package com.cbgm.sparrow.feature.chats.domain.repository.group
+package com.cbgm.sparrow.feature.membership.domain.repository
 
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationState
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupInvitationOwnerIdentity
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupLeaveRequirement
+import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
+import com.cbgm.sparrow.feature.membership.domain.model.GroupInvitationOwnerIdentity
+import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
 import kotlinx.coroutines.flow.Flow
 
 interface GroupMembershipRepository {

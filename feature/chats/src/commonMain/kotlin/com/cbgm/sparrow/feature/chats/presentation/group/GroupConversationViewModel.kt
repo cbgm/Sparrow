@@ -18,13 +18,10 @@ import com.cbgm.sparrow.feature.chats.domain.model.LocationShareStateMachine
 import com.cbgm.sparrow.feature.chats.domain.model.MessageComposerPolicy
 import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryCursor
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupChatContext
 import com.cbgm.sparrow.feature.chats.domain.usecase.FindMessageHistoryCursorUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.forward.ForwardMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.forward.LoadOlderMessagesUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.AcceptGroupInvitationUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeclineGroupInvitationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeleteGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.EditGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.MarkGroupConversationReadUseCase
@@ -51,6 +48,9 @@ import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMembershipUi
 import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactResult
 import com.cbgm.sparrow.feature.contacts.domain.usecase.AddDeviceContactUseCase
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
+import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
+import com.cbgm.sparrow.feature.membership.domain.usecase.AcceptGroupInvitationUseCase
+import com.cbgm.sparrow.feature.membership.domain.usecase.DeclineGroupInvitationUseCase
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyDetails
 import com.cbgm.sparrow.feature.voice.domain.usecase.GetRecordedVoiceAttachmentUseCase

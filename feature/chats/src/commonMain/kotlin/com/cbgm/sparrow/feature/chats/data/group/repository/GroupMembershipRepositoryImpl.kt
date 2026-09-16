@@ -7,10 +7,10 @@ import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipCoord
 import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_LEFT_ROLE
 import com.cbgm.sparrow.feature.chats.data.group.security.isGroupAdminRole
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAdministrationState
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupInvitationOwnerIdentity
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupLeaveRequirement
-import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupMembershipRepository
+import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
+import com.cbgm.sparrow.feature.membership.domain.model.GroupInvitationOwnerIdentity
+import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
+import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine

@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.chats.domain.model.group
+package com.cbgm.sparrow.feature.membership.domain.model
 
 sealed interface GroupLeaveRequirement {
     data object CanLeave : GroupLeaveRequirement

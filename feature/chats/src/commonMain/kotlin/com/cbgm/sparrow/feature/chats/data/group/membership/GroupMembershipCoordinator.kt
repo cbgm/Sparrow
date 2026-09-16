@@ -3,7 +3,7 @@ package com.cbgm.sparrow.feature.chats.data.group.membership
 import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivationAcknowledgementPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupLeaveRequirement
+import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
 
 /**
  * Public entry point for group membership lifecycle operations.

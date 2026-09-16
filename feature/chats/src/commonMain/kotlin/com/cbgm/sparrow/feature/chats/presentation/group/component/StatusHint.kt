@@ -10,10 +10,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversationState
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMemberInvitationStatus
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiState
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMembershipUiState
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberInvitationStatus
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_group_deleted_status
 import com.cbgm.sparrow.resources.feature_chats_group_member_accepted

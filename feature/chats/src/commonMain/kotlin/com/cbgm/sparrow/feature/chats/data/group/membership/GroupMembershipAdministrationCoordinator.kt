@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.chats.data.group.membership
 
 import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupLeaveRequirement
+import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
 
 internal class GroupMembershipAdministrationCoordinator(
     private val promotionCoordinator: GroupMemberPromotionCoordinator,

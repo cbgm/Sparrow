@@ -3,9 +3,9 @@ package com.cbgm.sparrow.feature.chats.data.group.membership
 import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
 import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversationState
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupLeaveRequirement
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMemberInvitationState
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMemberInvitationStatus
+import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberInvitationState
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberInvitationStatus
 
 internal enum class GroupMembershipEvent {
     ACCEPT,

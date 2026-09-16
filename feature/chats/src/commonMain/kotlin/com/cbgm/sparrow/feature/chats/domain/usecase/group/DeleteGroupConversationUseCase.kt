@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.chats.domain.usecase.group
 
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentRepository
-import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupMembershipRepository
+import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
 
 class DeleteGroupConversationUseCase(
     private val repository: GroupMembershipRepository,

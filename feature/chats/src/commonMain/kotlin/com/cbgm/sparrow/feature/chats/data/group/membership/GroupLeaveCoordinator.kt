@@ -18,8 +18,8 @@ import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupMembershipPacketP
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_ADMIN_ROLE
 import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
 import com.cbgm.sparrow.feature.chats.data.group.security.isGroupAdminRole
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupLeaveRequirement
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
+import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
 
 @Suppress("LongParameterList")
 internal class GroupLeaveCoordinator(
