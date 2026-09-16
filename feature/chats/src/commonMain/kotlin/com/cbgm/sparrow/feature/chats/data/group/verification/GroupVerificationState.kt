@@ -6,11 +6,11 @@ import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
-import com.cbgm.sparrow.feature.chats.data.group.security.isGroupAdminRole
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
 import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationDirection
 import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 
 internal class GroupVerificationState(
     private val groupVerificationDao: GroupVerificationDao,

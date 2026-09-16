@@ -6,7 +6,7 @@ import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupDescriptionDataSource
 import com.cbgm.sparrow.feature.chats.data.group.description.GroupDescriptionPacketProtocol
-import com.cbgm.sparrow.feature.chats.data.group.security.isGroupAdminRole
+import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 
 class GroupDescriptionUpdatedPacketHandler internal constructor(
     private val groupSecurityDao: GroupSecurityDao,

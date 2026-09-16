@@ -2,12 +2,6 @@ package com.cbgm.sparrow.feature.chats.data.group.security
 
 import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
 
-typealias GroupWelcomeRecipientDto =
-    com.cbgm.sparrow.feature.membership.data.model.GroupWelcomeRecipientDto
-
-typealias CreatedGroupSecurityDto =
-    com.cbgm.sparrow.feature.membership.data.model.CreatedGroupSecurityDto
-
 data class OpenedGroupWelcomeDto(
     val packet: GroupCreatedPacket,
     val groupKey: ByteArray

@@ -6,8 +6,8 @@ import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupAvatarDataSource
 import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupPacketBroadcaster
-import com.cbgm.sparrow.feature.chats.data.group.security.isGroupAdminRole
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupAvatar
+import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 
 internal class GroupAvatarBroadcaster(
     private val groupSecurityDao: GroupSecurityDao,

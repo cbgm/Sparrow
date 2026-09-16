@@ -8,7 +8,7 @@ import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.entity.GroupPinEntity
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupPinDataSource
 import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupPacketBroadcaster
-import com.cbgm.sparrow.feature.chats.data.group.security.isGroupAdminRole
+import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 
 internal class GroupPinBroadcaster(
     private val groupSecurityDao: GroupSecurityDao,

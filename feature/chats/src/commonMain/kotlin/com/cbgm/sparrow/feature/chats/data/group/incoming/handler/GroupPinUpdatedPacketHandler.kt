@@ -9,7 +9,7 @@ import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupPinDataSource
 import com.cbgm.sparrow.feature.chats.data.group.mapper.toEntity
 import com.cbgm.sparrow.feature.chats.data.group.pin.GroupPinPacketProtocol
-import com.cbgm.sparrow.feature.chats.data.group.security.isGroupAdminRole
+import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 
 class GroupPinUpdatedPacketHandler internal constructor(
     private val groupSecurityDao: GroupSecurityDao,

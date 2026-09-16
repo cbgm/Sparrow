@@ -15,9 +15,9 @@ import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
-import com.cbgm.sparrow.feature.chats.data.group.security.isGroupAdminRole
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipVerificationDataSource
 import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 

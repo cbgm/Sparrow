@@ -22,6 +22,11 @@ import com.cbgm.sparrow.data.database.entity.GroupSecurityStateEntity
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupKeyDataSource
 import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupProtocolPayloadEncoder
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
+import com.cbgm.sparrow.feature.membership.data.model.CreatedGroupSecurityDto
+import com.cbgm.sparrow.feature.membership.data.model.GROUP_LEFT_ROLE
+import com.cbgm.sparrow.feature.membership.data.model.GROUP_OWNER_ROLE
+import com.cbgm.sparrow.feature.membership.data.model.GroupWelcomeRecipientDto
+import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 
 class GroupSecurityManager internal constructor(
     private val groupCrypto: GroupCrypto,
