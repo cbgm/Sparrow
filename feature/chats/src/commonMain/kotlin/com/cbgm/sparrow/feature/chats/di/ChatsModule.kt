@@ -116,8 +116,6 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.direct.GetOrCreateDirectCon
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.HandleAcceptedDirectInvitationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.HandleDeclinedDirectInvitationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.MarkDirectConversationReadUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveAcceptedDirectInvitationsUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDeclinedDirectInvitationsUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectChatContextUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ObserveDirectIndicatorUseCase
@@ -358,8 +356,6 @@ private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::DeleteDirectConversationUseCase)
     singleOf(::ObserveDirectIndicatorUseCase)
     singleOf(::SetDirectIndicatorUseCase)
-    singleOf(::ObserveAcceptedDirectInvitationsUseCase)
-    singleOf(::ObserveDeclinedDirectInvitationsUseCase)
     singleOf(::HandleAcceptedDirectInvitationUseCase)
     singleOf(::HandleDeclinedDirectInvitationUseCase)
 

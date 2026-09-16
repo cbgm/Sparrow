@@ -203,10 +203,6 @@ private object TestDeviceContactWriterRepository : DeviceContactWriterRepository
 private object TestDirectIdentityExchangeRepository : DirectIdentityExchangeRepository {
     override suspend fun start(contactId: String): Result<Unit> = error("Not used")
 
-    override fun observeAcceptedContactIds(): Flow<Set<String>> = emptyFlow()
-
-    override fun observeDeclinedOutgoingContactIds(): Flow<Set<String>> = emptyFlow()
-
     override fun observeState(
         contactId: String
     ): Flow<com.cbgm.sparrow.feature.identity.domain.model.IdentityHandshakeState?> = emptyFlow()
@@ -220,27 +216,9 @@ private object TestDirectIdentityExchangeRepository : DirectIdentityExchangeRepo
 
     override suspend fun revokeDirectChatAuthorization(contactId: String): Result<Unit> = error("Not used")
 
-    override suspend fun receiveInvite(
-        context: com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext,
-        packet: com.cbgm.sparrow.core.protocol.packet.ContactInvitePacket,
-        receptionEnabled: Boolean,
-        blockedPeerIds: Set<String>,
-        blockUnknownPeers: Boolean
-    ): Result<Unit> = error("Not used")
-
-    override suspend fun receiveAccepted(
-        context: com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext,
-        packet: com.cbgm.sparrow.core.protocol.packet.ContactInviteAcceptedPacket
-    ): Result<Unit> = error("Not used")
-
     override suspend fun receiveReady(
         context: com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext,
         packet: com.cbgm.sparrow.core.protocol.packet.ContactReadyPacket
-    ): Result<Unit> = error("Not used")
-
-    override suspend fun receiveDeclined(
-        context: com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext,
-        packet: com.cbgm.sparrow.core.protocol.packet.ContactInviteDeclinedPacket
     ): Result<Unit> = error("Not used")
 
     override suspend fun receiveDirectChatAuthorizationRevoked(

@@ -47,6 +47,7 @@ import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPacketProcessor
 import com.cbgm.sparrow.feature.invite.domain.model.Invitation
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationResult
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationStatus
 import com.cbgm.sparrow.feature.invite.domain.repository.InvitationRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -241,29 +242,34 @@ class DirectIdentityExchangeRepositoryImpl(
                 }
             }
 
-    override fun observeAcceptedContactIds(): Flow<Set<String>> =
+    override fun observeInvitationResults(): Flow<List<InvitationResult>> =
         invitationDao
             .observeLatestInvitations()
             .map { invitations ->
-                invitations
-                    .filter { invitation ->
-                        invitation.state == IdentityHandshakeState.WAITING_FOR_READY.name ||
-                            invitation.state == IdentityHandshakeState.MUTUAL_UNVERIFIED.name
-                    }
-                    .mapTo(mutableSetOf(), IdentityInvitationEntity::contactId)
-            }
-            .distinctUntilChanged()
+                invitations.mapNotNull { invitation ->
+                    val response =
+                        when (invitation.state) {
+                            IdentityHandshakeState.WAITING_FOR_READY.name,
+                            IdentityHandshakeState.MUTUAL_UNVERIFIED.name -> InvitationResponse.ACCEPTED
 
-    override fun observeDeclinedOutgoingContactIds(): Flow<Set<String>> =
-        invitationDao
-            .observeLatestInvitations()
-            .map { invitations ->
-                invitations
-                    .filter { invitation ->
-                        invitation.direction == InvitationDirection.OUTGOING.name &&
-                            invitation.state == IdentityHandshakeState.DECLINED.name
-                    }
-                    .mapTo(mutableSetOf(), IdentityInvitationEntity::contactId)
+                            IdentityHandshakeState.DECLINED.name -> InvitationResponse.DECLINED
+                            else -> null
+                        } ?: return@mapNotNull null
+
+                    val direction =
+                        when (invitation.direction) {
+                            InvitationDirection.INCOMING.name -> InvitationDirection.INCOMING
+                            InvitationDirection.OUTGOING.name -> InvitationDirection.OUTGOING
+                            else -> return@mapNotNull null
+                        }
+
+                    InvitationResult(
+                        invitationId = invitation.invitationId,
+                        peerId = invitation.contactId,
+                        direction = direction,
+                        response = response
+                    )
+                }
             }
             .distinctUntilChanged()
 

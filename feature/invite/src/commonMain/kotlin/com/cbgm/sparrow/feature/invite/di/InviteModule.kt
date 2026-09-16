@@ -1,10 +1,12 @@
 package com.cbgm.sparrow.feature.invite.di
 
 import com.cbgm.sparrow.core.protocol.handler.TypedProtocolPacketHandler
+import com.cbgm.sparrow.feature.invite.data.event.InvitationResultStreamImpl
 import com.cbgm.sparrow.feature.invite.data.policy.InvitationPolicyImpl
 import com.cbgm.sparrow.feature.invite.data.protocol.handler.IncomingInvitationPacketHandler
 import com.cbgm.sparrow.feature.invite.data.protocol.handler.InvitationAcceptedPacketHandler
 import com.cbgm.sparrow.feature.invite.data.protocol.handler.InvitationDeclinedPacketHandler
+import com.cbgm.sparrow.feature.invite.domain.event.InvitationResultStream
 import com.cbgm.sparrow.feature.invite.domain.policy.InvitationPolicy
 import com.cbgm.sparrow.feature.invite.domain.usecase.AcceptInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineAndBlockInvitationUseCase
@@ -28,6 +30,9 @@ val inviteModule =
                 repository = get(),
                 provider = get()
             )
+        }
+        single<InvitationResultStream> {
+            InvitationResultStreamImpl(repository = get())
         }
 
         factory { AcceptInvitationUseCase(repository = get(), policy = get()) }

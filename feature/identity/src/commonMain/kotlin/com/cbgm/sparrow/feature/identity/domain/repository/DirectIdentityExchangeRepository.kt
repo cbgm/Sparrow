@@ -10,10 +10,6 @@ import kotlinx.coroutines.flow.Flow
 interface DirectIdentityExchangeRepository {
     suspend fun start(contactId: String): Result<Unit>
 
-    fun observeAcceptedContactIds(): Flow<Set<String>>
-
-    fun observeDeclinedOutgoingContactIds(): Flow<Set<String>>
-
     fun observeState(contactId: String): Flow<IdentityHandshakeState?>
 
     suspend fun cancelForManualSetup(contactId: String): Result<Unit>
