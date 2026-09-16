@@ -32,7 +32,6 @@ import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachment
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.chats.data.group.delivery.GroupMessageDeliveryCoordinator
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
 import com.cbgm.sparrow.feature.chats.data.group.mapper.toMessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_END_TO_END_ENCRYPTED_MODE
@@ -41,6 +40,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessageDeliveryStateMachine
+import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 

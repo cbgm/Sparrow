@@ -1,6 +1,6 @@
-package com.cbgm.sparrow.feature.chats.data.group.invitation
+package com.cbgm.sparrow.feature.membership.data
 
-internal fun resolveInvitationUpdatedAt(
+fun resolveInvitationUpdatedAt(
     createdAtEpochMilliseconds: Long,
     candidateAtEpochMilliseconds: Long
 ): Long =

@@ -73,8 +73,6 @@ import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipActiv
 import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipAdministrationCoordinator
 import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipCoordinator
 import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipDeletionCoordinator
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipIdentity
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipLock
 import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupOutgoingMessageProcessor
 import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupPacketBroadcaster
 import com.cbgm.sparrow.feature.chats.data.group.pin.GroupPinBroadcaster
@@ -183,6 +181,8 @@ import com.cbgm.sparrow.feature.chats.presentation.overview.OverviewViewModel
 import com.cbgm.sparrow.feature.chats.presentation.verification.GroupMemberQrVerificationViewModel
 import com.cbgm.sparrow.feature.contacts.domain.usecase.EnsureIdentityExchangeStartedUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
+import com.cbgm.sparrow.feature.membership.data.GroupMembershipIdentity
+import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
 import com.cbgm.sparrow.feature.membership.domain.usecase.AcceptGroupInvitationUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.AddGroupMembersUseCase

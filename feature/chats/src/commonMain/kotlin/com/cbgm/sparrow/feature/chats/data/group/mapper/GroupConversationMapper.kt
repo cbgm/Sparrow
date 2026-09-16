@@ -6,8 +6,6 @@ import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessagesDto
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_END_TO_END_ENCRYPTED_MODE
 import com.cbgm.sparrow.feature.chats.data.mapper.toMessagePart
 import com.cbgm.sparrow.feature.chats.data.model.MessagePartDto
@@ -16,10 +14,12 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageReaction
 import com.cbgm.sparrow.feature.chats.domain.model.MessageSecurity
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessage
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessageDeliveryStateMachine
 import com.cbgm.sparrow.feature.chats.domain.model.group.MessageDeliveryProgress
+import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
+import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationState
 
 internal fun ConversationWithMessagesDto.toGroupConversation(
     participantContactIds: List<String>,

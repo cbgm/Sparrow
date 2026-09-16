@@ -2,13 +2,13 @@ package com.cbgm.sparrow.feature.chats.data.group.incoming
 
 import com.cbgm.sparrow.core.protocol.packet.GroupJoinRequestPacket
 import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
-import com.cbgm.sparrow.feature.chats.data.group.invitation.resolveInvitationUpdatedAt
 import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipActivationCoordinator
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipEvent
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupMembershipPacketProtocol
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.incoming.EstablishGroupMemberIdentityUseCase
+import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
+import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
+import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.feature.membership.data.resolveInvitationUpdatedAt
 
 internal class GroupJoinRequestIncomingProcessor(
     private val groupInvitationDao: GroupInvitationDao,

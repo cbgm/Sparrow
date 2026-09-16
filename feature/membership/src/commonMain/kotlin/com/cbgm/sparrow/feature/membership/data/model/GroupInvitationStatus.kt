@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.chats.data.group.invitation
+package com.cbgm.sparrow.feature.membership.data.model
 
 enum class GroupInvitationStatus {
     INVITE_SENT,

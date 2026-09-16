@@ -2,14 +2,14 @@ package com.cbgm.sparrow.feature.chats.data.group.incoming
 
 import com.cbgm.sparrow.core.protocol.packet.GroupInviteReceivedPacket
 import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationDirection
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
-import com.cbgm.sparrow.feature.chats.data.group.invitation.resolveInvitationUpdatedAt
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipEvent
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipIdentity
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupMembershipPacketProtocol
 import com.cbgm.sparrow.feature.chats.data.group.verification.GroupVerificationCoordinator
+import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
+import com.cbgm.sparrow.feature.membership.data.GroupMembershipIdentity
+import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
+import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationDirection
+import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.feature.membership.data.resolveInvitationUpdatedAt
 
 internal class GroupInviteReceivedIncomingProcessor(
     private val groupInvitationDao: GroupInvitationDao,

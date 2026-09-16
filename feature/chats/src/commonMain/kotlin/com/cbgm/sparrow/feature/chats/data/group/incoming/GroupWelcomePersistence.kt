@@ -7,9 +7,9 @@ import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationDirection
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
+import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationDirection
+import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
 
 internal class GroupWelcomePersistence(
     private val chatDao: ChatDao,

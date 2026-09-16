@@ -5,10 +5,10 @@ import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
 import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipEvent
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
+import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
+import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
+import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
 
 internal class GroupCreatedIncomingProcessor(
     private val groupSecurityManager: GroupSecurityManager,

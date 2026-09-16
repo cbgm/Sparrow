@@ -18,14 +18,14 @@ import com.cbgm.sparrow.data.database.entity.ContactEntity
 import com.cbgm.sparrow.data.database.entity.ContactPhoneNumberEntity
 import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipEvent
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupMembershipPacketProtocol
 import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
 import com.cbgm.sparrow.feature.chats.data.group.verification.GroupVerificationCoordinator
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumberType
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
+import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
+import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
+import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
 
 class GroupMemberActivatedPacketHandler(
     private val chatDao: ChatDao,

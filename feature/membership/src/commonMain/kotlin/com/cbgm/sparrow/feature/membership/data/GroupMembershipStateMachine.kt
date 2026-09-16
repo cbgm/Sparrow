@@ -1,13 +1,13 @@
-package com.cbgm.sparrow.feature.chats.data.group.membership
+package com.cbgm.sparrow.feature.membership.data
 
 import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversationState
+import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberInvitationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberInvitationStatus
 
-internal enum class GroupMembershipEvent {
+enum class GroupMembershipEvent {
     ACCEPT,
     EXPIRE,
     INVITE_SEND_FAILED,
@@ -30,7 +30,7 @@ internal enum class GroupMembershipEvent {
  * Incoming handlers and coordinators express *events*. This object decides the
  * next persisted invitation status and also derives the user-visible group state.
  */
-internal object GroupMembershipStateMachine {
+object GroupMembershipStateMachine {
     fun transition(
         currentStatus: String,
         event: GroupMembershipEvent

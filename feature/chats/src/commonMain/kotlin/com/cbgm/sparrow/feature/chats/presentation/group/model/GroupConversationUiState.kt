@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.chats.presentation.group.model
 
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupComposerState
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversationState
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
+import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationState
 
 data class GroupConversationUiState(
     val groupId: String = "",

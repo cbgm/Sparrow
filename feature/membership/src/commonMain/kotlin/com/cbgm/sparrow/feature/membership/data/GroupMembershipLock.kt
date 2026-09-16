@@ -1,9 +1,9 @@
-package com.cbgm.sparrow.feature.chats.data.group.membership
+package com.cbgm.sparrow.feature.membership.data
 
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-internal class GroupMembershipLock {
+class GroupMembershipLock {
     private val mutex = Mutex()
 
     suspend fun <T> withLock(block: suspend () -> T): T =

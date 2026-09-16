@@ -1,9 +1,9 @@
-package com.cbgm.sparrow.feature.chats.data.group.membership
+package com.cbgm.sparrow.feature.membership.data
 
 import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationDirection
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversationState
+import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationDirection
+import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberInvitationStatus
 import kotlin.test.Test

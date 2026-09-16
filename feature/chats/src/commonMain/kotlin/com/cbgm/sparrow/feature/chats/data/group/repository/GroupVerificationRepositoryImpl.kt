@@ -4,14 +4,14 @@ import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationDirection
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_LEFT_ROLE
 import com.cbgm.sparrow.feature.chats.data.group.security.isGroupAdminRole
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupVerificationContext
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupVerificationMembershipStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupVerificationPair
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationRepository
+import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationDirection
+import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map

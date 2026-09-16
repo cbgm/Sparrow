@@ -5,8 +5,8 @@ import com.cbgm.sparrow.core.protocol.packet.GroupInvitePacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
+import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
 
 class GroupIncomingPacketPolicy(
     private val chatDao: ChatDao,

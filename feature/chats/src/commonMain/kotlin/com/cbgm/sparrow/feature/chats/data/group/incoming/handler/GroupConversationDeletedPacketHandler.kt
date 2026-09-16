@@ -8,11 +8,11 @@ import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.feature.attachments.domain.usecase.DeleteConversationLocalAttachmentsUseCase
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipEvent
-import com.cbgm.sparrow.feature.chats.data.group.membership.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupMembershipPacketProtocol
 import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
+import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
+import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
+import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
 
 class GroupConversationDeletedPacketHandler internal constructor(
     private val chatDao: ChatDao,

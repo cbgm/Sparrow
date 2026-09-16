@@ -1,9 +1,9 @@
-package com.cbgm.sparrow.feature.chats.data.group.membership
+package com.cbgm.sparrow.feature.membership.data
 
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
 
-internal class GroupMembershipIdentity(
+class GroupMembershipIdentity(
     private val getContact: GetContactUseCase
 ) {
     suspend fun requireContact(contactId: String): Contact =

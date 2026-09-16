@@ -12,6 +12,8 @@ import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_OWNER_ROLE
 import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
 import com.cbgm.sparrow.feature.chats.data.group.security.GroupWelcomeRecipientDto
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
+import com.cbgm.sparrow.feature.membership.data.GroupMembershipIdentity
+import com.cbgm.sparrow.feature.membership.data.requireGroupPhoneNumber
 
 internal class GroupEpochCoordinator(
     private val chatDao: ChatDao,

@@ -5,7 +5,6 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessagePart
 import com.cbgm.sparrow.feature.chats.domain.model.group.ChatMessageType
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversationState
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessage
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupPin
 import com.cbgm.sparrow.feature.chats.domain.model.group.resolveComposerState
@@ -23,6 +22,7 @@ import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMessageUi
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
+import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationState
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyAssessment
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyWarningUi
 import kotlin.collections.component1

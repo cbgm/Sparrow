@@ -7,13 +7,13 @@ import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationDirection
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
-import com.cbgm.sparrow.feature.chats.data.group.invitation.resolveInvitationUpdatedAt
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
 import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupMembershipPacketProtocol
 import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.incoming.StageIncomingGroupOwnerIdentityUseCase
+import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationDirection
+import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.feature.membership.data.resolveInvitationUpdatedAt
 
 internal class GroupInviteIncomingProcessor(
     private val chatDao: ChatDao,

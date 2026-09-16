@@ -7,12 +7,13 @@ import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
 import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupLocalCleanupDataSource
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationDirection
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
 import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupPacketBroadcaster
 import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupMembershipPacketProtocol
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_LEFT_ROLE
 import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
+import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
+import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationDirection
+import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
 
 @Suppress("LongParameterList")
 internal class GroupMembershipDeletionCoordinator(

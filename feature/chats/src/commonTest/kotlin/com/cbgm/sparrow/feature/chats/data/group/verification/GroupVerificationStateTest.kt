@@ -7,14 +7,14 @@ import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.data.database.entity.GroupSecurityStateEntity
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationDirection
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.ImportContactRequest
 import com.cbgm.sparrow.feature.contacts.domain.model.ImportDeviceContactRequest
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
+import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationDirection
+import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest

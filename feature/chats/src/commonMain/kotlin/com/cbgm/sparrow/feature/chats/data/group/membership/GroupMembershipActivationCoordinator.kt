@@ -15,7 +15,6 @@ import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
 import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
 import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupPacketBroadcaster
 import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupMembershipPacketProtocol
@@ -24,6 +23,14 @@ import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_MEMBER_ROLE
 import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
 import com.cbgm.sparrow.feature.chats.data.group.verification.GroupVerificationCoordinator
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
+import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
+import com.cbgm.sparrow.feature.membership.data.GroupMembershipIdentity
+import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
+import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
+import com.cbgm.sparrow.feature.membership.data.groupMembershipDisplayName
+import com.cbgm.sparrow.feature.membership.data.hasMutualGroupIdentity
+import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.feature.membership.data.requireGroupPhoneNumber
 
 @Suppress("LongParameterList")
 internal class GroupMembershipActivationCoordinator(

@@ -11,6 +11,8 @@ import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
 import com.cbgm.sparrow.feature.chats.data.group.security.isGroupAdminRole
 import com.cbgm.sparrow.feature.chats.data.group.verification.GroupVerificationCoordinator
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
+import com.cbgm.sparrow.feature.membership.data.GroupMembershipIdentity
+import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 
 internal class GroupMemberPromotionCoordinator(
     private val chatDao: ChatDao,
