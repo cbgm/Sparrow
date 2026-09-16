@@ -4,10 +4,10 @@ import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.mailbox.MailboxCapabilityLifecycle
 import com.cbgm.sparrow.core.protocol.mailbox.NoOpMailboxCapabilityLifecycle
 import com.cbgm.sparrow.core.protocol.packet.DirectChatAuthorizationRevokedPacket
-import com.cbgm.sparrow.feature.invite.domain.repository.DirectInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.repository.DirectIdentityExchangeRepository
 
 class HandleDirectChatAuthorizationRevokedPacketUseCase(
-    private val identityInvitationRepository: DirectInvitationRepository,
+    private val directIdentityExchangeRepository: DirectIdentityExchangeRepository,
     private val mailboxCapabilityLifecycle: MailboxCapabilityLifecycle = NoOpMailboxCapabilityLifecycle
 ) {
     suspend operator fun invoke(
@@ -16,7 +16,7 @@ class HandleDirectChatAuthorizationRevokedPacketUseCase(
     ): Result<Unit> =
         runCatching {
             val authorizationError =
-                identityInvitationRepository
+                directIdentityExchangeRepository
                     .receiveDirectChatAuthorizationRevoked(context, packet)
                     .exceptionOrNull()
             val mailboxError =

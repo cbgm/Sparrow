@@ -3,11 +3,11 @@ package com.cbgm.sparrow.feature.chats.domain.usecase.direct
 import com.cbgm.sparrow.core.protocol.mailbox.MailboxCapabilityLifecycle
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectConversationRepository
-import com.cbgm.sparrow.feature.invite.domain.repository.DirectInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.repository.DirectIdentityExchangeRepository
 
 class DeleteDirectConversationUseCase(
     private val conversationRepository: DirectConversationRepository,
-    private val identityInvitationRepository: DirectInvitationRepository,
+    private val directIdentityExchangeRepository: DirectIdentityExchangeRepository,
     private val mailboxCapabilityLifecycle: MailboxCapabilityLifecycle,
     private val messageAttachmentRepository: MessageAttachmentRepository
 ) {
@@ -16,7 +16,7 @@ class DeleteDirectConversationUseCase(
             val contactId = conversationRepository.findContactId(conversationId).getOrThrow()
                 ?: return@runCatching
 
-            identityInvitationRepository
+            directIdentityExchangeRepository
                 .revokeDirectChatAuthorization(contactId)
                 .getOrThrow()
             mailboxCapabilityLifecycle

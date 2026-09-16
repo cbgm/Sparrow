@@ -5,7 +5,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryCursor
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectChatContext
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectConversationRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
-import com.cbgm.sparrow.feature.invite.domain.repository.DirectInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.repository.DirectIdentityExchangeRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.map
 class ObserveDirectChatContextUseCase(
     private val conversationRepository: DirectConversationRepository,
     private val contactRepository: ContactRepository,
-    private val identityInvitationRepository: DirectInvitationRepository,
+    private val directIdentityExchangeRepository: DirectIdentityExchangeRepository,
     private val identitySetupModeRepository: DirectIdentitySetupModeRepository
 ) {
     operator fun invoke(
@@ -28,7 +28,7 @@ class ObserveDirectChatContextUseCase(
                 .observeContacts()
                 .map { contacts -> contacts.firstOrNull { contact -> contact.id == contactId } }
                 .distinctUntilChanged(),
-            identityInvitationRepository.observeState(contactId),
+            directIdentityExchangeRepository.observeState(contactId),
             identitySetupModeRepository.observeMode()
         ) { conversation, contact, handshake, setupMode ->
             DirectChatContext(

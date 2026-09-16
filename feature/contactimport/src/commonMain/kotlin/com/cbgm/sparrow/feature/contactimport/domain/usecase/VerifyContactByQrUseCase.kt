@@ -7,12 +7,12 @@ import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactVerificationRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityExchangeRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityShareRepository
-import com.cbgm.sparrow.feature.invite.domain.repository.DirectInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.repository.DirectIdentityExchangeRepository
 
 class VerifyContactByQrUseCase(
     private val identityShareRepository: IdentityShareRepository,
     private val contactRepository: ContactRepository,
-    private val identityInvitationRepository: DirectInvitationRepository,
+    private val directIdentityExchangeRepository: DirectIdentityExchangeRepository,
     private val identityExchangeRepository: IdentityExchangeRepository,
     private val contactVerificationRepository: ContactVerificationRepository
 ) {
@@ -43,7 +43,7 @@ class VerifyContactByQrUseCase(
                         )
                     ).getOrThrow()
 
-            identityInvitationRepository
+            directIdentityExchangeRepository
                 .cancelForManualSetup(persistedContact.id)
                 .getOrThrow()
 

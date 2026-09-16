@@ -14,7 +14,7 @@ val contactImportModule =
             ImportSharedIdentityUseCase(
                 identityShareRepository = get(),
                 contactRepository = get(),
-                identityInvitationRepository = get(),
+                directIdentityExchangeRepository = get(),
                 identityExchangeRepository = get(),
                 deviceContactWriterRepository = get()
             )
@@ -24,7 +24,7 @@ val contactImportModule =
             VerifyContactByQrUseCase(
                 identityShareRepository = get(),
                 contactRepository = get(),
-                identityInvitationRepository = get(),
+                directIdentityExchangeRepository = get(),
                 identityExchangeRepository = get(),
                 contactVerificationRepository = get()
             )

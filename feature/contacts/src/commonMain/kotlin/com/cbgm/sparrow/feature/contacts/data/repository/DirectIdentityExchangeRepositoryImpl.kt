@@ -45,7 +45,7 @@ import com.cbgm.sparrow.feature.invite.domain.model.IdentityHandshakeState
 import com.cbgm.sparrow.feature.invite.domain.model.Invitation
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationStatus
-import com.cbgm.sparrow.feature.invite.domain.repository.DirectInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.repository.DirectIdentityExchangeRepository
 import com.cbgm.sparrow.feature.invite.domain.repository.InvitationRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
@@ -61,7 +61,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class DirectInvitationRepositoryImpl(
+class DirectIdentityExchangeRepositoryImpl(
     private val invitationDao: IdentityInvitationDao,
     private val contactDao: ContactDao,
     private val contactRoutingIdDao: ContactRoutingIdDao,
@@ -77,9 +77,9 @@ class DirectInvitationRepositoryImpl(
     private val contactVerificationDataSource: ContactVerificationDataSource,
     private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
     private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor
-) : DirectInvitationRepository,
+) : DirectIdentityExchangeRepository,
     InvitationRepository {
-    private val logger = SparrowLog.withTag("DirectInvitationRepositoryImpl")
+    private val logger = SparrowLog.withTag("DirectIdentityExchangeRepositoryImpl")
 
     private val mutex = Mutex()
 

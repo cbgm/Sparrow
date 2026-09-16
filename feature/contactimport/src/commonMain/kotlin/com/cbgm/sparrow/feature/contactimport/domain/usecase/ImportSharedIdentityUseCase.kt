@@ -8,12 +8,12 @@ import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.DeviceContactWriterRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityExchangeRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityShareRepository
-import com.cbgm.sparrow.feature.invite.domain.repository.DirectInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.repository.DirectIdentityExchangeRepository
 
 class ImportSharedIdentityUseCase(
     private val identityShareRepository: IdentityShareRepository,
     private val contactRepository: ContactRepository,
-    private val identityInvitationRepository: DirectInvitationRepository,
+    private val directIdentityExchangeRepository: DirectIdentityExchangeRepository,
     private val identityExchangeRepository: IdentityExchangeRepository,
     private val deviceContactWriterRepository: DeviceContactWriterRepository
 ) {
@@ -56,7 +56,7 @@ class ImportSharedIdentityUseCase(
                         )
                     ).getOrThrow()
 
-            identityInvitationRepository
+            directIdentityExchangeRepository
                 .cancelForManualSetup(persistedContact.id)
                 .getOrThrow()
 

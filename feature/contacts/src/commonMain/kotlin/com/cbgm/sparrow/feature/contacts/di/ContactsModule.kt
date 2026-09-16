@@ -17,7 +17,7 @@ import com.cbgm.sparrow.feature.contacts.data.datasource.ContactVerificationData
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactKeyExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactVerificationRepositoryImpl
-import com.cbgm.sparrow.feature.contacts.data.repository.DirectInvitationRepositoryImpl
+import com.cbgm.sparrow.feature.contacts.data.repository.DirectIdentityExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.IdentityExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactKeyExchangeRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
@@ -49,7 +49,7 @@ import com.cbgm.sparrow.feature.contacts.presentation.invitations.ContactInvitat
 import com.cbgm.sparrow.feature.contacts.presentation.overview.ContactsViewModel
 import com.cbgm.sparrow.feature.contacts.util.ContactVerificationPayloadEncoder
 import com.cbgm.sparrow.feature.contacts.util.IdentityInvitationPayloadEncoder
-import com.cbgm.sparrow.feature.invite.domain.repository.DirectInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.repository.DirectIdentityExchangeRepository
 import com.cbgm.sparrow.feature.invite.domain.repository.InvitationRepository
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
@@ -101,7 +101,7 @@ val contactsModule =
         }
 
         single {
-            DirectInvitationRepositoryImpl(
+            DirectIdentityExchangeRepositoryImpl(
                 invitationDao = get(),
                 contactDao = get(),
                 contactRoutingIdDao = get(),
@@ -120,16 +120,16 @@ val contactsModule =
             )
         }
 
-        single<DirectInvitationRepository> {
-            get<DirectInvitationRepositoryImpl>()
+        single<DirectIdentityExchangeRepository> {
+            get<DirectIdentityExchangeRepositoryImpl>()
         }
         single<InvitationRepository> {
-            get<DirectInvitationRepositoryImpl>()
+            get<DirectIdentityExchangeRepositoryImpl>()
         }
 
         factory {
             HandleDirectChatAuthorizationRevokedPacketUseCase(
-                identityInvitationRepository = get(),
+                directIdentityExchangeRepository = get(),
                 mailboxCapabilityLifecycle = get()
             )
         }
@@ -209,7 +209,7 @@ val contactsModule =
         factory {
             ImportContactUseCase(
                 contactRepository = get(),
-                identityInvitationRepository = get(),
+                directIdentityExchangeRepository = get(),
                 identityExchangeRepository = get(),
                 deviceContactWriterRepository = get()
             )
@@ -253,7 +253,7 @@ val contactsModule =
             BlockContactUseCase(
                 blocklistRepository = get(),
                 contactRepository = get(),
-                identityInvitationRepository = get(),
+                directIdentityExchangeRepository = get(),
                 mailboxCapabilityLifecycle = get()
             )
         }
@@ -271,7 +271,7 @@ val contactsModule =
 
         factory {
             RequireDirectChatAuthorizationUseCase(
-                identityInvitationRepository = get(),
+                directIdentityExchangeRepository = get(),
                 modeRepository = get(),
                 contactBlocklistRepository = get()
             )
@@ -292,7 +292,7 @@ val contactsModule =
             EnsureIdentityExchangeStartedUseCase(
                 modeRepository = get(),
                 contactBlocklistRepository = get(),
-                identityInvitationRepository = get(),
+                directIdentityExchangeRepository = get(),
                 identityExchangeRepository = get()
             )
         }

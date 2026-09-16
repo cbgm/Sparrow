@@ -4,12 +4,12 @@ import com.cbgm.sparrow.core.protocol.mailbox.MailboxCapabilityLifecycle
 import com.cbgm.sparrow.core.protocol.mailbox.NoOpMailboxCapabilityLifecycle
 import com.cbgm.sparrow.core.security.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
-import com.cbgm.sparrow.feature.invite.domain.repository.DirectInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.repository.DirectIdentityExchangeRepository
 
 class BlockContactUseCase(
     private val blocklistRepository: ContactBlocklistRepository,
     private val contactRepository: ContactRepository,
-    private val identityInvitationRepository: DirectInvitationRepository,
+    private val directIdentityExchangeRepository: DirectIdentityExchangeRepository,
     private val mailboxCapabilityLifecycle: MailboxCapabilityLifecycle =
         NoOpMailboxCapabilityLifecycle
 ) {
@@ -17,7 +17,7 @@ class BlockContactUseCase(
         runCatching {
             blocklistRepository.block(contactId)
             val authorizationError =
-                identityInvitationRepository.revokeDirectChatAuthorization(contactId).exceptionOrNull()
+                directIdentityExchangeRepository.revokeDirectChatAuthorization(contactId).exceptionOrNull()
             val mailboxError = mailboxCapabilityLifecycle.revokeForContact(contactId).exceptionOrNull()
             authorizationError?.let { throw it }
             mailboxError?.let { throw it }

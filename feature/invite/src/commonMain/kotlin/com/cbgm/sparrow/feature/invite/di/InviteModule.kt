@@ -28,18 +28,18 @@ val inviteModule =
 
         factory {
             HandleContactInvitePacketUseCase(
-                identityInvitationRepository = get(),
+                directIdentityExchangeRepository = get(),
                 modeRepository = get(),
                 contactBlocklistRepository = get()
             )
         }
-        factory { HandleContactInviteAcceptedPacketUseCase(identityInvitationRepository = get()) }
-        factory { HandleContactReadyPacketUseCase(identityInvitationRepository = get()) }
-        factory { HandleContactInviteDeclinedPacketUseCase(identityInvitationRepository = get()) }
+        factory { HandleContactInviteAcceptedPacketUseCase(directIdentityExchangeRepository = get()) }
+        factory { HandleContactReadyPacketUseCase(directIdentityExchangeRepository = get()) }
+        factory { HandleContactInviteDeclinedPacketUseCase(directIdentityExchangeRepository = get()) }
 
         factory {
             AcceptDirectInvitationUseCase(
-                directInvitationRepository = get(),
+                directIdentityExchangeRepository = get(),
                 acceptInvitation = get(),
                 modeRepository = get(),
                 contactBlocklistRepository = get()
@@ -47,7 +47,7 @@ val inviteModule =
         }
         factory {
             DeclineAndBlockDirectInvitationUseCase(
-                directInvitationRepository = get(),
+                directIdentityExchangeRepository = get(),
                 declineInvitation = get(),
                 contactBlocklistRepository = get()
             )
@@ -65,6 +65,6 @@ val inviteModule =
             )
         }
         factory { ObservePendingDirectInvitationCountUseCase(observePendingDirectInvitations = get()) }
-        factory { ObserveIdentityHandshakeStateUseCase(identityInvitationRepository = get()) }
+        factory { ObserveIdentityHandshakeStateUseCase(directIdentityExchangeRepository = get()) }
         factory { ObserveDirectInvitationsContextUseCase(observeDirectInvitations = get()) }
     }

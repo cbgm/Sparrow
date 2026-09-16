@@ -2,14 +2,14 @@ package com.cbgm.sparrow.feature.invite.domain.usecase
 
 import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.packet.ContactReadyPacket
-import com.cbgm.sparrow.feature.invite.domain.repository.DirectInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.repository.DirectIdentityExchangeRepository
 
 class HandleContactReadyPacketUseCase(
-    private val identityInvitationRepository: DirectInvitationRepository
+    private val directIdentityExchangeRepository: DirectIdentityExchangeRepository
 ) {
     suspend operator fun invoke(
         context: IncomingPacketContext,
         packet: ContactReadyPacket
     ): Result<Unit> =
-        identityInvitationRepository.receiveReady(context, packet)
+        directIdentityExchangeRepository.receiveReady(context, packet)
 }

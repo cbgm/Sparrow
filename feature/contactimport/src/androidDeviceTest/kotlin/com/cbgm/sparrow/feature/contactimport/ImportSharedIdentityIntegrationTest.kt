@@ -4,14 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
-import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
-import com.cbgm.sparrow.core.protocol.packet.ContactInviteAcceptedPacket
-import com.cbgm.sparrow.core.protocol.packet.ContactInviteDeclinedPacket
-import com.cbgm.sparrow.core.protocol.packet.ContactInvitePacket
-import com.cbgm.sparrow.core.protocol.packet.ContactReadyPacket
-import com.cbgm.sparrow.core.protocol.packet.DirectChatAuthorizationRevokedPacket
 import com.cbgm.sparrow.core.protocol.phone.DefaultPhoneNumberNormalizer
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.data.database.SparrowDatabase
 import com.cbgm.sparrow.feature.contactimport.domain.usecase.ImportSharedIdentityUseCase
 import com.cbgm.sparrow.feature.contacts.data.datasource.ContactKeyExchangeDataSource
@@ -27,8 +20,7 @@ import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityExchangeRepos
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityShareRepositoryImpl
 import com.cbgm.sparrow.feature.identity.domain.model.SharedContactDetails
 import com.cbgm.sparrow.feature.identity.domain.model.SharedIdentityPayload
-import com.cbgm.sparrow.feature.invite.domain.model.IdentityHandshakeState
-import com.cbgm.sparrow.feature.invite.domain.repository.DirectInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.repository.DirectIdentityExchangeRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -73,7 +65,7 @@ class ImportSharedIdentityIntegrationTest {
             ImportSharedIdentityUseCase(
                 identityShareRepository = identityShareRepository,
                 contactRepository = contactRepository,
-                identityInvitationRepository = TestDirectInvitationRepository,
+                directIdentityExchangeRepository = TestDirectIdentityExchangeRepository,
                 identityExchangeRepository = TestIdentityExchangeRepository,
                 deviceContactWriterRepository = TestDeviceContactWriterRepository
             )
@@ -208,7 +200,7 @@ private object TestDeviceContactWriterRepository : DeviceContactWriterRepository
     ): AddDeviceContactResult = AddDeviceContactResult.AlreadyExists
 }
 
-private object TestDirectInvitationRepository : DirectInvitationRepository {
+private object TestDirectIdentityExchangeRepository : DirectIdentityExchangeRepository {
     override suspend fun start(contactId: String): Result<Unit> = error("Not used")
 
     override fun observeAcceptedContactIds(): Flow<Set<String>> = emptyFlow()
@@ -217,7 +209,7 @@ private object TestDirectInvitationRepository : DirectInvitationRepository {
 
     override fun observeState(
         contactId: String
-    ): Flow<IdentityHandshakeState?> = emptyFlow()
+    ): Flow<com.cbgm.sparrow.feature.invite.domain.model.IdentityHandshakeState?> = emptyFlow()
 
     override suspend fun getContactId(invitationId: String): Result<String> = error("Not used")
 
@@ -225,36 +217,36 @@ private object TestDirectInvitationRepository : DirectInvitationRepository {
 
     override suspend fun requireDirectChatAuthorization(
         contactId: String,
-        mode: DirectIdentitySetupMode
+        mode: com.cbgm.sparrow.core.security.DirectIdentitySetupMode
     ): Result<Unit> = error("Not used")
 
     override suspend fun revokeDirectChatAuthorization(contactId: String): Result<Unit> = error("Not used")
 
     override suspend fun receiveInvite(
-        context: IncomingPacketContext,
-        packet: ContactInvitePacket,
-        setupMode: DirectIdentitySetupMode,
+        context: com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext,
+        packet: com.cbgm.sparrow.core.protocol.packet.ContactInvitePacket,
+        setupMode: com.cbgm.sparrow.core.security.DirectIdentitySetupMode,
         blockedContactIds: Set<String>,
         blockUnknownContactInvites: Boolean
     ): Result<Unit> = error("Not used")
 
     override suspend fun receiveAccepted(
-        context: IncomingPacketContext,
-        packet: ContactInviteAcceptedPacket
+        context: com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext,
+        packet: com.cbgm.sparrow.core.protocol.packet.ContactInviteAcceptedPacket
     ): Result<Unit> = error("Not used")
 
     override suspend fun receiveReady(
-        context: IncomingPacketContext,
-        packet: ContactReadyPacket
+        context: com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext,
+        packet: com.cbgm.sparrow.core.protocol.packet.ContactReadyPacket
     ): Result<Unit> = error("Not used")
 
     override suspend fun receiveDeclined(
-        context: IncomingPacketContext,
-        packet: ContactInviteDeclinedPacket
+        context: com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext,
+        packet: com.cbgm.sparrow.core.protocol.packet.ContactInviteDeclinedPacket
     ): Result<Unit> = error("Not used")
 
     override suspend fun receiveDirectChatAuthorizationRevoked(
-        context: IncomingPacketContext,
-        packet: DirectChatAuthorizationRevokedPacket
+        context: com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext,
+        packet: com.cbgm.sparrow.core.protocol.packet.DirectChatAuthorizationRevokedPacket
     ): Result<Unit> = error("Not used")
 }

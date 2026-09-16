@@ -3,10 +3,10 @@ package com.cbgm.sparrow.feature.contacts.domain.usecase
 import com.cbgm.sparrow.core.security.ContactBlocklistRepository
 import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.feature.contacts.domain.model.DirectChatAuthorizationRequiredException
-import com.cbgm.sparrow.feature.invite.domain.repository.DirectInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.repository.DirectIdentityExchangeRepository
 
 class RequireDirectChatAuthorizationUseCase(
-    private val identityInvitationRepository: DirectInvitationRepository,
+    private val directIdentityExchangeRepository: DirectIdentityExchangeRepository,
     private val modeRepository: DirectIdentitySetupModeRepository,
     private val contactBlocklistRepository: ContactBlocklistRepository
 ) {
@@ -22,7 +22,7 @@ class RequireDirectChatAuthorizationUseCase(
                 )
             }
 
-            identityInvitationRepository
+            directIdentityExchangeRepository
                 .requireDirectChatAuthorization(
                     contactId = contactId,
                     mode = modeRepository.getMode()

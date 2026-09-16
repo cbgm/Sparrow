@@ -10,7 +10,7 @@ import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.invite.domain.model.IdentityHandshakeState
 import kotlinx.coroutines.flow.Flow
 
-interface DirectInvitationRepository {
+interface DirectIdentityExchangeRepository {
     suspend fun start(contactId: String): Result<Unit>
 
     fun observeAcceptedContactIds(): Flow<Set<String>>
