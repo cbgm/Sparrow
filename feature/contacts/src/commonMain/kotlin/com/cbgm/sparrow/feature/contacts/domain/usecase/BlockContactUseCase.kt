@@ -4,7 +4,7 @@ import com.cbgm.sparrow.core.protocol.mailbox.MailboxCapabilityLifecycle
 import com.cbgm.sparrow.core.protocol.mailbox.NoOpMailboxCapabilityLifecycle
 import com.cbgm.sparrow.core.security.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
-import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.repository.IdentityInvitationRepository
 
 class BlockContactUseCase(
     private val blocklistRepository: ContactBlocklistRepository,

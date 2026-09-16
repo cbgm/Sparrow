@@ -4,7 +4,7 @@ import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.handler.TypedProtocolPacketHandler
 import com.cbgm.sparrow.core.protocol.packet.ContactInviteDeclinedPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
-import com.cbgm.sparrow.feature.contacts.domain.usecase.HandleContactInviteDeclinedPacketUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.HandleContactInviteDeclinedPacketUseCase
 
 class ContactInviteDeclinedPacketHandler(
     private val handleContactInviteDeclinedPacket: HandleContactInviteDeclinedPacketUseCase

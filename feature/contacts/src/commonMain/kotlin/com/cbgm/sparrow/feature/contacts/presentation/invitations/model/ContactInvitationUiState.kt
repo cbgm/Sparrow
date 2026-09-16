@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.contacts.presentation.invitations.model
 
-import com.cbgm.sparrow.feature.contacts.domain.model.ContactInvitation
-import com.cbgm.sparrow.feature.contacts.domain.model.IdentityInvitationDirection
+import com.cbgm.sparrow.feature.invite.domain.model.ContactInvitation
+import com.cbgm.sparrow.feature.invite.domain.model.IdentityInvitationDirection
 
 enum class ContactInvitationTab(
     val direction: IdentityInvitationDirection

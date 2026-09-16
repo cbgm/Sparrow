@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.contacts.domain.model
+package com.cbgm.sparrow.feature.invite.domain.model
 
 enum class IdentityInvitationDirection {
     INCOMING,

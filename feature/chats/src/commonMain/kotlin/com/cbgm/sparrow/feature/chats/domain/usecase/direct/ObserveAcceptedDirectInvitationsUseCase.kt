@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.chats.domain.usecase.direct
 
-import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.repository.IdentityInvitationRepository
 import kotlinx.coroutines.flow.Flow
 
 class ObserveAcceptedDirectInvitationsUseCase(

@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.contacts.presentation.invitations.mapper
 
-import com.cbgm.sparrow.feature.contacts.domain.model.ContactInvitation
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationTab
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiState
+import com.cbgm.sparrow.feature.invite.domain.model.ContactInvitation
 
 internal fun toContactInvitationUiState(
     selectedTab: ContactInvitationTab,

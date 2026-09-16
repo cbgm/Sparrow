@@ -17,6 +17,7 @@ kotlin {
             implementation(projects.core.ui)
             implementation(projects.feature.contacts)
             implementation(projects.feature.identity)
+            implementation(projects.feature.invite)
 
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)

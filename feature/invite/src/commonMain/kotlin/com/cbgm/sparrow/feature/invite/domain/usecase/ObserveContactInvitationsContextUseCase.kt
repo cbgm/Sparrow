@@ -1,7 +1,7 @@
-package com.cbgm.sparrow.feature.contacts.domain.usecase
+package com.cbgm.sparrow.feature.invite.domain.usecase
 
-import com.cbgm.sparrow.feature.contacts.domain.model.ContactInvitationsContext
-import com.cbgm.sparrow.feature.contacts.domain.model.IdentityInvitationDirection
+import com.cbgm.sparrow.feature.invite.domain.model.ContactInvitationsContext
+import com.cbgm.sparrow.feature.invite.domain.model.IdentityInvitationDirection
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 

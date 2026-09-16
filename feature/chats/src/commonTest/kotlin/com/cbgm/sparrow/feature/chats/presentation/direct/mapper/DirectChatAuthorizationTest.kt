@@ -3,7 +3,7 @@ package com.cbgm.sparrow.feature.chats.presentation.direct.mapper
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectComposerState
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
-import com.cbgm.sparrow.feature.contacts.domain.model.IdentityHandshakeState
+import com.cbgm.sparrow.feature.invite.domain.model.IdentityHandshakeState
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

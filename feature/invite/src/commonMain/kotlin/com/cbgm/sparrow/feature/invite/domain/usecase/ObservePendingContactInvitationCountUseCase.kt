@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.contacts.domain.usecase
+package com.cbgm.sparrow.feature.invite.domain.usecase
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged

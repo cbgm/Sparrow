@@ -1,7 +1,7 @@
-package com.cbgm.sparrow.feature.contacts.domain.usecase
+package com.cbgm.sparrow.feature.invite.domain.usecase
 
-import com.cbgm.sparrow.feature.contacts.domain.model.IdentityInvitationDirection
-import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.model.IdentityInvitationDirection
+import com.cbgm.sparrow.feature.invite.domain.repository.IdentityInvitationRepository
 
 class MarkContactInvitationsViewedUseCase(
     private val repository: IdentityInvitationRepository

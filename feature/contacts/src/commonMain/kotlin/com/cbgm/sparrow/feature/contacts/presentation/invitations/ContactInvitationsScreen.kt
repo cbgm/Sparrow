@@ -51,12 +51,12 @@ import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
-import com.cbgm.sparrow.feature.contacts.domain.model.ContactInvitation
-import com.cbgm.sparrow.feature.contacts.domain.model.ContactInvitationStatus
-import com.cbgm.sparrow.feature.contacts.domain.model.IdentityInvitationDirection
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationTab
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiState
+import com.cbgm.sparrow.feature.invite.domain.model.ContactInvitation
+import com.cbgm.sparrow.feature.invite.domain.model.ContactInvitationStatus
+import com.cbgm.sparrow.feature.invite.domain.model.IdentityInvitationDirection
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_unknown
 import com.cbgm.sparrow.resources.feature_contacts_accept_invitation

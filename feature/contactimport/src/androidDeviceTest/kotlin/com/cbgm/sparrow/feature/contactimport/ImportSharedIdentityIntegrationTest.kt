@@ -17,10 +17,10 @@ import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactReq
 import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactResult
 import com.cbgm.sparrow.feature.contacts.domain.repository.DeviceContactWriterRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityExchangeRepository
-import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityInvitationRepository
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityShareRepositoryImpl
 import com.cbgm.sparrow.feature.identity.domain.model.SharedContactDetails
 import com.cbgm.sparrow.feature.identity.domain.model.SharedIdentityPayload
+import com.cbgm.sparrow.feature.invite.domain.repository.IdentityInvitationRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -203,12 +203,12 @@ private object TestDeviceContactWriterRepository : DeviceContactWriterRepository
 private object TestIdentityInvitationRepository : IdentityInvitationRepository {
     override suspend fun start(contactId: String): Result<Unit> = error("Not used")
 
-    override fun observePendingIncoming(): Flow<List<com.cbgm.sparrow.feature.contacts.domain.model.PendingContactInvitation>> =
+    override fun observePendingIncoming(): Flow<List<com.cbgm.sparrow.feature.invite.domain.model.PendingContactInvitation>> =
         emptyFlow()
 
     override fun observeInvitations(
-        direction: com.cbgm.sparrow.feature.contacts.domain.model.IdentityInvitationDirection
-    ): Flow<List<com.cbgm.sparrow.feature.contacts.domain.model.ContactInvitation>> = emptyFlow()
+        direction: com.cbgm.sparrow.feature.invite.domain.model.IdentityInvitationDirection
+    ): Flow<List<com.cbgm.sparrow.feature.invite.domain.model.ContactInvitation>> = emptyFlow()
 
     override fun observeAcceptedContactIds(): Flow<Set<String>> = emptyFlow()
 
@@ -216,7 +216,7 @@ private object TestIdentityInvitationRepository : IdentityInvitationRepository {
 
     override fun observeState(
         contactId: String
-    ): Flow<com.cbgm.sparrow.feature.contacts.domain.model.IdentityHandshakeState?> = emptyFlow()
+    ): Flow<com.cbgm.sparrow.feature.invite.domain.model.IdentityHandshakeState?> = emptyFlow()
 
     override suspend fun getContactId(invitationId: String): Result<String> = error("Not used")
 
@@ -225,7 +225,7 @@ private object TestIdentityInvitationRepository : IdentityInvitationRepository {
     override suspend fun decline(invitationId: String): Result<Unit> = error("Not used")
 
     override suspend fun markViewed(
-        direction: com.cbgm.sparrow.feature.contacts.domain.model.IdentityInvitationDirection
+        direction: com.cbgm.sparrow.feature.invite.domain.model.IdentityInvitationDirection
     ): Result<Unit> = error("Not used")
 
     override suspend fun deleteDeclinedOutgoing(invitationId: String): Result<Unit> = error("Not used")

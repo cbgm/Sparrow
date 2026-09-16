@@ -3,7 +3,7 @@ package com.cbgm.sparrow.feature.chats.domain.usecase.direct
 import com.cbgm.sparrow.core.protocol.mailbox.MailboxCapabilityLifecycle
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectConversationRepository
-import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.repository.IdentityInvitationRepository
 
 class DeleteDirectConversationUseCase(
     private val conversationRepository: DirectConversationRepository,

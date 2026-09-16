@@ -7,8 +7,8 @@ import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactReq
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.DeviceContactWriterRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityExchangeRepository
-import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityInvitationRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityShareRepository
+import com.cbgm.sparrow.feature.invite.domain.repository.IdentityInvitationRepository
 
 class ImportSharedIdentityUseCase(
     private val identityShareRepository: IdentityShareRepository,

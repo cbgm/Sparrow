@@ -3,7 +3,7 @@ package com.cbgm.sparrow.feature.contacts.domain.usecase
 import com.cbgm.sparrow.core.security.ContactBlocklistRepository
 import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.feature.contacts.domain.model.DirectChatAuthorizationRequiredException
-import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.repository.IdentityInvitationRepository
 
 class RequireDirectChatAuthorizationUseCase(
     private val identityInvitationRepository: IdentityInvitationRepository,
