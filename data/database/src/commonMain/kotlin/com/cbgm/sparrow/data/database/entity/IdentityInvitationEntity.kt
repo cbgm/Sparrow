@@ -39,7 +39,8 @@ data class IdentityInvitationEntity(
     val localEncryptionPublicKey: ByteArray? = null,
     val localSigningPublicKey: ByteArray? = null,
     val viewedAtEpochMilliseconds: Long? = null,
-    val hiddenAtEpochMilliseconds: Long? = null
+    val hiddenAtEpochMilliseconds: Long? = null,
+    val resultAction: String? = null
 ) {
     override fun equals(other: Any?): Boolean =
         other is IdentityInvitationEntity &&
@@ -59,7 +60,8 @@ data class IdentityInvitationEntity(
             localEncryptionPublicKey.contentEqualsNullable(other.localEncryptionPublicKey) &&
             localSigningPublicKey.contentEqualsNullable(other.localSigningPublicKey) &&
             viewedAtEpochMilliseconds == other.viewedAtEpochMilliseconds &&
-            hiddenAtEpochMilliseconds == other.hiddenAtEpochMilliseconds
+            hiddenAtEpochMilliseconds == other.hiddenAtEpochMilliseconds &&
+            resultAction == other.resultAction
 
     override fun hashCode(): Int {
         var result = invitationId.hashCode()
@@ -79,6 +81,7 @@ data class IdentityInvitationEntity(
         result = 31 * result + (localSigningPublicKey?.contentHashCode() ?: 0)
         result = 31 * result + (viewedAtEpochMilliseconds?.hashCode() ?: 0)
         result = 31 * result + (hiddenAtEpochMilliseconds?.hashCode() ?: 0)
+        result = 31 * result + (resultAction?.hashCode() ?: 0)
         return result
     }
 }

@@ -74,7 +74,7 @@ import com.cbgm.sparrow.data.database.entity.RemoteMailboxRouteEntity
         RemoteMailboxRouteEntity::class,
         LinkPreviewEntity::class
     ],
-    version = 39,
+    version = 40,
     autoMigrations = [
         AutoMigration(from = 26, to = 27),
         AutoMigration(from = 27, to = 28),
@@ -88,7 +88,8 @@ import com.cbgm.sparrow.data.database.entity.RemoteMailboxRouteEntity
         AutoMigration(from = 35, to = 36),
         AutoMigration(from = 36, to = 37),
         AutoMigration(from = 37, to = 38),
-        AutoMigration(from = 38, to = 39)
+        AutoMigration(from = 38, to = 39),
+        AutoMigration(from = 39, to = 40)
     ],
     exportSchema = true
 )

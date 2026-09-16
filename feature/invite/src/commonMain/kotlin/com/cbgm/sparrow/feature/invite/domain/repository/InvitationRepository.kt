@@ -4,6 +4,7 @@ import com.cbgm.sparrow.feature.invite.domain.model.Invitation
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResult
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationResultAction
 import kotlinx.coroutines.flow.Flow
 
 interface InvitationRepository {
@@ -15,7 +16,10 @@ interface InvitationRepository {
 
     suspend fun accept(invitationId: String): Result<Unit>
 
-    suspend fun decline(invitationId: String): Result<Unit>
+    suspend fun decline(
+        invitationId: String,
+        action: InvitationResultAction? = null
+    ): Result<Unit>
 
     suspend fun applyResponse(
         invitationId: String,

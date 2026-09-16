@@ -4,5 +4,6 @@ data class InvitationResult(
     val invitationId: String,
     val peerId: String,
     val direction: InvitationDirection,
-    val response: InvitationResponse
+    val response: InvitationResponse,
+    val action: InvitationResultAction? = null
 )

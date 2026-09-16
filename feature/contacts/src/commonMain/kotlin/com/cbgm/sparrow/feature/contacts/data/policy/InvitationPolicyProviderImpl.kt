@@ -30,8 +30,4 @@ class InvitationPolicyProviderImpl(
 
     override suspend fun isPeerBlocked(peerId: String): Boolean =
         contactBlocklistRepository.isBlocked(peerId)
-
-    override suspend fun blockPeer(peerId: String) {
-        contactBlocklistRepository.block(peerId)
-    }
 }

@@ -46,6 +46,7 @@ import com.cbgm.sparrow.feature.invite.domain.model.Invitation
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResult
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationResultAction
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
@@ -262,7 +263,8 @@ internal class DirectIdentityExchangeCoordinator(
                         invitationId = invitation.invitationId,
                         peerId = invitation.contactId,
                         direction = direction,
-                        response = response
+                        response = response,
+                        action = invitation.resultAction.toInvitationResultAction()
                     )
                 }
             }
@@ -455,7 +457,10 @@ internal class DirectIdentityExchangeCoordinator(
             }
         }
 
-    suspend fun decline(invitationId: String): Result<Unit> =
+    suspend fun decline(
+        invitationId: String,
+        action: InvitationResultAction? = null
+    ): Result<Unit> =
         safeSuspendCall {
             mutex.withLock {
                 val invitation = requireInvitation(invitationId, InvitationDirection.INCOMING)
@@ -502,7 +507,8 @@ internal class DirectIdentityExchangeCoordinator(
                     invitation.copy(
                         state = IdentityHandshakeState.DECLINED.name,
                         updatedAtEpochMilliseconds = now,
-                        lastError = null
+                        lastError = null,
+                        resultAction = action?.name
                     )
                 )
             }
@@ -2034,6 +2040,11 @@ internal class DirectIdentityExchangeCoordinator(
         invitationDao.upsert(expired)
         return expired
     }
+
+    private fun String?.toInvitationResultAction(): InvitationResultAction? =
+        this?.let { stored ->
+            InvitationResultAction.entries.firstOrNull { action -> action.name == stored }
+        }
 
     private fun IdentityInvitationEntity.toInvitationStatus(): InvitationStatus? =
         when (state) {

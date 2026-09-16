@@ -39,13 +39,7 @@ val inviteModule =
 
         factory { AcceptInvitationUseCase(repository = get(), policy = get()) }
         factory { DeclineInvitationUseCase(repository = get()) }
-        factory {
-            DeclineAndBlockInvitationUseCase(
-                repository = get(),
-                declineInvitation = get(),
-                policyProvider = get()
-            )
-        }
+        factory { DeclineAndBlockInvitationUseCase(repository = get()) }
         factory { HandleIncomingInvitationUseCase(policy = get()) }
         factory { HandleInvitationResponseUseCase(repository = get()) }
         factory { MarkInvitationsViewedUseCase(repository = get()) }

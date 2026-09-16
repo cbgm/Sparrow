@@ -11,6 +11,7 @@ import com.cbgm.sparrow.feature.contacts.adapter.IdentityAcknowledgementPacketHa
 import com.cbgm.sparrow.feature.contacts.adapter.IdentityPacketHandler
 import com.cbgm.sparrow.feature.contacts.data.datasource.ContactKeyExchangeDataSource
 import com.cbgm.sparrow.feature.contacts.data.datasource.ContactVerificationDataSource
+import com.cbgm.sparrow.feature.contacts.data.invitation.InvitationResultObserver
 import com.cbgm.sparrow.feature.contacts.data.policy.InvitationPolicyProviderImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactKeyExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactRepositoryImpl
@@ -138,6 +139,7 @@ val contactsModule =
                 contactBlocklistRepository = get()
             )
         }
+        singleOf(::InvitationResultObserver)
         factory { HandleContactReadyPacketUseCase(directIdentityExchangeRepository = get()) }
 
         factory {

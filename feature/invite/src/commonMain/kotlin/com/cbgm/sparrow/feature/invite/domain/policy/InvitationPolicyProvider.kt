@@ -14,6 +14,4 @@ interface InvitationPolicyProvider {
     suspend fun blockUnknownPeers(): Boolean
 
     suspend fun isPeerBlocked(peerId: String): Boolean
-
-    suspend fun blockPeer(peerId: String)
 }

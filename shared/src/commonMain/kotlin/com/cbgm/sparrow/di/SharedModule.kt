@@ -17,6 +17,7 @@ val sharedModule =
                 platformNotificationRuntime = get(),
                 conversationNotificationCoordinator = get(),
                 directInvitationConversationCoordinator = get(),
+                invitationResultObserver = get(),
                 controlPlaneConfiguration = get(),
                 controlPlaneStatusStore = get(),
                 controlPlaneDirectorySynchronizer = get(),
