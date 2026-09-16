@@ -15,6 +15,7 @@ kotlin {
             implementation(projects.data.database)
             implementation(projects.feature.contacts)
             implementation(libs.bundles.coroutines)
+            implementation(libs.bundles.koin.core)
         }
     }
 }

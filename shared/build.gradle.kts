@@ -62,6 +62,7 @@ kotlin {
             implementation(projects.feature.contacts)
             implementation(projects.feature.identity)
             implementation(projects.feature.media)
+            implementation(projects.feature.membership)
             implementation(projects.feature.voice)
             implementation(projects.feature.linkpreview)
             implementation(projects.feature.messaging)
