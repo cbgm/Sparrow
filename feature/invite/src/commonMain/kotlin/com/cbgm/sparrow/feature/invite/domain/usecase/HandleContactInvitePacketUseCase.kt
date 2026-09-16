@@ -4,10 +4,10 @@ import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.packet.ContactInvitePacket
 import com.cbgm.sparrow.core.security.ContactBlocklistRepository
 import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
-import com.cbgm.sparrow.feature.invite.domain.repository.IdentityInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.repository.DirectInvitationRepository
 
 class HandleContactInvitePacketUseCase(
-    private val identityInvitationRepository: IdentityInvitationRepository,
+    private val identityInvitationRepository: DirectInvitationRepository,
     private val modeRepository: DirectIdentitySetupModeRepository,
     private val contactBlocklistRepository: ContactBlocklistRepository
 ) {

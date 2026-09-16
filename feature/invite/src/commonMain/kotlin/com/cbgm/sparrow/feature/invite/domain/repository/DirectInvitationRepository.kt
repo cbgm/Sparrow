@@ -13,7 +13,7 @@ import com.cbgm.sparrow.feature.invite.domain.model.IdentityInvitationDirection
 import com.cbgm.sparrow.feature.invite.domain.model.PendingContactInvitation
 import kotlinx.coroutines.flow.Flow
 
-interface IdentityInvitationRepository {
+interface DirectInvitationRepository {
     suspend fun start(contactId: String): Result<Unit>
 
     fun observePendingIncoming(): Flow<List<PendingContactInvitation>>

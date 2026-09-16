@@ -20,7 +20,7 @@ import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityExchangeRepos
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityShareRepositoryImpl
 import com.cbgm.sparrow.feature.identity.domain.model.SharedContactDetails
 import com.cbgm.sparrow.feature.identity.domain.model.SharedIdentityPayload
-import com.cbgm.sparrow.feature.invite.domain.repository.IdentityInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.repository.DirectInvitationRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -65,7 +65,7 @@ class ImportSharedIdentityIntegrationTest {
             ImportSharedIdentityUseCase(
                 identityShareRepository = identityShareRepository,
                 contactRepository = contactRepository,
-                identityInvitationRepository = TestIdentityInvitationRepository,
+                identityInvitationRepository = TestDirectInvitationRepository,
                 identityExchangeRepository = TestIdentityExchangeRepository,
                 deviceContactWriterRepository = TestDeviceContactWriterRepository
             )
@@ -200,7 +200,7 @@ private object TestDeviceContactWriterRepository : DeviceContactWriterRepository
     ): AddDeviceContactResult = AddDeviceContactResult.AlreadyExists
 }
 
-private object TestIdentityInvitationRepository : IdentityInvitationRepository {
+private object TestDirectInvitationRepository : DirectInvitationRepository {
     override suspend fun start(contactId: String): Result<Unit> = error("Not used")
 
     override fun observePendingIncoming(): Flow<List<com.cbgm.sparrow.feature.invite.domain.model.PendingContactInvitation>> =

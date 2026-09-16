@@ -60,6 +60,7 @@ kotlin {
             implementation(projects.feature.attachments)
             implementation(projects.feature.contactimport)
             implementation(projects.feature.contacts)
+            implementation(projects.feature.invite)
             implementation(projects.feature.identity)
             implementation(projects.feature.media)
             implementation(projects.feature.membership)

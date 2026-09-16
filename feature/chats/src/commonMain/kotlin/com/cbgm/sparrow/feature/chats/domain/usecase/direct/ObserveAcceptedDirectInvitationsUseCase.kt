@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.chats.domain.usecase.direct
 
-import com.cbgm.sparrow.feature.invite.domain.repository.IdentityInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.repository.DirectInvitationRepository
 import kotlinx.coroutines.flow.Flow
 
 class ObserveAcceptedDirectInvitationsUseCase(
-    private val identityInvitationRepository: IdentityInvitationRepository
+    private val identityInvitationRepository: DirectInvitationRepository
 ) {
     operator fun invoke(): Flow<Set<String>> =
         identityInvitationRepository.observeAcceptedContactIds()

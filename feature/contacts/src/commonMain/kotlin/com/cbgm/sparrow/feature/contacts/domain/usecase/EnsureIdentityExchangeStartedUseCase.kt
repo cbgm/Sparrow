@@ -4,12 +4,12 @@ import com.cbgm.sparrow.core.security.ContactBlocklistRepository
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityExchangeRepository
-import com.cbgm.sparrow.feature.invite.domain.repository.IdentityInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.repository.DirectInvitationRepository
 
 class EnsureIdentityExchangeStartedUseCase(
     private val modeRepository: DirectIdentitySetupModeRepository,
     private val contactBlocklistRepository: ContactBlocklistRepository,
-    private val identityInvitationRepository: IdentityInvitationRepository,
+    private val identityInvitationRepository: DirectInvitationRepository,
     private val identityExchangeRepository: IdentityExchangeRepository
 ) {
     suspend operator fun invoke(contactId: String): Result<Unit> =

@@ -46,7 +46,7 @@ import com.cbgm.sparrow.feature.invite.domain.model.ContactInvitationStatus
 import com.cbgm.sparrow.feature.invite.domain.model.IdentityHandshakeState
 import com.cbgm.sparrow.feature.invite.domain.model.IdentityInvitationDirection
 import com.cbgm.sparrow.feature.invite.domain.model.PendingContactInvitation
-import com.cbgm.sparrow.feature.invite.domain.repository.IdentityInvitationRepository
+import com.cbgm.sparrow.feature.invite.domain.repository.DirectInvitationRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
@@ -61,7 +61,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class IdentityInvitationRepositoryImpl(
+class DirectInvitationRepositoryImpl(
     private val invitationDao: IdentityInvitationDao,
     private val contactDao: ContactDao,
     private val contactRoutingIdDao: ContactRoutingIdDao,
@@ -77,8 +77,8 @@ class IdentityInvitationRepositoryImpl(
     private val contactVerificationDataSource: ContactVerificationDataSource,
     private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
     private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor
-) : IdentityInvitationRepository {
-    private val logger = SparrowLog.withTag("IdentityInvitationRepositoryImpl")
+) : DirectInvitationRepository {
+    private val logger = SparrowLog.withTag("DirectInvitationRepositoryImpl")
 
     private val mutex = Mutex()
 
