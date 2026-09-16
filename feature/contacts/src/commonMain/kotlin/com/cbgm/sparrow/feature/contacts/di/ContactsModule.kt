@@ -15,8 +15,11 @@ import com.cbgm.sparrow.feature.contacts.data.policy.InvitationPolicyProviderImp
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactKeyExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactVerificationRepositoryImpl
+import com.cbgm.sparrow.feature.contacts.data.repository.DirectIdentityExchangeCoordinator
 import com.cbgm.sparrow.feature.contacts.data.repository.DirectIdentityExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.IdentityExchangeRepositoryImpl
+import com.cbgm.sparrow.feature.contacts.data.repository.InvitationPacketProcessorImpl
+import com.cbgm.sparrow.feature.contacts.data.repository.InvitationRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactKeyExchangeRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactVerificationRepository
@@ -101,7 +104,7 @@ val contactsModule =
         }
 
         single {
-            DirectIdentityExchangeRepositoryImpl(
+            DirectIdentityExchangeCoordinator(
                 invitationDao = get(),
                 contactDao = get(),
                 contactRoutingIdDao = get(),
@@ -121,13 +124,13 @@ val contactsModule =
         }
 
         single<DirectIdentityExchangeRepository> {
-            get<DirectIdentityExchangeRepositoryImpl>()
+            DirectIdentityExchangeRepositoryImpl(coordinator = get())
         }
         single<InvitationRepository> {
-            get<DirectIdentityExchangeRepositoryImpl>()
+            InvitationRepositoryImpl(coordinator = get())
         }
         single<InvitationPacketProcessor> {
-            get<DirectIdentityExchangeRepositoryImpl>()
+            InvitationPacketProcessorImpl(coordinator = get())
         }
         single<InvitationPolicyProvider> {
             InvitationPolicyProviderImpl(
