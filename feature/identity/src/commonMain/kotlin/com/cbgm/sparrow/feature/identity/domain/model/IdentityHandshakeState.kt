@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.invite.domain.model
+package com.cbgm.sparrow.feature.identity.domain.model
 
 enum class IdentityHandshakeState {
     INVITE_SENT,

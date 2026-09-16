@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.invite.domain.repository
+package com.cbgm.sparrow.feature.identity.domain.repository
 
 import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.packet.ContactInviteAcceptedPacket
@@ -7,7 +7,7 @@ import com.cbgm.sparrow.core.protocol.packet.ContactInvitePacket
 import com.cbgm.sparrow.core.protocol.packet.ContactReadyPacket
 import com.cbgm.sparrow.core.protocol.packet.DirectChatAuthorizationRevokedPacket
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
-import com.cbgm.sparrow.feature.invite.domain.model.IdentityHandshakeState
+import com.cbgm.sparrow.feature.identity.domain.model.IdentityHandshakeState
 import kotlinx.coroutines.flow.Flow
 
 interface DirectIdentityExchangeRepository {

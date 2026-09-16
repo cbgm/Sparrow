@@ -4,7 +4,7 @@ import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.mailbox.MailboxCapabilityLifecycle
 import com.cbgm.sparrow.core.protocol.mailbox.NoOpMailboxCapabilityLifecycle
 import com.cbgm.sparrow.core.protocol.packet.DirectChatAuthorizationRevokedPacket
-import com.cbgm.sparrow.feature.invite.domain.repository.DirectIdentityExchangeRepository
+import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
 
 class HandleDirectChatAuthorizationRevokedPacketUseCase(
     private val directIdentityExchangeRepository: DirectIdentityExchangeRepository,

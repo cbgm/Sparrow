@@ -1,7 +1,7 @@
-package com.cbgm.sparrow.feature.invite.domain.usecase
+package com.cbgm.sparrow.feature.identity.domain.usecase
 
-import com.cbgm.sparrow.feature.invite.domain.model.IdentityHandshakeState
-import com.cbgm.sparrow.feature.invite.domain.repository.DirectIdentityExchangeRepository
+import com.cbgm.sparrow.feature.identity.domain.model.IdentityHandshakeState
+import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
 import kotlinx.coroutines.flow.Flow
 
 class ObserveIdentityHandshakeStateUseCase(

@@ -11,7 +11,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.direct.isDirectReinviteRetryS
 import com.cbgm.sparrow.feature.contacts.domain.model.DirectChatAuthorizationRequiredException
 import com.cbgm.sparrow.feature.contacts.domain.usecase.EnsureIdentityExchangeStartedUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
-import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveIdentityHandshakeStateUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveIdentityHandshakeStateUseCase
 import kotlinx.coroutines.flow.first
 
 class SendOrQueueDirectMessageUseCase(

@@ -1,10 +1,10 @@
-package com.cbgm.sparrow.feature.invite.domain.usecase
+package com.cbgm.sparrow.feature.contacts.domain.usecase
 
 import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.packet.ContactInvitePacket
 import com.cbgm.sparrow.core.security.ContactBlocklistRepository
 import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
-import com.cbgm.sparrow.feature.invite.domain.repository.DirectIdentityExchangeRepository
+import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
 
 class HandleContactInvitePacketUseCase(
     private val directIdentityExchangeRepository: DirectIdentityExchangeRepository,

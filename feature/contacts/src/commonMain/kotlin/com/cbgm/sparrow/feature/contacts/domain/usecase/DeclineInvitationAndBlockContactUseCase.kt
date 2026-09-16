@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.contacts.domain.usecase
 
 import com.cbgm.sparrow.core.security.ContactBlocklistRepository
-import com.cbgm.sparrow.feature.invite.domain.repository.DirectIdentityExchangeRepository
+import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
 import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineInvitationUseCase
 
 class DeclineInvitationAndBlockContactUseCase(

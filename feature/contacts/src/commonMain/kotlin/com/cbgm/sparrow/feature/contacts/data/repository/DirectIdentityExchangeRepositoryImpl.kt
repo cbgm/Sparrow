@@ -41,11 +41,11 @@ import com.cbgm.sparrow.feature.contacts.domain.model.DirectChatAuthorizationReq
 import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.RemoteIdentityOrigin
 import com.cbgm.sparrow.feature.contacts.util.IdentityInvitationPayloadEncoder
-import com.cbgm.sparrow.feature.invite.domain.model.IdentityHandshakeState
+import com.cbgm.sparrow.feature.identity.domain.model.IdentityHandshakeState
+import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
 import com.cbgm.sparrow.feature.invite.domain.model.Invitation
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationStatus
-import com.cbgm.sparrow.feature.invite.domain.repository.DirectIdentityExchangeRepository
 import com.cbgm.sparrow.feature.invite.domain.repository.InvitationRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation

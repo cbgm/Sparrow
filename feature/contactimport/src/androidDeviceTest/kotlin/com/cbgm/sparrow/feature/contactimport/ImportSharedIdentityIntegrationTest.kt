@@ -20,7 +20,7 @@ import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityExchangeRepos
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityShareRepositoryImpl
 import com.cbgm.sparrow.feature.identity.domain.model.SharedContactDetails
 import com.cbgm.sparrow.feature.identity.domain.model.SharedIdentityPayload
-import com.cbgm.sparrow.feature.invite.domain.repository.DirectIdentityExchangeRepository
+import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -209,7 +209,7 @@ private object TestDirectIdentityExchangeRepository : DirectIdentityExchangeRepo
 
     override fun observeState(
         contactId: String
-    ): Flow<com.cbgm.sparrow.feature.invite.domain.model.IdentityHandshakeState?> = emptyFlow()
+    ): Flow<com.cbgm.sparrow.feature.identity.domain.model.IdentityHandshakeState?> = emptyFlow()
 
     override suspend fun getContactId(invitationId: String): Result<String> = error("Not used")
 
