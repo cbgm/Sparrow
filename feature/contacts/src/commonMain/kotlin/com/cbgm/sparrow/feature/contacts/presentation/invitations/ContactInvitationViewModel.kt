@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
-import com.cbgm.sparrow.feature.contacts.domain.usecase.DeclineInvitationAndBlockContactUseCase
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.mapper.toContactInvitationUiState
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.mapper.toContactInvitationsUiData
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.mapper.toInvitationDirection
@@ -16,6 +15,7 @@ import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactI
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationUiState
 import com.cbgm.sparrow.feature.contacts.presentation.invitations.model.ContactInvitationsUiData
 import com.cbgm.sparrow.feature.invite.domain.usecase.AcceptInvitationUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineAndBlockInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.DeleteDeclinedOutgoingInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.MarkInvitationsViewedUseCase
@@ -26,7 +26,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -37,7 +38,7 @@ class ContactInvitationViewModel(
     observeInvitationsContext: ObserveInvitationsContextUseCase,
     private val acceptInvitation: AcceptInvitationUseCase,
     private val declineInvitation: DeclineInvitationUseCase,
-    private val declineInvitationAndBlockContact: DeclineInvitationAndBlockContactUseCase,
+    private val declineAndBlockInvitation: DeclineAndBlockInvitationUseCase,
     private val deleteDeclinedOutgoingInvitation: DeleteDeclinedOutgoingInvitationUseCase,
     private val markInvitationsViewed: MarkInvitationsViewedUseCase
 ) : BaseViewModel() {
@@ -83,6 +84,7 @@ class ContactInvitationViewModel(
 
     init {
         observeViewedTab()
+        observeIncomingInvitations()
     }
 
     fun onUiEvent(event: ContactInvitationUiEvent) {
@@ -117,45 +119,48 @@ class ContactInvitationViewModel(
         }
     }
 
+    private fun observeIncomingInvitations() {
+        viewModelScope.launch {
+            combine(
+                selectedTab,
+                invitations
+            ) { tab, invitationData ->
+                tab == ContactInvitationTab.INCOMING && invitationData.incoming.isEmpty()
+            }.drop(1)
+                .distinctUntilChanged()
+                .filter { isEmpty -> isEmpty }
+                .collect {
+                    navigator.popBackStack()
+                }
+        }
+    }
+
     private fun accept(invitationId: String) {
-        updateInvitation(
-            invitationId = invitationId,
-            closeWhenScreenBecomesEmpty = true
-        ) {
+        updateInvitation(invitationId = invitationId) {
             acceptInvitation(invitationId)
         }
     }
 
     private fun decline(invitationId: String) {
-        updateInvitation(
-            invitationId = invitationId,
-            closeWhenScreenBecomesEmpty = true
-        ) {
+        updateInvitation(invitationId = invitationId) {
             declineInvitation(invitationId)
         }
     }
 
     private fun declineAndBlock(invitationId: String) {
-        updateInvitation(
-            invitationId = invitationId,
-            closeWhenScreenBecomesEmpty = true
-        ) {
-            declineInvitationAndBlockContact(invitationId)
+        updateInvitation(invitationId = invitationId) {
+            declineAndBlockInvitation(invitationId)
         }
     }
 
     private fun deleteDeclinedOutgoing(invitationId: String) {
-        updateInvitation(
-            invitationId = invitationId,
-            closeWhenScreenBecomesEmpty = false
-        ) {
+        updateInvitation(invitationId = invitationId) {
             deleteDeclinedOutgoingInvitation(invitationId)
         }
     }
 
     private fun updateInvitation(
         invitationId: String,
-        closeWhenScreenBecomesEmpty: Boolean,
         operation: suspend () -> Result<Unit>
     ) {
         if (processingInvitationId.value != null) return
@@ -166,31 +171,12 @@ class ContactInvitationViewModel(
             result.onFailure { error ->
                 _effects.send(
                     ContactInvitationEffect.ShowError(
-                        message = error.message ?: "Contact invitation could not be updated"
+                        message = error.message ?: "Invitation could not be updated"
                     )
                 )
             }
 
-            val shouldClose =
-                result.isSuccess &&
-                    closeWhenScreenBecomesEmpty &&
-                    isScreenEmptyAfter(invitationId)
-
             processingInvitationId.value = null
-
-            if (shouldClose) {
-                navigator.popBackStack()
-            }
         }
-    }
-
-    private suspend fun isScreenEmptyAfter(invitationId: String): Boolean {
-        val invitationData =
-            invitations.first { current ->
-                current.incoming.none { invitation -> invitation.invitationId == invitationId } &&
-                    current.outgoing.none { invitation -> invitation.invitationId == invitationId }
-            }
-
-        return invitationData.incoming.isEmpty() && invitationData.outgoing.isEmpty()
     }
 }

@@ -14,25 +14,21 @@ import com.cbgm.sparrow.feature.contacts.adapter.IdentityAcknowledgementPacketHa
 import com.cbgm.sparrow.feature.contacts.adapter.IdentityPacketHandler
 import com.cbgm.sparrow.feature.contacts.data.datasource.ContactKeyExchangeDataSource
 import com.cbgm.sparrow.feature.contacts.data.datasource.ContactVerificationDataSource
+import com.cbgm.sparrow.feature.contacts.data.policy.InvitationPolicyProviderImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactKeyExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactVerificationRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.DirectIdentityExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.IdentityExchangeRepositoryImpl
-import com.cbgm.sparrow.feature.contacts.domain.ContactInvitationPolicy
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactKeyExchangeRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactVerificationRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityExchangeRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.AddDeviceContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.BlockContactUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.DeclineInvitationAndBlockContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.EnsureIdentityExchangeStartedUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.HandleContactInviteAcceptedPacketUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.HandleContactInviteDeclinedPacketUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.HandleContactInvitePacketUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.HandleContactReadyPacketUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.HandleContactVerificationReceiptPacketUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.HandleDirectChatAuthorizationRevokedPacketUseCase
@@ -56,7 +52,7 @@ import com.cbgm.sparrow.feature.contacts.presentation.overview.ContactsViewModel
 import com.cbgm.sparrow.feature.contacts.util.ContactVerificationPayloadEncoder
 import com.cbgm.sparrow.feature.contacts.util.IdentityInvitationPayloadEncoder
 import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
-import com.cbgm.sparrow.feature.invite.domain.policy.InvitationPolicy
+import com.cbgm.sparrow.feature.invite.domain.policy.InvitationPolicyProvider
 import com.cbgm.sparrow.feature.invite.domain.repository.InvitationRepository
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
@@ -133,24 +129,13 @@ val contactsModule =
         single<InvitationRepository> {
             get<DirectIdentityExchangeRepositoryImpl>()
         }
-        single<InvitationPolicy> {
-            ContactInvitationPolicy(
-                directIdentityExchangeRepository = get(),
+        single<InvitationPolicyProvider> {
+            InvitationPolicyProviderImpl(
                 modeRepository = get(),
                 contactBlocklistRepository = get()
             )
         }
-
-        factory {
-            HandleContactInvitePacketUseCase(
-                directIdentityExchangeRepository = get(),
-                modeRepository = get(),
-                contactBlocklistRepository = get()
-            )
-        }
-        factory { HandleContactInviteAcceptedPacketUseCase(directIdentityExchangeRepository = get()) }
         factory { HandleContactReadyPacketUseCase(directIdentityExchangeRepository = get()) }
-        factory { HandleContactInviteDeclinedPacketUseCase(directIdentityExchangeRepository = get()) }
 
         factory {
             HandleDirectChatAuthorizationRevokedPacketUseCase(
@@ -295,13 +280,6 @@ val contactsModule =
         }
 
         factory {
-            DeclineInvitationAndBlockContactUseCase(
-                directIdentityExchangeRepository = get(),
-                declineInvitation = get(),
-                contactBlocklistRepository = get()
-            )
-        }
-        factory {
             RequireDirectChatAuthorizationUseCase(
                 directIdentityExchangeRepository = get(),
                 modeRepository = get(),
@@ -335,7 +313,7 @@ val contactsModule =
                 observeInvitationsContext = get(),
                 acceptInvitation = get(),
                 declineInvitation = get(),
-                declineInvitationAndBlockContact = get(),
+                declineAndBlockInvitation = get(),
                 deleteDeclinedOutgoingInvitation = get(),
                 markInvitationsViewed = get()
             )

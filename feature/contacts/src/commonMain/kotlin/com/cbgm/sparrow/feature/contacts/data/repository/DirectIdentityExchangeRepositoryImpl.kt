@@ -45,6 +45,7 @@ import com.cbgm.sparrow.feature.identity.domain.model.IdentityHandshakeState
 import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
 import com.cbgm.sparrow.feature.invite.domain.model.Invitation
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationStatus
 import com.cbgm.sparrow.feature.invite.domain.repository.InvitationRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -218,12 +219,13 @@ class DirectIdentityExchangeRepositoryImpl(
                                 val invitation = expirePendingInvitationIfNeeded(storedInvitation, now)
                                 val status = invitation.toInvitationStatus() ?: continue
                                 if (
-                                    direction == InvitationDirection.INCOMING &&
-                                    status != InvitationStatus.PENDING
+                                    !isVisibleInvitation(
+                                        direction = direction,
+                                        status = status,
+                                        updatedAtEpochMilliseconds = invitation.updatedAtEpochMilliseconds,
+                                        now = now
+                                    )
                                 ) {
-                                    continue
-                                }
-                                if (!isVisibleInvitationHistory(status, invitation.updatedAtEpochMilliseconds, now)) {
                                     continue
                                 }
 
@@ -262,6 +264,29 @@ class DirectIdentityExchangeRepositoryImpl(
                     .mapTo(mutableSetOf(), IdentityInvitationEntity::contactId)
             }
             .distinctUntilChanged()
+
+    override suspend fun applyResponse(
+        invitationId: String,
+        response: InvitationResponse
+    ): Result<Unit> =
+        safeSuspendCall {
+            require(invitationId.isNotBlank()) { "Invitation ID must not be blank" }
+
+            mutex.withLock {
+                val invitation = invitationDao.findById(invitationId) ?: return@withLock
+                check(invitation.direction == InvitationDirection.OUTGOING.name) {
+                    "Only outgoing invitations can receive a remote response"
+                }
+
+                if (response == InvitationResponse.ACCEPTED && invitation.hiddenAtEpochMilliseconds == null) {
+                    invitationDao.upsert(
+                        invitation.copy(
+                            hiddenAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+                        )
+                    )
+                }
+            }
+        }
 
     override suspend fun markViewed(direction: InvitationDirection): Result<Unit> =
         safeSuspendCall {
@@ -324,7 +349,7 @@ class DirectIdentityExchangeRepositoryImpl(
         }
     }
 
-    override suspend fun getContactId(invitationId: String): Result<String> =
+    override suspend fun getPeerId(invitationId: String): Result<String> =
         safeSuspendCall {
             require(invitationId.isNotBlank()) {
                 "Invitation ID must not be blank"
@@ -610,9 +635,9 @@ class DirectIdentityExchangeRepositoryImpl(
     override suspend fun receiveInvite(
         context: IncomingPacketContext,
         packet: ContactInvitePacket,
-        setupMode: DirectIdentitySetupMode,
-        blockedContactIds: Set<String>,
-        blockUnknownContactInvites: Boolean
+        receptionEnabled: Boolean,
+        blockedPeerIds: Set<String>,
+        blockUnknownPeers: Boolean
     ): Result<Unit> =
         safeSuspendCall {
             mutex.withLock {
@@ -673,8 +698,8 @@ class DirectIdentityExchangeRepositoryImpl(
                 if (
                     shouldAutomaticallyDecline(
                         contactId = contactId,
-                        blockedContactIds = blockedContactIds,
-                        blockUnknownContactInvites = blockUnknownContactInvites
+                        blockedPeerIds = blockedPeerIds,
+                        blockUnknownPeers = blockUnknownPeers
                     )
                 ) {
                     queueDecline(
@@ -685,7 +710,7 @@ class DirectIdentityExchangeRepositoryImpl(
                     return@withLock
                 }
 
-                if (setupMode == DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING) {
+                if (!receptionEnabled) {
                     queueDecline(
                         contactId = contactId,
                         invitationId = packet.invitationId,
@@ -1906,13 +1931,13 @@ class DirectIdentityExchangeRepositoryImpl(
 
     private suspend fun shouldAutomaticallyDecline(
         contactId: String,
-        blockedContactIds: Set<String>,
-        blockUnknownContactInvites: Boolean
+        blockedPeerIds: Set<String>,
+        blockUnknownPeers: Boolean
     ): Boolean {
-        if (contactId in blockedContactIds) {
+        if (contactId in blockedPeerIds) {
             return true
         }
-        if (!blockUnknownContactInvites) {
+        if (!blockUnknownPeers) {
             return false
         }
 
@@ -1967,11 +1992,8 @@ class DirectIdentityExchangeRepositoryImpl(
                     when (invitation.state) {
                         IdentityHandshakeState.INVITE_SENT.name,
                         IdentityHandshakeState.AWAITING_ACCEPTANCE.name -> invitation.expiresAtEpochMilliseconds
-                        IdentityHandshakeState.MUTUAL_UNVERIFIED.name,
-                        IdentityHandshakeState.DECLINED.name,
-                        IdentityHandshakeState.EXPIRED.name,
-                        IdentityHandshakeState.FAILED.name ->
-                            invitation.updatedAtEpochMilliseconds + INVITATION_HISTORY_RETENTION_MILLISECONDS
+                        IdentityHandshakeState.DECLINED.name ->
+                            invitation.updatedAtEpochMilliseconds + DECLINED_INVITATION_RETENTION_MILLISECONDS
                         else -> null
                     }
                 wakeAt?.takeIf { it > now }
@@ -1980,16 +2002,11 @@ class DirectIdentityExchangeRepositoryImpl(
     private fun visibleInvitationStates(direction: InvitationDirection): List<String> =
         when (direction) {
             InvitationDirection.INCOMING ->
-                listOf(
-                    IdentityHandshakeState.AWAITING_ACCEPTANCE.name,
-                    IdentityHandshakeState.ACCEPTANCE_SENT.name
-                )
+                listOf(IdentityHandshakeState.AWAITING_ACCEPTANCE.name)
             InvitationDirection.OUTGOING ->
                 listOf(
                     IdentityHandshakeState.INVITE_SENT.name,
-                    IdentityHandshakeState.DECLINED.name,
-                    IdentityHandshakeState.EXPIRED.name,
-                    IdentityHandshakeState.FAILED.name
+                    IdentityHandshakeState.DECLINED.name
                 )
         }
 
@@ -2026,13 +2043,21 @@ class DirectIdentityExchangeRepositoryImpl(
             else -> null
         }
 
-    private fun isVisibleInvitationHistory(
+    private fun isVisibleInvitation(
+        direction: InvitationDirection,
         status: InvitationStatus,
         updatedAtEpochMilliseconds: Long,
         now: Long
     ): Boolean =
-        status == InvitationStatus.PENDING ||
-            now - updatedAtEpochMilliseconds < INVITATION_HISTORY_RETENTION_MILLISECONDS
+        when (direction) {
+            InvitationDirection.INCOMING -> status == InvitationStatus.PENDING
+            InvitationDirection.OUTGOING ->
+                status == InvitationStatus.PENDING ||
+                    (
+                        status == InvitationStatus.DECLINED &&
+                            now - updatedAtEpochMilliseconds < DECLINED_INVITATION_RETENTION_MILLISECONDS
+                    )
+        }
 
     private suspend fun toInvitation(
         invitation: IdentityInvitationEntity,
@@ -2070,8 +2095,12 @@ class DirectIdentityExchangeRepositoryImpl(
             expiresAtEpochMilliseconds = invitation.expiresAtEpochMilliseconds,
             updatedAtEpochMilliseconds = invitation.updatedAtEpochMilliseconds,
             hasUnreadUpdate =
-                viewedAtEpochMilliseconds == null ||
-                    invitation.updatedAtEpochMilliseconds > viewedAtEpochMilliseconds
+                direction == InvitationDirection.INCOMING &&
+                    status == InvitationStatus.PENDING &&
+                    (
+                        viewedAtEpochMilliseconds == null ||
+                            invitation.updatedAtEpochMilliseconds > viewedAtEpochMilliseconds
+                    )
         )
     }
 
@@ -2080,7 +2109,7 @@ class DirectIdentityExchangeRepositoryImpl(
         const val CHALLENGE_SIZE = 32
         const val INVITATION_LIFETIME_MILLISECONDS = 24L * 60L * 60L * 1_000L
         const val INVITATION_RESTART_GRACE_MILLISECONDS = 5L * 1_000L
-        const val INVITATION_HISTORY_RETENTION_MILLISECONDS = 24L * 60L * 60L * 1_000L
+        const val DECLINED_INVITATION_RETENTION_MILLISECONDS = 24L * 60L * 60L * 1_000L
         const val MAX_CLOCK_SKEW_MILLISECONDS = 5L * 60L * 1_000L
         const val MAXIMUM_COUNTRY_CODE_DIGITS = 3
         const val MINIMUM_COUNTRY_CODE_DIGITS = 1

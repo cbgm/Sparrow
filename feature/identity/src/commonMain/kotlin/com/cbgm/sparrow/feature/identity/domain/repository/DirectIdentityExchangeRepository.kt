@@ -19,8 +19,6 @@ interface DirectIdentityExchangeRepository {
 
     fun observeState(contactId: String): Flow<IdentityHandshakeState?>
 
-    suspend fun getContactId(invitationId: String): Result<String>
-
     suspend fun cancelForManualSetup(contactId: String): Result<Unit>
 
     suspend fun requireDirectChatAuthorization(
@@ -33,9 +31,9 @@ interface DirectIdentityExchangeRepository {
     suspend fun receiveInvite(
         context: IncomingPacketContext,
         packet: ContactInvitePacket,
-        setupMode: DirectIdentitySetupMode,
-        blockedContactIds: Set<String>,
-        blockUnknownContactInvites: Boolean
+        receptionEnabled: Boolean,
+        blockedPeerIds: Set<String>,
+        blockUnknownPeers: Boolean
     ): Result<Unit>
 
     suspend fun receiveAccepted(

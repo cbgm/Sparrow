@@ -1,8 +1,13 @@
 package com.cbgm.sparrow.feature.invite.di
 
+import com.cbgm.sparrow.feature.invite.data.policy.InvitationPolicyImpl
+import com.cbgm.sparrow.feature.invite.domain.policy.InvitationPolicy
 import com.cbgm.sparrow.feature.invite.domain.usecase.AcceptInvitationUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineAndBlockInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.DeleteDeclinedOutgoingInvitationUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.HandleIncomingInvitationUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.HandleInvitationResponseUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.MarkInvitationsViewedUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationsContextUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationsUseCase
@@ -12,8 +17,24 @@ import org.koin.dsl.module
 
 val inviteModule =
     module {
+        single<InvitationPolicy> {
+            InvitationPolicyImpl(
+                repository = get(),
+                provider = get()
+            )
+        }
+
         factory { AcceptInvitationUseCase(repository = get(), policy = get()) }
         factory { DeclineInvitationUseCase(repository = get()) }
+        factory {
+            DeclineAndBlockInvitationUseCase(
+                repository = get(),
+                declineInvitation = get(),
+                policyProvider = get()
+            )
+        }
+        factory { HandleIncomingInvitationUseCase(policy = get()) }
+        factory { HandleInvitationResponseUseCase(repository = get()) }
         factory { MarkInvitationsViewedUseCase(repository = get()) }
         factory { ObserveInvitationsUseCase(repository = get(), policy = get()) }
         factory { DeleteDeclinedOutgoingInvitationUseCase(repository = get()) }

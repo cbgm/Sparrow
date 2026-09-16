@@ -211,8 +211,6 @@ private object TestDirectIdentityExchangeRepository : DirectIdentityExchangeRepo
         contactId: String
     ): Flow<com.cbgm.sparrow.feature.identity.domain.model.IdentityHandshakeState?> = emptyFlow()
 
-    override suspend fun getContactId(invitationId: String): Result<String> = error("Not used")
-
     override suspend fun cancelForManualSetup(contactId: String): Result<Unit> = Result.success(Unit)
 
     override suspend fun requireDirectChatAuthorization(
@@ -225,9 +223,9 @@ private object TestDirectIdentityExchangeRepository : DirectIdentityExchangeRepo
     override suspend fun receiveInvite(
         context: com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext,
         packet: com.cbgm.sparrow.core.protocol.packet.ContactInvitePacket,
-        setupMode: com.cbgm.sparrow.core.security.DirectIdentitySetupMode,
-        blockedContactIds: Set<String>,
-        blockUnknownContactInvites: Boolean
+        receptionEnabled: Boolean,
+        blockedPeerIds: Set<String>,
+        blockUnknownPeers: Boolean
     ): Result<Unit> = error("Not used")
 
     override suspend fun receiveAccepted(

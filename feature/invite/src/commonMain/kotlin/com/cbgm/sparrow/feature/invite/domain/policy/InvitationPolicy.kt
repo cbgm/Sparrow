@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.invite.domain.policy
 
 import com.cbgm.sparrow.feature.invite.domain.model.Invitation
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationReceptionPolicy
 import kotlinx.coroutines.flow.Flow
 
 interface InvitationPolicy {
@@ -11,6 +12,8 @@ interface InvitationPolicy {
     ): Flow<List<Invitation>>
 
     fun observePendingEnabled(): Flow<Boolean>
+
+    suspend fun getReceptionPolicy(): InvitationReceptionPolicy
 
     suspend fun validateAcceptance(invitationId: String): Result<Unit>
 }
