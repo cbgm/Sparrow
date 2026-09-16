@@ -1,15 +1,15 @@
-package com.cbgm.sparrow.feature.contacts.adapter
+package com.cbgm.sparrow.feature.invite.data.protocol.handler
 
 import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.handler.TypedProtocolPacketHandler
 import com.cbgm.sparrow.core.protocol.packet.ContactInvitePacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
-import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
+import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPacketProcessor
 import com.cbgm.sparrow.feature.invite.domain.usecase.HandleIncomingInvitationUseCase
 
-class ContactInvitePacketHandler(
+class IncomingInvitationPacketHandler(
     private val handleIncomingInvitation: HandleIncomingInvitationUseCase,
-    private val directIdentityExchangeRepository: DirectIdentityExchangeRepository
+    private val invitationPacketProcessor: InvitationPacketProcessor
 ) : TypedProtocolPacketHandler {
     override fun canHandle(packet: SparrowPacket): Boolean = packet is ContactInvitePacket
 
@@ -19,10 +19,10 @@ class ContactInvitePacketHandler(
     ): Result<Unit> {
         val invitePacket =
             packet as? ContactInvitePacket
-                ?: error("Incompatible contact invite packet")
+                ?: error("Incompatible invitation packet")
 
         return handleIncomingInvitation { receptionPolicy ->
-            directIdentityExchangeRepository.receiveInvite(
+            invitationPacketProcessor.receiveInvite(
                 context = context,
                 packet = invitePacket,
                 receptionEnabled = receptionPolicy.enabled,

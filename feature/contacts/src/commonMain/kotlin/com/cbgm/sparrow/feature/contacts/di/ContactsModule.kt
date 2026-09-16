@@ -3,9 +3,6 @@ package com.cbgm.sparrow.feature.contacts.di
 import com.cbgm.sparrow.core.protocol.handler.TypedProtocolPacketHandler
 import com.cbgm.sparrow.core.protocol.identity.LocalIdentityChangeHandler
 import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
-import com.cbgm.sparrow.feature.contacts.adapter.ContactInviteAcceptedPacketHandler
-import com.cbgm.sparrow.feature.contacts.adapter.ContactInviteDeclinedPacketHandler
-import com.cbgm.sparrow.feature.contacts.adapter.ContactInvitePacketHandler
 import com.cbgm.sparrow.feature.contacts.adapter.ContactLocalIdentityChangeHandler
 import com.cbgm.sparrow.feature.contacts.adapter.ContactReadyPacketHandler
 import com.cbgm.sparrow.feature.contacts.adapter.ContactVerificationReceiptPacketHandler
@@ -52,6 +49,7 @@ import com.cbgm.sparrow.feature.contacts.presentation.overview.ContactsViewModel
 import com.cbgm.sparrow.feature.contacts.util.ContactVerificationPayloadEncoder
 import com.cbgm.sparrow.feature.contacts.util.IdentityInvitationPayloadEncoder
 import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
+import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPacketProcessor
 import com.cbgm.sparrow.feature.invite.domain.policy.InvitationPolicyProvider
 import com.cbgm.sparrow.feature.invite.domain.repository.InvitationRepository
 import org.koin.core.module.dsl.bind
@@ -129,6 +127,9 @@ val contactsModule =
         single<InvitationRepository> {
             get<DirectIdentityExchangeRepositoryImpl>()
         }
+        single<InvitationPacketProcessor> {
+            get<DirectIdentityExchangeRepositoryImpl>()
+        }
         single<InvitationPolicyProvider> {
             InvitationPolicyProviderImpl(
                 modeRepository = get(),
@@ -164,19 +165,7 @@ val contactsModule =
             )
         }
 
-        singleOf(::ContactInvitePacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-
-        singleOf(::ContactInviteAcceptedPacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-
         singleOf(::ContactReadyPacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-
-        singleOf(::ContactInviteDeclinedPacketHandler) {
             bind<TypedProtocolPacketHandler>()
         }
 

@@ -43,6 +43,7 @@ import com.cbgm.sparrow.feature.contacts.domain.model.RemoteIdentityOrigin
 import com.cbgm.sparrow.feature.contacts.util.IdentityInvitationPayloadEncoder
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityHandshakeState
 import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
+import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPacketProcessor
 import com.cbgm.sparrow.feature.invite.domain.model.Invitation
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
@@ -79,7 +80,8 @@ class DirectIdentityExchangeRepositoryImpl(
     private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
     private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor
 ) : DirectIdentityExchangeRepository,
-    InvitationRepository {
+    InvitationRepository,
+    InvitationPacketProcessor {
     private val logger = SparrowLog.withTag("DirectIdentityExchangeRepositoryImpl")
 
     private val mutex = Mutex()

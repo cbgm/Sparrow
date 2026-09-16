@@ -1,16 +1,16 @@
-package com.cbgm.sparrow.feature.contacts.adapter
+package com.cbgm.sparrow.feature.invite.data.protocol.handler
 
 import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.handler.TypedProtocolPacketHandler
 import com.cbgm.sparrow.core.protocol.packet.ContactInviteAcceptedPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
-import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
+import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPacketProcessor
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
 import com.cbgm.sparrow.feature.invite.domain.usecase.HandleInvitationResponseUseCase
 
-class ContactInviteAcceptedPacketHandler(
+class InvitationAcceptedPacketHandler(
     private val handleInvitationResponse: HandleInvitationResponseUseCase,
-    private val directIdentityExchangeRepository: DirectIdentityExchangeRepository
+    private val invitationPacketProcessor: InvitationPacketProcessor
 ) : TypedProtocolPacketHandler {
     override fun canHandle(packet: SparrowPacket): Boolean = packet is ContactInviteAcceptedPacket
 
@@ -20,13 +20,13 @@ class ContactInviteAcceptedPacketHandler(
     ): Result<Unit> {
         val acceptedPacket =
             packet as? ContactInviteAcceptedPacket
-                ?: error("Incompatible contact acceptance packet")
+                ?: error("Incompatible invitation acceptance packet")
 
         return handleInvitationResponse(
             invitationId = acceptedPacket.invitationId,
             response = InvitationResponse.ACCEPTED,
             applyResponseEffects = {
-                directIdentityExchangeRepository.receiveAccepted(
+                invitationPacketProcessor.receiveAccepted(
                     context = context,
                     packet = acceptedPacket
                 )

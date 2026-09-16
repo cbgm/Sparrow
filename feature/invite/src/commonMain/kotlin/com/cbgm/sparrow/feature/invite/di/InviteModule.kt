@@ -1,6 +1,10 @@
 package com.cbgm.sparrow.feature.invite.di
 
+import com.cbgm.sparrow.core.protocol.handler.TypedProtocolPacketHandler
 import com.cbgm.sparrow.feature.invite.data.policy.InvitationPolicyImpl
+import com.cbgm.sparrow.feature.invite.data.protocol.handler.IncomingInvitationPacketHandler
+import com.cbgm.sparrow.feature.invite.data.protocol.handler.InvitationAcceptedPacketHandler
+import com.cbgm.sparrow.feature.invite.data.protocol.handler.InvitationDeclinedPacketHandler
 import com.cbgm.sparrow.feature.invite.domain.policy.InvitationPolicy
 import com.cbgm.sparrow.feature.invite.domain.usecase.AcceptInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineAndBlockInvitationUseCase
@@ -13,6 +17,8 @@ import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationsContextU
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationsUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObservePendingInvitationCountUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObservePendingInvitationsUseCase
+import org.koin.core.module.dsl.bind
+import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 
 val inviteModule =
@@ -47,4 +53,14 @@ val inviteModule =
         }
         factory { ObservePendingInvitationCountUseCase(observePendingInvitations = get()) }
         factory { ObserveInvitationsContextUseCase(observeInvitations = get()) }
+
+        singleOf(::IncomingInvitationPacketHandler) {
+            bind<TypedProtocolPacketHandler>()
+        }
+        singleOf(::InvitationAcceptedPacketHandler) {
+            bind<TypedProtocolPacketHandler>()
+        }
+        singleOf(::InvitationDeclinedPacketHandler) {
+            bind<TypedProtocolPacketHandler>()
+        }
     }
