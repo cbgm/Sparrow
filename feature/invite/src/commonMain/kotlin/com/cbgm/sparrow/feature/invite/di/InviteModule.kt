@@ -1,19 +1,15 @@
 package com.cbgm.sparrow.feature.invite.di
 
 import com.cbgm.sparrow.core.protocol.handler.TypedProtocolPacketHandler
-import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
-import com.cbgm.sparrow.feature.invite.data.direct.DirectIdentityExchangeCoordinator
-import com.cbgm.sparrow.feature.invite.data.direct.DirectIdentityExchangeRepositoryImpl
-import com.cbgm.sparrow.feature.invite.data.event.InvitationResultStreamImpl
 import com.cbgm.sparrow.feature.invite.data.group.GroupInvitationLifecycleCoordinator
+import com.cbgm.sparrow.feature.invite.data.group.GroupInvitationLifecycleDataSource
 import com.cbgm.sparrow.feature.invite.data.group.GroupInviteDeclinedIncomingProcessor
 import com.cbgm.sparrow.feature.invite.data.group.GroupInviteIncomingProcessor
 import com.cbgm.sparrow.feature.invite.data.group.GroupInviteReceivedIncomingProcessor
 import com.cbgm.sparrow.feature.invite.data.group.GroupJoinRequestIncomingProcessor
+import com.cbgm.sparrow.feature.invite.data.lifecycle.InvitationLifecycleDataSource
 import com.cbgm.sparrow.feature.invite.data.outbox.InvitationOutboxDeliveryHandler
 import com.cbgm.sparrow.feature.invite.data.policy.InvitationPolicyImpl
-import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPacketProcessor
-import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPacketProcessorImpl
 import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPayloadEncoder
 import com.cbgm.sparrow.feature.invite.data.protocol.handler.GroupInviteDeclinedPacketHandler
 import com.cbgm.sparrow.feature.invite.data.protocol.handler.GroupInvitePacketHandler
@@ -23,7 +19,6 @@ import com.cbgm.sparrow.feature.invite.data.protocol.handler.IncomingInvitationP
 import com.cbgm.sparrow.feature.invite.data.protocol.handler.InvitationAcceptedPacketHandler
 import com.cbgm.sparrow.feature.invite.data.protocol.handler.InvitationDeclinedPacketHandler
 import com.cbgm.sparrow.feature.invite.data.repository.InvitationRepositoryImpl
-import com.cbgm.sparrow.feature.invite.domain.event.InvitationResultStream
 import com.cbgm.sparrow.feature.invite.domain.policy.InvitationPolicy
 import com.cbgm.sparrow.feature.invite.domain.repository.InvitationRepository
 import com.cbgm.sparrow.feature.invite.domain.usecase.AcceptInvitationUseCase
@@ -33,6 +28,7 @@ import com.cbgm.sparrow.feature.invite.domain.usecase.DeleteDeclinedOutgoingInvi
 import com.cbgm.sparrow.feature.invite.domain.usecase.HandleIncomingInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.HandleInvitationResponseUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.MarkInvitationsViewedUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationResultsUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationsContextUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationsUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObservePendingInvitationCountUseCase
@@ -54,50 +50,19 @@ val inviteModule =
         singleOf(::GroupInvitationLifecycleCoordinator)
         singleOf(::InvitationOutboxDeliveryHandler)
 
-        single {
-            DirectIdentityExchangeCoordinator(
-                invitationDao = get(),
-                contactDao = get(),
-                contactRoutingIdDao = get(),
-                contactKeyExchangeDataSource = get(),
-                localPublicIdentityProvider = get(),
-                localSigningKeyPairProvider = get(),
-                detachedSignatureCrypto = get(),
-                secureRandomGenerator = get(),
-                payloadEncoder = get(),
-                protocolOutbox = get(),
-                localPhoneNumberProvider = get(),
-                phoneNumberNormalizer = get(),
-                contactVerificationDataSource = get(),
-                localProfilePictureMetadataProvider = get(),
-                remoteProfilePictureMetadataProcessor = get()
-            )
-        }
-
-        single<DirectIdentityExchangeRepository> {
-            DirectIdentityExchangeRepositoryImpl(coordinator = get())
+        singleOf(::GroupInvitationLifecycleDataSource) {
+            bind<InvitationLifecycleDataSource>()
         }
         single<InvitationRepository> {
-            InvitationRepositoryImpl(
-                directCoordinator = get(),
-                groupCoordinator = get()
-            )
-        }
-        single<InvitationPacketProcessor> {
-            InvitationPacketProcessorImpl(coordinator = get())
+            InvitationRepositoryImpl(lifecycleDataSources = getAll())
         }
 
         single<InvitationPolicy> {
             InvitationPolicyImpl(
                 repository = get(),
-                modeRepository = get(),
-                contactBlocklistRepository = get()
+                provider = get()
             )
         }
-        single<InvitationResultStream> {
-            InvitationResultStreamImpl(repository = get())
-        }
-
         factory { AcceptInvitationUseCase(repository = get(), policy = get()) }
         factory { DeclineInvitationUseCase(repository = get()) }
         factory { DeclineAndBlockInvitationUseCase(repository = get()) }
@@ -106,6 +71,7 @@ val inviteModule =
         factory { MarkInvitationsViewedUseCase(repository = get()) }
         factory { SendInvitationUseCase(repository = get()) }
         factory { ObserveInvitationsUseCase(repository = get(), policy = get()) }
+        factory { ObserveInvitationResultsUseCase(repository = get()) }
         factory { DeleteDeclinedOutgoingInvitationUseCase(repository = get()) }
 
         factory {

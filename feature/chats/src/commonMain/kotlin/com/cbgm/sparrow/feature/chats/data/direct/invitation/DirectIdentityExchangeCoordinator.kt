@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.invite.data.direct
+package com.cbgm.sparrow.feature.chats.data.direct.invitation
 
 import com.cbgm.sparrow.core.crypto.random.SecureRandomGenerator
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
@@ -32,6 +32,7 @@ import com.cbgm.sparrow.data.database.dao.IdentityInvitationDao
 import com.cbgm.sparrow.data.database.entity.ContactPhoneNumberEntity
 import com.cbgm.sparrow.data.database.entity.ContactRoutingIdEntity
 import com.cbgm.sparrow.data.database.entity.IdentityInvitationEntity
+import com.cbgm.sparrow.feature.chats.data.direct.authorization.DirectAuthorizationPayloadEncoder
 import com.cbgm.sparrow.feature.identity.data.datasource.ContactKeyExchangeDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.ContactVerificationDataSource
 import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
@@ -71,6 +72,7 @@ internal class DirectIdentityExchangeCoordinator(
     private val detachedSignatureCrypto: DetachedSignatureCrypto,
     private val secureRandomGenerator: SecureRandomGenerator,
     private val payloadEncoder: InvitationPayloadEncoder,
+    private val authorizationPayloadEncoder: DirectAuthorizationPayloadEncoder,
     private val protocolOutbox: ProtocolOutbox,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
     private val phoneNumberNormalizer: PhoneNumberNormalizer,
@@ -1200,7 +1202,7 @@ internal class DirectIdentityExchangeCoordinator(
                 }
 
                 val payload =
-                    payloadEncoder.encodeDirectChatAuthorizationRevoked(
+                    authorizationPayloadEncoder.encodeRevoked(
                         packetId = packet.packetId,
                         version = packet.version,
                         invitationId = packet.invitationId,
@@ -1918,7 +1920,7 @@ internal class DirectIdentityExchangeCoordinator(
         val revokedAt = SystemClock.nowEpochMilliseconds()
         val packetId = authorizationRevokedPacketId(invitation.invitationId)
         val payload =
-            payloadEncoder.encodeDirectChatAuthorizationRevoked(
+            authorizationPayloadEncoder.encodeRevoked(
                 packetId = packetId,
                 version = ProtocolVersion.CURRENT,
                 invitationId = invitation.invitationId,

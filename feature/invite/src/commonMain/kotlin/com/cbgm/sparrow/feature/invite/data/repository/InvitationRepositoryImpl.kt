@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.feature.invite.data.repository
 
-import com.cbgm.sparrow.feature.invite.data.direct.DirectIdentityExchangeCoordinator
-import com.cbgm.sparrow.feature.invite.data.group.GroupInvitationLifecycleCoordinator
+import com.cbgm.sparrow.feature.invite.data.lifecycle.InvitationLifecycleDataSource
 import com.cbgm.sparrow.feature.invite.domain.model.Invitation
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationPayloadType
@@ -13,96 +12,88 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
 internal class InvitationRepositoryImpl(
-    private val directCoordinator: DirectIdentityExchangeCoordinator,
-    private val groupCoordinator: GroupInvitationLifecycleCoordinator
+    lifecycleDataSources: List<InvitationLifecycleDataSource>
 ) : InvitationRepository {
+    private val dataSourcesByPayloadType = lifecycleDataSources.associateBy { it.payloadType }
+
+    init {
+        require(dataSourcesByPayloadType.size == lifecycleDataSources.size) {
+            "Only one invitation lifecycle data source may be registered per payload type"
+        }
+    }
+
     override fun observeInvitations(direction: InvitationDirection): Flow<List<Invitation>> =
         combine(
-            directCoordinator.observeInvitations(direction),
-            groupCoordinator.observeInvitations(direction)
+            dataSource(InvitationPayloadType.DIRECT).observeInvitations(direction),
+            dataSource(InvitationPayloadType.GROUP).observeInvitations(direction)
         ) { direct, group ->
             (direct + group).sortedByDescending(Invitation::updatedAtEpochMilliseconds)
         }
 
     override fun observeInvitationResults(): Flow<List<InvitationResult>> =
         combine(
-            directCoordinator.observeInvitationResults(),
-            groupCoordinator.observeInvitationResults()
+            dataSource(InvitationPayloadType.DIRECT).observeInvitationResults(),
+            dataSource(InvitationPayloadType.GROUP).observeInvitationResults()
         ) { direct, group -> direct + group }
 
     override suspend fun getPeerId(invitationId: String): Result<String> =
-        if (directCoordinator.containsInvitation(invitationId)) {
-            directCoordinator.getPeerId(invitationId)
-        } else {
-            groupCoordinator.getPeerId(invitationId)
-        }
+        findDataSource(invitationId)
+            .getOrElse { return Result.failure(it) }
+            .getPeerId(invitationId)
 
     override suspend fun getPayloadType(invitationId: String): Result<InvitationPayloadType> =
-        runCatching {
-            if (directCoordinator.containsInvitation(invitationId)) {
-                InvitationPayloadType.DIRECT
-            } else if (groupCoordinator.contains(invitationId)) {
-                InvitationPayloadType.GROUP
-            } else {
-                error("Invitation was not found")
-            }
-        }
+        findDataSource(invitationId).map { dataSource -> dataSource.payloadType }
 
     override suspend fun send(
         payloadType: InvitationPayloadType,
         payloadId: String,
         peerIds: Set<String>
-    ): Result<Unit> =
-        when (payloadType) {
-            InvitationPayloadType.DIRECT ->
-                runCatching {
-                    require(peerIds.size == 1) { "A direct invitation requires exactly one peer" }
-                    val peerId = peerIds.single()
-                    require(payloadId == peerId) { "Direct invitation payload ID must match its peer ID" }
-                    directCoordinator.start(peerId).getOrThrow()
-                }
-
-            InvitationPayloadType.GROUP -> groupCoordinator.send(payloadId, peerIds)
-        }
+    ): Result<Unit> = dataSource(payloadType).send(payloadId, peerIds)
 
     override suspend fun accept(invitationId: String): Result<Unit> =
-        if (directCoordinator.containsInvitation(invitationId)) {
-            directCoordinator.accept(invitationId)
-        } else {
-            groupCoordinator.accept(invitationId)
-        }
+        findDataSource(invitationId)
+            .getOrElse { return Result.failure(it) }
+            .accept(invitationId)
 
     override suspend fun decline(
         invitationId: String,
         action: InvitationResultAction?
     ): Result<Unit> =
-        if (directCoordinator.containsInvitation(invitationId)) {
-            directCoordinator.decline(invitationId, action)
-        } else {
-            if (action != null) {
-                Result.failure(IllegalArgumentException("Group invitations do not support decline-and-block"))
-            } else {
-                groupCoordinator.decline(invitationId)
-            }
-        }
+        findDataSource(invitationId)
+            .getOrElse { return Result.failure(it) }
+            .decline(invitationId, action)
 
     override suspend fun applyResponse(
         invitationId: String,
         response: InvitationResponse
     ): Result<Unit> =
-        if (directCoordinator.containsInvitation(invitationId)) {
-            directCoordinator.applyResponse(invitationId, response)
-        } else {
-            Result.failure(IllegalArgumentException("Group invitation responses are handled by group packet processors"))
-        }
+        findDataSource(invitationId)
+            .getOrElse { return Result.failure(it) }
+            .applyResponse(invitationId, response)
 
-    override suspend fun markViewed(direction: InvitationDirection): Result<Unit> =
-        directCoordinator.markViewed(direction)
+    override suspend fun markViewed(direction: InvitationDirection): Result<Unit> {
+        for (dataSource in dataSourcesByPayloadType.values) {
+            val result = dataSource.markViewed(direction)
+            if (result.isFailure) return result
+        }
+        return Result.success(Unit)
+    }
 
     override suspend fun deleteDeclinedOutgoing(invitationId: String): Result<Unit> =
-        if (directCoordinator.containsInvitation(invitationId)) {
-            directCoordinator.deleteDeclinedOutgoing(invitationId)
-        } else {
-            groupCoordinator.deleteDeclinedOutgoing(invitationId)
+        findDataSource(invitationId)
+            .getOrElse { return Result.failure(it) }
+            .deleteDeclinedOutgoing(invitationId)
+
+    private fun dataSource(payloadType: InvitationPayloadType): InvitationLifecycleDataSource =
+        dataSourcesByPayloadType[payloadType]
+            ?: error("No invitation lifecycle data source registered for $payloadType")
+
+    private suspend fun findDataSource(invitationId: String): Result<InvitationLifecycleDataSource> =
+        runCatching {
+            require(invitationId.isNotBlank()) { "Invitation ID must not be blank" }
+            for (dataSource in dataSourcesByPayloadType.values) {
+                if (dataSource.contains(invitationId)) return@runCatching dataSource
+            }
+            error("Invitation was not found: $invitationId")
         }
 }

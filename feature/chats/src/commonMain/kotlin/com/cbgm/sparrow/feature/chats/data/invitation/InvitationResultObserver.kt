@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.data.invitation
+package com.cbgm.sparrow.feature.chats.data.invitation
 
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.security.ContactBlocklistRepository
@@ -6,18 +6,18 @@ import com.cbgm.sparrow.feature.chats.data.direct.outgoing.DirectPendingAuthoriz
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ActivateAuthorizedDirectConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.DiscardPendingAuthorizationMessagesUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.BlockContactUseCase
-import com.cbgm.sparrow.feature.invite.domain.event.InvitationResultStream
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationPayloadType
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResultAction
+import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationResultsUseCase
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class InvitationResultObserver(
-    private val invitationResultStream: InvitationResultStream,
+    private val observeInvitationResults: ObserveInvitationResultsUseCase,
     private val contactBlocklistRepository: ContactBlocklistRepository,
     private val blockContact: BlockContactUseCase,
     private val activateAuthorizedDirectConversation: ActivateAuthorizedDirectConversationUseCase,
@@ -35,7 +35,7 @@ class InvitationResultObserver(
         }
 
     private suspend fun observeAccepted() {
-        invitationResultStream.observeInvitationResults()
+        observeInvitationResults()
             .map { results ->
                 results
                     .asSequence()
@@ -59,7 +59,7 @@ class InvitationResultObserver(
     }
 
     private suspend fun observeOutgoingDeclined() {
-        invitationResultStream.observeInvitationResults()
+        observeInvitationResults()
             .map { results ->
                 results
                     .asSequence()
@@ -84,7 +84,7 @@ class InvitationResultObserver(
     }
 
     private suspend fun observeBlockRequested() {
-        invitationResultStream.observeInvitationResults()
+        observeInvitationResults()
             .map { results ->
                 results
                     .asSequence()

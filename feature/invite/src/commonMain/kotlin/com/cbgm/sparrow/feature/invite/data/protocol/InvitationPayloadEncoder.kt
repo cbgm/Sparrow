@@ -100,24 +100,6 @@ class InvitationPayloadEncoder {
             declinerSigningPublicKey
         )
 
-    fun encodeDirectChatAuthorizationRevoked(
-        packetId: String,
-        version: Int,
-        invitationId: String,
-        revokedAtEpochMilliseconds: Long,
-        inviteChallenge: ByteArray,
-        revokerSigningPublicKey: ByteArray
-    ): ByteArray =
-        encode(
-            domainSeparator = "Sparrow.DirectChatAuthorizationRevoked",
-            packetId.encodeToByteArray(),
-            ByteArrays.encodeInt(version),
-            invitationId.encodeToByteArray(),
-            ByteArrays.encodeLong(revokedAtEpochMilliseconds),
-            inviteChallenge,
-            revokerSigningPublicKey
-        )
-
     private fun encode(
         domainSeparator: String,
         vararg fields: ByteArray

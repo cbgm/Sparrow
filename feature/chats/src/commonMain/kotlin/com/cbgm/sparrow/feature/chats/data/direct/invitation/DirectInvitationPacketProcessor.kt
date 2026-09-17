@@ -1,12 +1,12 @@
-package com.cbgm.sparrow.feature.invite.data.protocol
+package com.cbgm.sparrow.feature.chats.data.direct.invitation
 
 import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.packet.ContactInviteAcceptedPacket
 import com.cbgm.sparrow.core.protocol.packet.ContactInviteDeclinedPacket
 import com.cbgm.sparrow.core.protocol.packet.ContactInvitePacket
-import com.cbgm.sparrow.feature.invite.data.direct.DirectIdentityExchangeCoordinator
+import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPacketProcessor
 
-internal class InvitationPacketProcessorImpl(
+internal class DirectInvitationPacketProcessor(
     private val coordinator: DirectIdentityExchangeCoordinator
 ) : InvitationPacketProcessor {
     override suspend fun receiveInvite(

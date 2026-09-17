@@ -1,18 +1,15 @@
 package com.cbgm.sparrow.di
 
 import com.cbgm.sparrow.core.coroutines.ApplicationCoroutineScope
-import com.cbgm.sparrow.data.invitation.InvitationResultObserver
 import com.cbgm.sparrow.presentation.AppViewModel
 import com.cbgm.sparrow.presentation.model.AppInitializationDependencies
 import com.cbgm.sparrow.presentation.model.ForegroundRuntimeDependencies
-import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val sharedModule =
     module {
         single { ApplicationCoroutineScope() }
-        singleOf(::InvitationResultObserver)
 
         single {
             AppInitializationDependencies(

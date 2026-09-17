@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.invite.data.direct
+package com.cbgm.sparrow.feature.chats.data.direct.invitation
 
 import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.packet.ContactReadyPacket

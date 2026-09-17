@@ -1,13 +1,12 @@
-package com.cbgm.sparrow.feature.invite.data.event
+package com.cbgm.sparrow.feature.invite.domain.usecase
 
-import com.cbgm.sparrow.feature.invite.domain.event.InvitationResultStream
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResult
 import com.cbgm.sparrow.feature.invite.domain.repository.InvitationRepository
 import kotlinx.coroutines.flow.Flow
 
-class InvitationResultStreamImpl(
+class ObserveInvitationResultsUseCase(
     private val repository: InvitationRepository
-) : InvitationResultStream {
-    override fun observeInvitationResults(): Flow<List<InvitationResult>> =
+) {
+    operator fun invoke(): Flow<List<InvitationResult>> =
         repository.observeInvitationResults()
 }

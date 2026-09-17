@@ -5,7 +5,7 @@ import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
 import com.cbgm.sparrow.core.transport.ControlPlaneDirectorySynchronizer
 import com.cbgm.sparrow.core.transport.ControlPlaneHealthMonitor
 import com.cbgm.sparrow.core.transport.ControlPlaneStatusStore
-import com.cbgm.sparrow.data.invitation.InvitationResultObserver
+import com.cbgm.sparrow.feature.chats.data.invitation.InvitationResultObserver
 import com.cbgm.sparrow.feature.contacts.domain.repository.DeviceContactsPermissionRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportDeviceContactsUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalIdentityReadyUseCase
