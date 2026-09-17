@@ -1,20 +1,20 @@
 package com.cbgm.sparrow.feature.chats.data.group.verification
 
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
+import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationDirection
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 
 internal class GroupVerificationState(
     private val groupVerificationDao: GroupVerificationDao,
-    private val groupInvitationDao: GroupInvitationDao,
+    private val groupMembershipDao: GroupMembershipDao,
     private val groupSecurityDao: GroupSecurityDao,
     private val getContact: GetContactUseCase
 ) {
@@ -22,10 +22,10 @@ internal class GroupVerificationState(
         groupVerificationDao
             .findByGroupId(groupId)
             .any { row -> row.contactId != null } ||
-            groupInvitationDao
+            groupMembershipDao
                 .findByGroupId(groupId)
-                .any { invitation ->
-                    invitation.direction == GroupInvitationDirection.OUTGOING.name
+                .any { membership ->
+                    membership.perspective == GroupMembershipPerspective.OWNER.name
                 }
 
     suspend fun requireCurrentParticipant(
@@ -55,8 +55,8 @@ internal class GroupVerificationState(
         val existingRows = groupVerificationDao.findByGroupId(groupId)
         val existingByContactId =
             existingRows.mapNotNull { row -> row.contactId?.let { it to row } }.toMap()
-        val invitations = groupInvitationDao.findByGroupId(groupId)
-        val invitationByContactId = invitations.associateBy { invitation -> invitation.contactId }
+        val memberships = groupMembershipDao.findByGroupId(groupId)
+        val membershipByContactId = memberships.associateBy { membership -> membership.contactId }
         val securityState = groupSecurityDao.findState(groupId)
         val currentMemberKeys =
             securityState
@@ -71,13 +71,13 @@ internal class GroupVerificationState(
         val activeRows =
             currentMemberKeys.map { memberKey ->
                 val contact = requireContact(memberKey.contactId)
-                val invitation = invitationByContactId[memberKey.contactId]
+                val membership = membershipByContactId[memberKey.contactId]
                 val previous = existingByContactId[memberKey.contactId]
                 val sameIdentity = previous.matches(memberKey)
                 GroupVerificationPairEntity(
                     groupId = groupId,
                     invitationId =
-                        invitation?.invitationId
+                        membership?.sourceInvitationId
                             ?: previous?.invitationId
                             ?: "member-${memberKey.contactId}",
                     contactId = memberKey.contactId,
@@ -88,26 +88,26 @@ internal class GroupVerificationState(
                     adminVerifiedParticipant = sameIdentity && previous?.adminVerifiedParticipant == true,
                     participantVerifiedAdmin = sameIdentity && previous?.participantVerifiedAdmin == true,
                     updatedAtEpochMilliseconds =
-                        maxOf(invitation?.updatedAtEpochMilliseconds ?: 0L, now)
+                        maxOf(membership?.updatedAtEpochMilliseconds ?: 0L, now)
                 )
             }
 
         val activeContactIds =
             currentMemberKeys.mapTo(mutableSetOf()) { memberKey -> memberKey.contactId }
         val pendingRows =
-            invitations
-                .filter { invitation ->
-                    invitation.direction == GroupInvitationDirection.OUTGOING.name &&
-                        invitation.status.isVisiblePendingStatus() &&
-                        invitation.contactId !in activeContactIds
-                }.map { invitation ->
-                    val contact = requireContact(invitation.contactId)
+            memberships
+                .filter { membership ->
+                    membership.perspective == GroupMembershipPerspective.OWNER.name &&
+                        membership.status.isVisiblePendingStatus() &&
+                        membership.contactId !in activeContactIds
+                }.map { membership ->
+                    val contact = requireContact(membership.contactId)
                     val identity = contact.sparrowIdentity
-                    val previous = existingByContactId[invitation.contactId]
+                    val previous = existingByContactId[membership.contactId]
                     GroupVerificationPairEntity(
                         groupId = groupId,
-                        invitationId = invitation.invitationId,
-                        contactId = invitation.contactId,
+                        invitationId = membership.sourceInvitationId,
+                        contactId = membership.contactId,
                         displayName = contact.verificationDisplayName(),
                         membershipStatus = GroupVerificationPairEntity.PENDING_STATUS,
                         participantEncryptionPublicKey = identity?.encryptionPublicKey?.copyOf(),
@@ -116,7 +116,7 @@ internal class GroupVerificationState(
                         participantVerifiedAdmin = false,
                         updatedAtEpochMilliseconds =
                             maxOf(
-                                invitation.updatedAtEpochMilliseconds,
+                                membership.updatedAtEpochMilliseconds,
                                 previous?.updatedAtEpochMilliseconds ?: 0L
                             )
                     )
@@ -155,9 +155,7 @@ internal class GroupVerificationState(
         displayName?.trim()?.takeIf(String::isNotBlank) ?: "Unknown member"
 
     private fun String.isVisiblePendingStatus(): Boolean =
-        this == GroupInvitationStatus.INVITE_SENT.name ||
-            this == GroupInvitationStatus.INVITE_RECEIVED.name ||
-            this == GroupInvitationStatus.WAITING_FOR_IDENTITY.name ||
-            this == GroupInvitationStatus.IDENTITY_READY.name ||
-            this == GroupInvitationStatus.WELCOME_SENT.name
+        this == GroupMembershipStatus.STAGED.name ||
+            this == GroupMembershipStatus.IDENTITY_READY.name ||
+            this == GroupMembershipStatus.WELCOME_SENT.name
 }

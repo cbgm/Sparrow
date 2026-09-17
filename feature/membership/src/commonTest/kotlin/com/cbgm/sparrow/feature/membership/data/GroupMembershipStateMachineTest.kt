@@ -1,48 +1,49 @@
 package com.cbgm.sparrow.feature.membership.data
 
-import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationDirection
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
-import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberInvitationStatus
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberProgressStatus
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
 class GroupMembershipStateMachineTest {
     @Test
-    fun recipientInvitationRequiresAcceptanceBeforeJoining() {
-        val invited = listOf(invitation(GroupInvitationStatus.AWAITING_ACCEPTANCE))
-        val joining = listOf(invitation(GroupInvitationStatus.JOIN_SENT))
+    fun stagedMemberWaitsWhileJoinRequestIsJoining() {
+        val staged = listOf(membership(GroupMembershipStatus.STAGED))
+        val joining = listOf(membership(GroupMembershipStatus.JOIN_REQUEST_SENT))
 
-        assertEquals(GroupConversationState.INVITED, GroupMembershipStateMachine.conversationState(invited))
-        assertEquals(GroupConversationState.JOINING, GroupMembershipStateMachine.conversationState(joining))
-        assertTrue(GroupMembershipStateMachine.isIncoming(invited))
-        assertTrue(GroupMembershipStateMachine.isIncoming(joining))
+        assertEquals(
+            GroupConversationState.WAITING_FOR_MEMBERS,
+            GroupMembershipStateMachine.conversationState(staged)
+        )
+        assertEquals(
+            GroupConversationState.JOINING,
+            GroupMembershipStateMachine.conversationState(joining)
+        )
     }
 
     @Test
     fun creatorIsReadyWhenAtLeastOneMemberIsActive() {
         val partiallyActive =
             listOf(
-                invitation(GroupInvitationStatus.ACTIVE, contactId = "contact-1"),
-                invitation(GroupInvitationStatus.WELCOME_SENT, contactId = "contact-2")
+                membership(GroupMembershipStatus.ACTIVE, contactId = "contact-1"),
+                membership(GroupMembershipStatus.WELCOME_SENT, contactId = "contact-2")
             )
 
         val fullyActive =
             listOf(
-                invitation(GroupInvitationStatus.ACTIVE, contactId = "contact-1"),
-                invitation(GroupInvitationStatus.ACTIVE, contactId = "contact-2")
+                membership(GroupMembershipStatus.ACTIVE, contactId = "contact-1"),
+                membership(GroupMembershipStatus.ACTIVE, contactId = "contact-2")
             )
 
         assertEquals(
             GroupConversationState.READY,
             GroupMembershipStateMachine.conversationState(partiallyActive)
         )
-
         assertEquals(
             GroupConversationState.READY,
             GroupMembershipStateMachine.conversationState(fullyActive)
@@ -50,62 +51,38 @@ class GroupMembershipStateMachineTest {
     }
 
     @Test
-    fun declinedInvitationRemainsVisibleAndBlocksActivation() {
-        val declined = listOf(invitation(GroupInvitationStatus.DECLINED))
-        val invitations =
+    fun removedMembersNoLongerAffectConversationOrMemberProgress() {
+        val memberships =
             listOf(
-                invitation(GroupInvitationStatus.IDENTITY_READY, contactId = "contact-1"),
-                invitation(GroupInvitationStatus.DECLINED, contactId = "contact-2")
-            )
-
-        assertEquals(
-            GroupConversationState.DECLINED,
-            GroupMembershipStateMachine.conversationState(declined)
-        )
-        assertFalse(GroupMembershipStateMachine.isIncoming(declined))
-        assertEquals(
-            GroupConversationState.DECLINED,
-            GroupMembershipStateMachine.conversationState(invitations)
-        )
-        assertEquals(
-            GroupMemberInvitationStatus.DECLINED,
-            GroupMembershipStateMachine.memberStates(invitations)[1].status
-        )
-    }
-
-    @Test
-    fun removedMembersNoLongerAffectConversationOrMemberState() {
-        val invitations =
-            listOf(
-                invitation(GroupInvitationStatus.ACTIVE, contactId = "contact-1"),
-                invitation(GroupInvitationStatus.REMOVED, contactId = "contact-2")
+                membership(GroupMembershipStatus.ACTIVE, contactId = "contact-1"),
+                membership(GroupMembershipStatus.REMOVED, contactId = "contact-2")
             )
 
         assertEquals(
             GroupConversationState.READY,
-            GroupMembershipStateMachine.conversationState(invitations)
+            GroupMembershipStateMachine.conversationState(memberships)
         )
         assertEquals(
             listOf("contact-1"),
-            GroupMembershipStateMachine.memberStates(invitations).map { member -> member.contactId }
+            GroupMembershipStateMachine.memberProgress(memberships).map { member -> member.contactId }
         )
     }
 
     @Test
     fun localRemovalEventBlocksOnlyTheRemovedRecipient() {
-        val removed = listOf(invitation(GroupInvitationStatus.REMOVED))
+        val removed = listOf(membership(GroupMembershipStatus.REMOVED))
 
         assertEquals(
             GroupConversationState.REMOVED,
             GroupMembershipStateMachine.conversationState(
-                invitations = removed,
+                memberships = removed,
                 isLocallyInactive = true
             )
         )
         assertEquals(
             GroupConversationState.READY,
             GroupMembershipStateMachine.conversationState(
-                invitations = removed,
+                memberships = removed,
                 isLocallyInactive = false
             )
         )
@@ -147,34 +124,32 @@ class GroupMembershipStateMachineTest {
     }
 
     @Test
-    fun queuedLeaveRequestMakesTheRecipientReadOnly() {
-        val leaving = listOf(invitation(GroupInvitationStatus.LEAVE_SENT))
+    fun queuedLeaveRequestMakesConversationReadOnly() {
+        val leaving = listOf(membership(GroupMembershipStatus.LEAVE_REQUESTED))
 
         assertEquals(
             GroupConversationState.LEAVING,
             GroupMembershipStateMachine.conversationState(leaving)
         )
-        assertTrue(GroupMembershipStateMachine.isIncoming(leaving))
     }
 
     @Test
     fun ownerDeletionKeepsHistoryReadOnly() {
-        val deleted = listOf(invitation(GroupInvitationStatus.GROUP_DELETED))
+        val deleted = listOf(membership(GroupMembershipStatus.GROUP_DELETED))
 
         assertEquals(
             GroupConversationState.DELETED,
             GroupMembershipStateMachine.conversationState(deleted)
         )
-        assertFalse(GroupMembershipStateMachine.isIncoming(deleted))
-        assertTrue(GroupMembershipStateMachine.memberStates(deleted).isEmpty())
+        assertEquals(emptyList(), GroupMembershipStateMachine.memberProgress(deleted))
     }
 
     @Test
     fun incomingMembershipEventsFollowOneExplicitStatePath() {
         val joinSent =
             GroupMembershipStateMachine.transition(
-                GroupInvitationStatus.AWAITING_ACCEPTANCE.name,
-                GroupMembershipEvent.ACCEPT
+                GroupMembershipStatus.STAGED.name,
+                GroupMembershipEvent.JOIN_REQUESTED
             )
         val waitingForActivation =
             GroupMembershipStateMachine.transition(
@@ -187,16 +162,16 @@ class GroupMembershipStateMachineTest {
                 GroupMembershipEvent.MEMBER_ACTIVATED
             )
 
-        assertEquals(GroupInvitationStatus.JOIN_SENT, joinSent)
-        assertEquals(GroupInvitationStatus.WAITING_FOR_ACTIVATION, waitingForActivation)
-        assertEquals(GroupInvitationStatus.ACTIVE, active)
+        assertEquals(GroupMembershipStatus.JOIN_REQUEST_SENT, joinSent)
+        assertEquals(GroupMembershipStatus.WAITING_FOR_ACTIVATION, waitingForActivation)
+        assertEquals(GroupMembershipStatus.ACTIVE, active)
     }
 
     @Test
     fun outgoingMembershipEventsFollowOneExplicitStatePath() {
         val identityReady =
             GroupMembershipStateMachine.transition(
-                GroupInvitationStatus.INVITE_SENT.name,
+                GroupMembershipStatus.STAGED.name,
                 GroupMembershipEvent.IDENTITY_CONFIRMED
             )
         val welcomeSent =
@@ -210,67 +185,61 @@ class GroupMembershipStateMachineTest {
                 GroupMembershipEvent.MEMBER_READY
             )
 
-        assertEquals(GroupInvitationStatus.IDENTITY_READY, identityReady)
-        assertEquals(GroupInvitationStatus.WELCOME_SENT, welcomeSent)
-        assertEquals(GroupInvitationStatus.ACTIVE, active)
+        assertEquals(GroupMembershipStatus.IDENTITY_READY, identityReady)
+        assertEquals(GroupMembershipStatus.WELCOME_SENT, welcomeSent)
+        assertEquals(GroupMembershipStatus.ACTIVE, active)
     }
 
     @Test
-    fun outgoingInviteIsVisibleImmediatelyAsInvitedMember() {
+    fun stagedMembershipIsExposedAsPendingProgress() {
         val states =
-            GroupMembershipStateMachine.memberStates(
-                listOf(invitation(GroupInvitationStatus.INVITE_SENT))
+            GroupMembershipStateMachine.memberProgress(
+                listOf(membership(GroupMembershipStatus.STAGED))
             )
 
         assertEquals(1, states.size)
-        assertEquals(GroupMemberInvitationStatus.INVITED, states.single().status)
+        assertEquals(GroupMemberProgressStatus.PENDING, states.single().status)
     }
 
     @Test
-    fun outgoingInviteReceiptAdvancesPersistedState() {
-        val received =
+    fun joinSendFailureBecomesFailedMembership() {
+        val joinSent =
             GroupMembershipStateMachine.transition(
-                GroupInvitationStatus.INVITE_SENT.name,
-                GroupMembershipEvent.INVITE_RECEIVED
+                GroupMembershipStatus.STAGED.name,
+                GroupMembershipEvent.JOIN_REQUESTED
             )
-
-        assertEquals(GroupInvitationStatus.INVITE_RECEIVED, received)
-    }
-
-    @Test
-    fun failedInvitationSendBecomesRetryableTerminalState() {
         val failed =
             GroupMembershipStateMachine.transition(
-                GroupInvitationStatus.INVITE_SENT.name,
-                GroupMembershipEvent.INVITE_SEND_FAILED
+                joinSent.name,
+                GroupMembershipEvent.JOIN_SEND_FAILED
             )
 
-        assertEquals(GroupInvitationStatus.FAILED, failed)
+        assertEquals(GroupMembershipStatus.FAILED, failed)
     }
 
     @Test
     fun invalidMembershipTransitionFailsImmediately() {
         assertFailsWith<IllegalStateException> {
             GroupMembershipStateMachine.transition(
-                GroupInvitationStatus.ACTIVE.name,
-                GroupMembershipEvent.ACCEPT
+                GroupMembershipStatus.ACTIVE.name,
+                GroupMembershipEvent.JOIN_REQUESTED
             )
         }
     }
 
-    private fun invitation(
-        status: GroupInvitationStatus,
+    private fun membership(
+        status: GroupMembershipStatus,
         contactId: String = "contact-1"
-    ): GroupInvitationEntity =
-        GroupInvitationEntity(
-            invitationId = "invitation-$contactId",
+    ): GroupMembershipEntity =
+        GroupMembershipEntity(
+            membershipId = "membership-$contactId",
+            sourceInvitationId = "invitation-$contactId",
             groupId = "group-1",
             contactId = contactId,
-            direction = GroupInvitationDirection.OUTGOING.name,
+            perspective = GroupMembershipPerspective.OWNER.name,
             status = status.name,
             challenge = byteArrayOf(1),
             createdAtEpochMilliseconds = 100L,
-            expiresAtEpochMilliseconds = 200L,
             updatedAtEpochMilliseconds = 100L
         )
 }

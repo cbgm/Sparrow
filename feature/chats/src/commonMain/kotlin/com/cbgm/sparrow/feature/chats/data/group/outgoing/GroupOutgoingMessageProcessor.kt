@@ -23,7 +23,7 @@ import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.MessageReactionDao
 import com.cbgm.sparrow.data.database.dao.MessageRecipientStateDao
-import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
+import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
@@ -40,7 +40,8 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessageDeliveryStateMachine
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -72,12 +73,12 @@ class GroupOutgoingMessageProcessor(
         text: String,
         attachments: List<OutgoingMessageAttachment> = emptyList(),
         replyToMessageId: String? = null,
-        invitations: List<GroupInvitationEntity>
+        memberships: List<GroupMembershipEntity>
     ): Result<Unit> =
         safeSuspendCall {
             sendMutex.withLock {
                 val normalizedText = requireMessageContent(text, attachments)
-                requireActiveMembership(groupId, invitations)
+                requireActiveMembership(groupId, memberships)
                 val recipients = findCurrentRecipients(groupId)
                 check(recipients.isNotEmpty()) { "Group has no active recipients" }
 
@@ -99,12 +100,12 @@ class GroupOutgoingMessageProcessor(
         groupId: String,
         messageId: String,
         emoji: String,
-        invitations: List<GroupInvitationEntity>
+        memberships: List<GroupMembershipEntity>
     ): Result<Unit> =
         safeSuspendCall {
             require(messageId.isNotBlank()) { "Message ID must not be blank" }
             require(emoji.isNotBlank()) { "Reaction emoji must not be blank" }
-            requireActiveMembership(groupId, invitations)
+            requireActiveMembership(groupId, memberships)
             val target = chatDao.findMessageById(messageId) ?: error("Message was not found")
             check(target.conversationId == groupId) { "Message does not belong to this group" }
             val recipients = findCurrentRecipients(groupId)
@@ -156,11 +157,11 @@ class GroupOutgoingMessageProcessor(
     suspend fun deleteMessage(
         groupId: String,
         messageId: String,
-        invitations: List<GroupInvitationEntity>
+        memberships: List<GroupMembershipEntity>
     ): Result<Unit> =
         safeSuspendCall {
             require(messageId.isNotBlank()) { "Message ID must not be blank" }
-            requireActiveMembership(groupId, invitations)
+            requireActiveMembership(groupId, memberships)
             val target = chatDao.findMessageById(messageId) ?: error("Message was not found")
             check(target.conversationId == groupId) { "Message does not belong to this group" }
             check(target.transportMode == GROUP_END_TO_END_ENCRYPTED_MODE) { "Only user messages can be deleted" }
@@ -208,13 +209,13 @@ class GroupOutgoingMessageProcessor(
         groupId: String,
         messageId: String,
         text: String,
-        invitations: List<GroupInvitationEntity>
+        memberships: List<GroupMembershipEntity>
     ): Result<Unit> =
         safeSuspendCall {
             require(messageId.isNotBlank()) { "Message ID must not be blank" }
             val normalizedText = text.trim()
             require(normalizedText.isNotBlank()) { "Edited message text must not be blank" }
-            requireActiveMembership(groupId, invitations)
+            requireActiveMembership(groupId, memberships)
 
             val target = chatDao.findMessageById(messageId) ?: error("Message was not found")
             check(target.conversationId == groupId) { "Message does not belong to this group" }
@@ -325,33 +326,33 @@ class GroupOutgoingMessageProcessor(
 
     private suspend fun requireActiveMembership(
         groupId: String,
-        invitations: List<GroupInvitationEntity>
+        memberships: List<GroupMembershipEntity>
     ) {
         requireGroupConversation(groupId)
-        check(invitations.none { invitation -> invitation.status.isIncomingPendingStatus() }) {
-            "Accept the group invitation before sending messages"
+        check(memberships.none { membership -> membership.blocksLocalMessaging() }) {
+            "Complete the group join before sending messages"
         }
-        check(invitations.none { invitation -> invitation.status == GroupInvitationStatus.LEAVE_SENT.name }) {
+        check(memberships.none { membership -> membership.status == GroupMembershipStatus.LEAVE_REQUESTED.name }) {
             "Messages are disabled while the group is being left"
         }
-        check(invitations.none { invitation -> invitation.status == GroupInvitationStatus.GROUP_DELETED.name }) {
+        check(memberships.none { membership -> membership.status == GroupMembershipStatus.GROUP_DELETED.name }) {
             "This group conversation was deleted"
         }
-        check(isStillMember(groupId, invitations)) {
+        check(isStillMember(groupId, memberships)) {
             "You are no longer a member of this group"
         }
     }
 
     private suspend fun isStillMember(
         groupId: String,
-        invitations: List<GroupInvitationEntity>
+        memberships: List<GroupMembershipEntity>
     ): Boolean {
-        val hasCurrentInvitation =
-            invitations.any { invitation ->
-                invitation.status != GroupInvitationStatus.REMOVED.name &&
-                    invitation.status != GroupInvitationStatus.GROUP_DELETED.name
+        val hasCurrentMembership =
+            memberships.any { membership ->
+                membership.status != GroupMembershipStatus.REMOVED.name &&
+                    membership.status != GroupMembershipStatus.GROUP_DELETED.name
             }
-        if (hasCurrentInvitation) return true
+        if (hasCurrentMembership) return true
 
         val wasRemoved =
             chatDao.hasMessageWithTransportMode(
@@ -529,7 +530,7 @@ class GroupOutgoingMessageProcessor(
                         messageId = messageId,
                         readAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
                     )
-            ).map { Unit }
+            ).map { }
 
     private fun requireMessageContent(
         text: String,
@@ -555,10 +556,13 @@ class GroupOutgoingMessageProcessor(
         }
     }
 
-    private fun String.isIncomingPendingStatus(): Boolean =
-        this == GroupInvitationStatus.AWAITING_ACCEPTANCE.name ||
-            this == GroupInvitationStatus.JOIN_SENT.name ||
-            this == GroupInvitationStatus.WAITING_FOR_ACTIVATION.name
+    private fun GroupMembershipEntity.blocksLocalMessaging(): Boolean =
+        perspective == GroupMembershipPerspective.MEMBER.name &&
+            status in setOf(
+                GroupMembershipStatus.STAGED.name,
+                GroupMembershipStatus.JOIN_REQUEST_SENT.name,
+                GroupMembershipStatus.WAITING_FOR_ACTIVATION.name
+            )
 
     private fun packetId(
         messageId: String,

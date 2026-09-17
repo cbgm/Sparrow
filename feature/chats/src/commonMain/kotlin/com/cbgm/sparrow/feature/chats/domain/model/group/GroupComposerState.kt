@@ -29,7 +29,7 @@ fun GroupConversation?.resolveComposerState(): GroupComposerState {
 
     return when {
         isReady -> GroupComposerState.READY
-        !isIncomingInvitation && state.canQueueMessagesWhilePreparing() -> GroupComposerState.QUEUEING
+        state.canQueueMessagesWhilePreparing() -> GroupComposerState.QUEUEING
         else -> GroupComposerState.DISABLED
     }
 }

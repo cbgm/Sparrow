@@ -10,11 +10,11 @@ import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
 import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
+import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
-import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
+import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipIdentity
@@ -29,13 +29,13 @@ import com.cbgm.sparrow.feature.membership.data.groupMembershipDisplayName
 import com.cbgm.sparrow.feature.membership.data.hasMutualGroupIdentity
 import com.cbgm.sparrow.feature.membership.data.model.CreatedGroupSecurityDto
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_MEMBER_ROLE
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.data.requireGroupPhoneNumber
 
 @Suppress("LongParameterList")
 class GroupMembershipActivationCoordinator(
     private val chatDao: ChatDao,
-    private val groupInvitationDao: GroupInvitationDao,
+    private val groupMembershipDao: GroupMembershipDao,
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
@@ -55,15 +55,15 @@ class GroupMembershipActivationCoordinator(
     ): Result<Unit> =
         runCatching {
             membershipLock.withLock {
-                val invitation = groupInvitationDao.findByGroupAndContact(packet.groupId, memberContactId)
-                validateReadyAcknowledgement(memberContactId, packet, invitation)
-                if (!shouldActivateReadyMember(memberContactId, packet.groupId, invitation)) {
+                val membership = groupMembershipDao.findByGroupAndContact(packet.groupId, memberContactId)
+                validateReadyAcknowledgement(memberContactId, packet, membership)
+                if (!shouldActivateReadyMember(memberContactId, packet.groupId, membership)) {
                     return@withLock
                 }
                 activateReadyMember(
                     memberContactId = memberContactId,
                     packet = packet,
-                    invitation = requireNotNull(invitation),
+                    membership = requireNotNull(membership),
                     receivedAt = receivedAtEpochMilliseconds
                 )
             }
@@ -72,9 +72,9 @@ class GroupMembershipActivationCoordinator(
     private suspend fun validateReadyAcknowledgement(
         memberContactId: String,
         packet: GroupReadyAcknowledgementPacket,
-        invitation: GroupInvitationEntity?
+        membership: GroupMembershipEntity?
     ) {
-        val referenceId = invitation?.invitationId ?: "member-$memberContactId"
+        val referenceId = membership?.sourceInvitationId ?: "member-$memberContactId"
         val expectedSigningPublicKey =
             currentMemberKey(packet.groupId, memberContactId)
                 ?.signingPublicKey
@@ -103,16 +103,16 @@ class GroupMembershipActivationCoordinator(
     private suspend fun shouldActivateReadyMember(
         memberContactId: String,
         groupId: String,
-        invitation: GroupInvitationEntity?
+        membership: GroupMembershipEntity?
     ): Boolean {
-        if (invitation == null) {
+        if (membership == null) {
             check(currentMemberKey(groupId, memberContactId) != null) {
                 "Ready acknowledgement came from a non-member"
             }
             return false
         }
-        if (invitation.status == GroupInvitationStatus.ACTIVE.name) return false
-        check(invitation.status == GroupInvitationStatus.WELCOME_SENT.name) {
+        if (membership.status == GroupMembershipStatus.ACTIVE.name) return false
+        check(membership.status == GroupMembershipStatus.WELCOME_SENT.name) {
             "Group member is not waiting for a ready acknowledgement"
         }
         return true
@@ -121,20 +121,20 @@ class GroupMembershipActivationCoordinator(
     private suspend fun activateReadyMember(
         memberContactId: String,
         packet: GroupReadyAcknowledgementPacket,
-        invitation: GroupInvitationEntity,
+        membership: GroupMembershipEntity,
         receivedAt: Long
     ) {
         val activatedContact = identity.requireContact(memberContactId)
-        val activationTimestamp = maxOf(invitation.createdAtEpochMilliseconds, receivedAt)
+        val activationTimestamp = maxOf(membership.createdAtEpochMilliseconds, receivedAt)
         sendActivationPackets(
             memberContactId = memberContactId,
             packet = packet,
             activatedContact = activatedContact,
             activationTimestamp = activationTimestamp
         )
-        markMemberActive(invitation, activationTimestamp)
+        markMemberActive(membership, activationTimestamp)
         persistActiveParticipant(packet.groupId, memberContactId, activationTimestamp)
-        recordMemberAddedIfNeeded(packet, invitation, activatedContact, activationTimestamp)
+        recordMemberAddedIfNeeded(packet, membership, activatedContact, activationTimestamp)
         groupVerificationCoordinator.onOwnedMembershipChanged(packet.groupId).getOrThrow()
     }
 
@@ -180,21 +180,21 @@ class GroupMembershipActivationCoordinator(
     }
 
     private suspend fun markMemberActive(
-        invitation: GroupInvitationEntity,
+        membership: GroupMembershipEntity,
         activationTimestamp: Long
     ) {
         val updated =
-            groupInvitationDao.updateStatus(
-                invitationId = invitation.invitationId,
-                expectedStatus = GroupInvitationStatus.WELCOME_SENT.name,
+            groupMembershipDao.updateStatus(
+                membershipId = membership.membershipId,
+                expectedStatus = GroupMembershipStatus.WELCOME_SENT.name,
                 newStatus =
                     GroupMembershipStateMachine.transition(
-                        invitation.status,
+                        membership.status,
                         GroupMembershipEvent.MEMBER_READY
                     ).name,
                 updatedAt = activationTimestamp
             )
-        check(updated == 1) { "Group invitation changed while readiness was applied" }
+        check(updated == 1) { "Group membership changed while readiness was applied" }
     }
 
     private suspend fun persistActiveParticipant(
@@ -214,11 +214,10 @@ class GroupMembershipActivationCoordinator(
 
     private suspend fun recordMemberAddedIfNeeded(
         packet: GroupReadyAcknowledgementPacket,
-        invitation: GroupInvitationEntity,
+        membership: GroupMembershipEntity,
         contact: Contact,
         createdAt: Long
     ) {
-        if (!chatDao.hasMessages(packet.groupId)) return
         chatDao.upsertMessage(
             membershipMessageDataSource.memberAdded(
                 conversationId = packet.groupId,
@@ -226,7 +225,7 @@ class GroupMembershipActivationCoordinator(
                 contactId = contact.id,
                 contactName = contact.groupMembershipDisplayName(),
                 createdAtEpochMilliseconds = createdAt,
-                eventId = invitation.invitationId
+                eventId = membership.sourceInvitationId
             )
         )
         chatDao.updateConversationTimestamp(packet.groupId, createdAt)
@@ -235,18 +234,18 @@ class GroupMembershipActivationCoordinator(
     suspend fun activateGroupIfReady(groupId: String): Result<Unit> =
         runCatching {
             membershipLock.withLock {
-                val readyInvitations =
-                    groupInvitationDao
+                val readyMemberships =
+                    groupMembershipDao
                         .findByGroupId(groupId)
-                        .filter { invitation -> invitation.status == GroupInvitationStatus.IDENTITY_READY.name }
-                        .sortedBy(GroupInvitationEntity::invitationId)
+                        .filter { membership -> membership.status == GroupMembershipStatus.IDENTITY_READY.name }
+                        .sortedBy(GroupMembershipEntity::sourceInvitationId)
 
                 val failures = mutableListOf<String>()
-                readyInvitations.forEach { invitation ->
-                    runCatching { distributeGroupKeyToMember(groupId, invitation) }
+                readyMemberships.forEach { membership ->
+                    runCatching { distributeGroupKeyToMember(groupId, membership) }
                         .onFailure { error ->
                             failures +=
-                                "${invitation.contactId}: ${error.message ?: error::class.simpleName.orEmpty()}"
+                                "${membership.contactId}: ${error.message ?: error::class.simpleName.orEmpty()}"
                         }
                 }
                 check(failures.isEmpty()) {
@@ -335,12 +334,12 @@ class GroupMembershipActivationCoordinator(
 
     private suspend fun distributeGroupKeyToMember(
         groupId: String,
-        invitation: GroupInvitationEntity
+        membership: GroupMembershipEntity
     ) {
         val conversation =
             chatDao.findConversationById(groupId)
                 ?: error("Pending group was not found")
-        val contact = identity.requireContact(invitation.contactId)
+        val contact = identity.requireContact(membership.contactId)
         check(contact.hasMutualGroupIdentity()) {
             "Group member identity is not ready: ${contact.id}"
         }
@@ -359,7 +358,7 @@ class GroupMembershipActivationCoordinator(
             "Recipient welcome packet was not created"
         }
         enqueueWelcomePackets(securedGroup)
-        markWelcomeSent(invitation)
+        markWelcomeSent(membership)
     }
 
     private suspend fun loadGroupKeyDistributionMembers(
@@ -435,23 +434,23 @@ class GroupMembershipActivationCoordinator(
         packetBroadcaster.enqueueAll(securedGroup.welcomePacketsByContactId).getOrThrow()
     }
 
-    private suspend fun markWelcomeSent(invitation: GroupInvitationEntity) {
+    private suspend fun markWelcomeSent(membership: GroupMembershipEntity) {
         val updated =
-            groupInvitationDao.updateStatus(
-                invitationId = invitation.invitationId,
-                expectedStatus = GroupInvitationStatus.IDENTITY_READY.name,
+            groupMembershipDao.updateStatus(
+                membershipId = membership.membershipId,
+                expectedStatus = GroupMembershipStatus.IDENTITY_READY.name,
                 newStatus =
                     GroupMembershipStateMachine
-                        .transition(invitation.status, GroupMembershipEvent.WELCOME_SENT)
+                        .transition(membership.status, GroupMembershipEvent.WELCOME_SENT)
                         .name,
                 updatedAt =
                     maxOf(
-                        invitation.createdAtEpochMilliseconds,
+                        membership.createdAtEpochMilliseconds,
                         SystemClock.nowEpochMilliseconds()
                     )
             )
         check(updated == 1) {
-            "Group invitation changed while its welcome was recorded"
+            "Group membership changed while its welcome was recorded"
         }
     }
 

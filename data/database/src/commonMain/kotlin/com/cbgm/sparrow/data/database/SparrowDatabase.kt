@@ -8,11 +8,12 @@ import com.cbgm.sparrow.data.database.dao.AutoReplyDao
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.data.database.dao.ContactRoutingIdDao
-import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
+import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.data.database.dao.GroupPinDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.data.database.dao.IdentityInvitationDao
+import com.cbgm.sparrow.data.database.dao.InvitationDao
 import com.cbgm.sparrow.data.database.dao.LinkPreviewDao
 import com.cbgm.sparrow.data.database.dao.MailboxRouteDao
 import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
@@ -30,12 +31,13 @@ import com.cbgm.sparrow.data.database.entity.ContactPublicIdentityEntity
 import com.cbgm.sparrow.data.database.entity.ContactRoutingIdEntity
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
-import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
+import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
 import com.cbgm.sparrow.data.database.entity.GroupPinEntity
 import com.cbgm.sparrow.data.database.entity.GroupSecurityStateEntity
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.data.database.entity.IdentityInvitationEntity
+import com.cbgm.sparrow.data.database.entity.InvitationEntity
 import com.cbgm.sparrow.data.database.entity.LinkPreviewEntity
 import com.cbgm.sparrow.data.database.entity.LocalMailboxCredentialEntity
 import com.cbgm.sparrow.data.database.entity.MessageAttachmentEntity
@@ -59,7 +61,8 @@ import com.cbgm.sparrow.data.database.entity.RemoteMailboxRouteEntity
         ConversationParticipantEntity::class,
         GroupSecurityStateEntity::class,
         GroupMemberKeyEntity::class,
-        GroupInvitationEntity::class,
+        GroupMembershipEntity::class,
+        InvitationEntity::class,
         GroupPinEntity::class,
         GroupVerificationPairEntity::class,
         IdentityInvitationEntity::class,
@@ -74,7 +77,7 @@ import com.cbgm.sparrow.data.database.entity.RemoteMailboxRouteEntity
         RemoteMailboxRouteEntity::class,
         LinkPreviewEntity::class
     ],
-    version = 40,
+    version = 41,
     autoMigrations = [
         AutoMigration(from = 26, to = 27),
         AutoMigration(from = 27, to = 28),
@@ -103,7 +106,9 @@ abstract class SparrowDatabase : RoomDatabase() {
 
     abstract fun groupSecurityDao(): GroupSecurityDao
 
-    abstract fun groupInvitationDao(): GroupInvitationDao
+    abstract fun groupMembershipDao(): GroupMembershipDao
+
+    abstract fun invitationDao(): InvitationDao
 
     abstract fun groupPinDao(): GroupPinDao
 

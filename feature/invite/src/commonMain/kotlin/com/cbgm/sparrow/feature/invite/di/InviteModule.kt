@@ -9,6 +9,8 @@ import com.cbgm.sparrow.feature.invite.data.group.GroupInvitationLifecycleCoordi
 import com.cbgm.sparrow.feature.invite.data.group.GroupInviteDeclinedIncomingProcessor
 import com.cbgm.sparrow.feature.invite.data.group.GroupInviteIncomingProcessor
 import com.cbgm.sparrow.feature.invite.data.group.GroupInviteReceivedIncomingProcessor
+import com.cbgm.sparrow.feature.invite.data.group.GroupJoinRequestIncomingProcessor
+import com.cbgm.sparrow.feature.invite.data.outbox.InvitationOutboxDeliveryHandler
 import com.cbgm.sparrow.feature.invite.data.policy.InvitationPolicyImpl
 import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPacketProcessor
 import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPacketProcessorImpl
@@ -16,6 +18,7 @@ import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPayloadEncoder
 import com.cbgm.sparrow.feature.invite.data.protocol.handler.GroupInviteDeclinedPacketHandler
 import com.cbgm.sparrow.feature.invite.data.protocol.handler.GroupInvitePacketHandler
 import com.cbgm.sparrow.feature.invite.data.protocol.handler.GroupInviteReceivedPacketHandler
+import com.cbgm.sparrow.feature.invite.data.protocol.handler.GroupJoinRequestPacketHandler
 import com.cbgm.sparrow.feature.invite.data.protocol.handler.IncomingInvitationPacketHandler
 import com.cbgm.sparrow.feature.invite.data.protocol.handler.InvitationAcceptedPacketHandler
 import com.cbgm.sparrow.feature.invite.data.protocol.handler.InvitationDeclinedPacketHandler
@@ -34,6 +37,7 @@ import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationsContextU
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationsUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObservePendingInvitationCountUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObservePendingInvitationsUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.SendInvitationUseCase
 import com.cbgm.sparrow.feature.invite.presentation.InvitationViewModel
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
@@ -44,9 +48,11 @@ val inviteModule =
     module {
         singleOf(::InvitationPayloadEncoder)
         singleOf(::GroupInviteIncomingProcessor)
+        singleOf(::GroupJoinRequestIncomingProcessor)
         singleOf(::GroupInviteReceivedIncomingProcessor)
         singleOf(::GroupInviteDeclinedIncomingProcessor)
         singleOf(::GroupInvitationLifecycleCoordinator)
+        singleOf(::InvitationOutboxDeliveryHandler)
 
         single {
             DirectIdentityExchangeCoordinator(
@@ -98,6 +104,7 @@ val inviteModule =
         factory { HandleIncomingInvitationUseCase(policy = get()) }
         factory { HandleInvitationResponseUseCase(repository = get()) }
         factory { MarkInvitationsViewedUseCase(repository = get()) }
+        factory { SendInvitationUseCase(repository = get()) }
         factory { ObserveInvitationsUseCase(repository = get(), policy = get()) }
         factory { DeleteDeclinedOutgoingInvitationUseCase(repository = get()) }
 
@@ -129,6 +136,9 @@ val inviteModule =
             bind<TypedProtocolPacketHandler>()
         }
         singleOf(::GroupInviteDeclinedPacketHandler) {
+            bind<TypedProtocolPacketHandler>()
+        }
+        singleOf(::GroupJoinRequestPacketHandler) {
             bind<TypedProtocolPacketHandler>()
         }
 

@@ -12,7 +12,7 @@ import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.ContactDao
-import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
+import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.entity.ContactEntity
 import com.cbgm.sparrow.data.database.entity.ContactPhoneNumberEntity
@@ -25,12 +25,12 @@ import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumberType
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 
 class GroupMemberActivatedPacketHandler(
     private val chatDao: ChatDao,
     private val contactDao: ContactDao,
-    private val groupInvitationDao: GroupInvitationDao,
+    private val groupMembershipDao: GroupMembershipDao,
     private val groupSecurityDao: GroupSecurityDao,
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
@@ -108,7 +108,7 @@ class GroupMemberActivatedPacketHandler(
         check(packet.activationRound == GroupMemberActivatedPacket.FINAL_ROUND) {
             "Local group membership requires a final activation"
         }
-        activateLocalInvitation(
+        activateLocalMembershipState(
             groupId = packet.groupId,
             ownerContactId = context.contactId,
             updatedAtEpochMilliseconds =
@@ -211,29 +211,29 @@ class GroupMemberActivatedPacketHandler(
         )
     }
 
-    private suspend fun activateLocalInvitation(
+    private suspend fun activateLocalMembershipState(
         groupId: String,
         ownerContactId: String,
         updatedAtEpochMilliseconds: Long
     ) {
-        val invitation = groupInvitationDao.findByGroupAndContact(groupId, ownerContactId) ?: return
-        if (invitation.status == GroupInvitationStatus.ACTIVE.name) return
+        val membership = groupMembershipDao.findByGroupAndContact(groupId, ownerContactId) ?: return
+        if (membership.status == GroupMembershipStatus.ACTIVE.name) return
 
-        check(invitation.status == GroupInvitationStatus.WAITING_FOR_ACTIVATION.name) {
-            "Group membership was activated from status ${invitation.status}"
+        check(membership.status == GroupMembershipStatus.WAITING_FOR_ACTIVATION.name) {
+            "Group membership was activated from status ${membership.status}"
         }
         val updated =
-            groupInvitationDao.updateStatus(
-                invitationId = invitation.invitationId,
-                expectedStatus = GroupInvitationStatus.WAITING_FOR_ACTIVATION.name,
+            groupMembershipDao.updateStatus(
+                membershipId = membership.membershipId,
+                expectedStatus = GroupMembershipStatus.WAITING_FOR_ACTIVATION.name,
                 newStatus =
                     GroupMembershipStateMachine.transition(
-                        invitation.status,
+                        membership.status,
                         GroupMembershipEvent.MEMBER_ACTIVATED
                     ).name,
-                updatedAt = maxOf(invitation.createdAtEpochMilliseconds, updatedAtEpochMilliseconds)
+                updatedAt = maxOf(membership.createdAtEpochMilliseconds, updatedAtEpochMilliseconds)
             )
-        check(updated == 1) { "Group invitation changed while membership activation was applied" }
+        check(updated == 1) { "Group membership changed while activation was applied" }
     }
 
     private suspend fun resolveMemberContact(member: GroupMemberPayload): String {

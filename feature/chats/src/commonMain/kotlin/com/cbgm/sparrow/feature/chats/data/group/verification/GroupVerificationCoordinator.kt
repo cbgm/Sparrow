@@ -11,12 +11,12 @@ import com.cbgm.sparrow.core.protocol.packet.GroupVerificationSnapshotPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupVerificationSnapshotRequestPacket
 import com.cbgm.sparrow.core.protocol.version.ProtocolVersion
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
+import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipVerificationDataSource
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -24,7 +24,7 @@ import kotlinx.coroutines.sync.withLock
 @Suppress("LongParameterList")
 class GroupVerificationCoordinator internal constructor(
     private val groupVerificationDao: GroupVerificationDao,
-    private val groupInvitationDao: GroupInvitationDao,
+    private val groupMembershipDao: GroupMembershipDao,
     private val groupSecurityDao: GroupSecurityDao,
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
@@ -405,22 +405,22 @@ class GroupVerificationCoordinator internal constructor(
         groupId: String,
         ownerContactId: String
     ) {
-        val invitation =
-            groupInvitationDao
+        val membership =
+            groupMembershipDao
                 .findByGroupId(groupId)
                 .singleOrNull()
-                ?: error("Local group invitation was not found")
-        check(invitation.status == GroupInvitationStatus.ACTIVE.name) {
-            "The group invitation must be active before verification"
+                ?: error("Local group membership was not found")
+        check(membership.status == GroupMembershipStatus.ACTIVE.name) {
+            "The group membership must be active before verification"
         }
 
         val row =
             groupVerificationDao.findPair(
                 groupId = groupId,
-                invitationId = invitation.invitationId
+                invitationId = membership.sourceInvitationId
             ) ?: error("Open the group once to synchronize its verification state")
         check(row.membershipStatus == GroupVerificationPairEntity.ACTIVE_STATUS) {
-            "The group invitation must be active before verification"
+            "The group membership must be active before verification"
         }
 
         val ownerMemberKey =
@@ -443,7 +443,7 @@ class GroupVerificationCoordinator internal constructor(
                 packetId = packetId,
                 version = ProtocolVersion.CURRENT,
                 groupId = groupId,
-                invitationId = invitation.invitationId,
+                invitationId = membership.sourceInvitationId,
                 receiptId = receiptId,
                 verifiedAtEpochMilliseconds = verifiedAt,
                 participantEncryptionPublicKey = localIdentity.encryptionPublicKey.copyOf(),
@@ -470,12 +470,12 @@ class GroupVerificationCoordinator internal constructor(
         groupId: String,
         ownerContactId: String
     ) {
-        val invitation =
-            groupInvitationDao
+        val membership =
+            groupMembershipDao
                 .findByGroupId(groupId)
                 .singleOrNull()
                 ?: return
-        if (invitation.status != GroupInvitationStatus.ACTIVE.name) {
+        if (membership.status != GroupMembershipStatus.ACTIVE.name) {
             return
         }
 
@@ -492,7 +492,7 @@ class GroupVerificationCoordinator internal constructor(
                 packetId = packetId,
                 version = ProtocolVersion.CURRENT,
                 groupId = groupId,
-                invitationId = invitation.invitationId,
+                invitationId = membership.sourceInvitationId,
                 requestId = requestId,
                 requestedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
                 requesterSigningPublicKey = localIdentity.signingPublicKey.copyOf(),

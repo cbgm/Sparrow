@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.chats.data.group.verification
 
-import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
+import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
-import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
+import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
 import com.cbgm.sparrow.data.database.entity.GroupSecurityStateEntity
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
@@ -13,8 +13,8 @@ import com.cbgm.sparrow.feature.contacts.domain.model.ImportContactRequest
 import com.cbgm.sparrow.feature.contacts.domain.model.ImportDeviceContactRequest
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationDirection
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
@@ -23,18 +23,18 @@ import kotlin.test.assertEquals
 
 class GroupVerificationStateTest {
     @Test
-    fun inviteSentIsExposedImmediatelyAsPendingVerificationMember() =
+    fun stagedMembershipIsExposedImmediatelyAsPendingVerificationMember() =
         runTest {
-            val invitationDao = FakeGroupInvitationDao()
+            val membershipDao = FakeGroupMembershipDao()
             val verificationDao = FakeGroupVerificationDao()
             val state =
                 GroupVerificationState(
                     groupVerificationDao = verificationDao,
-                    groupInvitationDao = invitationDao,
+                    groupMembershipDao = membershipDao,
                     groupSecurityDao = EmptyGroupSecurityDao(),
                     getContact = GetContactUseCase(FakeContactRepository())
                 )
-            invitationDao.invitations = listOf(outgoingInvitation())
+            membershipDao.memberships = listOf(ownerMembership())
 
             state.refreshOwnedState(GROUP_ID)
 
@@ -47,22 +47,22 @@ class GroupVerificationStateTest {
         }
 
     @Test
-    fun historicalIncomingInvitationIsNotTurnedIntoPendingMember() =
+    fun memberPerspectiveMembershipIsNotTurnedIntoOwnedPendingMember() =
         runTest {
-            val invitationDao = FakeGroupInvitationDao()
+            val membershipDao = FakeGroupMembershipDao()
             val verificationDao = FakeGroupVerificationDao()
             val state =
                 GroupVerificationState(
                     groupVerificationDao = verificationDao,
-                    groupInvitationDao = invitationDao,
+                    groupMembershipDao = membershipDao,
                     groupSecurityDao = EmptyGroupSecurityDao(),
                     getContact = GetContactUseCase(FakeContactRepository())
                 )
-            invitationDao.invitations =
+            membershipDao.memberships =
                 listOf(
-                    outgoingInvitation().copy(
-                        direction = GroupInvitationDirection.INCOMING.name,
-                        status = GroupInvitationStatus.ACTIVE.name
+                    ownerMembership().copy(
+                        perspective = GroupMembershipPerspective.MEMBER.name,
+                        status = GroupMembershipStatus.ACTIVE.name
                     )
                 )
 
@@ -71,16 +71,16 @@ class GroupVerificationStateTest {
             assertEquals(emptyList(), verificationDao.rows)
         }
 
-    private fun outgoingInvitation() =
-        GroupInvitationEntity(
-            invitationId = "invite-1",
+    private fun ownerMembership() =
+        GroupMembershipEntity(
+            membershipId = "membership-1",
+            sourceInvitationId = "invite-1",
             groupId = GROUP_ID,
             contactId = CONTACT_ID,
-            direction = GroupInvitationDirection.OUTGOING.name,
-            status = GroupInvitationStatus.INVITE_SENT.name,
+            perspective = GroupMembershipPerspective.OWNER.name,
+            status = GroupMembershipStatus.STAGED.name,
             challenge = byteArrayOf(1),
             createdAtEpochMilliseconds = 1L,
-            expiresAtEpochMilliseconds = 2L,
             updatedAtEpochMilliseconds = 1L
         )
 
@@ -108,51 +108,59 @@ class GroupVerificationStateTest {
         override suspend fun markParticipantVerifiedAdmin(groupId: String, invitationId: String, updatedAt: Long): Int = 0
     }
 
-    private class FakeGroupInvitationDao : GroupInvitationDao {
-        var invitations: List<GroupInvitationEntity> = emptyList()
+    private class FakeGroupMembershipDao : GroupMembershipDao {
+        var memberships: List<GroupMembershipEntity> = emptyList()
 
-        override suspend fun upsert(invitation: GroupInvitationEntity) = unused()
+        override suspend fun upsert(membership: GroupMembershipEntity) = unused()
 
-        override suspend fun upsertAll(invitations: List<GroupInvitationEntity>) = unused()
+        override suspend fun upsertAll(memberships: List<GroupMembershipEntity>) = unused()
 
-        override suspend fun findByInvitationId(invitationId: String): GroupInvitationEntity? = null
+        override suspend fun findBySourceInvitationId(invitationId: String): GroupMembershipEntity? = null
 
-        override suspend fun findByGroupAndContact(groupId: String, contactId: String): GroupInvitationEntity? = null
+        override suspend fun findByGroupAndContact(groupId: String, contactId: String): GroupMembershipEntity? = null
 
-        override suspend fun findByGroupContactAndDirection(
+        override suspend fun findByGroupContactAndPerspective(
             groupId: String,
             contactId: String,
-            direction: String
-        ): GroupInvitationEntity? = null
+            perspective: String
+        ): GroupMembershipEntity? = null
 
-        override suspend fun findByGroupId(groupId: String): List<GroupInvitationEntity> = invitations
+        override suspend fun findByGroupId(groupId: String): List<GroupMembershipEntity> = memberships
 
         override suspend fun deleteByGroupAndContact(groupId: String, contactId: String) = unused()
 
-        override suspend fun deleteByGroupContactAndDirection(
+        override suspend fun deleteByGroupContactAndPerspective(
             groupId: String,
             contactId: String,
-            direction: String
+            perspective: String
         ) = unused()
 
         override suspend fun deleteByGroupId(groupId: String) = unused()
 
-        override fun observeByGroupId(groupId: String): Flow<List<GroupInvitationEntity>> = emptyFlow()
+        override fun observeByGroupId(groupId: String): Flow<List<GroupMembershipEntity>> = emptyFlow()
 
-        override fun observeByDirection(direction: String): Flow<List<GroupInvitationEntity>> = emptyFlow()
+        override fun observeByPerspective(perspective: String): Flow<List<GroupMembershipEntity>> = emptyFlow()
 
-        override fun observeAll(): Flow<List<GroupInvitationEntity>> = emptyFlow()
+        override fun observeAll(): Flow<List<GroupMembershipEntity>> = emptyFlow()
 
-        override suspend fun deleteByInvitationId(invitationId: String): Int = 0
+        override suspend fun findByMembershipId(membershipId: String): GroupMembershipEntity? = null
 
-        override suspend fun updateStatus(invitationId: String, expectedStatus: String, newStatus: String, updatedAt: Long): Int = 0
+        override suspend fun deleteByMembershipId(membershipId: String): Int = 0
 
-        override suspend fun failSupersededIncomingInvitations(
+        override suspend fun deleteBySourceInvitationId(invitationId: String): Int = 0
+
+        override suspend fun updateStatus(
+            membershipId: String,
+            expectedStatus: String,
+            newStatus: String,
+            updatedAt: Long
+        ): Int = 0
+
+        override suspend fun deleteSupersededStagedMemberships(
             contactId: String,
             currentInvitationId: String,
-            awaitingAcceptanceStatus: String,
-            failedStatus: String,
-            updatedAt: Long
+            perspective: String,
+            stagedStatus: String
         ): Int = 0
 
         override suspend fun markGroupActive(groupId: String, readyStatus: String, activeStatus: String, updatedAt: Long): Int = 0

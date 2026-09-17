@@ -4,17 +4,17 @@ import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.ContactDao
-import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
+import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationDirection
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 
 internal class GroupWelcomePersistence(
     private val chatDao: ChatDao,
     private val contactDao: ContactDao,
-    private val groupInvitationDao: GroupInvitationDao,
+    private val groupMembershipDao: GroupMembershipDao,
     private val groupSecurityDao: GroupSecurityDao
 ) {
     suspend fun loadPreviousMembership(groupId: String): PreviousGroupMembershipDto {
@@ -100,7 +100,7 @@ internal class GroupWelcomePersistence(
         val removedMessages = removedMembershipMessages(packet, previous, currentParticipantIds, persistedAt)
         val addedMessages = addedMembershipMessages(packet, current, previousParticipantIds, persistedAt)
 
-        markRemovedOutgoingInvitationsTerminal(
+        markRemovedOwnerMembershipsTerminal(
             groupId = packet.groupId,
             removedContactIds = removedParticipantIds,
             updatedAt = persistedAt
@@ -147,7 +147,7 @@ internal class GroupWelcomePersistence(
         previousParticipantIds: Set<String>,
         persistedAt: Long
     ) =
-        if (previousParticipantIds.isNotEmpty() && chatDao.hasMessages(packet.groupId)) {
+        if (previousParticipantIds.isNotEmpty()) {
             current.participants
                 .filterNot { participant -> participant.contactId in previousParticipantIds }
                 .map { participant ->
@@ -163,36 +163,34 @@ internal class GroupWelcomePersistence(
             emptyList()
         }
 
-    private suspend fun markRemovedOutgoingInvitationsTerminal(
+    private suspend fun markRemovedOwnerMembershipsTerminal(
         groupId: String,
         removedContactIds: Set<String>,
         updatedAt: Long
     ) {
         removedContactIds.forEach { contactId ->
-            val invitation =
-                groupInvitationDao.findByGroupContactAndDirection(
+            val membership =
+                groupMembershipDao.findByGroupContactAndPerspective(
                     groupId = groupId,
                     contactId = contactId,
-                    direction = GroupInvitationDirection.OUTGOING.name
+                    perspective = GroupMembershipPerspective.OWNER.name
                 ) ?: return@forEach
 
-            if (invitation.status.isTerminalInvitationStatus()) return@forEach
+            if (membership.status.isTerminalMembershipStatus()) return@forEach
 
-            groupInvitationDao.updateStatus(
-                invitationId = invitation.invitationId,
-                expectedStatus = invitation.status,
-                newStatus = GroupInvitationStatus.REMOVED.name,
+            groupMembershipDao.updateStatus(
+                membershipId = membership.membershipId,
+                expectedStatus = membership.status,
+                newStatus = GroupMembershipStatus.REMOVED.name,
                 updatedAt = updatedAt
             )
         }
     }
 
-    private fun String.isTerminalInvitationStatus(): Boolean =
-        this == GroupInvitationStatus.DECLINED.name ||
-            this == GroupInvitationStatus.EXPIRED.name ||
-            this == GroupInvitationStatus.FAILED.name ||
-            this == GroupInvitationStatus.REMOVED.name ||
-            this == GroupInvitationStatus.GROUP_DELETED.name
+    private fun String.isTerminalMembershipStatus(): Boolean =
+        this == GroupMembershipStatus.FAILED.name ||
+            this == GroupMembershipStatus.REMOVED.name ||
+            this == GroupMembershipStatus.GROUP_DELETED.name
 
     private suspend fun membershipDisplayName(contactId: String): String =
         contactDao

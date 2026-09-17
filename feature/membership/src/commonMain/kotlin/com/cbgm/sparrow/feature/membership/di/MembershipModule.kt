@@ -3,18 +3,19 @@ package com.cbgm.sparrow.feature.membership.di
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipIdentity
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.coordinator.GroupEpochCoordinator
-import com.cbgm.sparrow.feature.membership.data.coordinator.GroupInvitationCoordinator
 import com.cbgm.sparrow.feature.membership.data.coordinator.GroupLeaveCoordinator
 import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMemberPromotionCoordinator
 import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMemberRemovalCoordinator
 import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMembershipActivationCoordinator
 import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMembershipAdministrationCoordinator
+import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMembershipAttemptCoordinator
 import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMembershipCoordinator
 import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMembershipDeletionCoordinator
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipAttemptDataSource
 import com.cbgm.sparrow.feature.membership.data.repository.GroupMembershipRepositoryImpl
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
-import com.cbgm.sparrow.feature.membership.domain.usecase.AddGroupMembersUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupLeaveRequirementUseCase
+import com.cbgm.sparrow.feature.membership.domain.usecase.InitializeOwnedGroupMembershipUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.LeaveGroupUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.ObserveGroupAdministrationUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.PromoteGroupMemberUseCase
@@ -36,18 +37,20 @@ val membershipModule =
         singleOf(::GroupLeaveCoordinator)
         singleOf(::GroupMembershipAdministrationCoordinator)
         singleOf(::GroupMembershipDeletionCoordinator)
-        singleOf(::GroupInvitationCoordinator)
+        singleOf(::GroupMembershipAttemptCoordinator) {
+            bind<GroupMembershipAttemptDataSource>()
+        }
         singleOf(::GroupMembershipCoordinator)
 
         singleOf(::GroupMembershipRepositoryImpl) {
             bind<GroupMembershipRepository>()
         }
 
-        singleOf(::AddGroupMembersUseCase)
         singleOf(::RemoveGroupMemberUseCase)
         singleOf(::PromoteGroupMemberUseCase)
         singleOf(::TransferGroupAdminAndLeaveUseCase)
         singleOf(::GetGroupLeaveRequirementUseCase)
+        singleOf(::InitializeOwnedGroupMembershipUseCase)
         singleOf(::LeaveGroupUseCase)
         singleOf(::ObserveGroupAdministrationUseCase)
         singleOf(::StageGroupOwnerIdentityUseCase)

@@ -8,7 +8,7 @@ import com.cbgm.sparrow.core.protocol.packet.GroupMembershipChangePayload
 import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
+import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
@@ -21,14 +21,14 @@ import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipMessag
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtocolDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_ADMIN_ROLE
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationDirection
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
 
 @Suppress("LongParameterList")
 class GroupLeaveCoordinator(
     private val chatDao: ChatDao,
-    private val groupInvitationDao: GroupInvitationDao,
+    private val groupMembershipDao: GroupMembershipDao,
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
@@ -214,9 +214,9 @@ class GroupLeaveCoordinator(
             return
         }
 
-        val invitation =
-            groupInvitationDao.findByGroupId(groupId)
-                .firstOrNull { row -> row.direction == GroupInvitationDirection.INCOMING.name }
+        val membership =
+            groupMembershipDao.findByGroupId(groupId)
+                .firstOrNull { row -> row.perspective == GroupMembershipPerspective.MEMBER.name }
         val epoch =
             groupSecurityManager.findCurrentEpoch(groupId).getOrThrow()
                 ?: error("Active group security state was not found")
@@ -225,17 +225,17 @@ class GroupLeaveCoordinator(
         val leaveRequest =
             membershipPacketProtocol
                 .createLeaveRequest(
-                    invitationId = invitation?.invitationId ?: "member-${localSigningKeyPair.publicKey.contentHashCode()}",
+                    invitationId = membership?.sourceInvitationId ?: "member-${localSigningKeyPair.publicKey.contentHashCode()}",
                     groupId = groupId,
                     epoch = epoch,
-                    challenge = invitation?.challenge ?: byteArrayOf(),
+                    challenge = membership?.challenge ?: byteArrayOf(),
                     requestedAtEpochMilliseconds = now,
                     memberSigningKeyPair = localSigningKeyPair
                 ).getOrThrow()
         protocolOutbox.enqueue(adminParticipant.contactId, leaveRequest).getOrThrow()
-        invitation?.let { row ->
-            groupInvitationDao.updateStatus(
-                invitationId = row.invitationId,
+        membership?.let { row ->
+            groupMembershipDao.updateStatus(
+                membershipId = row.membershipId,
                 expectedStatus = row.status,
                 newStatus =
                     GroupMembershipStateMachine.transition(
@@ -247,7 +247,7 @@ class GroupLeaveCoordinator(
         }
         endLocalMembership(
             groupId = groupId,
-            referenceId = invitation?.invitationId ?: "local-member-leave-$groupId",
+            referenceId = membership?.sourceInvitationId ?: "local-member-leave-$groupId",
             epoch = epoch,
             endedAtEpochMilliseconds = now
         )

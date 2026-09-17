@@ -232,9 +232,7 @@ private fun GroupConversation?.toGroupMemberProgressUi(
     contactsById: Map<String, Contact>
 ): List<GroupMemberProgressUi> =
     this
-        ?.memberInvitationStates
-        .orEmpty()
-        .takeIf { this?.isIncomingInvitation == false }
+        ?.memberProgress
         .orEmpty()
         .map { member ->
             val contact = contactsById[member.contactId]

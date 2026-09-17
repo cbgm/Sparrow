@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.chats.data.group.mapper
 
-import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
+import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
@@ -32,7 +32,7 @@ class GroupLocalMembershipTimelineTest {
                         ),
                         userMessage("after", 500L)
                     ),
-                invitations = emptyList()
+                memberships = emptyList()
             )
 
         assertEquals(
@@ -57,17 +57,17 @@ class GroupLocalMembershipTimelineTest {
                         ),
                         userMessage("absent", 250L)
                     ),
-                invitations =
+                memberships =
                     listOf(
-                        GroupInvitationEntity(
-                            invitationId = "invite-2",
+                        GroupMembershipEntity(
+                            membershipId = "membership-2",
+                            sourceInvitationId = "invite-2",
                             groupId = GROUP_ID,
                             contactId = "admin-1",
-                            direction = "INCOMING",
-                            status = "AWAITING_ACCEPTANCE",
+                            perspective = "MEMBER",
+                            status = "STAGED",
                             challenge = byteArrayOf(1),
                             createdAtEpochMilliseconds = 300L,
-                            expiresAtEpochMilliseconds = 400L,
                             updatedAtEpochMilliseconds = 300L
                         )
                     )
@@ -75,7 +75,7 @@ class GroupLocalMembershipTimelineTest {
 
         assertFalse(timeline.isLocallyInactive)
         assertEquals(listOf("before", "You left this group"), timeline.visibleMessages.map(MessageEntity::text))
-        assertEquals(listOf("invite-2"), timeline.currentInvitations.map(GroupInvitationEntity::invitationId))
+        assertEquals(listOf("invite-2"), timeline.currentMemberships.map(GroupMembershipEntity::sourceInvitationId))
     }
 
     @Test
@@ -92,7 +92,7 @@ class GroupLocalMembershipTimelineTest {
                             createdAtEpochMilliseconds = 200L
                         )
                     ),
-                invitations = emptyList()
+                memberships = emptyList()
             )
 
         assertTrue(timeline.isLocallyInactive)

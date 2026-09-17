@@ -16,7 +16,7 @@ class GroupMembershipIdentity(
     ) {
         val existing = requireContact(contactId).sparrowIdentity ?: return
         check(existing.signingPublicKey.contentEquals(signingPublicKey)) {
-            "Contact signing identity conflicts with the invitation response"
+            "Contact signing identity conflicts with the membership handshake"
         }
     }
 }

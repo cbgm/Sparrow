@@ -1,22 +1,20 @@
 package com.cbgm.sparrow.feature.invite.data.group
 
 import com.cbgm.sparrow.core.protocol.packet.GroupInviteDeclinedPacket
-import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
-import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
+import com.cbgm.sparrow.data.database.dao.InvitationDao
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationPayloadType
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipIdentity
-import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMembershipAdministrationCoordinator
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipAttemptDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtocolDataSource
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipVerificationDataSource
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
-import com.cbgm.sparrow.feature.membership.data.resolveInvitationUpdatedAt
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 
 internal class GroupInviteDeclinedIncomingProcessor(
-    private val groupInvitationDao: GroupInvitationDao,
+    private val invitationDao: InvitationDao,
     private val membershipPacketProtocol: GroupMembershipProtocolDataSource,
+    private val membershipAttempts: GroupMembershipAttemptDataSource,
     private val identity: GroupMembershipIdentity,
-    private val administration: GroupMembershipAdministrationCoordinator,
-    private val groupVerificationCoordinator: GroupMembershipVerificationDataSource
+    private val administration: GroupMembershipAdministrationCoordinator
 ) {
     suspend fun process(
         memberContactId: String,
@@ -24,24 +22,21 @@ internal class GroupInviteDeclinedIncomingProcessor(
         receivedAtEpochMilliseconds: Long
     ): Result<Unit> =
         runCatching {
-            val invitation =
-                groupInvitationDao.findByInvitationId(packet.invitationId)
-                    ?: error("Group invitation was not found")
-            check(invitation.groupId == packet.groupId) { "Decline uses the wrong group" }
-            check(invitation.contactId == memberContactId) { "Decline came from the wrong contact" }
-            check(invitation.challenge.contentEquals(packet.challenge)) { "Decline challenge does not match" }
+            val invitation = invitationDao.findById(packet.invitationId) ?: return@runCatching
+            check(invitation.payloadType == InvitationPayloadType.GROUP.name) { "Invitation is not a group invitation" }
+            check(invitation.payloadId == packet.groupId) { "Decline uses the wrong group" }
+            check(invitation.peerId == memberContactId) { "Decline came from the wrong contact" }
+
+            val membership =
+                membershipAttempts.findBySourceInvitationId(packet.invitationId)
+                    ?: return@runCatching
+            check(membership.challenge.contentEquals(packet.challenge)) { "Decline challenge does not match" }
             membershipPacketProtocol.verifyDecline(packet).getOrThrow()
             identity.ensureSigningIdentityMatches(memberContactId, packet.memberSigningPublicKey)
 
             if (
-                invitation.status == GroupInvitationStatus.DECLINED.name ||
-                invitation.status == GroupInvitationStatus.REMOVED.name
-            ) {
-                return@runCatching
-            }
-            if (
-                invitation.status == GroupInvitationStatus.WELCOME_SENT.name ||
-                invitation.status == GroupInvitationStatus.ACTIVE.name
+                membership.status == GroupMembershipStatus.WELCOME_SENT ||
+                membership.status == GroupMembershipStatus.ACTIVE
             ) {
                 administration
                     .removeDepartingMember(
@@ -50,29 +45,29 @@ internal class GroupInviteDeclinedIncomingProcessor(
                     ).getOrThrow()
                 return@runCatching
             }
-            check(
-                invitation.status == GroupInvitationStatus.INVITE_SENT.name ||
-                    invitation.status == GroupInvitationStatus.INVITE_RECEIVED.name ||
-                    invitation.status == GroupInvitationStatus.WAITING_FOR_IDENTITY.name ||
-                    invitation.status == GroupInvitationStatus.IDENTITY_READY.name
-            ) {
-                "Group invitation cannot be declined after it was accepted"
+
+            check(invitation.status == INVITATION_STATUS_PENDING) {
+                "Group invitation cannot be declined from status ${invitation.status}"
             }
+            check(membership.status == GroupMembershipStatus.STAGED) {
+                "Group membership cannot be declined from status ${membership.status}"
+            }
+
+            val updatedAt = maxOf(invitation.createdAtEpochMilliseconds, receivedAtEpochMilliseconds)
             val updated =
-                groupInvitationDao.updateStatus(
+                invitationDao.updateStatus(
                     invitationId = invitation.invitationId,
-                    expectedStatus = invitation.status,
-                    newStatus =
-                        GroupMembershipStateMachine
-                            .transition(invitation.status, GroupMembershipEvent.DECLINE)
-                            .name,
-                    updatedAt =
-                        resolveInvitationUpdatedAt(
-                            createdAtEpochMilliseconds = invitation.createdAtEpochMilliseconds,
-                            candidateAtEpochMilliseconds = receivedAtEpochMilliseconds
-                        )
+                    expectedStatus = INVITATION_STATUS_PENDING,
+                    newStatus = INVITATION_STATUS_DECLINED,
+                    updatedAt = updatedAt
                 )
             check(updated == 1) { "Group invitation changed while the decline was applied" }
-            groupVerificationCoordinator.onOwnedMembershipChanged(packet.groupId).getOrThrow()
+            membershipAttempts.deleteAttempt(packet.invitationId).getOrThrow()
+            membershipAttempts.refreshOwnedMembership(packet.groupId).getOrThrow()
         }
+
+    private companion object {
+        const val INVITATION_STATUS_PENDING = "PENDING"
+        const val INVITATION_STATUS_DECLINED = "DECLINED"
+    }
 }

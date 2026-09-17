@@ -51,6 +51,8 @@ interface GroupMembershipProtocolDataSource {
         memberSigningKeyPair: LocalSigningKeyPair
     ): Result<GroupJoinRequestPacket>
 
+    suspend fun verifyJoinRequest(packet: GroupJoinRequestPacket): Result<Unit>
+
     suspend fun createDecline(
         invitationId: String,
         groupId: String,

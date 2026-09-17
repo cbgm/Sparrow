@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.membership.data.repository
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMembershipCoordinator
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipAttemptDataSource
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_LEFT_ROLE
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
@@ -15,7 +16,8 @@ import kotlinx.coroutines.flow.transformLatest
 
 class GroupMembershipRepositoryImpl(
     private val groupSecurityDao: GroupSecurityDao,
-    private val membershipCoordinator: GroupMembershipCoordinator
+    private val membershipCoordinator: GroupMembershipCoordinator,
+    private val membershipAttempts: GroupMembershipAttemptDataSource
 ) : GroupMembershipRepository {
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeAdministration(groupId: String): Flow<GroupAdministrationState> =
@@ -59,15 +61,8 @@ class GroupMembershipRepositoryImpl(
             )
         }
 
-    override suspend fun create(
-        title: String,
-        contactIds: Set<String>
-    ): Result<String> = membershipCoordinator.createGroup(title, contactIds)
-
-    override suspend fun addMembers(
-        groupId: String,
-        contactIds: Set<String>
-    ): Result<Unit> = membershipCoordinator.addMembers(groupId, contactIds)
+    override suspend fun initializeOwnedGroup(groupId: String): Result<Unit> =
+        membershipAttempts.initializeOwnedGroup(groupId)
 
     override suspend fun removeMember(
         groupId: String,

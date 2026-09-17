@@ -1,41 +1,38 @@
 package com.cbgm.sparrow.feature.membership.data
 
-import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
-import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberInvitationState
-import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberInvitationStatus
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberProgress
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberProgressStatus
 
 enum class GroupMembershipEvent {
-    ACCEPT,
-    EXPIRE,
-    INVITE_SEND_FAILED,
-    INVITE_RECEIVED,
+    JOIN_REQUESTED,
     JOIN_SEND_FAILED,
     IDENTITY_CONFIRMED,
     WELCOME_SENT,
     WELCOME_RECEIVED,
     MEMBER_READY,
     MEMBER_ACTIVATED,
-    DECLINE,
     LEAVE_REQUESTED,
     REMOVE,
     GROUP_DELETED
 }
 
 /**
- * Single source of truth for the group membership lifecycle.
+ * Single source of truth for the membership/security lifecycle.
  *
- * Incoming handlers and coordinators express *events*. This object decides the
- * next persisted invitation status and also derives the user-visible group state.
+ * Invitation decisions are deliberately not represented here. A pending, accepted,
+ * declined or expired invitation is owned by feature:invite. A membership row only
+ * tracks the security/join attempt that can eventually become an active membership.
  */
 object GroupMembershipStateMachine {
     fun transition(
         currentStatus: String,
         event: GroupMembershipEvent
-    ): GroupInvitationStatus {
-        val current = currentStatus.toGroupInvitationStatus()
+    ): GroupMembershipStatus {
+        val current = currentStatus.toGroupMembershipStatus()
         val next = nextStatus(current, event)
         check(next != null) {
             "Unsupported group membership transition: $current + $event"
@@ -44,26 +41,23 @@ object GroupMembershipStateMachine {
     }
 
     fun conversationState(
-        invitations: List<GroupInvitationEntity>,
+        memberships: List<GroupMembershipEntity>,
         isLocallyInactive: Boolean = false
     ): GroupConversationState {
-        if (invitations.hasStatus(GroupInvitationStatus.GROUP_DELETED)) {
+        if (memberships.hasStatus(GroupMembershipStatus.GROUP_DELETED)) {
             return GroupConversationState.DELETED
         }
 
-        val currentInvitations = invitations.filterActiveHistory()
-        if (isLocallyInactive && currentInvitations.isEmpty()) {
+        val currentMemberships = memberships.filterCurrentHistory()
+        if (isLocallyInactive && currentMemberships.isEmpty()) {
             return GroupConversationState.REMOVED
         }
-        if (currentInvitations.isEmpty() || currentInvitations.allHaveStatus(GroupInvitationStatus.ACTIVE)) {
+        if (currentMemberships.isEmpty() || currentMemberships.allHaveStatus(GroupMembershipStatus.ACTIVE)) {
             return GroupConversationState.READY
         }
 
-        return currentInvitations.deriveConversationState()
+        return currentMemberships.deriveConversationState()
     }
-
-    fun isIncoming(invitations: List<GroupInvitationEntity>): Boolean =
-        invitations.any { invitation -> invitation.status.isIncomingMembershipStatus() }
 
     fun leaveRequirement(
         isLocalAdmin: Boolean,
@@ -80,162 +74,119 @@ object GroupMembershipStateMachine {
             GroupLeaveRequirement.PromoteAdminFirst(currentMemberContactIds)
         }
 
-    fun memberStates(invitations: List<GroupInvitationEntity>): List<GroupMemberInvitationState> =
-        invitations
-            .filter { invitation -> invitation.shouldExposeMemberState() }
-            .map { invitation ->
-                GroupMemberInvitationState(
-                    contactId = invitation.contactId,
-                    status = invitation.status.toGroupMemberInvitationStatus()
+    fun memberProgress(memberships: List<GroupMembershipEntity>): List<GroupMemberProgress> =
+        memberships
+            .filter { membership -> membership.shouldExposeProgress() }
+            .map { membership ->
+                GroupMemberProgress(
+                    contactId = membership.contactId,
+                    status = membership.status.toGroupMemberProgressStatus()
                 )
             }
 
     private fun nextStatus(
-        current: GroupInvitationStatus,
+        current: GroupMembershipStatus,
         event: GroupMembershipEvent
-    ): GroupInvitationStatus? =
+    ): GroupMembershipStatus? =
         when (event) {
-            GroupMembershipEvent.ACCEPT ->
-                GroupInvitationStatus.JOIN_SENT.takeIf {
-                    current == GroupInvitationStatus.AWAITING_ACCEPTANCE
-                }
-
-            GroupMembershipEvent.EXPIRE ->
-                GroupInvitationStatus.EXPIRED.takeIf {
-                    current == GroupInvitationStatus.AWAITING_ACCEPTANCE
-                }
-
-            GroupMembershipEvent.INVITE_SEND_FAILED ->
-                GroupInvitationStatus.FAILED.takeIf {
-                    current == GroupInvitationStatus.INVITE_SENT
-                }
-
-            GroupMembershipEvent.INVITE_RECEIVED ->
-                GroupInvitationStatus.INVITE_RECEIVED.takeIf {
-                    current == GroupInvitationStatus.INVITE_SENT
+            GroupMembershipEvent.JOIN_REQUESTED ->
+                GroupMembershipStatus.JOIN_REQUEST_SENT.takeIf {
+                    current == GroupMembershipStatus.STAGED
                 }
 
             GroupMembershipEvent.JOIN_SEND_FAILED ->
-                GroupInvitationStatus.FAILED.takeIf {
-                    current == GroupInvitationStatus.JOIN_SENT
+                GroupMembershipStatus.FAILED.takeIf {
+                    current == GroupMembershipStatus.JOIN_REQUEST_SENT
                 }
 
             GroupMembershipEvent.IDENTITY_CONFIRMED ->
-                GroupInvitationStatus.IDENTITY_READY.takeIf {
-                    current == GroupInvitationStatus.INVITE_SENT ||
-                        current == GroupInvitationStatus.INVITE_RECEIVED ||
-                        current == GroupInvitationStatus.WAITING_FOR_IDENTITY
+                GroupMembershipStatus.IDENTITY_READY.takeIf {
+                    current == GroupMembershipStatus.STAGED
                 }
 
             GroupMembershipEvent.WELCOME_SENT ->
-                GroupInvitationStatus.WELCOME_SENT.takeIf {
-                    current == GroupInvitationStatus.IDENTITY_READY
+                GroupMembershipStatus.WELCOME_SENT.takeIf {
+                    current == GroupMembershipStatus.IDENTITY_READY
                 }
 
             GroupMembershipEvent.WELCOME_RECEIVED ->
-                GroupInvitationStatus.WAITING_FOR_ACTIVATION.takeIf {
-                    current == GroupInvitationStatus.JOIN_SENT
+                GroupMembershipStatus.WAITING_FOR_ACTIVATION.takeIf {
+                    current == GroupMembershipStatus.JOIN_REQUEST_SENT
                 }
 
             GroupMembershipEvent.MEMBER_READY ->
-                GroupInvitationStatus.ACTIVE.takeIf {
-                    current == GroupInvitationStatus.WELCOME_SENT
+                GroupMembershipStatus.ACTIVE.takeIf {
+                    current == GroupMembershipStatus.WELCOME_SENT
                 }
 
             GroupMembershipEvent.MEMBER_ACTIVATED ->
-                GroupInvitationStatus.ACTIVE.takeIf {
-                    current == GroupInvitationStatus.WAITING_FOR_ACTIVATION
-                }
-
-            GroupMembershipEvent.DECLINE ->
-                GroupInvitationStatus.DECLINED.takeIf {
-                    current in DECLINABLE_STATUSES
+                GroupMembershipStatus.ACTIVE.takeIf {
+                    current == GroupMembershipStatus.WAITING_FOR_ACTIVATION
                 }
 
             GroupMembershipEvent.LEAVE_REQUESTED ->
-                GroupInvitationStatus.LEAVE_SENT.takeIf {
+                GroupMembershipStatus.LEAVE_REQUESTED.takeIf {
                     current !in TERMINAL_STATUSES
                 }
 
             GroupMembershipEvent.REMOVE ->
-                GroupInvitationStatus.REMOVED.takeIf {
-                    current != GroupInvitationStatus.REMOVED &&
-                        current != GroupInvitationStatus.GROUP_DELETED
+                GroupMembershipStatus.REMOVED.takeIf {
+                    current != GroupMembershipStatus.REMOVED &&
+                        current != GroupMembershipStatus.GROUP_DELETED
                 }
 
             GroupMembershipEvent.GROUP_DELETED ->
-                GroupInvitationStatus.GROUP_DELETED.takeIf {
-                    current != GroupInvitationStatus.GROUP_DELETED
+                GroupMembershipStatus.GROUP_DELETED.takeIf {
+                    current != GroupMembershipStatus.GROUP_DELETED
                 }
         }
 
-    private fun List<GroupInvitationEntity>.deriveConversationState(): GroupConversationState =
+    private fun List<GroupMembershipEntity>.deriveConversationState(): GroupConversationState =
         when {
-            hasStatus(GroupInvitationStatus.AWAITING_ACCEPTANCE) -> GroupConversationState.INVITED
-            hasStatus(GroupInvitationStatus.LEAVE_SENT) -> GroupConversationState.LEAVING
-            hasStatus(GroupInvitationStatus.JOIN_SENT) ||
-                hasStatus(GroupInvitationStatus.WAITING_FOR_ACTIVATION) -> GroupConversationState.JOINING
-            hasStatus(GroupInvitationStatus.ACTIVE) -> GroupConversationState.READY
-            hasStatus(GroupInvitationStatus.WELCOME_SENT) -> GroupConversationState.DISTRIBUTING_KEYS
-            hasStatus(GroupInvitationStatus.DECLINED) -> GroupConversationState.DECLINED
-            hasStatus(GroupInvitationStatus.EXPIRED) -> GroupConversationState.EXPIRED
-            hasStatus(GroupInvitationStatus.FAILED) -> GroupConversationState.FAILED
+            hasStatus(GroupMembershipStatus.LEAVE_REQUESTED) -> GroupConversationState.LEAVING
+            hasStatus(GroupMembershipStatus.JOIN_REQUEST_SENT) ||
+                hasStatus(GroupMembershipStatus.WAITING_FOR_ACTIVATION) -> GroupConversationState.JOINING
+            hasStatus(GroupMembershipStatus.ACTIVE) -> GroupConversationState.READY
+            hasStatus(GroupMembershipStatus.IDENTITY_READY) ||
+                hasStatus(GroupMembershipStatus.WELCOME_SENT) -> GroupConversationState.DISTRIBUTING_KEYS
+            hasStatus(GroupMembershipStatus.STAGED) -> GroupConversationState.WAITING_FOR_MEMBERS
+            hasStatus(GroupMembershipStatus.FAILED) -> GroupConversationState.FAILED
             else -> GroupConversationState.WAITING_FOR_MEMBERS
         }
 
-    private fun List<GroupInvitationEntity>.filterActiveHistory(): List<GroupInvitationEntity> =
-        filterNot { invitation -> invitation.status == GroupInvitationStatus.REMOVED.name }
+    private fun List<GroupMembershipEntity>.filterCurrentHistory(): List<GroupMembershipEntity> =
+        filterNot { membership -> membership.status == GroupMembershipStatus.REMOVED.name }
 
-    private fun List<GroupInvitationEntity>.hasStatus(status: GroupInvitationStatus): Boolean =
-        any { invitation -> invitation.status == status.name }
+    private fun List<GroupMembershipEntity>.hasStatus(status: GroupMembershipStatus): Boolean =
+        any { membership -> membership.status == status.name }
 
-    private fun List<GroupInvitationEntity>.allHaveStatus(status: GroupInvitationStatus): Boolean =
-        all { invitation -> invitation.status == status.name }
+    private fun List<GroupMembershipEntity>.allHaveStatus(status: GroupMembershipStatus): Boolean =
+        all { membership -> membership.status == status.name }
 
-    private fun String.toGroupInvitationStatus(): GroupInvitationStatus =
-        GroupInvitationStatus.entries.firstOrNull { status -> status.name == this }
-            ?: error("Unknown group invitation status: $this")
+    private fun String.toGroupMembershipStatus(): GroupMembershipStatus =
+        GroupMembershipStatus.entries.firstOrNull { status -> status.name == this }
+            ?: error("Unknown group membership status: $this")
 
-    private fun String.isIncomingMembershipStatus(): Boolean =
-        this == GroupInvitationStatus.AWAITING_ACCEPTANCE.name ||
-            this == GroupInvitationStatus.JOIN_SENT.name ||
-            this == GroupInvitationStatus.WAITING_FOR_ACTIVATION.name ||
-            this == GroupInvitationStatus.LEAVE_SENT.name
+    private fun GroupMembershipEntity.shouldExposeProgress(): Boolean =
+        status != GroupMembershipStatus.REMOVED.name &&
+            status != GroupMembershipStatus.GROUP_DELETED.name
 
-    private fun GroupInvitationEntity.shouldExposeMemberState(): Boolean =
-        !status.isHiddenMemberStatus()
-
-    private fun String.isHiddenMemberStatus(): Boolean =
-        this == GroupInvitationStatus.REMOVED.name ||
-            this == GroupInvitationStatus.GROUP_DELETED.name
-
-    private fun String.toGroupMemberInvitationStatus(): GroupMemberInvitationStatus =
+    private fun String.toGroupMemberProgressStatus(): GroupMemberProgressStatus =
         when (this) {
-            GroupInvitationStatus.IDENTITY_READY.name -> GroupMemberInvitationStatus.ACCEPTED
-            GroupInvitationStatus.WELCOME_SENT.name,
-            GroupInvitationStatus.WAITING_FOR_ACTIVATION.name -> GroupMemberInvitationStatus.KEY_SENT
-            GroupInvitationStatus.ACTIVE.name -> GroupMemberInvitationStatus.ACTIVE
-            GroupInvitationStatus.DECLINED.name -> GroupMemberInvitationStatus.DECLINED
-            GroupInvitationStatus.EXPIRED.name -> GroupMemberInvitationStatus.EXPIRED
-            GroupInvitationStatus.FAILED.name -> GroupMemberInvitationStatus.FAILED
-            else -> GroupMemberInvitationStatus.INVITED
+            GroupMembershipStatus.STAGED.name -> GroupMemberProgressStatus.PENDING
+            GroupMembershipStatus.IDENTITY_READY.name,
+            GroupMembershipStatus.JOIN_REQUEST_SENT.name -> GroupMemberProgressStatus.JOINING
+            GroupMembershipStatus.WELCOME_SENT.name,
+            GroupMembershipStatus.WAITING_FOR_ACTIVATION.name -> GroupMemberProgressStatus.KEY_EXCHANGE
+            GroupMembershipStatus.ACTIVE.name -> GroupMemberProgressStatus.ACTIVE
+            GroupMembershipStatus.FAILED.name -> GroupMemberProgressStatus.FAILED
+            else -> GroupMemberProgressStatus.PENDING
         }
-
-    private val DECLINABLE_STATUSES =
-        setOf(
-            GroupInvitationStatus.AWAITING_ACCEPTANCE,
-            GroupInvitationStatus.INVITE_SENT,
-            GroupInvitationStatus.INVITE_RECEIVED,
-            GroupInvitationStatus.WAITING_FOR_IDENTITY,
-            GroupInvitationStatus.IDENTITY_READY
-        )
 
     private val TERMINAL_STATUSES =
         setOf(
-            GroupInvitationStatus.DECLINED,
-            GroupInvitationStatus.EXPIRED,
-            GroupInvitationStatus.FAILED,
-            GroupInvitationStatus.REMOVED,
-            GroupInvitationStatus.GROUP_DELETED
+            GroupMembershipStatus.FAILED,
+            GroupMembershipStatus.REMOVED,
+            GroupMembershipStatus.GROUP_DELETED
         )
 }

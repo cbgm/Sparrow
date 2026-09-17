@@ -196,7 +196,7 @@ class GroupMembershipPacketProtocol(
             unsignedPacket.copy(memberSignature = signature)
         }
 
-    suspend fun verifyJoinRequest(packet: GroupJoinRequestPacket): Result<Unit> =
+    override suspend fun verifyJoinRequest(packet: GroupJoinRequestPacket): Result<Unit> =
         groupCrypto.verify(
             payload = payloadEncoder.encodeJoinRequest(packet),
             signature = packet.memberSignature,

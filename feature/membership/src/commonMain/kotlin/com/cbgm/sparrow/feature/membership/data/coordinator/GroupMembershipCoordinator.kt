@@ -9,24 +9,13 @@ import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
  * Public entry point for group membership lifecycle operations.
  *
  * The facade keeps packet handlers and repositories on one obvious red line while delegating the
- * actual invitation, activation, administration and deletion rules to focused coordinators.
+ * actual activation, administration and deletion rules to focused coordinators.
  */
 class GroupMembershipCoordinator(
-    private val invitations: GroupInvitationCoordinator,
     private val activation: GroupMembershipActivationCoordinator,
     private val administration: GroupMembershipAdministrationCoordinator,
     private val deletion: GroupMembershipDeletionCoordinator
 ) {
-    suspend fun createGroup(
-        title: String,
-        contactIds: Set<String>
-    ): Result<String> = invitations.createGroup(title, contactIds)
-
-    suspend fun addMembers(
-        groupId: String,
-        contactIds: Set<String>
-    ): Result<Unit> = invitations.addMembers(groupId, contactIds)
-
     suspend fun removeMember(
         groupId: String,
         contactId: String

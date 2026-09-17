@@ -5,19 +5,19 @@ import com.cbgm.sparrow.core.protocol.packet.GroupConversationDeletedPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.ContactDao
-import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
+import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.feature.attachments.domain.usecase.DeleteConversationLocalAttachmentsUseCase
 import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupMembershipPacketProtocol
 import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 
 class GroupConversationDeletedPacketHandler internal constructor(
     private val chatDao: ChatDao,
     private val contactDao: ContactDao,
-    private val groupInvitationDao: GroupInvitationDao,
+    private val groupMembershipDao: GroupMembershipDao,
     private val groupVerificationDao: GroupVerificationDao,
     private val membershipPacketProtocol: GroupMembershipPacketProtocol,
     private val groupSecurityManager: GroupSecurityManager,
@@ -33,20 +33,20 @@ class GroupConversationDeletedPacketHandler internal constructor(
             val deletion =
                 packet as? GroupConversationDeletedPacket
                     ?: error("GroupConversationDeletedPacketHandler received an incompatible packet")
-            val invitation =
-                groupInvitationDao.findByInvitationId(deletion.invitationId)
-                    ?: error("Deleted group invitation was not found")
-            check(invitation.groupId == deletion.groupId) {
+            val membership =
+                groupMembershipDao.findBySourceInvitationId(deletion.invitationId)
+                    ?: error("Deleted group membership was not found")
+            check(membership.groupId == deletion.groupId) {
                 "Group deletion references the wrong group"
             }
-            check(invitation.contactId == context.contactId) {
+            check(membership.contactId == context.contactId) {
                 "Group deletion came from a contact that is not the group owner"
             }
-            check(invitation.challenge.contentEquals(deletion.challenge)) {
-                "Group deletion invitation challenge does not match"
+            check(membership.challenge.contentEquals(deletion.challenge)) {
+                "Group deletion membership challenge does not match"
             }
-            check(deletion.deletedAtEpochMilliseconds >= invitation.createdAtEpochMilliseconds) {
-                "Group deletion predates the invitation"
+            check(deletion.deletedAtEpochMilliseconds >= membership.createdAtEpochMilliseconds) {
+                "Group deletion predates the membership attempt"
             }
             val ownerIdentity =
                 contactDao.findPublicIdentityByContactId(context.contactId)
@@ -61,19 +61,19 @@ class GroupConversationDeletedPacketHandler internal constructor(
             groupSecurityManager.deleteLocalGroup(deletion.groupId).getOrThrow()
             chatDao.deleteConversationParticipants(deletion.groupId)
             groupVerificationDao.deleteByGroupId(deletion.groupId)
-            if (invitation.status != GroupInvitationStatus.GROUP_DELETED.name) {
+            if (membership.status != GroupMembershipStatus.GROUP_DELETED.name) {
                 val updated =
-                    groupInvitationDao.updateStatus(
-                        invitationId = invitation.invitationId,
-                        expectedStatus = invitation.status,
+                    groupMembershipDao.updateStatus(
+                        membershipId = membership.membershipId,
+                        expectedStatus = membership.status,
                         newStatus =
                             GroupMembershipStateMachine.transition(
-                                invitation.status,
+                                membership.status,
                                 GroupMembershipEvent.GROUP_DELETED
                             ).name,
                         updatedAt = deletion.deletedAtEpochMilliseconds
                     )
-                check(updated == 1) { "Group invitation changed while deletion was applied" }
+                check(updated == 1) { "Group membership changed while deletion was applied" }
             }
             chatDao.updateConversationTimestamp(
                 conversationId = deletion.groupId,

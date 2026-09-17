@@ -1,13 +1,15 @@
 package com.cbgm.sparrow.feature.chats.data.group.repository
 
+import com.cbgm.sparrow.core.id.IdGenerator
+import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
+import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.data.database.dao.MessageReactionDao
 import com.cbgm.sparrow.data.database.dao.MessageRecipientStateDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
-import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
+import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
@@ -32,10 +34,29 @@ class GroupConversationRepositoryImpl(
     private val messageAttachmentDataSource: MessageAttachmentDataSource,
     private val messageRecipientStateDao: MessageRecipientStateDao,
     private val messageReactionDao: MessageReactionDao,
-    private val groupInvitationDao: GroupInvitationDao,
+    private val groupMembershipDao: GroupMembershipDao,
     private val groupSecurityDao: GroupSecurityDao,
     private val groupVerificationDao: GroupVerificationDao
 ) : GroupConversationRepository {
+    override suspend fun create(title: String): Result<String> =
+        runCatching {
+            val normalizedTitle = title.trim()
+            require(normalizedTitle.isNotEmpty()) { "Group title must not be blank" }
+            val now = SystemClock.nowEpochMilliseconds()
+            val groupId = IdGenerator.generate(prefix = "group")
+            chatDao.upsertConversation(
+                ConversationEntity(
+                    id = groupId,
+                    contactId = null,
+                    type = GROUP_CONVERSATION_TYPE,
+                    title = normalizedTitle,
+                    createdAtEpochMilliseconds = now,
+                    updatedAtEpochMilliseconds = now
+                )
+            )
+            groupId
+        }
+
     override fun observe(
         groupId: String,
         oldestCursor: MessageHistoryCursor?
@@ -71,13 +92,13 @@ class GroupConversationRepositoryImpl(
             combine(
                 groupSecurityDao.observeCurrentMemberKeys(groupId),
                 observeRecipientStates(groupId, oldestCursor),
-                groupInvitationDao.observeByGroupId(groupId),
+                groupMembershipDao.observeByGroupId(groupId),
                 groupVerificationDao.observeByGroupId(groupId)
-            ) { memberKeys, recipientStates, invitations, verificationRows ->
+            ) { memberKeys, recipientStates, memberships, verificationRows ->
                 GroupStateSnapshotDto(
                     participantContactIds = memberKeys.map { memberKey -> memberKey.contactId },
                     recipientStates = recipientStates,
-                    invitations = invitations,
+                    memberships = memberships,
                     verificationRows = verificationRows
                 )
             }
@@ -93,7 +114,7 @@ class GroupConversationRepositoryImpl(
                 ?.toGroupConversation(
                     participantContactIds = groupState.participantContactIds,
                     recipientStates = groupState.recipientStates,
-                    invitations = groupState.invitations,
+                    memberships = groupState.memberships,
                     verificationRows = groupState.verificationRows,
                     partsByMessageId = snapshot.partsByMessageId,
                     reactionsByMessageId = snapshot.reactionsByMessageId,
@@ -165,7 +186,7 @@ class GroupConversationRepositoryImpl(
     private data class GroupStateSnapshotDto(
         val participantContactIds: List<String>,
         val recipientStates: List<MessageRecipientStateEntity>,
-        val invitations: List<GroupInvitationEntity>,
+        val memberships: List<GroupMembershipEntity>,
         val verificationRows: List<GroupVerificationPairEntity>
     )
 

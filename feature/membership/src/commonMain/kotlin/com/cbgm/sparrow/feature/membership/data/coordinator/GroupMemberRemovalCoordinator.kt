@@ -9,9 +9,9 @@ import com.cbgm.sparrow.core.protocol.packet.GroupMembershipChangePayload
 import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
-import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
+import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
+import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipIdentity
@@ -23,13 +23,13 @@ import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtoc
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipVerificationDataSource
 import com.cbgm.sparrow.feature.membership.data.groupMembershipDisplayName
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationDirection
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 
 @Suppress("LongParameterList")
 class GroupMemberRemovalCoordinator(
     private val chatDao: ChatDao,
-    private val groupInvitationDao: GroupInvitationDao,
+    private val groupMembershipDao: GroupMembershipDao,
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
@@ -114,7 +114,7 @@ class GroupMemberRemovalCoordinator(
         val removal = loadMemberRemoval(groupId, contactId)
         val removalEpoch = rotateForRemovalIfNeeded(groupId, contactId, reason, removal)
         sendMemberRemovalPacket(groupId, contactId, reason, removalEpoch, removal)
-        markOutgoingInvitationRemoved(removal.invitation, removal.removedAt)
+        markMembershipRemoved(removal.membership, removal.removedAt)
         persistMemberRemoval(groupId, contactId, reason, removalEpoch, removal)
         groupVerificationCoordinator.onOwnedMembershipChanged(groupId).getOrThrow()
         chatDao.updateConversationTimestamp(groupId, removal.removedAt)
@@ -126,14 +126,14 @@ class GroupMemberRemovalCoordinator(
     ): MemberRemovalDto {
         groupSecurityManager.findOwnedGroupEpoch(groupId).getOrThrow()
         val currentMemberKey = currentMemberKey(groupId, contactId)
-        val invitation =
-            groupInvitationDao.findByGroupContactAndDirection(
+        val membership =
+            groupMembershipDao.findByGroupContactAndPerspective(
                 groupId = groupId,
                 contactId = contactId,
-                direction = GroupInvitationDirection.OUTGOING.name
+                perspective = GroupMembershipPerspective.OWNER.name
             )
-        check(currentMemberKey != null || invitation != null) { "Group member was not found" }
-        check(invitation?.status?.isTerminalStatus() != true) { "Group member is already inactive" }
+        check(currentMemberKey != null || membership != null) { "Group member was not found" }
+        check(membership?.status?.isTerminalStatus() != true) { "Group member is already inactive" }
 
         val contact = identity.requireContact(contactId)
         val signingPublicKey =
@@ -142,16 +142,16 @@ class GroupMemberRemovalCoordinator(
                 ?: byteArrayOf()
         val removedAt =
             maxOf(
-                invitation?.createdAtEpochMilliseconds ?: 0L,
+                membership?.createdAtEpochMilliseconds ?: 0L,
                 SystemClock.nowEpochMilliseconds()
             )
         return MemberRemovalDto(
             currentMemberKey = currentMemberKey,
-            invitation = invitation,
+            membership = membership,
             contact = contact,
             signingPublicKey = signingPublicKey,
             removedAt = removedAt,
-            referenceId = invitation?.invitationId ?: "member-$contactId"
+            referenceId = membership?.sourceInvitationId ?: "member-$contactId"
         )
     }
 
@@ -190,7 +190,7 @@ class GroupMemberRemovalCoordinator(
                     groupId = groupId,
                     epoch = removalEpoch,
                     reason = reason,
-                    challenge = removal.invitation?.challenge ?: byteArrayOf(),
+                    challenge = removal.membership?.challenge ?: byteArrayOf(),
                     removedMemberSigningPublicKey = removal.signingPublicKey.copyOf(),
                     removedAtEpochMilliseconds = removal.removedAt,
                     ownerSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
@@ -198,13 +198,13 @@ class GroupMemberRemovalCoordinator(
         protocolOutbox.enqueue(contactId, packet).getOrThrow()
     }
 
-    private suspend fun markOutgoingInvitationRemoved(
-        invitation: GroupInvitationEntity?,
+    private suspend fun markMembershipRemoved(
+        membership: GroupMembershipEntity?,
         updatedAt: Long
     ) {
-        val row = invitation ?: return
-        groupInvitationDao.updateStatus(
-            invitationId = row.invitationId,
+        val row = membership ?: return
+        groupMembershipDao.updateStatus(
+            membershipId = row.membershipId,
             expectedStatus = row.status,
             newStatus =
                 GroupMembershipStateMachine.transition(
@@ -288,9 +288,9 @@ class GroupMemberRemovalCoordinator(
     }
 
     private fun String.isTerminalStatus(): Boolean =
-        this == GroupInvitationStatus.DECLINED.name ||
-            this == GroupInvitationStatus.REMOVED.name ||
-            this == GroupInvitationStatus.EXPIRED.name
+        this == GroupMembershipStatus.REMOVED.name ||
+            this == GroupMembershipStatus.GROUP_DELETED.name ||
+            this == GroupMembershipStatus.FAILED.name
 
     private suspend fun requireCurrentMemberKey(
         groupId: String,
@@ -311,7 +311,7 @@ class GroupMemberRemovalCoordinator(
 
     private data class MemberRemovalDto(
         val currentMemberKey: GroupMemberKeyEntity?,
-        val invitation: GroupInvitationEntity?,
+        val membership: GroupMembershipEntity?,
         val contact: Contact,
         val signingPublicKey: ByteArray,
         val removedAt: Long,
@@ -325,7 +325,7 @@ class GroupMemberRemovalCoordinator(
 
             if (removedAt != other.removedAt) return false
             if (currentMemberKey != other.currentMemberKey) return false
-            if (invitation != other.invitation) return false
+            if (membership != other.membership) return false
             if (contact != other.contact) return false
             if (!signingPublicKey.contentEquals(other.signingPublicKey)) return false
             if (referenceId != other.referenceId) return false
@@ -336,7 +336,7 @@ class GroupMemberRemovalCoordinator(
         override fun hashCode(): Int {
             var result = removedAt.hashCode()
             result = 31 * result + (currentMemberKey?.hashCode() ?: 0)
-            result = 31 * result + (invitation?.hashCode() ?: 0)
+            result = 31 * result + (membership?.hashCode() ?: 0)
             result = 31 * result + contact.hashCode()
             result = 31 * result + signingPublicKey.contentHashCode()
             result = 31 * result + referenceId.hashCode()

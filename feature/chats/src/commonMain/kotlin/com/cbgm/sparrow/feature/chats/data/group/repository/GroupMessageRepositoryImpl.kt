@@ -1,13 +1,13 @@
 package com.cbgm.sparrow.feature.chats.data.group.repository
 
 import com.cbgm.sparrow.core.result.safeSuspendCall
-import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
+import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
 import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupOutgoingMessageProcessor
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupMessageRepository
 
 class GroupMessageRepositoryImpl(
-    private val groupInvitationDao: GroupInvitationDao,
+    private val groupMembershipDao: GroupMembershipDao,
     private val outgoingMessageProcessor: GroupOutgoingMessageProcessor
 ) : GroupMessageRepository {
     override suspend fun send(
@@ -21,7 +21,7 @@ class GroupMessageRepositoryImpl(
             text = text,
             attachments = attachments,
             replyToMessageId = replyToMessageId,
-            invitations = groupInvitationDao.findByGroupId(groupId)
+            memberships = groupMembershipDao.findByGroupId(groupId)
         )
 
     override suspend fun toggleReaction(
@@ -34,7 +34,7 @@ class GroupMessageRepositoryImpl(
                 groupId = groupId,
                 messageId = messageId,
                 emoji = emoji,
-                invitations = groupInvitationDao.findByGroupId(groupId)
+                memberships = groupMembershipDao.findByGroupId(groupId)
             )
         }
 
@@ -43,7 +43,7 @@ class GroupMessageRepositoryImpl(
             outgoingMessageProcessor.deleteMessage(
                 groupId = groupId,
                 messageId = messageId,
-                invitations = groupInvitationDao.findByGroupId(groupId)
+                memberships = groupMembershipDao.findByGroupId(groupId)
             )
         }
 
@@ -56,7 +56,7 @@ class GroupMessageRepositoryImpl(
             groupId = groupId,
             messageId = messageId,
             text = text,
-            invitations = groupInvitationDao.findByGroupId(groupId)
+            memberships = groupMembershipDao.findByGroupId(groupId)
         )
     }
 

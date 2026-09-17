@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.chats.presentation.group.model
 
-import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberInvitationStatus
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberProgressStatus
 
 data class GroupMemberProgressUi(
     val displayName: String,
-    val status: GroupMemberInvitationStatus
+    val status: GroupMemberProgressStatus
 )
 
 data class GroupMembershipUiState(

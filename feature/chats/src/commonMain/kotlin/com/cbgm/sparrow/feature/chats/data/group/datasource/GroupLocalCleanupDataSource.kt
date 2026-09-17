@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.chats.data.group.datasource
 
 import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
+import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
@@ -10,7 +10,7 @@ import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipCleanu
 
 internal class GroupLocalCleanupDataSource(
     private val chatDao: ChatDao,
-    private val groupInvitationDao: GroupInvitationDao,
+    private val groupMembershipDao: GroupMembershipDao,
     private val groupVerificationDao: GroupVerificationDao,
     private val groupSecurityManager: GroupSecurityManager,
     private val groupAvatarDataSource: GroupAvatarDataSource,
@@ -26,7 +26,7 @@ internal class GroupLocalCleanupDataSource(
                 retiredAtEpochMilliseconds = message.createdAtEpochMilliseconds
             ).getOrThrow()
         groupVerificationDao.deleteByGroupId(message.conversationId)
-        groupInvitationDao.deleteByGroupId(message.conversationId)
+        groupMembershipDao.deleteByGroupId(message.conversationId)
     }
 
     override suspend fun deleteConversationHistory(
@@ -40,7 +40,7 @@ internal class GroupLocalCleanupDataSource(
             )
         )
         groupVerificationDao.deleteByGroupId(groupId)
-        groupInvitationDao.deleteByGroupId(groupId)
+        groupMembershipDao.deleteByGroupId(groupId)
         groupAvatarDataSource.deleteLocal(groupId)
         groupTitleDataSource.deleteLocal(groupId)
         groupDescriptionDataSource.deleteLocal(groupId)
@@ -59,7 +59,7 @@ internal class GroupLocalCleanupDataSource(
         )
         groupSecurityManager.deleteLocalGroup(groupId).getOrThrow()
         groupVerificationDao.deleteByGroupId(groupId)
-        groupInvitationDao.deleteByGroupId(groupId)
+        groupMembershipDao.deleteByGroupId(groupId)
         groupAvatarDataSource.deleteLocal(groupId)
         groupTitleDataSource.deleteLocal(groupId)
         groupDescriptionDataSource.deleteLocal(groupId)

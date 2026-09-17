@@ -1,35 +1,26 @@
 package com.cbgm.sparrow.feature.chats.data.group.delivery
 
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
-import com.cbgm.sparrow.feature.membership.data.coordinator.GroupInvitationCoordinator
+import com.cbgm.sparrow.feature.invite.data.outbox.InvitationOutboxDeliveryHandler
 
 class GroupOutboxDeliveryHandler internal constructor(
     private val deliveryCoordinator: GroupMessageDeliveryCoordinator,
-    private val invitationCoordinator: GroupInvitationCoordinator
+    private val invitationDeliveryHandler: InvitationOutboxDeliveryHandler
 ) {
     suspend fun canHandle(packetId: String): Boolean =
-        packetId.isGroupInvitePacketId() || deliveryCoordinator.handlesPacket(packetId)
+        invitationDeliveryHandler.canHandle(packetId) || deliveryCoordinator.handlesPacket(packetId)
 
     suspend fun applyEvent(
         packetId: String,
         event: MessageDeliveryEvent,
         errorMessage: String? = null
     ) {
-        if (packetId.isGroupInvitePacketId()) {
+        if (invitationDeliveryHandler.canHandle(packetId)) {
             if (event == MessageDeliveryEvent.SEND_FAILED) {
-                invitationCoordinator.markInvitationTransportFailed(packetId)
+                invitationDeliveryHandler.onFailed(packetId)
             }
             return
         }
         deliveryCoordinator.applyPacketEvent(packetId, event, errorMessage)
-    }
-
-    private fun String.isGroupInvitePacketId(): Boolean =
-        startsWith(GROUP_INVITE_PACKET_ID_PREFIX) &&
-            !startsWith(GROUP_INVITE_RECEIVED_PACKET_ID_PREFIX)
-
-    private companion object {
-        const val GROUP_INVITE_PACKET_ID_PREFIX = "group-invite-"
-        const val GROUP_INVITE_RECEIVED_PACKET_ID_PREFIX = "group-invite-received-"
     }
 }

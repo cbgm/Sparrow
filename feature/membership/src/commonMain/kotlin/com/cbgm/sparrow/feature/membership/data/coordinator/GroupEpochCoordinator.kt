@@ -3,7 +3,7 @@ package com.cbgm.sparrow.feature.membership.data.coordinator
 import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentity
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberPayload
 import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
+import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
@@ -17,7 +17,7 @@ import com.cbgm.sparrow.feature.membership.data.requireGroupPhoneNumber
 
 class GroupEpochCoordinator(
     private val chatDao: ChatDao,
-    private val groupInvitationDao: GroupInvitationDao,
+    private val groupMembershipDao: GroupMembershipDao,
     private val groupSecurityDao: GroupSecurityDao,
     private val groupSecurityManager: GroupMembershipSecurityDataSource,
     private val identity: GroupMembershipIdentity
@@ -103,11 +103,11 @@ class GroupEpochCoordinator(
         contacts: List<Contact>
     ): List<GroupWelcomeRecipientDto> =
         contacts.map { contact ->
-            val invitation = groupInvitationDao.findByGroupAndContact(groupId, contact.id)
+            val membership = groupMembershipDao.findByGroupAndContact(groupId, contact.id)
             val member = resolveMemberIdentity(groupId, contact)
             GroupWelcomeRecipientDto(
                 contactId = contact.id,
-                invitationId = invitation?.invitationId ?: "member-${contact.id}",
+                invitationId = membership?.sourceInvitationId ?: "member-${contact.id}",
                 encryptionPublicKey = member.encryptionPublicKey.copyOf()
             )
         }

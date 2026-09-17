@@ -6,20 +6,20 @@ import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.ContactDao
-import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
+import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
-import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
+import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
 import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupMembershipPacketProtocol
 import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 
 class GroupMemberRemovedPacketHandler(
     private val chatDao: ChatDao,
     private val contactDao: ContactDao,
-    private val groupInvitationDao: GroupInvitationDao,
+    private val groupMembershipDao: GroupMembershipDao,
     private val groupVerificationDao: GroupVerificationDao,
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val membershipPacketProtocol: GroupMembershipPacketProtocol,
@@ -34,8 +34,8 @@ class GroupMemberRemovedPacketHandler(
     ): Result<Unit> =
         runCatching {
             val removal = packet.requireRemovalPacket()
-            val invitation = groupInvitationDao.findByInvitationId(removal.invitationId)
-            if (!validateRemoval(context, removal, invitation)) return@runCatching
+            val membership = groupMembershipDao.findBySourceInvitationId(removal.invitationId)
+            if (!validateRemoval(context, removal, membership)) return@runCatching
 
             val wasLocallyHidden = isLocallyHidden(removal.groupId)
             removeLocalSecurityState(context, removal)
@@ -43,7 +43,7 @@ class GroupMemberRemovedPacketHandler(
                 applyLocalRemovalMessage(removal)
             }
 
-            markInvitationRemoved(invitation, removal)
+            markMembershipRemoved(membership, removal)
             groupVerificationDao.deleteByGroupId(removal.groupId)
         }
 
@@ -54,18 +54,18 @@ class GroupMemberRemovedPacketHandler(
     private suspend fun validateRemoval(
         context: IncomingPacketContext,
         packet: GroupMemberRemovedPacket,
-        invitation: GroupInvitationEntity?
+        membership: GroupMembershipEntity?
     ): Boolean {
         if (packet.epoch == GroupMemberRemovedPacket.PENDING_INVITATION_EPOCH) {
             val authorityIdentity =
                 contactDao.findPublicIdentityByContactId(context.contactId)
-                    ?: error("Pending group invitation owner identity was not found")
+                    ?: error("Pending group membership owner identity was not found")
             membershipPacketProtocol
                 .verifyMemberRemoved(
                     packet = packet,
                     expectedOwnerSigningPublicKey = authorityIdentity.signingPublicKey
                 ).getOrThrow()
-            return validatePendingInvitationRemoval(context, packet, invitation)
+            return validatePendingInvitationRemoval(context, packet, membership)
         }
 
         val authorityMemberKey =
@@ -90,20 +90,20 @@ class GroupMemberRemovedPacketHandler(
     private fun validatePendingInvitationRemoval(
         context: IncomingPacketContext,
         packet: GroupMemberRemovedPacket,
-        invitation: GroupInvitationEntity?
+        membership: GroupMembershipEntity?
     ): Boolean {
-        val pending = invitation ?: return false
+        val pending = membership ?: return false
         check(pending.groupId == packet.groupId) { "Group removal references the wrong group" }
         check(pending.contactId == context.contactId) {
             "Pending group removal came from a contact that is not the inviter"
         }
         check(pending.challenge.contentEquals(packet.challenge)) {
-            "Group removal invitation challenge does not match"
+            "Group removal membership challenge does not match"
         }
-        if (pending.status == GroupInvitationStatus.REMOVED.name) return false
+        if (pending.status == GroupMembershipStatus.REMOVED.name) return false
         check(
-            pending.status == GroupInvitationStatus.AWAITING_ACCEPTANCE.name ||
-                pending.status == GroupInvitationStatus.JOIN_SENT.name
+            pending.status == GroupMembershipStatus.STAGED.name ||
+                pending.status == GroupMembershipStatus.JOIN_REQUEST_SENT.name
         ) {
             "An installed group key requires an epoch-advancing removal"
         }
@@ -149,15 +149,15 @@ class GroupMemberRemovedPacketHandler(
         chatDao.applyLocalGroupRemoval(message)
     }
 
-    private suspend fun markInvitationRemoved(
-        invitation: GroupInvitationEntity?,
+    private suspend fun markMembershipRemoved(
+        membership: GroupMembershipEntity?,
         packet: GroupMemberRemovedPacket
     ) {
-        val existing = invitation ?: return
-        if (existing.status == GroupInvitationStatus.REMOVED.name) return
+        val existing = membership ?: return
+        if (existing.status == GroupMembershipStatus.REMOVED.name) return
 
-        groupInvitationDao.updateStatus(
-            invitationId = existing.invitationId,
+        groupMembershipDao.updateStatus(
+            membershipId = existing.membershipId,
             expectedStatus = existing.status,
             newStatus =
                 GroupMembershipStateMachine.transition(

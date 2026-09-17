@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.chats.data.group.repository
 
-import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
+import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
@@ -9,8 +9,8 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.GroupVerificationMember
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupVerificationPair
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationRepository
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_LEFT_ROLE
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationDirection
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.map
 
 class GroupVerificationRepositoryImpl(
     private val groupVerificationDao: GroupVerificationDao,
-    private val groupInvitationDao: GroupInvitationDao,
+    private val groupMembershipDao: GroupMembershipDao,
     private val groupSecurityDao: GroupSecurityDao
 ) : GroupVerificationRepository {
     override fun observePairs(groupId: String): Flow<List<GroupVerificationPair>> =
@@ -29,26 +29,26 @@ class GroupVerificationRepositoryImpl(
     override fun observeContext(groupId: String): Flow<GroupVerificationContext> =
         combine(
             groupSecurityDao.observeState(groupId),
-            groupInvitationDao.observeByGroupId(groupId),
+            groupMembershipDao.observeByGroupId(groupId),
             groupVerificationDao.observeByGroupId(groupId)
-        ) { securityState, invitations, rows ->
+        ) { securityState, memberships, rows ->
             val isLocalAdmin =
                 securityState?.localRole?.isGroupAdminRole() == true ||
                     (
                         securityState == null &&
                             (
                                 rows.any { row -> row.contactId != null } ||
-                                    invitations.any { invitation ->
-                                        invitation.direction == GroupInvitationDirection.OUTGOING.name
+                                    memberships.any { membership ->
+                                        membership.perspective == GroupMembershipPerspective.OWNER.name
                                     }
                             )
                     )
-            val localInvitation =
+            val localMembership =
                 if (isLocalAdmin) {
                     null
                 } else {
-                    invitations.singleOrNull { invitation ->
-                        invitation.direction == GroupInvitationDirection.INCOMING.name
+                    memberships.singleOrNull { membership ->
+                        membership.perspective == GroupMembershipPerspective.MEMBER.name
                     }
                 }
 
@@ -62,11 +62,11 @@ class GroupVerificationRepositoryImpl(
                     if (isLocalAdmin) {
                         null
                     } else {
-                        securityState?.ownerContactId ?: localInvitation?.contactId
+                        securityState?.ownerContactId ?: localMembership?.contactId
                     },
-                ownInvitationId = localInvitation?.invitationId,
+                ownInvitationId = localMembership?.sourceInvitationId,
                 isLeavePending =
-                    localInvitation?.status == GroupInvitationStatus.LEAVE_SENT.name
+                    localMembership?.status == GroupMembershipStatus.LEAVE_REQUESTED.name
             )
         }
 }

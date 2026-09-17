@@ -4,20 +4,20 @@ import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.GroupConversationDeletedPacket
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
-import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
+import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
+import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipBroadcastDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipCleanupDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtocolDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_LEFT_ROLE
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationDirection
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 
 @Suppress("LongParameterList")
 class GroupMembershipDeletionCoordinator(
-    private val groupInvitationDao: GroupInvitationDao,
+    private val groupMembershipDao: GroupMembershipDao,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val protocolOutbox: ProtocolOutbox,
     private val membershipPacketProtocol: GroupMembershipProtocolDataSource,
@@ -42,27 +42,27 @@ class GroupMembershipDeletionCoordinator(
                 return@runCatching
             }
 
-            val invitations = groupInvitationDao.findByGroupId(groupId)
-            val hasOutgoingInvitation =
-                invitations.any { invitation ->
-                    invitation.direction == GroupInvitationDirection.OUTGOING.name
+            val memberships = groupMembershipDao.findByGroupId(groupId)
+            val hasOwnerMembership =
+                memberships.any { membership ->
+                    membership.perspective == GroupMembershipPerspective.OWNER.name
                 }
-            if (hasOutgoingInvitation) {
-                deleteOwnedGroupConversation(groupId, invitations)
+            if (hasOwnerMembership) {
+                deleteOwnedGroupConversation(groupId, memberships)
             } else {
-                deleteJoinedGroupConversation(groupId, invitations)
+                deleteJoinedGroupConversation(groupId, memberships)
             }
         }
 
     private suspend fun deleteOwnedGroupConversation(
         groupId: String,
-        invitations: List<GroupInvitationEntity>
+        memberships: List<GroupMembershipEntity>
     ) {
         membershipLock.withLock {
             val now =
                 maxOf(
                     SystemClock.nowEpochMilliseconds(),
-                    invitations.maxOfOrNull(GroupInvitationEntity::createdAtEpochMilliseconds) ?: 0L
+                    memberships.maxOfOrNull(GroupMembershipEntity::createdAtEpochMilliseconds) ?: 0L
                 )
             val epoch =
                 groupSecurityManager.findOwnedGroupEpoch(groupId).getOrThrow()
@@ -70,16 +70,16 @@ class GroupMembershipDeletionCoordinator(
             val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
 
             val packetsByContactId =
-                invitations
-                    .filterNot { invitation -> invitation.status.isTerminalStatus() }
-                    .associate { invitation ->
-                        invitation.contactId to
+                memberships
+                    .filterNot { membership -> membership.status.isTerminalStatus() }
+                    .associate { membership ->
+                        membership.contactId to
                             membershipPacketProtocol
                                 .createConversationDeleted(
-                                    invitationId = invitation.invitationId,
+                                    invitationId = membership.sourceInvitationId,
                                     groupId = groupId,
                                     epoch = epoch,
-                                    challenge = invitation.challenge,
+                                    challenge = membership.challenge,
                                     deletedAtEpochMilliseconds = now,
                                     ownerSigningKeyPair = signingKeyPair
                                 ).getOrThrow()
@@ -92,33 +92,33 @@ class GroupMembershipDeletionCoordinator(
 
     private suspend fun deleteJoinedGroupConversation(
         groupId: String,
-        invitations: List<GroupInvitationEntity>
+        memberships: List<GroupMembershipEntity>
     ) {
-        val invitation =
-            invitations
+        val membership =
+            memberships
                 .filter { candidate ->
-                    candidate.direction == GroupInvitationDirection.INCOMING.name &&
+                    candidate.perspective == GroupMembershipPerspective.MEMBER.name &&
                         (
                             candidate.status.isIncomingStatus() ||
-                                candidate.status == GroupInvitationStatus.ACTIVE.name
+                                candidate.status == GroupMembershipStatus.ACTIVE.name
                         )
-                }.maxByOrNull(GroupInvitationEntity::updatedAtEpochMilliseconds)
-        if (invitation != null) {
-            when (invitation.status) {
-                GroupInvitationStatus.ACTIVE.name -> administration.leaveGroup(groupId).getOrThrow()
-                GroupInvitationStatus.AWAITING_ACCEPTANCE.name,
-                GroupInvitationStatus.JOIN_SENT.name,
-                GroupInvitationStatus.WAITING_FOR_ACTIVATION.name -> {
+                }.maxByOrNull(GroupMembershipEntity::updatedAtEpochMilliseconds)
+        if (membership != null) {
+            when (membership.status) {
+                GroupMembershipStatus.ACTIVE.name -> administration.leaveGroup(groupId).getOrThrow()
+                GroupMembershipStatus.STAGED.name,
+                GroupMembershipStatus.JOIN_REQUEST_SENT.name,
+                GroupMembershipStatus.WAITING_FOR_ACTIVATION.name -> {
                     val decline =
                         membershipPacketProtocol
                             .createDecline(
-                                invitationId = invitation.invitationId,
+                                invitationId = membership.sourceInvitationId,
                                 groupId = groupId,
-                                challenge = invitation.challenge,
+                                challenge = membership.challenge,
                                 memberSigningKeyPair =
                                     localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
                             ).getOrThrow()
-                    protocolOutbox.enqueue(invitation.contactId, decline).getOrThrow()
+                    protocolOutbox.enqueue(membership.contactId, decline).getOrThrow()
                 }
             }
         }
@@ -128,18 +128,18 @@ class GroupMembershipDeletionCoordinator(
             deletedAtEpochMilliseconds =
                 maxOf(
                     SystemClock.nowEpochMilliseconds(),
-                    invitations.maxOfOrNull(GroupInvitationEntity::createdAtEpochMilliseconds) ?: 0L
+                    memberships.maxOfOrNull(GroupMembershipEntity::createdAtEpochMilliseconds) ?: 0L
                 )
         )
     }
 
     private fun String.isIncomingStatus(): Boolean =
-        this == GroupInvitationStatus.AWAITING_ACCEPTANCE.name ||
-            this == GroupInvitationStatus.JOIN_SENT.name ||
-            this == GroupInvitationStatus.WAITING_FOR_ACTIVATION.name
+        this == GroupMembershipStatus.STAGED.name ||
+            this == GroupMembershipStatus.JOIN_REQUEST_SENT.name ||
+            this == GroupMembershipStatus.WAITING_FOR_ACTIVATION.name
 
     private fun String.isTerminalStatus(): Boolean =
-        this == GroupInvitationStatus.DECLINED.name ||
-            this == GroupInvitationStatus.REMOVED.name ||
-            this == GroupInvitationStatus.EXPIRED.name
+        this == GroupMembershipStatus.REMOVED.name ||
+            this == GroupMembershipStatus.GROUP_DELETED.name ||
+            this == GroupMembershipStatus.FAILED.name
 }

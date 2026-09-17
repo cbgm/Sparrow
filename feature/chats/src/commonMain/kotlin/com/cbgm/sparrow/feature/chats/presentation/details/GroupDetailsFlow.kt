@@ -348,7 +348,7 @@ private fun PromoteBeforeLeaveDialog(
                     )
                     if (index < members.lastIndex) {
                         HorizontalDivider(
-                            modifier = Modifier.weight(1f),
+                            thickness = Dimens.Base.dividerThickness,
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.divider)
                         )
                     }

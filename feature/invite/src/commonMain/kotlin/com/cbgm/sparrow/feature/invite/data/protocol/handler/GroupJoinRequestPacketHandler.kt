@@ -1,16 +1,17 @@
-package com.cbgm.sparrow.feature.chats.data.group.incoming.handler
+package com.cbgm.sparrow.feature.invite.data.protocol.handler
 
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.core.protocol.handler.TypedProtocolPacketHandler
 import com.cbgm.sparrow.core.protocol.packet.GroupJoinRequestPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProcessor
-import com.cbgm.sparrow.feature.chats.data.group.incoming.GroupJoinRequestIncomingProcessor
+import com.cbgm.sparrow.feature.invite.data.group.GroupJoinRequestIncomingProcessor
 
 internal class GroupJoinRequestPacketHandler(
     private val joinRequestIncomingProcessor: GroupJoinRequestIncomingProcessor,
     private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor
-) : GroupPacketHandler {
+) : TypedProtocolPacketHandler {
     private val logger = SparrowLog.withTag("GroupJoinRequestPacketHandler")
 
     override fun canHandle(packet: SparrowPacket): Boolean = packet is GroupJoinRequestPacket

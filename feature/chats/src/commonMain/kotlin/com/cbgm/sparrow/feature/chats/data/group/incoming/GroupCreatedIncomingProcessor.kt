@@ -2,18 +2,18 @@ package com.cbgm.sparrow.feature.chats.data.group.incoming
 
 import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
-import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
+import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
-import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
+import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
 import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 
 internal class GroupCreatedIncomingProcessor(
     private val groupSecurityManager: GroupSecurityManager,
     private val groupSecurityDao: GroupSecurityDao,
-    private val groupInvitationDao: GroupInvitationDao,
+    private val groupMembershipDao: GroupMembershipDao,
     private val welcomeSecurityProcessor: GroupWelcomeSecurityProcessor,
     private val membershipResolver: GroupWelcomeMembershipResolver,
     private val welcomePersistence: GroupWelcomePersistence
@@ -27,9 +27,9 @@ internal class GroupCreatedIncomingProcessor(
                 return@runCatching
             }
 
-            val invitation = groupInvitationDao.findByGroupAndContact(packet.groupId, context.contactId)
+            val localMembership = groupMembershipDao.findByGroupAndContact(packet.groupId, context.contactId)
             val isFirstWelcome = groupSecurityDao.findState(packet.groupId) == null
-            validateInvitation(packet, invitation, isFirstWelcome)
+            validateMembership(packet, localMembership, isFirstWelcome)
 
             val welcome =
                 welcomeSecurityProcessor.openAndTrustWelcome(
@@ -43,90 +43,90 @@ internal class GroupCreatedIncomingProcessor(
             welcomePersistence.persistConversation(packet, persistedAt)
             welcomePersistence.recordMembershipRestartIfNeeded(
                 packet = packet,
-                invitationId = invitation?.invitationId,
+                invitationId = localMembership?.sourceInvitationId,
                 isFirstWelcome = isFirstWelcome,
                 persistedAt = persistedAt
             )
 
-            val membership = membershipResolver.resolve(packet, context.contactId, welcome)
+            val resolvedMembership = membershipResolver.resolve(packet, context.contactId, welcome)
             val referenceAdmin =
                 welcomeSecurityProcessor.validateAuthorityAndResolveReferenceAdmin(
                     packet = packet,
                     senderContactId = context.contactId,
                     welcome = welcome,
-                    membership = membership
+                    membership = resolvedMembership
                 )
 
             welcomeSecurityProcessor.persistGroupSecurity(
                 welcome = welcome,
-                membership = membership,
+                membership = resolvedMembership,
                 referenceAdmin = referenceAdmin,
                 persistedAt = persistedAt
             )
-            welcomePersistence.replaceMembership(packet, previousMembership, membership, persistedAt)
+            welcomePersistence.replaceMembership(packet, previousMembership, resolvedMembership, persistedAt)
             welcomeSecurityProcessor.sendReadyAcknowledgement(packet, context.contactId, welcome)
-            advanceInvitation(invitation, isFirstWelcome, persistedAt)
+            advanceMembership(localMembership, isFirstWelcome, persistedAt)
         }
 
-    private fun validateInvitation(
+    private fun validateMembership(
         packet: GroupCreatedPacket,
-        invitation: GroupInvitationEntity?,
+        membership: GroupMembershipEntity?,
         isFirstWelcome: Boolean
     ) {
         if (!isFirstWelcome) return
 
-        val acceptedInvitation = invitation ?: error("Accepted group invitation was not found")
-        check(acceptedInvitation.status.isAcceptedWelcomeStatus()) {
-            "Group welcome arrived before the invitation was accepted"
+        val acceptedMembership = membership ?: error("Accepted group membership was not found")
+        check(acceptedMembership.status.isAcceptedWelcomeStatus()) {
+            "Group welcome arrived before the membership was accepted"
         }
         check(
             packet.packetId ==
                 groupSecurityManager.welcomePacketId(
                     groupId = packet.groupId,
-                    invitationId = acceptedInvitation.invitationId,
+                    invitationId = acceptedMembership.sourceInvitationId,
                     epoch = packet.epoch
                 )
         ) {
-            "Group welcome does not belong to the current invitation"
+            "Group welcome does not belong to the current membership"
         }
     }
 
-    private suspend fun advanceInvitation(
-        invitation: GroupInvitationEntity?,
+    private suspend fun advanceMembership(
+        membership: GroupMembershipEntity?,
         isFirstWelcome: Boolean,
         persistedAt: Long
     ) {
-        val acceptedInvitation = invitation ?: return
-        when (acceptedInvitation.status) {
-            GroupInvitationStatus.JOIN_SENT.name -> markWaitingForActivation(acceptedInvitation, persistedAt)
-            GroupInvitationStatus.WAITING_FOR_ACTIVATION.name,
-            GroupInvitationStatus.ACTIVE.name,
-            GroupInvitationStatus.LEAVE_SENT.name -> Unit
-            else -> if (isFirstWelcome) error("Group welcome arrived before the invitation was accepted")
+        val acceptedMembership = membership ?: return
+        when (acceptedMembership.status) {
+            GroupMembershipStatus.JOIN_REQUEST_SENT.name -> markWaitingForActivation(acceptedMembership, persistedAt)
+            GroupMembershipStatus.WAITING_FOR_ACTIVATION.name,
+            GroupMembershipStatus.ACTIVE.name,
+            GroupMembershipStatus.LEAVE_REQUESTED.name -> Unit
+            else -> if (isFirstWelcome) error("Group welcome arrived before the membership was accepted")
         }
     }
 
     private suspend fun markWaitingForActivation(
-        invitation: GroupInvitationEntity,
+        membership: GroupMembershipEntity,
         persistedAt: Long
     ) {
         val updated =
-            groupInvitationDao.updateStatus(
-                invitationId = invitation.invitationId,
-                expectedStatus = GroupInvitationStatus.JOIN_SENT.name,
+            groupMembershipDao.updateStatus(
+                membershipId = membership.membershipId,
+                expectedStatus = GroupMembershipStatus.JOIN_REQUEST_SENT.name,
                 newStatus =
                     GroupMembershipStateMachine.transition(
-                        invitation.status,
+                        membership.status,
                         GroupMembershipEvent.WELCOME_RECEIVED
                     ).name,
-                updatedAt = maxOf(invitation.createdAtEpochMilliseconds, persistedAt)
+                updatedAt = maxOf(membership.createdAtEpochMilliseconds, persistedAt)
             )
-        check(updated == 1) { "Group invitation changed while the welcome was applied" }
+        check(updated == 1) { "Group membership changed while the welcome was applied" }
     }
 
     private fun String.isAcceptedWelcomeStatus(): Boolean =
-        this == GroupInvitationStatus.JOIN_SENT.name ||
-            this == GroupInvitationStatus.WAITING_FOR_ACTIVATION.name ||
-            this == GroupInvitationStatus.ACTIVE.name ||
-            this == GroupInvitationStatus.LEAVE_SENT.name
+        this == GroupMembershipStatus.JOIN_REQUEST_SENT.name ||
+            this == GroupMembershipStatus.WAITING_FOR_ACTIVATION.name ||
+            this == GroupMembershipStatus.ACTIVE.name ||
+            this == GroupMembershipStatus.LEAVE_REQUESTED.name
 }

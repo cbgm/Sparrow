@@ -48,6 +48,23 @@ internal class InvitationRepositoryImpl(
             }
         }
 
+    override suspend fun send(
+        payloadType: InvitationPayloadType,
+        payloadId: String,
+        peerIds: Set<String>
+    ): Result<Unit> =
+        when (payloadType) {
+            InvitationPayloadType.DIRECT ->
+                runCatching {
+                    require(peerIds.size == 1) { "A direct invitation requires exactly one peer" }
+                    val peerId = peerIds.single()
+                    require(payloadId == peerId) { "Direct invitation payload ID must match its peer ID" }
+                    directCoordinator.start(peerId).getOrThrow()
+                }
+
+            InvitationPayloadType.GROUP -> groupCoordinator.send(payloadId, peerIds)
+        }
+
     override suspend fun accept(invitationId: String): Result<Unit> =
         if (directCoordinator.containsInvitation(invitationId)) {
             directCoordinator.accept(invitationId)

@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.chats.domain.model.group
 
 import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationState
-import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberInvitationState
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberProgress
 
 data class GroupConversation(
     val id: String,
@@ -12,9 +12,5 @@ data class GroupConversation(
     val pendingParticipantCount: Int,
     val isReady: Boolean,
     val state: GroupConversationState,
-    val isIncomingInvitation: Boolean,
-    val memberInvitationStates: List<GroupMemberInvitationState>
-) {
-    val lastMessage: GroupMessage?
-        get() = messages.maxByOrNull(GroupMessage::timestamp)
-}
+    val memberProgress: List<GroupMemberProgress>
+)

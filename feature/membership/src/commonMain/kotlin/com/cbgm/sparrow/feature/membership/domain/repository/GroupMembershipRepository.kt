@@ -7,15 +7,7 @@ import kotlinx.coroutines.flow.Flow
 interface GroupMembershipRepository {
     fun observeAdministration(groupId: String): Flow<GroupAdministrationState>
 
-    suspend fun create(
-        title: String,
-        contactIds: Set<String>
-    ): Result<String>
-
-    suspend fun addMembers(
-        groupId: String,
-        contactIds: Set<String>
-    ): Result<Unit>
+    suspend fun initializeOwnedGroup(groupId: String): Result<Unit>
 
     suspend fun removeMember(
         groupId: String,
