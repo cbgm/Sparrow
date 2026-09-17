@@ -3,7 +3,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.runtime
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.security.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.BlockContactUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.domain.port.DirectConversationPort
+import com.cbgm.sparrow.feature.conversationorchestration.domain.port.ConversationPort
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationPayloadType
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
@@ -18,7 +18,7 @@ class InvitationResultObserver(
     private val observeInvitationResults: ObserveInvitationResultsUseCase,
     private val contactBlocklistRepository: ContactBlocklistRepository,
     private val blockContact: BlockContactUseCase,
-    private val directConversationPort: DirectConversationPort
+    private val conversationPort: ConversationPort
 ) {
     private val logger = SparrowLog.withTag("InvitationResultObserver")
 
@@ -27,7 +27,7 @@ class InvitationResultObserver(
             launch { observeAccepted() }
             launch { observeOutgoingDeclined() }
             launch { observeBlockRequested() }
-            launch { directConversationPort.runPendingAuthorizationCleanup() }
+            launch { conversationPort.runPendingAuthorizationCleanup() }
         }
 
     private suspend fun observeAccepted() {
@@ -44,7 +44,7 @@ class InvitationResultObserver(
             .distinctUntilChanged()
             .collect { peerIds ->
                 peerIds.forEach { peerId ->
-                    directConversationPort
+                    conversationPort
                         .activateAuthorizedConversation(peerId)
                         .onFailure { error ->
                             logger.warn(error) {
@@ -70,7 +70,7 @@ class InvitationResultObserver(
             .distinctUntilChanged()
             .collect { peerIds ->
                 peerIds.forEach { peerId ->
-                    directConversationPort
+                    conversationPort
                         .discardPendingAuthorizationMessages(peerId)
                         .onFailure { error ->
                             logger.warn(error) {

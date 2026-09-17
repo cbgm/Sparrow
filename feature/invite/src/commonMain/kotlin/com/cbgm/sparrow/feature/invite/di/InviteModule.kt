@@ -8,6 +8,7 @@ import com.cbgm.sparrow.feature.invite.data.group.GroupInviteIncomingProcessor
 import com.cbgm.sparrow.feature.invite.data.group.GroupInviteReceivedIncomingProcessor
 import com.cbgm.sparrow.feature.invite.data.group.GroupJoinRequestIncomingProcessor
 import com.cbgm.sparrow.feature.invite.data.lifecycle.InvitationLifecycleDataSource
+import com.cbgm.sparrow.feature.invite.data.lifecycle.PersistentInvitationLifecycleDataSource
 import com.cbgm.sparrow.feature.invite.data.outbox.InvitationOutboxDeliveryHandler
 import com.cbgm.sparrow.feature.invite.data.policy.InvitationPolicyImpl
 import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPayloadEncoder
@@ -28,11 +29,13 @@ import com.cbgm.sparrow.feature.invite.domain.usecase.DeleteDeclinedOutgoingInvi
 import com.cbgm.sparrow.feature.invite.domain.usecase.HandleIncomingInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.HandleInvitationResponseUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.MarkInvitationsViewedUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationLifecycleStatusUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationResultsUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationsContextUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationsUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObservePendingInvitationCountUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObservePendingInvitationsUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.RecordPendingInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.SendInvitationUseCase
 import com.cbgm.sparrow.feature.invite.presentation.InvitationViewModel
 import org.koin.core.module.dsl.bind
@@ -50,6 +53,9 @@ val inviteModule =
         singleOf(::GroupInvitationLifecycleCoordinator)
         singleOf(::InvitationOutboxDeliveryHandler)
 
+        singleOf(::PersistentInvitationLifecycleDataSource) {
+            bind<InvitationLifecycleDataSource>()
+        }
         singleOf(::GroupInvitationLifecycleDataSource) {
             bind<InvitationLifecycleDataSource>()
         }
@@ -68,9 +74,11 @@ val inviteModule =
         factory { DeclineAndBlockInvitationUseCase(repository = get()) }
         factory { HandleIncomingInvitationUseCase(policy = get()) }
         factory { HandleInvitationResponseUseCase(repository = get()) }
+        factory { RecordPendingInvitationUseCase(repository = get()) }
         factory { MarkInvitationsViewedUseCase(repository = get()) }
         factory { SendInvitationUseCase(repository = get()) }
         factory { ObserveInvitationsUseCase(repository = get(), policy = get()) }
+        factory { ObserveInvitationLifecycleStatusUseCase(repository = get()) }
         factory { ObserveInvitationResultsUseCase(repository = get()) }
         factory { DeleteDeclinedOutgoingInvitationUseCase(repository = get()) }
 

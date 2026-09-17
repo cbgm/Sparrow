@@ -59,7 +59,7 @@ val androidDatabaseModule =
         }
 
         single {
-            get<SparrowDatabase>().identityInvitationDao()
+            get<SparrowDatabase>().identityExchangeDao()
         }
 
         single {

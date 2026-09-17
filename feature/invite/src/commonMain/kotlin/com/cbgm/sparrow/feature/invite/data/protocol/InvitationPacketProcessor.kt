@@ -4,6 +4,7 @@ import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.packet.ContactInviteAcceptedPacket
 import com.cbgm.sparrow.core.protocol.packet.ContactInviteDeclinedPacket
 import com.cbgm.sparrow.core.protocol.packet.ContactInvitePacket
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationLifecycleRecord
 
 interface InvitationPacketProcessor {
     suspend fun receiveInvite(
@@ -12,7 +13,7 @@ interface InvitationPacketProcessor {
         receptionEnabled: Boolean,
         blockedPeerIds: Set<String>,
         blockUnknownPeers: Boolean
-    ): Result<Unit>
+    ): Result<InvitationLifecycleRecord?>
 
     suspend fun receiveAccepted(
         context: IncomingPacketContext,

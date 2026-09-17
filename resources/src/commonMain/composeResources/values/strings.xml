@@ -112,7 +112,7 @@
     <string name="feature_chats_not_encrypted">Not encrypted</string>
     <string name="feature_chats_numbers_match">Numbers match</string>
     <string name="feature_chats_queued">Queued</string>
-    <string name="feature_chats_waiting_for_invitation_acceptance">Waiting for invitation acceptance</string>
+    <string name="feature_chats_waiting_for_authorization">Waiting for authorization</string>
     <string name="feature_chats_reply">Reply</string>
     <string name="feature_chats_forward">Forward</string>
     <string name="feature_chats_forward_to">Forward to</string>

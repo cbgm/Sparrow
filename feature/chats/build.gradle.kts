@@ -26,7 +26,6 @@ kotlin {
             implementation(projects.feature.conversationorchestration)
             implementation(projects.feature.attachments)
             implementation(projects.feature.identity)
-            implementation(projects.feature.invite)
             implementation(projects.feature.media)
             api(projects.feature.membership)
             implementation(projects.feature.voice)

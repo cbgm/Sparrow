@@ -1,13 +1,9 @@
 package com.cbgm.sparrow.feature.identity.domain.model
 
 enum class IdentityHandshakeState {
-    INVITE_SENT,
-    AWAITING_ACCEPTANCE,
     ACCEPTANCE_SENT,
     WAITING_FOR_READY,
     MUTUAL_UNVERIFIED,
-    DECLINED,
-    CONVERSATION_DELETED,
-    EXPIRED,
+    AUTHORIZATION_REVOKED,
     FAILED
 }

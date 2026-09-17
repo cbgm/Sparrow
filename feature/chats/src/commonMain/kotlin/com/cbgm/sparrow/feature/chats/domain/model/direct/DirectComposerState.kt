@@ -1,67 +1,23 @@
 package com.cbgm.sparrow.feature.chats.domain.model.direct
 
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
-import com.cbgm.sparrow.feature.identity.domain.model.IdentityHandshakeState
-
 enum class DirectComposerState(
     val isInputEnabled: Boolean,
     val isSendActionEnabled: Boolean,
     val sendsIndicators: Boolean
 ) {
-    READY(
-        isInputEnabled = true,
-        isSendActionEnabled = true,
-        sendsIndicators = true
-    ),
-    REINVITE_REQUIRED(
-        isInputEnabled = true,
-        isSendActionEnabled = true,
-        sendsIndicators = false
-    ),
-    REINVITE_PENDING(
-        isInputEnabled = true,
-        isSendActionEnabled = true,
-        sendsIndicators = false
-    ),
-    DISABLED(
-        isInputEnabled = false,
-        isSendActionEnabled = false,
-        sendsIndicators = false
-    )
+    READY(true, true, true),
+    QUEUE_ALLOWED(true, true, false),
+    DISABLED(false, false, false)
 }
 
 fun resolveDirectComposerState(
     hasConversation: Boolean,
     isChatAuthorized: Boolean,
-    handshake: IdentityHandshakeState?,
-    setupMode: DirectIdentitySetupMode
-): DirectComposerState {
-    if (!hasConversation) return DirectComposerState.DISABLED
-
-    return when (setupMode) {
-        DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING ->
-            if (isChatAuthorized) DirectComposerState.READY else DirectComposerState.DISABLED
-
-        DirectIdentitySetupMode.AUTOMATIC_INVITATION ->
-            when {
-                isChatAuthorized -> DirectComposerState.READY
-                handshake.isDirectReinvitePending() -> DirectComposerState.REINVITE_PENDING
-                handshake.isDirectReinviteRetryState() -> DirectComposerState.REINVITE_REQUIRED
-                else -> DirectComposerState.DISABLED
-            }
+    canQueueMessages: Boolean
+): DirectComposerState =
+    when {
+        !hasConversation -> DirectComposerState.DISABLED
+        isChatAuthorized -> DirectComposerState.READY
+        canQueueMessages -> DirectComposerState.QUEUE_ALLOWED
+        else -> DirectComposerState.DISABLED
     }
-}
-
-fun IdentityHandshakeState?.isDirectReinvitePending(): Boolean =
-    this == IdentityHandshakeState.INVITE_SENT
-
-fun IdentityHandshakeState?.isDirectReinviteRetryState(): Boolean =
-    this in DIRECT_REINVITE_RETRY_STATES
-
-private val DIRECT_REINVITE_RETRY_STATES =
-    setOf(
-        IdentityHandshakeState.CONVERSATION_DELETED,
-        IdentityHandshakeState.DECLINED,
-        IdentityHandshakeState.EXPIRED,
-        IdentityHandshakeState.FAILED
-    )

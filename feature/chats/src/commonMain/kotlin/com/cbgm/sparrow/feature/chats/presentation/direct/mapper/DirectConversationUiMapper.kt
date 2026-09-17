@@ -133,6 +133,7 @@ internal fun toDirectConversationUiState(
     conversation: DirectConversation?,
     contact: Contact?,
     handshake: IdentityHandshakeState?,
+    canQueueMessages: Boolean,
     setupMode: DirectIdentitySetupMode,
     safetyAssessments: Map<String, MessageSafetyAssessment>
 ): DirectConversationUiState {
@@ -141,8 +142,7 @@ internal fun toDirectConversationUiState(
         resolveDirectComposerState(
             hasConversation = conversation != null,
             isChatAuthorized = isChatAuthorized,
-            handshake = handshake,
-            setupMode = setupMode
+            canQueueMessages = canQueueMessages
         )
 
     val contactName = resolveContactName(contact, fallbackContactName)

@@ -153,6 +153,7 @@ class DirectConversationViewModel(
                 conversation = context.conversation,
                 contact = context.contact,
                 handshake = context.handshake,
+                canQueueMessages = context.canQueueMessages,
                 setupMode = context.setupMode,
                 safetyAssessments = safetyAssessments
             )
@@ -490,7 +491,7 @@ class DirectConversationViewModel(
                     if (result is DirectMessageDispatchResult.QueuedWithIdentityExchangeFailure) {
                         setError(
                             result.throwable.message
-                                ?: "Contact invitation could not be started"
+                                ?: "Conversation authorization could not be started"
                         )
                     }
                 }.onFailure { error ->

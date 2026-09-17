@@ -184,7 +184,7 @@ object Dimens {
 
     object DirectConversationScreen {
         val topBarAvatarSize = 36.dp
-        val invitationIconSize = 16.dp
+        val authorizationIconSize = 16.dp
         val statusIconSize = 14.dp
     }
 

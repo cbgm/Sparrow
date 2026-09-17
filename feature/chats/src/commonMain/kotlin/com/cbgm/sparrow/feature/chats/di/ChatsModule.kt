@@ -82,7 +82,7 @@ import com.cbgm.sparrow.feature.chats.data.group.verification.GroupVerificationS
 import com.cbgm.sparrow.feature.chats.data.incoming.IncomingPacketProcessor
 import com.cbgm.sparrow.feature.chats.data.incoming.IncomingPacketRouter
 import com.cbgm.sparrow.feature.chats.data.incoming.ReceiptIncomingPacketRouter
-import com.cbgm.sparrow.feature.chats.data.orchestration.ChatsDirectConversationPort
+import com.cbgm.sparrow.feature.chats.data.orchestration.ChatsConversationPort
 import com.cbgm.sparrow.feature.chats.data.outbox.ChatOutboxDeliveryStateRouter
 import com.cbgm.sparrow.feature.chats.data.overview.repository.ConversationOverviewRepositoryImpl
 import com.cbgm.sparrow.feature.chats.data.repository.MessageHistoryRepositoryImpl
@@ -99,10 +99,10 @@ import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupTitleReposito
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationActionRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.overview.ConversationOverviewRepository
+import com.cbgm.sparrow.feature.chats.domain.usecase.DeleteConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.FindMessageHistoryCursorUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.contact.EncodeContactForSharingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ActivateAuthorizedDirectConversationUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.direct.DeleteDirectConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.DeleteDirectMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.DiscardPendingAuthorizationMessagesUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.EditDirectMessageUseCase
@@ -159,9 +159,8 @@ import com.cbgm.sparrow.feature.chats.presentation.forwarding.ForwardingSelectio
 import com.cbgm.sparrow.feature.chats.presentation.group.GroupConversationViewModel
 import com.cbgm.sparrow.feature.chats.presentation.overview.OverviewViewModel
 import com.cbgm.sparrow.feature.chats.presentation.verification.GroupMemberQrVerificationViewModel
-import com.cbgm.sparrow.feature.contacts.domain.usecase.EnsureIdentityExchangeStartedUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.domain.port.DirectConversationPort
+import com.cbgm.sparrow.feature.conversationorchestration.domain.port.ConversationPort
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipBroadcastDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipCleanupDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipMessageDataSource
@@ -198,8 +197,8 @@ private fun org.koin.core.module.Module.registerDirectData() {
     singleOf(::DirectReceiptPacketHandler)
     singleOf(::DirectIncomingPacketProcessor)
 
-    singleOf(::ChatsDirectConversationPort) {
-        bind<DirectConversationPort>()
+    singleOf(::ChatsConversationPort) {
+        bind<ConversationPort>()
     }
 }
 
@@ -344,7 +343,7 @@ private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::SetDirectIndicatorUseCase)
     singleOf(::ActivateAuthorizedDirectConversationUseCase)
     singleOf(::DiscardPendingAuthorizationMessagesUseCase)
-    singleOf(::DeleteDirectConversationUseCase)
+    singleOf(::DeleteConversationUseCase)
 
     singleOf(::AddGroupMembersUseCase)
     singleOf(::CreateGroupConversationUseCase)
@@ -378,19 +377,14 @@ private fun org.koin.core.module.Module.registerUseCases() {
 
 private fun org.koin.core.module.Module.registerViewModels() {
     viewModel {
-        ContactsFlowViewModel(
-            getOrCreateDirectConversation = get(),
-            ensureIdentityExchangeStarted = get<EnsureIdentityExchangeStartedUseCase>(),
-            observeIdentitySetupMode = get(),
-            requireDirectChatAuthorization = get()
-        )
+        ContactsFlowViewModel(prepareConversationOpen = get())
     }
 
     viewModel {
         OverviewViewModel(
             observeConversationContext = get(),
             observeActiveAutoReply = get(),
-            deleteDirectConversation = get(),
+            deletePeerConversation = get(),
             deleteGroupConversation = get(),
             getGroupLeaveRequirement = get()
         )

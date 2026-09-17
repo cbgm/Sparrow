@@ -11,7 +11,7 @@ import com.cbgm.sparrow.feature.chats.presentation.overview.mapper.toOverviewUiS
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.ConversationListItem
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiState
-import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.direct.DeleteDirectConversationWorkflowUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.DeletePeerConversationUseCase
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupLeaveRequirementUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
 class OverviewViewModel(
     observeConversationContext: ObserveConversationOverviewContextUseCase,
     observeActiveAutoReply: ObserveActiveAutoReplyUseCase,
-    private val deleteDirectConversation: DeleteDirectConversationWorkflowUseCase,
+    private val deletePeerConversation: DeletePeerConversationUseCase,
     private val deleteGroupConversation: DeleteGroupConversationUseCase,
     private val getGroupLeaveRequirement: GetGroupLeaveRequirementUseCase
 ) : BaseViewModel() {
@@ -72,7 +72,7 @@ class OverviewViewModel(
             if (chat.isGroup) {
                 deleteGroup(chat)
             } else {
-                deleteDirectConversation(conversationId)
+                deletePeerConversation(conversationId)
                     .onFailure { failure ->
                         logger.error(failure) { "Direct conversation deletion failed" }
                         error.value = failure.message ?: "Direct conversation deletion failed"

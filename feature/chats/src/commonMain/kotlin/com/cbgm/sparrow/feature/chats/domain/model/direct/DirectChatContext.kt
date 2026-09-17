@@ -8,5 +8,6 @@ data class DirectChatContext(
     val conversation: DirectConversation?,
     val contact: Contact?,
     val handshake: IdentityHandshakeState?,
+    val canQueueMessages: Boolean,
     val setupMode: DirectIdentitySetupMode
 )

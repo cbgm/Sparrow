@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.conversationorchestration.data.direct.invitation
+package com.cbgm.sparrow.feature.conversationorchestration.data.direct.identity
 
 import com.cbgm.sparrow.core.crypto.random.SecureRandomGenerator
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
@@ -28,10 +28,10 @@ import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.data.database.dao.ContactRoutingIdDao
-import com.cbgm.sparrow.data.database.dao.IdentityInvitationDao
+import com.cbgm.sparrow.data.database.dao.IdentityExchangeDao
 import com.cbgm.sparrow.data.database.entity.ContactPhoneNumberEntity
 import com.cbgm.sparrow.data.database.entity.ContactRoutingIdEntity
-import com.cbgm.sparrow.data.database.entity.IdentityInvitationEntity
+import com.cbgm.sparrow.data.database.entity.IdentityExchangeEntity
 import com.cbgm.sparrow.feature.conversationorchestration.data.direct.authorization.DirectAuthorizationPayloadEncoder
 import com.cbgm.sparrow.feature.identity.data.datasource.ContactKeyExchangeDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.ContactVerificationDataSource
@@ -41,29 +41,19 @@ import com.cbgm.sparrow.feature.identity.domain.model.IdentityHandshakeState
 import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.identity.domain.model.RemoteIdentityOrigin
 import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPayloadEncoder
-import com.cbgm.sparrow.feature.invite.domain.model.Invitation
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationLifecycleRecord
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationPayloadType
-import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
-import com.cbgm.sparrow.feature.invite.domain.model.InvitationResult
-import com.cbgm.sparrow.feature.invite.domain.model.InvitationResultAction
-import com.cbgm.sparrow.feature.invite.domain.model.InvitationStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.awaitCancellation
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class DirectIdentityExchangeCoordinator(
-    private val invitationDao: IdentityInvitationDao,
+    private val identityExchangeDao: IdentityExchangeDao,
     private val contactDao: ContactDao,
     private val contactRoutingIdDao: ContactRoutingIdDao,
     private val contactKeyExchangeDataSource: ContactKeyExchangeDataSource,
@@ -85,6 +75,9 @@ internal class DirectIdentityExchangeCoordinator(
     private val mutex = Mutex()
 
     suspend fun start(contactId: String): Result<Unit> =
+        startInvitation(contactId).map { Unit }
+
+    suspend fun startInvitation(contactId: String): Result<InvitationLifecycleRecord?> =
         safeSuspendCall {
             require(contactId.isNotBlank()) {
                 "Contact ID must not be blank"
@@ -97,35 +90,39 @@ internal class DirectIdentityExchangeCoordinator(
                 requireLocalKeysMatch(localIdentity, signingKeyPair)
 
                 if (hasActiveDirectChatAuthorization(contactId, localIdentity)) {
-                    return@withLock
+                    return@withLock null
                 }
 
                 val now = SystemClock.nowEpochMilliseconds()
-                invitationDao.findActiveForContact(contactId, TERMINAL_STATES)?.let { activeInvitation ->
+                identityExchangeDao.findActiveForContact(contactId, TERMINAL_STATES)?.let { activeInvitation ->
                     if (!isBoundToLocalIdentity(activeInvitation, localIdentity)) {
-                        invitationDao.upsert(
+                        identityExchangeDao.upsert(
                             activeInvitation.copy(
-                                state = IdentityHandshakeState.FAILED.name,
+                                stage = DirectIdentityExchangeStage.FAILED.name,
                                 updatedAtEpochMilliseconds = now,
                                 lastError = "Handshake belongs to a previous local identity"
                             )
                         )
                     } else if (activeInvitation.expiresAtEpochMilliseconds > now) {
                         if (resumeActiveHandshake(activeInvitation)) {
-                            return@withLock
+                            return@withLock activeInvitation
+                                .takeIf { invitation ->
+                                    invitation.direction == InvitationDirection.OUTGOING.name &&
+                                        invitation.stage == DirectIdentityExchangeStage.OUTGOING_CHALLENGE_SENT.name
+                                }?.toLifecycleRecord()
                         }
 
-                        invitationDao.upsert(
+                        identityExchangeDao.upsert(
                             activeInvitation.copy(
-                                state = IdentityHandshakeState.FAILED.name,
+                                stage = DirectIdentityExchangeStage.FAILED.name,
                                 updatedAtEpochMilliseconds = now,
                                 lastError = "Handshake was superseded by a fresh invitation"
                             )
                         )
                     } else {
-                        invitationDao.upsert(
+                        identityExchangeDao.upsert(
                             activeInvitation.copy(
-                                state = IdentityHandshakeState.EXPIRED.name,
+                                stage = DirectIdentityExchangeStage.CLOSED.name,
                                 updatedAtEpochMilliseconds = now,
                                 lastError = "Invitation expired"
                             )
@@ -167,12 +164,12 @@ internal class DirectIdentityExchangeCoordinator(
                         signature = signature.copyOf()
                     )
 
-                invitationDao.upsert(
-                    IdentityInvitationEntity(
-                        invitationId = invitationId,
+                val storedInvitation =
+                    IdentityExchangeEntity(
+                        exchangeId = invitationId,
                         contactId = contactId,
                         direction = InvitationDirection.OUTGOING.name,
-                        state = IdentityHandshakeState.INVITE_SENT.name,
+                        stage = DirectIdentityExchangeStage.OUTGOING_CHALLENGE_SENT.name,
                         remoteDisplayName = contact.contact.displayName,
                         inviteChallenge = challenge.copyOf(),
                         responseChallenge = null,
@@ -186,138 +183,32 @@ internal class DirectIdentityExchangeCoordinator(
                         localEncryptionPublicKey = localIdentity.encryptionPublicKey.copyOf(),
                         localSigningPublicKey = localIdentity.signingPublicKey.copyOf()
                     )
-                )
+                identityExchangeDao.upsert(storedInvitation)
 
                 enqueueOrResend(contactId, packet).getOrElse { error ->
-                    invitationDao.upsert(
-                        requireNotNull(invitationDao.findById(invitationId)).copy(
-                            state = IdentityHandshakeState.FAILED.name,
+                    identityExchangeDao.upsert(
+                        requireNotNull(identityExchangeDao.findById(invitationId)).copy(
+                            stage = DirectIdentityExchangeStage.FAILED.name,
                             updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
                             lastError = error.message
                         )
                     )
                     throw error
                 }
+
+                storedInvitation.toLifecycleRecord()
             }
         }
 
-    suspend fun containsInvitation(invitationId: String): Boolean =
-        invitationDao.findById(invitationId) != null
-
-    fun observeInvitations(
-        direction: InvitationDirection
-    ): Flow<List<Invitation>> =
-        invitationDao
-            .observeByDirectionAndStates(
-                direction = direction.name,
-                states = visibleInvitationStates(direction)
-            ).transformLatest { invitations ->
-                while (true) {
-                    val now = SystemClock.nowEpochMilliseconds()
-                    emit(
-                        buildList {
-                            for (storedInvitation in invitations) {
-                                if (storedInvitation.hiddenAtEpochMilliseconds != null) continue
-
-                                val invitation = expirePendingInvitationIfNeeded(storedInvitation, now)
-                                val status = invitation.toInvitationStatus() ?: continue
-                                if (
-                                    !isVisibleInvitation(
-                                        direction = direction,
-                                        status = status,
-                                        updatedAtEpochMilliseconds = invitation.updatedAtEpochMilliseconds,
-                                        now = now
-                                    )
-                                ) {
-                                    continue
-                                }
-
-                                toInvitation(invitation, direction, status)?.let(::add)
-                            }
-                        }
-                    )
-
-                    val nextWakeAt = nextInvitationWakeAt(invitations, now) ?: awaitCancellation()
-                    delay((nextWakeAt - now).coerceAtLeast(1L).milliseconds)
-                }
-            }
-
-    fun observeInvitationResults(): Flow<List<InvitationResult>> =
-        invitationDao
-            .observeLatestInvitations()
-            .map { invitations ->
-                invitations.mapNotNull { invitation ->
-                    val response =
-                        when (invitation.state) {
-                            IdentityHandshakeState.WAITING_FOR_READY.name,
-                            IdentityHandshakeState.MUTUAL_UNVERIFIED.name -> InvitationResponse.ACCEPTED
-
-                            IdentityHandshakeState.DECLINED.name -> InvitationResponse.DECLINED
-                            else -> null
-                        } ?: return@mapNotNull null
-
-                    val direction =
-                        when (invitation.direction) {
-                            InvitationDirection.INCOMING.name -> InvitationDirection.INCOMING
-                            InvitationDirection.OUTGOING.name -> InvitationDirection.OUTGOING
-                            else -> return@mapNotNull null
-                        }
-
-                    InvitationResult(
-                        invitationId = invitation.invitationId,
-                        payloadType = InvitationPayloadType.DIRECT,
-                        payloadId = invitation.contactId,
-                        peerId = invitation.contactId,
-                        direction = direction,
-                        response = response,
-                        action = invitation.resultAction.toInvitationResultAction()
-                    )
-                }
-            }
-            .distinctUntilChanged()
-
-    suspend fun applyResponse(
-        invitationId: String,
-        response: InvitationResponse
-    ): Result<Unit> =
+    suspend fun getPendingIncomingInvitationLifecycleRecord(
+        invitationId: String
+    ): Result<InvitationLifecycleRecord?> =
         safeSuspendCall {
             require(invitationId.isNotBlank()) { "Invitation ID must not be blank" }
-
-            mutex.withLock {
-                val invitation = invitationDao.findById(invitationId) ?: return@withLock
-                check(invitation.direction == InvitationDirection.OUTGOING.name) {
-                    "Only outgoing invitations can receive a remote response"
-                }
-
-                if (response == InvitationResponse.ACCEPTED && invitation.hiddenAtEpochMilliseconds == null) {
-                    invitationDao.upsert(
-                        invitation.copy(
-                            hiddenAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
-                        )
-                    )
-                }
-            }
-        }
-
-    suspend fun markViewed(direction: InvitationDirection): Result<Unit> =
-        safeSuspendCall {
-            invitationDao.markDirectionViewed(
-                direction = direction.name,
-                viewedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
-            )
-        }
-
-    suspend fun deleteDeclinedOutgoing(invitationId: String): Result<Unit> =
-        safeSuspendCall {
-            require(invitationId.isNotBlank()) { "Invitation ID must not be blank" }
-            val changed =
-                invitationDao.hideByIdAndState(
-                    invitationId = invitationId,
-                    direction = InvitationDirection.OUTGOING.name,
-                    state = IdentityHandshakeState.DECLINED.name,
-                    hiddenAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
-                )
-            check(changed == 1) { "Only declined outgoing invitations can be deleted" }
+            val invitation = identityExchangeDao.findById(invitationId) ?: return@safeSuspendCall null
+            if (invitation.direction != InvitationDirection.INCOMING.name) return@safeSuspendCall null
+            if (invitation.stage != DirectIdentityExchangeStage.INCOMING_CHALLENGE_RECEIVED.name) return@safeSuspendCall null
+            invitation.toLifecycleRecord()
         }
 
     fun observeState(contactId: String): Flow<IdentityHandshakeState?> {
@@ -326,10 +217,10 @@ internal class DirectIdentityExchangeCoordinator(
         }
 
         return combine(
-            invitationDao.observeLatestForContact(contactId),
-            invitationDao.observeLatestForContactByStates(
+            identityExchangeDao.observeLatestForContact(contactId),
+            identityExchangeDao.observeLatestForContactByStages(
                 contactId = contactId,
-                states = AUTHORIZATION_EVENT_STATES
+                stages = AUTHORIZATION_EVENT_STATES
             )
         ) { latestInvitation, latestAuthorizationEvent ->
             val state =
@@ -360,15 +251,6 @@ internal class DirectIdentityExchangeCoordinator(
         }
     }
 
-    suspend fun getPeerId(invitationId: String): Result<String> =
-        safeSuspendCall {
-            require(invitationId.isNotBlank()) {
-                "Invitation ID must not be blank"
-            }
-            invitationDao.findById(invitationId)?.contactId
-                ?: error("Invitation was not found: $invitationId")
-        }
-
     suspend fun accept(invitationId: String): Result<Unit> =
         safeSuspendCall {
             mutex.withLock {
@@ -377,17 +259,17 @@ internal class DirectIdentityExchangeCoordinator(
                 invitation = rebindIncomingInvitation(invitation)
 
                 if (
-                    invitation.state == IdentityHandshakeState.ACCEPTANCE_SENT.name ||
-                    invitation.state == IdentityHandshakeState.WAITING_FOR_READY.name
+                    invitation.stage == DirectIdentityExchangeStage.ACCEPTANCE_SENT.name ||
+                    invitation.stage == DirectIdentityExchangeStage.WAITING_FOR_READY.name
                 ) {
                     queueAcceptanceReplay(invitation)
                     return@withLock
                 }
-                if (invitation.state == IdentityHandshakeState.MUTUAL_UNVERIFIED.name) {
+                if (invitation.stage == DirectIdentityExchangeStage.MUTUAL_UNVERIFIED.name) {
                     return@withLock
                 }
 
-                requireState(invitation, IdentityHandshakeState.AWAITING_ACCEPTANCE)
+                requireState(invitation, DirectIdentityExchangeStage.INCOMING_CHALLENGE_RECEIVED)
 
                 val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
                 val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
@@ -428,9 +310,9 @@ internal class DirectIdentityExchangeCoordinator(
                     )
 
                 prepareAcceptedRemoteIdentity(invitation)
-                invitationDao.upsert(
+                identityExchangeDao.upsert(
                     invitation.copy(
-                        state = IdentityHandshakeState.ACCEPTANCE_SENT.name,
+                        stage = DirectIdentityExchangeStage.ACCEPTANCE_SENT.name,
                         responseChallenge = responseChallenge.copyOf(),
                         updatedAtEpochMilliseconds = now,
                         lastError = null,
@@ -439,9 +321,9 @@ internal class DirectIdentityExchangeCoordinator(
                     )
                 )
                 enqueueOrResend(invitation.contactId, packet).getOrElse { error ->
-                    invitationDao.upsert(
-                        requireNotNull(invitationDao.findById(invitationId)).copy(
-                            state = IdentityHandshakeState.ACCEPTANCE_SENT.name,
+                    identityExchangeDao.upsert(
+                        requireNotNull(identityExchangeDao.findById(invitationId)).copy(
+                            stage = DirectIdentityExchangeStage.ACCEPTANCE_SENT.name,
                             updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
                             lastError = error.message
                         )
@@ -454,27 +336,24 @@ internal class DirectIdentityExchangeCoordinator(
                         expectedRemoteEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
                         expectedRemoteSigningPublicKey = invitation.remoteSigningPublicKey
                     )
-                invitationDao.upsert(
-                    requireNotNull(invitationDao.findById(invitationId)).copy(
-                        state = IdentityHandshakeState.WAITING_FOR_READY.name,
+                identityExchangeDao.upsert(
+                    requireNotNull(identityExchangeDao.findById(invitationId)).copy(
+                        stage = DirectIdentityExchangeStage.WAITING_FOR_READY.name,
                         updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
                     )
                 )
             }
         }
 
-    suspend fun decline(
-        invitationId: String,
-        action: InvitationResultAction? = null
-    ): Result<Unit> =
+    suspend fun decline(invitationId: String): Result<Unit> =
         safeSuspendCall {
             mutex.withLock {
                 val invitation = requireInvitation(invitationId, InvitationDirection.INCOMING)
-                if (invitation.state == IdentityHandshakeState.DECLINED.name) {
-                    resendPersistedPacket(declinedPacketId(invitation.invitationId))
+                if (invitation.stage == DirectIdentityExchangeStage.CLOSED.name) {
+                    resendPersistedPacket(declinedPacketId(invitation.exchangeId))
                     return@withLock
                 }
-                requireState(invitation, IdentityHandshakeState.AWAITING_ACCEPTANCE)
+                requireState(invitation, DirectIdentityExchangeStage.INCOMING_CHALLENGE_RECEIVED)
 
                 val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
                 val now = SystemClock.nowEpochMilliseconds()
@@ -500,21 +379,20 @@ internal class DirectIdentityExchangeCoordinator(
                     )
 
                 enqueueOrResend(invitation.contactId, packet).getOrElse { error ->
-                    invitationDao.upsert(
+                    identityExchangeDao.upsert(
                         invitation.copy(
-                            state = IdentityHandshakeState.FAILED.name,
+                            stage = DirectIdentityExchangeStage.FAILED.name,
                             updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
                             lastError = error.message
                         )
                     )
                     throw error
                 }
-                invitationDao.upsert(
+                identityExchangeDao.upsert(
                     invitation.copy(
-                        state = IdentityHandshakeState.DECLINED.name,
+                        stage = DirectIdentityExchangeStage.CLOSED.name,
                         updatedAtEpochMilliseconds = now,
-                        lastError = null,
-                        resultAction = action?.name
+                        lastError = null
                     )
                 )
             }
@@ -528,28 +406,28 @@ internal class DirectIdentityExchangeCoordinator(
 
             mutex.withLock {
                 val invitation =
-                    invitationDao.findActiveForContact(
+                    identityExchangeDao.findActiveForContact(
                         contactId = contactId,
-                        terminalStates = TERMINAL_STATES
+                        terminalStages = TERMINAL_STATES
                     ) ?: return@withLock
 
                 val state =
-                    IdentityHandshakeState.entries.firstOrNull { candidate ->
-                        candidate.name == invitation.state
+                    DirectIdentityExchangeStage.entries.firstOrNull { candidate ->
+                        candidate.name == invitation.stage
                     } ?: return@withLock
 
                 when {
                     invitation.direction == InvitationDirection.INCOMING.name &&
-                        state == IdentityHandshakeState.AWAITING_ACCEPTANCE -> {
+                        state == DirectIdentityExchangeStage.INCOMING_CHALLENGE_RECEIVED -> {
                         queueDecline(
                             contactId = invitation.contactId,
-                            invitationId = invitation.invitationId,
+                            invitationId = invitation.exchangeId,
                             inviteChallenge = invitation.inviteChallenge
                         )
 
-                        invitationDao.upsert(
+                        identityExchangeDao.upsert(
                             invitation.copy(
-                                state = IdentityHandshakeState.DECLINED.name,
+                                stage = DirectIdentityExchangeStage.CLOSED.name,
                                 updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
                                 lastError = "Manual identity exchange selected"
                             )
@@ -557,10 +435,10 @@ internal class DirectIdentityExchangeCoordinator(
                     }
 
                     invitation.direction == InvitationDirection.OUTGOING.name &&
-                        state == IdentityHandshakeState.INVITE_SENT -> {
-                        invitationDao.upsert(
+                        state == DirectIdentityExchangeStage.OUTGOING_CHALLENGE_SENT -> {
+                        identityExchangeDao.upsert(
                             invitation.copy(
-                                state = IdentityHandshakeState.DECLINED.name,
+                                stage = DirectIdentityExchangeStage.CLOSED.name,
                                 updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
                                 lastError = "Manual identity exchange selected"
                             )
@@ -610,36 +488,35 @@ internal class DirectIdentityExchangeCoordinator(
             }
 
             mutex.withLock {
-                val invitation = invitationDao.findLatestForContact(contactId) ?: return@withLock
+                val invitation = identityExchangeDao.findLatestForContact(contactId) ?: return@withLock
                 val state =
-                    IdentityHandshakeState.entries.firstOrNull { candidate ->
-                        candidate.name == invitation.state
-                    } ?: error("Unknown contact invitation state: ${invitation.state}")
+                    DirectIdentityExchangeStage.entries.firstOrNull { candidate ->
+                        candidate.name == invitation.stage
+                    } ?: error("Unknown contact invitation state: ${invitation.stage}")
 
-                if (state == IdentityHandshakeState.CONVERSATION_DELETED) {
+                if (state == DirectIdentityExchangeStage.AUTHORIZATION_REVOKED) {
                     return@withLock
                 }
 
                 if (
                     invitation.direction == InvitationDirection.INCOMING.name &&
-                    state == IdentityHandshakeState.AWAITING_ACCEPTANCE
+                    state == DirectIdentityExchangeStage.INCOMING_CHALLENGE_RECEIVED
                 ) {
                     queueDecline(
                         contactId = contactId,
-                        invitationId = invitation.invitationId,
+                        invitationId = invitation.exchangeId,
                         inviteChallenge = invitation.inviteChallenge
                     )
                 } else if (
-                    state != IdentityHandshakeState.DECLINED &&
-                    state != IdentityHandshakeState.EXPIRED &&
-                    state != IdentityHandshakeState.FAILED
+                    state != DirectIdentityExchangeStage.CLOSED &&
+                    state != DirectIdentityExchangeStage.FAILED
                 ) {
                     queueDirectChatAuthorizationRevocation(invitation)
                 }
 
-                invitationDao.upsert(
+                identityExchangeDao.upsert(
                     invitation.copy(
-                        state = IdentityHandshakeState.CONVERSATION_DELETED.name,
+                        stage = DirectIdentityExchangeStage.AUTHORIZATION_REVOKED.name,
                         updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
                         lastError = null
                     )
@@ -748,7 +625,7 @@ internal class DirectIdentityExchangeCoordinator(
                     )
                 }
 
-                invitationDao.findById(packet.invitationId)?.let { existing ->
+                identityExchangeDao.findById(packet.invitationId)?.let { existing ->
                     check(existing.direction == InvitationDirection.INCOMING.name) {
                         "Invitation replay changed its direction"
                     }
@@ -778,20 +655,20 @@ internal class DirectIdentityExchangeCoordinator(
                             localEncryptionPublicKey = localIdentity.encryptionPublicKey.copyOf(),
                             localSigningPublicKey = localIdentity.signingPublicKey.copyOf()
                         )
-                    invitationDao.upsert(reboundExisting)
+                    identityExchangeDao.upsert(reboundExisting)
                     recoverIncomingInviteReplay(reboundExisting)
                     return@withLock
                 }
 
-                invitationDao
+                identityExchangeDao
                     .findActiveForContact(
                         contactId = contactId,
-                        terminalStates = TERMINAL_STATES
+                        terminalStages = TERMINAL_STATES
                     )?.let { activeInvitation ->
                         if (activeInvitation.expiresAtEpochMilliseconds <= context.receivedAtEpochMilliseconds) {
-                            invitationDao.upsert(
+                            identityExchangeDao.upsert(
                                 activeInvitation.copy(
-                                    state = IdentityHandshakeState.EXPIRED.name,
+                                    stage = DirectIdentityExchangeStage.CLOSED.name,
                                     updatedAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
                                     lastError = "Invitation expired"
                                 )
@@ -830,12 +707,12 @@ internal class DirectIdentityExchangeCoordinator(
                     remoteSigningPublicKey = packet.signingPublicKey
                 )
 
-                invitationDao.upsert(
-                    IdentityInvitationEntity(
-                        invitationId = packet.invitationId,
+                identityExchangeDao.upsert(
+                    IdentityExchangeEntity(
+                        exchangeId = packet.invitationId,
                         contactId = contactId,
                         direction = InvitationDirection.INCOMING.name,
-                        state = IdentityHandshakeState.AWAITING_ACCEPTANCE.name,
+                        stage = DirectIdentityExchangeStage.INCOMING_CHALLENGE_RECEIVED.name,
                         remoteDisplayName = remoteDisplayName,
                         inviteChallenge = packet.inviteChallenge.copyOf(),
                         responseChallenge = null,
@@ -928,7 +805,7 @@ internal class DirectIdentityExchangeCoordinator(
                         logger.warn(error) { "Could not store profile picture for ${context.contactId}" }
                     }
 
-                if (invitation.state == IdentityHandshakeState.MUTUAL_UNVERIFIED.name) {
+                if (invitation.stage == DirectIdentityExchangeStage.MUTUAL_UNVERIFIED.name) {
                     check(invitation.responseChallenge?.contentEquals(packet.responseChallenge) == true) {
                         "Acceptance replay changed its response challenge"
                     }
@@ -945,7 +822,7 @@ internal class DirectIdentityExchangeCoordinator(
                     return@withLock
                 }
 
-                requireState(invitation, IdentityHandshakeState.INVITE_SENT)
+                requireState(invitation, DirectIdentityExchangeStage.OUTGOING_CHALLENGE_SENT)
 
                 contactKeyExchangeDataSource
                     .storeRemoteIdentity(
@@ -972,9 +849,9 @@ internal class DirectIdentityExchangeCoordinator(
                         expectedRemoteSigningPublicKey = packet.responderSigningPublicKey
                     )
 
-                invitationDao.upsert(
+                identityExchangeDao.upsert(
                     invitation.copy(
-                        state = IdentityHandshakeState.MUTUAL_UNVERIFIED.name,
+                        stage = DirectIdentityExchangeStage.MUTUAL_UNVERIFIED.name,
                         responseChallenge = packet.responseChallenge.copyOf(),
                         remoteEncryptionPublicKey = packet.responderEncryptionPublicKey.copyOf(),
                         remoteSigningPublicKey = packet.responderSigningPublicKey.copyOf(),
@@ -1057,15 +934,15 @@ internal class DirectIdentityExchangeCoordinator(
                     "Ready confirmation was created too far in the future"
                 }
 
-                if (invitation.state == IdentityHandshakeState.MUTUAL_UNVERIFIED.name) {
+                if (invitation.stage == DirectIdentityExchangeStage.MUTUAL_UNVERIFIED.name) {
                     return@withLock
                 }
 
                 check(
-                    invitation.state == IdentityHandshakeState.ACCEPTANCE_SENT.name ||
-                        invitation.state == IdentityHandshakeState.WAITING_FOR_READY.name
+                    invitation.stage == DirectIdentityExchangeStage.ACCEPTANCE_SENT.name ||
+                        invitation.stage == DirectIdentityExchangeStage.WAITING_FOR_READY.name
                 ) {
-                    "Ready confirmation cannot be applied from state ${invitation.state}"
+                    "Ready confirmation cannot be applied from state ${invitation.stage}"
                 }
 
                 contactKeyExchangeDataSource
@@ -1075,9 +952,9 @@ internal class DirectIdentityExchangeCoordinator(
                         expectedRemoteSigningPublicKey = invitation.remoteSigningPublicKey
                     )
 
-                invitationDao.upsert(
+                identityExchangeDao.upsert(
                     invitation.copy(
-                        state = IdentityHandshakeState.MUTUAL_UNVERIFIED.name,
+                        stage = DirectIdentityExchangeStage.MUTUAL_UNVERIFIED.name,
                         updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
                         lastError = null,
                         localEncryptionPublicKey = localIdentity.encryptionPublicKey.copyOf(),
@@ -1127,7 +1004,7 @@ internal class DirectIdentityExchangeCoordinator(
                     "Decline response was created too far in the future"
                 }
 
-                val invitation = invitationDao.findById(packet.invitationId)
+                val invitation = identityExchangeDao.findById(packet.invitationId)
                 if (invitation == null) {
                     // Terminal invitation responses are replay-safe. Once the exact invitation
                     // is gone, do not compare the packet with the contact's current identity:
@@ -1158,17 +1035,17 @@ internal class DirectIdentityExchangeCoordinator(
                     "Contact signing identity changed during invitation decline"
                 }
 
-                if (invitation.state == IdentityHandshakeState.DECLINED.name) {
+                if (invitation.stage == DirectIdentityExchangeStage.CLOSED.name) {
                     check(invitation.remoteSigningPublicKey.contentEquals(packet.declinerSigningPublicKey)) {
                         "Decline replay changed its signing key"
                     }
                     return@withLock
                 }
 
-                requireState(invitation, IdentityHandshakeState.INVITE_SENT)
-                invitationDao.upsert(
+                requireState(invitation, DirectIdentityExchangeStage.OUTGOING_CHALLENGE_SENT)
+                identityExchangeDao.upsert(
                     invitation.copy(
-                        state = IdentityHandshakeState.DECLINED.name,
+                        stage = DirectIdentityExchangeStage.CLOSED.name,
                         remoteSigningPublicKey = packet.declinerSigningPublicKey.copyOf(),
                         updatedAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
                         lastError = null
@@ -1189,7 +1066,7 @@ internal class DirectIdentityExchangeCoordinator(
                     invitationId = packet.invitationId
                 )
                 val invitation =
-                    invitationDao.findById(packet.invitationId)
+                    identityExchangeDao.findById(packet.invitationId)
                         ?: error("Invitation was not found: ${packet.invitationId}")
                 check(invitation.contactId == context.contactId) {
                     "Authorization revocation contact does not match invitation"
@@ -1220,13 +1097,13 @@ internal class DirectIdentityExchangeCoordinator(
                     "Authorization revocation was created too far in the future"
                 }
 
-                if (invitation.state == IdentityHandshakeState.CONVERSATION_DELETED.name) {
+                if (invitation.stage == DirectIdentityExchangeStage.AUTHORIZATION_REVOKED.name) {
                     return@withLock
                 }
 
-                invitationDao.upsert(
+                identityExchangeDao.upsert(
                     invitation.copy(
-                        state = IdentityHandshakeState.CONVERSATION_DELETED.name,
+                        stage = DirectIdentityExchangeStage.AUTHORIZATION_REVOKED.name,
                         updatedAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
                         lastError = null
                     )
@@ -1235,8 +1112,8 @@ internal class DirectIdentityExchangeCoordinator(
         }
 
     private suspend fun rebindIncomingInvitation(
-        invitation: IdentityInvitationEntity
-    ): IdentityInvitationEntity {
+        invitation: IdentityExchangeEntity
+    ): IdentityExchangeEntity {
         val remotePhoneNumber =
             invitation.remoteDisplayName
                 ?.let { value -> phoneNumberNormalizer.normalize(value).getOrNull() }
@@ -1275,7 +1152,7 @@ internal class DirectIdentityExchangeCoordinator(
                 updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
                 lastError = null
             ).also { reboundInvitation ->
-                invitationDao.upsert(reboundInvitation)
+                identityExchangeDao.upsert(reboundInvitation)
             }
     }
 
@@ -1444,7 +1321,7 @@ internal class DirectIdentityExchangeCoordinator(
                 toContactId = toContactId
             )
         }
-        invitationDao.reassignContact(
+        identityExchangeDao.reassignContact(
             fromContactId = fromContactId,
             toContactId = toContactId
         )
@@ -1472,7 +1349,7 @@ internal class DirectIdentityExchangeCoordinator(
         )
     }
 
-    private suspend fun prepareAcceptedRemoteIdentity(invitation: IdentityInvitationEntity) {
+    private suspend fun prepareAcceptedRemoteIdentity(invitation: IdentityExchangeEntity) {
         contactKeyExchangeDataSource
             .prepareRemoteIdentityForHandshake(
                 contactId = invitation.contactId,
@@ -1615,11 +1492,11 @@ internal class DirectIdentityExchangeCoordinator(
         contactId: String,
         localIdentity: LocalPublicIdentity
     ): Boolean {
-        val latestInvitation = invitationDao.findLatestForContact(contactId)
+        val latestInvitation = identityExchangeDao.findLatestForContact(contactId)
         val latestAuthorizationEvent =
-            invitationDao.findLatestForContactByStates(
+            identityExchangeDao.findLatestForContactByStages(
                 contactId = contactId,
-                states = AUTHORIZATION_EVENT_STATES
+                stages = AUTHORIZATION_EVENT_STATES
             )
 
         val state =
@@ -1640,18 +1517,18 @@ internal class DirectIdentityExchangeCoordinator(
     }
 
     private fun isBoundToLocalIdentity(
-        invitation: IdentityInvitationEntity,
+        invitation: IdentityExchangeEntity,
         localIdentity: LocalPublicIdentity
     ): Boolean =
         invitation.localEncryptionPublicKey?.contentEquals(localIdentity.encryptionPublicKey) == true &&
             invitation.localSigningPublicKey?.contentEquals(localIdentity.signingPublicKey) == true
 
     private fun resolveObservedState(
-        latestInvitation: IdentityInvitationEntity?,
-        latestAuthorizationEvent: IdentityInvitationEntity?
+        latestInvitation: IdentityExchangeEntity?,
+        latestAuthorizationEvent: IdentityExchangeEntity?
     ): IdentityHandshakeState? {
         val authorizationIsCurrent =
-            latestAuthorizationEvent?.state == IdentityHandshakeState.MUTUAL_UNVERIFIED.name &&
+            latestAuthorizationEvent?.stage == DirectIdentityExchangeStage.MUTUAL_UNVERIFIED.name &&
                 (
                     latestInvitation == null ||
                         latestAuthorizationEvent.updatedAtEpochMilliseconds >=
@@ -1662,15 +1539,15 @@ internal class DirectIdentityExchangeCoordinator(
             return IdentityHandshakeState.MUTUAL_UNVERIFIED
         }
 
-        return latestInvitation?.state.toIdentityHandshakeStateOrNull()
+        return latestInvitation?.stage.toIdentityHandshakeStateOrNull()
     }
 
-    private suspend fun resumeActiveHandshake(invitation: IdentityInvitationEntity): Boolean {
+    private suspend fun resumeActiveHandshake(invitation: IdentityExchangeEntity): Boolean {
         if (
             invitation.direction == InvitationDirection.INCOMING.name &&
             (
-                invitation.state == IdentityHandshakeState.ACCEPTANCE_SENT.name ||
-                    invitation.state == IdentityHandshakeState.WAITING_FOR_READY.name
+                invitation.stage == DirectIdentityExchangeStage.ACCEPTANCE_SENT.name ||
+                    invitation.stage == DirectIdentityExchangeStage.WAITING_FOR_READY.name
             )
         ) {
             queueAcceptanceReplay(invitation)
@@ -1679,9 +1556,9 @@ internal class DirectIdentityExchangeCoordinator(
 
         if (
             invitation.direction == InvitationDirection.OUTGOING.name &&
-            invitation.state == IdentityHandshakeState.INVITE_SENT.name
+            invitation.stage == DirectIdentityExchangeStage.OUTGOING_CHALLENGE_SENT.name
         ) {
-            val packetId = invitePacketId(invitation.invitationId)
+            val packetId = invitePacketId(invitation.exchangeId)
             val outboxItem = protocolOutbox.findByPacketId(packetId).getOrThrow()
             return when (outboxItem?.status) {
                 OutboxStatus.PENDING,
@@ -1700,22 +1577,22 @@ internal class DirectIdentityExchangeCoordinator(
         return true
     }
 
-    private suspend fun recoverIncomingInviteReplay(invitation: IdentityInvitationEntity) {
-        when (invitation.state) {
-            IdentityHandshakeState.ACCEPTANCE_SENT.name,
-            IdentityHandshakeState.WAITING_FOR_READY.name ->
+    private suspend fun recoverIncomingInviteReplay(invitation: IdentityExchangeEntity) {
+        when (invitation.stage) {
+            DirectIdentityExchangeStage.ACCEPTANCE_SENT.name,
+            DirectIdentityExchangeStage.WAITING_FOR_READY.name ->
                 queueAcceptanceReplay(invitation)
 
-            IdentityHandshakeState.DECLINED.name ->
+            DirectIdentityExchangeStage.CLOSED.name ->
                 queueDecline(
                     contactId = invitation.contactId,
-                    invitationId = invitation.invitationId,
+                    invitationId = invitation.exchangeId,
                     inviteChallenge = invitation.inviteChallenge
                 )
         }
     }
 
-    private suspend fun queueAcceptanceReplay(invitation: IdentityInvitationEntity) {
+    private suspend fun queueAcceptanceReplay(invitation: IdentityExchangeEntity) {
         prepareAcceptedRemoteIdentity(invitation)
         val responseChallenge =
             checkNotNull(invitation.responseChallenge) {
@@ -1729,12 +1606,12 @@ internal class DirectIdentityExchangeCoordinator(
         check(acceptedAt <= invitation.expiresAtEpochMilliseconds) {
             "Invitation has expired"
         }
-        val packetId = acceptedPacketId(invitation.invitationId)
+        val packetId = acceptedPacketId(invitation.exchangeId)
         val payload =
             payloadEncoder.encodeAccepted(
                 packetId = packetId,
                 version = ProtocolVersion.CURRENT,
-                invitationId = invitation.invitationId,
+                invitationId = invitation.exchangeId,
                 acceptedAtEpochMilliseconds = acceptedAt,
                 profilePicture = profilePicture,
                 inviteChallenge = invitation.inviteChallenge,
@@ -1750,7 +1627,7 @@ internal class DirectIdentityExchangeCoordinator(
             packet =
                 ContactInviteAcceptedPacket(
                     packetId = packetId,
-                    invitationId = invitation.invitationId,
+                    invitationId = invitation.exchangeId,
                     acceptedAtEpochMilliseconds = acceptedAt,
                     profilePicture = profilePicture,
                     inviteChallenge = invitation.inviteChallenge.copyOf(),
@@ -1768,9 +1645,9 @@ internal class DirectIdentityExchangeCoordinator(
                 expectedRemoteEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
                 expectedRemoteSigningPublicKey = invitation.remoteSigningPublicKey
             )
-        invitationDao.upsert(
+        identityExchangeDao.upsert(
             invitation.copy(
-                state = IdentityHandshakeState.WAITING_FOR_READY.name,
+                stage = DirectIdentityExchangeStage.WAITING_FOR_READY.name,
                 updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
                 lastError = null,
                 localEncryptionPublicKey = localIdentity.encryptionPublicKey.copyOf(),
@@ -1838,10 +1715,13 @@ internal class DirectIdentityExchangeCoordinator(
     }
 
     private fun String?.toIdentityHandshakeStateOrNull(): IdentityHandshakeState? =
-        this?.let { state ->
-            IdentityHandshakeState.entries.firstOrNull { candidate ->
-                candidate.name == state
-            }
+        when (this) {
+            DirectIdentityExchangeStage.ACCEPTANCE_SENT.name -> IdentityHandshakeState.ACCEPTANCE_SENT
+            DirectIdentityExchangeStage.WAITING_FOR_READY.name -> IdentityHandshakeState.WAITING_FOR_READY
+            DirectIdentityExchangeStage.MUTUAL_UNVERIFIED.name -> IdentityHandshakeState.MUTUAL_UNVERIFIED
+            DirectIdentityExchangeStage.AUTHORIZATION_REVOKED.name -> IdentityHandshakeState.AUTHORIZATION_REVOKED
+            DirectIdentityExchangeStage.FAILED.name -> IdentityHandshakeState.FAILED
+            else -> null
         }
 
     private fun invitePacketId(invitationId: String): String = "contact-invite-$invitationId"
@@ -1868,26 +1748,26 @@ internal class DirectIdentityExchangeCoordinator(
     private suspend fun requireInvitation(
         invitationId: String,
         direction: InvitationDirection
-    ): IdentityInvitationEntity {
+    ): IdentityExchangeEntity {
         require(invitationId.isNotBlank()) {
             "Invitation ID must not be blank"
         }
 
-        val invitation = invitationDao.findById(invitationId) ?: error("Invitation was not found: $invitationId")
+        val invitation = identityExchangeDao.findById(invitationId) ?: error("Invitation was not found: $invitationId")
         check(invitation.direction == direction.name) {
             "Invitation direction does not match this operation"
         }
         return invitation
     }
 
-    private suspend fun ensureNotExpired(invitation: IdentityInvitationEntity) {
+    private suspend fun ensureNotExpired(invitation: IdentityExchangeEntity) {
         if (invitation.expiresAtEpochMilliseconds > SystemClock.nowEpochMilliseconds()) {
             return
         }
 
-        invitationDao.upsert(
+        identityExchangeDao.upsert(
             invitation.copy(
-                state = IdentityHandshakeState.EXPIRED.name,
+                stage = DirectIdentityExchangeStage.CLOSED.name,
                 updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
                 lastError = "Invitation expired"
             )
@@ -1896,11 +1776,11 @@ internal class DirectIdentityExchangeCoordinator(
     }
 
     private fun requireState(
-        invitation: IdentityInvitationEntity,
-        expectedState: IdentityHandshakeState
+        invitation: IdentityExchangeEntity,
+        expectedState: DirectIdentityExchangeStage
     ) {
-        check(invitation.state == expectedState.name) {
-            "Expected invitation state ${expectedState.name}, but was ${invitation.state}"
+        check(invitation.stage == expectedState.name) {
+            "Expected invitation state ${expectedState.name}, but was ${invitation.stage}"
         }
     }
 
@@ -1914,16 +1794,16 @@ internal class DirectIdentityExchangeCoordinator(
     }
 
     private suspend fun queueDirectChatAuthorizationRevocation(
-        invitation: IdentityInvitationEntity
+        invitation: IdentityExchangeEntity
     ) {
         val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
         val revokedAt = SystemClock.nowEpochMilliseconds()
-        val packetId = authorizationRevokedPacketId(invitation.invitationId)
+        val packetId = authorizationRevokedPacketId(invitation.exchangeId)
         val payload =
             authorizationPayloadEncoder.encodeRevoked(
                 packetId = packetId,
                 version = ProtocolVersion.CURRENT,
-                invitationId = invitation.invitationId,
+                invitationId = invitation.exchangeId,
                 revokedAtEpochMilliseconds = revokedAt,
                 inviteChallenge = invitation.inviteChallenge,
                 revokerSigningPublicKey = signingKeyPair.publicKey
@@ -1935,7 +1815,7 @@ internal class DirectIdentityExchangeCoordinator(
             packet =
                 DirectChatAuthorizationRevokedPacket(
                     packetId = packetId,
-                    invitationId = invitation.invitationId,
+                    invitationId = invitation.exchangeId,
                     revokedAtEpochMilliseconds = revokedAt,
                     inviteChallenge = invitation.inviteChallenge.copyOf(),
                     revokerSigningPublicKey = signingKeyPair.publicKey.copyOf(),
@@ -1995,136 +1875,19 @@ internal class DirectIdentityExchangeCoordinator(
         ).getOrThrow()
     }
 
-    private fun nextInvitationWakeAt(
-        invitations: List<IdentityInvitationEntity>,
-        now: Long
-    ): Long? =
-        invitations
-            .asSequence()
-            .filter { invitation -> invitation.hiddenAtEpochMilliseconds == null }
-            .mapNotNull { invitation ->
-                val wakeAt =
-                    when (invitation.state) {
-                        IdentityHandshakeState.INVITE_SENT.name,
-                        IdentityHandshakeState.AWAITING_ACCEPTANCE.name -> invitation.expiresAtEpochMilliseconds
-                        IdentityHandshakeState.DECLINED.name ->
-                            invitation.updatedAtEpochMilliseconds + DECLINED_INVITATION_RETENTION_MILLISECONDS
-                        else -> null
-                    }
-                wakeAt?.takeIf { it > now }
-            }.minOrNull()
-
-    private fun visibleInvitationStates(direction: InvitationDirection): List<String> =
-        when (direction) {
-            InvitationDirection.INCOMING ->
-                listOf(IdentityHandshakeState.AWAITING_ACCEPTANCE.name)
-            InvitationDirection.OUTGOING ->
-                listOf(
-                    IdentityHandshakeState.INVITE_SENT.name,
-                    IdentityHandshakeState.DECLINED.name
-                )
-        }
-
-    private suspend fun expirePendingInvitationIfNeeded(
-        invitation: IdentityInvitationEntity,
-        now: Long
-    ): IdentityInvitationEntity {
-        if (
-            invitation.state != IdentityHandshakeState.INVITE_SENT.name &&
-            invitation.state != IdentityHandshakeState.AWAITING_ACCEPTANCE.name
-        ) {
-            return invitation
-        }
-        if (invitation.expiresAtEpochMilliseconds > now) return invitation
-
-        val expired =
-            invitation.copy(
-                state = IdentityHandshakeState.EXPIRED.name,
-                updatedAtEpochMilliseconds = now,
-                lastError = "Invitation expired"
-            )
-        invitationDao.upsert(expired)
-        return expired
-    }
-
-    private fun String?.toInvitationResultAction(): InvitationResultAction? =
-        this?.let { stored ->
-            InvitationResultAction.entries.firstOrNull { action -> action.name == stored }
-        }
-
-    private fun IdentityInvitationEntity.toInvitationStatus(): InvitationStatus? =
-        when (state) {
-            IdentityHandshakeState.INVITE_SENT.name,
-            IdentityHandshakeState.AWAITING_ACCEPTANCE.name,
-            IdentityHandshakeState.ACCEPTANCE_SENT.name -> InvitationStatus.PENDING
-            IdentityHandshakeState.DECLINED.name -> InvitationStatus.DECLINED
-            IdentityHandshakeState.EXPIRED.name -> InvitationStatus.EXPIRED
-            IdentityHandshakeState.FAILED.name -> InvitationStatus.FAILED
-            else -> null
-        }
-
-    private fun isVisibleInvitation(
-        direction: InvitationDirection,
-        status: InvitationStatus,
-        updatedAtEpochMilliseconds: Long,
-        now: Long
-    ): Boolean =
-        when (direction) {
-            InvitationDirection.INCOMING -> status == InvitationStatus.PENDING
-            InvitationDirection.OUTGOING ->
-                status == InvitationStatus.PENDING ||
-                    (
-                        status == InvitationStatus.DECLINED &&
-                            now - updatedAtEpochMilliseconds < DECLINED_INVITATION_RETENTION_MILLISECONDS
-                    )
-        }
-
-    private suspend fun toInvitation(
-        invitation: IdentityInvitationEntity,
-        direction: InvitationDirection,
-        status: InvitationStatus
-    ): Invitation? {
-        val contact = contactDao.findById(invitation.contactId) ?: return null
-        val invitationDisplayName =
-            invitation.remoteDisplayName
-                ?.trim()
-                ?.takeIf(String::isNotBlank)
-        val invitationPhoneNumber =
-            invitationDisplayName
-                ?.let { value -> phoneNumberNormalizer.normalize(value).getOrNull() }
-        val contactPhoneNumber =
-            contact.phoneNumbers
-                .firstOrNull { phoneNumber -> phoneNumber.id == contact.contact.preferredPhoneNumberId }
-                ?.value
-                ?: contact.phoneNumbers.firstOrNull()?.value
-                ?: invitationPhoneNumber
-
-        val viewedAtEpochMilliseconds = invitation.viewedAtEpochMilliseconds
-
-        return Invitation(
-            invitationId = invitation.invitationId,
+    private fun IdentityExchangeEntity.toLifecycleRecord(): InvitationLifecycleRecord =
+        InvitationLifecycleRecord(
+            invitationId = exchangeId,
             payloadType = InvitationPayloadType.DIRECT,
-            payloadId = invitation.contactId,
-            peerId = invitation.contactId,
-            peerDisplayName =
-                contact.contact.displayName
-                    ?.takeIf(String::isNotBlank)
-                    ?.takeUnless { displayName -> displayName == contactPhoneNumber }
-                    ?: invitationDisplayName?.takeIf { invitationPhoneNumber == null },
-            peerSecondaryText = contactPhoneNumber,
-            direction = direction,
-            status = status,
-            expiresAtEpochMilliseconds = invitation.expiresAtEpochMilliseconds,
-            updatedAtEpochMilliseconds = invitation.updatedAtEpochMilliseconds,
-            hasUnreadUpdate =
-                direction == InvitationDirection.INCOMING &&
-                    status == InvitationStatus.PENDING &&
-                    (
-                        viewedAtEpochMilliseconds == null ||
-                            invitation.updatedAtEpochMilliseconds > viewedAtEpochMilliseconds
-                    )
+            payloadId = contactId,
+            peerId = contactId,
+            direction =
+                InvitationDirection.entries.firstOrNull { direction -> direction.name == this.direction }
+                    ?: error("Unknown invitation direction: $direction"),
+            createdAtEpochMilliseconds = createdAtEpochMilliseconds,
+            expiresAtEpochMilliseconds = expiresAtEpochMilliseconds,
+            updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
         )
-    }
 
     private companion object {
         const val CONTACT_PHONE_NUMBER_TYPE_MOBILE = "MOBILE"
@@ -2133,7 +1896,6 @@ internal class DirectIdentityExchangeCoordinator(
         const val CHALLENGE_SIZE = 32
         const val INVITATION_LIFETIME_MILLISECONDS = 24L * 60L * 60L * 1_000L
         const val INVITATION_RESTART_GRACE_MILLISECONDS = 5L * 1_000L
-        const val DECLINED_INVITATION_RETENTION_MILLISECONDS = 24L * 60L * 60L * 1_000L
         const val MAX_CLOCK_SKEW_MILLISECONDS = 5L * 60L * 1_000L
         const val MAXIMUM_COUNTRY_CODE_DIGITS = 3
         const val MINIMUM_COUNTRY_CODE_DIGITS = 1
@@ -2148,17 +1910,16 @@ internal class DirectIdentityExchangeCoordinator(
 
         val AUTHORIZATION_EVENT_STATES =
             listOf(
-                IdentityHandshakeState.MUTUAL_UNVERIFIED.name,
-                IdentityHandshakeState.CONVERSATION_DELETED.name
+                DirectIdentityExchangeStage.MUTUAL_UNVERIFIED.name,
+                DirectIdentityExchangeStage.AUTHORIZATION_REVOKED.name
             )
 
         val TERMINAL_STATES =
             listOf(
-                IdentityHandshakeState.MUTUAL_UNVERIFIED.name,
-                IdentityHandshakeState.DECLINED.name,
-                IdentityHandshakeState.CONVERSATION_DELETED.name,
-                IdentityHandshakeState.EXPIRED.name,
-                IdentityHandshakeState.FAILED.name
+                DirectIdentityExchangeStage.MUTUAL_UNVERIFIED.name,
+                DirectIdentityExchangeStage.CLOSED.name,
+                DirectIdentityExchangeStage.AUTHORIZATION_REVOKED.name,
+                DirectIdentityExchangeStage.FAILED.name
             )
     }
 }

@@ -102,7 +102,7 @@ internal fun SecurityBanner(
             Icon(
                 imageVector = state.icon,
                 contentDescription = null,
-                modifier = Modifier.size(Dimens.DirectConversationScreen.invitationIconSize)
+                modifier = Modifier.size(Dimens.DirectConversationScreen.authorizationIconSize)
             )
             Column(
                 modifier = Modifier.padding(start = MaterialTheme.spacing.small).weight(1f)

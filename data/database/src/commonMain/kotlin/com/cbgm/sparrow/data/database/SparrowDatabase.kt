@@ -12,7 +12,7 @@ import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.data.database.dao.GroupPinDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
-import com.cbgm.sparrow.data.database.dao.IdentityInvitationDao
+import com.cbgm.sparrow.data.database.dao.IdentityExchangeDao
 import com.cbgm.sparrow.data.database.dao.InvitationDao
 import com.cbgm.sparrow.data.database.dao.LinkPreviewDao
 import com.cbgm.sparrow.data.database.dao.MailboxRouteDao
@@ -36,7 +36,7 @@ import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
 import com.cbgm.sparrow.data.database.entity.GroupPinEntity
 import com.cbgm.sparrow.data.database.entity.GroupSecurityStateEntity
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
-import com.cbgm.sparrow.data.database.entity.IdentityInvitationEntity
+import com.cbgm.sparrow.data.database.entity.IdentityExchangeEntity
 import com.cbgm.sparrow.data.database.entity.InvitationEntity
 import com.cbgm.sparrow.data.database.entity.LinkPreviewEntity
 import com.cbgm.sparrow.data.database.entity.LocalMailboxCredentialEntity
@@ -48,6 +48,7 @@ import com.cbgm.sparrow.data.database.entity.MessageSafetyAssessmentEntity
 import com.cbgm.sparrow.data.database.entity.MessageSearchEmbeddingEntity
 import com.cbgm.sparrow.data.database.entity.ProtocolOutboxEntity
 import com.cbgm.sparrow.data.database.entity.RemoteMailboxRouteEntity
+import com.cbgm.sparrow.data.database.migration.IdentityExchangeMigration41To42
 
 @Database(
     entities = [
@@ -65,7 +66,7 @@ import com.cbgm.sparrow.data.database.entity.RemoteMailboxRouteEntity
         InvitationEntity::class,
         GroupPinEntity::class,
         GroupVerificationPairEntity::class,
-        IdentityInvitationEntity::class,
+        IdentityExchangeEntity::class,
         MessageEntity::class,
         MessageAttachmentEntity::class,
         MessageSearchEmbeddingEntity::class,
@@ -77,7 +78,7 @@ import com.cbgm.sparrow.data.database.entity.RemoteMailboxRouteEntity
         RemoteMailboxRouteEntity::class,
         LinkPreviewEntity::class
     ],
-    version = 41,
+    version = 42,
     autoMigrations = [
         AutoMigration(from = 26, to = 27),
         AutoMigration(from = 27, to = 28),
@@ -92,7 +93,8 @@ import com.cbgm.sparrow.data.database.entity.RemoteMailboxRouteEntity
         AutoMigration(from = 36, to = 37),
         AutoMigration(from = 37, to = 38),
         AutoMigration(from = 38, to = 39),
-        AutoMigration(from = 39, to = 40)
+        AutoMigration(from = 39, to = 40),
+        AutoMigration(from = 41, to = 42, spec = IdentityExchangeMigration41To42::class)
     ],
     exportSchema = true
 )
@@ -114,7 +116,7 @@ abstract class SparrowDatabase : RoomDatabase() {
 
     abstract fun groupVerificationDao(): GroupVerificationDao
 
-    abstract fun identityInvitationDao(): IdentityInvitationDao
+    abstract fun identityExchangeDao(): IdentityExchangeDao
 
     abstract fun contactRoutingIdDao(): ContactRoutingIdDao
 

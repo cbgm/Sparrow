@@ -6,7 +6,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
-    tableName = "identity_invitations",
+    tableName = "identity_exchanges",
     foreignKeys = [
         ForeignKey(
             entity = ContactEntity::class,
@@ -18,15 +18,15 @@ import androidx.room.PrimaryKey
     indices = [
         Index(value = ["contactId"]),
         Index(value = ["direction"]),
-        Index(value = ["state"])
+        Index(value = ["stage"])
     ]
 )
-data class IdentityInvitationEntity(
+data class IdentityExchangeEntity(
     @PrimaryKey
-    val invitationId: String,
+    val exchangeId: String,
     val contactId: String,
     val direction: String,
-    val state: String,
+    val stage: String,
     val remoteDisplayName: String?,
     val inviteChallenge: ByteArray,
     val responseChallenge: ByteArray?,
@@ -37,17 +37,14 @@ data class IdentityInvitationEntity(
     val updatedAtEpochMilliseconds: Long,
     val lastError: String?,
     val localEncryptionPublicKey: ByteArray? = null,
-    val localSigningPublicKey: ByteArray? = null,
-    val viewedAtEpochMilliseconds: Long? = null,
-    val hiddenAtEpochMilliseconds: Long? = null,
-    val resultAction: String? = null
+    val localSigningPublicKey: ByteArray? = null
 ) {
     override fun equals(other: Any?): Boolean =
-        other is IdentityInvitationEntity &&
-            invitationId == other.invitationId &&
+        other is IdentityExchangeEntity &&
+            exchangeId == other.exchangeId &&
             contactId == other.contactId &&
             direction == other.direction &&
-            state == other.state &&
+            stage == other.stage &&
             remoteDisplayName == other.remoteDisplayName &&
             inviteChallenge.contentEquals(other.inviteChallenge) &&
             responseChallenge.contentEqualsNullable(other.responseChallenge) &&
@@ -58,16 +55,13 @@ data class IdentityInvitationEntity(
             updatedAtEpochMilliseconds == other.updatedAtEpochMilliseconds &&
             lastError == other.lastError &&
             localEncryptionPublicKey.contentEqualsNullable(other.localEncryptionPublicKey) &&
-            localSigningPublicKey.contentEqualsNullable(other.localSigningPublicKey) &&
-            viewedAtEpochMilliseconds == other.viewedAtEpochMilliseconds &&
-            hiddenAtEpochMilliseconds == other.hiddenAtEpochMilliseconds &&
-            resultAction == other.resultAction
+            localSigningPublicKey.contentEqualsNullable(other.localSigningPublicKey)
 
     override fun hashCode(): Int {
-        var result = invitationId.hashCode()
+        var result = exchangeId.hashCode()
         result = 31 * result + contactId.hashCode()
         result = 31 * result + direction.hashCode()
-        result = 31 * result + state.hashCode()
+        result = 31 * result + stage.hashCode()
         result = 31 * result + (remoteDisplayName?.hashCode() ?: 0)
         result = 31 * result + inviteChallenge.contentHashCode()
         result = 31 * result + (responseChallenge?.contentHashCode() ?: 0)
@@ -79,9 +73,6 @@ data class IdentityInvitationEntity(
         result = 31 * result + (lastError?.hashCode() ?: 0)
         result = 31 * result + (localEncryptionPublicKey?.contentHashCode() ?: 0)
         result = 31 * result + (localSigningPublicKey?.contentHashCode() ?: 0)
-        result = 31 * result + (viewedAtEpochMilliseconds?.hashCode() ?: 0)
-        result = 31 * result + (hiddenAtEpochMilliseconds?.hashCode() ?: 0)
-        result = 31 * result + (resultAction?.hashCode() ?: 0)
         return result
     }
 }

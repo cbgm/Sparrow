@@ -2,6 +2,8 @@ package com.cbgm.sparrow.feature.invite.domain.repository
 
 import com.cbgm.sparrow.feature.invite.domain.model.Invitation
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationLifecycleRecord
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationLifecycleStatus
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationPayloadType
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResult
@@ -13,7 +15,16 @@ interface InvitationRepository {
 
     fun observeInvitationResults(): Flow<List<InvitationResult>>
 
+    fun observeLifecycleStatus(
+        payloadType: InvitationPayloadType,
+        payloadId: String,
+        peerId: String,
+        direction: InvitationDirection
+    ): Flow<InvitationLifecycleStatus?>
+
     suspend fun getPeerId(invitationId: String): Result<String>
+
+    suspend fun recordPending(record: InvitationLifecycleRecord): Result<Unit>
 
     suspend fun getPayloadType(invitationId: String): Result<InvitationPayloadType>
 
@@ -31,6 +42,7 @@ interface InvitationRepository {
     ): Result<Unit>
 
     suspend fun applyResponse(
+        payloadType: InvitationPayloadType,
         invitationId: String,
         response: InvitationResponse
     ): Result<Unit>

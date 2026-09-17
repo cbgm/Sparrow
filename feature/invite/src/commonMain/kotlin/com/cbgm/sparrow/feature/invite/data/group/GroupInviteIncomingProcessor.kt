@@ -71,6 +71,7 @@ internal class GroupInviteIncomingProcessor(
 
         invitationDao.failSuperseded(
             payloadType = INVITATION_PAYLOAD_TYPE_GROUP,
+            payloadId = packet.groupId,
             peerId = ownerContactId,
             currentInvitationId = packet.invitationId,
             direction = INVITATION_DIRECTION_INCOMING,

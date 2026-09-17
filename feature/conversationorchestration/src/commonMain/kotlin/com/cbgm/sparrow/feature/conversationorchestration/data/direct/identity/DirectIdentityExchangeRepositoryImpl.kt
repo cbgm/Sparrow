@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.conversationorchestration.data.direct.invitation
+package com.cbgm.sparrow.feature.conversationorchestration.data.direct.identity
 
 import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.packet.ContactReadyPacket

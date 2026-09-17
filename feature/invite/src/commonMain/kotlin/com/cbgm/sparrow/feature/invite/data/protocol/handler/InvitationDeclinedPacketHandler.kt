@@ -5,6 +5,7 @@ import com.cbgm.sparrow.core.protocol.handler.TypedProtocolPacketHandler
 import com.cbgm.sparrow.core.protocol.packet.ContactInviteDeclinedPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPacketProcessor
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationPayloadType
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
 import com.cbgm.sparrow.feature.invite.domain.usecase.HandleInvitationResponseUseCase
 
@@ -23,6 +24,7 @@ class InvitationDeclinedPacketHandler(
                 ?: error("Incompatible invitation decline packet")
 
         return handleInvitationResponse(
+            payloadType = InvitationPayloadType.DIRECT,
             invitationId = declinedPacket.invitationId,
             response = InvitationResponse.DECLINED,
             applyResponseEffects = {

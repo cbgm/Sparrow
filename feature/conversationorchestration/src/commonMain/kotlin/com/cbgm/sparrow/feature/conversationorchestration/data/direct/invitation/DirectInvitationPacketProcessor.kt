@@ -4,7 +4,9 @@ import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.packet.ContactInviteAcceptedPacket
 import com.cbgm.sparrow.core.protocol.packet.ContactInviteDeclinedPacket
 import com.cbgm.sparrow.core.protocol.packet.ContactInvitePacket
+import com.cbgm.sparrow.feature.conversationorchestration.data.direct.identity.DirectIdentityExchangeCoordinator
 import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPacketProcessor
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationLifecycleRecord
 
 internal class DirectInvitationPacketProcessor(
     private val coordinator: DirectIdentityExchangeCoordinator
@@ -15,14 +17,18 @@ internal class DirectInvitationPacketProcessor(
         receptionEnabled: Boolean,
         blockedPeerIds: Set<String>,
         blockUnknownPeers: Boolean
-    ): Result<Unit> =
-        coordinator.receiveInvite(
-            context = context,
-            packet = packet,
-            receptionEnabled = receptionEnabled,
-            blockedPeerIds = blockedPeerIds,
-            blockUnknownPeers = blockUnknownPeers
-        )
+    ): Result<InvitationLifecycleRecord?> =
+        coordinator
+            .receiveInvite(
+                context = context,
+                packet = packet,
+                receptionEnabled = receptionEnabled,
+                blockedPeerIds = blockedPeerIds,
+                blockUnknownPeers = blockUnknownPeers
+            ).fold(
+                onSuccess = { coordinator.getPendingIncomingInvitationLifecycleRecord(packet.invitationId) },
+                onFailure = { error -> Result.failure(error) }
+            )
 
     override suspend fun receiveAccepted(
         context: IncomingPacketContext,

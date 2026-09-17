@@ -3,6 +3,8 @@ package com.cbgm.sparrow.feature.invite.data.repository
 import com.cbgm.sparrow.feature.invite.data.lifecycle.InvitationLifecycleDataSource
 import com.cbgm.sparrow.feature.invite.domain.model.Invitation
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationLifecycleRecord
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationLifecycleStatus
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationPayloadType
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResult
@@ -30,6 +32,18 @@ internal class InvitationRepositoryImpl(
             (direct + group).sortedByDescending(Invitation::updatedAtEpochMilliseconds)
         }
 
+    override fun observeLifecycleStatus(
+        payloadType: InvitationPayloadType,
+        payloadId: String,
+        peerId: String,
+        direction: InvitationDirection
+    ): Flow<InvitationLifecycleStatus?> =
+        dataSource(payloadType).observeLifecycleStatus(
+            payloadId = payloadId,
+            peerId = peerId,
+            direction = direction
+        )
+
     override fun observeInvitationResults(): Flow<List<InvitationResult>> =
         combine(
             dataSource(InvitationPayloadType.DIRECT).observeInvitationResults(),
@@ -40,6 +54,9 @@ internal class InvitationRepositoryImpl(
         findDataSource(invitationId)
             .getOrElse { return Result.failure(it) }
             .getPeerId(invitationId)
+
+    override suspend fun recordPending(record: InvitationLifecycleRecord): Result<Unit> =
+        dataSource(record.payloadType).recordPending(record)
 
     override suspend fun getPayloadType(invitationId: String): Result<InvitationPayloadType> =
         findDataSource(invitationId).map { dataSource -> dataSource.payloadType }
@@ -64,12 +81,11 @@ internal class InvitationRepositoryImpl(
             .decline(invitationId, action)
 
     override suspend fun applyResponse(
+        payloadType: InvitationPayloadType,
         invitationId: String,
         response: InvitationResponse
     ): Result<Unit> =
-        findDataSource(invitationId)
-            .getOrElse { return Result.failure(it) }
-            .applyResponse(invitationId, response)
+        dataSource(payloadType).applyResponse(invitationId, response)
 
     override suspend fun markViewed(direction: InvitationDirection): Result<Unit> {
         for (dataSource in dataSourcesByPayloadType.values) {

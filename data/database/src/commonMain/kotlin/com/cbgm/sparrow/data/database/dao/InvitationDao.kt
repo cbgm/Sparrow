@@ -82,6 +82,25 @@ interface InvitationDao {
 
     @Query(
         """
+        SELECT *
+        FROM invitations
+        WHERE payloadType = :payloadType
+          AND payloadId = :payloadId
+          AND peerId = :peerId
+          AND direction = :direction
+        ORDER BY updatedAtEpochMilliseconds DESC, createdAtEpochMilliseconds DESC
+        LIMIT 1
+        """
+    )
+    fun observeLatest(
+        payloadType: String,
+        payloadId: String,
+        peerId: String,
+        direction: String
+    ): Flow<InvitationEntity?>
+
+    @Query(
+        """
         UPDATE invitations
         SET status = :newStatus,
             updatedAtEpochMilliseconds = MAX(createdAtEpochMilliseconds, :updatedAt),
@@ -104,6 +123,7 @@ interface InvitationDao {
         SET status = :failedStatus,
             updatedAtEpochMilliseconds = MAX(createdAtEpochMilliseconds, :updatedAt)
         WHERE payloadType = :payloadType
+          AND payloadId = :payloadId
           AND peerId = :peerId
           AND invitationId != :currentInvitationId
           AND direction = :direction
@@ -112,6 +132,7 @@ interface InvitationDao {
     )
     suspend fun failSuperseded(
         payloadType: String,
+        payloadId: String,
         peerId: String,
         currentInvitationId: String,
         direction: String,
@@ -124,11 +145,13 @@ interface InvitationDao {
         """
         UPDATE invitations
         SET viewedAtEpochMilliseconds = :viewedAtEpochMilliseconds
-        WHERE direction = :direction
+        WHERE payloadType = :payloadType
+          AND direction = :direction
           AND hiddenAtEpochMilliseconds IS NULL
         """
     )
     suspend fun markDirectionViewed(
+        payloadType: String,
         direction: String,
         viewedAtEpochMilliseconds: Long
     )

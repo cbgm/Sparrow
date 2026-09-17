@@ -5,6 +5,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryCursor
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectChatContext
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectConversationRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
+import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.ObserveConversationQueueAvailabilityUseCase
 import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -15,6 +16,7 @@ class ObserveDirectChatContextUseCase(
     private val conversationRepository: DirectConversationRepository,
     private val contactRepository: ContactRepository,
     private val directIdentityExchangeRepository: DirectIdentityExchangeRepository,
+    private val observeConversationQueueAvailability: ObserveConversationQueueAvailabilityUseCase,
     private val identitySetupModeRepository: DirectIdentitySetupModeRepository
 ) {
     operator fun invoke(
@@ -29,12 +31,14 @@ class ObserveDirectChatContextUseCase(
                 .map { contacts -> contacts.firstOrNull { contact -> contact.id == contactId } }
                 .distinctUntilChanged(),
             directIdentityExchangeRepository.observeState(contactId),
+            observeConversationQueueAvailability(contactId),
             identitySetupModeRepository.observeMode()
-        ) { conversation, contact, handshake, setupMode ->
+        ) { conversation, contact, handshake, canQueueMessages, setupMode ->
             DirectChatContext(
                 conversation = conversation,
                 contact = contact,
                 handshake = handshake,
+                canQueueMessages = canQueueMessages,
                 setupMode = setupMode
             )
         }

@@ -33,7 +33,7 @@ class DirectChatAuthorizationTest {
     }
 
     @Test
-    fun `mutual invitation is authorized`() {
+    fun `mutual identity is authorized`() {
         assertTrue(
             isDirectChatAuthorized(
                 contact = null,
@@ -44,34 +44,30 @@ class DirectChatAuthorizationTest {
     }
 
     @Test
-    fun `deleted peer conversation requires reinvite but keeps composer editable`() {
-        val state = directUiStateFor(IdentityHandshakeState.CONVERSATION_DELETED)
+    fun `unauthorized conversation can keep composer usable when queueing is available`() {
+        val state = directUiStateFor(
+            handshake = IdentityHandshakeState.AUTHORIZATION_REVOKED,
+            canQueueMessages = true
+        )
 
         assertFalse(state.isChatAuthorized)
-        assertEquals(DirectComposerState.REINVITE_REQUIRED, state.composerState)
+        assertEquals(DirectComposerState.QUEUE_ALLOWED, state.composerState)
         assertTrue(state.composerState.isInputEnabled)
         assertTrue(state.composerState.isSendActionEnabled)
         assertFalse(state.composerState.sendsIndicators)
     }
 
     @Test
-    fun `pending reinvite keeps composer usable for locally queued messages`() {
-        val state = directUiStateFor(IdentityHandshakeState.INVITE_SENT)
+    fun `unavailable authorization disables composer`() {
+        val state = directUiStateFor(
+            handshake = IdentityHandshakeState.ACCEPTANCE_SENT,
+            canQueueMessages = false
+        )
 
         assertFalse(state.isChatAuthorized)
-        assertEquals(DirectComposerState.REINVITE_PENDING, state.composerState)
-        assertTrue(state.composerState.isInputEnabled)
-        assertTrue(state.composerState.isSendActionEnabled)
-        assertFalse(state.composerState.sendsIndicators)
-    }
-
-    @Test
-    fun `failed reinvite can be started again by another send action`() {
-        val state = directUiStateFor(IdentityHandshakeState.FAILED)
-
-        assertEquals(DirectComposerState.REINVITE_REQUIRED, state.composerState)
-        assertTrue(state.composerState.isInputEnabled)
-        assertTrue(state.composerState.isSendActionEnabled)
+        assertEquals(DirectComposerState.DISABLED, state.composerState)
+        assertFalse(state.composerState.isInputEnabled)
+        assertFalse(state.composerState.isSendActionEnabled)
     }
 
     @Test
@@ -83,13 +79,17 @@ class DirectChatAuthorizationTest {
         assertTrue(state.composerState.sendsIndicators)
     }
 
-    private fun directUiStateFor(handshake: IdentityHandshakeState) =
+    private fun directUiStateFor(
+        handshake: IdentityHandshakeState?,
+        canQueueMessages: Boolean = false
+    ) =
         toDirectConversationUiState(
             contactId = "contact",
             fallbackContactName = "Contact",
             conversation = DirectConversation("conversation", "contact", emptyList(), 0),
             contact = null,
             handshake = handshake,
+            canQueueMessages = canQueueMessages,
             setupMode = DirectIdentitySetupMode.AUTOMATIC_INVITATION,
             safetyAssessments = emptyMap()
         )

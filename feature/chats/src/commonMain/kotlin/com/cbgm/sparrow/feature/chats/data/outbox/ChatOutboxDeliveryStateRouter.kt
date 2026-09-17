@@ -4,11 +4,12 @@ import com.cbgm.sparrow.core.protocol.outbox.OutboxDeliveryStateListener
 import com.cbgm.sparrow.feature.chats.data.direct.delivery.DirectOutboxDeliveryHandler
 import com.cbgm.sparrow.feature.chats.data.group.delivery.GroupOutboxDeliveryHandler
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
+import com.cbgm.sparrow.feature.conversationorchestration.domain.port.OrchestratedOutboxDeliveryPort
 
-/** Thin outbox edge that routes chat callbacks to Direct or Group. */
 class ChatOutboxDeliveryStateRouter(
     private val directHandler: DirectOutboxDeliveryHandler,
-    private val groupHandler: GroupOutboxDeliveryHandler
+    private val groupHandler: GroupOutboxDeliveryHandler,
+    private val orchestratedHandler: OrchestratedOutboxDeliveryPort
 ) : OutboxDeliveryStateListener {
     override suspend fun onProcessing(packetId: String): Result<Unit> =
         applyEvent(packetId, MessageDeliveryEvent.SEND_STARTED)
@@ -51,6 +52,12 @@ class ChatOutboxDeliveryStateRouter(
     ): Result<Unit> =
         runCatching {
             when {
+                orchestratedHandler.canHandle(packetId) -> {
+                    if (event == MessageDeliveryEvent.SEND_FAILED) {
+                        orchestratedHandler.onFailed(packetId)
+                    }
+                }
+
                 groupHandler.canHandle(packetId) ->
                     groupHandler.applyEvent(packetId, event, errorMessage)
 

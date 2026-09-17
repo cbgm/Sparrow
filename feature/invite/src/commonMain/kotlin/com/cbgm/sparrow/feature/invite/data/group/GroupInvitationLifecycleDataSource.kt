@@ -3,6 +3,8 @@ package com.cbgm.sparrow.feature.invite.data.group
 import com.cbgm.sparrow.feature.invite.data.lifecycle.InvitationLifecycleDataSource
 import com.cbgm.sparrow.feature.invite.domain.model.Invitation
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationLifecycleRecord
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationLifecycleStatus
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationPayloadType
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResult
@@ -17,11 +19,25 @@ internal class GroupInvitationLifecycleDataSource(
     override fun observeInvitations(direction: InvitationDirection): Flow<List<Invitation>> =
         coordinator.observeInvitations(direction)
 
+    override fun observeLifecycleStatus(
+        payloadId: String,
+        peerId: String,
+        direction: InvitationDirection
+    ): Flow<InvitationLifecycleStatus?> =
+        coordinator.observeLifecycleStatus(
+            payloadId = payloadId,
+            peerId = peerId,
+            direction = direction
+        )
+
     override fun observeInvitationResults(): Flow<List<InvitationResult>> =
         coordinator.observeInvitationResults()
 
     override suspend fun contains(invitationId: String): Boolean =
         coordinator.contains(invitationId)
+
+    override suspend fun recordPending(record: InvitationLifecycleRecord): Result<Unit> =
+        Result.failure(UnsupportedOperationException("Group packet processors persist group invitations directly"))
 
     override suspend fun getPeerId(invitationId: String): Result<String> =
         coordinator.getPeerId(invitationId)

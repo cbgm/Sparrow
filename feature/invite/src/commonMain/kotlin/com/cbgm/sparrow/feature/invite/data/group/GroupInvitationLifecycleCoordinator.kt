@@ -15,6 +15,7 @@ import com.cbgm.sparrow.feature.identity.data.datasource.ContactKeyExchangeDataS
 import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.invite.domain.model.Invitation
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationLifecycleStatus
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationPayloadType
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResult
@@ -54,6 +55,21 @@ internal class GroupInvitationLifecycleCoordinator(
                     val status = current.toVisibleStatus(direction, now) ?: return@mapNotNull null
                     current.toInvitation(direction, status)
                 }
+            }.distinctUntilChanged()
+
+    fun observeLifecycleStatus(
+        payloadId: String,
+        peerId: String,
+        direction: InvitationDirection
+    ): Flow<InvitationLifecycleStatus?> =
+        invitationDao
+            .observeLatest(
+                payloadType = InvitationPayloadType.GROUP.name,
+                payloadId = payloadId,
+                peerId = peerId,
+                direction = direction.name
+            ).map { invitation ->
+                invitation?.status?.toLifecycleStatus()
             }.distinctUntilChanged()
 
     fun observeInvitationResults(): Flow<List<InvitationResult>> =
@@ -502,6 +518,16 @@ internal class GroupInvitationLifecycleCoordinator(
             response = response
         )
     }
+
+    private fun String.toLifecycleStatus(): InvitationLifecycleStatus? =
+        when (this) {
+            INVITATION_STATUS_PENDING -> InvitationLifecycleStatus.PENDING
+            INVITATION_STATUS_ACCEPTED -> InvitationLifecycleStatus.ACCEPTED
+            INVITATION_STATUS_DECLINED -> InvitationLifecycleStatus.DECLINED
+            INVITATION_STATUS_EXPIRED -> InvitationLifecycleStatus.EXPIRED
+            INVITATION_STATUS_FAILED -> InvitationLifecycleStatus.FAILED
+            else -> null
+        }
 
     private fun InvitationEntity.toVisibleStatus(
         direction: InvitationDirection,

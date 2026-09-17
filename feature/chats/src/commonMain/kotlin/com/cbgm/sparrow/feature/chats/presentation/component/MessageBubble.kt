@@ -76,7 +76,7 @@ import com.cbgm.sparrow.resources.feature_chats_sending
 import com.cbgm.sparrow.resources.feature_chats_sent
 import com.cbgm.sparrow.resources.feature_chats_unable_decrypt_secure_message
 import com.cbgm.sparrow.resources.feature_chats_unable_read_plaintext
-import com.cbgm.sparrow.resources.feature_chats_waiting_for_invitation_acceptance
+import com.cbgm.sparrow.resources.feature_chats_waiting_for_authorization
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -628,7 +628,7 @@ private fun DeliveryIndicator(
             DeliveryLabel(
                 text = stringResource(
                     if (deliveryStatus == MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION) {
-                        Res.string.feature_chats_waiting_for_invitation_acceptance
+                        Res.string.feature_chats_waiting_for_authorization
                     } else {
                         Res.string.feature_chats_queued
                     }
