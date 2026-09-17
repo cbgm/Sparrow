@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.chats.data.direct.authorization
+package com.cbgm.sparrow.feature.conversationorchestration.data.direct.authorization
 
 import com.cbgm.sparrow.core.crypto.util.ByteArrays
 

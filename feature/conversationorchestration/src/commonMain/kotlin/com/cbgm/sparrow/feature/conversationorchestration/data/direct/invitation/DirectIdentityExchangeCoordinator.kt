@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.chats.data.direct.invitation
+package com.cbgm.sparrow.feature.conversationorchestration.data.direct.invitation
 
 import com.cbgm.sparrow.core.crypto.random.SecureRandomGenerator
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
@@ -32,7 +32,7 @@ import com.cbgm.sparrow.data.database.dao.IdentityInvitationDao
 import com.cbgm.sparrow.data.database.entity.ContactPhoneNumberEntity
 import com.cbgm.sparrow.data.database.entity.ContactRoutingIdEntity
 import com.cbgm.sparrow.data.database.entity.IdentityInvitationEntity
-import com.cbgm.sparrow.feature.chats.data.direct.authorization.DirectAuthorizationPayloadEncoder
+import com.cbgm.sparrow.feature.conversationorchestration.data.direct.authorization.DirectAuthorizationPayloadEncoder
 import com.cbgm.sparrow.feature.identity.data.datasource.ContactKeyExchangeDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.ContactVerificationDataSource
 import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus

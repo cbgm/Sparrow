@@ -7,7 +7,6 @@ import com.cbgm.sparrow.core.protocol.outbox.OutboxDeliveryStateListener
 import com.cbgm.sparrow.feature.chats.adapter.ChatsGroupAvatarProvider
 import com.cbgm.sparrow.feature.chats.adapter.ChatsGroupPinnedAttachmentProvider
 import com.cbgm.sparrow.feature.chats.data.datasource.UnreadableTransportMessageDataSource
-import com.cbgm.sparrow.feature.chats.data.direct.authorization.DirectAuthorizationPayloadEncoder
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.delivery.DirectMessageDeliveryCoordinator
 import com.cbgm.sparrow.feature.chats.data.direct.delivery.DirectOutboxDeliveryHandler
@@ -16,11 +15,6 @@ import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessage
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessageEditPacketHandler
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessagePacketHandler
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectReceiptPacketHandler
-import com.cbgm.sparrow.feature.chats.data.direct.invitation.DirectIdentityExchangeCoordinator
-import com.cbgm.sparrow.feature.chats.data.direct.invitation.DirectIdentityExchangeRepositoryImpl
-import com.cbgm.sparrow.feature.chats.data.direct.invitation.DirectInvitationLifecycleDataSource
-import com.cbgm.sparrow.feature.chats.data.direct.invitation.DirectInvitationPacketProcessor
-import com.cbgm.sparrow.feature.chats.data.direct.invitation.DirectInvitationPolicyProvider
 import com.cbgm.sparrow.feature.chats.data.direct.outgoing.DirectOutgoingMessageProcessor
 import com.cbgm.sparrow.feature.chats.data.direct.outgoing.DirectPendingAuthorizationMessageCoordinator
 import com.cbgm.sparrow.feature.chats.data.direct.repository.DirectConversationRepositoryImpl
@@ -88,6 +82,7 @@ import com.cbgm.sparrow.feature.chats.data.group.verification.GroupVerificationS
 import com.cbgm.sparrow.feature.chats.data.incoming.IncomingPacketProcessor
 import com.cbgm.sparrow.feature.chats.data.incoming.IncomingPacketRouter
 import com.cbgm.sparrow.feature.chats.data.incoming.ReceiptIncomingPacketRouter
+import com.cbgm.sparrow.feature.chats.data.orchestration.ChatsDirectConversationPort
 import com.cbgm.sparrow.feature.chats.data.outbox.ChatOutboxDeliveryStateRouter
 import com.cbgm.sparrow.feature.chats.data.overview.repository.ConversationOverviewRepositoryImpl
 import com.cbgm.sparrow.feature.chats.data.repository.MessageHistoryRepositoryImpl
@@ -166,10 +161,7 @@ import com.cbgm.sparrow.feature.chats.presentation.overview.OverviewViewModel
 import com.cbgm.sparrow.feature.chats.presentation.verification.GroupMemberQrVerificationViewModel
 import com.cbgm.sparrow.feature.contacts.domain.usecase.EnsureIdentityExchangeStartedUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
-import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
-import com.cbgm.sparrow.feature.invite.data.lifecycle.InvitationLifecycleDataSource
-import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPacketProcessor
-import com.cbgm.sparrow.feature.invite.domain.policy.InvitationPolicyProvider
+import com.cbgm.sparrow.feature.conversationorchestration.domain.port.DirectConversationPort
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipBroadcastDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipCleanupDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipMessageDataSource
@@ -195,7 +187,6 @@ val chatsModule =
     }
 
 private fun org.koin.core.module.Module.registerDirectData() {
-    singleOf(::DirectAuthorizationPayloadEncoder)
     singleOf(::DirectConversationDataSource)
     singleOf(::DirectMessageDeliveryCoordinator)
     singleOf(::DirectOutboxDeliveryHandler)
@@ -207,37 +198,8 @@ private fun org.koin.core.module.Module.registerDirectData() {
     singleOf(::DirectReceiptPacketHandler)
     singleOf(::DirectIncomingPacketProcessor)
 
-    single {
-        DirectIdentityExchangeCoordinator(
-            invitationDao = get(),
-            contactDao = get(),
-            contactRoutingIdDao = get(),
-            contactKeyExchangeDataSource = get(),
-            localPublicIdentityProvider = get(),
-            localSigningKeyPairProvider = get(),
-            detachedSignatureCrypto = get(),
-            secureRandomGenerator = get(),
-            payloadEncoder = get(),
-            authorizationPayloadEncoder = get(),
-            protocolOutbox = get(),
-            localPhoneNumberProvider = get(),
-            phoneNumberNormalizer = get(),
-            contactVerificationDataSource = get(),
-            localProfilePictureMetadataProvider = get(),
-            remoteProfilePictureMetadataProcessor = get()
-        )
-    }
-    single<DirectIdentityExchangeRepository> {
-        DirectIdentityExchangeRepositoryImpl(coordinator = get())
-    }
-    singleOf(::DirectInvitationLifecycleDataSource) {
-        bind<InvitationLifecycleDataSource>()
-    }
-    singleOf(::DirectInvitationPacketProcessor) {
-        bind<InvitationPacketProcessor>()
-    }
-    singleOf(::DirectInvitationPolicyProvider) {
-        bind<InvitationPolicyProvider>()
+    singleOf(::ChatsDirectConversationPort) {
+        bind<DirectConversationPort>()
     }
 }
 
@@ -378,11 +340,11 @@ private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::QueueDirectMessageUntilAuthorizedUseCase)
     singleOf(::RetryDirectMessageUseCase)
     singleOf(::MarkDirectConversationReadUseCase)
-    singleOf(::DeleteDirectConversationUseCase)
     singleOf(::ObserveDirectIndicatorUseCase)
     singleOf(::SetDirectIndicatorUseCase)
     singleOf(::ActivateAuthorizedDirectConversationUseCase)
     singleOf(::DiscardPendingAuthorizationMessagesUseCase)
+    singleOf(::DeleteDirectConversationUseCase)
 
     singleOf(::AddGroupMembersUseCase)
     singleOf(::CreateGroupConversationUseCase)

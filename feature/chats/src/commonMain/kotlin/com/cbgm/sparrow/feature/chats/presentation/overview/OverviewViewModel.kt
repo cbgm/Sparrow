@@ -5,13 +5,13 @@ import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.ObserveActiveAutoReplyUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.direct.DeleteDirectConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeleteGroupConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.overview.ObserveConversationOverviewContextUseCase
 import com.cbgm.sparrow.feature.chats.presentation.overview.mapper.toOverviewUiState
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.ConversationListItem
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiState
+import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.direct.DeleteDirectConversationWorkflowUseCase
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupLeaveRequirementUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
 class OverviewViewModel(
     observeConversationContext: ObserveConversationOverviewContextUseCase,
     observeActiveAutoReply: ObserveActiveAutoReplyUseCase,
-    private val deleteDirectConversation: DeleteDirectConversationUseCase,
+    private val deleteDirectConversation: DeleteDirectConversationWorkflowUseCase,
     private val deleteGroupConversation: DeleteGroupConversationUseCase,
     private val getGroupLeaveRequirement: GetGroupLeaveRequirementUseCase
 ) : BaseViewModel() {

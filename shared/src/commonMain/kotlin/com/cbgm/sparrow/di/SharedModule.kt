@@ -10,7 +10,6 @@ import org.koin.dsl.module
 val sharedModule =
     module {
         single { ApplicationCoroutineScope() }
-
         single {
             AppInitializationDependencies(
                 initializeCryptoRuntime = get(),

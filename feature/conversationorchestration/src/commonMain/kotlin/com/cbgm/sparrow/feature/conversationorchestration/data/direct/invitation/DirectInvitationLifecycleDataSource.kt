@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.chats.data.direct.invitation
+package com.cbgm.sparrow.feature.conversationorchestration.data.direct.invitation
 
 import com.cbgm.sparrow.feature.invite.data.lifecycle.InvitationLifecycleDataSource
 import com.cbgm.sparrow.feature.invite.domain.model.Invitation
