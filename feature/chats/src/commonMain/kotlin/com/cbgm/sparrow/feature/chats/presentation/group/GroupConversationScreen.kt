@@ -482,8 +482,7 @@ private fun TopBar(
 
         StatusHint(
             uiState = uiState,
-            membershipState = membershipState,
-            onUiEvent = onUiEvent
+            membershipState = membershipState
         )
     }
 }
