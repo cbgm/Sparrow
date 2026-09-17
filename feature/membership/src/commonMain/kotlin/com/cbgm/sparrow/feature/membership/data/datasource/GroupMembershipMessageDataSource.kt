@@ -3,6 +3,10 @@ package com.cbgm.sparrow.feature.membership.data.datasource
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 
 interface GroupMembershipMessageDataSource {
+    companion object {
+        const val LOCAL_CONVERSATION_DELETED_TRANSPORT_MODE = "SYSTEM_LOCAL_CONVERSATION_DELETED"
+    }
+
     fun memberAdded(
         conversationId: String,
         epoch: Int,

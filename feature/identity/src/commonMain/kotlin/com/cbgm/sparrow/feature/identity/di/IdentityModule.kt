@@ -19,11 +19,14 @@ import com.cbgm.sparrow.feature.identity.adapter.IdentityLocalSigningKeyPairProv
 import com.cbgm.sparrow.feature.identity.adapter.IdentityLocalSigningPublicKeyProvider
 import com.cbgm.sparrow.feature.identity.adapter.IdentityRemoteProfilePictureMetadataProcessor
 import com.cbgm.sparrow.feature.identity.adapter.IdentityRemoteProfilePictureProvider
+import com.cbgm.sparrow.feature.identity.data.datasource.ContactKeyExchangeDataSource
+import com.cbgm.sparrow.feature.identity.data.datasource.ContactVerificationDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.LocalIdentityProfileDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.LocalProfilePictureDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.PublicIdentityDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.RemoteProfilePictureDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.SparrowDataStorePublicIdentityDataSource
+import com.cbgm.sparrow.feature.identity.data.protocol.ContactVerificationPayloadEncoder
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityShareRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.LocalIdentityProfileRepositoryImpl
@@ -55,6 +58,26 @@ import org.koin.dsl.module
 
 val identityModule =
     module {
+        single {
+            ContactKeyExchangeDataSource(
+                contactDao = get(),
+                mailboxCapabilityLifecycle = get()
+            )
+        }
+
+        single { ContactVerificationPayloadEncoder() }
+
+        single {
+            ContactVerificationDataSource(
+                contactDao = get(),
+                localPublicIdentityProvider = get(),
+                localSigningKeyPairProvider = get(),
+                detachedSignatureCrypto = get(),
+                payloadEncoder = get(),
+                protocolOutbox = get()
+            )
+        }
+
         single<PublicIdentityDataSource> {
             SparrowDataStorePublicIdentityDataSource(dataStore = get())
         }

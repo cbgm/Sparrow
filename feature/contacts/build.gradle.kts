@@ -19,7 +19,6 @@ kotlin {
             implementation(projects.core.ui)
             implementation(projects.feature.avatar)
             implementation(projects.feature.identity)
-            implementation(projects.feature.invite)
             implementation(projects.data.database)
 
             implementation(libs.bundles.compose)

@@ -17,13 +17,11 @@ import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipIdentity
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipMessageDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtocolDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipVerificationDataSource
 import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationDirection
 import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationStatus
-import com.cbgm.sparrow.feature.membership.data.resolveInvitationUpdatedAt
 
 @Suppress("LongParameterList")
 class GroupInvitationCoordinator(
@@ -37,8 +35,7 @@ class GroupInvitationCoordinator(
     private val groupVerificationCoordinator: GroupMembershipVerificationDataSource,
     private val membershipLock: GroupMembershipLock,
     private val identity: GroupMembershipIdentity,
-    private val epochCoordinator: GroupEpochCoordinator,
-    private val membershipMessageDataSource: GroupMembershipMessageDataSource
+    private val epochCoordinator: GroupEpochCoordinator
 ) {
     suspend fun createGroup(
         title: String,
@@ -264,129 +261,6 @@ class GroupInvitationCoordinator(
                         GroupMembershipEvent.INVITE_SEND_FAILED
                     ).name,
             updatedAt = maxOf(invitation.createdAtEpochMilliseconds, SystemClock.nowEpochMilliseconds())
-        )
-    }
-
-    suspend fun acceptInvitation(groupId: String): Result<Unit> =
-        runCatching {
-            val invitation = requireIncomingInvitation(groupId)
-            check(invitation.status == GroupInvitationStatus.AWAITING_ACCEPTANCE.name) {
-                "Group invitation cannot be accepted from status ${invitation.status}"
-            }
-            val now = SystemClock.nowEpochMilliseconds()
-            if (now > invitation.expiresAtEpochMilliseconds) {
-                groupInvitationDao.updateStatus(
-                    invitationId = invitation.invitationId,
-                    expectedStatus = invitation.status,
-                    newStatus = GroupMembershipStateMachine.transition(invitation.status, GroupMembershipEvent.EXPIRE).name,
-                    updatedAt =
-                        resolveInvitationUpdatedAt(
-                            createdAtEpochMilliseconds = invitation.createdAtEpochMilliseconds,
-                            candidateAtEpochMilliseconds = now
-                        )
-                )
-                error("Group invitation has expired")
-            }
-
-            val memberIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
-            val memberSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
-            val joinRequest =
-                membershipPacketProtocol
-                    .createJoinRequest(
-                        invitationId = invitation.invitationId,
-                        groupId = invitation.groupId,
-                        challenge = invitation.challenge,
-                        memberIdentity = memberIdentity,
-                        memberSigningKeyPair = memberSigningKeyPair
-                    ).getOrThrow()
-
-            val updated =
-                groupInvitationDao.updateStatus(
-                    invitationId = invitation.invitationId,
-                    expectedStatus = GroupInvitationStatus.AWAITING_ACCEPTANCE.name,
-                    newStatus = GroupMembershipStateMachine.transition(invitation.status, GroupMembershipEvent.ACCEPT).name,
-                    updatedAt =
-                        resolveInvitationUpdatedAt(
-                            createdAtEpochMilliseconds = invitation.createdAtEpochMilliseconds,
-                            candidateAtEpochMilliseconds = now
-                        )
-                )
-            check(updated == 1) { "Group invitation changed while it was accepted" }
-
-            protocolOutbox.enqueue(invitation.contactId, joinRequest).getOrElse { error ->
-                groupInvitationDao.updateStatus(
-                    invitationId = invitation.invitationId,
-                    expectedStatus = GroupInvitationStatus.JOIN_SENT.name,
-                    newStatus = GroupMembershipStateMachine.transition(GroupInvitationStatus.JOIN_SENT.name, GroupMembershipEvent.JOIN_SEND_FAILED).name,
-                    updatedAt =
-                        resolveInvitationUpdatedAt(
-                            createdAtEpochMilliseconds = invitation.createdAtEpochMilliseconds,
-                            candidateAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
-                        )
-                )
-                throw error
-            }
-        }
-
-    suspend fun declineInvitation(groupId: String): Result<Unit> =
-        runCatching {
-            val invitation = requireIncomingInvitation(groupId)
-            check(invitation.status == GroupInvitationStatus.AWAITING_ACCEPTANCE.name) {
-                "Group invitation cannot be declined from status ${invitation.status}"
-            }
-            val hasHistory = chatDao.hasMessages(groupId)
-            val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
-            val packet =
-                membershipPacketProtocol
-                    .createDecline(
-                        invitationId = invitation.invitationId,
-                        groupId = invitation.groupId,
-                        challenge = invitation.challenge,
-                        memberSigningKeyPair = signingKeyPair
-                    ).getOrThrow()
-
-            protocolOutbox.enqueue(invitation.contactId, packet).getOrThrow()
-            val updated =
-                groupInvitationDao.updateStatus(
-                    invitationId = invitation.invitationId,
-                    expectedStatus = GroupInvitationStatus.AWAITING_ACCEPTANCE.name,
-                    newStatus = GroupMembershipStateMachine.transition(invitation.status, GroupMembershipEvent.DECLINE).name,
-                    updatedAt =
-                        resolveInvitationUpdatedAt(
-                            createdAtEpochMilliseconds = invitation.createdAtEpochMilliseconds,
-                            candidateAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
-                        )
-                )
-            check(updated == 1) { "Group invitation changed while it was declined" }
-            if (!hasHistory) {
-                hideEmptyJoinedGroupConversation(
-                    groupId = groupId,
-                    hiddenAtEpochMilliseconds =
-                        resolveInvitationUpdatedAt(
-                            createdAtEpochMilliseconds = invitation.createdAtEpochMilliseconds,
-                            candidateAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
-                        )
-                )
-            }
-        }
-
-    private suspend fun requireIncomingInvitation(groupId: String): GroupInvitationEntity {
-        val invitations = groupInvitationDao.findByGroupId(groupId)
-        return invitations
-            .singleOrNull { invitation ->
-                invitation.direction == GroupInvitationDirection.INCOMING.name
-            } ?: error("Incoming group invitation was not found")
-    }
-
-    private suspend fun hideEmptyJoinedGroupConversation(
-        groupId: String,
-        hiddenAtEpochMilliseconds: Long
-    ) {
-        chatDao.hideGroupConversation(
-            membershipMessageDataSource.localConversationDeletedMarker(
-                conversationId = groupId,
-                createdAtEpochMilliseconds = hiddenAtEpochMilliseconds
-            )
         )
     }
 

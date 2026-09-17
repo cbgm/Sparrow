@@ -14,6 +14,8 @@ interface GroupMembershipSecurityDataSource {
 
     suspend fun findLocalRole(groupId: String): Result<String?>
 
+    suspend fun clearRetiredMembershipBeforeRejoin(groupId: String): Result<Unit>
+
     suspend fun findRemoteMemberKey(
         groupId: String,
         contactId: String

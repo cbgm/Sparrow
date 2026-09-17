@@ -14,8 +14,13 @@ kotlin {
             implementation(projects.core.protocol)
             implementation(projects.data.database)
             implementation(projects.feature.contacts)
+            implementation(projects.feature.identity)
             implementation(libs.bundles.coroutines)
             implementation(libs.bundles.koin.core)
+        }
+
+        commonTest.dependencies {
+            implementation(libs.bundles.kmp.testing)
         }
     }
 }

@@ -55,6 +55,7 @@ import com.cbgm.sparrow.feature.invite.presentation.model.InvitationTab
 import com.cbgm.sparrow.feature.invite.presentation.model.InvitationUi
 import com.cbgm.sparrow.feature.invite.presentation.model.InvitationUiDirection
 import com.cbgm.sparrow.feature.invite.presentation.model.InvitationUiEvent
+import com.cbgm.sparrow.feature.invite.presentation.model.InvitationUiPayloadType
 import com.cbgm.sparrow.feature.invite.presentation.model.InvitationUiState
 import com.cbgm.sparrow.feature.invite.presentation.model.InvitationUiStatus
 import com.cbgm.sparrow.resources.Res
@@ -259,44 +260,52 @@ private fun IncomingInvitationItem(
     SparrowSwipeRevealItem(
         enabled = actionsEnabled,
         actions =
-            listOf(
-                SwipeRevealAction(
-                    backgroundColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                    onClick = {
-                        onUiEvent(InvitationUiEvent.AcceptClicked(invitation.invitationId))
+            buildList {
+                add(
+                    SwipeRevealAction(
+                        backgroundColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                        onClick = {
+                            onUiEvent(InvitationUiEvent.AcceptClicked(invitation.invitationId))
+                        }
+                    ) {
+                        InvitationSwipeActionContent(
+                            icon = Icons.Default.Check,
+                            label = stringResource(Res.string.feature_invite_accept_invitation)
+                        )
                     }
-                ) {
-                    InvitationSwipeActionContent(
-                        icon = Icons.Default.Check,
-                        label = stringResource(Res.string.feature_invite_accept_invitation)
-                    )
-                },
-                SwipeRevealAction(
-                    backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    contentColor = MaterialTheme.colorScheme.onSurface,
-                    onClick = {
-                        onUiEvent(InvitationUiEvent.DeclineClicked(invitation.invitationId))
+                )
+                add(
+                    SwipeRevealAction(
+                        backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        onClick = {
+                            onUiEvent(InvitationUiEvent.DeclineClicked(invitation.invitationId))
+                        }
+                    ) {
+                        InvitationSwipeActionContent(
+                            icon = Icons.Default.Close,
+                            label = stringResource(Res.string.feature_invite_decline_invitation)
+                        )
                     }
-                ) {
-                    InvitationSwipeActionContent(
-                        icon = Icons.Default.Close,
-                        label = stringResource(Res.string.feature_invite_decline_invitation)
-                    )
-                },
-                SwipeRevealAction(
-                    backgroundColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError,
-                    onClick = {
-                        onUiEvent(InvitationUiEvent.DeclineAndBlockClicked(invitation.invitationId))
-                    }
-                ) {
-                    InvitationSwipeActionContent(
-                        icon = Icons.Default.Block,
-                        label = stringResource(Res.string.feature_invite_block_invitation)
+                )
+                if (invitation.payloadType == InvitationUiPayloadType.DIRECT) {
+                    add(
+                        SwipeRevealAction(
+                            backgroundColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError,
+                            onClick = {
+                                onUiEvent(InvitationUiEvent.DeclineAndBlockClicked(invitation.invitationId))
+                            }
+                        ) {
+                            InvitationSwipeActionContent(
+                                icon = Icons.Default.Block,
+                                label = stringResource(Res.string.feature_invite_block_invitation)
+                            )
+                        }
                     )
                 }
-            )
+            }
     ) {
         InvitationRow(
             invitation = invitation,
@@ -537,7 +546,9 @@ private fun InvitationsScreenPreview() {
                                 status = InvitationUiStatus.PENDING,
                                 expiresAtEpochMilliseconds = Long.MAX_VALUE,
                                 updatedAtEpochMilliseconds = 1,
-                                hasUnreadUpdate = false
+                                hasUnreadUpdate = false,
+                                payloadId = "12",
+                                payloadType = InvitationUiPayloadType.DIRECT
                             ),
                             InvitationUi(
                                 invitationId = "declined",
@@ -548,7 +559,9 @@ private fun InvitationsScreenPreview() {
                                 status = InvitationUiStatus.DECLINED,
                                 expiresAtEpochMilliseconds = Long.MAX_VALUE,
                                 updatedAtEpochMilliseconds = 2,
-                                hasUnreadUpdate = true
+                                hasUnreadUpdate = true,
+                                payloadId = "15",
+                                payloadType = InvitationUiPayloadType.DIRECT
                             )
                         )
                 ),

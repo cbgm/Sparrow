@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.contacts.domain.usecase
 
 import com.cbgm.sparrow.core.security.ContactBlocklistRepository
 import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
-import com.cbgm.sparrow.feature.contacts.domain.model.DirectChatAuthorizationRequiredException
+import com.cbgm.sparrow.feature.identity.domain.model.DirectChatAuthorizationRequiredException
 import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
 
 class RequireDirectChatAuthorizationUseCase(

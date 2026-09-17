@@ -55,12 +55,6 @@ class GroupMembershipCoordinator(
         packet: GroupLeaveRequestPacket
     ): Result<Unit> = administration.receiveLeaveRequest(memberContactId, packet)
 
-    suspend fun acceptInvitation(groupId: String): Result<Unit> =
-        invitations.acceptInvitation(groupId)
-
-    suspend fun declineInvitation(groupId: String): Result<Unit> =
-        invitations.declineInvitation(groupId)
-
     suspend fun receiveReadyAcknowledgement(
         memberContactId: String,
         packet: GroupReadyAcknowledgementPacket,

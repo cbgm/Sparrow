@@ -15,6 +15,7 @@ kotlin {
         commonMain.dependencies {
             implementation(projects.core)
             implementation(projects.data.datastore)
+            implementation(projects.data.database)
             implementation(projects.core.crypto)
             implementation(projects.core.protocol)
             implementation(projects.core.ui)

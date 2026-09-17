@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.feature.membership.domain.repository
 
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
-import com.cbgm.sparrow.feature.membership.domain.model.GroupInvitationOwnerIdentity
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
 import kotlinx.coroutines.flow.Flow
 
@@ -38,10 +37,4 @@ interface GroupMembershipRepository {
     suspend fun leave(groupId: String): Result<Unit>
 
     suspend fun delete(groupId: String): Result<Unit>
-
-    suspend fun getIncomingInvitationOwnerIdentity(groupId: String): Result<GroupInvitationOwnerIdentity>
-
-    suspend fun acceptInvitation(groupId: String): Result<Unit>
-
-    suspend fun declineInvitation(groupId: String): Result<Unit>
 }

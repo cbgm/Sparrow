@@ -10,14 +10,14 @@ import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumber
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumberType
-import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
-import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.SparrowIdentity
 import com.cbgm.sparrow.feature.contacts.presentation.details.components.ContactDetailsBody
 import com.cbgm.sparrow.feature.contacts.presentation.details.components.ContactDetailsTopBar
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsUiState
+import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
+import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_contact
 import com.cbgm.sparrow.resources.feature_contacts_contact_details

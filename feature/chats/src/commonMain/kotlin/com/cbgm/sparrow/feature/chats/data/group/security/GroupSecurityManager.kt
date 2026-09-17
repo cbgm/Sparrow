@@ -124,7 +124,7 @@ class GroupSecurityManager internal constructor(
             ) { "Group security state disappeared while local membership was retired" }
         }
 
-    suspend fun clearRetiredMembershipBeforeRejoin(groupId: String): Result<Unit> =
+    override suspend fun clearRetiredMembershipBeforeRejoin(groupId: String): Result<Unit> =
         safeSuspendCall {
             require(groupId.isNotBlank()) { "Group ID must not be blank" }
             val state = groupSecurityDao.findState(groupId) ?: return@safeSuspendCall

@@ -10,8 +10,8 @@ import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessage
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessageEditPacketHandler
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessagePacketHandler
 import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacketDto
-import com.cbgm.sparrow.feature.contacts.domain.model.DirectChatAuthorizationRequiredException
 import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
+import com.cbgm.sparrow.feature.identity.domain.model.DirectChatAuthorizationRequiredException
 
 class DirectIncomingPacketProcessor(
     private val conversationDataSource: DirectConversationDataSource,

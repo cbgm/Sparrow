@@ -9,7 +9,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversationUiState
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMembershipUiState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationState
@@ -41,16 +40,9 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 internal fun StatusHint(
     uiState: GroupConversationUiState,
-    membershipState: GroupMembershipUiState,
-    onUiEvent: (GroupConversationUiEvent) -> Unit
+    membershipState: GroupMembershipUiState
 ) {
     when {
-        uiState.state == GroupConversationState.INVITED ->
-            InvitationHint(
-                onAccept = { onUiEvent(GroupConversationUiEvent.AcceptInvitation) },
-                onDecline = { onUiEvent(GroupConversationUiEvent.DeclineInvitation) }
-            )
-
         uiState.state == GroupConversationState.DELETED -> ConversationDeletedHint()
         uiState.state == GroupConversationState.REMOVED ||
             (uiState.state == GroupConversationState.DECLINED && uiState.messages.isNotEmpty()) ->

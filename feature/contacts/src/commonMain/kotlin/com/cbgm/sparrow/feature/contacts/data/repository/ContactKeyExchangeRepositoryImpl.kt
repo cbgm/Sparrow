@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.contacts.data.repository
 
 import com.cbgm.sparrow.core.result.safeSuspendCall
-import com.cbgm.sparrow.feature.contacts.data.datasource.ContactKeyExchangeDataSource
-import com.cbgm.sparrow.feature.contacts.domain.model.RemoteIdentityOrigin
-import com.cbgm.sparrow.feature.contacts.domain.model.RemoteIdentityUpdate
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactKeyExchangeRepository
+import com.cbgm.sparrow.feature.identity.data.datasource.ContactKeyExchangeDataSource
+import com.cbgm.sparrow.feature.identity.domain.model.RemoteIdentityOrigin
+import com.cbgm.sparrow.feature.identity.domain.model.RemoteIdentityUpdate
 
 class ContactKeyExchangeRepositoryImpl(
     private val dataSource: ContactKeyExchangeDataSource
@@ -50,13 +50,13 @@ class ContactKeyExchangeRepositoryImpl(
             )
         }
 
-    override suspend fun acceptInvitationIdentityForHandshake(
+    override suspend fun prepareRemoteIdentityForHandshake(
         contactId: String,
         remoteEncryptionPublicKey: ByteArray,
         remoteSigningPublicKey: ByteArray
     ): Result<Unit> =
         safeSuspendCall {
-            dataSource.acceptInvitationIdentityForHandshake(
+            dataSource.prepareRemoteIdentityForHandshake(
                 contactId = contactId,
                 remoteEncryptionPublicKey = remoteEncryptionPublicKey,
                 remoteSigningPublicKey = remoteSigningPublicKey

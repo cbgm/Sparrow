@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.invite.domain.usecase
 
 import com.cbgm.sparrow.feature.invite.domain.model.Invitation
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationPayloadType
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationStatus
 import com.cbgm.sparrow.feature.invite.domain.policy.InvitationPolicy
 import kotlinx.coroutines.flow.Flow
@@ -16,12 +17,12 @@ class ObservePendingInvitationsUseCase(
             observeInvitations(InvitationDirection.INCOMING),
             policy.observePendingEnabled()
         ) { invitations, pendingEnabled ->
-            if (pendingEnabled) {
-                invitations.filter { invitation ->
-                    invitation.status == InvitationStatus.PENDING
-                }
-            } else {
-                emptyList()
+            invitations.filter { invitation ->
+                invitation.status == InvitationStatus.PENDING &&
+                    (
+                        invitation.payloadType == InvitationPayloadType.GROUP ||
+                            pendingEnabled
+                    )
             }
         }
 }

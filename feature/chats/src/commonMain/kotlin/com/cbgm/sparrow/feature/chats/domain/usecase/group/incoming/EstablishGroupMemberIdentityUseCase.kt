@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.chats.domain.usecase.group.incoming
 
-import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactKeyExchangeRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
+import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 
 class EstablishGroupMemberIdentityUseCase(
     private val contactRepository: ContactRepository,
@@ -26,7 +26,7 @@ class EstablishGroupMemberIdentityUseCase(
 
             if (!sameIdentity) {
                 contactKeyExchangeRepository
-                    .acceptInvitationIdentityForHandshake(
+                    .prepareRemoteIdentityForHandshake(
                         contactId = contactId,
                         remoteEncryptionPublicKey = encryptionPublicKey,
                         remoteSigningPublicKey = signingPublicKey

@@ -13,17 +13,17 @@ import com.cbgm.sparrow.core.protocol.packet.IdentityAcknowledgementPacket
 import com.cbgm.sparrow.core.protocol.packet.IdentityPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
-import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.ImportContactRequest
 import com.cbgm.sparrow.feature.contacts.domain.model.ImportDeviceContactRequest
-import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
-import com.cbgm.sparrow.feature.contacts.domain.model.RemoteIdentityOrigin
-import com.cbgm.sparrow.feature.contacts.domain.model.RemoteIdentityUpdate
 import com.cbgm.sparrow.feature.contacts.domain.model.SparrowIdentity
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactKeyExchangeRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactVerificationRepository
+import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
+import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
+import com.cbgm.sparrow.feature.identity.domain.model.RemoteIdentityOrigin
+import com.cbgm.sparrow.feature.identity.domain.model.RemoteIdentityUpdate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -350,7 +350,7 @@ class HandleIdentityPacketUseCaseTest {
             expectedRemoteSigningPublicKey: ByteArray
         ): Result<Unit> = Result.failure(UnsupportedOperationException())
 
-        override suspend fun acceptInvitationIdentityForHandshake(
+        override suspend fun prepareRemoteIdentityForHandshake(
             contactId: String,
             remoteEncryptionPublicKey: ByteArray,
             remoteSigningPublicKey: ByteArray

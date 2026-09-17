@@ -102,8 +102,4 @@ sealed interface GroupConversationUiEvent {
     ) : GroupConversationUiEvent
 
     data object BackClicked : GroupConversationUiEvent
-
-    data object AcceptInvitation : GroupConversationUiEvent
-
-    data object DeclineInvitation : GroupConversationUiEvent
 }

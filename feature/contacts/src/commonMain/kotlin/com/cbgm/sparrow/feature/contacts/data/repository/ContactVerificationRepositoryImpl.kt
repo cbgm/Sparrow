@@ -3,8 +3,8 @@ package com.cbgm.sparrow.feature.contacts.data.repository
 import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.packet.ContactVerificationReceiptPacket
 import com.cbgm.sparrow.core.result.safeSuspendCall
-import com.cbgm.sparrow.feature.contacts.data.datasource.ContactVerificationDataSource
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactVerificationRepository
+import com.cbgm.sparrow.feature.identity.data.datasource.ContactVerificationDataSource
 
 class ContactVerificationRepositoryImpl(
     private val dataSource: ContactVerificationDataSource

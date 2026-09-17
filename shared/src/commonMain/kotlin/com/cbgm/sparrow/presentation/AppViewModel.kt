@@ -103,10 +103,6 @@ class AppViewModel(
     private fun startInvitationResultCoordinators() {
         viewModelScope.launch {
             waitUntilLocalIdentityIsReady()
-            initialization.directInvitationConversationCoordinator.run()
-        }
-        viewModelScope.launch {
-            waitUntilLocalIdentityIsReady()
             initialization.invitationResultObserver.run()
         }
     }

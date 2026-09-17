@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.messaging.data.datasource
 
 import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.data.database.dao.ContactRoutingIdDao
-import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
+import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 import kotlinx.coroutines.flow.first
 
 data class MailboxContactStateDto(

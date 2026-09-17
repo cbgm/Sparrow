@@ -29,8 +29,8 @@ import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
-import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
-import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
+import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
+import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_contacts_no_sparrow_identity
 import com.cbgm.sparrow.resources.feature_contacts_sparrow_contact_not_verified

@@ -1,15 +1,28 @@
 package com.cbgm.sparrow.feature.invite.di
 
 import com.cbgm.sparrow.core.protocol.handler.TypedProtocolPacketHandler
+import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
+import com.cbgm.sparrow.feature.invite.data.direct.DirectIdentityExchangeCoordinator
+import com.cbgm.sparrow.feature.invite.data.direct.DirectIdentityExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.invite.data.event.InvitationResultStreamImpl
+import com.cbgm.sparrow.feature.invite.data.group.GroupInvitationLifecycleCoordinator
+import com.cbgm.sparrow.feature.invite.data.group.GroupInviteDeclinedIncomingProcessor
+import com.cbgm.sparrow.feature.invite.data.group.GroupInviteIncomingProcessor
+import com.cbgm.sparrow.feature.invite.data.group.GroupInviteReceivedIncomingProcessor
 import com.cbgm.sparrow.feature.invite.data.policy.InvitationPolicyImpl
-import com.cbgm.sparrow.feature.invite.data.policy.InvitationPolicyProviderImpl
+import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPacketProcessor
+import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPacketProcessorImpl
+import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPayloadEncoder
+import com.cbgm.sparrow.feature.invite.data.protocol.handler.GroupInviteDeclinedPacketHandler
+import com.cbgm.sparrow.feature.invite.data.protocol.handler.GroupInvitePacketHandler
+import com.cbgm.sparrow.feature.invite.data.protocol.handler.GroupInviteReceivedPacketHandler
 import com.cbgm.sparrow.feature.invite.data.protocol.handler.IncomingInvitationPacketHandler
 import com.cbgm.sparrow.feature.invite.data.protocol.handler.InvitationAcceptedPacketHandler
 import com.cbgm.sparrow.feature.invite.data.protocol.handler.InvitationDeclinedPacketHandler
+import com.cbgm.sparrow.feature.invite.data.repository.InvitationRepositoryImpl
 import com.cbgm.sparrow.feature.invite.domain.event.InvitationResultStream
 import com.cbgm.sparrow.feature.invite.domain.policy.InvitationPolicy
-import com.cbgm.sparrow.feature.invite.domain.policy.InvitationPolicyProvider
+import com.cbgm.sparrow.feature.invite.domain.repository.InvitationRepository
 import com.cbgm.sparrow.feature.invite.domain.usecase.AcceptInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineAndBlockInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineInvitationUseCase
@@ -29,16 +42,50 @@ import org.koin.dsl.module
 
 val inviteModule =
     module {
-        single<InvitationPolicyProvider> {
-            InvitationPolicyProviderImpl(
-                modeRepository = get(),
-                contactBlocklistRepository = get()
+        singleOf(::InvitationPayloadEncoder)
+        singleOf(::GroupInviteIncomingProcessor)
+        singleOf(::GroupInviteReceivedIncomingProcessor)
+        singleOf(::GroupInviteDeclinedIncomingProcessor)
+        singleOf(::GroupInvitationLifecycleCoordinator)
+
+        single {
+            DirectIdentityExchangeCoordinator(
+                invitationDao = get(),
+                contactDao = get(),
+                contactRoutingIdDao = get(),
+                contactKeyExchangeDataSource = get(),
+                localPublicIdentityProvider = get(),
+                localSigningKeyPairProvider = get(),
+                detachedSignatureCrypto = get(),
+                secureRandomGenerator = get(),
+                payloadEncoder = get(),
+                protocolOutbox = get(),
+                localPhoneNumberProvider = get(),
+                phoneNumberNormalizer = get(),
+                contactVerificationDataSource = get(),
+                localProfilePictureMetadataProvider = get(),
+                remoteProfilePictureMetadataProcessor = get()
             )
         }
+
+        single<DirectIdentityExchangeRepository> {
+            DirectIdentityExchangeRepositoryImpl(coordinator = get())
+        }
+        single<InvitationRepository> {
+            InvitationRepositoryImpl(
+                directCoordinator = get(),
+                groupCoordinator = get()
+            )
+        }
+        single<InvitationPacketProcessor> {
+            InvitationPacketProcessorImpl(coordinator = get())
+        }
+
         single<InvitationPolicy> {
             InvitationPolicyImpl(
                 repository = get(),
-                provider = get()
+                modeRepository = get(),
+                contactBlocklistRepository = get()
             )
         }
         single<InvitationResultStream> {
@@ -73,6 +120,16 @@ val inviteModule =
                 deleteDeclinedOutgoingInvitation = get(),
                 markInvitationsViewed = get()
             )
+        }
+
+        singleOf(::GroupInvitePacketHandler) {
+            bind<TypedProtocolPacketHandler>()
+        }
+        singleOf(::GroupInviteReceivedPacketHandler) {
+            bind<TypedProtocolPacketHandler>()
+        }
+        singleOf(::GroupInviteDeclinedPacketHandler) {
+            bind<TypedProtocolPacketHandler>()
         }
 
         singleOf(::IncomingInvitationPacketHandler) {

@@ -465,6 +465,20 @@ interface ChatDao {
         WHERE messages.conversationId = conversations.id
           AND messages.transportMode = :localDeletionTransportMode
     )
+      AND NOT (
+        conversations.type = 'GROUP'
+        AND (
+            SELECT group_invitations.status
+            FROM group_invitations
+            WHERE group_invitations.groupId = conversations.id
+              AND group_invitations.direction = 'INCOMING'
+            ORDER BY
+                group_invitations.updatedAtEpochMilliseconds DESC,
+                group_invitations.createdAtEpochMilliseconds DESC,
+                group_invitations.invitationId DESC
+            LIMIT 1
+        ) IN ('AWAITING_ACCEPTANCE', 'DECLINED', 'EXPIRED', 'FAILED')
+    )
     ORDER BY conversations.updatedAtEpochMilliseconds DESC
     """
     )

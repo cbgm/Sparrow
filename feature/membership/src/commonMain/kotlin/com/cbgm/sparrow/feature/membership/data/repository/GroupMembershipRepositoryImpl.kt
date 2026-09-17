@@ -1,14 +1,11 @@
 package com.cbgm.sparrow.feature.membership.data.repository
 
-import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMembershipCoordinator
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_LEFT_ROLE
-import com.cbgm.sparrow.feature.membership.data.model.GroupInvitationDirection
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
-import com.cbgm.sparrow.feature.membership.domain.model.GroupInvitationOwnerIdentity
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,7 +15,6 @@ import kotlinx.coroutines.flow.transformLatest
 
 class GroupMembershipRepositoryImpl(
     private val groupSecurityDao: GroupSecurityDao,
-    private val groupInvitationDao: GroupInvitationDao,
     private val membershipCoordinator: GroupMembershipCoordinator
 ) : GroupMembershipRepository {
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -96,28 +92,4 @@ class GroupMembershipRepositoryImpl(
 
     override suspend fun delete(groupId: String): Result<Unit> =
         membershipCoordinator.deleteGroupConversation(groupId)
-
-    override suspend fun getIncomingInvitationOwnerIdentity(
-        groupId: String
-    ): Result<GroupInvitationOwnerIdentity> =
-        runCatching {
-            val invitation =
-                groupInvitationDao
-                    .findByGroupId(groupId)
-                    .singleOrNull { invitation ->
-                        invitation.direction == GroupInvitationDirection.INCOMING.name
-                    } ?: error("Incoming group invitation was not found")
-
-            GroupInvitationOwnerIdentity(
-                contactId = invitation.contactId,
-                encryptionPublicKey = invitation.ownerEncryptionPublicKey?.copyOf(),
-                signingPublicKey = invitation.ownerSigningPublicKey?.copyOf()
-            )
-        }
-
-    override suspend fun acceptInvitation(groupId: String): Result<Unit> =
-        membershipCoordinator.acceptInvitation(groupId)
-
-    override suspend fun declineInvitation(groupId: String): Result<Unit> =
-        membershipCoordinator.declineInvitation(groupId)
 }

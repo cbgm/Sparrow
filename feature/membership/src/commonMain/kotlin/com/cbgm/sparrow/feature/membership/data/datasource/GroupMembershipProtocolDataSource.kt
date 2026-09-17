@@ -5,6 +5,7 @@ import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair
 import com.cbgm.sparrow.core.protocol.packet.GroupConversationDeletedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupInviteDeclinedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupInvitePacket
+import com.cbgm.sparrow.core.protocol.packet.GroupInviteReceivedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupJoinRequestPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivatedPacket
@@ -32,6 +33,16 @@ interface GroupMembershipProtocolDataSource {
         ownerSigningKeyPair: LocalSigningKeyPair
     ): Result<GroupInvitePacket>
 
+    suspend fun verifyInvite(packet: GroupInvitePacket): Result<Unit>
+
+    suspend fun createInviteReceived(
+        invite: GroupInvitePacket,
+        receivedAtEpochMilliseconds: Long,
+        memberSigningKeyPair: LocalSigningKeyPair
+    ): Result<GroupInviteReceivedPacket>
+
+    suspend fun verifyInviteReceived(packet: GroupInviteReceivedPacket): Result<Unit>
+
     suspend fun createJoinRequest(
         invitationId: String,
         groupId: String,
@@ -46,6 +57,8 @@ interface GroupMembershipProtocolDataSource {
         challenge: ByteArray,
         memberSigningKeyPair: LocalSigningKeyPair
     ): Result<GroupInviteDeclinedPacket>
+
+    suspend fun verifyDecline(packet: GroupInviteDeclinedPacket): Result<Unit>
 
     suspend fun createLeaveRequest(
         invitationId: String,

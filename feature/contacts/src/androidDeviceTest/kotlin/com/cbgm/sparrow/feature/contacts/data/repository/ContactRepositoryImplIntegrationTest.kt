@@ -8,14 +8,14 @@ import com.cbgm.sparrow.core.protocol.phone.DefaultPhoneNumberNormalizer
 import com.cbgm.sparrow.data.database.SparrowDatabase
 import com.cbgm.sparrow.data.database.entity.ContactEntity
 import com.cbgm.sparrow.data.database.entity.ContactPhoneNumberEntity
-import com.cbgm.sparrow.feature.contacts.data.datasource.ContactKeyExchangeDataSource
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumberType
-import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.ImportContactRequest
 import com.cbgm.sparrow.feature.contacts.domain.model.ImportDeviceContactRequest
 import com.cbgm.sparrow.feature.contacts.domain.model.ImportDevicePhoneNumber
 import com.cbgm.sparrow.feature.contacts.domain.model.SparrowIdentity
+import com.cbgm.sparrow.feature.identity.data.datasource.ContactKeyExchangeDataSource
+import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking

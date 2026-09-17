@@ -139,6 +139,12 @@ class GroupVerificationStateTest {
 
         override fun observeByGroupId(groupId: String): Flow<List<GroupInvitationEntity>> = emptyFlow()
 
+        override fun observeByDirection(direction: String): Flow<List<GroupInvitationEntity>> = emptyFlow()
+
+        override fun observeAll(): Flow<List<GroupInvitationEntity>> = emptyFlow()
+
+        override suspend fun deleteByInvitationId(invitationId: String): Int = 0
+
         override suspend fun updateStatus(invitationId: String, expectedStatus: String, newStatus: String, updatedAt: Long): Int = 0
 
         override suspend fun failSupersededIncomingInvitations(

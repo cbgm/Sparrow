@@ -105,14 +105,14 @@ class GroupMembershipPacketProtocol(
             unsignedPacket.copy(ownerSignature = signature)
         }
 
-    suspend fun verifyInvite(packet: GroupInvitePacket): Result<Unit> =
+    override suspend fun verifyInvite(packet: GroupInvitePacket): Result<Unit> =
         groupCrypto.verify(
             payload = payloadEncoder.encodeInvite(packet),
             signature = packet.ownerSignature,
             signingPublicKey = packet.ownerSigningPublicKey
         )
 
-    suspend fun createInviteReceived(
+    override suspend fun createInviteReceived(
         invite: GroupInvitePacket,
         receivedAtEpochMilliseconds: Long,
         memberSigningKeyPair: LocalSigningKeyPair
@@ -138,7 +138,7 @@ class GroupMembershipPacketProtocol(
             unsignedPacket.copy(memberSignature = signature)
         }
 
-    suspend fun verifyInviteReceived(packet: GroupInviteReceivedPacket): Result<Unit> =
+    override suspend fun verifyInviteReceived(packet: GroupInviteReceivedPacket): Result<Unit> =
         groupCrypto.verify(
             payload = payloadEncoder.encodeInviteReceived(packet),
             signature = packet.memberSignature,
@@ -229,7 +229,7 @@ class GroupMembershipPacketProtocol(
             unsignedPacket.copy(memberSignature = signature)
         }
 
-    suspend fun verifyDecline(packet: GroupInviteDeclinedPacket): Result<Unit> =
+    override suspend fun verifyDecline(packet: GroupInviteDeclinedPacket): Result<Unit> =
         groupCrypto.verify(
             payload = payloadEncoder.encodeInviteDeclined(packet),
             signature = packet.memberSignature,

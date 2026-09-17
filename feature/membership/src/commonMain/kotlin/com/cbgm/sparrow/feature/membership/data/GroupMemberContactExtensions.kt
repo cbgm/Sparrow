@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.membership.data
 
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
-import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
+import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 
 fun Contact.hasMutualGroupIdentity(): Boolean {
     val identity = sparrowIdentity ?: return false

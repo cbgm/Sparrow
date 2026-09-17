@@ -4,7 +4,7 @@ import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.data.database.dao.ContactRoutingIdDao
 import com.cbgm.sparrow.data.database.entity.ContactRoutingIdEntity
 import com.cbgm.sparrow.data.database.model.ContactWithPublicIdentityDto
-import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
+import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.transport.routing.RoutingIdGenerator
 
 class ContactRoutingDataSource(

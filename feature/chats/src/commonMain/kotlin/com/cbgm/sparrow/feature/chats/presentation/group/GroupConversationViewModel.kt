@@ -49,8 +49,6 @@ import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactRes
 import com.cbgm.sparrow.feature.contacts.domain.usecase.AddDeviceContactUseCase
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
-import com.cbgm.sparrow.feature.membership.domain.usecase.AcceptGroupInvitationUseCase
-import com.cbgm.sparrow.feature.membership.domain.usecase.DeclineGroupInvitationUseCase
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyDetails
 import com.cbgm.sparrow.feature.voice.domain.usecase.GetRecordedVoiceAttachmentUseCase
@@ -84,8 +82,6 @@ class GroupConversationViewModel(
     private val editMessageUseCase: EditGroupMessageUseCase,
     private val pinMessageUseCase: PinGroupMessageUseCase,
     private val unpinMessageUseCase: UnpinGroupMessageUseCase,
-    private val acceptInvitation: AcceptGroupInvitationUseCase,
-    private val declineInvitation: DeclineGroupInvitationUseCase,
     observeMemberIndicator: ObserveGroupMemberIndicatorUseCase,
     setGroupIndicator: SetGroupIndicatorUseCase,
     observeMessageSafetyAssessments: ObserveMessageSafetyAssessmentsUseCase,
@@ -342,8 +338,6 @@ class GroupConversationViewModel(
                 } else {
                     navigator.popBackStackTo(AppRoute.Main)
                 }
-            GroupConversationUiEvent.AcceptInvitation -> acceptCurrentInvitation()
-            GroupConversationUiEvent.DeclineInvitation -> declineCurrentInvitation()
         }
     }
 
@@ -672,21 +666,6 @@ class GroupConversationViewModel(
         viewModelScope.launch {
             retryMessage(messageId)
                 .onFailure { error -> setError(error.message ?: "Message could not be queued again") }
-        }
-    }
-
-    private fun acceptCurrentInvitation() {
-        viewModelScope.launch {
-            acceptInvitation(groupId)
-                .onFailure { error -> setError(error.message ?: "Group invitation could not be accepted") }
-        }
-    }
-
-    private fun declineCurrentInvitation() {
-        viewModelScope.launch {
-            declineInvitation(groupId)
-                .onSuccess { navigator.popBackStackTo(AppRoute.Main) }
-                .onFailure { error -> setError(error.message ?: "Group invitation could not be declined") }
         }
     }
 

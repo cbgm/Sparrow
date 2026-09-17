@@ -1,5 +1,10 @@
 package com.cbgm.sparrow.feature.invite.domain.model
 
+enum class InvitationPayloadType {
+    DIRECT,
+    GROUP
+}
+
 enum class InvitationDirection {
     INCOMING,
     OUTGOING
@@ -14,6 +19,8 @@ enum class InvitationStatus {
 
 data class Invitation(
     val invitationId: String,
+    val payloadType: InvitationPayloadType,
+    val payloadId: String,
     val peerId: String,
     val peerDisplayName: String?,
     val peerSecondaryText: String?,

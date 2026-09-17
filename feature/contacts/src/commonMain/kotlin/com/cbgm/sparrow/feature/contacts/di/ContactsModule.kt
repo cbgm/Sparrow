@@ -9,17 +9,10 @@ import com.cbgm.sparrow.feature.contacts.adapter.ContactVerificationReceiptPacke
 import com.cbgm.sparrow.feature.contacts.adapter.DirectChatAuthorizationRevokedPacketHandler
 import com.cbgm.sparrow.feature.contacts.adapter.IdentityAcknowledgementPacketHandler
 import com.cbgm.sparrow.feature.contacts.adapter.IdentityPacketHandler
-import com.cbgm.sparrow.feature.contacts.data.datasource.ContactKeyExchangeDataSource
-import com.cbgm.sparrow.feature.contacts.data.datasource.ContactVerificationDataSource
-import com.cbgm.sparrow.feature.contacts.data.invitation.InvitationResultObserver
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactKeyExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactVerificationRepositoryImpl
-import com.cbgm.sparrow.feature.contacts.data.repository.DirectIdentityExchangeCoordinator
-import com.cbgm.sparrow.feature.contacts.data.repository.DirectIdentityExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.IdentityExchangeRepositoryImpl
-import com.cbgm.sparrow.feature.contacts.data.repository.InvitationPacketProcessorImpl
-import com.cbgm.sparrow.feature.contacts.data.repository.InvitationRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactKeyExchangeRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactVerificationRepository
@@ -48,11 +41,6 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.VerifyContactUseCase
 import com.cbgm.sparrow.feature.contacts.presentation.blocklist.BlockedContactsViewModel
 import com.cbgm.sparrow.feature.contacts.presentation.details.ContactDetailsViewModel
 import com.cbgm.sparrow.feature.contacts.presentation.overview.ContactsViewModel
-import com.cbgm.sparrow.feature.contacts.util.ContactVerificationPayloadEncoder
-import com.cbgm.sparrow.feature.contacts.util.IdentityInvitationPayloadEncoder
-import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
-import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPacketProcessor
-import com.cbgm.sparrow.feature.invite.domain.repository.InvitationRepository
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
@@ -60,13 +48,6 @@ import org.koin.dsl.module
 
 val contactsModule =
     module {
-
-        single {
-            ContactKeyExchangeDataSource(
-                contactDao = get(),
-                mailboxCapabilityLifecycle = get()
-            )
-        }
 
         single<ContactKeyExchangeRepository> {
             ContactKeyExchangeRepositoryImpl(dataSource = get())
@@ -79,59 +60,10 @@ val contactsModule =
             )
         }
 
-        single {
-            IdentityInvitationPayloadEncoder()
-        }
-
-        single {
-            ContactVerificationPayloadEncoder()
-        }
-
-        single {
-            ContactVerificationDataSource(
-                contactDao = get(),
-                localPublicIdentityProvider = get(),
-                localSigningKeyPairProvider = get(),
-                detachedSignatureCrypto = get(),
-                payloadEncoder = get(),
-                protocolOutbox = get()
-            )
-        }
-
         single<ContactVerificationRepository> {
             ContactVerificationRepositoryImpl(dataSource = get())
         }
 
-        single {
-            DirectIdentityExchangeCoordinator(
-                invitationDao = get(),
-                contactDao = get(),
-                contactRoutingIdDao = get(),
-                contactKeyExchangeDataSource = get(),
-                localPublicIdentityProvider = get(),
-                localSigningKeyPairProvider = get(),
-                detachedSignatureCrypto = get(),
-                secureRandomGenerator = get(),
-                payloadEncoder = get(),
-                protocolOutbox = get(),
-                localPhoneNumberProvider = get(),
-                phoneNumberNormalizer = get(),
-                contactVerificationDataSource = get(),
-                localProfilePictureMetadataProvider = get(),
-                remoteProfilePictureMetadataProcessor = get()
-            )
-        }
-
-        single<DirectIdentityExchangeRepository> {
-            DirectIdentityExchangeRepositoryImpl(coordinator = get())
-        }
-        single<InvitationRepository> {
-            InvitationRepositoryImpl(coordinator = get())
-        }
-        single<InvitationPacketProcessor> {
-            InvitationPacketProcessorImpl(coordinator = get())
-        }
-        singleOf(::InvitationResultObserver)
         factory { HandleContactReadyPacketUseCase(directIdentityExchangeRepository = get()) }
 
         factory {

@@ -6,11 +6,11 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import com.cbgm.sparrow.data.database.SparrowDatabase
 import com.cbgm.sparrow.data.database.entity.ContactEntity
-import com.cbgm.sparrow.feature.contacts.data.datasource.ContactKeyExchangeDataSource
-import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
-import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
-import com.cbgm.sparrow.feature.contacts.domain.model.RemoteIdentityOrigin
+import com.cbgm.sparrow.feature.identity.data.datasource.ContactKeyExchangeDataSource
+import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
+import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
+import com.cbgm.sparrow.feature.identity.domain.model.RemoteIdentityOrigin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
@@ -42,7 +42,7 @@ class ContactKeyExchangeRepositoryImplIntegrationTest {
     }
 
     @Test
-    fun acceptingInvitationIdentityPromotesRemoteIdentityToMutual() =
+    fun preparingRemoteIdentityForHandshakePromotesRemoteIdentityToMutual() =
         runBlocking {
             createContact()
             store
@@ -70,7 +70,7 @@ class ContactKeyExchangeRepositoryImplIntegrationTest {
         }
 
     @Test
-    fun directInvitationRemainsOneWayUntilReadyConfirmation() =
+    fun remoteHandshakeRemainsOneWayUntilReadyConfirmation() =
         runBlocking {
             createContact()
             store
@@ -78,7 +78,7 @@ class ContactKeyExchangeRepositoryImplIntegrationTest {
                     contactId = CONTACT_ID,
                     encryptionPublicKey = ENCRYPTION_KEY,
                     signingPublicKey = SIGNING_KEY,
-                    origin = RemoteIdentityOrigin.CONTACT_INVITATION
+                    origin = RemoteIdentityOrigin.REMOTE_HANDSHAKE
                 ).getOrThrow()
 
             var identity =
@@ -160,7 +160,7 @@ class ContactKeyExchangeRepositoryImplIntegrationTest {
                     contactId = CONTACT_ID,
                     encryptionPublicKey = ENCRYPTION_KEY,
                     signingPublicKey = SIGNING_KEY,
-                    origin = RemoteIdentityOrigin.CONTACT_INVITATION
+                    origin = RemoteIdentityOrigin.REMOTE_HANDSHAKE
                 ).getOrThrow()
 
             store
@@ -180,7 +180,7 @@ class ContactKeyExchangeRepositoryImplIntegrationTest {
         }
 
     @Test
-    fun mutualIdentityCannotBeSilentlyReplacedByInvitation() =
+    fun mutualIdentityCannotBeSilentlyReplacedByRemoteHandshake() =
         runBlocking {
             createContact()
             store
@@ -203,7 +203,7 @@ class ContactKeyExchangeRepositoryImplIntegrationTest {
                     contactId = CONTACT_ID,
                     encryptionPublicKey = byteArrayOf(99),
                     signingPublicKey = byteArrayOf(98),
-                    origin = RemoteIdentityOrigin.CONTACT_INVITATION
+                    origin = RemoteIdentityOrigin.REMOTE_HANDSHAKE
                 )
 
             assertTrue(result.isFailure)
@@ -217,7 +217,7 @@ class ContactKeyExchangeRepositoryImplIntegrationTest {
         }
 
     @Test
-    fun acceptingInvitationIdentityRejectsChangedKeys() =
+    fun preparingRemoteIdentityForHandshakeRejectsChangedKeys() =
         runBlocking {
             createContact()
             store
@@ -246,7 +246,7 @@ class ContactKeyExchangeRepositoryImplIntegrationTest {
         }
 
     @Test
-    fun acceptedInvitationCanReplaceOldMutualIdentityAfterRemoteReinstall() =
+    fun remoteHandshakeCanReplaceOldMutualIdentityAfterRemoteReinstall() =
         runBlocking {
             createContact()
             store
@@ -265,7 +265,7 @@ class ContactKeyExchangeRepositoryImplIntegrationTest {
                 ).getOrThrow()
 
             store
-                .acceptInvitationIdentityForHandshake(
+                .prepareRemoteIdentityForHandshake(
                     contactId = CONTACT_ID,
                     remoteEncryptionPublicKey = REINSTALLED_ENCRYPTION_KEY,
                     remoteSigningPublicKey = REINSTALLED_SIGNING_KEY

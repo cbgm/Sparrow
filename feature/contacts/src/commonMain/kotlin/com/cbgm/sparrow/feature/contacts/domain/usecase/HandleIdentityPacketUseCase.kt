@@ -7,11 +7,11 @@ import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.IdentityAcknowledgementPacket
 import com.cbgm.sparrow.core.protocol.packet.IdentityPacket
-import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
-import com.cbgm.sparrow.feature.contacts.domain.model.RemoteIdentityOrigin
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactKeyExchangeRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactVerificationRepository
+import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
+import com.cbgm.sparrow.feature.identity.domain.model.RemoteIdentityOrigin
 
 class HandleIdentityPacketUseCase(
     private val contactRepository: ContactRepository,

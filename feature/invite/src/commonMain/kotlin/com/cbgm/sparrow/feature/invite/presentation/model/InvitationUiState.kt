@@ -5,6 +5,11 @@ enum class InvitationTab {
     OUTGOING
 }
 
+enum class InvitationUiPayloadType {
+    DIRECT,
+    GROUP
+}
+
 enum class InvitationUiDirection {
     INCOMING,
     OUTGOING
@@ -19,6 +24,8 @@ enum class InvitationUiStatus {
 
 data class InvitationUi(
     val invitationId: String,
+    val payloadType: InvitationUiPayloadType,
+    val payloadId: String,
     val peerId: String,
     val peerDisplayName: String?,
     val peerSecondaryText: String?,

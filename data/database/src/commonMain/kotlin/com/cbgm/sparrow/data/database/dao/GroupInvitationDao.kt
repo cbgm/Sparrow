@@ -109,6 +109,28 @@ interface GroupInvitationDao {
 
     @Query(
         """
+        SELECT *
+        FROM group_invitations
+        WHERE direction = :direction
+        ORDER BY createdAtEpochMilliseconds, invitationId
+        """
+    )
+    fun observeByDirection(direction: String): Flow<List<GroupInvitationEntity>>
+
+    @Query(
+        """
+        SELECT *
+        FROM group_invitations
+        ORDER BY updatedAtEpochMilliseconds DESC, createdAtEpochMilliseconds DESC, invitationId DESC
+        """
+    )
+    fun observeAll(): Flow<List<GroupInvitationEntity>>
+
+    @Query("DELETE FROM group_invitations WHERE invitationId = :invitationId")
+    suspend fun deleteByInvitationId(invitationId: String): Int
+
+    @Query(
+        """
         UPDATE group_invitations
         SET status = :newStatus,
             updatedAtEpochMilliseconds = MAX(createdAtEpochMilliseconds, :updatedAt)

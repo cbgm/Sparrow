@@ -13,14 +13,13 @@ import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMembershipCoord
 import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMembershipDeletionCoordinator
 import com.cbgm.sparrow.feature.membership.data.repository.GroupMembershipRepositoryImpl
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
-import com.cbgm.sparrow.feature.membership.domain.usecase.AcceptGroupInvitationUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.AddGroupMembersUseCase
-import com.cbgm.sparrow.feature.membership.domain.usecase.DeclineGroupInvitationUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupLeaveRequirementUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.LeaveGroupUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.ObserveGroupAdministrationUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.PromoteGroupMemberUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.RemoveGroupMemberUseCase
+import com.cbgm.sparrow.feature.membership.domain.usecase.StageGroupOwnerIdentityUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.TransferGroupAdminAndLeaveUseCase
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
@@ -44,8 +43,6 @@ val membershipModule =
             bind<GroupMembershipRepository>()
         }
 
-        singleOf(::AcceptGroupInvitationUseCase)
-        singleOf(::DeclineGroupInvitationUseCase)
         singleOf(::AddGroupMembersUseCase)
         singleOf(::RemoveGroupMemberUseCase)
         singleOf(::PromoteGroupMemberUseCase)
@@ -53,4 +50,5 @@ val membershipModule =
         singleOf(::GetGroupLeaveRequirementUseCase)
         singleOf(::LeaveGroupUseCase)
         singleOf(::ObserveGroupAdministrationUseCase)
+        singleOf(::StageGroupOwnerIdentityUseCase)
     }

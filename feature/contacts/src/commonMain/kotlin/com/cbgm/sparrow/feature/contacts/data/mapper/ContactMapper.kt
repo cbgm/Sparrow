@@ -6,10 +6,10 @@ import com.cbgm.sparrow.data.database.model.ContactWithPublicIdentityDto
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumber
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumberType
-import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
-import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.SparrowIdentity
+import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
+import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 
 fun ContactWithPublicIdentityDto.toContact(): Contact =
     Contact(

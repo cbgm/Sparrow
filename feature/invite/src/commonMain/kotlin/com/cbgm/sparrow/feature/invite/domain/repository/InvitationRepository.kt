@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.invite.domain.repository
 
 import com.cbgm.sparrow.feature.invite.domain.model.Invitation
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationPayloadType
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResult
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResultAction
@@ -13,6 +14,8 @@ interface InvitationRepository {
     fun observeInvitationResults(): Flow<List<InvitationResult>>
 
     suspend fun getPeerId(invitationId: String): Result<String>
+
+    suspend fun getPayloadType(invitationId: String): Result<InvitationPayloadType>
 
     suspend fun accept(invitationId: String): Result<Unit>
 

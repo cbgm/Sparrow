@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.contacts.domain.repository
 
-import com.cbgm.sparrow.feature.contacts.domain.model.RemoteIdentityOrigin
-import com.cbgm.sparrow.feature.contacts.domain.model.RemoteIdentityUpdate
+import com.cbgm.sparrow.feature.identity.domain.model.RemoteIdentityOrigin
+import com.cbgm.sparrow.feature.identity.domain.model.RemoteIdentityUpdate
 
 interface ContactKeyExchangeRepository {
     suspend fun storeRemoteIdentity(
@@ -23,7 +23,7 @@ interface ContactKeyExchangeRepository {
         expectedRemoteSigningPublicKey: ByteArray
     ): Result<Unit>
 
-    suspend fun acceptInvitationIdentityForHandshake(
+    suspend fun prepareRemoteIdentityForHandshake(
         contactId: String,
         remoteEncryptionPublicKey: ByteArray,
         remoteSigningPublicKey: ByteArray

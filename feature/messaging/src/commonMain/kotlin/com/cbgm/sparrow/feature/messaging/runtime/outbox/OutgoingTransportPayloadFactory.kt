@@ -6,7 +6,7 @@ import com.cbgm.sparrow.core.crypto.transport.TransportMessageCipher
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
-import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
+import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.messaging.data.datasource.GroupTransportKeyDataSource
 
 class OutgoingTransportPayloadFactory(
