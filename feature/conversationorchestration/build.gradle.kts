@@ -17,6 +17,7 @@ kotlin {
             implementation(projects.feature.contacts)
             implementation(projects.feature.identity)
             implementation(projects.feature.invite)
+            implementation(projects.feature.membership)
 
             implementation(libs.bundles.coroutines)
             implementation(libs.bundles.koin.core)
