@@ -18,8 +18,13 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessage
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessageDeliveryStateMachine
 import com.cbgm.sparrow.feature.chats.domain.model.group.MessageDeliveryProgress
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
+import com.cbgm.sparrow.feature.membership.data.model.GroupConversationStateDto
+import com.cbgm.sparrow.feature.membership.data.model.GroupMemberProgressDto
+import com.cbgm.sparrow.feature.membership.data.model.GroupMemberProgressStatusDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationState
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberProgress
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberProgressStatus
 
 internal fun ConversationWithMessagesDto.toGroupConversation(
     participantContactIds: List<String>,
@@ -71,9 +76,9 @@ internal fun ConversationWithMessagesDto.toGroupConversation(
             } else {
                 timeline.currentMemberships.count { it.status.isPendingMembershipStatus() }
             },
-        isReady = groupState == GroupConversationState.READY,
-        state = groupState,
-        memberProgress = GroupMembershipStateMachine.memberProgress(timeline.currentMemberships)
+        isReady = groupState == GroupConversationStateDto.READY,
+        state = groupState.toDomain(),
+        memberProgress = GroupMembershipStateMachine.memberProgress(timeline.currentMemberships).map(GroupMemberProgressDto::toDomain)
     )
 }
 
@@ -141,3 +146,12 @@ private fun String.isPendingMembershipStatus(): Boolean =
         this == GroupMembershipStatus.JOIN_REQUEST_SENT.name ||
         this == GroupMembershipStatus.WELCOME_SENT.name ||
         this == GroupMembershipStatus.WAITING_FOR_ACTIVATION.name
+
+private fun GroupConversationStateDto.toDomain(): GroupConversationState =
+    GroupConversationState.valueOf(name)
+
+private fun GroupMemberProgressDto.toDomain(): GroupMemberProgress =
+    GroupMemberProgress(
+        contactId = contactId,
+        status = GroupMemberProgressStatus.valueOf(status.name)
+    )

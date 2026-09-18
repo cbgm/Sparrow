@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.membership.data
 
 import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
+import com.cbgm.sparrow.feature.membership.data.model.GroupConversationStateDto
+import com.cbgm.sparrow.feature.membership.data.model.GroupLeaveRequirementDto
+import com.cbgm.sparrow.feature.membership.data.model.GroupMemberProgressDto
+import com.cbgm.sparrow.feature.membership.data.model.GroupMemberProgressStatusDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
-import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationState
-import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
-import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberProgress
-import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberProgressStatus
 
 enum class GroupMembershipEvent {
     JOIN_REQUESTED,
@@ -43,17 +43,17 @@ object GroupMembershipStateMachine {
     fun conversationState(
         memberships: List<GroupMembershipEntity>,
         isLocallyInactive: Boolean = false
-    ): GroupConversationState {
+    ): GroupConversationStateDto {
         if (memberships.hasStatus(GroupMembershipStatus.GROUP_DELETED)) {
-            return GroupConversationState.DELETED
+            return GroupConversationStateDto.DELETED
         }
 
         val currentMemberships = memberships.filterCurrentHistory()
         if (isLocallyInactive && currentMemberships.isEmpty()) {
-            return GroupConversationState.REMOVED
+            return GroupConversationStateDto.REMOVED
         }
         if (currentMemberships.isEmpty() || currentMemberships.allHaveStatus(GroupMembershipStatus.ACTIVE)) {
-            return GroupConversationState.READY
+            return GroupConversationStateDto.READY
         }
 
         return currentMemberships.deriveConversationState()
@@ -63,24 +63,24 @@ object GroupMembershipStateMachine {
         isLocalAdmin: Boolean,
         currentMemberContactIds: Set<String>,
         currentAdminContactIds: Set<String>
-    ): GroupLeaveRequirement =
+    ): GroupLeaveRequirementDto =
         if (
             !isLocalAdmin ||
             currentMemberContactIds.isEmpty() ||
             currentAdminContactIds.isNotEmpty()
         ) {
-            GroupLeaveRequirement.CanLeave
+            GroupLeaveRequirementDto.CanLeave
         } else {
-            GroupLeaveRequirement.PromoteAdminFirst(currentMemberContactIds)
+            GroupLeaveRequirementDto.PromoteAdminFirst(currentMemberContactIds)
         }
 
-    fun memberProgress(memberships: List<GroupMembershipEntity>): List<GroupMemberProgress> =
+    fun memberProgress(memberships: List<GroupMembershipEntity>): List<GroupMemberProgressDto> =
         memberships
             .filter { membership -> membership.shouldExposeProgress() }
             .map { membership ->
-                GroupMemberProgress(
+                GroupMemberProgressDto(
                     contactId = membership.contactId,
-                    status = membership.status.toGroupMemberProgressStatus()
+                    status = membership.status.toGroupMemberProgressStatusDto()
                 )
             }
 
@@ -141,17 +141,17 @@ object GroupMembershipStateMachine {
                 }
         }
 
-    private fun List<GroupMembershipEntity>.deriveConversationState(): GroupConversationState =
+    private fun List<GroupMembershipEntity>.deriveConversationState(): GroupConversationStateDto =
         when {
-            hasStatus(GroupMembershipStatus.LEAVE_REQUESTED) -> GroupConversationState.LEAVING
+            hasStatus(GroupMembershipStatus.LEAVE_REQUESTED) -> GroupConversationStateDto.LEAVING
             hasStatus(GroupMembershipStatus.JOIN_REQUEST_SENT) ||
-                hasStatus(GroupMembershipStatus.WAITING_FOR_ACTIVATION) -> GroupConversationState.JOINING
-            hasStatus(GroupMembershipStatus.ACTIVE) -> GroupConversationState.READY
+                hasStatus(GroupMembershipStatus.WAITING_FOR_ACTIVATION) -> GroupConversationStateDto.JOINING
+            hasStatus(GroupMembershipStatus.ACTIVE) -> GroupConversationStateDto.READY
             hasStatus(GroupMembershipStatus.IDENTITY_READY) ||
-                hasStatus(GroupMembershipStatus.WELCOME_SENT) -> GroupConversationState.DISTRIBUTING_KEYS
-            hasStatus(GroupMembershipStatus.STAGED) -> GroupConversationState.WAITING_FOR_MEMBERS
-            hasStatus(GroupMembershipStatus.FAILED) -> GroupConversationState.FAILED
-            else -> GroupConversationState.WAITING_FOR_MEMBERS
+                hasStatus(GroupMembershipStatus.WELCOME_SENT) -> GroupConversationStateDto.DISTRIBUTING_KEYS
+            hasStatus(GroupMembershipStatus.STAGED) -> GroupConversationStateDto.WAITING_FOR_MEMBERS
+            hasStatus(GroupMembershipStatus.FAILED) -> GroupConversationStateDto.FAILED
+            else -> GroupConversationStateDto.WAITING_FOR_MEMBERS
         }
 
     private fun List<GroupMembershipEntity>.filterCurrentHistory(): List<GroupMembershipEntity> =
@@ -171,16 +171,16 @@ object GroupMembershipStateMachine {
         status != GroupMembershipStatus.REMOVED.name &&
             status != GroupMembershipStatus.GROUP_DELETED.name
 
-    private fun String.toGroupMemberProgressStatus(): GroupMemberProgressStatus =
+    private fun String.toGroupMemberProgressStatusDto(): GroupMemberProgressStatusDto =
         when (this) {
-            GroupMembershipStatus.STAGED.name -> GroupMemberProgressStatus.PENDING
+            GroupMembershipStatus.STAGED.name -> GroupMemberProgressStatusDto.PENDING
             GroupMembershipStatus.IDENTITY_READY.name,
-            GroupMembershipStatus.JOIN_REQUEST_SENT.name -> GroupMemberProgressStatus.JOINING
+            GroupMembershipStatus.JOIN_REQUEST_SENT.name -> GroupMemberProgressStatusDto.JOINING
             GroupMembershipStatus.WELCOME_SENT.name,
-            GroupMembershipStatus.WAITING_FOR_ACTIVATION.name -> GroupMemberProgressStatus.KEY_EXCHANGE
-            GroupMembershipStatus.ACTIVE.name -> GroupMemberProgressStatus.ACTIVE
-            GroupMembershipStatus.FAILED.name -> GroupMemberProgressStatus.FAILED
-            else -> GroupMemberProgressStatus.PENDING
+            GroupMembershipStatus.WAITING_FOR_ACTIVATION.name -> GroupMemberProgressStatusDto.KEY_EXCHANGE
+            GroupMembershipStatus.ACTIVE.name -> GroupMemberProgressStatusDto.ACTIVE
+            GroupMembershipStatus.FAILED.name -> GroupMemberProgressStatusDto.FAILED
+            else -> GroupMemberProgressStatusDto.PENDING
         }
 
     private val TERMINAL_STATUSES =

@@ -8,10 +8,10 @@ import com.cbgm.sparrow.feature.chats.data.group.avatar.GroupAvatarBroadcaster
 import com.cbgm.sparrow.feature.chats.data.group.description.GroupDescriptionBroadcaster
 import com.cbgm.sparrow.feature.chats.data.group.pin.GroupPinBroadcaster
 import com.cbgm.sparrow.feature.chats.data.group.title.GroupTitleBroadcaster
-import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMembershipCoordinator
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipLifecycleDataSource
 
 class GroupReadyAcknowledgementPacketHandler internal constructor(
-    private val membershipCoordinator: GroupMembershipCoordinator,
+    private val membershipCoordinator: GroupMembershipLifecycleDataSource,
     private val groupAvatarBroadcaster: GroupAvatarBroadcaster,
     private val groupTitleBroadcaster: GroupTitleBroadcaster,
     private val groupDescriptionBroadcaster: GroupDescriptionBroadcaster,

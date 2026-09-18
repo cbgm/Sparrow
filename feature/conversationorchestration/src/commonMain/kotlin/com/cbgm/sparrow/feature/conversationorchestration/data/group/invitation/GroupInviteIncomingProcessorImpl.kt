@@ -5,10 +5,10 @@ import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.GroupInvitePacket
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
+import com.cbgm.sparrow.feature.conversationorchestration.data.group.invitation.datasource.GroupInvitationOwnerIdentityDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipAttemptDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipMessageDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtocolDataSource
-import com.cbgm.sparrow.feature.membership.domain.usecase.StageGroupOwnerIdentityUseCase
 
 internal class GroupInviteIncomingProcessorImpl(
     private val chatDao: ChatDao,
@@ -16,7 +16,7 @@ internal class GroupInviteIncomingProcessorImpl(
     private val protocolOutbox: ProtocolOutbox,
     private val membershipPacketProtocol: GroupMembershipProtocolDataSource,
     private val membershipAttempts: GroupMembershipAttemptDataSource,
-    private val stageIncomingOwnerIdentity: StageGroupOwnerIdentityUseCase
+    private val ownerIdentityDataSource: GroupInvitationOwnerIdentityDataSource
 ) {
     suspend fun process(
         ownerContactId: String,
@@ -48,11 +48,11 @@ internal class GroupInviteIncomingProcessorImpl(
         packet: GroupInvitePacket
     ) {
         val identityChanged =
-            stageIncomingOwnerIdentity(
+            ownerIdentityDataSource.stage(
                 contactId = ownerContactId,
                 encryptionPublicKey = packet.ownerEncryptionPublicKey,
                 signingPublicKey = packet.ownerSigningPublicKey
-            ).getOrThrow()
+            )
         if (!identityChanged) return
 
         membershipAttempts

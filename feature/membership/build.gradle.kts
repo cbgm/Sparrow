@@ -13,8 +13,6 @@ kotlin {
             implementation(projects.core)
             implementation(projects.core.protocol)
             implementation(projects.data.database)
-            implementation(projects.feature.contacts)
-            implementation(projects.feature.identity)
             implementation(libs.bundles.coroutines)
             implementation(libs.bundles.koin.core)
         }

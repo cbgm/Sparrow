@@ -3,10 +3,10 @@ package com.cbgm.sparrow.feature.chats.data.group.incoming.handler
 import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
-import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMembershipCoordinator
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipLifecycleDataSource
 
 class GroupLeaveRequestPacketHandler(
-    private val membershipCoordinator: GroupMembershipCoordinator
+    private val membershipCoordinator: GroupMembershipLifecycleDataSource
 ) : GroupPacketHandler {
     override fun canHandle(packet: SparrowPacket): Boolean = packet is GroupLeaveRequestPacket
 

@@ -1,29 +1,29 @@
-package com.cbgm.sparrow.feature.membership.data.coordinator
+package com.cbgm.sparrow.feature.membership.data.datasource
 
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.GroupConversationDeletedPacket
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipBroadcastDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipCleanupDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtocolDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipStoreDataSource
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_LEFT_ROLE
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 
 @Suppress("LongParameterList")
-class GroupMembershipDeletionCoordinator(
-    private val groupMembershipDao: GroupMembershipDao,
+internal class GroupMembershipDeletionDataSource(
+    private val membershipStore: GroupMembershipStoreDataSource,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val protocolOutbox: ProtocolOutbox,
     private val membershipPacketProtocol: GroupMembershipProtocolDataSource,
     private val groupSecurityManager: GroupMembershipSecurityDataSource,
     private val packetBroadcaster: GroupMembershipBroadcastDataSource,
-    private val administration: GroupMembershipAdministrationCoordinator,
+    private val administration: GroupMembershipAdministrationDataSource,
     private val membershipLock: GroupMembershipLock,
     private val localCleanupDataSource: GroupMembershipCleanupDataSource
 ) {
@@ -42,7 +42,7 @@ class GroupMembershipDeletionCoordinator(
                 return@runCatching
             }
 
-            val memberships = groupMembershipDao.findByGroupId(groupId)
+            val memberships = membershipStore.findByGroupId(groupId)
             val hasOwnerMembership =
                 memberships.any { membership ->
                     membership.perspective == GroupMembershipPerspective.OWNER.name

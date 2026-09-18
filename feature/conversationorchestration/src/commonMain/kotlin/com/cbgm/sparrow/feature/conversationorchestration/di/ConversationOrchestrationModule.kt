@@ -21,10 +21,12 @@ import com.cbgm.sparrow.feature.conversationorchestration.data.group.invitation.
 import com.cbgm.sparrow.feature.conversationorchestration.data.group.invitation.GroupInviteReceivedIncomingProcessorImpl
 import com.cbgm.sparrow.feature.conversationorchestration.data.group.invitation.GroupJoinRequestIncomingProcessor
 import com.cbgm.sparrow.feature.conversationorchestration.data.group.invitation.GroupJoinRequestIncomingProcessorImpl
+import com.cbgm.sparrow.feature.conversationorchestration.data.group.invitation.datasource.GroupInvitationOwnerIdentityDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.data.group.invitation.handler.GroupInviteDeclinedPacketHandler
 import com.cbgm.sparrow.feature.conversationorchestration.data.group.invitation.handler.GroupInvitePacketHandler
 import com.cbgm.sparrow.feature.conversationorchestration.data.group.invitation.handler.GroupInviteReceivedPacketHandler
 import com.cbgm.sparrow.feature.conversationorchestration.data.group.invitation.handler.GroupJoinRequestPacketHandler
+import com.cbgm.sparrow.feature.conversationorchestration.data.group.membership.GroupMembershipPeerDataSourceImpl
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.AddConversationMembersUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.DeletePeerConversationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.ObserveConversationQueueAvailabilityUseCase
@@ -36,6 +38,7 @@ import com.cbgm.sparrow.feature.invite.data.lifecycle.InvitationLifecycleEffects
 import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPacketProcessor
 import com.cbgm.sparrow.feature.invite.domain.policy.InvitationPolicyProvider
 import com.cbgm.sparrow.feature.invite.domain.provider.InvitationPeerMetadataProvider
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipPeerDataSource
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
@@ -80,6 +83,11 @@ val conversationOrchestrationModule =
         }
 
         singleOf(::IdentityExchangeDataSource)
+
+        singleOf(::GroupMembershipPeerDataSourceImpl) {
+            bind<GroupMembershipPeerDataSource>()
+        }
+        singleOf(::GroupInvitationOwnerIdentityDataSource)
 
         singleOf(::GroupInviteIncomingProcessorImpl)
         singleOf(::GroupInviteReceivedIncomingProcessorImpl)

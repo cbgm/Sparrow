@@ -1,15 +1,15 @@
 package com.cbgm.sparrow.feature.conversationorchestration.data.group.invitation
 
 import com.cbgm.sparrow.core.protocol.packet.GroupInviteReceivedPacket
-import com.cbgm.sparrow.feature.membership.data.GroupMembershipIdentity
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipAttemptDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipPeerDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtocolDataSource
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
 
 internal class GroupInviteReceivedIncomingProcessorImpl(
     private val membershipPacketProtocol: GroupMembershipProtocolDataSource,
     private val membershipAttempts: GroupMembershipAttemptDataSource,
-    private val identity: GroupMembershipIdentity
+    private val peerDataSource: GroupMembershipPeerDataSource
 ) {
     suspend fun process(
         memberContactId: String,
@@ -29,7 +29,7 @@ internal class GroupInviteReceivedIncomingProcessorImpl(
             check(membership.challenge.contentEquals(packet.challenge)) { "Invite receipt challenge does not match" }
 
             membershipPacketProtocol.verifyInviteReceived(packet).getOrThrow()
-            identity.ensureSigningIdentityMatches(memberContactId, packet.memberSigningPublicKey)
+            peerDataSource.ensureSigningIdentityMatches(memberContactId, packet.memberSigningPublicKey)
             membershipAttempts.refreshOwnedMembership(packet.groupId).getOrThrow()
         }
 }

@@ -5,7 +5,7 @@ import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.feature.identity.data.datasource.ContactKeyExchangeDataSource
 import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
-import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMembershipActivationCoordinator
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipActivationDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipAttemptDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtocolDataSource
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
@@ -15,7 +15,7 @@ internal class GroupJoinRequestIncomingProcessorImpl(
     private val contactKeyExchangeDataSource: ContactKeyExchangeDataSource,
     private val membershipPacketProtocol: GroupMembershipProtocolDataSource,
     private val membershipAttempts: GroupMembershipAttemptDataSource,
-    private val activation: GroupMembershipActivationCoordinator
+    private val activation: GroupMembershipActivationDataSource
 ) {
     suspend fun process(
         memberContactId: String,

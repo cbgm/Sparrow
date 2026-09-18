@@ -1,25 +1,18 @@
 package com.cbgm.sparrow.feature.membership.data
 
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
-import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPeerDto
 
-fun Contact.hasMutualGroupIdentity(): Boolean {
-    val identity = sparrowIdentity ?: return false
-    return identity.keyExchangeStatus == KeyExchangeStatus.MUTUAL &&
-        identity.encryptionPublicKey.isNotEmpty() &&
-        identity.signingPublicKey.isNotEmpty()
-}
+fun GroupMembershipPeerDto.hasMutualGroupIdentity(): Boolean = hasMutualIdentity
 
-fun Contact.groupMembershipDisplayName(): String =
+fun GroupMembershipPeerDto.groupMembershipDisplayName(): String =
     displayName?.trim()?.takeIf(String::isNotEmpty)
-        ?: preferredPhoneNumber?.value?.trim()?.takeIf(String::isNotEmpty)
+        ?: preferredPhoneNumber?.trim()?.takeIf(String::isNotEmpty)
         ?: "Member"
 
-fun Contact.requireGroupPhoneNumber(): String =
-    preferredPhoneNumber?.value?.trim()?.takeIf(String::isNotEmpty)
+fun GroupMembershipPeerDto.requireGroupPhoneNumber(): String =
+    preferredPhoneNumber?.trim()?.takeIf(String::isNotEmpty)
         ?: phoneNumbers
             .firstOrNull()
-            ?.value
             ?.trim()
             ?.takeIf(String::isNotEmpty)
-        ?: error("Contact has no phone number: $id")
+        ?: error("Membership peer has no phone number: $id")

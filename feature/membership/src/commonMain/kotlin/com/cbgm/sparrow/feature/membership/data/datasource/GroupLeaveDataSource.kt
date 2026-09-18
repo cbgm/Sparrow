@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.membership.data.coordinator
+package com.cbgm.sparrow.feature.membership.data.datasource
 
 import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentityProvider
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
@@ -7,28 +7,28 @@ import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMembershipChangePayload
 import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
-import com.cbgm.sparrow.feature.membership.data.GroupMembershipIdentity
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipBroadcastDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipCleanupDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipConversationDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipMessageDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipPeerDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtocolDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipStoreDataSource
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_ADMIN_ROLE
+import com.cbgm.sparrow.feature.membership.data.model.GroupLeaveRequirementDto
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPeerDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
-import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
 
 @Suppress("LongParameterList")
-class GroupLeaveCoordinator(
-    private val chatDao: ChatDao,
-    private val groupMembershipDao: GroupMembershipDao,
+internal class GroupLeaveDataSource(
+    private val conversationDataSource: GroupMembershipConversationDataSource,
+    private val membershipStore: GroupMembershipStoreDataSource,
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
@@ -36,21 +36,21 @@ class GroupLeaveCoordinator(
     private val membershipPacketProtocol: GroupMembershipProtocolDataSource,
     private val groupSecurityManager: GroupMembershipSecurityDataSource,
     private val membershipLock: GroupMembershipLock,
-    private val identity: GroupMembershipIdentity,
-    private val epochCoordinator: GroupEpochCoordinator,
+    private val peerDataSource: GroupMembershipPeerDataSource,
+    private val epochDataSource: GroupEpochDataSource,
     private val localCleanupDataSource: GroupMembershipCleanupDataSource,
     private val packetBroadcaster: GroupMembershipBroadcastDataSource,
     private val membershipMessageDataSource: GroupMembershipMessageDataSource
 ) {
-    suspend fun getLeaveRequirement(groupId: String): Result<GroupLeaveRequirement> =
+    suspend fun getLeaveRequirement(groupId: String): Result<GroupLeaveRequirementDto> =
         runCatching {
             require(groupId.isNotBlank()) { "Group ID must not be blank" }
             val localRole = groupSecurityManager.findLocalRole(groupId).getOrThrow()
             if (localRole?.isGroupAdminRole() != true) {
-                return@runCatching GroupLeaveRequirement.CanLeave
+                return@runCatching GroupLeaveRequirementDto.CanLeave
             }
 
-            val participants = epochCoordinator.findCurrentParticipants(groupId)
+            val participants = epochDataSource.findCurrentParticipants(groupId)
             GroupMembershipStateMachine.leaveRequirement(
                 isLocalAdmin = true,
                 currentMemberContactIds =
@@ -94,7 +94,7 @@ class GroupLeaveCoordinator(
         groupId: String,
         promoteContactId: String?
     ) {
-        val participants = epochCoordinator.findCurrentParticipants(groupId)
+        val participants = epochDataSource.findCurrentParticipants(groupId)
         if (participants.isEmpty()) {
             check(promoteContactId == null) { "There is no group member to promote" }
             val epoch = groupSecurityManager.findCurrentEpoch(groupId).getOrThrow() ?: 1
@@ -145,14 +145,14 @@ class GroupLeaveCoordinator(
         participants: List<ConversationParticipantEntity>,
         promotedParticipant: ConversationParticipantEntity?
     ) {
-        val conversation = chatDao.findConversationById(groupId) ?: error("Group conversation was not found")
+        val conversation = conversationDataSource.findConversationById(groupId) ?: error("Group conversation was not found")
         val currentEpoch =
             groupSecurityManager.findOwnedGroupEpoch(groupId).getOrThrow()
                 ?: error("Active group security state was not found")
         val contacts =
             participants
-                .map { participant -> identity.requireContact(participant.contactId) }
-                .sortedBy(Contact::id)
+                .map { participant -> peerDataSource.requirePeer(participant.contactId) }
+                .sortedBy(GroupMembershipPeerDto::id)
         val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
         val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
         val localPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow()
@@ -170,7 +170,7 @@ class GroupLeaveCoordinator(
                     createdAtEpochMilliseconds = conversation.createdAtEpochMilliseconds,
                     updatedAtEpochMilliseconds = now,
                     memberPayloads =
-                        epochCoordinator.createMemberPayloads(
+                        epochDataSource.createMemberPayloads(
                             groupId = groupId,
                             localIdentity = localIdentity,
                             localPhoneNumber = localPhoneNumber,
@@ -179,8 +179,8 @@ class GroupLeaveCoordinator(
                         ).filterNot { member ->
                             member.signingPublicKey.contentEquals(localSigningKeyPair.publicKey)
                         },
-                    memberKeys = epochCoordinator.createMemberKeys(groupId, currentEpoch + 1, contacts, roleOverrides),
-                    recipients = epochCoordinator.createRecipients(groupId, contacts),
+                    memberKeys = epochDataSource.createMemberKeys(groupId, currentEpoch + 1, contacts, roleOverrides),
+                    recipients = epochDataSource.createRecipients(groupId, contacts),
                     localSigningKeyPair = localSigningKeyPair,
                     membershipChange =
                         GroupMembershipChangePayload(
@@ -198,7 +198,7 @@ class GroupLeaveCoordinator(
     }
 
     private suspend fun leaveAsMember(groupId: String) {
-        val participants = epochCoordinator.findCurrentParticipants(groupId)
+        val participants = epochDataSource.findCurrentParticipants(groupId)
         val adminParticipant =
             participants
                 .filter { participant -> participant.role.isGroupAdminRole() }
@@ -215,7 +215,7 @@ class GroupLeaveCoordinator(
         }
 
         val membership =
-            groupMembershipDao.findByGroupId(groupId)
+            membershipStore.findByGroupId(groupId)
                 .firstOrNull { row -> row.perspective == GroupMembershipPerspective.MEMBER.name }
         val epoch =
             groupSecurityManager.findCurrentEpoch(groupId).getOrThrow()
@@ -234,7 +234,7 @@ class GroupLeaveCoordinator(
                 ).getOrThrow()
         protocolOutbox.enqueue(adminParticipant.contactId, leaveRequest).getOrThrow()
         membership?.let { row ->
-            groupMembershipDao.updateStatus(
+            membershipStore.updateStatus(
                 membershipId = row.membershipId,
                 expectedStatus = row.status,
                 newStatus =

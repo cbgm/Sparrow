@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.membership.data.coordinator
+package com.cbgm.sparrow.feature.membership.data.datasource
 
 import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentityProvider
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
@@ -8,38 +8,38 @@ import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMembershipChangePayload
 import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
-import com.cbgm.sparrow.feature.membership.data.GroupMembershipIdentity
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipBroadcastDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipConversationDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipMessageDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipPeerDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtocolDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipStoreDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipVerificationDataSource
 import com.cbgm.sparrow.feature.membership.data.groupMembershipDisplayName
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPeerDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 
 @Suppress("LongParameterList")
-class GroupMemberRemovalCoordinator(
-    private val chatDao: ChatDao,
-    private val groupMembershipDao: GroupMembershipDao,
+internal class GroupMemberRemovalDataSource(
+    private val conversationDataSource: GroupMembershipConversationDataSource,
+    private val membershipStore: GroupMembershipStoreDataSource,
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
     private val protocolOutbox: ProtocolOutbox,
     private val membershipPacketProtocol: GroupMembershipProtocolDataSource,
     private val groupSecurityManager: GroupMembershipSecurityDataSource,
-    private val groupVerificationCoordinator: GroupMembershipVerificationDataSource,
+    private val verificationDataSource: GroupMembershipVerificationDataSource,
     private val membershipLock: GroupMembershipLock,
-    private val identity: GroupMembershipIdentity,
-    private val epochCoordinator: GroupEpochCoordinator,
+    private val peerDataSource: GroupMembershipPeerDataSource,
+    private val epochDataSource: GroupEpochDataSource,
     private val packetBroadcaster: GroupMembershipBroadcastDataSource,
     private val membershipMessageDataSource: GroupMembershipMessageDataSource
 ) {
@@ -116,8 +116,8 @@ class GroupMemberRemovalCoordinator(
         sendMemberRemovalPacket(groupId, contactId, reason, removalEpoch, removal)
         markMembershipRemoved(removal.membership, removal.removedAt)
         persistMemberRemoval(groupId, contactId, reason, removalEpoch, removal)
-        groupVerificationCoordinator.onOwnedMembershipChanged(groupId).getOrThrow()
-        chatDao.updateConversationTimestamp(groupId, removal.removedAt)
+        verificationDataSource.onOwnedMembershipChanged(groupId).getOrThrow()
+        conversationDataSource.updateConversationTimestamp(groupId, removal.removedAt)
     }
 
     private suspend fun loadMemberRemoval(
@@ -127,7 +127,7 @@ class GroupMemberRemovalCoordinator(
         groupSecurityManager.findOwnedGroupEpoch(groupId).getOrThrow()
         val currentMemberKey = currentMemberKey(groupId, contactId)
         val membership =
-            groupMembershipDao.findByGroupContactAndPerspective(
+            membershipStore.findByGroupContactAndPerspective(
                 groupId = groupId,
                 contactId = contactId,
                 perspective = GroupMembershipPerspective.OWNER.name
@@ -135,10 +135,10 @@ class GroupMemberRemovalCoordinator(
         check(currentMemberKey != null || membership != null) { "Group member was not found" }
         check(membership?.status?.isTerminalStatus() != true) { "Group member is already inactive" }
 
-        val contact = identity.requireContact(contactId)
+        val contact = peerDataSource.requirePeer(contactId)
         val signingPublicKey =
             currentMemberKey?.signingPublicKey?.copyOf()
-                ?: contact.sparrowIdentity?.signingPublicKey?.copyOf()
+                ?: contact.signingPublicKey?.copyOf()
                 ?: byteArrayOf()
         val removedAt =
             maxOf(
@@ -203,7 +203,7 @@ class GroupMemberRemovalCoordinator(
         updatedAt: Long
     ) {
         val row = membership ?: return
-        groupMembershipDao.updateStatus(
+        membershipStore.updateStatus(
             membershipId = row.membershipId,
             expectedStatus = row.status,
             newStatus =
@@ -222,7 +222,7 @@ class GroupMemberRemovalCoordinator(
         removalEpoch: Int,
         removal: MemberRemovalDto
     ) {
-        chatDao.deleteConversationParticipant(groupId, contactId)
+        conversationDataSource.deleteConversationParticipant(groupId, contactId)
         val message =
             if (reason == GroupMemberRemovedPacket.REASON_MEMBER_LEFT) {
                 membershipMessageDataSource.memberLeft(
@@ -243,7 +243,7 @@ class GroupMemberRemovalCoordinator(
                     eventId = removal.referenceId
                 )
             }
-        chatDao.upsertMessage(message)
+        conversationDataSource.upsertMessage(message)
     }
 
     private suspend fun rotateAfterRemoval(
@@ -252,12 +252,12 @@ class GroupMemberRemovalCoordinator(
         updatedAtEpochMilliseconds: Long,
         membershipChange: GroupMembershipChangePayload?
     ): Int {
-        val conversation = chatDao.findConversationById(groupId) ?: error("Group conversation was not found")
+        val conversation = conversationDataSource.findConversationById(groupId) ?: error("Group conversation was not found")
         val currentEpoch =
             groupSecurityManager.findOwnedGroupEpoch(groupId).getOrThrow()
                 ?: error("Active group security state was not found")
         val remainingContacts =
-            epochCoordinator.loadCurrentParticipantContacts(groupId)
+            epochDataSource.loadCurrentParticipantContacts(groupId)
                 .filterNot { contact -> contact.id == removedContactId }
         val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
         val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
@@ -271,14 +271,14 @@ class GroupMemberRemovalCoordinator(
                     createdAtEpochMilliseconds = conversation.createdAtEpochMilliseconds,
                     updatedAtEpochMilliseconds = updatedAtEpochMilliseconds,
                     memberPayloads =
-                        epochCoordinator.createMemberPayloads(
+                        epochDataSource.createMemberPayloads(
                             groupId = groupId,
                             localIdentity = localIdentity,
                             localPhoneNumber = localPhoneNumber,
                             contacts = remainingContacts
                         ),
-                    memberKeys = epochCoordinator.createMemberKeys(groupId, nextEpoch, remainingContacts),
-                    recipients = epochCoordinator.createRecipients(groupId, remainingContacts),
+                    memberKeys = epochDataSource.createMemberKeys(groupId, nextEpoch, remainingContacts),
+                    recipients = epochDataSource.createRecipients(groupId, remainingContacts),
                     localSigningKeyPair = localSigningKeyPair,
                     membershipChange = membershipChange
                 ).getOrThrow()
@@ -312,7 +312,7 @@ class GroupMemberRemovalCoordinator(
     private data class MemberRemovalDto(
         val currentMemberKey: GroupMemberKeyEntity?,
         val membership: GroupMembershipEntity?,
-        val contact: Contact,
+        val contact: GroupMembershipPeerDto,
         val signingPublicKey: ByteArray,
         val removedAt: Long,
         val referenceId: String

@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.membership.data.coordinator
+package com.cbgm.sparrow.feature.membership.data.datasource
 
 import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentityProvider
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair
@@ -9,42 +9,42 @@ import com.cbgm.sparrow.core.protocol.packet.GroupMemberPayload
 import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
 import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
-import com.cbgm.sparrow.feature.membership.data.GroupMembershipIdentity
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipBroadcastDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipConversationDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipMessageDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipPeerDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtocolDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipStoreDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipVerificationDataSource
 import com.cbgm.sparrow.feature.membership.data.groupMembershipDisplayName
 import com.cbgm.sparrow.feature.membership.data.hasMutualGroupIdentity
 import com.cbgm.sparrow.feature.membership.data.model.CreatedGroupSecurityDto
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_MEMBER_ROLE
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPeerDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.data.requireGroupPhoneNumber
 
 @Suppress("LongParameterList")
-class GroupMembershipActivationCoordinator(
-    private val chatDao: ChatDao,
-    private val groupMembershipDao: GroupMembershipDao,
+class GroupMembershipActivationDataSource(
+    private val conversationDataSource: GroupMembershipConversationDataSource,
+    private val membershipStore: GroupMembershipStoreDataSource,
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
     private val membershipPacketProtocol: GroupMembershipProtocolDataSource,
     private val groupSecurityManager: GroupMembershipSecurityDataSource,
-    private val groupVerificationCoordinator: GroupMembershipVerificationDataSource,
+    private val verificationDataSource: GroupMembershipVerificationDataSource,
     private val membershipLock: GroupMembershipLock,
-    private val identity: GroupMembershipIdentity,
-    private val epochCoordinator: GroupEpochCoordinator,
+    private val peerDataSource: GroupMembershipPeerDataSource,
+    private val epochDataSource: GroupEpochDataSource,
     private val packetBroadcaster: GroupMembershipBroadcastDataSource,
     private val membershipMessageDataSource: GroupMembershipMessageDataSource
 ) {
@@ -55,7 +55,7 @@ class GroupMembershipActivationCoordinator(
     ): Result<Unit> =
         runCatching {
             membershipLock.withLock {
-                val membership = groupMembershipDao.findByGroupAndContact(packet.groupId, memberContactId)
+                val membership = membershipStore.findByGroupAndContact(packet.groupId, memberContactId)
                 validateReadyAcknowledgement(memberContactId, packet, membership)
                 if (!shouldActivateReadyMember(memberContactId, packet.groupId, membership)) {
                     return@withLock
@@ -78,7 +78,7 @@ class GroupMembershipActivationCoordinator(
         val expectedSigningPublicKey =
             currentMemberKey(packet.groupId, memberContactId)
                 ?.signingPublicKey
-                ?: identity.requireContact(memberContactId).sparrowIdentity?.signingPublicKey
+                ?: peerDataSource.requirePeer(memberContactId).signingPublicKey
                 ?: error("Group member signing identity was not found")
         val expectedWelcomePacketId =
             groupSecurityManager.welcomePacketId(
@@ -124,7 +124,7 @@ class GroupMembershipActivationCoordinator(
         membership: GroupMembershipEntity,
         receivedAt: Long
     ) {
-        val activatedContact = identity.requireContact(memberContactId)
+        val activatedContact = peerDataSource.requirePeer(memberContactId)
         val activationTimestamp = maxOf(membership.createdAtEpochMilliseconds, receivedAt)
         sendActivationPackets(
             memberContactId = memberContactId,
@@ -135,19 +135,19 @@ class GroupMembershipActivationCoordinator(
         markMemberActive(membership, activationTimestamp)
         persistActiveParticipant(packet.groupId, memberContactId, activationTimestamp)
         recordMemberAddedIfNeeded(packet, membership, activatedContact, activationTimestamp)
-        groupVerificationCoordinator.onOwnedMembershipChanged(packet.groupId).getOrThrow()
+        verificationDataSource.onOwnedMembershipChanged(packet.groupId).getOrThrow()
     }
 
     private suspend fun sendActivationPackets(
         memberContactId: String,
         packet: GroupReadyAcknowledgementPacket,
-        activatedContact: Contact,
+        activatedContact: GroupMembershipPeerDto,
         activationTimestamp: Long
     ) {
         val adminSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
         val packetsByContactId = linkedMapOf<String, GroupMemberActivatedPacket>()
 
-        epochCoordinator
+        epochDataSource
             .loadCurrentParticipantContacts(packet.groupId)
             .filterNot { contact -> contact.id == memberContactId }
             .forEach { activeContact ->
@@ -184,7 +184,7 @@ class GroupMembershipActivationCoordinator(
         activationTimestamp: Long
     ) {
         val updated =
-            groupMembershipDao.updateStatus(
+            membershipStore.updateStatus(
                 membershipId = membership.membershipId,
                 expectedStatus = GroupMembershipStatus.WELCOME_SENT.name,
                 newStatus =
@@ -202,7 +202,7 @@ class GroupMembershipActivationCoordinator(
         memberContactId: String,
         joinedAt: Long
     ) {
-        chatDao.upsertConversationParticipant(
+        conversationDataSource.upsertConversationParticipant(
             ConversationParticipantEntity(
                 conversationId = groupId,
                 contactId = memberContactId,
@@ -215,10 +215,10 @@ class GroupMembershipActivationCoordinator(
     private suspend fun recordMemberAddedIfNeeded(
         packet: GroupReadyAcknowledgementPacket,
         membership: GroupMembershipEntity,
-        contact: Contact,
+        contact: GroupMembershipPeerDto,
         createdAt: Long
     ) {
-        chatDao.upsertMessage(
+        conversationDataSource.upsertMessage(
             membershipMessageDataSource.memberAdded(
                 conversationId = packet.groupId,
                 epoch = packet.epoch,
@@ -228,14 +228,14 @@ class GroupMembershipActivationCoordinator(
                 eventId = membership.sourceInvitationId
             )
         )
-        chatDao.updateConversationTimestamp(packet.groupId, createdAt)
+        conversationDataSource.updateConversationTimestamp(packet.groupId, createdAt)
     }
 
     suspend fun activateGroupIfReady(groupId: String): Result<Unit> =
         runCatching {
             membershipLock.withLock {
                 val readyMemberships =
-                    groupMembershipDao
+                    membershipStore
                         .findByGroupId(groupId)
                         .filter { membership -> membership.status == GroupMembershipStatus.IDENTITY_READY.name }
                         .sortedBy(GroupMembershipEntity::sourceInvitationId)
@@ -260,7 +260,7 @@ class GroupMembershipActivationCoordinator(
     ): Result<Unit> =
         runCatching {
             membershipLock.withLock {
-                val participants = epochCoordinator.findCurrentParticipants(packet.groupId)
+                val participants = epochDataSource.findCurrentParticipants(packet.groupId)
                 val acknowledgingParticipant =
                     participants.firstOrNull { participant -> participant.contactId == acknowledgingContactId }
                         ?: error("Acknowledging group member was not found")
@@ -270,13 +270,13 @@ class GroupMembershipActivationCoordinator(
                             ?.signingPublicKey
                             ?.contentEquals(packet.activatedMemberSigningPublicKey) == true
                     } ?: error("Activated group member was not found")
-                val activatedContact = identity.requireContact(activatedParticipant.contactId)
+                val activatedContact = peerDataSource.requirePeer(activatedParticipant.contactId)
                 check(activatedContact.id != acknowledgingContactId) {
                     "A group member cannot acknowledge its own activation"
                 }
 
                 val adminSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
-                val acknowledgingContact = identity.requireContact(acknowledgingParticipant.contactId)
+                val acknowledgingContact = peerDataSource.requirePeer(acknowledgingParticipant.contactId)
                 val acknowledgedAt = packet.acknowledgedAtEpochMilliseconds
 
                 when (packet.activationRound) {
@@ -337,9 +337,9 @@ class GroupMembershipActivationCoordinator(
         membership: GroupMembershipEntity
     ) {
         val conversation =
-            chatDao.findConversationById(groupId)
+            conversationDataSource.findConversationById(groupId)
                 ?: error("Pending group was not found")
-        val contact = identity.requireContact(membership.contactId)
+        val contact = peerDataSource.requirePeer(membership.contactId)
         check(contact.hasMutualGroupIdentity()) {
             "Group member identity is not ready: ${contact.id}"
         }
@@ -363,11 +363,11 @@ class GroupMembershipActivationCoordinator(
 
     private suspend fun loadGroupKeyDistributionMembers(
         groupId: String,
-        newMember: Contact
-    ): List<Contact> =
-        (epochCoordinator.loadCurrentParticipantContacts(groupId) + newMember)
-            .distinctBy(Contact::id)
-            .sortedBy(Contact::id)
+        newMember: GroupMembershipPeerDto
+    ): List<GroupMembershipPeerDto> =
+        (epochDataSource.loadCurrentParticipantContacts(groupId) + newMember)
+            .distinctBy(GroupMembershipPeerDto::id)
+            .sortedBy(GroupMembershipPeerDto::id)
 
     private suspend fun memberRoleOverrides(
         groupId: String,
@@ -384,7 +384,7 @@ class GroupMembershipActivationCoordinator(
     private suspend fun createWelcomePackets(
         groupId: String,
         conversation: ConversationEntity,
-        members: List<Contact>,
+        members: List<GroupMembershipPeerDto>,
         roleOverrides: Map<String, String>
     ): CreatedGroupSecurityDto {
         val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
@@ -393,15 +393,15 @@ class GroupMembershipActivationCoordinator(
         val currentEpoch = groupSecurityManager.findOwnedGroupEpoch(groupId).getOrThrow()
         val targetEpoch = currentEpoch?.plus(1) ?: INITIAL_GROUP_EPOCH
         val memberPayloads =
-            epochCoordinator.createMemberPayloads(
+            epochDataSource.createMemberPayloads(
                 groupId = groupId,
                 localIdentity = localIdentity,
                 localPhoneNumber = localPhoneNumber,
                 contacts = members,
                 roleOverrides = roleOverrides
             )
-        val memberKeys = epochCoordinator.createMemberKeys(groupId, targetEpoch, members, roleOverrides)
-        val recipients = epochCoordinator.createRecipients(groupId, members)
+        val memberKeys = epochDataSource.createMemberKeys(groupId, targetEpoch, members, roleOverrides)
+        val recipients = epochDataSource.createRecipients(groupId, members)
         val title = requireNotNull(conversation.title)
 
         return if (currentEpoch == null) {
@@ -436,7 +436,7 @@ class GroupMembershipActivationCoordinator(
 
     private suspend fun markWelcomeSent(membership: GroupMembershipEntity) {
         val updated =
-            groupMembershipDao.updateStatus(
+            membershipStore.updateStatus(
                 membershipId = membership.membershipId,
                 expectedStatus = GroupMembershipStatus.IDENTITY_READY.name,
                 newStatus =
@@ -460,7 +460,7 @@ class GroupMembershipActivationCoordinator(
         activationId: String,
         activatedAtEpochMilliseconds: Long,
         activationRound: Int,
-        memberContact: Contact,
+        memberContact: GroupMembershipPeerDto,
         recipientContactId: String,
         ownerSigningKeyPair: LocalSigningKeyPair
     ): GroupMemberActivatedPacket {

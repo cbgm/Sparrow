@@ -1,29 +1,29 @@
-package com.cbgm.sparrow.feature.membership.data.coordinator
+package com.cbgm.sparrow.feature.membership.data.datasource
 
 import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentityProvider
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
-import com.cbgm.sparrow.feature.membership.data.GroupMembershipIdentity
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipBroadcastDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipConversationDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipPeerDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipVerificationDataSource
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_ADMIN_ROLE
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPeerDto
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 
-class GroupMemberPromotionCoordinator(
-    private val chatDao: ChatDao,
+internal class GroupMemberPromotionDataSource(
+    private val conversationDataSource: GroupMembershipConversationDataSource,
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
     private val groupSecurityManager: GroupMembershipSecurityDataSource,
-    private val groupVerificationCoordinator: GroupMembershipVerificationDataSource,
+    private val verificationDataSource: GroupMembershipVerificationDataSource,
     private val membershipLock: GroupMembershipLock,
-    private val identity: GroupMembershipIdentity,
-    private val epochCoordinator: GroupEpochCoordinator,
+    private val peerDataSource: GroupMembershipPeerDataSource,
+    private val epochDataSource: GroupEpochDataSource,
     private val packetBroadcaster: GroupMembershipBroadcastDataSource
 ) {
     suspend fun promoteMember(
@@ -42,11 +42,11 @@ class GroupMemberPromotionCoordinator(
         groupId: String,
         contactId: String
     ) {
-        val conversation = chatDao.findConversationById(groupId) ?: error("Group conversation was not found")
+        val conversation = conversationDataSource.findConversationById(groupId) ?: error("Group conversation was not found")
         val currentEpoch =
             groupSecurityManager.findOwnedGroupEpoch(groupId).getOrThrow()
                 ?: error("Active group security state was not found")
-        val participants = epochCoordinator.findCurrentParticipants(groupId)
+        val participants = epochDataSource.findCurrentParticipants(groupId)
         val target =
             participants.firstOrNull { participant -> participant.contactId == contactId }
                 ?: error("Only an active group member can be promoted")
@@ -54,8 +54,8 @@ class GroupMemberPromotionCoordinator(
 
         val contacts =
             participants
-                .map { participant -> identity.requireContact(participant.contactId) }
-                .sortedBy(Contact::id)
+                .map { participant -> peerDataSource.requirePeer(participant.contactId) }
+                .sortedBy(GroupMembershipPeerDto::id)
         requireCurrentMemberKey(groupId, contactId)
 
         val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
@@ -71,24 +71,24 @@ class GroupMemberPromotionCoordinator(
                     createdAtEpochMilliseconds = conversation.createdAtEpochMilliseconds,
                     updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
                     memberPayloads =
-                        epochCoordinator.createMemberPayloads(
+                        epochDataSource.createMemberPayloads(
                             groupId = groupId,
                             localIdentity = localIdentity,
                             localPhoneNumber = localPhoneNumber,
                             contacts = contacts,
                             roleOverrides = roleOverrides
                         ),
-                    memberKeys = epochCoordinator.createMemberKeys(groupId, nextEpoch, contacts, roleOverrides),
-                    recipients = epochCoordinator.createRecipients(groupId, contacts),
+                    memberKeys = epochDataSource.createMemberKeys(groupId, nextEpoch, contacts, roleOverrides),
+                    recipients = epochDataSource.createRecipients(groupId, contacts),
                     localSigningKeyPair = localSigningKeyPair
                 ).getOrThrow()
 
         packetBroadcaster.enqueueAll(securedGroup.welcomePacketsByContactId).getOrThrow()
-        check(chatDao.updateConversationParticipantRole(groupId, contactId, GROUP_ADMIN_ROLE) == 1) {
+        check(conversationDataSource.updateConversationParticipantRole(groupId, contactId, GROUP_ADMIN_ROLE) == 1) {
             "Promoted group member disappeared while the new epoch was created"
         }
-        groupVerificationCoordinator.onOwnedMembershipChanged(groupId).getOrThrow()
-        chatDao.updateConversationTimestamp(groupId, SystemClock.nowEpochMilliseconds())
+        verificationDataSource.onOwnedMembershipChanged(groupId).getOrThrow()
+        conversationDataSource.updateConversationTimestamp(groupId, SystemClock.nowEpochMilliseconds())
     }
 
     private suspend fun requireCurrentMemberKey(

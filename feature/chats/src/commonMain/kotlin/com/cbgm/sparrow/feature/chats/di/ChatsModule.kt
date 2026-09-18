@@ -25,6 +25,7 @@ import com.cbgm.sparrow.feature.chats.data.group.avatar.GroupAvatarPacketProtoco
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupAvatarDataSource
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupDescriptionDataSource
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupLocalCleanupDataSource
+import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupMembershipConversationDataSourceImpl
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupPinDataSource
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupTitleDataSource
 import com.cbgm.sparrow.feature.chats.data.group.delivery.GroupMessageDeliveryCoordinator
@@ -164,6 +165,7 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUs
 import com.cbgm.sparrow.feature.conversationorchestration.domain.port.ConversationPort
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipBroadcastDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipCleanupDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipConversationDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipMessageDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtocolDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
@@ -237,6 +239,7 @@ private fun org.koin.core.module.Module.registerGroupData() {
     singleOf(::GroupOutgoingMessageProcessor)
     singleOf(::GroupPacketBroadcaster) { bind<GroupMembershipBroadcastDataSource>() }
     singleOf(::GroupLocalCleanupDataSource) { bind<GroupMembershipCleanupDataSource>() }
+    singleOf(::GroupMembershipConversationDataSourceImpl) { bind<GroupMembershipConversationDataSource>() }
     single<GroupMembershipMessageDataSource> { GroupMembershipMessageFactory }
     singleOf(::GroupWelcomeMembershipResolver)
     singleOf(::GroupWelcomePersistence)

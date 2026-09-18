@@ -1,29 +1,43 @@
 package com.cbgm.sparrow.feature.membership.data.repository
 
-import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
-import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMembershipCoordinator
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipAttemptDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipLifecycleDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipStoreDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupSecurityStoreDataSource
+import com.cbgm.sparrow.feature.membership.data.mapper.toDomain
+import com.cbgm.sparrow.feature.membership.data.mapper.toMembershipResult
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_LEFT_ROLE
+import com.cbgm.sparrow.feature.membership.data.model.GroupLeaveRequirementDto
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
+import com.cbgm.sparrow.feature.membership.domain.model.MembershipResult
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transformLatest
 
-class GroupMembershipRepositoryImpl(
-    private val groupSecurityDao: GroupSecurityDao,
-    private val membershipCoordinator: GroupMembershipCoordinator,
+internal class GroupMembershipRepositoryImpl(
+    private val membershipStore: GroupMembershipStoreDataSource,
+    private val securityStore: GroupSecurityStoreDataSource,
+    private val operations: GroupMembershipLifecycleDataSource,
     private val membershipAttempts: GroupMembershipAttemptDataSource
 ) : GroupMembershipRepository {
+    override fun observeMembershipResults(): Flow<List<MembershipResult>> =
+        membershipStore
+            .observeAll()
+            .map { memberships -> memberships.map { membership -> membership.toMembershipResult() } }
+            .distinctUntilChanged()
+
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeAdministration(groupId: String): Flow<GroupAdministrationState> =
         combine(
-            groupSecurityDao.observeState(groupId),
-            groupSecurityDao.observeCurrentMemberKeys(groupId)
+            securityStore.observeState(groupId),
+            securityStore.observeCurrentMemberKeys(groupId)
         ) { securityState, memberKeys ->
             securityState to memberKeys
         }.transformLatest { (securityState, memberKeys) ->
@@ -55,7 +69,7 @@ class GroupMembershipRepositoryImpl(
                             contactId !in currentAdmins
                         },
                     requiresPromotionBeforeLeave =
-                        leaveRequirement is GroupLeaveRequirement.PromoteAdminFirst,
+                        leaveRequirement is GroupLeaveRequirementDto.PromoteAdminFirst,
                     activeMemberCount = currentMembers.size + 1
                 )
             )
@@ -67,24 +81,24 @@ class GroupMembershipRepositoryImpl(
     override suspend fun removeMember(
         groupId: String,
         contactId: String
-    ): Result<Unit> = membershipCoordinator.removeMember(groupId, contactId)
+    ): Result<Unit> = operations.removeMember(groupId, contactId)
 
     override suspend fun promoteMember(
         groupId: String,
         contactId: String
-    ): Result<Unit> = membershipCoordinator.promoteMember(groupId, contactId)
+    ): Result<Unit> = operations.promoteMember(groupId, contactId)
 
     override suspend fun transferAdminAndLeave(
         groupId: String,
         contactId: String
-    ): Result<Unit> = membershipCoordinator.transferAdminAndLeave(groupId, contactId)
+    ): Result<Unit> = operations.transferAdminAndLeave(groupId, contactId)
 
     override suspend fun getLeaveRequirement(groupId: String): Result<GroupLeaveRequirement> =
-        membershipCoordinator.getLeaveRequirement(groupId)
+        operations.getLeaveRequirement(groupId).map { requirement -> requirement.toDomain() }
 
     override suspend fun leave(groupId: String): Result<Unit> =
-        membershipCoordinator.leaveGroup(groupId)
+        operations.leaveGroup(groupId)
 
     override suspend fun delete(groupId: String): Result<Unit> =
-        membershipCoordinator.deleteGroupConversation(groupId)
+        operations.deleteGroupConversation(groupId)
 }

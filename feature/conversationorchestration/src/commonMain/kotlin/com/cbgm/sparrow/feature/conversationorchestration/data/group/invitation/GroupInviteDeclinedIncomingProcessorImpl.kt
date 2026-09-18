@@ -2,17 +2,17 @@ package com.cbgm.sparrow.feature.conversationorchestration.data.group.invitation
 
 import com.cbgm.sparrow.core.protocol.packet.GroupInviteDeclinedPacket
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
-import com.cbgm.sparrow.feature.membership.data.GroupMembershipIdentity
-import com.cbgm.sparrow.feature.membership.data.coordinator.GroupMembershipAdministrationCoordinator
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipAdministrationDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipAttemptDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipPeerDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtocolDataSource
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 
 internal class GroupInviteDeclinedIncomingProcessorImpl(
     private val membershipPacketProtocol: GroupMembershipProtocolDataSource,
     private val membershipAttempts: GroupMembershipAttemptDataSource,
-    private val identity: GroupMembershipIdentity,
-    private val administration: GroupMembershipAdministrationCoordinator
+    private val peerDataSource: GroupMembershipPeerDataSource,
+    private val administration: GroupMembershipAdministrationDataSource
 ) {
     suspend fun process(
         memberContactId: String,
@@ -27,7 +27,7 @@ internal class GroupInviteDeclinedIncomingProcessorImpl(
             check(membership.contactId == memberContactId) { "Decline came from the wrong contact" }
             check(membership.challenge.contentEquals(packet.challenge)) { "Decline challenge does not match" }
             membershipPacketProtocol.verifyDecline(packet).getOrThrow()
-            identity.ensureSigningIdentityMatches(memberContactId, packet.memberSigningPublicKey)
+            peerDataSource.ensureSigningIdentityMatches(memberContactId, packet.memberSigningPublicKey)
 
             if (
                 membership.status == GroupMembershipStatus.WELCOME_SENT ||

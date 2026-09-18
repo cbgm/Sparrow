@@ -2,9 +2,12 @@ package com.cbgm.sparrow.feature.membership.domain.repository
 
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
+import com.cbgm.sparrow.feature.membership.domain.model.MembershipResult
 import kotlinx.coroutines.flow.Flow
 
 interface GroupMembershipRepository {
+    fun observeMembershipResults(): Flow<List<MembershipResult>>
+
     fun observeAdministration(groupId: String): Flow<GroupAdministrationState>
 
     suspend fun initializeOwnedGroup(groupId: String): Result<Unit>

@@ -15,6 +15,18 @@ class ContactKeyExchangeDataSource(
     private val mailboxCapabilityLifecycle: MailboxCapabilityLifecycle =
         NoOpMailboxCapabilityLifecycle
 ) {
+    suspend fun storeRemoteHandshakeIdentity(
+        contactId: String,
+        encryptionPublicKey: ByteArray,
+        signingPublicKey: ByteArray
+    ): Boolean =
+        storeRemoteIdentity(
+            contactId = contactId,
+            encryptionPublicKey = encryptionPublicKey,
+            signingPublicKey = signingPublicKey,
+            origin = RemoteIdentityOrigin.REMOTE_HANDSHAKE
+        ).identityChanged
+
     suspend fun storeRemoteIdentity(
         contactId: String,
         encryptionPublicKey: ByteArray,

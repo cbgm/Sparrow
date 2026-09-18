@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.membership.data
 
 import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
+import com.cbgm.sparrow.feature.membership.data.model.GroupConversationStateDto
+import com.cbgm.sparrow.feature.membership.data.model.GroupLeaveRequirementDto
+import com.cbgm.sparrow.feature.membership.data.model.GroupMemberProgressStatusDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
-import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationState
-import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
-import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberProgressStatus
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -17,11 +17,11 @@ class GroupMembershipStateMachineTest {
         val joining = listOf(membership(GroupMembershipStatus.JOIN_REQUEST_SENT))
 
         assertEquals(
-            GroupConversationState.WAITING_FOR_MEMBERS,
+            GroupConversationStateDto.WAITING_FOR_MEMBERS,
             GroupMembershipStateMachine.conversationState(staged)
         )
         assertEquals(
-            GroupConversationState.JOINING,
+            GroupConversationStateDto.JOINING,
             GroupMembershipStateMachine.conversationState(joining)
         )
     }
@@ -41,11 +41,11 @@ class GroupMembershipStateMachineTest {
             )
 
         assertEquals(
-            GroupConversationState.READY,
+            GroupConversationStateDto.READY,
             GroupMembershipStateMachine.conversationState(partiallyActive)
         )
         assertEquals(
-            GroupConversationState.READY,
+            GroupConversationStateDto.READY,
             GroupMembershipStateMachine.conversationState(fullyActive)
         )
     }
@@ -59,7 +59,7 @@ class GroupMembershipStateMachineTest {
             )
 
         assertEquals(
-            GroupConversationState.READY,
+            GroupConversationStateDto.READY,
             GroupMembershipStateMachine.conversationState(memberships)
         )
         assertEquals(
@@ -73,14 +73,14 @@ class GroupMembershipStateMachineTest {
         val removed = listOf(membership(GroupMembershipStatus.REMOVED))
 
         assertEquals(
-            GroupConversationState.REMOVED,
+            GroupConversationStateDto.REMOVED,
             GroupMembershipStateMachine.conversationState(
                 memberships = removed,
                 isLocallyInactive = true
             )
         )
         assertEquals(
-            GroupConversationState.READY,
+            GroupConversationStateDto.READY,
             GroupMembershipStateMachine.conversationState(
                 memberships = removed,
                 isLocallyInactive = false
@@ -98,7 +98,7 @@ class GroupMembershipStateMachineTest {
             )
 
         assertEquals(
-            GroupLeaveRequirement.PromoteAdminFirst(setOf("member-1", "member-2")),
+            GroupLeaveRequirementDto.PromoteAdminFirst(setOf("member-1", "member-2")),
             requirement
         )
     }
@@ -106,7 +106,7 @@ class GroupMembershipStateMachineTest {
     @Test
     fun adminCanLeaveWhenAnotherAdminRemainsOrGroupIsEmpty() {
         assertEquals(
-            GroupLeaveRequirement.CanLeave,
+            GroupLeaveRequirementDto.CanLeave,
             GroupMembershipStateMachine.leaveRequirement(
                 isLocalAdmin = true,
                 currentMemberContactIds = setOf("admin-2"),
@@ -114,7 +114,7 @@ class GroupMembershipStateMachineTest {
             )
         )
         assertEquals(
-            GroupLeaveRequirement.CanLeave,
+            GroupLeaveRequirementDto.CanLeave,
             GroupMembershipStateMachine.leaveRequirement(
                 isLocalAdmin = true,
                 currentMemberContactIds = emptySet(),
@@ -128,7 +128,7 @@ class GroupMembershipStateMachineTest {
         val leaving = listOf(membership(GroupMembershipStatus.LEAVE_REQUESTED))
 
         assertEquals(
-            GroupConversationState.LEAVING,
+            GroupConversationStateDto.LEAVING,
             GroupMembershipStateMachine.conversationState(leaving)
         )
     }
@@ -138,7 +138,7 @@ class GroupMembershipStateMachineTest {
         val deleted = listOf(membership(GroupMembershipStatus.GROUP_DELETED))
 
         assertEquals(
-            GroupConversationState.DELETED,
+            GroupConversationStateDto.DELETED,
             GroupMembershipStateMachine.conversationState(deleted)
         )
         assertEquals(emptyList(), GroupMembershipStateMachine.memberProgress(deleted))
@@ -198,7 +198,7 @@ class GroupMembershipStateMachineTest {
             )
 
         assertEquals(1, states.size)
-        assertEquals(GroupMemberProgressStatus.PENDING, states.single().status)
+        assertEquals(GroupMemberProgressStatusDto.PENDING, states.single().status)
     }
 
     @Test

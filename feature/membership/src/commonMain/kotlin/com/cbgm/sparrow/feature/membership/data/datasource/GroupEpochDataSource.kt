@@ -1,32 +1,32 @@
-package com.cbgm.sparrow.feature.membership.data.coordinator
+package com.cbgm.sparrow.feature.membership.data.datasource
 
 import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentity
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberPayload
-import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
-import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
-import com.cbgm.sparrow.feature.membership.data.GroupMembershipIdentity
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipConversationDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipPeerDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipStoreDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupSecurityStoreDataSource
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_MEMBER_ROLE
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_OWNER_ROLE
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPeerDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupWelcomeRecipientDto
 import com.cbgm.sparrow.feature.membership.data.requireGroupPhoneNumber
 
-class GroupEpochCoordinator(
-    private val chatDao: ChatDao,
-    private val groupMembershipDao: GroupMembershipDao,
-    private val groupSecurityDao: GroupSecurityDao,
+internal class GroupEpochDataSource(
+    private val conversationDataSource: GroupMembershipConversationDataSource,
+    private val membershipStore: GroupMembershipStoreDataSource,
+    private val securityStore: GroupSecurityStoreDataSource,
     private val groupSecurityManager: GroupMembershipSecurityDataSource,
-    private val identity: GroupMembershipIdentity
+    private val peerDataSource: GroupMembershipPeerDataSource
 ) {
     suspend fun findCurrentParticipants(groupId: String): List<ConversationParticipantEntity> {
-        val state = groupSecurityDao.findState(groupId) ?: return emptyList()
+        val state = securityStore.findState(groupId) ?: return emptyList()
         val existingByContactId =
-            chatDao.findConversationParticipants(groupId).associateBy(ConversationParticipantEntity::contactId)
-        return groupSecurityDao
+            conversationDataSource.findConversationParticipants(groupId).associateBy(ConversationParticipantEntity::contactId)
+        return securityStore
             .findMemberKeys(groupId, state.currentEpoch)
             .map { memberKey ->
                 existingByContactId[memberKey.contactId]
@@ -40,15 +40,15 @@ class GroupEpochCoordinator(
             }
     }
 
-    suspend fun loadCurrentParticipantContacts(groupId: String): List<Contact> =
+    suspend fun loadCurrentParticipantContacts(groupId: String): List<GroupMembershipPeerDto> =
         findCurrentParticipants(groupId)
-            .map { participant -> identity.requireContact(participant.contactId) }
+            .map { participant -> peerDataSource.requirePeer(participant.contactId) }
 
     suspend fun createMemberPayloads(
         groupId: String,
         localIdentity: LocalPublicIdentity,
         localPhoneNumber: String,
-        contacts: List<Contact>,
+        contacts: List<GroupMembershipPeerDto>,
         roleOverrides: Map<String, String> = emptyMap()
     ): List<GroupMemberPayload> {
         val localRole =
@@ -83,7 +83,7 @@ class GroupEpochCoordinator(
     suspend fun createMemberKeys(
         groupId: String,
         epoch: Int,
-        contacts: List<Contact>,
+        contacts: List<GroupMembershipPeerDto>,
         roleOverrides: Map<String, String> = emptyMap()
     ): List<GroupMemberKeyEntity> =
         contacts.map { contact ->
@@ -100,10 +100,10 @@ class GroupEpochCoordinator(
 
     suspend fun createRecipients(
         groupId: String,
-        contacts: List<Contact>
+        contacts: List<GroupMembershipPeerDto>
     ): List<GroupWelcomeRecipientDto> =
         contacts.map { contact ->
-            val membership = groupMembershipDao.findByGroupAndContact(groupId, contact.id)
+            val membership = membershipStore.findByGroupAndContact(groupId, contact.id)
             val member = resolveMemberIdentity(groupId, contact)
             GroupWelcomeRecipientDto(
                 contactId = contact.id,
@@ -114,7 +114,7 @@ class GroupEpochCoordinator(
 
     private suspend fun resolveMemberIdentity(
         groupId: String,
-        contact: Contact
+        contact: GroupMembershipPeerDto
     ): MemberIdentityDto {
         val currentMemberKey = currentMemberKey(groupId, contact.id)
         if (currentMemberKey != null) {
@@ -125,13 +125,17 @@ class GroupEpochCoordinator(
             )
         }
 
-        val contactIdentity =
-            requireNotNull(contact.sparrowIdentity) {
-                "New group member has no accepted Sparrow identity"
+        val encryptionPublicKey =
+            requireNotNull(contact.encryptionPublicKey) {
+                "New group member has no accepted Sparrow encryption identity"
+            }
+        val signingPublicKey =
+            requireNotNull(contact.signingPublicKey) {
+                "New group member has no accepted Sparrow signing identity"
             }
         return MemberIdentityDto(
-            encryptionPublicKey = contactIdentity.encryptionPublicKey,
-            signingPublicKey = contactIdentity.signingPublicKey,
+            encryptionPublicKey = encryptionPublicKey,
+            signingPublicKey = signingPublicKey,
             role = GROUP_MEMBER_ROLE
         )
     }
