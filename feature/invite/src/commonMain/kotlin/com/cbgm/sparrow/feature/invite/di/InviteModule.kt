@@ -1,19 +1,11 @@
 package com.cbgm.sparrow.feature.invite.di
 
 import com.cbgm.sparrow.core.protocol.handler.TypedProtocolPacketHandler
-import com.cbgm.sparrow.feature.invite.data.group.GroupInviteDeclinedIncomingProcessor
-import com.cbgm.sparrow.feature.invite.data.group.GroupInviteIncomingProcessor
-import com.cbgm.sparrow.feature.invite.data.group.GroupInviteReceivedIncomingProcessor
-import com.cbgm.sparrow.feature.invite.data.group.GroupJoinRequestIncomingProcessor
+import com.cbgm.sparrow.feature.invite.data.datasource.PersistentInvitationLifecycleDataSource
 import com.cbgm.sparrow.feature.invite.data.lifecycle.InvitationLifecycleEffects
-import com.cbgm.sparrow.feature.invite.data.lifecycle.PersistentInvitationLifecycleDataSource
 import com.cbgm.sparrow.feature.invite.data.outbox.InvitationOutboxDeliveryHandler
 import com.cbgm.sparrow.feature.invite.data.policy.InvitationPolicyImpl
 import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPayloadEncoder
-import com.cbgm.sparrow.feature.invite.data.protocol.handler.GroupInviteDeclinedPacketHandler
-import com.cbgm.sparrow.feature.invite.data.protocol.handler.GroupInvitePacketHandler
-import com.cbgm.sparrow.feature.invite.data.protocol.handler.GroupInviteReceivedPacketHandler
-import com.cbgm.sparrow.feature.invite.data.protocol.handler.GroupJoinRequestPacketHandler
 import com.cbgm.sparrow.feature.invite.data.protocol.handler.IncomingInvitationPacketHandler
 import com.cbgm.sparrow.feature.invite.data.protocol.handler.InvitationAcceptedPacketHandler
 import com.cbgm.sparrow.feature.invite.data.protocol.handler.InvitationDeclinedPacketHandler
@@ -49,10 +41,6 @@ import org.koin.dsl.module
 val inviteModule =
     module {
         singleOf(::InvitationPayloadEncoder)
-        singleOf(::GroupInviteIncomingProcessor)
-        singleOf(::GroupJoinRequestIncomingProcessor)
-        singleOf(::GroupInviteReceivedIncomingProcessor)
-        singleOf(::GroupInviteDeclinedIncomingProcessor)
         singleOf(::InvitationOutboxDeliveryHandler)
 
         single<InvitationRepository> {
@@ -118,19 +106,6 @@ val inviteModule =
                 deleteDeclinedOutgoingInvitation = get(),
                 markInvitationsViewed = get()
             )
-        }
-
-        singleOf(::GroupInvitePacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-        singleOf(::GroupInviteReceivedPacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-        singleOf(::GroupInviteDeclinedPacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-        singleOf(::GroupJoinRequestPacketHandler) {
-            bind<TypedProtocolPacketHandler>()
         }
 
         singleOf(::IncomingInvitationPacketHandler) {

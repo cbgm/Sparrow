@@ -40,7 +40,6 @@ internal class GroupCreatedIncomingProcessor(
             val previousMembership = welcomePersistence.loadPreviousMembership(packet.groupId)
             val persistedAt = maxOf(packet.createdAtEpochMilliseconds, context.receivedAtEpochMilliseconds)
 
-            welcomePersistence.persistConversation(packet, persistedAt)
             welcomePersistence.recordMembershipRestartIfNeeded(
                 packet = packet,
                 invitationId = localMembership?.sourceInvitationId,
@@ -66,6 +65,7 @@ internal class GroupCreatedIncomingProcessor(
             welcomePersistence.replaceMembership(packet, previousMembership, resolvedMembership, persistedAt)
             welcomeSecurityProcessor.sendReadyAcknowledgement(packet, context.contactId, welcome)
             advanceMembership(localMembership, isFirstWelcome, persistedAt)
+            welcomePersistence.persistConversation(packet, persistedAt)
         }
 
     private fun validateMembership(

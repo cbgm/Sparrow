@@ -1,9 +1,10 @@
-package com.cbgm.sparrow.feature.invite.data.lifecycle
+package com.cbgm.sparrow.feature.invite.data.datasource
 
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.InvitationDao
 import com.cbgm.sparrow.data.database.entity.InvitationEntity
+import com.cbgm.sparrow.feature.invite.data.lifecycle.InvitationLifecycleEffects
 import com.cbgm.sparrow.feature.invite.domain.model.Invitation
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationLifecycleRecord
@@ -29,8 +30,8 @@ internal class PersistentInvitationLifecycleDataSource(
     private val invitationDao: InvitationDao,
     private val effects: InvitationLifecycleEffects,
     private val peerMetadataProvider: InvitationPeerMetadataProvider
-) : InvitationLifecycleDataSource {
-    override val payloadType: InvitationPayloadType = effects.payloadType
+) {
+    val payloadType: InvitationPayloadType = effects.payloadType
 
     init {
         require(peerMetadataProvider.payloadType == payloadType) {
@@ -38,7 +39,7 @@ internal class PersistentInvitationLifecycleDataSource(
         }
     }
 
-    override fun observeInvitations(direction: InvitationDirection): Flow<List<Invitation>> =
+    fun observeInvitations(direction: InvitationDirection): Flow<List<Invitation>> =
         invitationDao
             .observeByPayloadTypeAndDirection(
                 payloadType = payloadType.name,
@@ -92,7 +93,7 @@ internal class PersistentInvitationLifecycleDataSource(
                 }
             }
 
-    override fun observeLifecycleStatus(
+    fun observeLifecycleStatus(
         payloadId: String,
         peerId: String,
         direction: InvitationDirection
@@ -107,7 +108,7 @@ internal class PersistentInvitationLifecycleDataSource(
                 invitation?.status?.toLifecycleStatus()
             }.distinctUntilChanged()
 
-    override fun observeInvitationResults(): Flow<List<InvitationResult>> =
+    fun observeInvitationResults(): Flow<List<InvitationResult>> =
         invitationDao
             .observeByPayloadType(payloadType.name)
             .map { invitations ->
@@ -132,10 +133,10 @@ internal class PersistentInvitationLifecycleDataSource(
                 }
             }.distinctUntilChanged()
 
-    override suspend fun contains(invitationId: String): Boolean =
+    suspend fun contains(invitationId: String): Boolean =
         invitationDao.findById(invitationId)?.payloadType == payloadType.name
 
-    override suspend fun shouldRecordPending(record: InvitationLifecycleRecord): Result<Boolean> =
+    suspend fun shouldRecordPending(record: InvitationLifecycleRecord): Result<Boolean> =
         safeSuspendCall {
             require(record.payloadType == payloadType) {
                 "Invitation payload type does not match $payloadType"
@@ -156,7 +157,7 @@ internal class PersistentInvitationLifecycleDataSource(
             latest == null || record.createdAtEpochMilliseconds > latest.createdAtEpochMilliseconds
         }
 
-    override suspend fun recordPending(record: InvitationLifecycleRecord): Result<Unit> =
+    suspend fun recordPending(record: InvitationLifecycleRecord): Result<Unit> =
         safeSuspendCall {
             require(record.payloadType == payloadType) {
                 "Invitation payload type does not match $payloadType"
@@ -164,7 +165,7 @@ internal class PersistentInvitationLifecycleDataSource(
             persistPending(record)
         }
 
-    override suspend fun validatePending(
+    suspend fun validatePending(
         invitationId: String,
         payloadId: String,
         peerId: String,
@@ -185,12 +186,12 @@ internal class PersistentInvitationLifecycleDataSource(
             }
         }
 
-    override suspend fun getPeerId(invitationId: String): Result<String> =
+    suspend fun getPeerId(invitationId: String): Result<String> =
         safeSuspendCall {
             requireInvitation(invitationId).peerId
         }
 
-    override suspend fun send(
+    suspend fun send(
         payloadId: String,
         peerIds: Set<String>
     ): Result<Unit> =
@@ -214,7 +215,7 @@ internal class PersistentInvitationLifecycleDataSource(
             }
         }
 
-    override suspend fun accept(invitationId: String): Result<Unit> =
+    suspend fun accept(invitationId: String): Result<Unit> =
         safeSuspendCall {
             val invitation = requireInvitation(invitationId)
             check(invitation.direction == InvitationDirection.INCOMING.name) {
@@ -243,7 +244,7 @@ internal class PersistentInvitationLifecycleDataSource(
             invitationDao.hideById(invitationId, now)
         }
 
-    override suspend fun decline(
+    suspend fun decline(
         invitationId: String,
         action: InvitationResultAction?
     ): Result<Unit> =
@@ -276,7 +277,7 @@ internal class PersistentInvitationLifecycleDataSource(
             invitationDao.hideById(invitationId, now)
         }
 
-    override suspend fun applyResponse(
+    suspend fun applyResponse(
         invitationId: String,
         response: InvitationResponse
     ): Result<Unit> =
@@ -317,7 +318,7 @@ internal class PersistentInvitationLifecycleDataSource(
             }
         }
 
-    override suspend fun markTransportFailed(invitationId: String): Result<Unit> =
+    suspend fun markTransportFailed(invitationId: String): Result<Unit> =
         safeSuspendCall {
             val invitation = invitationDao.findById(invitationId) ?: return@safeSuspendCall
             check(invitation.payloadType == payloadType.name) {
@@ -339,7 +340,7 @@ internal class PersistentInvitationLifecycleDataSource(
             }
         }
 
-    override suspend fun markViewed(direction: InvitationDirection): Result<Unit> =
+    suspend fun markViewed(direction: InvitationDirection): Result<Unit> =
         safeSuspendCall {
             invitationDao.markDirectionViewed(
                 payloadType = payloadType.name,
@@ -348,7 +349,7 @@ internal class PersistentInvitationLifecycleDataSource(
             )
         }
 
-    override suspend fun deleteDeclinedOutgoing(invitationId: String): Result<Unit> =
+    suspend fun deleteDeclinedOutgoing(invitationId: String): Result<Unit> =
         safeSuspendCall {
             val invitation = requireInvitation(invitationId)
             check(invitation.direction == InvitationDirection.OUTGOING.name) {

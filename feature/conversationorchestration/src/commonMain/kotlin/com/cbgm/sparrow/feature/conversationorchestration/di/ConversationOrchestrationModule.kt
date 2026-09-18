@@ -25,7 +25,6 @@ import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.Prepare
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.InvitationResultObserver
 import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
 import com.cbgm.sparrow.feature.invite.data.lifecycle.InvitationLifecycleEffects
-import com.cbgm.sparrow.feature.invite.data.protocol.GroupInvitationPacketProcessor
 import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPacketProcessor
 import com.cbgm.sparrow.feature.invite.domain.policy.InvitationPolicyProvider
 import com.cbgm.sparrow.feature.invite.domain.provider.InvitationPeerMetadataProvider

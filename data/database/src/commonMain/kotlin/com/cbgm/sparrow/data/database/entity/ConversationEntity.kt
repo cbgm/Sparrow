@@ -38,5 +38,7 @@ data class ConversationEntity(
     val createdAtEpochMilliseconds: Long,
     val updatedAtEpochMilliseconds: Long,
     @ColumnInfo(defaultValue = "0")
-    val unseenLocalMessageCount: Int = 0
+    val unseenLocalMessageCount: Int = 0,
+    @ColumnInfo(defaultValue = "1")
+    val isVisible: Boolean = true
 )

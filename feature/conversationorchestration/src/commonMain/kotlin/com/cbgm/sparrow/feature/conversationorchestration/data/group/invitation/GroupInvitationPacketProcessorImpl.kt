@@ -4,7 +4,6 @@ import com.cbgm.sparrow.core.protocol.packet.GroupInviteDeclinedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupInvitePacket
 import com.cbgm.sparrow.core.protocol.packet.GroupInviteReceivedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupJoinRequestPacket
-import com.cbgm.sparrow.feature.invite.data.protocol.GroupInvitationPacketProcessor
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
 
 internal class GroupInvitationPacketProcessorImpl(

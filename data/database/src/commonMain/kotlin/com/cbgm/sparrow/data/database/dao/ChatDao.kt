@@ -465,30 +465,7 @@ interface ChatDao {
         WHERE messages.conversationId = conversations.id
           AND messages.transportMode = :localDeletionTransportMode
     )
-      AND NOT EXISTS (
-        SELECT 1
-        FROM invitations AS invitation
-        WHERE conversations.type = 'GROUP'
-          AND invitation.invitationId = (
-              SELECT latest.invitationId
-              FROM invitations AS latest
-              WHERE latest.payloadType = 'GROUP'
-                AND latest.payloadId = conversations.id
-                AND latest.direction = 'INCOMING'
-              ORDER BY
-                  latest.updatedAtEpochMilliseconds DESC,
-                  latest.createdAtEpochMilliseconds DESC,
-                  latest.invitationId DESC
-              LIMIT 1
-          )
-          AND invitation.status IN ('PENDING', 'DECLINED', 'EXPIRED', 'FAILED')
-          AND NOT EXISTS (
-              SELECT 1
-              FROM messages AS existing_message
-              WHERE existing_message.conversationId = conversations.id
-                AND existing_message.transportMode != :localDeletionTransportMode
-          )
-    )
+      AND conversations.isVisible = 1
     ORDER BY conversations.updatedAtEpochMilliseconds DESC
     """
     )

@@ -78,7 +78,7 @@ import com.cbgm.sparrow.data.database.migration.IdentityExchangeMigration41To42
         RemoteMailboxRouteEntity::class,
         LinkPreviewEntity::class
     ],
-    version = 42,
+    version = 43,
     autoMigrations = [
         AutoMigration(from = 26, to = 27),
         AutoMigration(from = 27, to = 28),
@@ -94,7 +94,8 @@ import com.cbgm.sparrow.data.database.migration.IdentityExchangeMigration41To42
         AutoMigration(from = 37, to = 38),
         AutoMigration(from = 38, to = 39),
         AutoMigration(from = 39, to = 40),
-        AutoMigration(from = 41, to = 42, spec = IdentityExchangeMigration41To42::class)
+        AutoMigration(from = 41, to = 42, spec = IdentityExchangeMigration41To42::class),
+        AutoMigration(from = 42, to = 43)
     ],
     exportSchema = true
 )

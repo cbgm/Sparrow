@@ -48,7 +48,8 @@ internal class GroupWelcomePersistence(
                 type = GROUP_CONVERSATION_TYPE,
                 title = packet.title,
                 createdAtEpochMilliseconds = packet.createdAtEpochMilliseconds,
-                updatedAtEpochMilliseconds = persistedAt
+                updatedAtEpochMilliseconds = persistedAt,
+                isVisible = true
             )
         )
     }

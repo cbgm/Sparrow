@@ -110,6 +110,8 @@ internal class GroupInviteIncomingProcessorImpl(
         packet: GroupInvitePacket,
         persistedAt: Long
     ) {
+        val existingConversation = chatDao.findConversationById(packet.groupId)
+        val hasHistory = chatDao.hasMessages(packet.groupId)
         chatDao.upsertConversation(
             ConversationEntity(
                 id = packet.groupId,
@@ -117,7 +119,9 @@ internal class GroupInviteIncomingProcessorImpl(
                 type = GROUP_CONVERSATION_TYPE,
                 title = packet.title,
                 createdAtEpochMilliseconds = packet.createdAtEpochMilliseconds,
-                updatedAtEpochMilliseconds = persistedAt
+                updatedAtEpochMilliseconds = persistedAt,
+                unseenLocalMessageCount = existingConversation?.unseenLocalMessageCount ?: 0,
+                isVisible = existingConversation?.isVisible == true && hasHistory
             )
         )
         membershipAttempts
