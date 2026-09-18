@@ -3,36 +3,27 @@ package com.cbgm.sparrow.feature.membership.data.repository
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipAttemptDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipLifecycleDataSource
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipStoreDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupSecurityStoreDataSource
 import com.cbgm.sparrow.feature.membership.data.mapper.toDomain
-import com.cbgm.sparrow.feature.membership.data.mapper.toMembershipResult
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_LEFT_ROLE
 import com.cbgm.sparrow.feature.membership.data.model.GroupLeaveRequirementDto
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
-import com.cbgm.sparrow.feature.membership.domain.model.MembershipResult
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberPromotionResult
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberRemovalResult
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transformLatest
 
 internal class GroupMembershipRepositoryImpl(
-    private val membershipStore: GroupMembershipStoreDataSource,
     private val securityStore: GroupSecurityStoreDataSource,
     private val operations: GroupMembershipLifecycleDataSource,
     private val membershipAttempts: GroupMembershipAttemptDataSource
 ) : GroupMembershipRepository {
-    override fun observeMembershipResults(): Flow<List<MembershipResult>> =
-        membershipStore
-            .observeAll()
-            .map { memberships -> memberships.map { membership -> membership.toMembershipResult() } }
-            .distinctUntilChanged()
-
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeAdministration(groupId: String): Flow<GroupAdministrationState> =
         combine(
@@ -80,25 +71,56 @@ internal class GroupMembershipRepositoryImpl(
 
     override suspend fun removeMember(
         groupId: String,
-        contactId: String
-    ): Result<Unit> = operations.removeMember(groupId, contactId)
+        contactId: String,
+        context: GroupMembershipContext
+    ): Result<GroupMemberRemovalResult> = operations.removeMember(groupId, contactId, context)
 
     override suspend fun promoteMember(
         groupId: String,
-        contactId: String
-    ): Result<Unit> = operations.promoteMember(groupId, contactId)
+        contactId: String,
+        context: GroupMembershipContext
+    ): Result<GroupMemberPromotionResult> = operations.promoteMember(groupId, contactId, context)
 
     override suspend fun transferAdminAndLeave(
         groupId: String,
-        contactId: String
-    ): Result<Unit> = operations.transferAdminAndLeave(groupId, contactId)
+        contactId: String,
+        context: GroupMembershipContext
+    ): Result<Unit> = operations.transferAdminAndLeave(groupId, contactId, context)
 
     override suspend fun getLeaveRequirement(groupId: String): Result<GroupLeaveRequirement> =
-        operations.getLeaveRequirement(groupId).map { requirement -> requirement.toDomain() }
+        runCatching {
+            require(groupId.isNotBlank()) { "Group ID must not be blank" }
+            val securityState = securityStore.findState(groupId)
+            if (securityState == null || !securityState.localRole.isGroupAdminRole()) {
+                return@runCatching GroupLeaveRequirement.CanLeave
+            }
 
-    override suspend fun leave(groupId: String): Result<Unit> =
-        operations.leaveGroup(groupId)
+            val memberKeys =
+                securityStore.findMemberKeys(
+                    groupId = groupId,
+                    epoch = securityState.currentEpoch
+                )
+            val currentMembers = memberKeys.mapTo(mutableSetOf()) { memberKey -> memberKey.contactId }
+            val currentAdmins =
+                memberKeys
+                    .filter { memberKey -> memberKey.role.isGroupAdminRole() }
+                    .mapTo(mutableSetOf()) { memberKey -> memberKey.contactId }
 
-    override suspend fun delete(groupId: String): Result<Unit> =
-        operations.deleteGroupConversation(groupId)
+            GroupMembershipStateMachine
+                .leaveRequirement(
+                    isLocalAdmin = true,
+                    currentMemberContactIds = currentMembers,
+                    currentAdminContactIds = currentAdmins
+                ).toDomain()
+        }
+
+    override suspend fun leave(
+        groupId: String,
+        context: GroupMembershipContext
+    ): Result<Unit> = operations.leaveGroup(groupId, context)
+
+    override suspend fun delete(
+        groupId: String,
+        context: GroupMembershipContext
+    ): Result<Unit> = operations.deleteGroupConversation(groupId, context)
 }

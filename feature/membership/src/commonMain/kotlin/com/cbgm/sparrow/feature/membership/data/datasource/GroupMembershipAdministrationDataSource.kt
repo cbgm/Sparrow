@@ -1,41 +1,42 @@
 package com.cbgm.sparrow.feature.membership.data.datasource
 
 import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
-import com.cbgm.sparrow.feature.membership.data.model.GroupLeaveRequirementDto
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberPromotionResult
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberRemovalResult
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
 
-class GroupMembershipAdministrationDataSource(
+internal class GroupMembershipAdministrationDataSource(
     private val promotionDataSource: GroupMemberPromotionDataSource,
     private val removalDataSource: GroupMemberRemovalDataSource,
     private val leaveDataSource: GroupLeaveDataSource
 ) {
     suspend fun removeMember(
         groupId: String,
-        contactId: String
-    ): Result<Unit> = removalDataSource.removeMember(groupId, contactId)
-
-    suspend fun getLeaveRequirement(groupId: String): Result<GroupLeaveRequirementDto> =
-        leaveDataSource.getLeaveRequirement(groupId)
+        contactId: String,
+        context: GroupMembershipContext
+    ): Result<GroupMemberRemovalResult> = removalDataSource.removeMember(groupId, contactId, context)
 
     suspend fun promoteMember(
         groupId: String,
-        contactId: String
-    ): Result<Unit> = promotionDataSource.promoteMember(groupId, contactId)
+        contactId: String,
+        context: GroupMembershipContext
+    ): Result<GroupMemberPromotionResult> = promotionDataSource.promoteMember(groupId, contactId, context)
 
     suspend fun transferAdminAndLeave(
         groupId: String,
-        contactId: String
-    ): Result<Unit> = leaveDataSource.transferAdminAndLeave(groupId, contactId)
+        contactId: String,
+        context: GroupMembershipContext
+    ): Result<Unit> = leaveDataSource.transferAdminAndLeave(groupId, contactId, context)
 
-    suspend fun leaveGroup(groupId: String): Result<Unit> =
-        leaveDataSource.leaveGroup(groupId)
+    suspend fun leaveGroup(
+        groupId: String,
+        context: GroupMembershipContext
+    ): Result<Unit> = leaveDataSource.leaveGroup(groupId, context)
 
     suspend fun receiveLeaveRequest(
         memberContactId: String,
-        packet: GroupLeaveRequestPacket
-    ): Result<Unit> = removalDataSource.receiveLeaveRequest(memberContactId, packet)
-
-    suspend fun removeDepartingMember(
-        groupId: String,
-        contactId: String
-    ): Result<Unit> = removalDataSource.removeDepartingMember(groupId, contactId)
+        packet: GroupLeaveRequestPacket,
+        context: GroupMembershipContext
+    ): Result<GroupMemberRemovalResult> =
+        removalDataSource.receiveLeaveRequest(memberContactId, packet, context)
 }

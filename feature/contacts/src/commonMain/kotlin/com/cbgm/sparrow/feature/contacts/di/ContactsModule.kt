@@ -4,9 +4,7 @@ import com.cbgm.sparrow.core.protocol.handler.TypedProtocolPacketHandler
 import com.cbgm.sparrow.core.protocol.identity.LocalIdentityChangeHandler
 import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
 import com.cbgm.sparrow.feature.contacts.adapter.ContactLocalIdentityChangeHandler
-import com.cbgm.sparrow.feature.contacts.adapter.ContactReadyPacketHandler
 import com.cbgm.sparrow.feature.contacts.adapter.ContactVerificationReceiptPacketHandler
-import com.cbgm.sparrow.feature.contacts.adapter.DirectChatAuthorizationRevokedPacketHandler
 import com.cbgm.sparrow.feature.contacts.adapter.IdentityAcknowledgementPacketHandler
 import com.cbgm.sparrow.feature.contacts.adapter.IdentityPacketHandler
 import com.cbgm.sparrow.feature.contacts.data.datasource.ContactLocalDataSource
@@ -24,9 +22,7 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.BlockContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.EnsureIdentityExchangeStartedUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.HandleContactReadyPacketUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.HandleContactVerificationReceiptPacketUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.HandleDirectChatAuthorizationRevokedPacketUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.HandleIdentityAcknowledgementPacketUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.HandleIdentityPacketUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportContactUseCase
@@ -66,14 +62,6 @@ val contactsModule =
             ContactVerificationRepositoryImpl(dataSource = get())
         }
 
-        factory { HandleContactReadyPacketUseCase(directIdentityExchangeRepository = get()) }
-
-        factory {
-            HandleDirectChatAuthorizationRevokedPacketUseCase(
-                directIdentityExchangeRepository = get(),
-                mailboxCapabilityLifecycle = get()
-            )
-        }
         factory { HandleContactVerificationReceiptPacketUseCase(contactVerificationRepository = get()) }
         factory {
             HandleIdentityPacketUseCase(
@@ -93,14 +81,6 @@ val contactsModule =
                 identityAcknowledgementCrypto = get(),
                 contactVerificationRepository = get()
             )
-        }
-
-        singleOf(::ContactReadyPacketHandler) {
-            bind<TypedProtocolPacketHandler>()
-        }
-
-        singleOf(::DirectChatAuthorizationRevokedPacketHandler) {
-            bind<TypedProtocolPacketHandler>()
         }
 
         singleOf(::ContactVerificationReceiptPacketHandler) {

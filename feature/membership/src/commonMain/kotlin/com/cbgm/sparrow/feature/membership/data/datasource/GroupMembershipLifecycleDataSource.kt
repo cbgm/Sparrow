@@ -3,46 +3,64 @@ package com.cbgm.sparrow.feature.membership.data.datasource
 import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivationAcknowledgementPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
-import com.cbgm.sparrow.feature.membership.data.model.GroupLeaveRequirementDto
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberPromotionResult
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberRemovalResult
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
 
 /**
- * Public entry point for group membership lifecycle operations.
+ * Transitional facade for established group-membership lifecycle operations.
  *
- * The facade keeps packet handlers and repositories on one obvious red line while delegating the
- * actual activation, administration and deletion rules to focused data sources.
+ * Each branch is resolved only when that operation is actually used. This prevents the packet
+ * routing graph from eagerly constructing unrelated administration/deletion dependencies while
+ * those remaining cross-feature seams are being removed.
  */
-class GroupMembershipLifecycleDataSource(
-    private val activation: GroupMembershipActivationDataSource,
-    private val administration: GroupMembershipAdministrationDataSource,
-    private val deletion: GroupMembershipDeletionDataSource
+class GroupMembershipLifecycleDataSource internal constructor(
+    private val activationProvider: () -> GroupMembershipActivationDataSource,
+    private val administrationProvider: () -> GroupMembershipAdministrationDataSource,
+    private val deletionProvider: () -> GroupMembershipDeletionDataSource
 ) {
+    private val activation: GroupMembershipActivationDataSource
+        get() = activationProvider()
+
+    private val administration: GroupMembershipAdministrationDataSource
+        get() = administrationProvider()
+
+    private val deletion: GroupMembershipDeletionDataSource
+        get() = deletionProvider()
+
     suspend fun removeMember(
         groupId: String,
-        contactId: String
-    ): Result<Unit> = administration.removeMember(groupId, contactId)
-
-    suspend fun getLeaveRequirement(groupId: String): Result<GroupLeaveRequirementDto> =
-        administration.getLeaveRequirement(groupId)
+        contactId: String,
+        context: GroupMembershipContext
+    ): Result<GroupMemberRemovalResult> = administration.removeMember(groupId, contactId, context)
 
     suspend fun promoteMember(
         groupId: String,
-        contactId: String
-    ): Result<Unit> = administration.promoteMember(groupId, contactId)
+        contactId: String,
+        context: GroupMembershipContext
+    ): Result<GroupMemberPromotionResult> = administration.promoteMember(groupId, contactId, context)
 
     suspend fun transferAdminAndLeave(
         groupId: String,
-        contactId: String
-    ): Result<Unit> = administration.transferAdminAndLeave(groupId, contactId)
+        contactId: String,
+        context: GroupMembershipContext
+    ): Result<Unit> = administration.transferAdminAndLeave(groupId, contactId, context)
 
-    suspend fun leaveGroup(groupId: String): Result<Unit> = administration.leaveGroup(groupId)
+    suspend fun leaveGroup(
+        groupId: String,
+        context: GroupMembershipContext
+    ): Result<Unit> = administration.leaveGroup(groupId, context)
 
-    suspend fun deleteGroupConversation(groupId: String): Result<Unit> =
-        deletion.deleteGroupConversation(groupId)
+    suspend fun deleteGroupConversation(
+        groupId: String,
+        context: GroupMembershipContext
+    ): Result<Unit> = deletion.deleteGroupConversation(groupId, context)
 
     suspend fun receiveLeaveRequest(
         memberContactId: String,
-        packet: GroupLeaveRequestPacket
-    ): Result<Unit> = administration.receiveLeaveRequest(memberContactId, packet)
+        packet: GroupLeaveRequestPacket,
+        context: GroupMembershipContext
+    ): Result<GroupMemberRemovalResult> = administration.receiveLeaveRequest(memberContactId, packet, context)
 
     suspend fun receiveReadyAcknowledgement(
         memberContactId: String,
@@ -57,7 +75,12 @@ class GroupMembershipLifecycleDataSource(
 
     suspend fun receiveMemberActivationAcknowledgement(
         packet: GroupMemberActivationAcknowledgementPacket,
-        acknowledgingContactId: String
+        acknowledgingContactId: String,
+        transportMode: String
     ): Result<Unit> =
-        activation.receiveMemberActivationAcknowledgement(packet, acknowledgingContactId)
+        activation.receiveMemberActivationAcknowledgement(
+            packet = packet,
+            acknowledgingContactId = acknowledgingContactId,
+            transportMode = transportMode
+        )
 }

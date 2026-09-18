@@ -5,44 +5,40 @@ import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipBroadcastDataSource
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipConversationDataSource
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipPeerDataSource
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipVerificationDataSource
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_ADMIN_ROLE
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPeerDto
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberPromotionResult
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
 
 internal class GroupMemberPromotionDataSource(
-    private val conversationDataSource: GroupMembershipConversationDataSource,
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
     private val groupSecurityManager: GroupMembershipSecurityDataSource,
     private val verificationDataSource: GroupMembershipVerificationDataSource,
     private val membershipLock: GroupMembershipLock,
-    private val peerDataSource: GroupMembershipPeerDataSource,
     private val epochDataSource: GroupEpochDataSource,
-    private val packetBroadcaster: GroupMembershipBroadcastDataSource
+    private val packetBroadcaster: GroupPacketBroadcaster
 ) {
     suspend fun promoteMember(
         groupId: String,
-        contactId: String
-    ): Result<Unit> =
+        contactId: String,
+        context: GroupMembershipContext
+    ): Result<GroupMemberPromotionResult> =
         runCatching {
             require(groupId.isNotBlank()) { "Group ID must not be blank" }
             require(contactId.isNotBlank()) { "Contact ID must not be blank" }
             membershipLock.withLock {
-                promoteMemberLocked(groupId, contactId)
+                promoteMemberLocked(groupId, contactId, context)
             }
         }
 
     private suspend fun promoteMemberLocked(
         groupId: String,
-        contactId: String
-    ) {
-        val conversation = conversationDataSource.findConversationById(groupId) ?: error("Group conversation was not found")
+        contactId: String,
+        context: GroupMembershipContext
+    ): GroupMemberPromotionResult {
         val currentEpoch =
             groupSecurityManager.findOwnedGroupEpoch(groupId).getOrThrow()
                 ?: error("Active group security state was not found")
@@ -50,26 +46,34 @@ internal class GroupMemberPromotionDataSource(
         val target =
             participants.firstOrNull { participant -> participant.contactId == contactId }
                 ?: error("Only an active group member can be promoted")
-        if (target.role.isGroupAdminRole()) return
+        if (target.role.isGroupAdminRole()) {
+            return GroupMemberPromotionResult(
+                groupId = groupId,
+                contactId = contactId,
+                epoch = currentEpoch,
+                updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+            )
+        }
 
-        val contacts =
-            participants
-                .map { participant -> peerDataSource.requirePeer(participant.contactId) }
-                .sortedBy(GroupMembershipPeerDto::id)
         requireCurrentMemberKey(groupId, contactId)
+        val contacts =
+            epochDataSource
+                .loadCurrentParticipantContacts(groupId)
+                .sortedBy(GroupMembershipPeerDto::id)
 
         val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
         val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
         val localPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow()
         val nextEpoch = currentEpoch + 1
         val roleOverrides = mapOf(contactId to GROUP_ADMIN_ROLE)
+        val updatedAt = maxOf(context.createdAtEpochMilliseconds, SystemClock.nowEpochMilliseconds())
         val securedGroup =
             groupSecurityManager
                 .rotateOwnedGroup(
                     groupId = groupId,
-                    title = requireNotNull(conversation.title),
-                    createdAtEpochMilliseconds = conversation.createdAtEpochMilliseconds,
-                    updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
+                    title = context.title,
+                    createdAtEpochMilliseconds = context.createdAtEpochMilliseconds,
+                    updatedAtEpochMilliseconds = updatedAt,
                     memberPayloads =
                         epochDataSource.createMemberPayloads(
                             groupId = groupId,
@@ -84,11 +88,14 @@ internal class GroupMemberPromotionDataSource(
                 ).getOrThrow()
 
         packetBroadcaster.enqueueAll(securedGroup.welcomePacketsByContactId).getOrThrow()
-        check(conversationDataSource.updateConversationParticipantRole(groupId, contactId, GROUP_ADMIN_ROLE) == 1) {
-            "Promoted group member disappeared while the new epoch was created"
-        }
         verificationDataSource.onOwnedMembershipChanged(groupId).getOrThrow()
-        conversationDataSource.updateConversationTimestamp(groupId, SystemClock.nowEpochMilliseconds())
+
+        return GroupMemberPromotionResult(
+            groupId = groupId,
+            contactId = contactId,
+            epoch = nextEpoch,
+            updatedAtEpochMilliseconds = updatedAt
+        )
     }
 
     private suspend fun requireCurrentMemberKey(

@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.identity.di
 
+import com.cbgm.sparrow.core.protocol.handler.TypedProtocolPacketHandler
 import com.cbgm.sparrow.core.protocol.identity.LocalEncryptionKeyPairProvider
 import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentityProvider
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
@@ -19,6 +20,11 @@ import com.cbgm.sparrow.feature.identity.adapter.IdentityLocalSigningKeyPairProv
 import com.cbgm.sparrow.feature.identity.adapter.IdentityLocalSigningPublicKeyProvider
 import com.cbgm.sparrow.feature.identity.adapter.IdentityRemoteProfilePictureMetadataProcessor
 import com.cbgm.sparrow.feature.identity.adapter.IdentityRemoteProfilePictureProvider
+import com.cbgm.sparrow.feature.identity.adapter.direct.ContactInviteAcceptedPacketHandler
+import com.cbgm.sparrow.feature.identity.adapter.direct.ContactInviteDeclinedPacketHandler
+import com.cbgm.sparrow.feature.identity.adapter.direct.ContactInvitePacketHandler
+import com.cbgm.sparrow.feature.identity.adapter.direct.ContactReadyPacketHandler
+import com.cbgm.sparrow.feature.identity.adapter.direct.DirectChatAuthorizationRevokedPacketHandler
 import com.cbgm.sparrow.feature.identity.data.datasource.ContactKeyExchangeDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.ContactVerificationDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.LocalIdentityProfileDataSource
@@ -26,20 +32,34 @@ import com.cbgm.sparrow.feature.identity.data.datasource.LocalProfilePictureData
 import com.cbgm.sparrow.feature.identity.data.datasource.PublicIdentityDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.RemoteProfilePictureDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.SparrowDataStorePublicIdentityDataSource
+import com.cbgm.sparrow.feature.identity.data.direct.authorization.DirectAuthorizationPayloadEncoder
+import com.cbgm.sparrow.feature.identity.data.direct.datasource.DirectContactIdentityDataSource
+import com.cbgm.sparrow.feature.identity.data.direct.datasource.DirectContactRoutingDataSource
+import com.cbgm.sparrow.feature.identity.data.direct.datasource.IdentityExchangeDataSource
+import com.cbgm.sparrow.feature.identity.data.direct.identity.DirectIdentityExchangeCoordinator
+import com.cbgm.sparrow.feature.identity.data.direct.identity.DirectIdentityExchangeRepositoryImpl
+import com.cbgm.sparrow.feature.identity.data.direct.protocol.DirectInvitationPayloadEncoder
 import com.cbgm.sparrow.feature.identity.data.protocol.ContactVerificationPayloadEncoder
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityShareRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.LocalIdentityProfileRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.LocalProfilePictureRepositoryImpl
+import com.cbgm.sparrow.feature.identity.data.repository.RemoteIdentityHandshakeRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.RemoteProfilePictureRepositoryImpl
+import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityShareRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.LocalIdentityProfileRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.LocalProfilePictureRepository
+import com.cbgm.sparrow.feature.identity.domain.repository.RemoteIdentityHandshakeRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.RemoteProfilePictureRepository
+import com.cbgm.sparrow.feature.identity.domain.usecase.AcceptRemoteIdentityHandshakeUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ApplyRemoteProfilePictureMetadataUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.CreateIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.CreateSharedIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.DecodeSharedIdentityUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.EnsureRemoteSigningIdentityUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.EstablishMutualIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityStatusUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetLocalPhoneNumberUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetPublicIdentityUseCase
@@ -51,13 +71,56 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.RecoverIncompleteIdentit
 import com.cbgm.sparrow.feature.identity.domain.usecase.RemoveLocalProfilePictureUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SaveLocalPhoneNameUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SetLocalProfilePictureUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.StageRemoteIdentityUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.direct.AcceptDirectInvitationUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.direct.DeclineDirectInvitationUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.direct.ObserveDirectIdentityResultsUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.direct.ReceiveDirectAuthorizationRevokedUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.direct.ReceiveDirectInviteAcceptedUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.direct.ReceiveDirectInviteDeclinedUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.direct.ReceiveDirectInviteUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.direct.ReceiveDirectReadyUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.direct.StartDirectInvitationUseCase
 import com.cbgm.sparrow.feature.identity.presentation.setup.IdentityViewModel
 import com.cbgm.sparrow.feature.identity.presentation.share.ShareIdentityViewModel
+import org.koin.core.module.dsl.bind
+import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val identityModule =
     module {
+        singleOf(::IdentityExchangeDataSource)
+        singleOf(::DirectContactIdentityDataSource)
+        singleOf(::DirectContactRoutingDataSource)
+        singleOf(::DirectInvitationPayloadEncoder)
+        singleOf(::DirectAuthorizationPayloadEncoder)
+        singleOf(::DirectIdentityExchangeCoordinator)
+        singleOf(::DirectIdentityExchangeRepositoryImpl) { bind<DirectIdentityExchangeRepository>() }
+
+        singleOf(::RemoteIdentityHandshakeRepositoryImpl) { bind<RemoteIdentityHandshakeRepository>() }
+        factory { StageRemoteIdentityUseCase(repository = get()) }
+        factory { AcceptRemoteIdentityHandshakeUseCase(repository = get()) }
+        factory { EstablishMutualIdentityUseCase(repository = get()) }
+        factory { EnsureRemoteSigningIdentityUseCase(repository = get()) }
+        factory { ApplyRemoteProfilePictureMetadataUseCase(processor = get()) }
+
+        factory { StartDirectInvitationUseCase(repository = get()) }
+        factory { AcceptDirectInvitationUseCase(repository = get()) }
+        factory { DeclineDirectInvitationUseCase(repository = get()) }
+        factory { ObserveDirectIdentityResultsUseCase(repository = get()) }
+        factory { ReceiveDirectInviteUseCase(repository = get()) }
+        factory { ReceiveDirectInviteAcceptedUseCase(repository = get()) }
+        factory { ReceiveDirectInviteDeclinedUseCase(repository = get()) }
+        factory { ReceiveDirectReadyUseCase(repository = get()) }
+        factory { ReceiveDirectAuthorizationRevokedUseCase(repository = get()) }
+
+        singleOf(::ContactInvitePacketHandler) { bind<TypedProtocolPacketHandler>() }
+        singleOf(::ContactInviteAcceptedPacketHandler) { bind<TypedProtocolPacketHandler>() }
+        singleOf(::ContactInviteDeclinedPacketHandler) { bind<TypedProtocolPacketHandler>() }
+        singleOf(::ContactReadyPacketHandler) { bind<TypedProtocolPacketHandler>() }
+        singleOf(::DirectChatAuthorizationRevokedPacketHandler) { bind<TypedProtocolPacketHandler>() }
+
         single {
             ContactKeyExchangeDataSource(
                 contactDao = get(),

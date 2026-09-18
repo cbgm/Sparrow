@@ -10,18 +10,11 @@ class HandleInvitationResponseUseCase(
     suspend operator fun invoke(
         payloadType: InvitationPayloadType,
         invitationId: String,
-        response: InvitationResponse,
-        applyResponseEffects: suspend () -> Result<Unit>
-    ): Result<Unit> {
-        val effectsResult = applyResponseEffects()
-        if (effectsResult.isFailure) {
-            return effectsResult
-        }
-
-        return repository.applyResponse(
+        response: InvitationResponse
+    ): Result<Unit> =
+        repository.applyResponse(
             payloadType = payloadType,
             invitationId = invitationId,
             response = response
         )
-    }
 }

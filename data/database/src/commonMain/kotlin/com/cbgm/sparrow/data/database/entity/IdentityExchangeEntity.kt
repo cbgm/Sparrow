@@ -37,7 +37,8 @@ data class IdentityExchangeEntity(
     val updatedAtEpochMilliseconds: Long,
     val lastError: String?,
     val localEncryptionPublicKey: ByteArray? = null,
-    val localSigningPublicKey: ByteArray? = null
+    val localSigningPublicKey: ByteArray? = null,
+    val wasKnownPeerAtReceive: Boolean? = null
 ) {
     override fun equals(other: Any?): Boolean =
         other is IdentityExchangeEntity &&
@@ -55,7 +56,8 @@ data class IdentityExchangeEntity(
             updatedAtEpochMilliseconds == other.updatedAtEpochMilliseconds &&
             lastError == other.lastError &&
             localEncryptionPublicKey.contentEqualsNullable(other.localEncryptionPublicKey) &&
-            localSigningPublicKey.contentEqualsNullable(other.localSigningPublicKey)
+            localSigningPublicKey.contentEqualsNullable(other.localSigningPublicKey) &&
+            wasKnownPeerAtReceive == other.wasKnownPeerAtReceive
 
     override fun hashCode(): Int {
         var result = exchangeId.hashCode()
@@ -73,6 +75,7 @@ data class IdentityExchangeEntity(
         result = 31 * result + (lastError?.hashCode() ?: 0)
         result = 31 * result + (localEncryptionPublicKey?.contentHashCode() ?: 0)
         result = 31 * result + (localSigningPublicKey?.contentHashCode() ?: 0)
+        result = 31 * result + (wasKnownPeerAtReceive?.hashCode() ?: 0)
         return result
     }
 }

@@ -20,7 +20,6 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.MessageDeliveryProgress
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.membership.data.model.GroupConversationStateDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupMemberProgressDto
-import com.cbgm.sparrow.feature.membership.data.model.GroupMemberProgressStatusDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberProgress

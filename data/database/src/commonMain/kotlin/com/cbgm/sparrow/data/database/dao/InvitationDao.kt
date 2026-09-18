@@ -61,6 +61,26 @@ interface InvitationDao {
     )
     fun observeByPayloadType(payloadType: String): Flow<List<InvitationEntity>>
 
+    @Query(
+        """
+        SELECT *
+        FROM invitations
+        WHERE direction = :direction
+          AND hiddenAtEpochMilliseconds IS NULL
+        ORDER BY updatedAtEpochMilliseconds DESC, createdAtEpochMilliseconds DESC, invitationId DESC
+        """
+    )
+    fun observeByDirection(direction: String): Flow<List<InvitationEntity>>
+
+    @Query(
+        """
+        SELECT *
+        FROM invitations
+        ORDER BY updatedAtEpochMilliseconds DESC, createdAtEpochMilliseconds DESC, invitationId DESC
+        """
+    )
+    fun observeAll(): Flow<List<InvitationEntity>>
+
     @Query("DELETE FROM invitations WHERE invitationId = :invitationId")
     suspend fun deleteById(invitationId: String): Int
 

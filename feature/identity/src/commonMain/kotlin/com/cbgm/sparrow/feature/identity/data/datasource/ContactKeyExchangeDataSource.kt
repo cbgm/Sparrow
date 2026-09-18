@@ -15,18 +15,6 @@ class ContactKeyExchangeDataSource(
     private val mailboxCapabilityLifecycle: MailboxCapabilityLifecycle =
         NoOpMailboxCapabilityLifecycle
 ) {
-    suspend fun storeRemoteHandshakeIdentity(
-        contactId: String,
-        encryptionPublicKey: ByteArray,
-        signingPublicKey: ByteArray
-    ): Boolean =
-        storeRemoteIdentity(
-            contactId = contactId,
-            encryptionPublicKey = encryptionPublicKey,
-            signingPublicKey = signingPublicKey,
-            origin = RemoteIdentityOrigin.REMOTE_HANDSHAKE
-        ).identityChanged
-
     suspend fun storeRemoteIdentity(
         contactId: String,
         encryptionPublicKey: ByteArray,
@@ -286,6 +274,19 @@ class ContactKeyExchangeDataSource(
 
         check(updatedRows == 1) {
             "Contact identity changed before acknowledgement was applied"
+        }
+    }
+
+    suspend fun ensureSigningIdentityMatches(
+        contactId: String,
+        signingPublicKey: ByteArray
+    ) {
+        require(contactId.isNotBlank()) { "Contact ID must not be blank" }
+        require(signingPublicKey.isNotEmpty()) { "Signing public key must not be empty" }
+
+        val existing = contactDao.findPublicIdentityByContactId(contactId) ?: return
+        check(existing.signingPublicKey.contentEquals(signingPublicKey)) {
+            "Contact signing identity conflicts with the remote handshake"
         }
     }
 

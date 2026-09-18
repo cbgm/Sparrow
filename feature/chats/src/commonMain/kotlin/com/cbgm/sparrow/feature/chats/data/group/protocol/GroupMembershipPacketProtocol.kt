@@ -6,24 +6,21 @@ import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair
 import com.cbgm.sparrow.core.protocol.packet.GroupConversationDeletedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupInviteDeclinedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupInvitePacket
-import com.cbgm.sparrow.core.protocol.packet.GroupInviteReceivedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupJoinRequestPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivatedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivationAcknowledgementPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupMemberPayload
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
 import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtocolDataSource
 
 class GroupMembershipPacketProtocol(
     private val groupCrypto: GroupCrypto,
     private val payloadEncoder: GroupProtocolPayloadEncoder,
     private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider? = null
-) : GroupMembershipProtocolDataSource {
-    override suspend fun createConversationDeleted(
+) {
+    suspend fun createConversationDeleted(
         invitationId: String,
         groupId: String,
         epoch: Int,
@@ -62,7 +59,7 @@ class GroupMembershipPacketProtocol(
             signingPublicKey = expectedOwnerSigningPublicKey
         )
 
-    override suspend fun createInvite(
+    suspend fun createInvite(
         invitationId: String,
         groupId: String,
         title: String,
@@ -105,44 +102,11 @@ class GroupMembershipPacketProtocol(
             unsignedPacket.copy(ownerSignature = signature)
         }
 
-    override suspend fun verifyInvite(packet: GroupInvitePacket): Result<Unit> =
+    suspend fun verifyInvite(packet: GroupInvitePacket): Result<Unit> =
         groupCrypto.verify(
             payload = payloadEncoder.encodeInvite(packet),
             signature = packet.ownerSignature,
             signingPublicKey = packet.ownerSigningPublicKey
-        )
-
-    override suspend fun createInviteReceived(
-        invite: GroupInvitePacket,
-        receivedAtEpochMilliseconds: Long,
-        memberSigningKeyPair: LocalSigningKeyPair
-    ): Result<GroupInviteReceivedPacket> =
-        runCatching {
-            val unsignedPacket =
-                GroupInviteReceivedPacket(
-                    packetId = inviteReceivedPacketId(invite.invitationId),
-                    invitationId = invite.invitationId,
-                    groupId = invite.groupId,
-                    challenge = invite.challenge.copyOf(),
-                    memberSigningPublicKey = memberSigningKeyPair.publicKey.copyOf(),
-                    receivedAtEpochMilliseconds = receivedAtEpochMilliseconds,
-                    memberSignature = UNSIGNED_PACKET_MARKER
-                )
-            val signature =
-                groupCrypto
-                    .sign(
-                        payload = payloadEncoder.encodeInviteReceived(unsignedPacket),
-                        signingPrivateKey = memberSigningKeyPair.privateKey
-                    ).getOrThrow()
-
-            unsignedPacket.copy(memberSignature = signature)
-        }
-
-    override suspend fun verifyInviteReceived(packet: GroupInviteReceivedPacket): Result<Unit> =
-        groupCrypto.verify(
-            payload = payloadEncoder.encodeInviteReceived(packet),
-            signature = packet.memberSignature,
-            signingPublicKey = packet.memberSigningPublicKey
         )
 
     suspend fun createJoinRequest(
@@ -158,7 +122,7 @@ class GroupMembershipPacketProtocol(
             memberSigningKeyPair = memberSigningKeyPair
         )
 
-    override suspend fun createJoinRequest(
+    suspend fun createJoinRequest(
         invitationId: String,
         groupId: String,
         challenge: ByteArray,
@@ -196,14 +160,14 @@ class GroupMembershipPacketProtocol(
             unsignedPacket.copy(memberSignature = signature)
         }
 
-    override suspend fun verifyJoinRequest(packet: GroupJoinRequestPacket): Result<Unit> =
+    suspend fun verifyJoinRequest(packet: GroupJoinRequestPacket): Result<Unit> =
         groupCrypto.verify(
             payload = payloadEncoder.encodeJoinRequest(packet),
             signature = packet.memberSignature,
             signingPublicKey = packet.memberSigningPublicKey
         )
 
-    override suspend fun createDecline(
+    suspend fun createDecline(
         invitationId: String,
         groupId: String,
         challenge: ByteArray,
@@ -229,14 +193,14 @@ class GroupMembershipPacketProtocol(
             unsignedPacket.copy(memberSignature = signature)
         }
 
-    override suspend fun verifyDecline(packet: GroupInviteDeclinedPacket): Result<Unit> =
+    suspend fun verifyDecline(packet: GroupInviteDeclinedPacket): Result<Unit> =
         groupCrypto.verify(
             payload = payloadEncoder.encodeInviteDeclined(packet),
             signature = packet.memberSignature,
             signingPublicKey = packet.memberSigningPublicKey
         )
 
-    override suspend fun createLeaveRequest(
+    suspend fun createLeaveRequest(
         invitationId: String,
         groupId: String,
         epoch: Int,
@@ -266,7 +230,7 @@ class GroupMembershipPacketProtocol(
             unsignedPacket.copy(memberSignature = signature)
         }
 
-    override suspend fun verifyLeaveRequest(
+    suspend fun verifyLeaveRequest(
         packet: GroupLeaveRequestPacket,
         expectedMemberSigningPublicKey: ByteArray
     ): Result<Unit> =
@@ -303,7 +267,7 @@ class GroupMembershipPacketProtocol(
             unsignedPacket.copy(memberSignature = signature)
         }
 
-    override suspend fun verifyReadyAcknowledgement(
+    suspend fun verifyReadyAcknowledgement(
         packet: GroupReadyAcknowledgementPacket,
         expectedMemberSigningPublicKey: ByteArray
     ): Result<Unit> =
@@ -312,47 +276,6 @@ class GroupMembershipPacketProtocol(
             signature = packet.memberSignature,
             signingPublicKey = expectedMemberSigningPublicKey
         )
-
-    override suspend fun createMemberActivated(
-        groupId: String,
-        epoch: Int,
-        member: GroupMemberPayload,
-        activatedAtEpochMilliseconds: Long,
-        activationRound: Int,
-        activationId: String,
-        memberReferenceId: String,
-        recipientContactId: String,
-        ownerSigningKeyPair: LocalSigningKeyPair
-    ): Result<GroupMemberActivatedPacket> =
-        runCatching {
-            val unsignedPacket =
-                GroupMemberActivatedPacket(
-                    packetId =
-                        memberActivatedPacketId(
-                            groupId = groupId,
-                            epoch = epoch,
-                            activationId = activationId,
-                            activationRound = activationRound,
-                            memberReferenceId = memberReferenceId,
-                            recipientContactId = recipientContactId
-                        ),
-                    groupId = groupId,
-                    epoch = epoch,
-                    activationId = activationId,
-                    member = member,
-                    activatedAtEpochMilliseconds = activatedAtEpochMilliseconds,
-                    activationRound = activationRound,
-                    ownerSignature = UNSIGNED_PACKET_MARKER
-                )
-            val signature =
-                groupCrypto
-                    .sign(
-                        payload = payloadEncoder.encodeMemberActivated(unsignedPacket),
-                        signingPrivateKey = ownerSigningKeyPair.privateKey
-                    ).getOrThrow()
-
-            unsignedPacket.copy(ownerSignature = signature)
-        }
 
     suspend fun verifyMemberActivated(
         packet: GroupMemberActivatedPacket,
@@ -403,7 +326,7 @@ class GroupMembershipPacketProtocol(
             signingPublicKey = expectedMemberSigningPublicKey
         )
 
-    override suspend fun createMemberRemoved(
+    suspend fun createMemberRemoved(
         invitationId: String,
         groupId: String,
         epoch: Int,
@@ -446,15 +369,6 @@ class GroupMembershipPacketProtocol(
             signingPublicKey = expectedOwnerSigningPublicKey
         )
 
-    fun memberActivatedPacketId(
-        groupId: String,
-        epoch: Int,
-        activationId: String,
-        activationRound: Int,
-        memberReferenceId: String,
-        recipientContactId: String
-    ): String = "group-member-activated-$groupId-$epoch-$activationId-$activationRound-$memberReferenceId-$recipientContactId"
-
     private fun memberActivationAcknowledgementPacketId(activationPacketId: String): String = "group-member-activation-acknowledgement-$activationPacketId"
 
     private fun memberRemovedPacketId(
@@ -478,9 +392,6 @@ class GroupMembershipPacketProtocol(
         epoch: Int,
         welcomePacketId: String
     ): String = "group-ready-$groupId-$epoch-$welcomePacketId"
-
-    private fun inviteReceivedPacketId(invitationId: String): String =
-        "group-invite-received-$invitationId"
 
     private companion object {
         val UNSIGNED_PACKET_MARKER = byteArrayOf(0)

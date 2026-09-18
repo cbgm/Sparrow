@@ -13,60 +13,44 @@ import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipBroadcastDataSource
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipConversationDataSource
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipMessageDataSource
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipPeerDataSource
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtocolDataSource
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipStoreDataSource
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipVerificationDataSource
-import com.cbgm.sparrow.feature.membership.data.groupMembershipDisplayName
-import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPeerDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
+import com.cbgm.sparrow.feature.membership.data.protocol.GroupMembershipPacketProtocol
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberRemovalReason
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberRemovalResult
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
 
 @Suppress("LongParameterList")
 internal class GroupMemberRemovalDataSource(
-    private val conversationDataSource: GroupMembershipConversationDataSource,
     private val membershipStore: GroupMembershipStoreDataSource,
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
     private val protocolOutbox: ProtocolOutbox,
-    private val membershipPacketProtocol: GroupMembershipProtocolDataSource,
+    private val membershipPacketProtocol: GroupMembershipPacketProtocol,
     private val groupSecurityManager: GroupMembershipSecurityDataSource,
     private val verificationDataSource: GroupMembershipVerificationDataSource,
     private val membershipLock: GroupMembershipLock,
-    private val peerDataSource: GroupMembershipPeerDataSource,
     private val epochDataSource: GroupEpochDataSource,
-    private val packetBroadcaster: GroupMembershipBroadcastDataSource,
-    private val membershipMessageDataSource: GroupMembershipMessageDataSource
+    private val packetBroadcaster: GroupPacketBroadcaster
 ) {
     suspend fun removeMember(
         groupId: String,
-        contactId: String
-    ): Result<Unit> =
+        contactId: String,
+        context: GroupMembershipContext
+    ): Result<GroupMemberRemovalResult> =
         removeWithReason(
             groupId = groupId,
             contactId = contactId,
-            reason = GroupMemberRemovedPacket.REASON_REMOVED_BY_OWNER
-        )
-
-    suspend fun removeDepartingMember(
-        groupId: String,
-        contactId: String
-    ): Result<Unit> =
-        removeWithReason(
-            groupId = groupId,
-            contactId = contactId,
-            reason = GroupMemberRemovedPacket.REASON_MEMBER_LEFT
+            reason = GroupMemberRemovedPacket.REASON_REMOVED_BY_OWNER,
+            context = context
         )
 
     suspend fun receiveLeaveRequest(
         memberContactId: String,
-        packet: GroupLeaveRequestPacket
-    ): Result<Unit> =
+        packet: GroupLeaveRequestPacket,
+        context: GroupMembershipContext
+    ): Result<GroupMemberRemovalResult> =
         runCatching {
             membershipLock.withLock {
                 val currentEpoch =
@@ -88,7 +72,8 @@ internal class GroupMemberRemovalDataSource(
                 removeMemberLocked(
                     groupId = packet.groupId,
                     contactId = memberContactId,
-                    reason = GroupMemberRemovedPacket.REASON_MEMBER_LEFT
+                    reason = GroupMemberRemovedPacket.REASON_MEMBER_LEFT,
+                    context = context
                 )
             }
         }
@@ -96,28 +81,41 @@ internal class GroupMemberRemovalDataSource(
     private suspend fun removeWithReason(
         groupId: String,
         contactId: String,
-        reason: String
-    ): Result<Unit> =
+        reason: String,
+        context: GroupMembershipContext
+    ): Result<GroupMemberRemovalResult> =
         runCatching {
             require(groupId.isNotBlank()) { "Group ID must not be blank" }
             require(contactId.isNotBlank()) { "Contact ID must not be blank" }
             membershipLock.withLock {
-                removeMemberLocked(groupId, contactId, reason)
+                removeMemberLocked(groupId, contactId, reason, context)
             }
         }
 
     private suspend fun removeMemberLocked(
         groupId: String,
         contactId: String,
-        reason: String
-    ) {
+        reason: String,
+        context: GroupMembershipContext
+    ): GroupMemberRemovalResult {
         val removal = loadMemberRemoval(groupId, contactId)
-        val removalEpoch = rotateForRemovalIfNeeded(groupId, contactId, reason, removal)
+        val removalEpoch = rotateForRemovalIfNeeded(groupId, contactId, reason, removal, context)
         sendMemberRemovalPacket(groupId, contactId, reason, removalEpoch, removal)
         markMembershipRemoved(removal.membership, removal.removedAt)
-        persistMemberRemoval(groupId, contactId, reason, removalEpoch, removal)
         verificationDataSource.onOwnedMembershipChanged(groupId).getOrThrow()
-        conversationDataSource.updateConversationTimestamp(groupId, removal.removedAt)
+        return GroupMemberRemovalResult(
+            groupId = groupId,
+            contactId = contactId,
+            epoch = removalEpoch,
+            eventId = removal.referenceId,
+            updatedAtEpochMilliseconds = removal.removedAt,
+            reason =
+                if (reason == GroupMemberRemovedPacket.REASON_MEMBER_LEFT) {
+                    GroupMemberRemovalReason.LEFT
+                } else {
+                    GroupMemberRemovalReason.REMOVED
+                }
+        )
     }
 
     private suspend fun loadMemberRemoval(
@@ -135,11 +133,7 @@ internal class GroupMemberRemovalDataSource(
         check(currentMemberKey != null || membership != null) { "Group member was not found" }
         check(membership?.status?.isTerminalStatus() != true) { "Group member is already inactive" }
 
-        val contact = peerDataSource.requirePeer(contactId)
-        val signingPublicKey =
-            currentMemberKey?.signingPublicKey?.copyOf()
-                ?: contact.signingPublicKey?.copyOf()
-                ?: byteArrayOf()
+        val signingPublicKey = currentMemberKey?.signingPublicKey?.copyOf() ?: byteArrayOf()
         val removedAt =
             maxOf(
                 membership?.createdAtEpochMilliseconds ?: 0L,
@@ -148,7 +142,6 @@ internal class GroupMemberRemovalDataSource(
         return MemberRemovalDto(
             currentMemberKey = currentMemberKey,
             membership = membership,
-            contact = contact,
             signingPublicKey = signingPublicKey,
             removedAt = removedAt,
             referenceId = membership?.sourceInvitationId ?: "member-$contactId"
@@ -159,7 +152,8 @@ internal class GroupMemberRemovalDataSource(
         groupId: String,
         contactId: String,
         reason: String,
-        removal: MemberRemovalDto
+        removal: MemberRemovalDto,
+        context: GroupMembershipContext
     ): Int {
         if (removal.currentMemberKey == null) {
             return GroupMemberRemovedPacket.PENDING_INVITATION_EPOCH
@@ -172,7 +166,8 @@ internal class GroupMemberRemovalDataSource(
                 GroupMembershipChangePayload(
                     reason = reason,
                     memberSigningPublicKey = removal.signingPublicKey.copyOf()
-                )
+                ),
+            context = context
         )
     }
 
@@ -215,49 +210,19 @@ internal class GroupMemberRemovalDataSource(
         )
     }
 
-    private suspend fun persistMemberRemoval(
-        groupId: String,
-        contactId: String,
-        reason: String,
-        removalEpoch: Int,
-        removal: MemberRemovalDto
-    ) {
-        conversationDataSource.deleteConversationParticipant(groupId, contactId)
-        val message =
-            if (reason == GroupMemberRemovedPacket.REASON_MEMBER_LEFT) {
-                membershipMessageDataSource.memberLeft(
-                    conversationId = groupId,
-                    epoch = removalEpoch,
-                    contactId = contactId,
-                    contactName = removal.contact.groupMembershipDisplayName(),
-                    createdAtEpochMilliseconds = removal.removedAt,
-                    eventId = removal.referenceId
-                )
-            } else {
-                membershipMessageDataSource.memberRemoved(
-                    conversationId = groupId,
-                    epoch = removalEpoch,
-                    contactId = contactId,
-                    contactName = removal.contact.groupMembershipDisplayName(),
-                    createdAtEpochMilliseconds = removal.removedAt,
-                    eventId = removal.referenceId
-                )
-            }
-        conversationDataSource.upsertMessage(message)
-    }
-
     private suspend fun rotateAfterRemoval(
         groupId: String,
         removedContactId: String,
         updatedAtEpochMilliseconds: Long,
-        membershipChange: GroupMembershipChangePayload?
+        membershipChange: GroupMembershipChangePayload?,
+        context: GroupMembershipContext
     ): Int {
-        val conversation = conversationDataSource.findConversationById(groupId) ?: error("Group conversation was not found")
         val currentEpoch =
             groupSecurityManager.findOwnedGroupEpoch(groupId).getOrThrow()
                 ?: error("Active group security state was not found")
         val remainingContacts =
-            epochDataSource.loadCurrentParticipantContacts(groupId)
+            epochDataSource
+                .loadCurrentParticipantContacts(groupId)
                 .filterNot { contact -> contact.id == removedContactId }
         val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
         val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
@@ -267,8 +232,8 @@ internal class GroupMemberRemovalDataSource(
             groupSecurityManager
                 .rotateOwnedGroup(
                     groupId = groupId,
-                    title = requireNotNull(conversation.title),
-                    createdAtEpochMilliseconds = conversation.createdAtEpochMilliseconds,
+                    title = context.title,
+                    createdAtEpochMilliseconds = context.createdAtEpochMilliseconds,
                     updatedAtEpochMilliseconds = updatedAtEpochMilliseconds,
                     memberPayloads =
                         epochDataSource.createMemberPayloads(
@@ -309,38 +274,11 @@ internal class GroupMemberRemovalDataSource(
                 contactId = contactId
             ).getOrThrow()
 
-    private data class MemberRemovalDto(
+    private class MemberRemovalDto(
         val currentMemberKey: GroupMemberKeyEntity?,
         val membership: GroupMembershipEntity?,
-        val contact: GroupMembershipPeerDto,
         val signingPublicKey: ByteArray,
         val removedAt: Long,
         val referenceId: String
-    ) {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as MemberRemovalDto
-
-            if (removedAt != other.removedAt) return false
-            if (currentMemberKey != other.currentMemberKey) return false
-            if (membership != other.membership) return false
-            if (contact != other.contact) return false
-            if (!signingPublicKey.contentEquals(other.signingPublicKey)) return false
-            if (referenceId != other.referenceId) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            var result = removedAt.hashCode()
-            result = 31 * result + (currentMemberKey?.hashCode() ?: 0)
-            result = 31 * result + (membership?.hashCode() ?: 0)
-            result = 31 * result + contact.hashCode()
-            result = 31 * result + signingPublicKey.contentHashCode()
-            result = 31 * result + referenceId.hashCode()
-            return result
-        }
-    }
+    )
 }

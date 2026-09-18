@@ -39,12 +39,6 @@ interface InvitationRepository {
 
     suspend fun getPayloadType(invitationId: String): Result<InvitationPayloadType>
 
-    suspend fun send(
-        payloadType: InvitationPayloadType,
-        payloadId: String,
-        peerIds: Set<String>
-    ): Result<Unit>
-
     suspend fun accept(invitationId: String): Result<Unit>
 
     suspend fun decline(

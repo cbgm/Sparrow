@@ -6,6 +6,7 @@ import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.model.ConversationMessagePlan
+import com.cbgm.sparrow.feature.conversationorchestration.domain.workflow.ConversationFlowHandler
 import com.cbgm.sparrow.feature.identity.domain.model.DirectChatAuthorizationRequiredException
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityHandshakeState
 import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
@@ -13,12 +14,11 @@ import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationLifecycleStatus
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationPayloadType
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationLifecycleStatusUseCase
-import com.cbgm.sparrow.feature.invite.domain.usecase.SendInvitationUseCase
 import kotlinx.coroutines.flow.first
 
-class PrepareConversationMessageUseCase(
+class PrepareConversationMessageUseCase internal constructor(
     private val requireDirectChatAuthorization: RequireDirectChatAuthorizationUseCase,
-    private val sendInvitation: SendInvitationUseCase,
+    private val flowHandler: ConversationFlowHandler,
     private val observeInvitationLifecycleStatus: ObserveInvitationLifecycleStatusUseCase,
     private val directIdentityExchangeRepository: DirectIdentityExchangeRepository,
     private val identitySetupModeRepository: DirectIdentitySetupModeRepository,
@@ -64,11 +64,7 @@ class PrepareConversationMessageUseCase(
                 invitationStatus in RETRYABLE_INVITATION_STATUSES ||
                     handshake in RETRYABLE_IDENTITY_STATES ||
                     handshake == null ->
-                    sendInvitation(
-                        payloadType = InvitationPayloadType.DIRECT,
-                        payloadId = peerId,
-                        peerIds = setOf(peerId)
-                    ).fold(
+                    flowHandler.startDirectInvitation(peerId).fold(
                         onSuccess = { ConversationMessagePlan.Queue },
                         onFailure = { error ->
                             ConversationMessagePlan.QueueWithAuthorizationFailure(error)

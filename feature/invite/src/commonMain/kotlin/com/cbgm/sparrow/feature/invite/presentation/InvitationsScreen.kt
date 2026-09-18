@@ -418,7 +418,11 @@ private fun InvitationRow(
         leadingContent = {
             SparrowAvatar(
                 name = displayName,
-                target = AvatarTarget.User(invitation.peerId)
+                target =
+                    when (invitation.payloadType) {
+                        InvitationUiPayloadType.DIRECT -> AvatarTarget.User(invitation.peerId)
+                        InvitationUiPayloadType.GROUP -> AvatarTarget.Group(invitation.payloadId)
+                    }
             )
         },
         headlineContent = {
@@ -434,7 +438,10 @@ private fun InvitationRow(
         supportingContent = {
             Column {
                 invitation.peerSecondaryText
-                    ?.takeIf { invitation.peerDisplayName != null }
+                    ?.takeIf {
+                        invitation.payloadType == InvitationUiPayloadType.DIRECT &&
+                            invitation.peerDisplayName != null
+                    }
                     ?.let { phoneNumber ->
                         Text(
                             text = phoneNumber,

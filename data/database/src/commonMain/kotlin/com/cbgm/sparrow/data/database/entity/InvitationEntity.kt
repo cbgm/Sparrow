@@ -20,6 +20,8 @@ data class InvitationEntity(
     val payloadType: String,
     val payloadId: String,
     val peerId: String,
+    val peerDisplayName: String? = null,
+    val peerSecondaryText: String? = null,
     val direction: String,
     val status: String,
     val createdAtEpochMilliseconds: Long,

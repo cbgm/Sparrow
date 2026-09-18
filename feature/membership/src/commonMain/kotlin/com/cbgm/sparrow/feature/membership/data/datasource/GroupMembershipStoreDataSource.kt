@@ -33,12 +33,6 @@ internal class GroupMembershipStoreDataSource(
     suspend fun deleteBySourceInvitationId(invitationId: String): Int =
         dao.deleteBySourceInvitationId(invitationId)
 
-    suspend fun deleteByGroupContactAndPerspective(
-        groupId: String,
-        contactId: String,
-        perspective: String
-    ) = dao.deleteByGroupContactAndPerspective(groupId, contactId, perspective)
-
     suspend fun deleteSupersededStagedMemberships(
         contactId: String,
         currentInvitationId: String,

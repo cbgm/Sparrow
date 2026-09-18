@@ -4,7 +4,6 @@ import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.InvitationDao
 import com.cbgm.sparrow.data.database.entity.InvitationEntity
-import com.cbgm.sparrow.feature.invite.data.lifecycle.InvitationLifecycleEffects
 import com.cbgm.sparrow.feature.invite.domain.model.Invitation
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationLifecycleRecord
@@ -14,8 +13,6 @@ import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResult
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResultAction
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationStatus
-import com.cbgm.sparrow.feature.invite.domain.provider.InvitationPeerMetadata
-import com.cbgm.sparrow.feature.invite.domain.provider.InvitationPeerMetadataProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
@@ -27,24 +24,12 @@ import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class InvitationLifecycleDataSource(
-    private val invitationDao: InvitationDao,
-    private val effects: InvitationLifecycleEffects,
-    private val peerMetadataProvider: InvitationPeerMetadataProvider
+    private val invitationDao: InvitationDao
 ) {
-    val payloadType: InvitationPayloadType = effects.payloadType
-
-    init {
-        require(peerMetadataProvider.payloadType == payloadType) {
-            "Invitation peer metadata provider does not match $payloadType"
-        }
-    }
-
     fun observeInvitations(direction: InvitationDirection): Flow<List<Invitation>> =
         invitationDao
-            .observeByPayloadTypeAndDirection(
-                payloadType = payloadType.name,
-                direction = direction.name
-            ).transformLatest { invitations ->
+            .observeByDirection(direction.name)
+            .transformLatest { invitations ->
                 while (true) {
                     val now = SystemClock.nowEpochMilliseconds()
                     emit(
@@ -54,32 +39,19 @@ internal class InvitationLifecycleDataSource(
 
                                 val invitation = expirePendingIfNeeded(storedInvitation, now)
                                 val status = invitation.toVisibleStatus() ?: continue
-                                if (!isVisible(
-                                        direction,
-                                        status,
-                                        invitation.updatedAtEpochMilliseconds,
-                                        now
-                                    )
-                                ) {
+                                if (!isVisible(direction, status, invitation.updatedAtEpochMilliseconds, now)) {
                                     continue
                                 }
 
-                                val metadata =
-                                    peerMetadataProvider
-                                        .get(
-                                            payloadId = invitation.payloadId,
-                                            peerId = invitation.peerId,
-                                            direction = direction
-                                        ).getOrElse { InvitationPeerMetadata() }
-
+                                val payloadType = invitation.payloadType.toPayloadType() ?: continue
                                 add(
                                     Invitation(
                                         invitationId = invitation.invitationId,
                                         payloadType = payloadType,
                                         payloadId = invitation.payloadId,
                                         peerId = invitation.peerId,
-                                        peerDisplayName = metadata.displayName,
-                                        peerSecondaryText = metadata.secondaryText,
+                                        peerDisplayName = invitation.peerDisplayName,
+                                        peerSecondaryText = invitation.peerSecondaryText,
                                         direction = direction,
                                         status = status,
                                         expiresAtEpochMilliseconds = invitation.expiresAtEpochMilliseconds,
@@ -100,6 +72,7 @@ internal class InvitationLifecycleDataSource(
             }
 
     fun observeLifecycleStatus(
+        payloadType: InvitationPayloadType,
         payloadId: String,
         peerId: String,
         direction: InvitationDirection
@@ -110,13 +83,12 @@ internal class InvitationLifecycleDataSource(
                 payloadId = payloadId,
                 peerId = peerId,
                 direction = direction.name
-            ).map { invitation ->
-                invitation?.status?.toLifecycleStatus()
-            }.distinctUntilChanged()
+            ).map { invitation -> invitation?.status?.toLifecycleStatus() }
+            .distinctUntilChanged()
 
     fun observeInvitationResults(): Flow<List<InvitationResult>> =
         invitationDao
-            .observeByPayloadType(payloadType.name)
+            .observeAll()
             .map { invitations ->
                 invitations.mapNotNull { invitation ->
                     val response =
@@ -125,6 +97,7 @@ internal class InvitationLifecycleDataSource(
                             STATUS_DECLINED -> InvitationResponse.DECLINED
                             else -> null
                         } ?: return@mapNotNull null
+                    val payloadType = invitation.payloadType.toPayloadType() ?: return@mapNotNull null
                     val direction = invitation.direction.toDirection() ?: return@mapNotNull null
 
                     InvitationResult(
@@ -139,14 +112,17 @@ internal class InvitationLifecycleDataSource(
                 }
             }.distinctUntilChanged()
 
-    suspend fun contains(invitationId: String): Boolean =
-        invitationDao.findById(invitationId)?.payloadType == payloadType.name
+    suspend fun getPeerId(invitationId: String): Result<String> =
+        safeSuspendCall { requireInvitation(invitationId).peerId }
+
+    suspend fun getPayloadType(invitationId: String): Result<InvitationPayloadType> =
+        safeSuspendCall {
+            requireInvitation(invitationId).payloadType.toPayloadType()
+                ?: error("Unknown invitation payload type")
+        }
 
     suspend fun shouldRecordPending(record: InvitationLifecycleRecord): Result<Boolean> =
         safeSuspendCall {
-            require(record.payloadType == payloadType) {
-                "Invitation payload type does not match $payloadType"
-            }
             val existing = invitationDao.findById(record.invitationId)
             if (existing != null) {
                 validateReplay(existing, record)
@@ -155,7 +131,7 @@ internal class InvitationLifecycleDataSource(
 
             val latest =
                 invitationDao.findLatest(
-                    payloadType = payloadType.name,
+                    payloadType = record.payloadType.name,
                     payloadId = record.payloadId,
                     peerId = record.peerId,
                     direction = record.direction.name
@@ -164,14 +140,10 @@ internal class InvitationLifecycleDataSource(
         }
 
     suspend fun recordPending(record: InvitationLifecycleRecord): Result<Unit> =
-        safeSuspendCall {
-            require(record.payloadType == payloadType) {
-                "Invitation payload type does not match $payloadType"
-            }
-            persistPending(record)
-        }
+        safeSuspendCall { persistPending(record) }
 
     suspend fun validatePending(
+        payloadType: InvitationPayloadType,
         invitationId: String,
         payloadId: String,
         peerId: String,
@@ -180,45 +152,13 @@ internal class InvitationLifecycleDataSource(
     ): Result<Unit> =
         safeSuspendCall {
             val invitation = requireInvitation(invitationId)
+            check(invitation.payloadType == payloadType.name) { "Invitation uses the wrong payload type" }
             check(invitation.payloadId == payloadId) { "Invitation uses the wrong payload" }
             check(invitation.peerId == peerId) { "Invitation uses the wrong peer" }
             check(invitation.direction == direction.name) { "Invitation uses the wrong direction" }
             val current = expirePendingIfNeeded(invitation, atEpochMilliseconds)
-            check(current.status == STATUS_PENDING) {
-                "Invitation is not pending: ${current.status}"
-            }
-            check(atEpochMilliseconds <= current.expiresAtEpochMilliseconds) {
-                "Invitation has expired"
-            }
-        }
-
-    suspend fun getPeerId(invitationId: String): Result<String> =
-        safeSuspendCall {
-            requireInvitation(invitationId).peerId
-        }
-
-    suspend fun send(
-        payloadId: String,
-        peerIds: Set<String>
-    ): Result<Unit> =
-        safeSuspendCall {
-            require(peerIds.isNotEmpty()) { "Choose at least one invitation peer" }
-            peerIds.sorted().forEach { peerId ->
-                val record = effects.send(payloadId, peerId).getOrThrow() ?: return@forEach
-                require(record.payloadType == payloadType) {
-                    "Lifecycle effects returned a ${record.payloadType} invitation for $payloadType"
-                }
-                check(record.direction == InvitationDirection.OUTGOING) {
-                    "Outgoing invitation effects must return OUTGOING records"
-                }
-                require(record.payloadId == payloadId) {
-                    "Lifecycle effects changed the invitation payload ID"
-                }
-                require(record.peerId == peerId) {
-                    "Lifecycle effects returned an unexpected invitation peer"
-                }
-                persistPending(record)
-            }
+            check(current.status == STATUS_PENDING) { "Invitation is not pending: ${current.status}" }
+            check(atEpochMilliseconds <= current.expiresAtEpochMilliseconds) { "Invitation has expired" }
         }
 
     suspend fun accept(invitationId: String): Result<Unit> =
@@ -233,7 +173,6 @@ internal class InvitationLifecycleDataSource(
                 "Invitation cannot be accepted from status ${current.status}"
             }
 
-            effects.accept(invitationId).getOrThrow()
             val now = SystemClock.nowEpochMilliseconds()
             val changed =
                 invitationDao.updateStatus(
@@ -265,7 +204,6 @@ internal class InvitationLifecycleDataSource(
                 "Invitation cannot be declined from status ${current.status}"
             }
 
-            effects.decline(invitationId, action).getOrThrow()
             val now = SystemClock.nowEpochMilliseconds()
             val changed =
                 invitationDao.updateStatus(
@@ -284,6 +222,7 @@ internal class InvitationLifecycleDataSource(
         }
 
     suspend fun applyResponse(
+        payloadType: InvitationPayloadType,
         invitationId: String,
         response: InvitationResponse
     ): Result<Unit> =
@@ -324,7 +263,10 @@ internal class InvitationLifecycleDataSource(
             }
         }
 
-    suspend fun markTransportFailed(invitationId: String): Result<Unit> =
+    suspend fun markTransportFailed(
+        payloadType: InvitationPayloadType,
+        invitationId: String
+    ): Result<Unit> =
         safeSuspendCall {
             val invitation = invitationDao.findById(invitationId) ?: return@safeSuspendCall
             check(invitation.payloadType == payloadType.name) {
@@ -334,25 +276,24 @@ internal class InvitationLifecycleDataSource(
                 return@safeSuspendCall
             }
 
-            val changed =
-                invitationDao.updateStatus(
-                    invitationId = invitationId,
-                    expectedStatus = STATUS_PENDING,
-                    newStatus = STATUS_FAILED,
-                    updatedAt = SystemClock.nowEpochMilliseconds()
-                )
-            if (changed == 1) {
-                effects.onTransportFailed(invitationId).getOrThrow()
-            }
+            invitationDao.updateStatus(
+                invitationId = invitationId,
+                expectedStatus = STATUS_PENDING,
+                newStatus = STATUS_FAILED,
+                updatedAt = SystemClock.nowEpochMilliseconds()
+            )
         }
 
     suspend fun markViewed(direction: InvitationDirection): Result<Unit> =
         safeSuspendCall {
-            invitationDao.markDirectionViewed(
-                payloadType = payloadType.name,
-                direction = direction.name,
-                viewedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
-            )
+            val now = SystemClock.nowEpochMilliseconds()
+            InvitationPayloadType.entries.forEach { payloadType ->
+                invitationDao.markDirectionViewed(
+                    payloadType = payloadType.name,
+                    direction = direction.name,
+                    viewedAtEpochMilliseconds = now
+                )
+            }
         }
 
     suspend fun deleteDeclinedOutgoing(invitationId: String): Result<Unit> =
@@ -364,15 +305,12 @@ internal class InvitationLifecycleDataSource(
             check(invitation.status == STATUS_DECLINED) {
                 "Only declined outgoing invitations can be deleted"
             }
-            effects.onDeleteDeclinedOutgoing(invitationId).getOrThrow()
             check(
                 invitationDao.hideById(
                     invitationId = invitationId,
                     hiddenAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
                 ) == 1
-            ) {
-                "Invitation was not found"
-            }
+            ) { "Invitation was not found" }
         }
 
     private fun InvitationEntity.hasUnreadUpdate(): Boolean {
@@ -388,7 +326,11 @@ internal class InvitationLifecycleDataSource(
 
             if (record.updatedAtEpochMilliseconds > existing.updatedAtEpochMilliseconds) {
                 invitationDao.upsert(
-                    existing.copy(updatedAtEpochMilliseconds = record.updatedAtEpochMilliseconds)
+                    existing.copy(
+                        updatedAtEpochMilliseconds = record.updatedAtEpochMilliseconds,
+                        peerDisplayName = record.peerDisplayName ?: existing.peerDisplayName,
+                        peerSecondaryText = record.peerSecondaryText ?: existing.peerSecondaryText
+                    )
                 )
             }
             return
@@ -396,20 +338,17 @@ internal class InvitationLifecycleDataSource(
 
         val latest =
             invitationDao.findLatest(
-                payloadType = payloadType.name,
+                payloadType = record.payloadType.name,
                 payloadId = record.payloadId,
                 peerId = record.peerId,
                 direction = record.direction.name
             )
-        if (
-            latest != null &&
-            record.createdAtEpochMilliseconds <= latest.createdAtEpochMilliseconds
-        ) {
+        if (latest != null && record.createdAtEpochMilliseconds <= latest.createdAtEpochMilliseconds) {
             return
         }
 
         invitationDao.failSuperseded(
-            payloadType = payloadType.name,
+            payloadType = record.payloadType.name,
             payloadId = record.payloadId,
             peerId = record.peerId,
             currentInvitationId = record.invitationId,
@@ -421,9 +360,11 @@ internal class InvitationLifecycleDataSource(
         invitationDao.upsert(
             InvitationEntity(
                 invitationId = record.invitationId,
-                payloadType = payloadType.name,
+                payloadType = record.payloadType.name,
                 payloadId = record.payloadId,
                 peerId = record.peerId,
+                peerDisplayName = record.peerDisplayName,
+                peerSecondaryText = record.peerSecondaryText,
                 direction = record.direction.name,
                 status = STATUS_PENDING,
                 createdAtEpochMilliseconds = record.createdAtEpochMilliseconds,
@@ -437,18 +378,10 @@ internal class InvitationLifecycleDataSource(
         existing: InvitationEntity,
         record: InvitationLifecycleRecord
     ) {
-        check(existing.payloadType == payloadType.name) {
-            "Invitation replay changed its payload type"
-        }
-        check(existing.payloadId == record.payloadId) {
-            "Invitation replay changed its payload ID"
-        }
-        check(existing.peerId == record.peerId) {
-            "Invitation replay changed its peer"
-        }
-        check(existing.direction == record.direction.name) {
-            "Invitation replay changed its direction"
-        }
+        check(existing.payloadType == record.payloadType.name) { "Invitation replay changed its payload type" }
+        check(existing.payloadId == record.payloadId) { "Invitation replay changed its payload ID" }
+        check(existing.peerId == record.peerId) { "Invitation replay changed its peer" }
+        check(existing.direction == record.direction.name) { "Invitation replay changed its direction" }
         check(existing.createdAtEpochMilliseconds == record.createdAtEpochMilliseconds) {
             "Invitation replay changed its creation time"
         }
@@ -459,12 +392,8 @@ internal class InvitationLifecycleDataSource(
 
     private suspend fun requireInvitation(invitationId: String): InvitationEntity {
         require(invitationId.isNotBlank()) { "Invitation ID must not be blank" }
-        val invitation = invitationDao.findById(invitationId)
+        return invitationDao.findById(invitationId)
             ?: error("Invitation was not found: $invitationId")
-        check(invitation.payloadType == payloadType.name) {
-            "Invitation payload type does not match $payloadType"
-        }
-        return invitation
     }
 
     private suspend fun expirePendingIfNeeded(
@@ -475,16 +404,12 @@ internal class InvitationLifecycleDataSource(
             return invitation
         }
 
-        val changed =
-            invitationDao.updateStatus(
-                invitationId = invitation.invitationId,
-                expectedStatus = STATUS_PENDING,
-                newStatus = STATUS_EXPIRED,
-                updatedAt = now
-            )
-        if (changed == 1) {
-            effects.onExpired(invitation.invitationId).getOrThrow()
-        }
+        invitationDao.updateStatus(
+            invitationId = invitation.invitationId,
+            expectedStatus = STATUS_PENDING,
+            newStatus = STATUS_EXPIRED,
+            updatedAt = now
+        )
         return invitation.copy(
             status = STATUS_EXPIRED,
             updatedAtEpochMilliseconds = maxOf(invitation.createdAtEpochMilliseconds, now)
@@ -527,9 +452,7 @@ internal class InvitationLifecycleDataSource(
                 val wakeAt =
                     when (invitation.status) {
                         STATUS_PENDING -> invitation.expiresAtEpochMilliseconds
-                        STATUS_DECLINED ->
-                            invitation.updatedAtEpochMilliseconds + DECLINED_RETENTION_MILLISECONDS
-
+                        STATUS_DECLINED -> invitation.updatedAtEpochMilliseconds + DECLINED_RETENTION_MILLISECONDS
                         else -> null
                     }
                 wakeAt?.takeIf { it > now }
@@ -548,10 +471,11 @@ internal class InvitationLifecycleDataSource(
     private fun String.toDirection(): InvitationDirection? =
         InvitationDirection.entries.firstOrNull { direction -> direction.name == this }
 
+    private fun String.toPayloadType(): InvitationPayloadType? =
+        InvitationPayloadType.entries.firstOrNull { payloadType -> payloadType.name == this }
+
     private fun String?.toResultAction(): InvitationResultAction? =
-        this?.let { stored ->
-            InvitationResultAction.entries.firstOrNull { action -> action.name == stored }
-        }
+        this?.let { stored -> InvitationResultAction.entries.firstOrNull { action -> action.name == stored } }
 
     private companion object {
         const val STATUS_PENDING = "PENDING"

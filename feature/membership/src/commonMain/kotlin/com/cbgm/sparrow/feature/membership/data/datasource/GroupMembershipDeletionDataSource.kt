@@ -6,34 +6,34 @@ import com.cbgm.sparrow.core.protocol.packet.GroupConversationDeletedPacket
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipBroadcastDataSource
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipCleanupDataSource
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtocolDataSource
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipStoreDataSource
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_LEFT_ROLE
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
+import com.cbgm.sparrow.feature.membership.data.protocol.GroupMembershipPacketProtocol
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
 
 @Suppress("LongParameterList")
 internal class GroupMembershipDeletionDataSource(
     private val membershipStore: GroupMembershipStoreDataSource,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val protocolOutbox: ProtocolOutbox,
-    private val membershipPacketProtocol: GroupMembershipProtocolDataSource,
+    private val membershipPacketProtocol: GroupMembershipPacketProtocol,
     private val groupSecurityManager: GroupMembershipSecurityDataSource,
-    private val packetBroadcaster: GroupMembershipBroadcastDataSource,
+    private val packetBroadcaster: GroupPacketBroadcaster,
     private val administration: GroupMembershipAdministrationDataSource,
     private val membershipLock: GroupMembershipLock,
     private val localCleanupDataSource: GroupMembershipCleanupDataSource
 ) {
-    suspend fun deleteGroupConversation(groupId: String): Result<Unit> =
+    suspend fun deleteGroupConversation(
+        groupId: String,
+        context: GroupMembershipContext
+    ): Result<Unit> =
         runCatching {
             require(groupId.isNotBlank()) { "Group ID must not be blank" }
             val localRole = groupSecurityManager.findLocalRole(groupId).getOrThrow()
             if (localRole != null) {
                 if (localRole != GROUP_LEFT_ROLE) {
-                    administration.leaveGroup(groupId).getOrThrow()
+                    administration.leaveGroup(groupId, context).getOrThrow()
                 }
                 localCleanupDataSource.deleteConversationHistory(
                     groupId = groupId,
@@ -50,7 +50,7 @@ internal class GroupMembershipDeletionDataSource(
             if (hasOwnerMembership) {
                 deleteOwnedGroupConversation(groupId, memberships)
             } else {
-                deleteJoinedGroupConversation(groupId, memberships)
+                deleteJoinedGroupConversation(groupId, memberships, context)
             }
         }
 
@@ -92,7 +92,8 @@ internal class GroupMembershipDeletionDataSource(
 
     private suspend fun deleteJoinedGroupConversation(
         groupId: String,
-        memberships: List<GroupMembershipEntity>
+        memberships: List<GroupMembershipEntity>,
+        context: GroupMembershipContext
     ) {
         val membership =
             memberships
@@ -105,7 +106,7 @@ internal class GroupMembershipDeletionDataSource(
                 }.maxByOrNull(GroupMembershipEntity::updatedAtEpochMilliseconds)
         if (membership != null) {
             when (membership.status) {
-                GroupMembershipStatus.ACTIVE.name -> administration.leaveGroup(groupId).getOrThrow()
+                GroupMembershipStatus.ACTIVE.name -> administration.leaveGroup(groupId, context).getOrThrow()
                 GroupMembershipStatus.STAGED.name,
                 GroupMembershipStatus.JOIN_REQUEST_SENT.name,
                 GroupMembershipStatus.WAITING_FOR_ACTIVATION.name -> {

@@ -74,6 +74,15 @@ interface IdentityExchangeDao {
         """
         SELECT *
         FROM identity_exchanges
+        ORDER BY updatedAtEpochMilliseconds DESC, createdAtEpochMilliseconds DESC, exchangeId DESC
+        """
+    )
+    fun observeAll(): Flow<List<IdentityExchangeEntity>>
+
+    @Query(
+        """
+        SELECT *
+        FROM identity_exchanges
         WHERE contactId = :contactId
           AND stage IN (:stages)
         ORDER BY updatedAtEpochMilliseconds DESC, createdAtEpochMilliseconds DESC

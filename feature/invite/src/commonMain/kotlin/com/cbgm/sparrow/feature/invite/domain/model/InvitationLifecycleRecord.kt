@@ -8,7 +8,9 @@ data class InvitationLifecycleRecord(
     val direction: InvitationDirection,
     val createdAtEpochMilliseconds: Long,
     val expiresAtEpochMilliseconds: Long,
-    val updatedAtEpochMilliseconds: Long
+    val updatedAtEpochMilliseconds: Long,
+    val peerDisplayName: String? = null,
+    val peerSecondaryText: String? = null
 ) {
     init {
         require(invitationId.isNotBlank()) { "Invitation ID must not be blank" }

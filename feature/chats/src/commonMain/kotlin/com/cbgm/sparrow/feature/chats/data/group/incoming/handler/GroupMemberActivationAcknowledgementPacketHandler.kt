@@ -58,7 +58,8 @@ class GroupMemberActivationAcknowledgementPacketHandler(
             membershipCoordinator
                 .receiveMemberActivationAcknowledgement(
                     packet = acknowledgement,
-                    acknowledgingContactId = context.contactId
+                    acknowledgingContactId = context.contactId,
+                    transportMode = context.transportMode
                 ).getOrThrow()
         }
 

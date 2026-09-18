@@ -6,14 +6,13 @@ import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.EnsureIdentityExchangeStartedUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.port.ConversationPort
-import com.cbgm.sparrow.feature.invite.domain.model.InvitationPayloadType
-import com.cbgm.sparrow.feature.invite.domain.usecase.SendInvitationUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.domain.workflow.ConversationFlowHandler
 
-class PrepareConversationOpenUseCase(
+class PrepareConversationOpenUseCase internal constructor(
     private val conversationPort: ConversationPort,
     private val ensureIdentityExchangeStarted: EnsureIdentityExchangeStartedUseCase,
     private val requireDirectChatAuthorization: RequireDirectChatAuthorizationUseCase,
-    private val sendInvitation: SendInvitationUseCase,
+    private val flowHandler: ConversationFlowHandler,
     private val identitySetupModeRepository: DirectIdentitySetupModeRepository
 ) {
     suspend operator fun invoke(peerId: String): Result<String?> =
@@ -27,11 +26,7 @@ class PrepareConversationOpenUseCase(
                     if (requireDirectChatAuthorization(peerId).isSuccess) {
                         conversationPort.getOrCreateConversation(peerId).getOrThrow()
                     } else {
-                        sendInvitation(
-                            payloadType = InvitationPayloadType.DIRECT,
-                            payloadId = peerId,
-                            peerIds = setOf(peerId)
-                        )
+                        flowHandler.startDirectInvitation(peerId).getOrThrow()
                         null
                     }
                 }

@@ -105,6 +105,14 @@ class AppViewModel(
             waitUntilLocalIdentityIsReady()
             initialization.invitationResultObserver.run()
         }
+        viewModelScope.launch {
+            waitUntilLocalIdentityIsReady()
+            initialization.membershipResultObserver.run()
+        }
+        viewModelScope.launch {
+            waitUntilLocalIdentityIsReady()
+            initialization.directIdentityResultObserver.run()
+        }
     }
 
     private fun startControlPlaneMaintenance() {

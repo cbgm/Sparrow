@@ -237,6 +237,10 @@ class GroupMemberActivatedPacketHandler(
     }
 
     private suspend fun resolveMemberContact(member: GroupMemberPayload): String {
+        contactDao.findBySigningPublicKey(member.signingPublicKey)?.let { stored ->
+            return stored.contact.id
+        }
+
         val phoneNumber = member.requirePhoneNumber()
         val normalizedPhoneNumber = phoneNumberNormalizer.normalize(phoneNumber).getOrThrow()
         val existing = contactDao.findByNormalizedPhoneNumber(normalizedPhoneNumber)

@@ -15,6 +15,12 @@ internal class GroupSecurityStoreDataSource(
         epoch: Int
     ): List<GroupMemberKeyEntity> = dao.findMemberKeys(groupId, epoch)
 
+    suspend fun findMemberKey(
+        groupId: String,
+        epoch: Int,
+        contactId: String
+    ): GroupMemberKeyEntity? = dao.findMemberKey(groupId, epoch, contactId)
+
     fun observeState(groupId: String): Flow<GroupSecurityStateEntity?> = dao.observeState(groupId)
 
     fun observeCurrentMemberKeys(groupId: String): Flow<List<GroupMemberKeyEntity>> =

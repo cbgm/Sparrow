@@ -2,47 +2,47 @@ package com.cbgm.sparrow.feature.membership.data.datasource
 
 import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentity
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberPayload
-import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipConversationDataSource
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipPeerDataSource
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipStoreDataSource
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupSecurityStoreDataSource
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_MEMBER_ROLE
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_OWNER_ROLE
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipParticipantDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPeerDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupWelcomeRecipientDto
-import com.cbgm.sparrow.feature.membership.data.requireGroupPhoneNumber
 
 internal class GroupEpochDataSource(
-    private val conversationDataSource: GroupMembershipConversationDataSource,
     private val membershipStore: GroupMembershipStoreDataSource,
     private val securityStore: GroupSecurityStoreDataSource,
-    private val groupSecurityManager: GroupMembershipSecurityDataSource,
-    private val peerDataSource: GroupMembershipPeerDataSource
+    private val groupSecurityManager: GroupMembershipSecurityDataSource
 ) {
-    suspend fun findCurrentParticipants(groupId: String): List<ConversationParticipantEntity> {
+    suspend fun findCurrentParticipants(groupId: String): List<GroupMembershipParticipantDto> {
         val state = securityStore.findState(groupId) ?: return emptyList()
-        val existingByContactId =
-            conversationDataSource.findConversationParticipants(groupId).associateBy(ConversationParticipantEntity::contactId)
         return securityStore
             .findMemberKeys(groupId, state.currentEpoch)
             .map { memberKey ->
-                existingByContactId[memberKey.contactId]
-                    ?.copy(role = memberKey.role)
-                    ?: ConversationParticipantEntity(
-                        conversationId = groupId,
-                        contactId = memberKey.contactId,
-                        role = memberKey.role,
-                        joinedAtEpochMilliseconds = state.updatedAtEpochMilliseconds
-                    )
+                GroupMembershipParticipantDto(
+                    contactId = memberKey.contactId,
+                    role = memberKey.role,
+                    joinedAtEpochMilliseconds = state.updatedAtEpochMilliseconds
+                )
             }
     }
 
-    suspend fun loadCurrentParticipantContacts(groupId: String): List<GroupMembershipPeerDto> =
-        findCurrentParticipants(groupId)
-            .map { participant -> peerDataSource.requirePeer(participant.contactId) }
+    suspend fun loadCurrentParticipantContacts(groupId: String): List<GroupMembershipPeerDto> {
+        val state = securityStore.findState(groupId) ?: return emptyList()
+        return securityStore
+            .findMemberKeys(groupId, state.currentEpoch)
+            .map { memberKey ->
+                GroupMembershipPeerDto(
+                    id = memberKey.contactId,
+                    displayName = null,
+                    preferredPhoneNumber = null,
+                    phoneNumbers = emptyList(),
+                    encryptionPublicKey = memberKey.encryptionPublicKey.copyOf(),
+                    signingPublicKey = memberKey.signingPublicKey.copyOf(),
+                    hasMutualIdentity = true
+                )
+            }
+    }
 
     suspend fun createMemberPayloads(
         groupId: String,
@@ -69,11 +69,11 @@ internal class GroupEpochDataSource(
                 val member = resolveMemberIdentity(groupId, contact)
                 add(
                     GroupMemberPayload(
-                        displayName = null,
+                        displayName = contact.displayName,
                         encryptionPublicKey = member.encryptionPublicKey.copyOf(),
                         signingPublicKey = member.signingPublicKey.copyOf(),
                         role = roleOverrides[contact.id] ?: member.role,
-                        phoneNumber = contact.requireGroupPhoneNumber()
+                        phoneNumber = contact.preferredPhoneNumber ?: contact.phoneNumbers.firstOrNull()
                     )
                 )
             }
@@ -157,15 +157,10 @@ internal class GroupEpochDataSource(
     ) {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as MemberIdentityDto
-
-            if (!encryptionPublicKey.contentEquals(other.encryptionPublicKey)) return false
-            if (!signingPublicKey.contentEquals(other.signingPublicKey)) return false
-            if (role != other.role) return false
-
-            return true
+            if (other !is MemberIdentityDto) return false
+            return encryptionPublicKey.contentEquals(other.encryptionPublicKey) &&
+                signingPublicKey.contentEquals(other.signingPublicKey) &&
+                role == other.role
         }
 
         override fun hashCode(): Int {

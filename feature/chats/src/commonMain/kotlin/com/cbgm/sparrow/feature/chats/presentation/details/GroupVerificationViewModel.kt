@@ -29,12 +29,12 @@ import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupVerificati
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupVerificationUiState
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.GetConversationGroupLeaveRequirementUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.LeaveConversationGroupUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.PromoteConversationGroupMemberUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.RemoveConversationGroupMemberUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.TransferConversationGroupAdminAndLeaveUseCase
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
-import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupLeaveRequirementUseCase
-import com.cbgm.sparrow.feature.membership.domain.usecase.LeaveGroupUseCase
-import com.cbgm.sparrow.feature.membership.domain.usecase.PromoteGroupMemberUseCase
-import com.cbgm.sparrow.feature.membership.domain.usecase.RemoveGroupMemberUseCase
-import com.cbgm.sparrow.feature.membership.domain.usecase.TransferGroupAdminAndLeaveUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -51,16 +51,16 @@ class GroupVerificationViewModel(
     private val getContactSafetyNumber: GetContactSafetyNumberUseCase,
     observeContacts: ObserveContactsUseCase,
     private val addGroupMembers: AddGroupMembersUseCase,
-    private val removeGroupMember: RemoveGroupMemberUseCase,
-    private val promoteGroupMember: PromoteGroupMemberUseCase,
-    private val transferGroupAdminAndLeave: TransferGroupAdminAndLeaveUseCase,
+    private val removeGroupMember: RemoveConversationGroupMemberUseCase,
+    private val promoteGroupMember: PromoteConversationGroupMemberUseCase,
+    private val transferGroupAdminAndLeave: TransferConversationGroupAdminAndLeaveUseCase,
     private val consumeAvatarEditResult: ConsumeAvatarEditResultUseCase,
     private val setGroupAvatar: SetGroupAvatarUseCase,
     private val removeGroupAvatar: RemoveGroupAvatarUseCase,
     private val setGroupTitle: SetGroupTitleUseCase,
     private val setGroupDescription: SetGroupDescriptionUseCase,
-    private val getGroupLeaveRequirement: GetGroupLeaveRequirementUseCase,
-    private val leaveGroup: LeaveGroupUseCase
+    private val getGroupLeaveRequirement: GetConversationGroupLeaveRequirementUseCase,
+    private val leaveGroup: LeaveConversationGroupUseCase
 ) : BaseViewModel() {
     private val conversationId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.GroupDetails::conversationId.name)

@@ -23,9 +23,9 @@ import com.cbgm.sparrow.feature.chats.data.direct.repository.DirectMessageReposi
 import com.cbgm.sparrow.feature.chats.data.group.avatar.GroupAvatarBroadcaster
 import com.cbgm.sparrow.feature.chats.data.group.avatar.GroupAvatarPacketProtocol
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupAvatarDataSource
+import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupDescriptionDataSource
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupLocalCleanupDataSource
-import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupMembershipConversationDataSourceImpl
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupPinDataSource
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupTitleDataSource
 import com.cbgm.sparrow.feature.chats.data.group.delivery.GroupMessageDeliveryCoordinator
@@ -101,7 +101,6 @@ import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupTitleReposito
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationActionRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.overview.ConversationOverviewRepository
-import com.cbgm.sparrow.feature.chats.domain.usecase.DeleteConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.FindMessageHistoryCursorUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.contact.EncodeContactForSharingUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ActivateAuthorizedDirectConversationUseCase
@@ -128,7 +127,6 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.forward.LoadOlderMessagesUs
 import com.cbgm.sparrow.feature.chats.domain.usecase.forward.PrepareForwardMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.AddGroupMembersUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.CreateGroupConversationUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeleteGroupConversationUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeleteGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.EditGroupMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.LoadGroupPinnedAttachmentUseCase
@@ -163,11 +161,8 @@ import com.cbgm.sparrow.feature.chats.presentation.overview.OverviewViewModel
 import com.cbgm.sparrow.feature.chats.presentation.verification.GroupMemberQrVerificationViewModel
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.port.ConversationPort
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipBroadcastDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipCleanupDataSource
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipConversationDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipMessageDataSource
-import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtocolDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipSecurityDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipVerificationDataSource
 import org.koin.core.module.dsl.bind
@@ -207,6 +202,7 @@ private fun org.koin.core.module.Module.registerDirectData() {
 }
 
 private fun org.koin.core.module.Module.registerGroupData() {
+    singleOf(::GroupConversationDataSource)
     singleOf(::GroupMessageDeliveryCoordinator)
     singleOf(::GroupOutboxDeliveryHandler)
     singleOf(::GroupProtocolPayloadEncoder)
@@ -229,7 +225,6 @@ private fun org.koin.core.module.Module.registerGroupData() {
             localProfilePictureMetadataProvider = get()
         )
     }
-    single<GroupMembershipProtocolDataSource> { get<GroupMembershipPacketProtocol>() }
     singleOf(::GroupWelcomeSecurity)
     singleOf(::GroupSecurityManager) { bind<GroupMembershipSecurityDataSource>() }
     singleOf(::GroupVerificationPayloadEncoder)
@@ -237,9 +232,8 @@ private fun org.koin.core.module.Module.registerGroupData() {
     singleOf(::GroupVerificationSnapshotSender)
     singleOf(::GroupVerificationCoordinator) { bind<GroupMembershipVerificationDataSource>() }
     singleOf(::GroupOutgoingMessageProcessor)
-    singleOf(::GroupPacketBroadcaster) { bind<GroupMembershipBroadcastDataSource>() }
+    singleOf(::GroupPacketBroadcaster)
     singleOf(::GroupLocalCleanupDataSource) { bind<GroupMembershipCleanupDataSource>() }
-    singleOf(::GroupMembershipConversationDataSourceImpl) { bind<GroupMembershipConversationDataSource>() }
     single<GroupMembershipMessageDataSource> { GroupMembershipMessageFactory }
     singleOf(::GroupWelcomeMembershipResolver)
     singleOf(::GroupWelcomePersistence)
@@ -348,7 +342,6 @@ private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::SetDirectIndicatorUseCase)
     singleOf(::ActivateAuthorizedDirectConversationUseCase)
     singleOf(::DiscardPendingAuthorizationMessagesUseCase)
-    singleOf(::DeleteConversationUseCase)
 
     singleOf(::AddGroupMembersUseCase)
     singleOf(::CreateGroupConversationUseCase)
@@ -361,7 +354,6 @@ private fun org.koin.core.module.Module.registerUseCases() {
     singleOf(::EditGroupMessageUseCase)
     singleOf(::RetryGroupMessageUseCase)
     singleOf(::MarkGroupConversationReadUseCase)
-    singleOf(::DeleteGroupConversationUseCase)
     singleOf(::SetGroupAvatarUseCase)
     singleOf(::RemoveGroupAvatarUseCase)
     singleOf(::SetGroupTitleUseCase)
