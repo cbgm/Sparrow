@@ -8,35 +8,30 @@ import com.cbgm.sparrow.core.protocol.packet.ChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.DeliveryReceiptPacket
 import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProcessor
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.ContactDao
-import com.cbgm.sparrow.data.database.dao.MessageReactionDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
-import com.cbgm.sparrow.data.database.entity.ConversationType
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
 import com.cbgm.sparrow.feature.attachments.runtime.MessageAttachmentCacheCoordinator
-import com.cbgm.sparrow.feature.autoreply.domain.usecase.ClaimAutoReplyForContactUseCase
-import com.cbgm.sparrow.feature.autoreply.domain.usecase.ReleaseAutoReplyRecipientUseCase
+import com.cbgm.sparrow.feature.autoreply.data.datasource.AutoReplyDataSource
+import com.cbgm.sparrow.feature.chats.data.datasource.MessageReactionDataSource
+import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
+import com.cbgm.sparrow.feature.chats.data.direct.outgoing.DirectOutgoingMessageProcessor
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
-import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SendDirectMessageUseCase
-import com.cbgm.sparrow.feature.linkpreview.domain.usecase.PrefetchLinkPreviewsUseCase
+import com.cbgm.sparrow.feature.contacts.data.datasource.ContactLocalDataSource
 
 /** Direct-only incoming chat-message handler. */
 class DirectMessagePacketHandler(
-    private val chatDao: ChatDao,
-    private val contactDao: ContactDao,
-    private val messageReactionDao: MessageReactionDao,
+    private val conversationDataSource: DirectConversationDataSource,
+    private val contactDataSource: ContactLocalDataSource,
+    private val messageReactionDataSource: MessageReactionDataSource,
     private val protocolOutbox: ProtocolOutbox,
     private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor,
     private val attachmentTransfer: MessageAttachmentDataSource,
     private val attachmentCacheCoordinator: MessageAttachmentCacheCoordinator,
-    private val prefetchLinkPreviews: PrefetchLinkPreviewsUseCase,
-    private val claimAutoReplyForContact: ClaimAutoReplyForContactUseCase,
-    private val releaseAutoReplyRecipient: ReleaseAutoReplyRecipientUseCase,
-    private val sendDirectMessage: SendDirectMessageUseCase
+    private val autoReplyDataSource: AutoReplyDataSource,
+    private val outgoingMessageProcessor: DirectOutgoingMessageProcessor
 ) {
     private val logger = SparrowLog.withTag("DirectMessagePacketHandler")
 
@@ -46,12 +41,12 @@ class DirectMessagePacketHandler(
     ): Result<Unit> =
         runCatching {
             packet.reaction?.let { reaction ->
-                val target = chatDao.findMessageById(reaction.messageId) ?: return@runCatching
+                val target = conversationDataSource.findMessageById(reaction.messageId) ?: return@runCatching
                 check(target.conversationId == context.conversationId) { "Reaction target belongs to another conversation" }
                 if (reaction.removed) {
-                    messageReactionDao.delete(reaction.messageId, context.contactId, reaction.emoji)
+                    messageReactionDataSource.delete(reaction.messageId, context.contactId, reaction.emoji)
                 } else {
-                    messageReactionDao.upsert(
+                    messageReactionDataSource.upsert(
                         MessageReactionEntity(reaction.messageId, context.conversationId, context.contactId, reaction.emoji)
                     )
                 }
@@ -67,7 +62,6 @@ class DirectMessagePacketHandler(
 
             val conversation = getOrCreateConversation(context)
             storeMessage(conversation, context, packet)
-            prefetchLinkPreviews(packet.text)
             attachmentTransfer.persistIncoming(packet.messageId, packet.attachments)
             sendDeliveryReceipt(context.contactId, packet.messageId)
             sendAutoReplyIfNeeded(conversation.id, context.contactId)
@@ -95,7 +89,7 @@ class DirectMessagePacketHandler(
         receivedAt: Long
     ) {
         val phoneNumber = packet.senderPhoneNumber?.trim()?.takeIf(String::isNotBlank) ?: return
-        contactDao.usePhoneNumberAsDisplayNameWhenMissing(
+        contactDataSource.usePhoneNumberAsDisplayNameWhenMissing(
             contactId = contactId,
             phoneNumber = phoneNumber,
             updatedAtEpochMilliseconds = receivedAt
@@ -105,22 +99,15 @@ class DirectMessagePacketHandler(
     private suspend fun getOrCreateConversation(
         context: IncomingPacketContext
     ): ConversationEntity =
-        chatDao.findConversationByContactId(contactId = context.contactId)
-            ?: ConversationEntity(
-                id = context.conversationId,
-                contactId = context.contactId,
-                type = ConversationType.DIRECT.name,
-                title = null,
-                createdAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
-                updatedAtEpochMilliseconds = context.receivedAtEpochMilliseconds
-            )
+        conversationDataSource.findConversationById(context.conversationId)
+            ?: conversationDataSource.getOrCreate(context.contactId)
 
     private suspend fun storeMessage(
         conversation: ConversationEntity,
         context: IncomingPacketContext,
         packet: ChatMessagePacket
     ) {
-        chatDao.upsertIncomingChatMessage(
+        conversationDataSource.upsertIncomingChatMessage(
             conversation = conversation,
             message = packet.toMessageEntity(conversation.id, context),
             timestamp = context.receivedAtEpochMilliseconds
@@ -150,15 +137,11 @@ class DirectMessagePacketHandler(
         conversationId: String,
         contactId: String
     ) {
-        val claimedReply =
-            claimAutoReplyForContact(contactId)
-                .getOrElse { error ->
-                    logger.warn(error) { "Could not claim auto reply for contactId=$contactId" }
-                    return
-                } ?: return
+        val now = SystemClock.nowEpochMilliseconds()
+        val claimedReply = runCatching { autoReplyDataSource.claimForContact(contactId, now) }.getOrNull() ?: return
 
         val sendResult =
-            sendDirectMessage(
+            outgoingMessageProcessor.send(
                 conversationId = conversationId,
                 text = claimedReply.text,
                 attachments = emptyList(),
@@ -172,10 +155,12 @@ class DirectMessagePacketHandler(
         }
 
         val activationSessionId = claimedReply.activationSessionId ?: return
-        releaseAutoReplyRecipient(
-            contactId = contactId,
-            expectedActivationSessionId = activationSessionId
-        ).onFailure { error ->
+        runCatching {
+            autoReplyDataSource.releaseContactClaim(
+                contactId = contactId,
+                expectedActivationSessionId = activationSessionId
+            )
+        }.onFailure { error ->
             logger.warn(error) {
                 "Could not release failed auto-reply claim for contactId=$contactId"
             }

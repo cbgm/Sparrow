@@ -5,26 +5,32 @@ import com.cbgm.sparrow.core.protocol.packet.ChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.MessageDeletionPacket
 import com.cbgm.sparrow.core.protocol.packet.MessageEditPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
+import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessageDeletionPacketHandler
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessageEditPacketHandler
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessagePacketHandler
 import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacketDto
-import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
 import com.cbgm.sparrow.feature.identity.domain.model.DirectChatAuthorizationRequiredException
+import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
 
 class DirectIncomingPacketProcessor(
     private val conversationDataSource: DirectConversationDataSource,
     private val messagePacketHandler: DirectMessagePacketHandler,
     private val deletionPacketHandler: DirectMessageDeletionPacketHandler,
     private val editPacketHandler: DirectMessageEditPacketHandler,
-    private val requireDirectChatAuthorization: RequireDirectChatAuthorizationUseCase
+    private val directIdentityExchangeRepository: DirectIdentityExchangeRepository,
+    private val identitySetupModeRepository: DirectIdentitySetupModeRepository
 ) {
     fun canProcess(packet: SparrowPacket): Boolean =
         packet is ChatMessagePacket || packet is MessageDeletionPacket || packet is MessageEditPacket
 
     suspend fun process(incoming: DecodedIncomingPacketDto): Result<Unit> {
-        val authorization = requireDirectChatAuthorization(incoming.contactId)
+        val authorization =
+            directIdentityExchangeRepository.requireDirectChatAuthorization(
+                contactId = incoming.contactId,
+                mode = identitySetupModeRepository.getMode()
+            )
         authorization.exceptionOrNull()?.let { error ->
             return if (error is DirectChatAuthorizationRequiredException) {
                 Result.success(Unit)

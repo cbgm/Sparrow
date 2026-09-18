@@ -9,6 +9,8 @@ import com.cbgm.sparrow.feature.contacts.adapter.ContactVerificationReceiptPacke
 import com.cbgm.sparrow.feature.contacts.adapter.DirectChatAuthorizationRevokedPacketHandler
 import com.cbgm.sparrow.feature.contacts.adapter.IdentityAcknowledgementPacketHandler
 import com.cbgm.sparrow.feature.contacts.adapter.IdentityPacketHandler
+import com.cbgm.sparrow.feature.contacts.data.datasource.ContactLocalDataSource
+import com.cbgm.sparrow.feature.contacts.data.datasource.ContactRoutingIdDataSource
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactKeyExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactRepositoryImpl
 import com.cbgm.sparrow.feature.contacts.data.repository.ContactVerificationRepositoryImpl
@@ -113,9 +115,12 @@ val contactsModule =
             bind<TypedProtocolPacketHandler>()
         }
 
+        singleOf(::ContactLocalDataSource)
+        singleOf(::ContactRoutingIdDataSource)
+
         single<IdentityExchangeRepository> {
             IdentityExchangeRepositoryImpl(
-                contactDao = get(),
+                contactDataSource = get(),
                 localPublicIdentityProvider = get(),
                 protocolOutbox = get()
             )
@@ -123,7 +128,7 @@ val contactsModule =
 
         single<ContactRepository> {
             ContactRepositoryImpl(
-                contactDao = get(),
+                contactDataSource = get(),
                 contactKeyExchangeDataSource = get(),
                 phoneNumberNormalizer = get<PhoneNumberNormalizer>()
             )

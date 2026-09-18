@@ -4,13 +4,13 @@ import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentityProvider
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.IdentityPacket
-import com.cbgm.sparrow.data.database.dao.ContactDao
+import com.cbgm.sparrow.feature.contacts.data.datasource.ContactLocalDataSource
 import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityExchangeRepository
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 class IdentityExchangeRepositoryImpl(
-    private val contactDao: ContactDao,
+    private val contactDataSource: ContactLocalDataSource,
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val protocolOutbox: ProtocolOutbox
 ) : IdentityExchangeRepository {
@@ -34,7 +34,7 @@ class IdentityExchangeRepositoryImpl(
 
             try {
                 val contact =
-                    contactDao.findById(contactId)
+                    contactDataSource.findById(contactId)
                         ?: error("Contact was not found: $contactId")
                 val remoteIdentity =
                     contact.publicIdentity

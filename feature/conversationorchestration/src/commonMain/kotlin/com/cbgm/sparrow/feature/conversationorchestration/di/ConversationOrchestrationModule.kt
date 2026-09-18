@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.di
 
 import com.cbgm.sparrow.feature.conversationorchestration.data.direct.authorization.DirectAuthorizationPayloadEncoder
+import com.cbgm.sparrow.feature.conversationorchestration.data.direct.datasource.IdentityExchangeDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.data.direct.identity.DirectIdentityExchangeCoordinator
 import com.cbgm.sparrow.feature.conversationorchestration.data.direct.identity.DirectIdentityExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.conversationorchestration.data.direct.invitation.DirectInvitationLifecycleEffects
@@ -27,11 +28,12 @@ import org.koin.dsl.module
 val conversationOrchestrationModule =
     module {
         singleOf(::DirectAuthorizationPayloadEncoder)
+        singleOf(::IdentityExchangeDataSource)
         single {
             DirectIdentityExchangeCoordinator(
-                identityExchangeDao = get(),
-                contactDao = get(),
-                contactRoutingIdDao = get(),
+                identityExchangeDataSource = get(),
+                contactDataSource = get(),
+                contactRoutingIdDataSource = get(),
                 contactKeyExchangeDataSource = get(),
                 localPublicIdentityProvider = get(),
                 localSigningKeyPairProvider = get(),

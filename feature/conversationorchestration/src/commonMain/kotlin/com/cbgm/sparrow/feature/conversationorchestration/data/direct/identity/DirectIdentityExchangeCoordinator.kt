@@ -26,13 +26,13 @@ import com.cbgm.sparrow.core.protocol.version.ProtocolVersion
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.data.database.dao.ContactDao
-import com.cbgm.sparrow.data.database.dao.ContactRoutingIdDao
-import com.cbgm.sparrow.data.database.dao.IdentityExchangeDao
 import com.cbgm.sparrow.data.database.entity.ContactPhoneNumberEntity
 import com.cbgm.sparrow.data.database.entity.ContactRoutingIdEntity
 import com.cbgm.sparrow.data.database.entity.IdentityExchangeEntity
+import com.cbgm.sparrow.feature.contacts.data.datasource.ContactLocalDataSource
+import com.cbgm.sparrow.feature.contacts.data.datasource.ContactRoutingIdDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.data.direct.authorization.DirectAuthorizationPayloadEncoder
+import com.cbgm.sparrow.feature.conversationorchestration.data.direct.datasource.IdentityExchangeDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.ContactKeyExchangeDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.ContactVerificationDataSource
 import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
@@ -53,9 +53,9 @@ import kotlinx.coroutines.sync.withLock
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class DirectIdentityExchangeCoordinator(
-    private val identityExchangeDao: IdentityExchangeDao,
-    private val contactDao: ContactDao,
-    private val contactRoutingIdDao: ContactRoutingIdDao,
+    private val identityExchangeDataSource: IdentityExchangeDataSource,
+    private val contactDataSource: ContactLocalDataSource,
+    private val contactRoutingIdDataSource: ContactRoutingIdDataSource,
     private val contactKeyExchangeDataSource: ContactKeyExchangeDataSource,
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
@@ -84,7 +84,7 @@ internal class DirectIdentityExchangeCoordinator(
             }
 
             mutex.withLock {
-                val contact = contactDao.findById(contactId) ?: error("Contact was not found: $contactId")
+                val contact = contactDataSource.findById(contactId) ?: error("Contact was not found: $contactId")
                 val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
                 val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
                 requireLocalKeysMatch(localIdentity, signingKeyPair)
@@ -94,9 +94,9 @@ internal class DirectIdentityExchangeCoordinator(
                 }
 
                 val now = SystemClock.nowEpochMilliseconds()
-                identityExchangeDao.findActiveForContact(contactId, TERMINAL_STATES)?.let { activeInvitation ->
+                identityExchangeDataSource.findActiveForContact(contactId, TERMINAL_STATES)?.let { activeInvitation ->
                     if (!isBoundToLocalIdentity(activeInvitation, localIdentity)) {
-                        identityExchangeDao.upsert(
+                        identityExchangeDataSource.upsert(
                             activeInvitation.copy(
                                 stage = DirectIdentityExchangeStage.FAILED.name,
                                 updatedAtEpochMilliseconds = now,
@@ -112,7 +112,7 @@ internal class DirectIdentityExchangeCoordinator(
                                 }?.toLifecycleRecord()
                         }
 
-                        identityExchangeDao.upsert(
+                        identityExchangeDataSource.upsert(
                             activeInvitation.copy(
                                 stage = DirectIdentityExchangeStage.FAILED.name,
                                 updatedAtEpochMilliseconds = now,
@@ -120,7 +120,7 @@ internal class DirectIdentityExchangeCoordinator(
                             )
                         )
                     } else {
-                        identityExchangeDao.upsert(
+                        identityExchangeDataSource.upsert(
                             activeInvitation.copy(
                                 stage = DirectIdentityExchangeStage.CLOSED.name,
                                 updatedAtEpochMilliseconds = now,
@@ -183,11 +183,11 @@ internal class DirectIdentityExchangeCoordinator(
                         localEncryptionPublicKey = localIdentity.encryptionPublicKey.copyOf(),
                         localSigningPublicKey = localIdentity.signingPublicKey.copyOf()
                     )
-                identityExchangeDao.upsert(storedInvitation)
+                identityExchangeDataSource.upsert(storedInvitation)
 
                 enqueueOrResend(contactId, packet).getOrElse { error ->
-                    identityExchangeDao.upsert(
-                        requireNotNull(identityExchangeDao.findById(invitationId)).copy(
+                    identityExchangeDataSource.upsert(
+                        requireNotNull(identityExchangeDataSource.findById(invitationId)).copy(
                             stage = DirectIdentityExchangeStage.FAILED.name,
                             updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
                             lastError = error.message
@@ -205,7 +205,7 @@ internal class DirectIdentityExchangeCoordinator(
     ): Result<InvitationLifecycleRecord?> =
         safeSuspendCall {
             require(invitationId.isNotBlank()) { "Invitation ID must not be blank" }
-            val invitation = identityExchangeDao.findById(invitationId) ?: return@safeSuspendCall null
+            val invitation = identityExchangeDataSource.findById(invitationId) ?: return@safeSuspendCall null
             if (invitation.direction != InvitationDirection.INCOMING.name) return@safeSuspendCall null
             if (invitation.stage != DirectIdentityExchangeStage.INCOMING_CHALLENGE_RECEIVED.name) return@safeSuspendCall null
             invitation.toLifecycleRecord()
@@ -217,8 +217,8 @@ internal class DirectIdentityExchangeCoordinator(
         }
 
         return combine(
-            identityExchangeDao.observeLatestForContact(contactId),
-            identityExchangeDao.observeLatestForContactByStages(
+            identityExchangeDataSource.observeLatestForContact(contactId),
+            identityExchangeDataSource.observeLatestForContactByStages(
                 contactId = contactId,
                 stages = AUTHORIZATION_EVENT_STATES
             )
@@ -310,7 +310,7 @@ internal class DirectIdentityExchangeCoordinator(
                     )
 
                 prepareAcceptedRemoteIdentity(invitation)
-                identityExchangeDao.upsert(
+                identityExchangeDataSource.upsert(
                     invitation.copy(
                         stage = DirectIdentityExchangeStage.ACCEPTANCE_SENT.name,
                         responseChallenge = responseChallenge.copyOf(),
@@ -321,8 +321,8 @@ internal class DirectIdentityExchangeCoordinator(
                     )
                 )
                 enqueueOrResend(invitation.contactId, packet).getOrElse { error ->
-                    identityExchangeDao.upsert(
-                        requireNotNull(identityExchangeDao.findById(invitationId)).copy(
+                    identityExchangeDataSource.upsert(
+                        requireNotNull(identityExchangeDataSource.findById(invitationId)).copy(
                             stage = DirectIdentityExchangeStage.ACCEPTANCE_SENT.name,
                             updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
                             lastError = error.message
@@ -336,8 +336,8 @@ internal class DirectIdentityExchangeCoordinator(
                         expectedRemoteEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
                         expectedRemoteSigningPublicKey = invitation.remoteSigningPublicKey
                     )
-                identityExchangeDao.upsert(
-                    requireNotNull(identityExchangeDao.findById(invitationId)).copy(
+                identityExchangeDataSource.upsert(
+                    requireNotNull(identityExchangeDataSource.findById(invitationId)).copy(
                         stage = DirectIdentityExchangeStage.WAITING_FOR_READY.name,
                         updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
                     )
@@ -379,7 +379,7 @@ internal class DirectIdentityExchangeCoordinator(
                     )
 
                 enqueueOrResend(invitation.contactId, packet).getOrElse { error ->
-                    identityExchangeDao.upsert(
+                    identityExchangeDataSource.upsert(
                         invitation.copy(
                             stage = DirectIdentityExchangeStage.FAILED.name,
                             updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
@@ -388,7 +388,7 @@ internal class DirectIdentityExchangeCoordinator(
                     )
                     throw error
                 }
-                identityExchangeDao.upsert(
+                identityExchangeDataSource.upsert(
                     invitation.copy(
                         stage = DirectIdentityExchangeStage.CLOSED.name,
                         updatedAtEpochMilliseconds = now,
@@ -406,7 +406,7 @@ internal class DirectIdentityExchangeCoordinator(
 
             mutex.withLock {
                 val invitation =
-                    identityExchangeDao.findActiveForContact(
+                    identityExchangeDataSource.findActiveForContact(
                         contactId = contactId,
                         terminalStages = TERMINAL_STATES
                     ) ?: return@withLock
@@ -425,7 +425,7 @@ internal class DirectIdentityExchangeCoordinator(
                             inviteChallenge = invitation.inviteChallenge
                         )
 
-                        identityExchangeDao.upsert(
+                        identityExchangeDataSource.upsert(
                             invitation.copy(
                                 stage = DirectIdentityExchangeStage.CLOSED.name,
                                 updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
@@ -436,7 +436,7 @@ internal class DirectIdentityExchangeCoordinator(
 
                     invitation.direction == InvitationDirection.OUTGOING.name &&
                         state == DirectIdentityExchangeStage.OUTGOING_CHALLENGE_SENT -> {
-                        identityExchangeDao.upsert(
+                        identityExchangeDataSource.upsert(
                             invitation.copy(
                                 stage = DirectIdentityExchangeStage.CLOSED.name,
                                 updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
@@ -469,7 +469,7 @@ internal class DirectIdentityExchangeCoordinator(
 
                 DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING -> {
                     val keyExchangeStatus =
-                        contactDao
+                        contactDataSource
                             .findPublicIdentityByContactId(contactId)
                             ?.keyExchangeStatus
                     if (keyExchangeStatus != KeyExchangeStatus.MUTUAL.name) {
@@ -488,7 +488,7 @@ internal class DirectIdentityExchangeCoordinator(
             }
 
             mutex.withLock {
-                val invitation = identityExchangeDao.findLatestForContact(contactId) ?: return@withLock
+                val invitation = identityExchangeDataSource.findLatestForContact(contactId) ?: return@withLock
                 val state =
                     DirectIdentityExchangeStage.entries.firstOrNull { candidate ->
                         candidate.name == invitation.stage
@@ -514,7 +514,7 @@ internal class DirectIdentityExchangeCoordinator(
                     queueDirectChatAuthorizationRevocation(invitation)
                 }
 
-                identityExchangeDao.upsert(
+                identityExchangeDataSource.upsert(
                     invitation.copy(
                         stage = DirectIdentityExchangeStage.AUTHORIZATION_REVOKED.name,
                         updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
@@ -625,7 +625,7 @@ internal class DirectIdentityExchangeCoordinator(
                     )
                 }
 
-                identityExchangeDao.findById(packet.invitationId)?.let { existing ->
+                identityExchangeDataSource.findById(packet.invitationId)?.let { existing ->
                     check(existing.direction == InvitationDirection.INCOMING.name) {
                         "Invitation replay changed its direction"
                     }
@@ -655,18 +655,18 @@ internal class DirectIdentityExchangeCoordinator(
                             localEncryptionPublicKey = localIdentity.encryptionPublicKey.copyOf(),
                             localSigningPublicKey = localIdentity.signingPublicKey.copyOf()
                         )
-                    identityExchangeDao.upsert(reboundExisting)
+                    identityExchangeDataSource.upsert(reboundExisting)
                     recoverIncomingInviteReplay(reboundExisting)
                     return@withLock
                 }
 
-                identityExchangeDao
+                identityExchangeDataSource
                     .findActiveForContact(
                         contactId = contactId,
                         terminalStages = TERMINAL_STATES
                     )?.let { activeInvitation ->
                         if (activeInvitation.expiresAtEpochMilliseconds <= context.receivedAtEpochMilliseconds) {
-                            identityExchangeDao.upsert(
+                            identityExchangeDataSource.upsert(
                                 activeInvitation.copy(
                                     stage = DirectIdentityExchangeStage.CLOSED.name,
                                     updatedAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
@@ -694,7 +694,7 @@ internal class DirectIdentityExchangeCoordinator(
                     }
 
                 remotePhoneNumber?.let { phoneNumber ->
-                    contactDao.usePhoneNumberAsDisplayNameWhenMissing(
+                    contactDataSource.usePhoneNumberAsDisplayNameWhenMissing(
                         contactId = contactId,
                         phoneNumber = phoneNumber,
                         updatedAtEpochMilliseconds = context.receivedAtEpochMilliseconds
@@ -707,7 +707,7 @@ internal class DirectIdentityExchangeCoordinator(
                     remoteSigningPublicKey = packet.signingPublicKey
                 )
 
-                identityExchangeDao.upsert(
+                identityExchangeDataSource.upsert(
                     IdentityExchangeEntity(
                         exchangeId = packet.invitationId,
                         contactId = contactId,
@@ -849,7 +849,7 @@ internal class DirectIdentityExchangeCoordinator(
                         expectedRemoteSigningPublicKey = packet.responderSigningPublicKey
                     )
 
-                identityExchangeDao.upsert(
+                identityExchangeDataSource.upsert(
                     invitation.copy(
                         stage = DirectIdentityExchangeStage.MUTUAL_UNVERIFIED.name,
                         responseChallenge = packet.responseChallenge.copyOf(),
@@ -952,7 +952,7 @@ internal class DirectIdentityExchangeCoordinator(
                         expectedRemoteSigningPublicKey = invitation.remoteSigningPublicKey
                     )
 
-                identityExchangeDao.upsert(
+                identityExchangeDataSource.upsert(
                     invitation.copy(
                         stage = DirectIdentityExchangeStage.MUTUAL_UNVERIFIED.name,
                         updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
@@ -1004,7 +1004,7 @@ internal class DirectIdentityExchangeCoordinator(
                     "Decline response was created too far in the future"
                 }
 
-                val invitation = identityExchangeDao.findById(packet.invitationId)
+                val invitation = identityExchangeDataSource.findById(packet.invitationId)
                 if (invitation == null) {
                     // Terminal invitation responses are replay-safe. Once the exact invitation
                     // is gone, do not compare the packet with the contact's current identity:
@@ -1043,7 +1043,7 @@ internal class DirectIdentityExchangeCoordinator(
                 }
 
                 requireState(invitation, DirectIdentityExchangeStage.OUTGOING_CHALLENGE_SENT)
-                identityExchangeDao.upsert(
+                identityExchangeDataSource.upsert(
                     invitation.copy(
                         stage = DirectIdentityExchangeStage.CLOSED.name,
                         remoteSigningPublicKey = packet.declinerSigningPublicKey.copyOf(),
@@ -1066,7 +1066,7 @@ internal class DirectIdentityExchangeCoordinator(
                     invitationId = packet.invitationId
                 )
                 val invitation =
-                    identityExchangeDao.findById(packet.invitationId)
+                    identityExchangeDataSource.findById(packet.invitationId)
                         ?: error("Invitation was not found: ${packet.invitationId}")
                 check(invitation.contactId == context.contactId) {
                     "Authorization revocation contact does not match invitation"
@@ -1101,7 +1101,7 @@ internal class DirectIdentityExchangeCoordinator(
                     return@withLock
                 }
 
-                identityExchangeDao.upsert(
+                identityExchangeDataSource.upsert(
                     invitation.copy(
                         stage = DirectIdentityExchangeStage.AUTHORIZATION_REVOKED.name,
                         updatedAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
@@ -1139,7 +1139,7 @@ internal class DirectIdentityExchangeCoordinator(
                 phoneNumber = phoneNumber,
                 updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
             )
-            contactDao.usePhoneNumberAsDisplayNameWhenMissing(
+            contactDataSource.usePhoneNumberAsDisplayNameWhenMissing(
                 contactId = contactId,
                 phoneNumber = phoneNumber,
                 updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
@@ -1152,7 +1152,7 @@ internal class DirectIdentityExchangeCoordinator(
                 updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
                 lastError = null
             ).also { reboundInvitation ->
-                identityExchangeDao.upsert(reboundInvitation)
+                identityExchangeDataSource.upsert(reboundInvitation)
             }
     }
 
@@ -1167,7 +1167,7 @@ internal class DirectIdentityExchangeCoordinator(
                 findEquivalentPhoneContactId(phoneNumber)
             }
         val identityContactId =
-            contactDao
+            contactDataSource
                 .findBySigningPublicKey(remoteSigningPublicKey)
                 ?.contact
                 ?.id
@@ -1220,7 +1220,7 @@ internal class DirectIdentityExchangeCoordinator(
         }
 
         val remainingIdentityContactId =
-            contactDao
+            contactDataSource
                 .findBySigningPublicKey(remoteSigningPublicKey)
                 ?.contact
                 ?.id
@@ -1232,7 +1232,7 @@ internal class DirectIdentityExchangeCoordinator(
     }
 
     private suspend fun findEquivalentPhoneContactId(phoneNumber: String): String? {
-        val contacts = contactDao.observeAll().first()
+        val contacts = contactDataSource.observeAll().first()
         val matches =
             contacts.filter { contact ->
                 contact.phoneNumbers.any { storedPhoneNumber ->
@@ -1275,7 +1275,7 @@ internal class DirectIdentityExchangeCoordinator(
         remoteEncryptionPublicKey: ByteArray,
         remoteSigningPublicKey: ByteArray
     ): Boolean {
-        val contact = contactDao.findById(contactId) ?: return false
+        val contact = contactDataSource.findById(contactId) ?: return false
         if (
             contact.contact.deviceContactId != null ||
             contact.contact.deviceContactLinkStatus == DEVICE_CONTACT_LINK_STATUS_LINKED
@@ -1321,27 +1321,27 @@ internal class DirectIdentityExchangeCoordinator(
                 toContactId = toContactId
             )
         }
-        identityExchangeDao.reassignContact(
+        identityExchangeDataSource.reassignContact(
             fromContactId = fromContactId,
             toContactId = toContactId
         )
-        contactDao.deleteById(fromContactId)
+        contactDataSource.deleteById(fromContactId)
     }
 
     private suspend fun moveBootstrapMapping(
         fromContactId: String,
         toContactId: String
     ) {
-        val routingId = contactRoutingIdDao.findRoutingIdByContactId(fromContactId) ?: return
+        val routingId = contactRoutingIdDataSource.findRoutingIdByContactId(fromContactId) ?: return
         if (!routingId.startsWith(BOOTSTRAP_ROUTING_ID_PREFIX)) {
             return
         }
 
-        contactRoutingIdDao.deleteOtherContactMapping(
+        contactRoutingIdDataSource.deleteOtherContactMapping(
             routingId = routingId,
             contactId = toContactId
         )
-        contactRoutingIdDao.upsert(
+        contactRoutingIdDataSource.upsert(
             ContactRoutingIdEntity(
                 contactId = toContactId,
                 routingId = routingId
@@ -1363,7 +1363,7 @@ internal class DirectIdentityExchangeCoordinator(
         remoteEncryptionPublicKey: ByteArray,
         remoteSigningPublicKey: ByteArray
     ) {
-        val existingIdentity = contactDao.findPublicIdentityByContactId(contactId)
+        val existingIdentity = contactDataSource.findPublicIdentityByContactId(contactId)
         val sameIdentity =
             existingIdentity != null &&
                 existingIdentity.encryptionPublicKey.contentEquals(remoteEncryptionPublicKey) &&
@@ -1394,7 +1394,7 @@ internal class DirectIdentityExchangeCoordinator(
         encryptionPublicKey: ByteArray,
         signingPublicKey: ByteArray
     ) {
-        val storedIdentity = contactDao.findPublicIdentityByContactId(contactId) ?: return
+        val storedIdentity = contactDataSource.findPublicIdentityByContactId(contactId) ?: return
         if (
             storedIdentity.encryptionPublicKey.contentEquals(encryptionPublicKey) &&
             storedIdentity.signingPublicKey.contentEquals(signingPublicKey)
@@ -1448,7 +1448,7 @@ internal class DirectIdentityExchangeCoordinator(
         phoneNumber: String,
         updatedAtEpochMilliseconds: Long
     ) {
-        val contact = contactDao.findById(contactId) ?: return
+        val contact = contactDataSource.findById(contactId) ?: return
         if (
             contact.phoneNumbers.any { existing ->
                 phoneNumbersEquivalent(
@@ -1460,12 +1460,12 @@ internal class DirectIdentityExchangeCoordinator(
             return
         }
 
-        if (contactDao.findByNormalizedPhoneNumber(phoneNumber) != null) {
+        if (contactDataSource.findByNormalizedPhoneNumber(phoneNumber) != null) {
             return
         }
 
         val phoneNumberId = IdGenerator.generate()
-        contactDao.upsertPhoneNumbers(
+        contactDataSource.upsertPhoneNumbers(
             listOf(
                 ContactPhoneNumberEntity(
                     id = phoneNumberId,
@@ -1479,7 +1479,7 @@ internal class DirectIdentityExchangeCoordinator(
             )
         )
         if (contact.contact.preferredPhoneNumberId == null) {
-            contactDao.upsertContact(
+            contactDataSource.upsertContact(
                 contact.contact.copy(
                     preferredPhoneNumberId = phoneNumberId,
                     updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
@@ -1492,9 +1492,9 @@ internal class DirectIdentityExchangeCoordinator(
         contactId: String,
         localIdentity: LocalPublicIdentity
     ): Boolean {
-        val latestInvitation = identityExchangeDao.findLatestForContact(contactId)
+        val latestInvitation = identityExchangeDataSource.findLatestForContact(contactId)
         val latestAuthorizationEvent =
-            identityExchangeDao.findLatestForContactByStages(
+            identityExchangeDataSource.findLatestForContactByStages(
                 contactId = contactId,
                 stages = AUTHORIZATION_EVENT_STATES
             )
@@ -1645,7 +1645,7 @@ internal class DirectIdentityExchangeCoordinator(
                 expectedRemoteEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
                 expectedRemoteSigningPublicKey = invitation.remoteSigningPublicKey
             )
-        identityExchangeDao.upsert(
+        identityExchangeDataSource.upsert(
             invitation.copy(
                 stage = DirectIdentityExchangeStage.WAITING_FOR_READY.name,
                 updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
@@ -1753,7 +1753,7 @@ internal class DirectIdentityExchangeCoordinator(
             "Invitation ID must not be blank"
         }
 
-        val invitation = identityExchangeDao.findById(invitationId) ?: error("Invitation was not found: $invitationId")
+        val invitation = identityExchangeDataSource.findById(invitationId) ?: error("Invitation was not found: $invitationId")
         check(invitation.direction == direction.name) {
             "Invitation direction does not match this operation"
         }
@@ -1765,7 +1765,7 @@ internal class DirectIdentityExchangeCoordinator(
             return
         }
 
-        identityExchangeDao.upsert(
+        identityExchangeDataSource.upsert(
             invitation.copy(
                 stage = DirectIdentityExchangeStage.CLOSED.name,
                 updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
@@ -1836,7 +1836,7 @@ internal class DirectIdentityExchangeCoordinator(
             return false
         }
 
-        val contact = contactDao.findById(contactId) ?: return true
+        val contact = contactDataSource.findById(contactId) ?: return true
         return contact.contact.deviceContactId == null &&
             contact.phoneNumbers.isEmpty() &&
             contact.publicIdentity?.locallyImported != true

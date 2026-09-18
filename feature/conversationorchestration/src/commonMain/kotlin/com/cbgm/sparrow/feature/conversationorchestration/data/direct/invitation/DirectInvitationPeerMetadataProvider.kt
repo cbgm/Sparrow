@@ -2,13 +2,13 @@ package com.cbgm.sparrow.feature.conversationorchestration.data.direct.invitatio
 
 import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
 import com.cbgm.sparrow.core.result.safeSuspendCall
-import com.cbgm.sparrow.data.database.dao.ContactDao
+import com.cbgm.sparrow.feature.contacts.data.datasource.ContactLocalDataSource
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationPayloadType
 import com.cbgm.sparrow.feature.invite.domain.provider.InvitationPeerMetadata
 import com.cbgm.sparrow.feature.invite.domain.provider.InvitationPeerMetadataProvider
 
 internal class DirectInvitationPeerMetadataProvider(
-    private val contactDao: ContactDao,
+    private val contactDataSource: ContactLocalDataSource,
     private val phoneNumberNormalizer: PhoneNumberNormalizer
 ) : InvitationPeerMetadataProvider {
     override val payloadType: InvitationPayloadType = InvitationPayloadType.DIRECT
@@ -16,7 +16,7 @@ internal class DirectInvitationPeerMetadataProvider(
     override suspend fun get(peerId: String): Result<InvitationPeerMetadata> =
         safeSuspendCall {
             require(peerId.isNotBlank()) { "Invitation peer ID must not be blank" }
-            val contact = contactDao.findById(peerId) ?: return@safeSuspendCall InvitationPeerMetadata()
+            val contact = contactDataSource.findById(peerId) ?: return@safeSuspendCall InvitationPeerMetadata()
             val phoneNumber =
                 contact.phoneNumbers
                     .firstOrNull { number -> number.id == contact.contact.preferredPhoneNumberId }

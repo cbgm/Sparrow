@@ -6,6 +6,7 @@ import com.cbgm.sparrow.core.protocol.handler.IncomingMessageHandler
 import com.cbgm.sparrow.core.protocol.outbox.OutboxDeliveryStateListener
 import com.cbgm.sparrow.feature.chats.adapter.ChatsGroupAvatarProvider
 import com.cbgm.sparrow.feature.chats.adapter.ChatsGroupPinnedAttachmentProvider
+import com.cbgm.sparrow.feature.chats.data.datasource.MessageReactionDataSource
 import com.cbgm.sparrow.feature.chats.data.datasource.UnreadableTransportMessageDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.delivery.DirectMessageDeliveryCoordinator
@@ -187,6 +188,7 @@ val chatsModule =
 
 private fun org.koin.core.module.Module.registerDirectData() {
     singleOf(::DirectConversationDataSource)
+    singleOf(::MessageReactionDataSource)
     singleOf(::DirectMessageDeliveryCoordinator)
     singleOf(::DirectOutboxDeliveryHandler)
     singleOf(::DirectOutgoingMessageProcessor)

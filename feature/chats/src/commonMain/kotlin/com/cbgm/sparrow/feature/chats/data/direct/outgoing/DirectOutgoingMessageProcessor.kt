@@ -15,15 +15,16 @@ import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.MessageReactionDao
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
 import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachmentDto
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
+import com.cbgm.sparrow.feature.chats.data.datasource.MessageReactionDataSource
+import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.delivery.DirectMessageDeliveryCoordinator
 import com.cbgm.sparrow.feature.chats.data.direct.mapper.toMessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
@@ -32,9 +33,9 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessageDeliveryStateMachine
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectPendingAuthorizationMessagePolicy
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
-import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
+import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
+import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
 
 /**
  * Owns every outgoing direct-message operation.
@@ -43,12 +44,13 @@ import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
  * Direct use case -> DirectMessageRepositoryImpl -> this processor -> ProtocolOutbox.
  */
 class DirectOutgoingMessageProcessor(
-    private val chatDao: ChatDao,
-    private val messageReactionDao: MessageReactionDao,
-    private val getContact: GetContactUseCase,
+    private val conversationDataSource: DirectConversationDataSource,
+    private val messageReactionDataSource: MessageReactionDataSource,
+    private val contactRepository: ContactRepository,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
     private val protocolOutbox: ProtocolOutbox,
-    private val requireDirectChatAuthorization: RequireDirectChatAuthorizationUseCase,
+    private val directIdentityExchangeRepository: DirectIdentityExchangeRepository,
+    private val identitySetupModeRepository: DirectIdentitySetupModeRepository,
     private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
     private val deliveryCoordinator: DirectMessageDeliveryCoordinator,
     private val attachmentTransfer: MessageAttachmentDataSource
@@ -66,7 +68,7 @@ class DirectOutgoingMessageProcessor(
             val target = loadTarget(conversationId)
             requireDirectChatAuthorization(target.contactId).getOrThrow()
 
-            val contact = getContact(target.contactId).getOrThrow() ?: error("Contact was not found")
+            val contact = contactRepository.getContact(target.contactId).getOrThrow() ?: error("Contact was not found")
             val messageId = IdGenerator.generate(prefix = "message")
             val prepared = attachmentTransfer.prepareAttachments(attachments)
             persistPreparedMessage(
@@ -89,7 +91,7 @@ class DirectOutgoingMessageProcessor(
                         linkPacket(messageId = messageId, packet = packet, contact = contact)
                     }
                 } catch (error: Throwable) {
-                    chatDao.findMessageById(messageId)?.let { storedMessage ->
+                    conversationDataSource.findMessageById(messageId)?.let { storedMessage ->
                         discardMessages(listOf(storedMessage))
                     }
                     throw error
@@ -103,15 +105,15 @@ class DirectOutgoingMessageProcessor(
             require(emoji.isNotBlank()) { "Reaction emoji must not be blank" }
             val target = loadTarget(conversationId)
             requireDirectChatAuthorization(target.contactId).getOrThrow()
-            val message = chatDao.findMessageById(messageId) ?: error("Message was not found")
+            val message = conversationDataSource.findMessageById(messageId) ?: error("Message was not found")
             check(message.conversationId == conversationId) { "Message does not belong to this conversation" }
 
-            val existing = messageReactionDao.find(messageId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
+            val existing = messageReactionDataSource.find(messageId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
             val removed = existing != null
             if (removed) {
-                messageReactionDao.delete(messageId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
+                messageReactionDataSource.delete(messageId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
             } else {
-                messageReactionDao.upsert(
+                messageReactionDataSource.upsert(
                     MessageReactionEntity(messageId, conversationId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
                 )
             }
@@ -132,7 +134,7 @@ class DirectOutgoingMessageProcessor(
         runCatching {
             require(messageId.isNotBlank()) { "Message ID must not be blank" }
             val target = loadTarget(conversationId)
-            val message = chatDao.findMessageById(messageId) ?: error("Message was not found")
+            val message = conversationDataSource.findMessageById(messageId) ?: error("Message was not found")
             check(message.conversationId == conversationId) { "Message does not belong to this conversation" }
             check(message.isMine) { "Only your own messages can be deleted for everyone" }
 
@@ -160,7 +162,7 @@ class DirectOutgoingMessageProcessor(
             require(normalizedText.isNotBlank()) { "Edited message text must not be blank" }
 
             val target = loadTarget(conversationId)
-            val message = chatDao.findMessageById(messageId) ?: error("Message was not found")
+            val message = conversationDataSource.findMessageById(messageId) ?: error("Message was not found")
             check(message.conversationId == conversationId) { "Message does not belong to this conversation" }
             check(message.isMine) { "Only your own messages can be edited" }
             check(message.deliveryStatus != MessageDeliveryStatus.READ.name) { "Read messages cannot be edited" }
@@ -170,7 +172,7 @@ class DirectOutgoingMessageProcessor(
             }
 
             if (message.deliveryStatus == MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION.name) {
-                chatDao.upsertMessage(message.copy(text = normalizedText))
+                conversationDataSource.upsertMessage(message.copy(text = normalizedText))
                 return@runCatching
             }
 
@@ -184,7 +186,7 @@ class DirectOutgoingMessageProcessor(
                     text = normalizedText
                 )
             ).getOrThrow()
-            chatDao.upsertMessage(message.copy(text = normalizedText))
+            conversationDataSource.upsertMessage(message.copy(text = normalizedText))
         }
 
     suspend fun queueUntilAuthorized(
@@ -196,7 +198,7 @@ class DirectOutgoingMessageProcessor(
         safeSuspendCall {
             val normalizedText = requireMessageContent(text, attachments)
             val target = loadTarget(conversationId)
-            val contact = getContact(target.contactId).getOrThrow() ?: error("Contact was not found")
+            val contact = contactRepository.getContact(target.contactId).getOrThrow() ?: error("Contact was not found")
             val prepared = attachmentTransfer.prepareAttachments(attachments)
             persistPreparedMessage(
                 target = target,
@@ -212,7 +214,7 @@ class DirectOutgoingMessageProcessor(
     suspend fun releaseWaitingForAuthorization(contactId: String): Result<Unit> =
         safeSuspendCall {
             requireDirectChatAuthorization(contactId).getOrThrow()
-            val contact = getContact(contactId).getOrThrow() ?: error("Contact was not found")
+            val contact = contactRepository.getContact(contactId).getOrThrow() ?: error("Contact was not found")
             val nowEpochMilliseconds = SystemClock.nowEpochMilliseconds()
             val waitingMessages = findWaitingMessages(contactId)
             val expiredMessages =
@@ -240,7 +242,7 @@ class DirectOutgoingMessageProcessor(
         safeSuspendCall {
             require(messageId.isNotBlank()) { "Message ID must not be blank" }
 
-            val message = chatDao.findMessageById(messageId) ?: error("Message was not found")
+            val message = conversationDataSource.findMessageById(messageId) ?: error("Message was not found")
             check(message.isMine) { "Only outgoing messages can be retried" }
             check(
                 DirectMessageDeliveryStateMachine.canTransition(
@@ -265,9 +267,9 @@ class DirectOutgoingMessageProcessor(
             require(conversationId.isNotBlank()) { "Conversation ID must not be blank" }
             loadTarget(conversationId)
 
-            chatDao.findMessagesAwaitingReadReceipt(conversationId).forEach { message ->
+            conversationDataSource.findMessagesAwaitingReadReceipt(conversationId).forEach { message ->
                 enqueueReadReceipt(message.messageId, message.contactId)
-                check(chatDao.markReadReceiptSent(message.messageId) == 1) {
+                check(conversationDataSource.markReadReceiptSent(message.messageId)) {
                     "Incoming direct message could not be marked as read"
                 }
                 logger.debug {
@@ -275,6 +277,12 @@ class DirectOutgoingMessageProcessor(
                 }
             }
         }
+
+    private suspend fun requireDirectChatAuthorization(contactId: String): Result<Unit> =
+        directIdentityExchangeRepository.requireDirectChatAuthorization(
+            contactId = contactId,
+            mode = identitySetupModeRepository.getMode()
+        )
 
     private suspend fun releaseMessage(
         message: MessageEntity,
@@ -297,7 +305,7 @@ class DirectOutgoingMessageProcessor(
                 attachments = attachmentTransfer.protocolAttachments(message.id),
                 replyToMessageId = message.replyToMessageId
             )
-        chatDao.upsertMessage(
+        conversationDataSource.upsertMessage(
             message.copy(
                 packetId = packet.packetId,
                 transportMode = contact.plannedTransportMode().name,
@@ -340,11 +348,10 @@ class DirectOutgoingMessageProcessor(
             )
 
         try {
-            chatDao.upsertMessage(message)
+            conversationDataSource.upsertMessage(message)
             attachmentTransfer.persistOutgoing(messageId, prepared)
-            chatDao.updateConversationTimestamp(target.conversationId, createdAtEpochMilliseconds)
         } catch (error: Throwable) {
-            runCatching { chatDao.deleteMessagesAndRefreshConversations(listOf(message)) }
+            runCatching { conversationDataSource.deleteMessages(listOf(message)) }
             attachmentTransfer.cleanupPrepared(prepared)
             throw error
         }
@@ -355,8 +362,8 @@ class DirectOutgoingMessageProcessor(
         packet: ChatMessagePacket,
         contact: Contact
     ) {
-        val message = chatDao.findMessageById(messageId) ?: error("Stored direct message was not found")
-        chatDao.upsertMessage(
+        val message = conversationDataSource.findMessageById(messageId) ?: error("Stored direct message was not found")
+        conversationDataSource.upsertMessage(
             message.copy(
                 packetId = packet.packetId,
                 transportMode = contact.plannedTransportMode().name
@@ -367,17 +374,14 @@ class DirectOutgoingMessageProcessor(
     private suspend fun discardMessages(messages: List<MessageEntity>) {
         if (messages.isEmpty()) return
         attachmentTransfer.deleteForMessages(messages.map(MessageEntity::id))
-        chatDao.deleteMessagesAndRefreshConversations(messages)
+        conversationDataSource.deleteMessages(messages)
     }
 
     private suspend fun findWaitingMessages(contactId: String): List<MessageEntity> =
-        chatDao.findDirectMessagesByContactAndDeliveryStatus(
-            contactId = contactId,
-            deliveryStatus = MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION.name
-        )
+        conversationDataSource.findMessagesWaitingForAuthorization(contactId)
 
     private suspend fun loadTarget(conversationId: String): DirectTargetDto {
-        val conversation = chatDao.findConversationById(conversationId)
+        val conversation = conversationDataSource.findConversationById(conversationId)
             ?: error("Direct conversation was not found")
         check(conversation.type == DIRECT_CONVERSATION_TYPE) { "Conversation is not direct" }
         val contactId = requireNotNull(conversation.contactId) { "Direct conversation has no contact" }
@@ -451,15 +455,20 @@ class DirectOutgoingMessageProcessor(
             identity != null &&
                 identity.encryptionPublicKey.isNotEmpty() &&
                 identity.keyExchangeStatus == KeyExchangeStatus.MUTUAL
-        return if (canEncrypt) TransportEncryptionMode.SEALED_BOX else TransportEncryptionMode.PLAINTEXT
-    }
 
-    private data class DirectTargetDto(
-        val conversationId: String,
-        val contactId: String
-    )
+        return if (canEncrypt) {
+            TransportEncryptionMode.SEALED_BOX
+        } else {
+            TransportEncryptionMode.PLAINTEXT
+        }
+    }
 
     private companion object {
         const val DIRECT_CONVERSATION_TYPE = "DIRECT"
     }
 }
+
+private data class DirectTargetDto(
+    val conversationId: String,
+    val contactId: String
+)
