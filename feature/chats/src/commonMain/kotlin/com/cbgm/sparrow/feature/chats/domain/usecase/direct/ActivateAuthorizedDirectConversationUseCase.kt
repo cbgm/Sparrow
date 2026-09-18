@@ -9,7 +9,7 @@ class ActivateAuthorizedDirectConversationUseCase(
 ) {
     suspend operator fun invoke(contactId: String): Result<Unit> =
         runCatching {
-            conversationRepository.getOrCreate(contactId)
+            conversationRepository.getOrCreate(contactId).getOrThrow()
             messageRepository.releaseWaitingForAuthorization(contactId).getOrThrow()
         }
 }
