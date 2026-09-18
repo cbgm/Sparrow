@@ -24,7 +24,18 @@ interface InvitationRepository {
 
     suspend fun getPeerId(invitationId: String): Result<String>
 
+    suspend fun shouldRecordPending(record: InvitationLifecycleRecord): Result<Boolean>
+
     suspend fun recordPending(record: InvitationLifecycleRecord): Result<Unit>
+
+    suspend fun validatePending(
+        payloadType: InvitationPayloadType,
+        invitationId: String,
+        payloadId: String,
+        peerId: String,
+        direction: InvitationDirection,
+        atEpochMilliseconds: Long
+    ): Result<Unit>
 
     suspend fun getPayloadType(invitationId: String): Result<InvitationPayloadType>
 
@@ -45,6 +56,11 @@ interface InvitationRepository {
         payloadType: InvitationPayloadType,
         invitationId: String,
         response: InvitationResponse
+    ): Result<Unit>
+
+    suspend fun markTransportFailed(
+        payloadType: InvitationPayloadType,
+        invitationId: String
     ): Result<Unit>
 
     suspend fun markViewed(direction: InvitationDirection): Result<Unit>

@@ -7,7 +7,7 @@ import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
 import com.cbgm.sparrow.data.database.entity.GroupMemberKeyEntity
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
-import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
+import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
@@ -16,7 +16,7 @@ internal class GroupVerificationState(
     private val groupVerificationDao: GroupVerificationDao,
     private val groupMembershipDao: GroupMembershipDao,
     private val groupSecurityDao: GroupSecurityDao,
-    private val getContact: GetContactUseCase
+    private val contactRepository: ContactRepository
 ) {
     suspend fun ownsGroup(groupId: String): Boolean =
         groupVerificationDao
@@ -138,7 +138,7 @@ internal class GroupVerificationState(
     }
 
     suspend fun requireContact(contactId: String): Contact =
-        getContact(contactId).getOrThrow()
+        contactRepository.getContact(contactId).getOrThrow()
             ?: error("Contact not found: $contactId")
 
     private fun GroupVerificationPairEntity?.matches(

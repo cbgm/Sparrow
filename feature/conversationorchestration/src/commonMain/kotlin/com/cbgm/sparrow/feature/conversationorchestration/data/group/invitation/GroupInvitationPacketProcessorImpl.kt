@@ -5,6 +5,7 @@ import com.cbgm.sparrow.core.protocol.packet.GroupInvitePacket
 import com.cbgm.sparrow.core.protocol.packet.GroupInviteReceivedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupJoinRequestPacket
 import com.cbgm.sparrow.feature.invite.data.protocol.GroupInvitationPacketProcessor
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
 
 internal class GroupInvitationPacketProcessorImpl(
     private val inviteProcessor: GroupInviteIncomingProcessorImpl,
@@ -15,12 +16,14 @@ internal class GroupInvitationPacketProcessorImpl(
     override suspend fun receiveInvite(
         ownerContactId: String,
         packet: GroupInvitePacket,
-        receivedAtEpochMilliseconds: Long
+        receivedAtEpochMilliseconds: Long,
+        shouldStage: Boolean
     ): Result<Unit> =
         inviteProcessor.process(
             ownerContactId = ownerContactId,
             packet = packet,
-            receivedAtEpochMilliseconds = receivedAtEpochMilliseconds
+            receivedAtEpochMilliseconds = receivedAtEpochMilliseconds,
+            shouldStage = shouldStage
         )
 
     override suspend fun receiveInviteReceived(
@@ -38,7 +41,7 @@ internal class GroupInvitationPacketProcessorImpl(
         memberContactId: String,
         packet: GroupInviteDeclinedPacket,
         receivedAtEpochMilliseconds: Long
-    ): Result<Unit> =
+    ): Result<InvitationResponse?> =
         inviteDeclinedProcessor.process(
             memberContactId = memberContactId,
             packet = packet,
@@ -49,7 +52,7 @@ internal class GroupInvitationPacketProcessorImpl(
         memberContactId: String,
         packet: GroupJoinRequestPacket,
         receivedAtEpochMilliseconds: Long
-    ): Result<Unit> =
+    ): Result<InvitationResponse?> =
         joinRequestProcessor.process(
             memberContactId = memberContactId,
             packet = packet,

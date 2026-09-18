@@ -14,13 +14,11 @@ internal class DirectInvitationLifecycleEffects(
 
     override suspend fun send(
         payloadId: String,
-        peerIds: Set<String>
-    ): Result<List<InvitationLifecycleRecord>> =
+        peerId: String
+    ): Result<InvitationLifecycleRecord?> =
         safeSuspendCall {
-            require(peerIds.size == 1) { "A direct invitation requires exactly one peer" }
-            val peerId = peerIds.single()
             require(payloadId == peerId) { "Direct invitation payload ID must match its peer ID" }
-            listOfNotNull(coordinator.startInvitation(peerId).getOrThrow())
+            coordinator.startInvitation(peerId).getOrThrow()
         }
 
     override suspend fun accept(invitationId: String): Result<Unit> =

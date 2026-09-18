@@ -1,14 +1,16 @@
 package com.cbgm.sparrow.feature.conversationorchestration.di
 
 import com.cbgm.sparrow.feature.conversationorchestration.data.direct.authorization.DirectAuthorizationPayloadEncoder
+import com.cbgm.sparrow.feature.conversationorchestration.data.direct.datasource.IdentityExchangeDataSource
 import com.cbgm.sparrow.feature.conversationorchestration.data.direct.identity.DirectIdentityExchangeCoordinator
 import com.cbgm.sparrow.feature.conversationorchestration.data.direct.identity.DirectIdentityExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.conversationorchestration.data.direct.invitation.DirectInvitationLifecycleEffects
 import com.cbgm.sparrow.feature.conversationorchestration.data.direct.invitation.DirectInvitationPacketProcessor
 import com.cbgm.sparrow.feature.conversationorchestration.data.direct.invitation.DirectInvitationPeerMetadataProvider
 import com.cbgm.sparrow.feature.conversationorchestration.data.direct.invitation.DirectInvitationPolicyProvider
-import com.cbgm.sparrow.feature.conversationorchestration.data.group.invitation.GroupInvitationLifecycleProcessorImpl
+import com.cbgm.sparrow.feature.conversationorchestration.data.group.invitation.GroupInvitationLifecycleEffects
 import com.cbgm.sparrow.feature.conversationorchestration.data.group.invitation.GroupInvitationPacketProcessorImpl
+import com.cbgm.sparrow.feature.conversationorchestration.data.group.invitation.GroupInvitationPeerMetadataProvider
 import com.cbgm.sparrow.feature.conversationorchestration.data.group.invitation.GroupInviteDeclinedIncomingProcessorImpl
 import com.cbgm.sparrow.feature.conversationorchestration.data.group.invitation.GroupInviteIncomingProcessorImpl
 import com.cbgm.sparrow.feature.conversationorchestration.data.group.invitation.GroupInviteReceivedIncomingProcessorImpl
@@ -22,7 +24,6 @@ import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.Prepare
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.PrepareConversationOpenUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.InvitationResultObserver
 import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
-import com.cbgm.sparrow.feature.invite.data.group.GroupInvitationLifecycleProcessor
 import com.cbgm.sparrow.feature.invite.data.lifecycle.InvitationLifecycleEffects
 import com.cbgm.sparrow.feature.invite.data.protocol.GroupInvitationPacketProcessor
 import com.cbgm.sparrow.feature.invite.data.protocol.InvitationPacketProcessor
@@ -35,11 +36,12 @@ import org.koin.dsl.module
 val conversationOrchestrationModule =
     module {
         singleOf(::DirectAuthorizationPayloadEncoder)
+        singleOf(::IdentityExchangeDataSource)
         single {
             DirectIdentityExchangeCoordinator(
-                identityExchangeDao = get(),
-                contactDao = get(),
-                contactRoutingIdDao = get(),
+                identityExchangeDataSource = get(),
+                contactDataSource = get(),
+                contactRoutingIdDataSource = get(),
                 contactKeyExchangeDataSource = get(),
                 localPublicIdentityProvider = get(),
                 localSigningKeyPairProvider = get(),
@@ -78,8 +80,11 @@ val conversationOrchestrationModule =
         singleOf(::GroupInvitationPacketProcessorImpl) {
             bind<GroupInvitationPacketProcessor>()
         }
-        singleOf(::GroupInvitationLifecycleProcessorImpl) {
-            bind<GroupInvitationLifecycleProcessor>()
+        singleOf(::GroupInvitationLifecycleEffects) {
+            bind<InvitationLifecycleEffects>()
+        }
+        singleOf(::GroupInvitationPeerMetadataProvider) {
+            bind<InvitationPeerMetadataProvider>()
         }
 
         singleOf(::InvitationOutboxDeliveryPort) {

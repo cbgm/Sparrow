@@ -4,24 +4,24 @@ import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.packet.GroupConversationDeletedPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
 import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
-import com.cbgm.sparrow.feature.attachments.domain.usecase.DeleteConversationLocalAttachmentsUseCase
+import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentRepository
 import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupMembershipPacketProtocol
 import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
+import com.cbgm.sparrow.feature.contacts.data.datasource.ContactLocalDataSource
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 
 class GroupConversationDeletedPacketHandler internal constructor(
     private val chatDao: ChatDao,
-    private val contactDao: ContactDao,
+    private val contactDataSource: ContactLocalDataSource,
     private val groupMembershipDao: GroupMembershipDao,
     private val groupVerificationDao: GroupVerificationDao,
     private val membershipPacketProtocol: GroupMembershipPacketProtocol,
     private val groupSecurityManager: GroupSecurityManager,
-    private val deleteConversationLocalAttachments: DeleteConversationLocalAttachmentsUseCase
+    private val messageAttachmentRepository: MessageAttachmentRepository
 ) : GroupPacketHandler {
     override fun canHandle(packet: SparrowPacket): Boolean = packet is GroupConversationDeletedPacket
 
@@ -49,7 +49,7 @@ class GroupConversationDeletedPacketHandler internal constructor(
                 "Group deletion predates the membership attempt"
             }
             val ownerIdentity =
-                contactDao.findPublicIdentityByContactId(context.contactId)
+                contactDataSource.findPublicIdentityByContactId(context.contactId)
                     ?: error("Group owner identity was not found")
             membershipPacketProtocol
                 .verifyConversationDeleted(
@@ -57,7 +57,7 @@ class GroupConversationDeletedPacketHandler internal constructor(
                     expectedOwnerSigningPublicKey = ownerIdentity.signingPublicKey
                 ).getOrThrow()
 
-            deleteConversationLocalAttachments(deletion.groupId).getOrThrow()
+            messageAttachmentRepository.deleteLocalAttachmentsForConversation(deletion.groupId).getOrThrow()
             groupSecurityManager.deleteLocalGroup(deletion.groupId).getOrThrow()
             chatDao.deleteConversationParticipants(deletion.groupId)
             groupVerificationDao.deleteByGroupId(deletion.groupId)

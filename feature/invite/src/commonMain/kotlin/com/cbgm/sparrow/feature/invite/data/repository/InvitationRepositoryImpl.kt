@@ -55,8 +55,27 @@ internal class InvitationRepositoryImpl(
             .getOrElse { return Result.failure(it) }
             .getPeerId(invitationId)
 
+    override suspend fun shouldRecordPending(record: InvitationLifecycleRecord): Result<Boolean> =
+        dataSource(record.payloadType).shouldRecordPending(record)
+
     override suspend fun recordPending(record: InvitationLifecycleRecord): Result<Unit> =
         dataSource(record.payloadType).recordPending(record)
+
+    override suspend fun validatePending(
+        payloadType: InvitationPayloadType,
+        invitationId: String,
+        payloadId: String,
+        peerId: String,
+        direction: InvitationDirection,
+        atEpochMilliseconds: Long
+    ): Result<Unit> =
+        dataSource(payloadType).validatePending(
+            invitationId = invitationId,
+            payloadId = payloadId,
+            peerId = peerId,
+            direction = direction,
+            atEpochMilliseconds = atEpochMilliseconds
+        )
 
     override suspend fun getPayloadType(invitationId: String): Result<InvitationPayloadType> =
         findDataSource(invitationId).map { dataSource -> dataSource.payloadType }
@@ -86,6 +105,12 @@ internal class InvitationRepositoryImpl(
         response: InvitationResponse
     ): Result<Unit> =
         dataSource(payloadType).applyResponse(invitationId, response)
+
+    override suspend fun markTransportFailed(
+        payloadType: InvitationPayloadType,
+        invitationId: String
+    ): Result<Unit> =
+        dataSource(payloadType).markTransportFailed(invitationId)
 
     override suspend fun markViewed(direction: InvitationDirection): Result<Unit> {
         for (dataSource in dataSourcesByPayloadType.values) {

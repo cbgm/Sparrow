@@ -25,7 +25,17 @@ interface InvitationLifecycleDataSource {
 
     suspend fun contains(invitationId: String): Boolean
 
+    suspend fun shouldRecordPending(record: InvitationLifecycleRecord): Result<Boolean>
+
     suspend fun recordPending(record: InvitationLifecycleRecord): Result<Unit>
+
+    suspend fun validatePending(
+        invitationId: String,
+        payloadId: String,
+        peerId: String,
+        direction: InvitationDirection,
+        atEpochMilliseconds: Long
+    ): Result<Unit>
 
     suspend fun getPeerId(invitationId: String): Result<String>
 
@@ -45,6 +55,8 @@ interface InvitationLifecycleDataSource {
         invitationId: String,
         response: InvitationResponse
     ): Result<Unit>
+
+    suspend fun markTransportFailed(invitationId: String): Result<Unit>
 
     suspend fun markViewed(direction: InvitationDirection): Result<Unit>
 

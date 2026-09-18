@@ -6,15 +6,15 @@ import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
-import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupMembershipPacketProtocol
 import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.incoming.MarkGroupContactIdentityMutualUseCase
+import com.cbgm.sparrow.feature.contacts.data.datasource.ContactLocalDataSource
+import com.cbgm.sparrow.feature.contacts.domain.repository.ContactKeyExchangeRepository
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
 
 internal class GroupWelcomeSecurityProcessor(
-    private val contactDao: ContactDao,
+    private val contactDataSource: ContactLocalDataSource,
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val localEncryptionKeyPairProvider: LocalEncryptionKeyPairProvider,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
@@ -22,7 +22,7 @@ internal class GroupWelcomeSecurityProcessor(
     private val groupSecurityDao: GroupSecurityDao,
     private val membershipPacketProtocol: GroupMembershipPacketProtocol,
     private val protocolOutbox: ProtocolOutbox,
-    private val markGroupContactIdentityMutual: MarkGroupContactIdentityMutualUseCase
+    private val contactKeyExchangeRepository: ContactKeyExchangeRepository
 ) {
     suspend fun openAndTrustWelcome(
         packet: GroupCreatedPacket,
@@ -49,10 +49,10 @@ internal class GroupWelcomeSecurityProcessor(
                 ).getOrThrow()
 
         if (isFirstWelcome) {
-            markGroupContactIdentityMutual(
+            contactKeyExchangeRepository.markMutual(
                 contactId = senderContactId,
-                encryptionPublicKey = authorityIdentity.encryptionPublicKey,
-                signingPublicKey = authorityIdentity.signingPublicKey
+                expectedRemoteEncryptionPublicKey = authorityIdentity.encryptionPublicKey,
+                expectedRemoteSigningPublicKey = authorityIdentity.signingPublicKey
             ).getOrThrow()
         }
 
@@ -141,7 +141,7 @@ internal class GroupWelcomeSecurityProcessor(
     ): GroupWelcomeAuthorityIdentityDto {
         if (isFirstWelcome) {
             val contactIdentity =
-                contactDao.findPublicIdentityByContactId(senderContactId)
+                contactDataSource.findPublicIdentityByContactId(senderContactId)
                     ?: error("Inviting group admin has no accepted Sparrow identity")
             return GroupWelcomeAuthorityIdentityDto(
                 encryptionPublicKey = contactIdentity.encryptionPublicKey.copyOf(),

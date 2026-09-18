@@ -9,8 +9,8 @@ interface InvitationLifecycleEffects {
 
     suspend fun send(
         payloadId: String,
-        peerIds: Set<String>
-    ): Result<List<InvitationLifecycleRecord>>
+        peerId: String
+    ): Result<InvitationLifecycleRecord?>
 
     suspend fun accept(invitationId: String): Result<Unit>
 
@@ -18,4 +18,10 @@ interface InvitationLifecycleEffects {
         invitationId: String,
         action: InvitationResultAction? = null
     ): Result<Unit>
+
+    suspend fun onExpired(invitationId: String): Result<Unit> = Result.success(Unit)
+
+    suspend fun onTransportFailed(invitationId: String): Result<Unit> = Result.success(Unit)
+
+    suspend fun onDeleteDeclinedOutgoing(invitationId: String): Result<Unit> = Result.success(Unit)
 }

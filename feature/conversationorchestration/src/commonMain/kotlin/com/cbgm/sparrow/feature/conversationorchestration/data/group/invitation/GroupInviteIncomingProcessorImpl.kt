@@ -4,9 +4,7 @@ import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.GroupInvitePacket
 import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.InvitationDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
-import com.cbgm.sparrow.data.database.entity.InvitationEntity
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipAttemptDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipMessageDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipProtocolDataSource
@@ -14,7 +12,6 @@ import com.cbgm.sparrow.feature.membership.domain.usecase.StageGroupOwnerIdentit
 
 internal class GroupInviteIncomingProcessorImpl(
     private val chatDao: ChatDao,
-    private val invitationDao: InvitationDao,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val protocolOutbox: ProtocolOutbox,
     private val membershipPacketProtocol: GroupMembershipProtocolDataSource,
@@ -24,42 +21,31 @@ internal class GroupInviteIncomingProcessorImpl(
     suspend fun process(
         ownerContactId: String,
         packet: GroupInvitePacket,
-        receivedAtEpochMilliseconds: Long
+        receivedAtEpochMilliseconds: Long,
+        shouldStage: Boolean
     ): Result<Unit> =
         runCatching {
             membershipPacketProtocol.verifyInvite(packet).getOrThrow()
             if (shouldIgnore(packet)) return@runCatching
-            if (isExisting(ownerContactId, packet)) {
+            if (!shouldStage) {
                 acknowledge(ownerContactId, packet, receivedAtEpochMilliseconds)
                 return@runCatching
             }
-
-            val latestInvitation =
-                invitationDao.findLatest(
-                    payloadType = INVITATION_PAYLOAD_TYPE_GROUP,
-                    payloadId = packet.groupId,
-                    peerId = ownerContactId,
-                    direction = INVITATION_DIRECTION_INCOMING
-                )
-            if (
-                latestInvitation != null &&
-                packet.createdAtEpochMilliseconds <= latestInvitation.createdAtEpochMilliseconds
-            ) {
+            if (isExisting(ownerContactId, packet)) {
                 acknowledge(ownerContactId, packet, receivedAtEpochMilliseconds)
                 return@runCatching
             }
 
             membershipAttempts.clearRetiredMembershipBeforeRejoin(packet.groupId).getOrThrow()
             val persistedAt = maxOf(packet.createdAtEpochMilliseconds, receivedAtEpochMilliseconds)
-            updateOwnerIdentity(ownerContactId, packet, persistedAt)
+            updateOwnerIdentity(ownerContactId, packet)
             store(ownerContactId, packet, persistedAt)
             acknowledge(ownerContactId, packet, receivedAtEpochMilliseconds)
         }
 
     private suspend fun updateOwnerIdentity(
         ownerContactId: String,
-        packet: GroupInvitePacket,
-        persistedAt: Long
+        packet: GroupInvitePacket
     ) {
         val identityChanged =
             stageIncomingOwnerIdentity(
@@ -69,16 +55,6 @@ internal class GroupInviteIncomingProcessorImpl(
             ).getOrThrow()
         if (!identityChanged) return
 
-        invitationDao.failSuperseded(
-            payloadType = INVITATION_PAYLOAD_TYPE_GROUP,
-            payloadId = packet.groupId,
-            peerId = ownerContactId,
-            currentInvitationId = packet.invitationId,
-            direction = INVITATION_DIRECTION_INCOMING,
-            pendingStatus = INVITATION_STATUS_PENDING,
-            failedStatus = INVITATION_STATUS_FAILED,
-            updatedAt = persistedAt
-        )
         membershipAttempts
             .deleteSupersededMemberStagedAttempts(
                 ownerContactId = ownerContactId,
@@ -155,33 +131,9 @@ internal class GroupInviteIncomingProcessorImpl(
                 createdAtEpochMilliseconds = packet.createdAtEpochMilliseconds,
                 updatedAtEpochMilliseconds = persistedAt
             ).getOrThrow()
-        val invitation =
-            InvitationEntity(
-                invitationId = packet.invitationId,
-                payloadType = INVITATION_PAYLOAD_TYPE_GROUP,
-                payloadId = packet.groupId,
-                peerId = ownerContactId,
-                direction = INVITATION_DIRECTION_INCOMING,
-                status = INVITATION_STATUS_PENDING,
-                createdAtEpochMilliseconds = packet.createdAtEpochMilliseconds,
-                expiresAtEpochMilliseconds = packet.expiresAtEpochMilliseconds,
-                updatedAtEpochMilliseconds = persistedAt
-            )
-
-        invitationDao.deleteByPayloadPeerAndDirection(
-            payloadType = INVITATION_PAYLOAD_TYPE_GROUP,
-            payloadId = packet.groupId,
-            peerId = ownerContactId,
-            direction = INVITATION_DIRECTION_INCOMING
-        )
-        invitationDao.upsert(invitation)
     }
 
     private companion object {
         const val GROUP_CONVERSATION_TYPE = "GROUP"
-        const val INVITATION_PAYLOAD_TYPE_GROUP = "GROUP"
-        const val INVITATION_DIRECTION_INCOMING = "INCOMING"
-        const val INVITATION_STATUS_PENDING = "PENDING"
-        const val INVITATION_STATUS_FAILED = "FAILED"
     }
 }
