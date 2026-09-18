@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.invite.di
 
 import com.cbgm.sparrow.core.protocol.handler.TypedProtocolPacketHandler
-import com.cbgm.sparrow.feature.invite.data.datasource.PersistentInvitationLifecycleDataSource
+import com.cbgm.sparrow.feature.invite.data.datasource.InvitationLifecycleDataSource
 import com.cbgm.sparrow.feature.invite.data.lifecycle.InvitationLifecycleEffects
 import com.cbgm.sparrow.feature.invite.data.outbox.InvitationOutboxDeliveryHandler
 import com.cbgm.sparrow.feature.invite.data.policy.InvitationPolicyImpl
@@ -41,7 +41,6 @@ import org.koin.dsl.module
 val inviteModule =
     module {
         singleOf(::InvitationPayloadEncoder)
-        singleOf(::InvitationOutboxDeliveryHandler)
 
         single<InvitationRepository> {
             val effectsByPayloadType =
@@ -50,7 +49,7 @@ val inviteModule =
                 getAll<InvitationPeerMetadataProvider>().associateBy { provider -> provider.payloadType }
             val lifecycleDataSources =
                 InvitationPayloadType.entries.map { payloadType ->
-                    PersistentInvitationLifecycleDataSource(
+                    InvitationLifecycleDataSource(
                         invitationDao = get(),
                         effects =
                             requireNotNull(effectsByPayloadType[payloadType]) {
@@ -80,6 +79,7 @@ val inviteModule =
         factory { ShouldRecordPendingInvitationUseCase(repository = get()) }
         factory { ValidatePendingInvitationUseCase(repository = get()) }
         factory { MarkInvitationTransportFailedUseCase(repository = get()) }
+        singleOf(::InvitationOutboxDeliveryHandler)
         factory { MarkInvitationsViewedUseCase(repository = get()) }
         factory { SendInvitationUseCase(repository = get()) }
         factory { ObserveInvitationsUseCase(repository = get(), policy = get()) }

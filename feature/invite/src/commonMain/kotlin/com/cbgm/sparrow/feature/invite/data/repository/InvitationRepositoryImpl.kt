@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.invite.data.repository
 
+import com.cbgm.sparrow.feature.invite.data.datasource.InvitationLifecycleDataSource
 import com.cbgm.sparrow.feature.invite.domain.model.Invitation
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationLifecycleRecord

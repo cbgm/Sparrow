@@ -135,7 +135,9 @@ val messagingModule =
             DefaultOutboxProcessor(
                 protocolOutbox = get<ProtocolOutbox>(),
                 packetSender = get(),
-                deliveryStateListener = get()
+                packetCodec = get(),
+                deliveryStateListener = get(),
+                invitationOutboxDeliveryHandler = get()
             )
         }
         single<OutboxRunner> {

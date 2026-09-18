@@ -26,7 +26,7 @@ import kotlinx.coroutines.flow.transformLatest
 import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
-internal class PersistentInvitationLifecycleDataSource(
+internal class InvitationLifecycleDataSource(
     private val invitationDao: InvitationDao,
     private val effects: InvitationLifecycleEffects,
     private val peerMetadataProvider: InvitationPeerMetadataProvider
@@ -54,7 +54,13 @@ internal class PersistentInvitationLifecycleDataSource(
 
                                 val invitation = expirePendingIfNeeded(storedInvitation, now)
                                 val status = invitation.toVisibleStatus() ?: continue
-                                if (!isVisible(direction, status, invitation.updatedAtEpochMilliseconds, now)) {
+                                if (!isVisible(
+                                        direction,
+                                        status,
+                                        invitation.updatedAtEpochMilliseconds,
+                                        now
+                                    )
+                                ) {
                                     continue
                                 }
 
@@ -523,6 +529,7 @@ internal class PersistentInvitationLifecycleDataSource(
                         STATUS_PENDING -> invitation.expiresAtEpochMilliseconds
                         STATUS_DECLINED ->
                             invitation.updatedAtEpochMilliseconds + DECLINED_RETENTION_MILLISECONDS
+
                         else -> null
                     }
                 wakeAt?.takeIf { it > now }
