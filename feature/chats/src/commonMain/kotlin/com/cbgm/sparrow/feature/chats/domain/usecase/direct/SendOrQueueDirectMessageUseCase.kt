@@ -25,10 +25,7 @@ class SendOrQueueDirectMessageUseCase(
             }
 
             val plan =
-                prepareConversationMessage(
-                    peerId = contactId,
-                    hasConversation = conversationId != null
-                ).getOrThrow()
+                prepareConversationMessage(peerId = contactId).getOrThrow()
             val resolvedConversationId =
                 conversationId
                     ?: getOrCreateDirectConversation(contactId).getOrThrow()

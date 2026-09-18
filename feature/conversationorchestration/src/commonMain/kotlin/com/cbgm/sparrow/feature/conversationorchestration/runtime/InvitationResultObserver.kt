@@ -31,54 +31,70 @@ class InvitationResultObserver(
         }
 
     private suspend fun observeAccepted() {
-        observeInvitationResults()
-            .map { results ->
-                results
-                    .asSequence()
-                    .filter { result ->
-                        result.payloadType == InvitationPayloadType.DIRECT &&
-                            result.response == InvitationResponse.ACCEPTED
-                    }
-                    .mapTo(mutableSetOf()) { result -> result.peerId }
-            }
-            .distinctUntilChanged()
-            .collect { peerIds ->
-                peerIds.forEach { peerId ->
-                    conversationPort
-                        .activateAuthorizedConversation(peerId)
-                        .onFailure { error ->
-                            logger.warn(error) {
-                                "Accepted invitation reaction failed for peerId=$peerId"
-                            }
-                        }
+        val seenInvitationIds = mutableSetOf<String>()
+        var initialized = false
+
+        observeInvitationResults().collect { results ->
+            val accepted =
+                results.filter { result ->
+                    result.payloadType == InvitationPayloadType.DIRECT &&
+                        result.response == InvitationResponse.ACCEPTED
                 }
+
+            if (!initialized) {
+                seenInvitationIds += accepted.map { result -> result.invitationId }
+                initialized = true
+                return@collect
             }
+
+            accepted.forEach { result ->
+                if (!seenInvitationIds.add(result.invitationId)) {
+                    return@forEach
+                }
+
+                conversationPort
+                    .activateAuthorizedConversation(result.peerId)
+                    .onFailure { error ->
+                        logger.warn(error) {
+                            "Accepted invitation reaction failed for invitationId=${result.invitationId}, peerId=${result.peerId}"
+                        }
+                    }
+            }
+        }
     }
 
     private suspend fun observeOutgoingDeclined() {
-        observeInvitationResults()
-            .map { results ->
-                results
-                    .asSequence()
-                    .filter { result ->
-                        result.payloadType == InvitationPayloadType.DIRECT &&
-                            result.direction == InvitationDirection.OUTGOING &&
-                            result.response == InvitationResponse.DECLINED
-                    }
-                    .mapTo(mutableSetOf()) { result -> result.peerId }
-            }
-            .distinctUntilChanged()
-            .collect { peerIds ->
-                peerIds.forEach { peerId ->
-                    conversationPort
-                        .discardPendingAuthorizationMessages(peerId)
-                        .onFailure { error ->
-                            logger.warn(error) {
-                                "Declined invitation reaction failed for peerId=$peerId"
-                            }
-                        }
+        val seenInvitationIds = mutableSetOf<String>()
+        var initialized = false
+
+        observeInvitationResults().collect { results ->
+            val declined =
+                results.filter { result ->
+                    result.payloadType == InvitationPayloadType.DIRECT &&
+                        result.direction == InvitationDirection.OUTGOING &&
+                        result.response == InvitationResponse.DECLINED
                 }
+
+            if (!initialized) {
+                seenInvitationIds += declined.map { result -> result.invitationId }
+                initialized = true
+                return@collect
             }
+
+            declined.forEach { result ->
+                if (!seenInvitationIds.add(result.invitationId)) {
+                    return@forEach
+                }
+
+                conversationPort
+                    .discardPendingAuthorizationMessages(result.peerId)
+                    .onFailure { error ->
+                        logger.warn(error) {
+                            "Declined invitation reaction failed for invitationId=${result.invitationId}, peerId=${result.peerId}"
+                        }
+                    }
+            }
+        }
     }
 
     private suspend fun observeBlockRequested() {

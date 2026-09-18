@@ -24,10 +24,7 @@ class PrepareConversationMessageUseCase(
     private val identitySetupModeRepository: DirectIdentitySetupModeRepository,
     private val contactBlocklistRepository: ContactBlocklistRepository
 ) {
-    suspend operator fun invoke(
-        peerId: String,
-        hasConversation: Boolean
-    ): Result<ConversationMessagePlan> =
+    suspend operator fun invoke(peerId: String): Result<ConversationMessagePlan> =
         safeSuspendCall {
             require(peerId.isNotBlank()) {
                 "Peer ID must not be blank"
@@ -66,7 +63,7 @@ class PrepareConversationMessageUseCase(
 
                 invitationStatus in RETRYABLE_INVITATION_STATUSES ||
                     handshake in RETRYABLE_IDENTITY_STATES ||
-                    (!hasConversation && handshake == null) ->
+                    handshake == null ->
                     sendInvitation(
                         payloadType = InvitationPayloadType.DIRECT,
                         payloadId = peerId,

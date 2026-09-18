@@ -1886,7 +1886,7 @@ internal class DirectIdentityExchangeCoordinator(
                     ?: error("Unknown invitation direction: $direction"),
             createdAtEpochMilliseconds = createdAtEpochMilliseconds,
             expiresAtEpochMilliseconds = expiresAtEpochMilliseconds,
-            updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
+            updatedAtEpochMilliseconds = maxOf(createdAtEpochMilliseconds, updatedAtEpochMilliseconds)
         )
 
     private companion object {
