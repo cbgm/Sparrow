@@ -11,8 +11,7 @@ import com.cbgm.sparrow.feature.membership.data.model.GroupWelcomeRecipientDto
 
 internal class GroupEpochDataSource(
     private val membershipStore: GroupMembershipStoreDataSource,
-    private val securityStore: GroupSecurityStoreDataSource,
-    private val groupSecurityManager: GroupMembershipSecurityDataSource
+    private val securityStore: GroupSecurityStoreDataSource
 ) {
     suspend fun findCurrentParticipants(groupId: String): List<GroupMembershipParticipantDto> {
         val state = securityStore.findState(groupId) ?: return emptyList()
@@ -52,7 +51,7 @@ internal class GroupEpochDataSource(
         roleOverrides: Map<String, String> = emptyMap()
     ): List<GroupMemberPayload> {
         val localRole =
-            groupSecurityManager.findLocalRole(groupId).getOrThrow()
+            securityStore.findLocalRole(groupId)
                 ?: GROUP_OWNER_ROLE
 
         return buildList {
@@ -144,11 +143,7 @@ internal class GroupEpochDataSource(
         groupId: String,
         contactId: String
     ): GroupMemberKeyEntity? =
-        groupSecurityManager
-            .findRemoteMemberKey(
-                groupId = groupId,
-                contactId = contactId
-            ).getOrNull()
+        securityStore.findCurrentRemoteMemberKey(groupId, contactId)
 
     private data class MemberIdentityDto(
         val encryptionPublicKey: ByteArray,

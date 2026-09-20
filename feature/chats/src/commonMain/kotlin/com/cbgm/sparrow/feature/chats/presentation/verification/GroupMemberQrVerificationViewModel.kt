@@ -11,8 +11,8 @@ import com.cbgm.sparrow.feature.chats.presentation.verification.model.GroupMembe
 import com.cbgm.sparrow.feature.chats.presentation.verification.model.GroupMemberQrVerificationUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.verification.model.GroupMemberQrVerificationUiState
 import com.cbgm.sparrow.feature.contactimport.presentation.scan.model.ScannedIdentityPreview
-import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.DecodeSharedIdentityUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
 class GroupMemberQrVerificationViewModel(
     savedStateHandle: SavedStateHandle,
     private val decodeSharedIdentity: DecodeSharedIdentityUseCase,
-    private val getContact: GetContactUseCase,
+    private val getRemoteIdentity: GetRemoteIdentityUseCase,
     private val verifyGroupMember: VerifyGroupMemberUseCase
 ) : BaseViewModel() {
     private val groupId =
@@ -130,9 +130,8 @@ class GroupMemberQrVerificationViewModel(
                     return null
                 }
         val expectedIdentity =
-            getContact(contactId)
+            getRemoteIdentity(contactId)
                 .getOrNull()
-                ?.sparrowIdentity
 
         if (
             expectedIdentity == null ||

@@ -34,7 +34,7 @@ internal class AvatarDataSource(
                 }
 
             is AvatarTarget.Group ->
-                groupAvatarProvider.observe(target.id).map { snapshot ->
+                groupAvatarProvider.observeSnapshot(target.id).map { snapshot ->
                     Avatar(
                         target = target,
                         changedAtEpochMilliseconds = snapshot.changedAtEpochMilliseconds,

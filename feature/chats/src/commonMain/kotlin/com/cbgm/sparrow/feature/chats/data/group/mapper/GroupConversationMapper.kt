@@ -1,7 +1,6 @@
 package com.cbgm.sparrow.feature.chats.data.group.mapper
 
 import com.cbgm.sparrow.core.crypto.transport.TransportEncryptionMode
-import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
@@ -17,18 +16,14 @@ import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessage
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessageDeliveryStateMachine
 import com.cbgm.sparrow.feature.chats.domain.model.group.MessageDeliveryProgress
-import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
-import com.cbgm.sparrow.feature.membership.data.model.GroupConversationStateDto
-import com.cbgm.sparrow.feature.membership.data.model.GroupMemberProgressDto
-import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
+import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationMembershipProjector
 import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationState
-import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberProgress
-import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberProgressStatus
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberLifecycleSnapshot
 
 internal fun ConversationWithMessagesDto.toGroupConversation(
     participantContactIds: List<String>,
     recipientStates: List<MessageRecipientStateEntity>,
-    memberships: List<GroupMembershipEntity>,
+    memberships: List<GroupMemberLifecycleSnapshot>,
     verificationRows: List<GroupVerificationPairEntity> = emptyList(),
     partsByMessageId: Map<String, List<MessagePartDto>> = emptyMap(),
     reactionsByMessageId: Map<String, List<MessageReaction>> = emptyMap(),
@@ -42,11 +37,10 @@ internal fun ConversationWithMessagesDto.toGroupConversation(
         )
     val visibleMessages = timeline.visibleMessages
     val statesByMessageId = recipientStates.groupBy(MessageRecipientStateEntity::messageId)
-    val groupState =
-        GroupMembershipStateMachine.conversationState(
-            memberships = timeline.currentMemberships,
-            isLocallyInactive = timeline.isLocallyInactive
-        )
+    val membershipProjection = GroupConversationMembershipProjector.project(
+        memberships = timeline.currentMemberships,
+        isLocallyInactive = timeline.isLocallyInactive
+    )
 
     return GroupConversation(
         id = conversation.id,
@@ -73,11 +67,11 @@ internal fun ConversationWithMessagesDto.toGroupConversation(
                     row.membershipStatus == GroupVerificationPairEntity.PENDING_STATUS
                 }
             } else {
-                timeline.currentMemberships.count { it.status.isPendingMembershipStatus() }
+                membershipProjection.pendingMemberCount
             },
-        isReady = groupState == GroupConversationStateDto.READY,
-        state = groupState.toDomain(),
-        memberProgress = GroupMembershipStateMachine.memberProgress(timeline.currentMemberships).map(GroupMemberProgressDto::toDomain)
+        isReady = membershipProjection.state == GroupConversationState.READY,
+        state = membershipProjection.state,
+        memberProgress = membershipProjection.memberProgress
     )
 }
 
@@ -138,19 +132,3 @@ private fun String.toMessageContentStatus(): MessageContentStatus =
 internal fun String.toMessageDeliveryStatus(): MessageDeliveryStatus =
     MessageDeliveryStatus.entries.firstOrNull { it.name == this }
         ?: MessageDeliveryStatus.NOT_APPLICABLE
-
-private fun String.isPendingMembershipStatus(): Boolean =
-    this == GroupMembershipStatus.STAGED.name ||
-        this == GroupMembershipStatus.IDENTITY_READY.name ||
-        this == GroupMembershipStatus.JOIN_REQUEST_SENT.name ||
-        this == GroupMembershipStatus.WELCOME_SENT.name ||
-        this == GroupMembershipStatus.WAITING_FOR_ACTIVATION.name
-
-private fun GroupConversationStateDto.toDomain(): GroupConversationState =
-    GroupConversationState.valueOf(name)
-
-private fun GroupMemberProgressDto.toDomain(): GroupMemberProgress =
-    GroupMemberProgress(
-        contactId = contactId,
-        status = GroupMemberProgressStatus.valueOf(status.name)
-    )

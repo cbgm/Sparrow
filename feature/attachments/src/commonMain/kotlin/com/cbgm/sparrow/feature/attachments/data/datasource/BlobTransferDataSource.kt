@@ -6,7 +6,7 @@ import com.cbgm.sparrow.core.crypto.random.SecureRandomGenerator
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.protocol.attachment.EncryptedBlobReference
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.feature.attachments.domain.model.UploadedBlob
+import com.cbgm.sparrow.feature.attachments.data.model.UploadedBlobDto
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpoint
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayBlobUploadTicketRequest
@@ -27,7 +27,7 @@ import io.ktor.utils.io.readAvailable
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
-class BlobTransferDataSource(
+internal class BlobTransferDataSource(
     private val httpClient: HttpClient,
     private val webSocketTransportClient: WebSocketTransportClient,
     private val nodeEndpointResolver: NodeEndpointResolver,
@@ -39,7 +39,7 @@ class BlobTransferDataSource(
     suspend fun upload(
         plaintext: ByteArray,
         retentionMilliseconds: Long
-    ): UploadedBlob {
+    ): UploadedBlobDto {
         require(plaintext.isNotEmpty()) { "Attachment blob must not be empty" }
         require(retentionMilliseconds > 0L) { "Blob retention must be positive" }
 
@@ -90,7 +90,7 @@ class BlobTransferDataSource(
             "Blob upload failed with HTTP ${response.status.value}"
         }
 
-        return UploadedBlob(
+        return UploadedBlobDto(
             reference =
                 EncryptedBlobReference(
                     nodeId = ticket.nodeId,
@@ -128,7 +128,7 @@ class BlobTransferDataSource(
             ).getOrThrow()
     }
 
-    suspend fun delete(uploadedBlob: UploadedBlob) {
+    suspend fun delete(uploadedBlob: UploadedBlobDto) {
         val reference = uploadedBlob.reference
         val endpoint = resolveBlobEndpoint(reference.nodeId)
         val response =

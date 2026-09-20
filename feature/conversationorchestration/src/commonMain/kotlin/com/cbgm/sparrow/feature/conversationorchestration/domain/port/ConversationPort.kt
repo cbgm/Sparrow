@@ -1,8 +1,54 @@
 package com.cbgm.sparrow.feature.conversationorchestration.domain.port
 
+import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
+import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
 
 interface ConversationPort {
+    /** Conversation-only side effects after Membership authenticates the welcome. */
+    suspend fun recordIncomingGroupWelcomeRestart(
+        packet: GroupCreatedPacket,
+        invitationId: String?,
+        isFirstWelcome: Boolean,
+        persistedAt: Long
+    ): Result<Unit>
+
+    suspend fun getCurrentGroupParticipantIds(groupId: String): Result<List<String>>
+
+    /** Conversation projection of an already-authenticated, Membership-persisted welcome. */
+    suspend fun installIncomingGroupWelcome(
+        packet: GroupCreatedPacket,
+        previousSigningKeysByContactId: Map<String, ByteArray>,
+        contactIdsByMember: List<String?>,
+        contactDisplayNames: Map<String, String>,
+        persistedAt: Long
+    ): Result<Set<String>>
+
+    /** Replays the Chats-owned group metadata after Membership accepted readiness. */
+    suspend fun sendCurrentGroupMetadataTo(groupId: String, peerId: String): Unit
+
+    /** Chats alone owns verification records and snapshot broadcasting. */
+    suspend fun refreshOwnedGroupVerification(groupId: String): Result<Unit>
+
+    suspend fun onLocalGroupMemberActivated(groupId: String): Result<Unit>
+
+    suspend fun onRemoteGroupMemberActivated(
+        groupId: String,
+        contactId: String,
+        role: String,
+        joinedAtEpochMilliseconds: Long
+    ): Result<Unit>
+
+    /** Chats owns attachments, installed group key, participants and verification records. */
+    suspend fun applyIncomingGroupRemoval(
+        packet: GroupMemberRemovedPacket,
+        senderContactId: String
+    ): Result<Unit>
+
+    suspend fun prepareIncomingGroupDeletion(groupId: String): Result<Unit>
+
+    suspend fun finishIncomingGroupDeletion(groupId: String, deletedAtEpochMilliseconds: Long): Result<Unit>
+
     suspend fun getOrCreateConversation(peerId: String): Result<String>
 
     suspend fun activateAuthorizedConversation(peerId: String): Result<Unit>
@@ -34,6 +80,8 @@ interface ConversationPort {
     suspend fun addGroupParticipant(
         groupId: String,
         peerId: String,
+        memberDisplayName: String,
+        epoch: Int,
         joinedAtEpochMilliseconds: Long,
         eventId: String
     ): Result<Unit>
@@ -47,11 +95,21 @@ interface ConversationPort {
     suspend fun removeGroupParticipant(
         groupId: String,
         peerId: String,
+        memberDisplayName: String,
         epoch: Int,
         eventId: String,
         updatedAtEpochMilliseconds: Long,
         memberLeft: Boolean
     ): Result<Unit>
+
+    suspend fun endLocalGroupMembership(
+        groupId: String,
+        referenceId: String,
+        epoch: Int,
+        endedAtEpochMilliseconds: Long
+    ): Result<Unit>
+
+    suspend fun deleteLocalGroupConversation(groupId: String, deletedAtEpochMilliseconds: Long): Result<Unit>
 
     suspend fun deleteGroupAttachments(groupId: String): Result<Unit>
 }

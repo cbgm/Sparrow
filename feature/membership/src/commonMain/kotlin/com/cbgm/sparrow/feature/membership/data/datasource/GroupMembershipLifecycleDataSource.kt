@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.membership.data.datasource
 import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivationAcknowledgementPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
+import com.cbgm.sparrow.feature.membership.data.model.GroupLocalMembershipEndDto
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberPromotionResult
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberRemovalResult
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
@@ -40,21 +41,21 @@ class GroupMembershipLifecycleDataSource internal constructor(
         context: GroupMembershipContext
     ): Result<GroupMemberPromotionResult> = administration.promoteMember(groupId, contactId, context)
 
-    suspend fun transferAdminAndLeave(
+    internal suspend fun transferAdminAndLeave(
         groupId: String,
         contactId: String,
         context: GroupMembershipContext
-    ): Result<Unit> = administration.transferAdminAndLeave(groupId, contactId, context)
+    ): Result<GroupLocalMembershipEndDto> = administration.transferAdminAndLeave(groupId, contactId, context)
 
-    suspend fun leaveGroup(
+    internal suspend fun leaveGroup(
         groupId: String,
         context: GroupMembershipContext
-    ): Result<Unit> = administration.leaveGroup(groupId, context)
+    ): Result<GroupLocalMembershipEndDto> = administration.leaveGroup(groupId, context)
 
     suspend fun deleteGroupConversation(
         groupId: String,
         context: GroupMembershipContext
-    ): Result<Unit> = deletion.deleteGroupConversation(groupId, context)
+    ): Result<Long> = deletion.deleteGroupConversation(groupId, context)
 
     suspend fun receiveLeaveRequest(
         memberContactId: String,

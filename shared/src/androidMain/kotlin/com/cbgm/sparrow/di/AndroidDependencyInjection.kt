@@ -9,6 +9,7 @@ import com.cbgm.sparrow.feature.chats.di.androidChatsModule
 import com.cbgm.sparrow.feature.contacts.di.androidContactsModule
 import com.cbgm.sparrow.feature.identity.di.androidIdentityStorageModule
 import com.cbgm.sparrow.feature.media.di.platformMediaModule
+import com.cbgm.sparrow.feature.membership.di.androidMembershipModule
 import com.cbgm.sparrow.feature.settings.di.androidSettingsModule
 import com.cbgm.sparrow.feature.voice.di.platformVoiceModule
 import com.cbgm.sparrow.notification.di.notificationAndroidModule
@@ -29,9 +30,10 @@ private val androidApplicationModules: List<Module> =
         androidIdentityStorageModule,
         androidContactsModule,
         androidAttachmentsModule,
+        androidChatsModule,
         platformMediaModule,
         platformVoiceModule,
-        androidChatsModule,
+        androidMembershipModule,
         notificationAndroidModule,
         androidSettingsModule
     )

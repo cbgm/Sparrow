@@ -5,21 +5,22 @@ import com.cbgm.sparrow.core.protocol.packet.ChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.MessageDeletionPacket
 import com.cbgm.sparrow.core.protocol.packet.MessageEditPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
+import com.cbgm.sparrow.core.security.DirectChatAuthorizationRequiredException
+import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessageDeletionPacketHandler
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessageEditPacketHandler
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessagePacketHandler
 import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacketDto
-import com.cbgm.sparrow.feature.identity.domain.model.DirectChatAuthorizationRequiredException
-import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
+import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
 
 class DirectIncomingPacketProcessor(
     private val conversationDataSource: DirectConversationDataSource,
     private val messagePacketHandler: DirectMessagePacketHandler,
     private val deletionPacketHandler: DirectMessageDeletionPacketHandler,
     private val editPacketHandler: DirectMessageEditPacketHandler,
-    private val directIdentityExchangeRepository: DirectIdentityExchangeRepository,
+    private val getIdentityPeerState: GetIdentityPeerStateUseCase,
     private val identitySetupModeRepository: DirectIdentitySetupModeRepository
 ) {
     fun canProcess(packet: SparrowPacket): Boolean =
@@ -27,10 +28,22 @@ class DirectIncomingPacketProcessor(
 
     suspend fun process(incoming: DecodedIncomingPacketDto): Result<Unit> {
         val authorization =
-            directIdentityExchangeRepository.requireDirectChatAuthorization(
-                contactId = incoming.contactId,
-                mode = identitySetupModeRepository.getMode()
-            )
+            getIdentityPeerState(incoming.contactId).mapCatching { state ->
+                when (identitySetupModeRepository.getMode()) {
+                    DirectIdentitySetupMode.AUTOMATIC_INVITATION ->
+                        if (!state.hasEstablishedExchange) {
+                            throw DirectChatAuthorizationRequiredException(
+                                "A contact invitation must be accepted before messages can be sent"
+                            )
+                        }
+                    DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING ->
+                        if (!state.hasMutualIdentity) {
+                            throw DirectChatAuthorizationRequiredException(
+                                "Both identities must be exchanged before messages can be sent"
+                            )
+                        }
+                }
+            }
         authorization.exceptionOrNull()?.let { error ->
             return if (error is DirectChatAuthorizationRequiredException) {
                 Result.success(Unit)

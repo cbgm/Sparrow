@@ -9,6 +9,7 @@ import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineAndBlockInvitationU
 import com.cbgm.sparrow.feature.invite.domain.usecase.DeclineInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.DeleteDeclinedOutgoingInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.HandleInvitationResponseUseCase
+import com.cbgm.sparrow.feature.invite.domain.usecase.InvalidatePendingInvitationUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.MarkInvitationTransportFailedUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.MarkInvitationsViewedUseCase
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationLifecycleStatusUseCase
@@ -39,6 +40,7 @@ val inviteModule =
         factory { ShouldRecordPendingInvitationUseCase(repository = get()) }
         factory { ValidatePendingInvitationUseCase(repository = get()) }
         factory { MarkInvitationTransportFailedUseCase(repository = get()) }
+        factory { InvalidatePendingInvitationUseCase(repository = get()) }
         singleOf(::InvitationOutboxDeliveryHandler)
         factory { MarkInvitationsViewedUseCase(repository = get()) }
         factory { ObserveInvitationsUseCase(repository = get()) }

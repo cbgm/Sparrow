@@ -1,12 +1,12 @@
 package com.cbgm.sparrow.feature.chats.domain.usecase.group
 
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupConversationRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupVerificationActionRepository
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.AddConversationMembersUseCase
-import com.cbgm.sparrow.feature.membership.domain.usecase.InitializeOwnedGroupMembershipUseCase
 
 class CreateGroupConversationUseCase(
     private val repository: GroupConversationRepository,
-    private val initializeOwnedGroupMembership: InitializeOwnedGroupMembershipUseCase,
+    private val verificationRepository: GroupVerificationActionRepository,
     private val addConversationMembers: AddConversationMembersUseCase
 ) {
     suspend operator fun invoke(
@@ -16,7 +16,7 @@ class CreateGroupConversationUseCase(
         runCatching {
             require(contactIds.isNotEmpty()) { "A group requires at least one contact" }
             val groupId = repository.create(title).getOrThrow()
-            initializeOwnedGroupMembership(groupId).getOrThrow()
+            verificationRepository.initializeOwnedGroup(groupId).getOrThrow()
             addConversationMembers(
                 conversationId = groupId,
                 peerIds = contactIds

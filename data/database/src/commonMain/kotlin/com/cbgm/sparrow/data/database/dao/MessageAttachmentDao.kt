@@ -3,6 +3,7 @@ package com.cbgm.sparrow.data.database.dao
 import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Upsert
+import com.cbgm.sparrow.data.database.entity.AttachmentMessageContextEntity
 import com.cbgm.sparrow.data.database.entity.MessageAttachmentEntity
 import com.cbgm.sparrow.data.database.model.LocalMessageAttachmentRowDto
 import kotlinx.coroutines.flow.Flow
@@ -10,50 +11,31 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface MessageAttachmentDao {
     @Upsert
+    suspend fun upsertMessageContext(context: AttachmentMessageContextEntity)
+
+    @Query("SELECT * FROM attachment_message_contexts WHERE messageId = :messageId LIMIT 1")
+    suspend fun findMessageContext(messageId: String): AttachmentMessageContextEntity?
+
+    @Query(
+        """
+        UPDATE attachment_message_contexts
+        SET displayName = :displayName, isGroup = :isGroup
+        WHERE conversationId = :conversationId
+          AND (displayName != :displayName OR isGroup != :isGroup)
+    """
+    )
+    suspend fun updateConversationDisplayName(conversationId: String, displayName: String, isGroup: Boolean): Int
+
+    @Upsert
     suspend fun upsertAll(attachments: List<MessageAttachmentEntity>)
 
+    /** Messages owner supplies the visible page IDs; only Attachments rows are queried here. */
     @Query(
-        """
-        SELECT message_attachments.*
-        FROM message_attachments
-        INNER JOIN messages ON messages.id = message_attachments.messageId
-        WHERE messages.conversationId = :conversationId
-          AND message_attachments.messageId IN (
-              SELECT id
-              FROM messages
-              WHERE conversationId = :conversationId
-              ORDER BY createdAtEpochMilliseconds DESC, id DESC
-              LIMIT :messageLimit
-          )
-        ORDER BY messages.createdAtEpochMilliseconds ASC, message_attachments.position ASC
-        """
+        """SELECT * FROM message_attachments
+              WHERE messageId IN (:messageIds)
+              ORDER BY messageId ASC, position ASC"""
     )
-    fun observeRecentByConversation(
-        conversationId: String,
-        messageLimit: Int
-    ): Flow<List<MessageAttachmentEntity>>
-
-    @Query(
-        """
-        SELECT message_attachments.*
-        FROM message_attachments
-        INNER JOIN messages ON messages.id = message_attachments.messageId
-        WHERE messages.conversationId = :conversationId
-          AND (
-              messages.createdAtEpochMilliseconds > :fromTimestamp
-              OR (
-                  messages.createdAtEpochMilliseconds = :fromTimestamp
-                  AND messages.id >= :fromMessageId
-              )
-          )
-        ORDER BY messages.createdAtEpochMilliseconds ASC, messages.id ASC, message_attachments.position ASC
-        """
-    )
-    fun observeFromMessageCursor(
-        conversationId: String,
-        fromTimestamp: Long,
-        fromMessageId: String
-    ): Flow<List<MessageAttachmentEntity>>
+    fun observeByMessageIds(messageIds: List<String>): Flow<List<MessageAttachmentEntity>>
 
     @Query(
         """
@@ -76,53 +58,53 @@ interface MessageAttachmentDao {
     suspend fun findByMessageIds(messageIds: List<String>): List<MessageAttachmentEntity>
 
     @Query(
-        """
-        SELECT message_attachments.*
-        FROM message_attachments
-        INNER JOIN messages ON messages.id = message_attachments.messageId
-        WHERE messages.conversationId = :conversationId
-        ORDER BY messages.createdAtEpochMilliseconds ASC, message_attachments.position ASC
-        """
+        """SELECT message_attachments.* FROM message_attachments
+              INNER JOIN attachment_message_contexts AS ctx
+              ON ctx.messageId = message_attachments.messageId
+              WHERE ctx.conversationId = :conversationId
+              ORDER BY ctx.createdAtEpochMilliseconds ASC, ctx.messageId ASC, message_attachments.position ASC"""
     )
     suspend fun findByConversationId(conversationId: String): List<MessageAttachmentEntity>
 
     @Query(
-        """
-        SELECT message_attachments.*,
-               messages.conversationId AS conversationId,
-               messages.createdAtEpochMilliseconds AS createdAtEpochMilliseconds
-        FROM message_attachments
-        INNER JOIN messages ON messages.id = message_attachments.messageId
-        WHERE message_attachments.localFileName IS NOT NULL
-        ORDER BY messages.createdAtEpochMilliseconds DESC, message_attachments.position ASC
-        """
+        """SELECT message_attachments.*,
+                     ctx.conversationId AS conversationId,
+                     ctx.createdAtEpochMilliseconds AS createdAtEpochMilliseconds,
+                     ctx.displayName AS displayName,
+                     ctx.isGroup AS isGroup
+              FROM message_attachments
+              INNER JOIN attachment_message_contexts AS ctx
+              ON ctx.messageId = message_attachments.messageId
+              WHERE message_attachments.localFileName IS NOT NULL
+              ORDER BY ctx.createdAtEpochMilliseconds DESC, message_attachments.position ASC"""
     )
     fun observeAllLocal(): Flow<List<LocalMessageAttachmentRowDto>>
 
     @Query(
-        """
-        SELECT message_attachments.*,
-               messages.conversationId AS conversationId,
-               messages.createdAtEpochMilliseconds AS createdAtEpochMilliseconds
-        FROM message_attachments
-        INNER JOIN messages ON messages.id = message_attachments.messageId
-        WHERE messages.conversationId = :conversationId
-          AND message_attachments.localFileName IS NOT NULL
-        ORDER BY messages.createdAtEpochMilliseconds DESC, message_attachments.position ASC
-        """
+        """SELECT message_attachments.*,
+                     ctx.conversationId AS conversationId,
+                     ctx.createdAtEpochMilliseconds AS createdAtEpochMilliseconds,
+                     ctx.displayName AS displayName,
+                     ctx.isGroup AS isGroup
+              FROM message_attachments
+              INNER JOIN attachment_message_contexts AS ctx
+              ON ctx.messageId = message_attachments.messageId
+              WHERE ctx.conversationId = :conversationId AND message_attachments.localFileName IS NOT NULL
+              ORDER BY ctx.createdAtEpochMilliseconds DESC, message_attachments.position ASC"""
     )
     fun observeLocalByConversationId(conversationId: String): Flow<List<LocalMessageAttachmentRowDto>>
 
     @Query(
-        """
-        SELECT message_attachments.*,
-               messages.conversationId AS conversationId,
-               messages.createdAtEpochMilliseconds AS createdAtEpochMilliseconds
-        FROM message_attachments
-        INNER JOIN messages ON messages.id = message_attachments.messageId
-        WHERE message_attachments.id IN (:attachmentIds)
-          AND message_attachments.localFileName IS NOT NULL
-        """
+        """SELECT message_attachments.*,
+                     ctx.conversationId AS conversationId,
+                     ctx.createdAtEpochMilliseconds AS createdAtEpochMilliseconds,
+                     ctx.displayName AS displayName,
+                     ctx.isGroup AS isGroup
+              FROM message_attachments
+              INNER JOIN attachment_message_contexts AS ctx
+              ON ctx.messageId = message_attachments.messageId
+              WHERE message_attachments.id IN (:attachmentIds)
+                AND message_attachments.localFileName IS NOT NULL"""
     )
     suspend fun findLocalRowsByIds(attachmentIds: List<String>): List<LocalMessageAttachmentRowDto>
 
@@ -139,11 +121,9 @@ interface MessageAttachmentDao {
         """
         UPDATE message_attachments
         SET localFileName = NULL
-        WHERE id IN (
-            SELECT message_attachments.id
-            FROM message_attachments
-            INNER JOIN messages ON messages.id = message_attachments.messageId
-            WHERE messages.conversationId = :conversationId
+        WHERE messageId IN (
+            SELECT messageId FROM attachment_message_contexts
+            WHERE conversationId = :conversationId
         )
         """
     )

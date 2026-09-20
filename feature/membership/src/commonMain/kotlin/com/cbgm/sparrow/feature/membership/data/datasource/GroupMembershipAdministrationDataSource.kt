@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.membership.data.datasource
 
 import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
+import com.cbgm.sparrow.feature.membership.data.model.GroupLocalMembershipEndDto
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberPromotionResult
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberRemovalResult
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
@@ -26,12 +27,12 @@ internal class GroupMembershipAdministrationDataSource(
         groupId: String,
         contactId: String,
         context: GroupMembershipContext
-    ): Result<Unit> = leaveDataSource.transferAdminAndLeave(groupId, contactId, context)
+    ): Result<GroupLocalMembershipEndDto> = leaveDataSource.transferAdminAndLeave(groupId, contactId, context)
 
     suspend fun leaveGroup(
         groupId: String,
         context: GroupMembershipContext
-    ): Result<Unit> = leaveDataSource.leaveGroup(groupId, context)
+    ): Result<GroupLocalMembershipEndDto> = leaveDataSource.leaveGroup(groupId, context)
 
     suspend fun receiveLeaveRequest(
         memberContactId: String,

@@ -2,6 +2,13 @@ package com.cbgm.sparrow.feature.identity.data.repository
 
 import com.cbgm.sparrow.core.crypto.identity.IdentityKeyGenerator
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
+import com.cbgm.sparrow.core.protocol.identity.LocalEncryptionKeyPair
+import com.cbgm.sparrow.core.protocol.identity.LocalEncryptionKeyPairProvider
+import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentity
+import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentityProvider
+import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair
+import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.core.protocol.identity.LocalSigningPublicKeyProvider
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.identity.data.datasource.PublicIdentityDataSource
 import com.cbgm.sparrow.feature.identity.device.PrivateKeyStorage
@@ -18,7 +25,11 @@ class IdentityRepositoryImpl(
     private val signatureCrypto: DetachedSignatureCrypto,
     private val privateKeyStorage: PrivateKeyStorage,
     private val publicIdentityDataSource: PublicIdentityDataSource
-) : IdentityRepository {
+) : IdentityRepository,
+    LocalPublicIdentityProvider,
+    LocalSigningKeyPairProvider,
+    LocalEncryptionKeyPairProvider,
+    LocalSigningPublicKeyProvider {
     private val identityUpdates =
         MutableSharedFlow<PublicIdentity?>(
             replay = 1,
@@ -145,6 +156,42 @@ class IdentityRepositoryImpl(
         safeSuspendCall {
             privateKeyStorage.loadSigningPrivateKey()?.toByteArray()
                 ?: error("Local signing private key does not exist")
+        }
+
+    override suspend fun getLocalPublicIdentity(): Result<LocalPublicIdentity> =
+        runCatching {
+            val identity = getIdentity().getOrThrow() ?: error("Local Sparrow identity does not exist")
+            LocalPublicIdentity(
+                encryptionPublicKey = identity.encryptionPublicKey.copyOf(),
+                signingPublicKey = identity.signingPublicKey.copyOf()
+            )
+        }
+
+    override suspend fun getSigningKeyPair(): Result<LocalSigningKeyPair> =
+        runCatching {
+            val identity = getIdentity().getOrThrow() ?: error("Local Sparrow identity does not exist")
+            LocalSigningKeyPair(
+                publicKey = identity.signingPublicKey.copyOf(),
+                privateKey = getSigningPrivateKey().getOrThrow().copyOf()
+            )
+        }
+
+    override suspend fun getEncryptionKeyPair(): Result<LocalEncryptionKeyPair> =
+        runCatching {
+            val identity = getIdentity().getOrThrow() ?: error("Local Sparrow identity does not exist")
+            val privateKey = getEncryptionPrivateKey().getOrThrow()
+            require(identity.encryptionPublicKey.isNotEmpty()) { "Local encryption public key is empty" }
+            require(privateKey.isNotEmpty()) { "Local encryption private key is empty" }
+            LocalEncryptionKeyPair(
+                publicKey = identity.encryptionPublicKey.copyOf(),
+                privateKey = privateKey.copyOf()
+            )
+        }
+
+    override suspend fun getSigningPublicKey(): Result<ByteArray> =
+        runCatching {
+            val identity = getIdentity().getOrThrow() ?: error("Local Sparrow identity does not exist")
+            identity.signingPublicKey.copyOf()
         }
 
     private companion object {

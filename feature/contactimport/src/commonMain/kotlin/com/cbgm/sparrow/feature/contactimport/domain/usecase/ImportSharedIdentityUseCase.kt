@@ -6,16 +6,23 @@ import com.cbgm.sparrow.feature.contacts.domain.model.ImportContactRequest
 import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactRequest
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.DeviceContactWriterRepository
-import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityExchangeRepository
-import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
+import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
+import com.cbgm.sparrow.feature.identity.domain.model.RemoteIdentityOrigin
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityShareRepository
+import com.cbgm.sparrow.feature.identity.domain.usecase.CancelIdentityExchangeUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.FindRemoteIdentityPeerIdUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ImportRemoteIdentityUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.StartManualIdentityExchangeUseCase
 
 class ImportSharedIdentityUseCase(
     private val identityShareRepository: IdentityShareRepository,
     private val contactRepository: ContactRepository,
-    private val directIdentityExchangeRepository: DirectIdentityExchangeRepository,
-    private val identityExchangeRepository: IdentityExchangeRepository,
-    private val deviceContactWriterRepository: DeviceContactWriterRepository
+    private val cancelIdentityExchange: CancelIdentityExchangeUseCase,
+    private val importRemoteIdentity: ImportRemoteIdentityUseCase,
+    private val findRemoteIdentityPeerId: FindRemoteIdentityPeerIdUseCase,
+    private val startManualIdentityExchange: StartManualIdentityExchangeUseCase,
+    private val deviceContactWriterRepository: DeviceContactWriterRepository,
+    private val getContact: GetContactUseCase
 ) {
     suspend operator fun invoke(
         encodedIdentity: String,
@@ -45,9 +52,15 @@ class ImportSharedIdentityUseCase(
 
             val persistedContact =
                 contactRepository
-                    .importContact(
+                    .upsertImportedContact(
                         ImportContactRequest(
                             contactId = contactId,
+                            matchedIdentityContactId =
+                                if (contactId == null) {
+                                    findRemoteIdentityPeerId(sharedIdentity.signingPublicKey).getOrThrow()
+                                } else {
+                                    null
+                                },
                             encryptionPublicKey = sharedIdentity.encryptionPublicKey.copyOf(),
                             signingPublicKey = sharedIdentity.signingPublicKey.copyOf(),
                             displayName = displayName,
@@ -56,18 +69,22 @@ class ImportSharedIdentityUseCase(
                         )
                     ).getOrThrow()
 
-            directIdentityExchangeRepository
-                .cancelForManualSetup(persistedContact.id)
-                .getOrThrow()
+            importRemoteIdentity(
+                peerId = persistedContact.id,
+                encryptionPublicKey = sharedIdentity.encryptionPublicKey,
+                signingPublicKey = sharedIdentity.signingPublicKey,
+                origin = if (identityImportTrust == IdentityImportTrust.VERIFIED_IN_PERSON) {
+                    RemoteIdentityOrigin.TRUSTED_QR_IMPORT
+                } else {
+                    RemoteIdentityOrigin.LOCAL_IMPORT
+                }
+            ).getOrThrow()
 
-            identityExchangeRepository
-                .startManualExchange(persistedContact.id)
-                .getOrThrow()
+            cancelIdentityExchange(persistedContact.id).getOrThrow()
+            startManualIdentityExchange(persistedContact.id).getOrThrow()
 
             val importedContact =
-                contactRepository
-                    .getContact(persistedContact.id)
-                    .getOrThrow()
+                getContact(persistedContact.id).getOrThrow()
                     ?: error("Imported contact could not be loaded")
 
             deviceContactWriterRepository.addIfNotExists(

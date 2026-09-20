@@ -52,6 +52,9 @@ interface InvitationRepository {
         response: InvitationResponse
     ): Result<Unit>
 
+    /** Invalidate an obsolete pending invitation by its own ID; do not affect a newer invite. */
+    suspend fun invalidatePending(invitationId: String): Result<Unit>
+
     suspend fun markTransportFailed(
         payloadType: InvitationPayloadType,
         invitationId: String

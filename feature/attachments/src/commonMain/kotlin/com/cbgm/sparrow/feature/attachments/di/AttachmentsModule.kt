@@ -6,9 +6,11 @@ import com.cbgm.sparrow.feature.attachments.data.datasource.LocalAttachmentConte
 import com.cbgm.sparrow.feature.attachments.data.datasource.LocalAttachmentDataSource
 import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
 import com.cbgm.sparrow.feature.attachments.data.repository.BlobTransferRepositoryImpl
+import com.cbgm.sparrow.feature.attachments.data.repository.MessageAttachmentOperationsRepositoryImpl
 import com.cbgm.sparrow.feature.attachments.data.repository.MessageAttachmentRepositoryImpl
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentTarget
 import com.cbgm.sparrow.feature.attachments.domain.repository.BlobTransferRepository
+import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentRepository
 import com.cbgm.sparrow.feature.attachments.domain.usecase.DeleteBlobUseCase
 import com.cbgm.sparrow.feature.attachments.domain.usecase.DeleteConversationLocalAttachmentsUseCase
@@ -42,6 +44,9 @@ val attachmentsModule =
         singleOf(::AttachmentContentDataSource)
         singleOf(::LocalAttachmentContentDataSource)
         singleOf(::MessageAttachmentCacheCoordinator)
+        singleOf(::MessageAttachmentOperationsRepositoryImpl) {
+            bind<MessageAttachmentOperationsRepository>()
+        }
         singleOf(::MessageAttachmentRepositoryImpl) {
             bind<MessageAttachmentRepository>()
         }

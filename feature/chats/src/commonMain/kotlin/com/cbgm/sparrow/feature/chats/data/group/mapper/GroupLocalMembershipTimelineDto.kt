@@ -1,17 +1,17 @@
 package com.cbgm.sparrow.feature.chats.data.group.mapper
 
-import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberLifecycleSnapshot
 
 internal data class GroupLocalMembershipTimelineDto(
     val visibleMessages: List<MessageEntity>,
-    val currentMemberships: List<GroupMembershipEntity>,
+    val currentMemberships: List<GroupMemberLifecycleSnapshot>,
     val isLocallyInactive: Boolean
 )
 
 internal fun buildGroupLocalMembershipTimeline(
     messages: List<MessageEntity>,
-    memberships: List<GroupMembershipEntity>,
+    memberships: List<GroupMemberLifecycleSnapshot>,
     localMembershipHistory: List<MessageEntity> = messages
 ): GroupLocalMembershipTimelineDto {
     val orderedMessages = messages.sortedWith(MESSAGE_ORDER)

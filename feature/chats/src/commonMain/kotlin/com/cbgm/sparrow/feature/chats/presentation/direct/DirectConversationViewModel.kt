@@ -152,6 +152,7 @@ class DirectConversationViewModel(
                 fallbackContactName = fallbackContactName,
                 conversation = context.conversation,
                 contact = context.contact,
+                remoteIdentity = context.remoteIdentity,
                 handshake = context.handshake,
                 canQueueMessages = context.canQueueMessages,
                 setupMode = context.setupMode,

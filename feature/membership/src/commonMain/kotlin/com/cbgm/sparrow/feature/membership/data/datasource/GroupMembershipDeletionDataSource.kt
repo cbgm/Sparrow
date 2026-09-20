@@ -15,31 +15,27 @@ import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
 @Suppress("LongParameterList")
 internal class GroupMembershipDeletionDataSource(
     private val membershipStore: GroupMembershipStoreDataSource,
+    private val securityStore: GroupSecurityStoreDataSource,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val protocolOutbox: ProtocolOutbox,
     private val membershipPacketProtocol: GroupMembershipPacketProtocol,
-    private val groupSecurityManager: GroupMembershipSecurityDataSource,
     private val packetBroadcaster: GroupPacketBroadcaster,
     private val administration: GroupMembershipAdministrationDataSource,
-    private val membershipLock: GroupMembershipLock,
-    private val localCleanupDataSource: GroupMembershipCleanupDataSource
+    private val membershipLock: GroupMembershipLock
 ) {
     suspend fun deleteGroupConversation(
         groupId: String,
         context: GroupMembershipContext
-    ): Result<Unit> =
+    ): Result<Long> =
         runCatching {
             require(groupId.isNotBlank()) { "Group ID must not be blank" }
-            val localRole = groupSecurityManager.findLocalRole(groupId).getOrThrow()
+            val localRole = securityStore.findLocalRole(groupId)
             if (localRole != null) {
                 if (localRole != GROUP_LEFT_ROLE) {
                     administration.leaveGroup(groupId, context).getOrThrow()
                 }
-                localCleanupDataSource.deleteConversationHistory(
-                    groupId = groupId,
-                    deletedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
-                )
-                return@runCatching
+                membershipStore.deleteByGroupId(groupId)
+                return@runCatching SystemClock.nowEpochMilliseconds()
             }
 
             val memberships = membershipStore.findByGroupId(groupId)
@@ -57,7 +53,7 @@ internal class GroupMembershipDeletionDataSource(
     private suspend fun deleteOwnedGroupConversation(
         groupId: String,
         memberships: List<GroupMembershipEntity>
-    ) {
+    ): Long =
         membershipLock.withLock {
             val now =
                 maxOf(
@@ -65,7 +61,7 @@ internal class GroupMembershipDeletionDataSource(
                     memberships.maxOfOrNull(GroupMembershipEntity::createdAtEpochMilliseconds) ?: 0L
                 )
             val epoch =
-                groupSecurityManager.findOwnedGroupEpoch(groupId).getOrThrow()
+                securityStore.findOwnedGroupEpoch(groupId)
                     ?: GroupConversationDeletedPacket.PENDING_GROUP_EPOCH
             val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
 
@@ -86,15 +82,16 @@ internal class GroupMembershipDeletionDataSource(
                     }
             packetBroadcaster.enqueueAll(packetsByContactId).getOrThrow()
 
-            localCleanupDataSource.delete(groupId, now)
+            securityStore.deleteGroup(groupId)
+            membershipStore.deleteByGroupId(groupId)
+            now
         }
-    }
 
     private suspend fun deleteJoinedGroupConversation(
         groupId: String,
         memberships: List<GroupMembershipEntity>,
         context: GroupMembershipContext
-    ) {
+    ): Long {
         val membership =
             memberships
                 .filter { candidate ->
@@ -124,14 +121,13 @@ internal class GroupMembershipDeletionDataSource(
             }
         }
 
-        localCleanupDataSource.delete(
-            groupId = groupId,
-            deletedAtEpochMilliseconds =
-                maxOf(
-                    SystemClock.nowEpochMilliseconds(),
-                    memberships.maxOfOrNull(GroupMembershipEntity::createdAtEpochMilliseconds) ?: 0L
-                )
+        val deletedAt = maxOf(
+            SystemClock.nowEpochMilliseconds(),
+            memberships.maxOfOrNull(GroupMembershipEntity::createdAtEpochMilliseconds) ?: 0L
         )
+        securityStore.deleteGroup(groupId)
+        membershipStore.deleteByGroupId(groupId)
+        return deletedAt
     }
 
     private fun String.isIncomingStatus(): Boolean =

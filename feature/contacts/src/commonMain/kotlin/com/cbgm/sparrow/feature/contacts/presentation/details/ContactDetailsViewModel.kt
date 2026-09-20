@@ -6,12 +6,12 @@ import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactDetailsContextUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.VerifyContactUseCase
 import com.cbgm.sparrow.feature.contacts.presentation.details.mapper.toContactDetailsUiState
 import com.cbgm.sparrow.feature.contacts.presentation.details.mapper.withVerificationState
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsUiState
 import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
+import com.cbgm.sparrow.feature.identity.domain.usecase.VerifyRemoteIdentityUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
 class ContactDetailsViewModel(
     savedStateHandle: SavedStateHandle,
     private val observeContactDetailsContext: ObserveContactDetailsContextUseCase,
-    private val verifyContact: VerifyContactUseCase
+    private val verifyContact: VerifyRemoteIdentityUseCase
 ) : BaseViewModel() {
     private val contactId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.ContactDetails::contactId.name)

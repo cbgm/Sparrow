@@ -8,10 +8,10 @@ import com.cbgm.sparrow.core.protocol.packet.GroupJoinRequestPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberPayload
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMembershipChangePayload
+import com.cbgm.sparrow.core.protocol.packet.GroupProtocolPayloadEncoder
 import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.protocol.profile.ProfilePicturePayload
-import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupProtocolPayloadEncoder
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertFalse

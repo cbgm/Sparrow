@@ -103,6 +103,10 @@ class AppViewModel(
     private fun startInvitationResultCoordinators() {
         viewModelScope.launch {
             waitUntilLocalIdentityIsReady()
+            initialization.attachmentConversationNameObserver.run()
+        }
+        viewModelScope.launch {
+            waitUntilLocalIdentityIsReady()
             initialization.invitationResultObserver.run()
         }
         viewModelScope.launch {
@@ -112,6 +116,10 @@ class AppViewModel(
         viewModelScope.launch {
             waitUntilLocalIdentityIsReady()
             initialization.directIdentityResultObserver.run()
+        }
+        viewModelScope.launch {
+            waitUntilLocalIdentityIsReady()
+            initialization.contactBlockObserver.run()
         }
     }
 

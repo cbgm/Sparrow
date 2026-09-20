@@ -8,13 +8,14 @@ import kotlinx.coroutines.flow.combine
 
 class ObserveGroupVerificationUseCase(
     private val repository: GroupVerificationRepository,
-    private val contactRepository: ContactRepository
+    private val contactRepository: ContactRepository,
+    private val observeVerificationContext: ObserveGroupVerificationContextUseCase
 ) {
     operator fun invoke(groupId: String): Flow<GroupVerificationState> =
         combine(
             repository.observePairs(groupId),
             contactRepository.observeContacts(),
-            repository.observeContext(groupId)
+            observeVerificationContext(groupId)
         ) { pairs, contacts, context ->
             val ownerDisplayName =
                 context.ownerContactId

@@ -5,7 +5,7 @@ import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.protocol.avatar.GroupAvatarMetadata
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair
 import com.cbgm.sparrow.core.protocol.packet.GroupAvatarUpdatedPacket
-import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupProtocolPayloadEncoder
+import com.cbgm.sparrow.core.protocol.packet.GroupProtocolPayloadEncoder
 
 internal class GroupAvatarPacketProtocol(
     private val groupCrypto: GroupCrypto,

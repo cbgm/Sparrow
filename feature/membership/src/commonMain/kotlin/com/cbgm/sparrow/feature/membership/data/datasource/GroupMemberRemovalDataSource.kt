@@ -28,8 +28,8 @@ internal class GroupMemberRemovalDataSource(
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
     private val protocolOutbox: ProtocolOutbox,
     private val membershipPacketProtocol: GroupMembershipPacketProtocol,
-    private val groupSecurityManager: GroupMembershipSecurityDataSource,
-    private val verificationDataSource: GroupMembershipVerificationDataSource,
+    private val groupEpochSecurity: GroupEpochSecurityDataSource,
+    private val securityStore: GroupSecurityStoreDataSource,
     private val membershipLock: GroupMembershipLock,
     private val epochDataSource: GroupEpochDataSource,
     private val packetBroadcaster: GroupPacketBroadcaster
@@ -54,7 +54,7 @@ internal class GroupMemberRemovalDataSource(
         runCatching {
             membershipLock.withLock {
                 val currentEpoch =
-                    groupSecurityManager.findOwnedGroupEpoch(packet.groupId).getOrThrow()
+                    securityStore.findOwnedGroupEpoch(packet.groupId)
                         ?: error("Active group security state was not found")
                 check(packet.epoch <= currentEpoch) {
                     "Group leave request references a future group epoch"
@@ -102,7 +102,6 @@ internal class GroupMemberRemovalDataSource(
         val removalEpoch = rotateForRemovalIfNeeded(groupId, contactId, reason, removal, context)
         sendMemberRemovalPacket(groupId, contactId, reason, removalEpoch, removal)
         markMembershipRemoved(removal.membership, removal.removedAt)
-        verificationDataSource.onOwnedMembershipChanged(groupId).getOrThrow()
         return GroupMemberRemovalResult(
             groupId = groupId,
             contactId = contactId,
@@ -122,7 +121,7 @@ internal class GroupMemberRemovalDataSource(
         groupId: String,
         contactId: String
     ): MemberRemovalDto {
-        groupSecurityManager.findOwnedGroupEpoch(groupId).getOrThrow()
+        securityStore.findOwnedGroupEpoch(groupId)
         val currentMemberKey = currentMemberKey(groupId, contactId)
         val membership =
             membershipStore.findByGroupContactAndPerspective(
@@ -218,7 +217,7 @@ internal class GroupMemberRemovalDataSource(
         context: GroupMembershipContext
     ): Int {
         val currentEpoch =
-            groupSecurityManager.findOwnedGroupEpoch(groupId).getOrThrow()
+            securityStore.findOwnedGroupEpoch(groupId)
                 ?: error("Active group security state was not found")
         val remainingContacts =
             epochDataSource
@@ -229,7 +228,7 @@ internal class GroupMemberRemovalDataSource(
         val localPhoneNumber = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow()
         val nextEpoch = currentEpoch + 1
         val securedGroup =
-            groupSecurityManager
+            groupEpochSecurity
                 .rotateOwnedGroup(
                     groupId = groupId,
                     title = context.title,
@@ -268,11 +267,7 @@ internal class GroupMemberRemovalDataSource(
         groupId: String,
         contactId: String
     ): GroupMemberKeyEntity? =
-        groupSecurityManager
-            .findRemoteMemberKey(
-                groupId = groupId,
-                contactId = contactId
-            ).getOrThrow()
+        securityStore.findCurrentRemoteMemberKey(groupId, contactId)
 
     private class MemberRemovalDto(
         val currentMemberKey: GroupMemberKeyEntity?,

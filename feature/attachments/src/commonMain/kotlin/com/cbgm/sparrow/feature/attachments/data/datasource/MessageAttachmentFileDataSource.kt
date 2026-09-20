@@ -89,6 +89,34 @@ class MessageAttachmentFileDataSource(
         return target.toString()
     }
 
+    /**
+     * Rename only the directory that is already marked as owned by this conversation.
+     * A user-created or another conversation's folder is never overwritten. The marker
+     * moves together with the media/files, so subsequent writes and deletion still locate
+     * the same saved copies after the owner changes its display name.
+     */
+    fun updateSavedConversationName(conversationId: String, displayName: String) {
+        require(conversationId.isNotBlank()) { "Conversation ID must not be blank" }
+        val existing = findExistingConversationDirectory(conversationId) ?: return
+        val preferredName = displayName.sanitizeDirectoryName().ifBlank { "Conversation" }
+        val preferred = savedDirectory / preferredName
+        if (existing == preferred) return
+
+        val target = if (!fileSystem.exists(preferred)) {
+            preferred
+        } else {
+            val owner = readUtf8OrNull(preferred / CONVERSATION_ID_MARKER)
+            // Never co-opt an unmarked directory or an existing directory owned by
+            // another conversation. Keep the current directory when no safe target exists.
+            if (owner == conversationId) return
+            val suffix = conversationId.filter(Char::isLetterOrDigit)
+                .takeLast(CONVERSATION_ID_SUFFIX_LENGTH).ifBlank { "conversation" }
+            savedDirectory / "$preferredName-$suffix"
+        }
+        if (target == existing || fileSystem.exists(target)) return
+        fileSystem.atomicMove(existing, target)
+    }
+
     fun deleteSavedAttachment(
         conversationId: String,
         attachmentId: String

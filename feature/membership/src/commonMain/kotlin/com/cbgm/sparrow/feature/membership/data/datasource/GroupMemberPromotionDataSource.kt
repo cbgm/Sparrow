@@ -15,8 +15,8 @@ internal class GroupMemberPromotionDataSource(
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
-    private val groupSecurityManager: GroupMembershipSecurityDataSource,
-    private val verificationDataSource: GroupMembershipVerificationDataSource,
+    private val groupEpochSecurity: GroupEpochSecurityDataSource,
+    private val securityStore: GroupSecurityStoreDataSource,
     private val membershipLock: GroupMembershipLock,
     private val epochDataSource: GroupEpochDataSource,
     private val packetBroadcaster: GroupPacketBroadcaster
@@ -40,7 +40,7 @@ internal class GroupMemberPromotionDataSource(
         context: GroupMembershipContext
     ): GroupMemberPromotionResult {
         val currentEpoch =
-            groupSecurityManager.findOwnedGroupEpoch(groupId).getOrThrow()
+            securityStore.findOwnedGroupEpoch(groupId)
                 ?: error("Active group security state was not found")
         val participants = epochDataSource.findCurrentParticipants(groupId)
         val target =
@@ -68,7 +68,7 @@ internal class GroupMemberPromotionDataSource(
         val roleOverrides = mapOf(contactId to GROUP_ADMIN_ROLE)
         val updatedAt = maxOf(context.createdAtEpochMilliseconds, SystemClock.nowEpochMilliseconds())
         val securedGroup =
-            groupSecurityManager
+            groupEpochSecurity
                 .rotateOwnedGroup(
                     groupId = groupId,
                     title = context.title,
@@ -88,7 +88,6 @@ internal class GroupMemberPromotionDataSource(
                 ).getOrThrow()
 
         packetBroadcaster.enqueueAll(securedGroup.welcomePacketsByContactId).getOrThrow()
-        verificationDataSource.onOwnedMembershipChanged(groupId).getOrThrow()
 
         return GroupMemberPromotionResult(
             groupId = groupId,
@@ -102,8 +101,6 @@ internal class GroupMemberPromotionDataSource(
         groupId: String,
         contactId: String
     ) =
-        groupSecurityManager
-            .findRemoteMemberKey(groupId = groupId, contactId = contactId)
-            .getOrThrow()
+        securityStore.findCurrentRemoteMemberKey(groupId, contactId)
             ?: error("Group member is not part of the current group epoch")
 }

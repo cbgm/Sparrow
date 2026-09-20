@@ -22,6 +22,19 @@ internal class GroupMembershipPacketProtocol(
     private val payloadEncoder: GroupMembershipPayloadEncoder,
     private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider? = null
 ) {
+    fun welcomePacketId(groupId: String, invitationId: String, epoch: Int): String =
+        "group-welcome-$groupId-$invitationId-$epoch"
+
+    suspend fun verifyConversationDeleted(
+        packet: GroupConversationDeletedPacket,
+        expectedOwnerSigningPublicKey: ByteArray
+    ): Result<Unit> =
+        groupCrypto.verify(
+            payload = payloadEncoder.encodeConversationDeleted(packet),
+            signature = packet.ownerSignature,
+            signingPublicKey = expectedOwnerSigningPublicKey
+        )
+
     suspend fun createConversationDeleted(
         invitationId: String,
         groupId: String,
@@ -252,6 +265,31 @@ internal class GroupMembershipPacketProtocol(
             signingPublicKey = expectedMemberSigningPublicKey
         )
 
+    suspend fun createReadyAcknowledgement(
+        groupId: String,
+        epoch: Int,
+        welcomePacketId: String,
+        keyConfirmation: ByteArray,
+        memberSigningKeyPair: LocalSigningKeyPair
+    ): Result<GroupReadyAcknowledgementPacket> =
+        runCatching {
+            val unsignedPacket =
+                GroupReadyAcknowledgementPacket(
+                    packetId = "group-ready-$groupId-$epoch-$welcomePacketId",
+                    groupId = groupId,
+                    epoch = epoch,
+                    welcomePacketId = welcomePacketId,
+                    keyConfirmation = keyConfirmation.copyOf(),
+                    memberSignature = UNSIGNED_PACKET_MARKER
+                )
+            val signature =
+                groupCrypto.sign(
+                    payload = payloadEncoder.encodeReadyAcknowledgement(unsignedPacket),
+                    signingPrivateKey = memberSigningKeyPair.privateKey
+                ).getOrThrow()
+            unsignedPacket.copy(memberSignature = signature)
+        }
+
     suspend fun verifyReadyAcknowledgement(
         packet: GroupReadyAcknowledgementPacket,
         expectedMemberSigningPublicKey: ByteArray
@@ -303,6 +341,40 @@ internal class GroupMembershipPacketProtocol(
             unsignedPacket.copy(ownerSignature = signature)
         }
 
+    suspend fun verifyMemberActivated(
+        packet: GroupMemberActivatedPacket,
+        expectedOwnerSigningPublicKey: ByteArray
+    ): Result<Unit> =
+        groupCrypto.verify(
+            payload = payloadEncoder.encodeMemberActivated(packet),
+            signature = packet.ownerSignature,
+            signingPublicKey = expectedOwnerSigningPublicKey
+        )
+
+    suspend fun createMemberActivationAcknowledgement(
+        activationPacket: GroupMemberActivatedPacket,
+        acknowledgedAtEpochMilliseconds: Long,
+        memberSigningKeyPair: LocalSigningKeyPair
+    ): Result<GroupMemberActivationAcknowledgementPacket> = runCatching {
+        val unsigned = GroupMemberActivationAcknowledgementPacket(
+            packetId = "group-member-activation-acknowledgement-${activationPacket.packetId}",
+            groupId = activationPacket.groupId,
+            epoch = activationPacket.epoch,
+            activationPacketId = activationPacket.packetId,
+            activationId = activationPacket.activationId,
+            activationRound = activationPacket.activationRound,
+            activatedMemberSigningPublicKey = activationPacket.member.signingPublicKey.copyOf(),
+            acknowledgingMemberSigningPublicKey = memberSigningKeyPair.publicKey.copyOf(),
+            acknowledgedAtEpochMilliseconds = acknowledgedAtEpochMilliseconds,
+            memberSignature = UNSIGNED_PACKET_MARKER
+        )
+        val signature = groupCrypto.sign(
+            payload = payloadEncoder.encodeMemberActivationAcknowledgement(unsigned),
+            signingPrivateKey = memberSigningKeyPair.privateKey
+        ).getOrThrow()
+        unsigned.copy(memberSignature = signature)
+    }
+
     suspend fun verifyMemberActivationAcknowledgement(
         packet: GroupMemberActivationAcknowledgementPacket,
         expectedMemberSigningPublicKey: ByteArray
@@ -311,6 +383,16 @@ internal class GroupMembershipPacketProtocol(
             payload = payloadEncoder.encodeMemberActivationAcknowledgement(packet),
             signature = packet.memberSignature,
             signingPublicKey = expectedMemberSigningPublicKey
+        )
+
+    suspend fun verifyMemberRemoved(
+        packet: GroupMemberRemovedPacket,
+        expectedOwnerSigningPublicKey: ByteArray
+    ): Result<Unit> =
+        groupCrypto.verify(
+            payload = payloadEncoder.encodeMemberRemoved(packet),
+            signature = packet.ownerSignature,
+            signingPublicKey = expectedOwnerSigningPublicKey
         )
 
     suspend fun createMemberRemoved(

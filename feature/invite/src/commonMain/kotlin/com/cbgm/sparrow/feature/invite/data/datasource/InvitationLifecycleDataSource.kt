@@ -83,8 +83,23 @@ internal class InvitationLifecycleDataSource(
                 payloadId = payloadId,
                 peerId = peerId,
                 direction = direction.name
-            ).map { invitation -> invitation?.status?.toLifecycleStatus() }
-            .distinctUntilChanged()
+            ).transformLatest { invitation ->
+                if (invitation == null) {
+                    emit(null)
+                    return@transformLatest
+                }
+
+                val now = SystemClock.nowEpochMilliseconds()
+                val current = expirePendingIfNeeded(invitation, now)
+                emit(current.status.toLifecycleStatus())
+                if (current.status == STATUS_PENDING) {
+                    // Expire the invitation even when the Invites screen is never opened.
+                    // Sending a queued message can then initiate a fresh exchange.
+                    delay((current.expiresAtEpochMilliseconds - now).coerceAtLeast(1L).milliseconds)
+                    val expired = expirePendingIfNeeded(current, SystemClock.nowEpochMilliseconds())
+                    emit(expired.status.toLifecycleStatus())
+                }
+            }.distinctUntilChanged()
 
     fun observeInvitationResults(): Flow<List<InvitationResult>> =
         invitationDao
@@ -263,6 +278,21 @@ internal class InvitationLifecycleDataSource(
             }
         }
 
+    /** A revoked exchange must no longer appear as an actionable pending invitation. */
+    suspend fun invalidatePending(invitationId: String): Result<Unit> =
+        safeSuspendCall {
+            val invitation = invitationDao.findById(invitationId) ?: return@safeSuspendCall
+            if (invitation.status != STATUS_PENDING) return@safeSuspendCall
+            val now = SystemClock.nowEpochMilliseconds()
+            invitationDao.updateStatus(
+                invitationId = invitationId,
+                expectedStatus = STATUS_PENDING,
+                newStatus = STATUS_FAILED,
+                updatedAt = now
+            )
+            invitationDao.hideById(invitationId, now)
+        }
+
     suspend fun markTransportFailed(
         payloadType: InvitationPayloadType,
         invitationId: String
@@ -324,11 +354,26 @@ internal class InvitationLifecycleDataSource(
             validateReplay(existing, record)
             if (existing.status != STATUS_PENDING) return
 
-            if (record.updatedAtEpochMilliseconds > existing.updatedAtEpochMilliseconds) {
+            // The result observer and the verified packet handler can race.
+            // Enrich a missing label even when both records have the same timestamp.
+            val needsIncomingLabel =
+                record.payloadType == InvitationPayloadType.DIRECT &&
+                    record.direction == InvitationDirection.INCOMING &&
+                    existing.peerDisplayName == null &&
+                    record.peerDisplayName != null
+            if (record.updatedAtEpochMilliseconds > existing.updatedAtEpochMilliseconds || needsIncomingLabel) {
                 invitationDao.upsert(
                     existing.copy(
-                        updatedAtEpochMilliseconds = record.updatedAtEpochMilliseconds,
-                        peerDisplayName = record.peerDisplayName ?: existing.peerDisplayName,
+                        updatedAtEpochMilliseconds =
+                            maxOf(existing.updatedAtEpochMilliseconds, record.updatedAtEpochMilliseconds),
+                        peerDisplayName =
+                            if (record.payloadType == InvitationPayloadType.DIRECT &&
+                                record.direction == InvitationDirection.INCOMING
+                            ) {
+                                existing.peerDisplayName ?: record.peerDisplayName
+                            } else {
+                                record.peerDisplayName ?: existing.peerDisplayName
+                            },
                         peerSecondaryText = record.peerSecondaryText ?: existing.peerSecondaryText
                     )
                 )

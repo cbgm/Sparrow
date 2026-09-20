@@ -15,14 +15,17 @@ import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.result.safeSuspendCall
+import com.cbgm.sparrow.core.security.DirectChatAuthorizationRequiredException
+import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
-import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
-import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachmentDto
+import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
+import com.cbgm.sparrow.feature.attachments.domain.model.PreparedMessageAttachment
+import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.chats.data.datasource.MessageReactionDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.delivery.DirectMessageDeliveryCoordinator
@@ -35,7 +38,8 @@ import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectPendingAuthoriza
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
-import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentityExchangeRepository
+import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
 
 /**
  * Owns every outgoing direct-message operation.
@@ -49,11 +53,12 @@ class DirectOutgoingMessageProcessor(
     private val contactRepository: ContactRepository,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
     private val protocolOutbox: ProtocolOutbox,
-    private val directIdentityExchangeRepository: DirectIdentityExchangeRepository,
+    private val getIdentityPeerState: GetIdentityPeerStateUseCase,
+    private val getRemoteIdentity: GetRemoteIdentityUseCase,
     private val identitySetupModeRepository: DirectIdentitySetupModeRepository,
     private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
     private val deliveryCoordinator: DirectMessageDeliveryCoordinator,
-    private val attachmentTransfer: MessageAttachmentDataSource
+    private val attachmentTransfer: MessageAttachmentOperationsRepository
 ) {
     private val logger = SparrowLog.withTag("DirectOutgoingMessageProcessor")
 
@@ -85,7 +90,7 @@ class DirectOutgoingMessageProcessor(
                     createPacket(
                         messageId = messageId,
                         text = normalizedText,
-                        attachments = prepared.map(PreparedMessageAttachmentDto::attachment),
+                        attachments = prepared.map(PreparedMessageAttachment::attachment),
                         replyToMessageId = replyToMessageId
                     ).also { packet ->
                         linkPacket(messageId = messageId, packet = packet, contact = contact)
@@ -279,10 +284,22 @@ class DirectOutgoingMessageProcessor(
         }
 
     private suspend fun requireDirectChatAuthorization(contactId: String): Result<Unit> =
-        directIdentityExchangeRepository.requireDirectChatAuthorization(
-            contactId = contactId,
-            mode = identitySetupModeRepository.getMode()
-        )
+        getIdentityPeerState(contactId).mapCatching { state ->
+            when (identitySetupModeRepository.getMode()) {
+                DirectIdentitySetupMode.AUTOMATIC_INVITATION ->
+                    if (!state.hasEstablishedExchange) {
+                        throw DirectChatAuthorizationRequiredException(
+                            "A contact invitation must be accepted before messages can be sent"
+                        )
+                    }
+                DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING ->
+                    if (!state.hasMutualIdentity) {
+                        throw DirectChatAuthorizationRequiredException(
+                            "Both identities must be exchanged before messages can be sent"
+                        )
+                    }
+            }
+        }
 
     private suspend fun releaseMessage(
         message: MessageEntity,
@@ -326,7 +343,7 @@ class DirectOutgoingMessageProcessor(
         contact: Contact,
         messageId: String,
         text: String,
-        prepared: List<PreparedMessageAttachmentDto>,
+        prepared: List<PreparedMessageAttachment>,
         deliveryStatus: MessageDeliveryStatus,
         replyToMessageId: String?
     ) {
@@ -349,7 +366,19 @@ class DirectOutgoingMessageProcessor(
 
         try {
             conversationDataSource.upsertMessage(message)
-            attachmentTransfer.persistOutgoing(messageId, prepared)
+            attachmentTransfer.persistOutgoing(
+                messageId = messageId,
+                prepared = prepared,
+                context = AttachmentMessageContext(
+                    conversationId = target.conversationId,
+                    createdAtEpochMilliseconds = message.createdAtEpochMilliseconds,
+                    displayName = contact.displayName?.takeIf(String::isNotBlank)
+                        ?: contact.preferredPhoneNumber?.value ?: target.contactId,
+                    isGroup = false,
+                    isMine = true,
+                    senderContactId = null
+                )
+            )
         } catch (error: Throwable) {
             runCatching { conversationDataSource.deleteMessages(listOf(message)) }
             attachmentTransfer.cleanupPrepared(prepared)
@@ -449,8 +478,8 @@ class DirectOutgoingMessageProcessor(
         }
     }
 
-    private fun Contact.plannedTransportMode(): TransportEncryptionMode {
-        val identity = sparrowIdentity
+    private suspend fun Contact.plannedTransportMode(): TransportEncryptionMode {
+        val identity = getRemoteIdentity(id).getOrThrow()
         val canEncrypt =
             identity != null &&
                 identity.encryptionPublicKey.isNotEmpty() &&

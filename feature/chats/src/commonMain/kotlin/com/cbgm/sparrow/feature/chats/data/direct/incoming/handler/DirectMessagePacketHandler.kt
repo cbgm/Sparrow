@@ -11,26 +11,27 @@ import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
-import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
-import com.cbgm.sparrow.feature.attachments.runtime.MessageAttachmentCacheCoordinator
-import com.cbgm.sparrow.feature.autoreply.data.datasource.AutoReplyDataSource
+import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
+import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
+import com.cbgm.sparrow.feature.autoreply.domain.usecase.ClaimAutoReplyForContactUseCase
+import com.cbgm.sparrow.feature.autoreply.domain.usecase.ReleaseAutoReplyRecipientUseCase
 import com.cbgm.sparrow.feature.chats.data.datasource.MessageReactionDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.outgoing.DirectOutgoingMessageProcessor
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
-import com.cbgm.sparrow.feature.contacts.data.datasource.ContactLocalDataSource
+import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 
 /** Direct-only incoming chat-message handler. */
 class DirectMessagePacketHandler(
     private val conversationDataSource: DirectConversationDataSource,
-    private val contactDataSource: ContactLocalDataSource,
+    private val contactRepository: ContactRepository,
     private val messageReactionDataSource: MessageReactionDataSource,
     private val protocolOutbox: ProtocolOutbox,
     private val remoteProfilePictureMetadataProcessor: RemoteProfilePictureMetadataProcessor,
-    private val attachmentTransfer: MessageAttachmentDataSource,
-    private val attachmentCacheCoordinator: MessageAttachmentCacheCoordinator,
-    private val autoReplyDataSource: AutoReplyDataSource,
+    private val attachmentTransfer: MessageAttachmentOperationsRepository,
+    private val claimAutoReplyForContact: ClaimAutoReplyForContactUseCase,
+    private val releaseAutoReplyRecipient: ReleaseAutoReplyRecipientUseCase,
     private val outgoingMessageProcessor: DirectOutgoingMessageProcessor
 ) {
     private val logger = SparrowLog.withTag("DirectMessagePacketHandler")
@@ -62,10 +63,25 @@ class DirectMessagePacketHandler(
 
             val conversation = getOrCreateConversation(context)
             storeMessage(conversation, context, packet)
-            attachmentTransfer.persistIncoming(packet.messageId, packet.attachments)
+            attachmentTransfer.persistIncoming(
+                messageId = packet.messageId,
+                attachments = packet.attachments,
+                context = AttachmentMessageContext(
+                    conversationId = conversation.id,
+                    createdAtEpochMilliseconds = conversationDataSource.findMessageById(packet.messageId)
+                        ?.createdAtEpochMilliseconds ?: context.receivedAtEpochMilliseconds,
+                    displayName = contactRepository.getContact(context.contactId).getOrThrow()?.let { contact ->
+                        contact.displayName?.takeIf(String::isNotBlank)
+                            ?: contact.preferredPhoneNumber?.value
+                    } ?: packet.senderPhoneNumber?.takeIf(String::isNotBlank) ?: context.contactId,
+                    isGroup = false,
+                    isMine = false,
+                    senderContactId = context.contactId
+                )
+            )
             sendDeliveryReceipt(context.contactId, packet.messageId)
             sendAutoReplyIfNeeded(conversation.id, context.contactId)
-            attachmentCacheCoordinator.cache(packet.messageId)
+            attachmentTransfer.cacheIncoming(packet.messageId)
         }
 
     private fun validateMessage(
@@ -89,11 +105,11 @@ class DirectMessagePacketHandler(
         receivedAt: Long
     ) {
         val phoneNumber = packet.senderPhoneNumber?.trim()?.takeIf(String::isNotBlank) ?: return
-        contactDataSource.usePhoneNumberAsDisplayNameWhenMissing(
+        contactRepository.usePhoneNumberAsDisplayNameWhenMissing(
             contactId = contactId,
             phoneNumber = phoneNumber,
             updatedAtEpochMilliseconds = receivedAt
-        )
+        ).getOrThrow()
     }
 
     private suspend fun getOrCreateConversation(
@@ -137,8 +153,7 @@ class DirectMessagePacketHandler(
         conversationId: String,
         contactId: String
     ) {
-        val now = SystemClock.nowEpochMilliseconds()
-        val claimedReply = runCatching { autoReplyDataSource.claimForContact(contactId, now) }.getOrNull() ?: return
+        val claimedReply = claimAutoReplyForContact(contactId).getOrNull() ?: return
 
         val sendResult =
             outgoingMessageProcessor.send(
@@ -156,10 +171,10 @@ class DirectMessagePacketHandler(
 
         val activationSessionId = claimedReply.activationSessionId ?: return
         runCatching {
-            autoReplyDataSource.releaseContactClaim(
+            releaseAutoReplyRecipient(
                 contactId = contactId,
                 expectedActivationSessionId = activationSessionId
-            )
+            ).getOrThrow()
         }.onFailure { error ->
             logger.warn(error) {
                 "Could not release failed auto-reply claim for contactId=$contactId"

@@ -6,7 +6,7 @@ import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair
 import com.cbgm.sparrow.core.protocol.message.GroupMessageContent
 import com.cbgm.sparrow.core.protocol.message.GroupMessageContentCodec
 import com.cbgm.sparrow.core.protocol.packet.GroupPinUpdatedPacket
-import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupProtocolPayloadEncoder
+import com.cbgm.sparrow.core.protocol.packet.GroupProtocolPayloadEncoder
 
 internal class GroupPinPacketProtocol(
     private val groupCrypto: GroupCrypto,

@@ -3,27 +3,28 @@ package com.cbgm.sparrow.feature.attachments.data.datasource
 import com.cbgm.sparrow.core.protocol.attachment.GroupPinnedAttachmentProvider
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.feature.attachments.data.model.AttachmentContentPayloadDto
-import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentSource
-import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentTarget
+import com.cbgm.sparrow.feature.attachments.data.model.AttachmentTargetDto
 
 internal class AttachmentContentDataSource(
     private val messageAttachmentDataSource: MessageAttachmentDataSource,
     private val messageAttachmentFileDataSource: MessageAttachmentFileDataSource,
     private val groupPinnedAttachmentProvider: GroupPinnedAttachmentProvider
 ) {
-    suspend fun load(target: AttachmentTarget): AttachmentContentPayloadDto =
-        when (val source = target.source) {
-            AttachmentSource.Message -> loadMessageAttachment(target)
-            is AttachmentSource.GroupPin -> loadPinnedAttachment(source.groupId, target)
+    suspend fun load(target: AttachmentTargetDto): AttachmentContentPayloadDto =
+        if (target.groupId == null) {
+            loadMessageAttachment(target)
+        } else {
+            loadPinnedAttachment(target.groupId, target)
         }
 
-    suspend fun loadBytes(target: AttachmentTarget): ByteArray =
-        when (val source = target.source) {
-            AttachmentSource.Message -> messageAttachmentDataSource.loadBytes(target.id)
-            is AttachmentSource.GroupPin -> groupPinnedAttachmentProvider.load(source.groupId, target.id)
+    suspend fun loadBytes(target: AttachmentTargetDto): ByteArray =
+        if (target.groupId == null) {
+            messageAttachmentDataSource.loadBytes(target.id)
+        } else {
+            groupPinnedAttachmentProvider.load(target.groupId, target.id)
         }
 
-    private suspend fun loadMessageAttachment(target: AttachmentTarget): AttachmentContentPayloadDto =
+    private suspend fun loadMessageAttachment(target: AttachmentTargetDto): AttachmentContentPayloadDto =
         when (target.type) {
             MessageAttachmentType.IMAGE,
             MessageAttachmentType.VIDEO,
@@ -52,7 +53,7 @@ internal class AttachmentContentDataSource(
 
     private suspend fun loadPinnedAttachment(
         groupId: String,
-        target: AttachmentTarget
+        target: AttachmentTargetDto
     ): AttachmentContentPayloadDto {
         val bytes = groupPinnedAttachmentProvider.load(groupId, target.id)
 

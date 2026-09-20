@@ -24,11 +24,10 @@ fun IconBadge(
     tint: Color = MaterialTheme.colorScheme.primary
 ) {
     Box(
-        modifier =
-            Modifier
-                .size(Dimens.IdentityScreen.iconBadgeSize)
-                .background(tint.copy(alpha = Alpha.IdentityScreen.iconBadgeBackground), MaterialTheme.shapes.circle)
-                .border(Dimens.IdentityScreen.iconBadgeBorderWidth, tint.copy(alpha = Alpha.IdentityScreen.iconBadgeBorder), MaterialTheme.shapes.circle),
+        modifier = Modifier
+            .size(Dimens.IdentityScreen.iconBadgeSize)
+            .background(tint.copy(alpha = Alpha.IdentityScreen.iconBadgeBackground), MaterialTheme.shapes.circle)
+            .border(Dimens.IdentityScreen.iconBadgeBorderWidth, tint.copy(alpha = Alpha.IdentityScreen.iconBadgeBorder), MaterialTheme.shapes.circle),
         contentAlignment = Alignment.Center
     ) {
         Icon(

@@ -2,21 +2,19 @@ package com.cbgm.sparrow.feature.chats.data.group.title
 
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
-import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupTitleDataSource
 import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupPacketBroadcaster
-import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
+import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeGroupMetadataUseCase
 
 internal class GroupTitleBroadcaster(
-    private val groupSecurityDao: GroupSecurityDao,
+    private val authorizeGroupMetadata: AuthorizeGroupMetadataUseCase,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val packetProtocol: GroupTitlePacketProtocol,
     private val packetBroadcaster: GroupPacketBroadcaster,
     private val dataSource: GroupTitleDataSource
 ) {
     suspend fun requireLocalAdmin(groupId: String): Result<Unit> =
-        runCatching { requireAdminContext(groupId) }
-            .map { Unit }
+        runCatching { requireAdminContext(groupId).let { } }
 
     suspend fun broadcast(groupId: String): Result<Unit> =
         runCatching {
@@ -60,24 +58,16 @@ internal class GroupTitleBroadcaster(
         }
 
     private suspend fun requireAdminContext(groupId: String): AdminContextDto {
-        val state = groupSecurityDao.findState(groupId) ?: error("Group security state was not found")
-        check(state.localRole.isGroupAdminRole()) { "Only a group admin may change the group title" }
         val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
-        check(state.localSigningPublicKey.contentEquals(signingKeyPair.publicKey)) {
-            "Local admin signing key does not match the group security state"
-        }
-        val recipients =
-            groupSecurityDao
-                .findMemberKeys(groupId, state.currentEpoch)
-                .asSequence()
-                .filterNot { member -> member.signingPublicKey.contentEquals(signingKeyPair.publicKey) }
-                .map { member -> member.contactId }
-                .filter(String::isNotBlank)
-                .toSet()
+        val authorized = authorizeGroupMetadata.send(
+            groupId = groupId,
+            localSigningPublicKey = signingKeyPair.publicKey,
+            action = "group title"
+        ).getOrThrow()
         return AdminContextDto(
-            epoch = state.currentEpoch,
+            epoch = authorized.epoch,
             signingKeyPair = signingKeyPair,
-            recipientContactIds = recipients
+            recipientContactIds = authorized.recipientContactIds
         )
     }
 

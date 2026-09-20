@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.Flow
 class LocalProfilePictureRepositoryImpl(
     private val dataSource: LocalProfilePictureDataSource
 ) : LocalProfilePictureRepository {
-    override fun observe(): Flow<LocalProfilePicture> = dataSource.observe()
+    override fun observe(): Flow<LocalProfilePicture> = dataSource.observePicture()
 
     override suspend fun get(): Result<LocalProfilePicture> =
         safeSuspendCall { dataSource.get() }

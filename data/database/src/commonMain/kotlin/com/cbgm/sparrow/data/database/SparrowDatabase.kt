@@ -23,6 +23,8 @@ import com.cbgm.sparrow.data.database.dao.MessageRecipientStateDao
 import com.cbgm.sparrow.data.database.dao.MessageSafetyDao
 import com.cbgm.sparrow.data.database.dao.MessageSearchDao
 import com.cbgm.sparrow.data.database.dao.ProtocolOutboxDao
+import com.cbgm.sparrow.data.database.dao.RemoteIdentityDao
+import com.cbgm.sparrow.data.database.entity.AttachmentMessageContextEntity
 import com.cbgm.sparrow.data.database.entity.AutoReplyEntity
 import com.cbgm.sparrow.data.database.entity.AutoReplyRecipientEntity
 import com.cbgm.sparrow.data.database.entity.ContactEntity
@@ -69,6 +71,7 @@ import com.cbgm.sparrow.data.database.migration.IdentityExchangeMigration41To42
         IdentityExchangeEntity::class,
         MessageEntity::class,
         MessageAttachmentEntity::class,
+        AttachmentMessageContextEntity::class,
         MessageSearchEmbeddingEntity::class,
         MessageSafetyAssessmentEntity::class,
         MessageRecipientStateEntity::class,
@@ -78,7 +81,7 @@ import com.cbgm.sparrow.data.database.migration.IdentityExchangeMigration41To42
         RemoteMailboxRouteEntity::class,
         LinkPreviewEntity::class
     ],
-    version = 45,
+    version = 47,
     autoMigrations = [
         AutoMigration(from = 26, to = 27),
         AutoMigration(from = 27, to = 28),
@@ -118,6 +121,8 @@ abstract class SparrowDatabase : RoomDatabase() {
     abstract fun groupVerificationDao(): GroupVerificationDao
 
     abstract fun identityExchangeDao(): IdentityExchangeDao
+
+    abstract fun remoteIdentityDao(): RemoteIdentityDao
 
     abstract fun contactRoutingIdDao(): ContactRoutingIdDao
 

@@ -9,5 +9,5 @@ class DeleteGroupMembershipUseCase(
     suspend operator fun invoke(
         groupId: String,
         context: GroupMembershipContext
-    ): Result<Unit> = repository.delete(groupId, context)
+    ): Result<Long> = repository.delete(groupId, context)
 }

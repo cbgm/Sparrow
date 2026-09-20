@@ -29,5 +29,5 @@ data class GroupAvatarSnapshot(
 }
 
 interface GroupAvatarProvider {
-    fun observe(groupId: String): Flow<GroupAvatarSnapshot>
+    fun observeSnapshot(groupId: String): Flow<GroupAvatarSnapshot>
 }

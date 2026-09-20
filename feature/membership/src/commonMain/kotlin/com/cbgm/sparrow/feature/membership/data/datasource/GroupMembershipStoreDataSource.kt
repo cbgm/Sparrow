@@ -9,6 +9,9 @@ internal class GroupMembershipStoreDataSource(
 ) {
     fun observeAll(): Flow<List<GroupMembershipEntity>> = dao.observeAll()
 
+    fun observeByGroupId(groupId: String): Flow<List<GroupMembershipEntity>> =
+        dao.observeByGroupId(groupId)
+
     suspend fun findBySourceInvitationId(invitationId: String): GroupMembershipEntity? =
         dao.findBySourceInvitationId(invitationId)
 
@@ -29,6 +32,8 @@ internal class GroupMembershipStoreDataSource(
 
     suspend fun replaceForGroupAndContact(membership: GroupMembershipEntity) =
         dao.replaceForGroupAndContact(membership)
+
+    suspend fun deleteByGroupId(groupId: String) = dao.deleteByGroupId(groupId)
 
     suspend fun deleteBySourceInvitationId(invitationId: String): Int =
         dao.deleteBySourceInvitationId(invitationId)

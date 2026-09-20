@@ -3,30 +3,23 @@ package com.cbgm.sparrow.feature.contacts.data.datasource
 import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.data.database.entity.ContactEntity
 import com.cbgm.sparrow.data.database.entity.ContactPhoneNumberEntity
-import com.cbgm.sparrow.data.database.entity.ContactPublicIdentityEntity
-import com.cbgm.sparrow.data.database.model.ContactWithPublicIdentityDto
+import com.cbgm.sparrow.data.database.model.ContactWithPhoneNumbersDto
 import kotlinx.coroutines.flow.Flow
 
 class ContactLocalDataSource(
     private val contactDao: ContactDao
 ) {
-    suspend fun findById(contactId: String): ContactWithPublicIdentityDto? =
-        contactDao.findById(contactId)
+    suspend fun findContactOnlyById(contactId: String): ContactWithPhoneNumbersDto? =
+        contactDao.findContactWithPhoneNumbers(contactId)
 
-    suspend fun findBySigningPublicKey(signingPublicKey: ByteArray): ContactWithPublicIdentityDto? =
-        contactDao.findBySigningPublicKey(signingPublicKey)
+    suspend fun findContactOnlyByNormalizedPhoneNumber(phoneNumber: String): ContactWithPhoneNumbersDto? =
+        contactDao.findContactWithPhoneNumbersByNormalizedPhoneNumber(phoneNumber)
 
-    suspend fun findByNormalizedPhoneNumber(phoneNumber: String): ContactWithPublicIdentityDto? =
-        contactDao.findByNormalizedPhoneNumber(phoneNumber)
+    fun observeContactsOnly(): Flow<List<ContactWithPhoneNumbersDto>> =
+        contactDao.observeContactsWithPhoneNumbers()
 
-    suspend fun findByDeviceContactId(deviceContactId: String): ContactWithPublicIdentityDto? =
-        contactDao.findByDeviceContactId(deviceContactId)
-
-    suspend fun findPublicIdentityByContactId(contactId: String): ContactPublicIdentityEntity? =
-        contactDao.findPublicIdentityByContactId(contactId)
-
-    fun observeAll(): Flow<List<ContactWithPublicIdentityDto>> =
-        contactDao.observeAll()
+    suspend fun findContactOnlyByDeviceContactId(deviceContactId: String): ContactWithPhoneNumbersDto? =
+        contactDao.findContactWithPhoneNumbersByDeviceContactId(deviceContactId)
 
     suspend fun usePhoneNumberAsDisplayNameWhenMissing(
         contactId: String,
@@ -49,60 +42,4 @@ class ContactLocalDataSource(
 
     suspend fun deleteById(contactId: String) =
         contactDao.deleteById(contactId)
-
-    suspend fun updateVerificationStatusIfKeysMatch(
-        contactId: String,
-        expectedEncryptionPublicKey: ByteArray,
-        expectedSigningPublicKey: ByteArray,
-        verificationStatus: String,
-        updatedAtEpochMilliseconds: Long
-    ) = contactDao.updateVerificationStatusIfKeysMatch(
-        contactId = contactId,
-        expectedEncryptionPublicKey = expectedEncryptionPublicKey,
-        expectedSigningPublicKey = expectedSigningPublicKey,
-        verificationStatus = verificationStatus,
-        updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
-    )
-
-    suspend fun updateKeyExchangeStatusIfKeysMatch(
-        contactId: String,
-        expectedEncryptionPublicKey: ByteArray,
-        expectedSigningPublicKey: ByteArray,
-        keyExchangeStatus: String,
-        updatedAtEpochMilliseconds: Long
-    ) = contactDao.updateKeyExchangeStatusIfKeysMatch(
-        contactId = contactId,
-        expectedEncryptionPublicKey = expectedEncryptionPublicKey,
-        expectedSigningPublicKey = expectedSigningPublicKey,
-        keyExchangeStatus = keyExchangeStatus,
-        updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
-    )
-
-    suspend fun updateKeyExchangeStatus(
-        contactId: String,
-        status: String,
-        updatedAt: Long
-    ) = contactDao.updateKeyExchangeStatus(
-        contactId = contactId,
-        status = status,
-        updatedAt = updatedAt
-    )
-
-    suspend fun updateVerificationStatus(
-        contactId: String,
-        status: String,
-        updatedAt: Long
-    ) = contactDao.updateVerificationStatus(
-        contactId = contactId,
-        status = status,
-        updatedAt = updatedAt
-    )
-
-    suspend fun clearVerifiedByContact(
-        contactId: String,
-        updatedAt: Long
-    ) = contactDao.clearVerifiedByContact(
-        contactId = contactId,
-        updatedAt = updatedAt
-    )
 }

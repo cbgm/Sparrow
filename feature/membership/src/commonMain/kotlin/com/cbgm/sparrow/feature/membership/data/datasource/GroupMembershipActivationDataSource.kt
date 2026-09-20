@@ -20,8 +20,6 @@ internal class GroupMembershipActivationDataSource(
     private val membershipStore: GroupMembershipStoreDataSource,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val membershipPacketProtocol: GroupMembershipPacketProtocol,
-    private val groupSecurityManager: GroupMembershipSecurityDataSource,
-    private val verificationDataSource: GroupMembershipVerificationDataSource,
     private val membershipLock: GroupMembershipLock,
     private val securityStore: GroupSecurityStoreDataSource,
     private val packetBroadcaster: GroupPacketBroadcaster
@@ -47,7 +45,6 @@ internal class GroupMembershipActivationDataSource(
                     activationTimestamp = activationTimestamp
                 )
                 markMemberActive(membership, activationTimestamp)
-                verificationDataSource.onOwnedMembershipChanged(packet.groupId).getOrThrow()
             }
         }
 
@@ -64,7 +61,7 @@ internal class GroupMembershipActivationDataSource(
                 contactId = memberContactId
             ) ?: error("Group member signing identity was not found")
         val expectedWelcomePacketId =
-            groupSecurityManager.welcomePacketId(
+            membershipPacketProtocol.welcomePacketId(
                 groupId = packet.groupId,
                 invitationId = referenceId,
                 epoch = packet.epoch
@@ -75,12 +72,11 @@ internal class GroupMembershipActivationDataSource(
         membershipPacketProtocol
             .verifyReadyAcknowledgement(packet, memberKey.signingPublicKey)
             .getOrThrow()
-        groupSecurityManager
-            .verifyKeyConfirmation(
-                groupId = packet.groupId,
-                epoch = packet.epoch,
-                keyConfirmation = packet.keyConfirmation
-            ).getOrThrow()
+        val state = securityStore.findState(packet.groupId)
+            ?: error("Group security state was not found")
+        check(state.currentEpoch == packet.epoch) {
+            "Ready acknowledgement uses a non-current group epoch"
+        }
     }
 
     private suspend fun shouldActivateReadyMember(

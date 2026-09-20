@@ -1,16 +1,12 @@
 package com.cbgm.sparrow.feature.chats.data.group.datasource
 
 import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.ContactDao
-import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
 
 internal class GroupConversationDataSource(
-    private val chatDao: ChatDao,
-    private val contactDao: ContactDao,
-    private val groupSecurityDao: GroupSecurityDao
+    private val chatDao: ChatDao
 ) {
     suspend fun getContext(groupId: String): GroupConversationContextDto {
         val conversation =
@@ -77,14 +73,12 @@ internal class GroupConversationDataSource(
     suspend fun addParticipant(
         groupId: String,
         peerId: String,
+        memberDisplayName: String,
+        epoch: Int,
         joinedAtEpochMilliseconds: Long,
         eventId: String
     ) {
-        val securityState =
-            requireNotNull(groupSecurityDao.findState(groupId)) {
-                "Group security state was not found"
-            }
-        val contactName = contactDisplayName(peerId)
+        val contactName = memberDisplayName
 
         chatDao.upsertConversationParticipant(
             ConversationParticipantEntity(
@@ -97,7 +91,7 @@ internal class GroupConversationDataSource(
         chatDao.upsertMessage(
             GroupMembershipMessageFactory.memberAdded(
                 conversationId = groupId,
-                epoch = securityState.currentEpoch,
+                epoch = epoch,
                 contactId = peerId,
                 contactName = contactName,
                 createdAtEpochMilliseconds = joinedAtEpochMilliseconds,
@@ -134,13 +128,14 @@ internal class GroupConversationDataSource(
     suspend fun removeParticipant(
         groupId: String,
         peerId: String,
+        memberDisplayName: String,
         epoch: Int,
         eventId: String,
         updatedAtEpochMilliseconds: Long,
         memberLeft: Boolean
     ) {
         chatDao.deleteConversationParticipant(groupId, peerId)
-        val contactName = contactDisplayName(peerId)
+        val contactName = memberDisplayName
         val message =
             if (memberLeft) {
                 GroupMembershipMessageFactory.memberLeft(
@@ -164,15 +159,6 @@ internal class GroupConversationDataSource(
         chatDao.upsertMessage(message)
         chatDao.updateConversationTimestamp(groupId, updatedAtEpochMilliseconds)
     }
-
-    private suspend fun contactDisplayName(peerId: String): String =
-        contactDao
-            .findById(peerId)
-            ?.contact
-            ?.displayName
-            ?.trim()
-            ?.takeIf(String::isNotEmpty)
-            ?: "Member"
 
     private companion object {
         const val GROUP_CONVERSATION_TYPE = "GROUP"

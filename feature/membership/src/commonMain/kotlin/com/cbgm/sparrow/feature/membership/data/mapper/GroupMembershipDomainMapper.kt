@@ -2,7 +2,9 @@ package com.cbgm.sparrow.feature.membership.data.mapper
 
 import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
 import com.cbgm.sparrow.feature.membership.data.model.GroupLeaveRequirementDto
+import com.cbgm.sparrow.feature.membership.data.model.GroupLocalMembershipEndDto
 import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
+import com.cbgm.sparrow.feature.membership.domain.model.GroupLocalMembershipEnd
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipPerspective
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipResult
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipStatus
@@ -33,4 +35,12 @@ internal fun GroupMembershipEntity.toMembershipResult(): MembershipResult =
                 ?.let { value -> MembershipStatus.valueOf(value.name) }
                 ?: error("Unknown membership status: $status"),
         updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
+    )
+
+internal fun GroupLocalMembershipEndDto.toDomain(): GroupLocalMembershipEnd =
+    GroupLocalMembershipEnd(
+        groupId = groupId,
+        referenceId = referenceId,
+        epoch = epoch,
+        endedAtEpochMilliseconds = endedAtEpochMilliseconds
     )

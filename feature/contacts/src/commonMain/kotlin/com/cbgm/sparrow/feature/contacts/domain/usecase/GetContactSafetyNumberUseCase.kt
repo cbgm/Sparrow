@@ -5,10 +5,12 @@ import com.cbgm.sparrow.core.crypto.safety.SafetyNumber
 import com.cbgm.sparrow.core.crypto.safety.SafetyNumberGenerator
 import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentityProvider
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
+import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
 
 class GetContactSafetyNumberUseCase(
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val contactRepository: ContactRepository,
+    private val getRemoteIdentity: GetRemoteIdentityUseCase,
     private val safetyNumberGenerator: SafetyNumberGenerator
 ) {
     suspend operator fun invoke(contactId: String): Result<SafetyNumber> =
@@ -24,7 +26,7 @@ class GetContactSafetyNumberUseCase(
                     ?: error("Contact was not found")
 
             val remoteIdentity =
-                contact.sparrowIdentity ?: error("Contact has no Sparrow identity")
+                getRemoteIdentity(contact.id).getOrThrow() ?: error("Contact has no Sparrow identity")
 
             safetyNumberGenerator
                 .generate(

@@ -74,6 +74,9 @@ internal class InvitationRepositoryImpl(
     ): Result<Unit> =
         dataSource.applyResponse(payloadType, invitationId, response)
 
+    override suspend fun invalidatePending(invitationId: String): Result<Unit> =
+        dataSource.invalidatePending(invitationId)
+
     override suspend fun markTransportFailed(
         payloadType: InvitationPayloadType,
         invitationId: String

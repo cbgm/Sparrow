@@ -10,7 +10,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-class MessageAttachmentCacheCoordinator(
+internal class MessageAttachmentCacheCoordinator(
     private val attachmentDataSource: MessageAttachmentDataSource
 ) {
     private val logger = SparrowLog.withTag("MessageAttachmentCacheCoordinator")

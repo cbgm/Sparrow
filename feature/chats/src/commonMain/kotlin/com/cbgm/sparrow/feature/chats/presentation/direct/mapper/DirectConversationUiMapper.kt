@@ -18,6 +18,7 @@ import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityHandshakeState
 import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
+import com.cbgm.sparrow.feature.identity.domain.model.RemotePeerIdentity
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyAssessment
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyWarningUi
 
@@ -95,8 +96,8 @@ private fun List<MessagePart>?.toReplyPreviewText(): String? =
             ?.fileName
             ?.takeIf(String::isNotBlank)
 
-internal fun Contact?.toContactSecurityState(): ContactSecurityState {
-    val identity = this?.sparrowIdentity ?: return ContactSecurityState.NO_REMOTE_PUBLIC_KEYS
+internal fun RemotePeerIdentity?.toContactSecurityState(): ContactSecurityState {
+    val identity = this ?: return ContactSecurityState.NO_REMOTE_PUBLIC_KEYS
 
     if (identity.keyExchangeStatus != KeyExchangeStatus.MUTUAL) {
         return ContactSecurityState.ONE_WAY_KEYS
@@ -114,7 +115,7 @@ internal fun Contact?.toContactSecurityState(): ContactSecurityState {
 }
 
 internal fun isDirectChatAuthorized(
-    contact: Contact?,
+    remoteIdentity: RemotePeerIdentity?,
     identityHandshakeState: IdentityHandshakeState?,
     identitySetupMode: DirectIdentitySetupMode
 ): Boolean =
@@ -124,7 +125,12 @@ internal fun isDirectChatAuthorized(
                 identityHandshakeState == IdentityHandshakeState.MUTUAL_UNVERIFIED
 
         DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING ->
-            contact?.sparrowIdentity?.keyExchangeStatus == KeyExchangeStatus.MUTUAL
+            remoteIdentity?.locallyImported == true &&
+                remoteIdentity.keyExchangeStatus == KeyExchangeStatus.MUTUAL &&
+                (
+                    identityHandshakeState == IdentityHandshakeState.WAITING_FOR_READY ||
+                        identityHandshakeState == IdentityHandshakeState.MUTUAL_UNVERIFIED
+                )
     }
 
 internal fun toDirectConversationUiState(
@@ -132,12 +138,13 @@ internal fun toDirectConversationUiState(
     fallbackContactName: String,
     conversation: DirectConversation?,
     contact: Contact?,
+    remoteIdentity: RemotePeerIdentity?,
     handshake: IdentityHandshakeState?,
     canQueueMessages: Boolean,
     setupMode: DirectIdentitySetupMode,
     safetyAssessments: Map<String, MessageSafetyAssessment>
 ): DirectConversationUiState {
-    val isChatAuthorized = isDirectChatAuthorized(contact, handshake, setupMode)
+    val isChatAuthorized = isDirectChatAuthorized(remoteIdentity, handshake, setupMode)
     val composerState =
         resolveDirectComposerState(
             hasConversation = conversation != null,
@@ -163,7 +170,14 @@ internal fun toDirectConversationUiState(
                     )
                 }
             },
-        contactSecurityState = contact.toContactSecurityState(),
+        contactSecurityState =
+            if (setupMode == DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING &&
+                remoteIdentity?.locallyImported != true
+            ) {
+                ContactSecurityState.NO_REMOTE_PUBLIC_KEYS
+            } else {
+                remoteIdentity.toContactSecurityState()
+            },
         identitySetupMode = setupMode,
         isLoading = contact == null,
         isChatAuthorized = isChatAuthorized,

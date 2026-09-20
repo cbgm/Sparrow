@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.chats.data.group.mapper
 
-import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberLifecycleSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -59,23 +59,18 @@ class GroupLocalMembershipTimelineTest {
                     ),
                 memberships =
                     listOf(
-                        GroupMembershipEntity(
-                            membershipId = "membership-2",
+                        GroupMemberLifecycleSnapshot(
                             sourceInvitationId = "invite-2",
-                            groupId = GROUP_ID,
                             contactId = "admin-1",
-                            perspective = "MEMBER",
                             status = "STAGED",
-                            challenge = byteArrayOf(1),
-                            createdAtEpochMilliseconds = 300L,
-                            updatedAtEpochMilliseconds = 300L
+                            createdAtEpochMilliseconds = 300L
                         )
                     )
             )
 
         assertFalse(timeline.isLocallyInactive)
         assertEquals(listOf("before", "You left this group"), timeline.visibleMessages.map(MessageEntity::text))
-        assertEquals(listOf("invite-2"), timeline.currentMemberships.map(GroupMembershipEntity::sourceInvitationId))
+        assertEquals(listOf("invite-2"), timeline.currentMemberships.map(GroupMemberLifecycleSnapshot::sourceInvitationId))
     }
 
     @Test

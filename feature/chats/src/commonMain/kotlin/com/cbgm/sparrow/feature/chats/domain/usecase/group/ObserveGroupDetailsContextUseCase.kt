@@ -19,14 +19,15 @@ class ObserveGroupDetailsContextUseCase(
     private val conversationRepository: GroupConversationRepository,
     private val avatarRepository: GroupAvatarRepository,
     private val descriptionRepository: GroupDescriptionRepository,
-    private val contactRepository: ContactRepository
+    private val contactRepository: ContactRepository,
+    private val observeVerificationContext: ObserveGroupVerificationContextUseCase
 ) {
     operator fun invoke(groupId: String): Flow<GroupDetailsContext> {
         val verificationFlow =
             combine(
                 verificationRepository.observePairs(groupId),
                 contactRepository.observeContacts(),
-                verificationRepository.observeContext(groupId)
+                observeVerificationContext(groupId)
             ) { pairs, contacts, context ->
                 val ownerDisplayName =
                     context.ownerContactId

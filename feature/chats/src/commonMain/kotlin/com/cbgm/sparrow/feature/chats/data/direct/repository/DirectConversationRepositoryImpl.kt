@@ -1,12 +1,9 @@
 package com.cbgm.sparrow.feature.chats.data.direct.repository
 
 import com.cbgm.sparrow.core.result.safeSuspendCall
-import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.MessageReactionDao
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessagesDto
-import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachment
+import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.mapper.toDirectConversation
 import com.cbgm.sparrow.feature.chats.data.mapper.toMessagePartDtos
@@ -18,12 +15,13 @@ import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectConversationRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class DirectConversationRepositoryImpl(
-    private val chatDao: ChatDao,
-    private val messageReactionDao: MessageReactionDao,
-    private val messageAttachmentDataSource: MessageAttachmentDataSource,
+    private val messageAttachmentDataSource: MessageAttachmentOperationsRepository,
     private val conversationDataSource: DirectConversationDataSource
 ) : DirectConversationRepository {
     override fun observe(
@@ -32,18 +30,20 @@ class DirectConversationRepositoryImpl(
     ): Flow<DirectConversation?> {
         val messages =
             oldestCursor?.let { cursor ->
-                chatDao.observeMessagesFromCursor(
+                conversationDataSource.observeMessagesFromCursor(
                     conversationId = conversationId,
                     fromTimestamp = cursor.createdAtEpochMilliseconds,
                     fromMessageId = cursor.messageId
                 )
-            } ?: chatDao.observeRecentMessages(conversationId, MessageHistoryPolicy.PAGE_SIZE)
+            } ?: conversationDataSource.observeRecentMessages(conversationId, MessageHistoryPolicy.PAGE_SIZE)
 
-        val attachments = observeAttachments(conversationId, oldestCursor)
+        val attachments = messages.map { loaded -> loaded.map { it.id } }.distinctUntilChanged().flatMapLatest { messageIds ->
+            messageAttachmentDataSource.observeByMessageIds(messageIds)
+        }
         val reactions = observeReactions(conversationId, oldestCursor)
 
         return combine(
-            chatDao.observeConversationById(conversationId),
+            conversationDataSource.observeConversationById(conversationId),
             messages,
             attachments,
             reactions
@@ -77,14 +77,14 @@ class DirectConversationRepositoryImpl(
     override suspend fun findContactId(conversationId: String): Result<String?> =
         safeSuspendCall {
             val conversation =
-                chatDao.findConversationById(conversationId) ?: return@safeSuspendCall null
+                conversationDataSource.findConversationById(conversationId) ?: return@safeSuspendCall null
             check(conversation.type == DIRECT_CONVERSATION_TYPE) { "Conversation is not direct" }
             requireNotNull(conversation.contactId) { "Direct conversation has no contact" }
         }
 
     override suspend fun findConversationId(contactId: String): Result<String?> =
         safeSuspendCall {
-            chatDao
+            conversationDataSource
                 .findConversationByContactId(contactId)
                 ?.takeIf { conversation -> conversation.type == DIRECT_CONVERSATION_TYPE }
                 ?.id
@@ -93,37 +93,22 @@ class DirectConversationRepositoryImpl(
     override suspend fun delete(conversationId: String): Result<Unit> =
         safeSuspendCall {
             val conversation =
-                chatDao.findConversationById(conversationId) ?: return@safeSuspendCall
+                conversationDataSource.findConversationById(conversationId) ?: return@safeSuspendCall
             check(conversation.type == DIRECT_CONVERSATION_TYPE) { "Conversation is not direct" }
-            chatDao.deleteConversation(conversationId)
+            conversationDataSource.deleteConversation(conversationId)
         }
-
-    private fun observeAttachments(
-        conversationId: String,
-        oldestCursor: MessageHistoryCursor?
-    ): Flow<Map<String, List<MessageAttachment>>> =
-        oldestCursor?.let { cursor ->
-            messageAttachmentDataSource.observeFromMessageCursor(
-                conversationId = conversationId,
-                fromTimestamp = cursor.createdAtEpochMilliseconds,
-                fromMessageId = cursor.messageId
-            )
-        } ?: messageAttachmentDataSource.observeRecentByConversation(
-            conversationId = conversationId,
-            messageLimit = MessageHistoryPolicy.PAGE_SIZE
-        )
 
     private fun observeReactions(
         conversationId: String,
         oldestCursor: MessageHistoryCursor?
     ): Flow<List<MessageReactionEntity>> =
         oldestCursor?.let { cursor ->
-            messageReactionDao.observeFromMessageCursor(
+            conversationDataSource.observeReactionsFromCursor(
                 conversationId = conversationId,
                 fromTimestamp = cursor.createdAtEpochMilliseconds,
                 fromMessageId = cursor.messageId
             )
-        } ?: messageReactionDao.observeRecentByConversationId(
+        } ?: conversationDataSource.observeRecentReactions(
             conversationId = conversationId,
             messageLimit = MessageHistoryPolicy.PAGE_SIZE
         )

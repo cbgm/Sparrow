@@ -63,6 +63,10 @@ val androidDatabaseModule =
         }
 
         single {
+            get<SparrowDatabase>().remoteIdentityDao()
+        }
+
+        single {
             get<SparrowDatabase>().contactRoutingIdDao()
         }
 

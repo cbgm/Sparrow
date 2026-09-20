@@ -11,7 +11,7 @@ class RemoteProfilePictureRepositoryImpl(
 ) : RemoteProfilePictureRepository {
     override fun observe(contactId: String): Flow<RemoteProfilePicture> {
         require(contactId.isNotBlank()) { "Contact ID must not be blank" }
-        return dataSource.observe(contactId)
+        return dataSource.observePicture(contactId)
     }
 
     override suspend fun get(contactId: String): Result<RemoteProfilePicture> =

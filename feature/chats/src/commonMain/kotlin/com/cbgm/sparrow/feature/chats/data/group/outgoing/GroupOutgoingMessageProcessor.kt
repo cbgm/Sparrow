@@ -20,28 +20,25 @@ import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvide
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.MessageReactionDao
-import com.cbgm.sparrow.data.database.dao.MessageRecipientStateDao
-import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
-import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
-import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachmentDto
+import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentMessageContext
 import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
 import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
+import com.cbgm.sparrow.feature.attachments.domain.model.PreparedMessageAttachment
+import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
+import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupOutgoingMessageDataSource
 import com.cbgm.sparrow.feature.chats.data.group.delivery.GroupMessageDeliveryCoordinator
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
 import com.cbgm.sparrow.feature.chats.data.group.mapper.toMessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_END_TO_END_ENCRYPTED_MODE
-import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryEvent
 import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessageDeliveryStateMachine
-import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
-import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMessageMembershipAccess
+import com.cbgm.sparrow.feature.membership.domain.repository.GroupSecurityRepository
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -52,18 +49,16 @@ import kotlinx.coroutines.sync.withLock
  * Group use case -> GroupMessageRepositoryImpl -> this processor -> ProtocolOutbox.
  */
 class GroupOutgoingMessageProcessor(
-    private val chatDao: ChatDao,
-    private val messageRecipientStateDao: MessageRecipientStateDao,
-    private val messageReactionDao: MessageReactionDao,
+    private val messageDataSource: GroupOutgoingMessageDataSource,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val protocolOutbox: ProtocolOutbox,
-    private val groupSecurityManager: GroupSecurityManager,
+    private val groupSecurityManager: GroupSecurityRepository,
     private val deliveryCoordinator: GroupMessageDeliveryCoordinator,
     private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
     private val groupMessageContentCodec: GroupMessageContentCodec,
     private val messageDeletionPayloadCodec: MessageDeletionPayloadCodec,
     private val messageEditPayloadCodec: MessageEditPayloadCodec,
-    private val attachmentTransfer: MessageAttachmentDataSource
+    private val attachmentTransfer: MessageAttachmentOperationsRepository
 ) {
     private val sendMutex = Mutex()
     private val logger = SparrowLog.withTag("GroupOutgoingMessageProcessor")
@@ -73,12 +68,12 @@ class GroupOutgoingMessageProcessor(
         text: String,
         attachments: List<OutgoingMessageAttachment> = emptyList(),
         replyToMessageId: String? = null,
-        memberships: List<GroupMembershipEntity>
+        access: GroupMessageMembershipAccess
     ): Result<Unit> =
         safeSuspendCall {
             sendMutex.withLock {
                 val normalizedText = requireMessageContent(text, attachments)
-                requireActiveMembership(groupId, memberships)
+                requireActiveMembership(groupId, access)
                 val recipients = findCurrentRecipients(groupId)
                 check(recipients.isNotEmpty()) { "Group has no active recipients" }
 
@@ -87,7 +82,7 @@ class GroupOutgoingMessageProcessor(
                 try {
                     encryptAndEnqueue(message, recipients, prepared)
                 } catch (error: Throwable) {
-                    val stored = chatDao.findMessageById(message.id) != null
+                    val stored = messageDataSource.findMessage(message.id) != null
                     if (!stored) {
                         attachmentTransfer.cleanupPrepared(prepared)
                     }
@@ -100,23 +95,23 @@ class GroupOutgoingMessageProcessor(
         groupId: String,
         messageId: String,
         emoji: String,
-        memberships: List<GroupMembershipEntity>
+        access: GroupMessageMembershipAccess
     ): Result<Unit> =
         safeSuspendCall {
             require(messageId.isNotBlank()) { "Message ID must not be blank" }
             require(emoji.isNotBlank()) { "Reaction emoji must not be blank" }
-            requireActiveMembership(groupId, memberships)
-            val target = chatDao.findMessageById(messageId) ?: error("Message was not found")
+            requireActiveMembership(groupId, access)
+            val target = messageDataSource.findMessage(messageId) ?: error("Message was not found")
             check(target.conversationId == groupId) { "Message does not belong to this group" }
             val recipients = findCurrentRecipients(groupId)
             check(recipients.isNotEmpty()) { "Group has no active recipients" }
 
-            val existing = messageReactionDao.find(messageId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
+            val existing = messageDataSource.findReaction(messageId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
             val removed = existing != null
             if (removed) {
-                messageReactionDao.delete(messageId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
+                messageDataSource.deleteReaction(messageId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
             } else {
-                messageReactionDao.upsert(
+                messageDataSource.saveReaction(
                     MessageReactionEntity(messageId, groupId, MessageReactionEntity.LOCAL_REACTOR_ID, emoji)
                 )
             }
@@ -157,12 +152,12 @@ class GroupOutgoingMessageProcessor(
     suspend fun deleteMessage(
         groupId: String,
         messageId: String,
-        memberships: List<GroupMembershipEntity>
+        access: GroupMessageMembershipAccess
     ): Result<Unit> =
         safeSuspendCall {
             require(messageId.isNotBlank()) { "Message ID must not be blank" }
-            requireActiveMembership(groupId, memberships)
-            val target = chatDao.findMessageById(messageId) ?: error("Message was not found")
+            requireActiveMembership(groupId, access)
+            val target = messageDataSource.findMessage(messageId) ?: error("Message was not found")
             check(target.conversationId == groupId) { "Message does not belong to this group" }
             check(target.transportMode == GROUP_END_TO_END_ENCRYPTED_MODE) { "Only user messages can be deleted" }
             check(target.isMine) { "Only your own messages can be deleted for everyone" }
@@ -202,22 +197,22 @@ class GroupOutgoingMessageProcessor(
             }
 
             attachmentTransfer.deleteForMessages(listOf(messageId))
-            chatDao.deleteMessagesAndRefreshConversations(listOf(target))
+            messageDataSource.deleteMessages(listOf(target))
         }
 
     suspend fun editMessage(
         groupId: String,
         messageId: String,
         text: String,
-        memberships: List<GroupMembershipEntity>
+        access: GroupMessageMembershipAccess
     ): Result<Unit> =
         safeSuspendCall {
             require(messageId.isNotBlank()) { "Message ID must not be blank" }
             val normalizedText = text.trim()
             require(normalizedText.isNotBlank()) { "Edited message text must not be blank" }
-            requireActiveMembership(groupId, memberships)
+            requireActiveMembership(groupId, access)
 
-            val target = chatDao.findMessageById(messageId) ?: error("Message was not found")
+            val target = messageDataSource.findMessage(messageId) ?: error("Message was not found")
             check(target.conversationId == groupId) { "Message does not belong to this group" }
             check(target.transportMode == GROUP_END_TO_END_ENCRYPTED_MODE) { "Only user messages can be edited" }
             check(target.isMine) { "Only your own messages can be edited" }
@@ -226,8 +221,8 @@ class GroupOutgoingMessageProcessor(
                 "Messages with attachments cannot be edited"
             }
             check(
-                messageRecipientStateDao
-                    .findByMessageId(messageId)
+                messageDataSource
+                    .findRecipientStates(messageId)
                     .none { state -> state.deliveryStatus == MessageDeliveryStatus.READ.name }
             ) { "Read messages cannot be edited" }
 
@@ -264,20 +259,20 @@ class GroupOutgoingMessageProcessor(
                 ).getOrThrow()
             }
 
-            chatDao.upsertMessage(target.copy(text = normalizedText))
+            messageDataSource.saveMessage(target.copy(text = normalizedText))
         }
 
     suspend fun retry(messageId: String): Result<Unit> =
         safeSuspendCall {
             require(messageId.isNotBlank()) { "Message ID must not be blank" }
 
-            val message = chatDao.findMessageById(messageId) ?: error("Message was not found")
+            val message = messageDataSource.findMessage(messageId) ?: error("Message was not found")
             check(message.isMine) { "Only outgoing messages can be retried" }
             requireGroupConversation(message.conversationId)
 
             val failedRecipients =
-                messageRecipientStateDao
-                    .findByMessageId(messageId)
+                messageDataSource
+                    .findRecipientStates(messageId)
                     .filter { state -> state.deliveryStatus == MessageDeliveryStatus.FAILED.name }
             check(failedRecipients.isNotEmpty()) { "Only failed group messages can be retried" }
 
@@ -302,14 +297,14 @@ class GroupOutgoingMessageProcessor(
             requireGroupConversation(groupId)
 
             val failures = mutableListOf<String>()
-            chatDao.findMessagesAwaitingReadReceipt(groupId).forEach { message ->
+            messageDataSource.findAwaitingReadReceipt(groupId).forEach { message ->
                 val enqueueError = enqueueReadReceipt(message.messageId, message.contactId).exceptionOrNull()
                 if (enqueueError != null) {
                     failures += message.contactId.toFailureDescription(enqueueError)
                     return@forEach
                 }
 
-                val markedRead = runCatching { chatDao.markReadReceiptSent(message.messageId) }
+                val markedRead = runCatching { messageDataSource.markReadReceiptSent(message.messageId) }
                 val markError = markedRead.exceptionOrNull()
                 when {
                     markError != null -> failures += message.contactId.toFailureDescription(markError)
@@ -326,41 +321,36 @@ class GroupOutgoingMessageProcessor(
 
     private suspend fun requireActiveMembership(
         groupId: String,
-        memberships: List<GroupMembershipEntity>
+        access: GroupMessageMembershipAccess
     ) {
         requireGroupConversation(groupId)
-        check(memberships.none { membership -> membership.blocksLocalMessaging() }) {
+        check(!access.isJoinPending) {
             "Complete the group join before sending messages"
         }
-        check(memberships.none { membership -> membership.status == GroupMembershipStatus.LEAVE_REQUESTED.name }) {
+        check(!access.isLeavePending) {
             "Messages are disabled while the group is being left"
         }
-        check(memberships.none { membership -> membership.status == GroupMembershipStatus.GROUP_DELETED.name }) {
+        check(!access.isDeleted) {
             "This group conversation was deleted"
         }
-        check(isStillMember(groupId, memberships)) {
+        check(isStillMember(groupId, access)) {
             "You are no longer a member of this group"
         }
     }
 
     private suspend fun isStillMember(
         groupId: String,
-        memberships: List<GroupMembershipEntity>
+        access: GroupMessageMembershipAccess
     ): Boolean {
-        val hasCurrentMembership =
-            memberships.any { membership ->
-                membership.status != GroupMembershipStatus.REMOVED.name &&
-                    membership.status != GroupMembershipStatus.GROUP_DELETED.name
-            }
-        if (hasCurrentMembership) return true
+        if (access.hasCurrentMembership) return true
 
         val wasRemoved =
-            chatDao.hasMessageWithTransportMode(
+            messageDataSource.hasMessageWithTransportMode(
                 conversationId = groupId,
                 transportMode = GroupMembershipMessageFactory.LOCAL_MEMBERSHIP_REMOVED_TRANSPORT_MODE
             )
         val leftGroup =
-            chatDao.hasMessageWithTransportMode(
+            messageDataSource.hasMessageWithTransportMode(
                 conversationId = groupId,
                 transportMode = GroupMembershipMessageFactory.LOCAL_MEMBERSHIP_LEFT_TRANSPORT_MODE
             )
@@ -368,7 +358,7 @@ class GroupOutgoingMessageProcessor(
     }
 
     private suspend fun requireGroupConversation(groupId: String) {
-        val conversation = chatDao.findConversationById(groupId)
+        val conversation = messageDataSource.findConversation(groupId)
             ?: error("Group conversation was not found")
         check(conversation.type == GROUP_CONVERSATION_TYPE) { "Conversation is not a group" }
     }
@@ -394,7 +384,7 @@ class GroupOutgoingMessageProcessor(
         )
 
     private suspend fun findCurrentRecipients(groupId: String): List<String> =
-        chatDao
+        messageDataSource
             .findConversationParticipants(groupId)
             .map { participant -> participant.contactId }
             .distinct()
@@ -402,20 +392,33 @@ class GroupOutgoingMessageProcessor(
     private suspend fun encryptAndEnqueue(
         message: MessageEntity,
         recipients: List<String>,
-        prepared: List<PreparedMessageAttachmentDto>
+        prepared: List<PreparedMessageAttachment>
     ) {
         val packets = createPackets(message, recipients, prepared)
         val recipientStates = packets.map { (contactId, packet) -> packet.toMessageRecipientStateEntity(contactId) }
 
-        chatDao.upsertOutgoingGroupMessage(
+        messageDataSource.saveOutgoingMessage(
             message = message,
             recipientStates = recipientStates,
             timestamp = message.createdAtEpochMilliseconds
         )
         try {
-            attachmentTransfer.persistOutgoing(message.id, prepared)
+            val conversation = messageDataSource.findConversation(message.conversationId)
+                ?: error("Group conversation was not found")
+            attachmentTransfer.persistOutgoing(
+                messageId = message.id,
+                prepared = prepared,
+                context = AttachmentMessageContext(
+                    conversationId = message.conversationId,
+                    createdAtEpochMilliseconds = message.createdAtEpochMilliseconds,
+                    displayName = conversation.title?.takeIf(String::isNotBlank) ?: conversation.id,
+                    isGroup = true,
+                    isMine = true,
+                    senderContactId = null
+                )
+            )
         } catch (error: Throwable) {
-            chatDao.deleteMessagesAndRefreshConversations(listOf(message))
+            messageDataSource.deleteMessages(listOf(message))
             attachmentTransfer.cleanupPrepared(prepared)
             throw error
         }
@@ -444,7 +447,7 @@ class GroupOutgoingMessageProcessor(
     private suspend fun createPackets(
         message: MessageEntity,
         recipients: List<String>,
-        prepared: List<PreparedMessageAttachmentDto>
+        prepared: List<PreparedMessageAttachment>
     ): Map<String, GroupChatMessagePacket> {
         val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
         val profilePicture =
@@ -453,7 +456,7 @@ class GroupOutgoingMessageProcessor(
             groupMessageContentCodec.encode(
                 GroupMessageContent(
                     text = message.text,
-                    attachments = prepared.map(PreparedMessageAttachmentDto::attachment),
+                    attachments = prepared.map(PreparedMessageAttachment::attachment),
                     replyToMessageId = message.replyToMessageId
                 )
             )
@@ -500,7 +503,7 @@ class GroupOutgoingMessageProcessor(
         contactId: String,
         packetId: String
     ) {
-        val currentState = messageRecipientStateDao.findByPacketId(packetId)
+        val currentState = messageDataSource.findRecipientByPacketId(packetId)
             ?: error("Recipient delivery state was not found")
         val currentStatus = currentState.deliveryStatus.toMessageDeliveryStatus()
 
@@ -555,14 +558,6 @@ class GroupOutgoingMessageProcessor(
             "$operation failed for ${joinToString()}"
         }
     }
-
-    private fun GroupMembershipEntity.blocksLocalMessaging(): Boolean =
-        perspective == GroupMembershipPerspective.MEMBER.name &&
-            status in setOf(
-                GroupMembershipStatus.STAGED.name,
-                GroupMembershipStatus.JOIN_REQUEST_SENT.name,
-                GroupMembershipStatus.WAITING_FOR_ACTIVATION.name
-            )
 
     private fun packetId(
         messageId: String,

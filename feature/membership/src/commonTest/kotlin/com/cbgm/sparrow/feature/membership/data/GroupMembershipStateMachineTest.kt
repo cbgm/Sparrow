@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.membership.data
 
 import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
-import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
-import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.data.model.GroupConversationStateDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupLeaveRequirementDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupMemberProgressStatusDto
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
+import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

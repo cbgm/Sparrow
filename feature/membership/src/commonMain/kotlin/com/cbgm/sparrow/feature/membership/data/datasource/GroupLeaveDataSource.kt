@@ -11,6 +11,7 @@ import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.membership.data.model.GROUP_ADMIN_ROLE
+import com.cbgm.sparrow.feature.membership.data.model.GroupLocalMembershipEndDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipParticipantDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPeerDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
@@ -26,23 +27,22 @@ internal class GroupLeaveDataSource(
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
     private val protocolOutbox: ProtocolOutbox,
     private val membershipPacketProtocol: GroupMembershipPacketProtocol,
-    private val groupSecurityManager: GroupMembershipSecurityDataSource,
+    private val groupEpochSecurity: GroupEpochSecurityDataSource,
+    private val securityStore: GroupSecurityStoreDataSource,
     private val membershipLock: GroupMembershipLock,
     private val epochDataSource: GroupEpochDataSource,
-    private val localCleanupDataSource: GroupMembershipCleanupDataSource,
-    private val packetBroadcaster: GroupPacketBroadcaster,
-    private val membershipMessageDataSource: GroupMembershipMessageDataSource
+    private val packetBroadcaster: GroupPacketBroadcaster
 ) {
     suspend fun transferAdminAndLeave(
         groupId: String,
         contactId: String,
         context: GroupMembershipContext
-    ): Result<Unit> =
+    ): Result<GroupLocalMembershipEndDto> =
         runCatching {
             require(groupId.isNotBlank()) { "Group ID must not be blank" }
             require(contactId.isNotBlank()) { "Contact ID must not be blank" }
             membershipLock.withLock {
-                check(groupSecurityManager.findLocalRole(groupId).getOrThrow()?.isGroupAdminRole() == true) {
+                check(securityStore.findLocalRole(groupId)?.isGroupAdminRole() == true) {
                     "Only a group admin can transfer administration before leaving"
                 }
                 leaveAsAdmin(groupId, promoteContactId = contactId, context = context)
@@ -52,11 +52,11 @@ internal class GroupLeaveDataSource(
     suspend fun leaveGroup(
         groupId: String,
         context: GroupMembershipContext
-    ): Result<Unit> =
+    ): Result<GroupLocalMembershipEndDto> =
         runCatching {
             require(groupId.isNotBlank()) { "Group ID must not be blank" }
             membershipLock.withLock {
-                val localRole = groupSecurityManager.findLocalRole(groupId).getOrThrow()
+                val localRole = securityStore.findLocalRole(groupId)
                 if (localRole?.isGroupAdminRole() == true) {
                     leaveAsAdmin(groupId, promoteContactId = null, context = context)
                 } else {
@@ -69,25 +69,24 @@ internal class GroupLeaveDataSource(
         groupId: String,
         promoteContactId: String?,
         context: GroupMembershipContext
-    ) {
+    ): GroupLocalMembershipEndDto {
         val participants = epochDataSource.findCurrentParticipants(groupId)
         if (participants.isEmpty()) {
             check(promoteContactId == null) { "There is no group member to promote" }
-            val epoch = groupSecurityManager.findCurrentEpoch(groupId).getOrThrow() ?: 1
-            endLocalMembership(
+            val epoch = securityStore.findCurrentEpoch(groupId) ?: 1
+            return endLocalMembership(
                 groupId = groupId,
                 referenceId = "local-admin-leave-$groupId",
                 epoch = epoch,
                 endedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
             )
-            return
         }
 
         val promotedParticipant = resolvePromotedParticipant(groupId, participants, promoteContactId)
         if (promotedParticipant == null) {
             requireAnotherValidAdmin(groupId, participants)
         }
-        rotateGroupBeforeAdminLeaves(groupId, promotedParticipant, context)
+        return rotateGroupBeforeAdminLeaves(groupId, promotedParticipant, context)
     }
 
     private suspend fun resolvePromotedParticipant(
@@ -120,9 +119,9 @@ internal class GroupLeaveDataSource(
         groupId: String,
         promotedParticipant: GroupMembershipParticipantDto?,
         context: GroupMembershipContext
-    ) {
+    ): GroupLocalMembershipEndDto {
         val currentEpoch =
-            groupSecurityManager.findOwnedGroupEpoch(groupId).getOrThrow()
+            securityStore.findOwnedGroupEpoch(groupId)
                 ?: error("Active group security state was not found")
         val contacts =
             epochDataSource
@@ -138,7 +137,7 @@ internal class GroupLeaveDataSource(
                 .orEmpty()
 
         val securedGroup =
-            groupSecurityManager
+            groupEpochSecurity
                 .rotateOwnedGroup(
                     groupId = groupId,
                     title = context.title,
@@ -164,7 +163,7 @@ internal class GroupLeaveDataSource(
                         )
                 ).getOrThrow()
         packetBroadcaster.enqueueAll(securedGroup.welcomePacketsByContactId).getOrThrow()
-        endLocalMembership(
+        return endLocalMembership(
             groupId = groupId,
             referenceId = "local-admin-leave-$groupId",
             epoch = currentEpoch + 1,
@@ -172,28 +171,27 @@ internal class GroupLeaveDataSource(
         )
     }
 
-    private suspend fun leaveAsMember(groupId: String) {
+    private suspend fun leaveAsMember(groupId: String): GroupLocalMembershipEndDto {
         val participants = epochDataSource.findCurrentParticipants(groupId)
         val adminParticipant =
             participants
                 .filter { participant -> participant.role.isGroupAdminRole() }
                 .minByOrNull(GroupMembershipParticipantDto::contactId)
         if (adminParticipant == null) {
-            val epoch = groupSecurityManager.findCurrentEpoch(groupId).getOrThrow() ?: 1
-            endLocalMembership(
+            val epoch = securityStore.findCurrentEpoch(groupId) ?: 1
+            return endLocalMembership(
                 groupId = groupId,
                 referenceId = "local-member-leave-$groupId",
                 epoch = epoch,
                 endedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
             )
-            return
         }
 
         val membership =
             membershipStore.findByGroupId(groupId)
                 .firstOrNull { row -> row.perspective == GroupMembershipPerspective.MEMBER.name }
         val epoch =
-            groupSecurityManager.findCurrentEpoch(groupId).getOrThrow()
+            securityStore.findCurrentEpoch(groupId)
                 ?: error("Active group security state was not found")
         val now = SystemClock.nowEpochMilliseconds()
         val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
@@ -220,7 +218,7 @@ internal class GroupLeaveDataSource(
                 updatedAt = now
             )
         }
-        endLocalMembership(
+        return endLocalMembership(
             groupId = groupId,
             referenceId = membership?.sourceInvitationId ?: "local-member-leave-$groupId",
             epoch = epoch,
@@ -233,14 +231,14 @@ internal class GroupLeaveDataSource(
         referenceId: String,
         epoch: Int,
         endedAtEpochMilliseconds: Long
-    ) {
-        localCleanupDataSource.endMembership(
-            membershipMessageDataSource.localMembershipLeft(
-                conversationId = groupId,
-                invitationId = referenceId,
-                epoch = epoch,
-                createdAtEpochMilliseconds = endedAtEpochMilliseconds
-            )
+    ): GroupLocalMembershipEndDto {
+        securityStore.retireLocalMembership(groupId, endedAtEpochMilliseconds)
+        membershipStore.deleteByGroupId(groupId)
+        return GroupLocalMembershipEndDto(
+            groupId = groupId,
+            referenceId = referenceId,
+            epoch = epoch,
+            endedAtEpochMilliseconds = endedAtEpochMilliseconds
         )
     }
 
@@ -255,9 +253,5 @@ internal class GroupLeaveDataSource(
         groupId: String,
         contactId: String
     ) =
-        groupSecurityManager
-            .findRemoteMemberKey(
-                groupId = groupId,
-                contactId = contactId
-            ).getOrThrow()
+        securityStore.findCurrentRemoteMemberKey(groupId, contactId)
 }

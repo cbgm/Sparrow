@@ -7,5 +7,7 @@ data class LocalMessageAttachmentRowDto(
     @Embedded
     val attachment: MessageAttachmentEntity,
     val conversationId: String,
-    val createdAtEpochMilliseconds: Long
+    val createdAtEpochMilliseconds: Long,
+    val displayName: String,
+    val isGroup: Boolean
 )

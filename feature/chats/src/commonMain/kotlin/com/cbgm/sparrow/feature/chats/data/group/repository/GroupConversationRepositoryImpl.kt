@@ -2,21 +2,14 @@ package com.cbgm.sparrow.feature.chats.data.group.repository
 
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.GroupMembershipDao
-import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
-import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
-import com.cbgm.sparrow.data.database.dao.MessageReactionDao
-import com.cbgm.sparrow.data.database.dao.MessageRecipientStateDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
-import com.cbgm.sparrow.data.database.entity.GroupMembershipEntity
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessagesDto
-import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachment
+import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
+import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupConversationHistoryDataSource
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
 import com.cbgm.sparrow.feature.chats.data.group.mapper.toGroupConversation
 import com.cbgm.sparrow.feature.chats.data.mapper.toMessagePartDtos
@@ -26,17 +19,19 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryPolicy
 import com.cbgm.sparrow.feature.chats.domain.model.MessageReaction
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupConversationRepository
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberLifecycleSnapshot
+import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 
-class GroupConversationRepositoryImpl(
-    private val chatDao: ChatDao,
-    private val messageAttachmentDataSource: MessageAttachmentDataSource,
-    private val messageRecipientStateDao: MessageRecipientStateDao,
-    private val messageReactionDao: MessageReactionDao,
-    private val groupMembershipDao: GroupMembershipDao,
-    private val groupSecurityDao: GroupSecurityDao,
-    private val groupVerificationDao: GroupVerificationDao
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+internal class GroupConversationRepositoryImpl(
+    private val historyDataSource: GroupConversationHistoryDataSource,
+    private val messageAttachmentDataSource: MessageAttachmentOperationsRepository,
+    private val membershipRepository: GroupMembershipRepository
 ) : GroupConversationRepository {
     override suspend fun create(title: String): Result<String> =
         runCatching {
@@ -44,7 +39,7 @@ class GroupConversationRepositoryImpl(
             require(normalizedTitle.isNotEmpty()) { "Group title must not be blank" }
             val now = SystemClock.nowEpochMilliseconds()
             val groupId = IdGenerator.generate(prefix = "group")
-            chatDao.upsertConversation(
+            historyDataSource.upsertConversation(
                 ConversationEntity(
                     id = groupId,
                     contactId = null,
@@ -63,18 +58,20 @@ class GroupConversationRepositoryImpl(
     ): Flow<GroupConversation?> {
         val messages =
             oldestCursor?.let { cursor ->
-                chatDao.observeMessagesFromCursor(
+                historyDataSource.observeMessagesFromCursor(
                     conversationId = groupId,
                     fromTimestamp = cursor.createdAtEpochMilliseconds,
                     fromMessageId = cursor.messageId
                 )
-            } ?: chatDao.observeRecentMessages(groupId, MessageHistoryPolicy.PAGE_SIZE)
+            } ?: historyDataSource.observeRecentMessages(groupId, MessageHistoryPolicy.PAGE_SIZE)
 
         val messageSnapshot =
             combine(
-                chatDao.observeConversationById(groupId),
+                historyDataSource.observeConversation(groupId),
                 messages,
-                observeAttachments(groupId, oldestCursor),
+                messages.map { loaded -> loaded.map { it.id } }.distinctUntilChanged().flatMapLatest { messageIds ->
+                    messageAttachmentDataSource.observeByMessageIds(messageIds)
+                },
                 observeReactions(groupId, oldestCursor)
             ) { conversation, loadedMessages, attachmentsByMessageId, reactions ->
                 MessageSnapshotDto(
@@ -90,15 +87,14 @@ class GroupConversationRepositoryImpl(
 
         val groupStateSnapshot =
             combine(
-                groupSecurityDao.observeCurrentMemberKeys(groupId),
+                membershipRepository.observeConversationMembership(groupId),
                 observeRecipientStates(groupId, oldestCursor),
-                groupMembershipDao.observeByGroupId(groupId),
-                groupVerificationDao.observeByGroupId(groupId)
-            ) { memberKeys, recipientStates, memberships, verificationRows ->
+                historyDataSource.observeVerificationRows(groupId)
+            ) { membership, recipientStates, verificationRows ->
                 GroupStateSnapshotDto(
-                    participantContactIds = memberKeys.map { memberKey -> memberKey.contactId },
+                    participantContactIds = membership.participantContactIds,
                     recipientStates = recipientStates,
-                    memberships = memberships,
+                    memberships = membership.memberships,
                     verificationRows = verificationRows
                 )
             }
@@ -106,7 +102,7 @@ class GroupConversationRepositoryImpl(
         return combine(
             messageSnapshot,
             groupStateSnapshot,
-            chatDao.observeMessagesByTransportModes(groupId, LOCAL_MEMBERSHIP_TRANSPORT_MODES)
+            historyDataSource.observeMessagesByTransportModes(groupId, LOCAL_MEMBERSHIP_TRANSPORT_MODES)
         ) { snapshot, groupState, membershipHistory ->
             snapshot.conversation
                 ?.takeIf { it.type == GROUP_CONVERSATION_TYPE }
@@ -123,32 +119,17 @@ class GroupConversationRepositoryImpl(
         }
     }
 
-    private fun observeAttachments(
-        conversationId: String,
-        oldestCursor: MessageHistoryCursor?
-    ): Flow<Map<String, List<MessageAttachment>>> =
-        oldestCursor?.let { cursor ->
-            messageAttachmentDataSource.observeFromMessageCursor(
-                conversationId = conversationId,
-                fromTimestamp = cursor.createdAtEpochMilliseconds,
-                fromMessageId = cursor.messageId
-            )
-        } ?: messageAttachmentDataSource.observeRecentByConversation(
-            conversationId = conversationId,
-            messageLimit = MessageHistoryPolicy.PAGE_SIZE
-        )
-
     private fun observeReactions(
         conversationId: String,
         oldestCursor: MessageHistoryCursor?
     ): Flow<List<MessageReactionEntity>> =
         oldestCursor?.let { cursor ->
-            messageReactionDao.observeFromMessageCursor(
+            historyDataSource.observeReactionsFromCursor(
                 conversationId = conversationId,
                 fromTimestamp = cursor.createdAtEpochMilliseconds,
                 fromMessageId = cursor.messageId
             )
-        } ?: messageReactionDao.observeRecentByConversationId(
+        } ?: historyDataSource.observeRecentReactions(
             conversationId = conversationId,
             messageLimit = MessageHistoryPolicy.PAGE_SIZE
         )
@@ -158,12 +139,12 @@ class GroupConversationRepositoryImpl(
         oldestCursor: MessageHistoryCursor?
     ): Flow<List<MessageRecipientStateEntity>> =
         oldestCursor?.let { cursor ->
-            messageRecipientStateDao.observeFromMessageCursor(
+            historyDataSource.observeRecipientStatesFromCursor(
                 conversationId = conversationId,
                 fromTimestamp = cursor.createdAtEpochMilliseconds,
                 fromMessageId = cursor.messageId
             )
-        } ?: messageRecipientStateDao.observeRecentByConversationId(
+        } ?: historyDataSource.observeRecentRecipientStates(
             conversationId = conversationId,
             messageLimit = MessageHistoryPolicy.PAGE_SIZE
         )
@@ -186,7 +167,7 @@ class GroupConversationRepositoryImpl(
     private data class GroupStateSnapshotDto(
         val participantContactIds: List<String>,
         val recipientStates: List<MessageRecipientStateEntity>,
-        val memberships: List<GroupMembershipEntity>,
+        val memberships: List<GroupMemberLifecycleSnapshot>,
         val verificationRows: List<GroupVerificationPairEntity>
     )
 
