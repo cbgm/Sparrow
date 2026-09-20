@@ -32,12 +32,8 @@ import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_verify
-import com.cbgm.sparrow.resources.feature_chats_chat_key_exchange_incomplete_description
-import com.cbgm.sparrow.resources.feature_chats_chat_key_exchange_incomplete_title
 import com.cbgm.sparrow.resources.feature_chats_chat_no_keys_description
 import com.cbgm.sparrow.resources.feature_chats_chat_one_way_keys_description
-import com.cbgm.sparrow.resources.feature_chats_chat_unencrypted_description
-import com.cbgm.sparrow.resources.feature_chats_chat_unencrypted_title
 import com.cbgm.sparrow.resources.feature_chats_chat_unverified_description
 import com.cbgm.sparrow.resources.feature_chats_chat_unverified_keys_description
 import com.cbgm.sparrow.resources.feature_chats_chat_unverified_title

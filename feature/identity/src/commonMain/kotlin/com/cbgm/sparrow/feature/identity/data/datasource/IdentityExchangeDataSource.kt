@@ -22,7 +22,6 @@ import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.IdentityExchangeEntity
-import com.cbgm.sparrow.feature.identity.data.datasource.IdentityExchangeStoreDataSource
 import com.cbgm.sparrow.feature.identity.data.model.IdentityExchangeBindingDto
 import com.cbgm.sparrow.feature.identity.data.model.IdentityExchangeStage
 import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus

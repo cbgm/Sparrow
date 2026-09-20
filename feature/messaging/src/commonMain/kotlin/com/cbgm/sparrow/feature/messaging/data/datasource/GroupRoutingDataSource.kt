@@ -23,6 +23,7 @@ class GroupRoutingDataSource(
             ?: error("Contact is not a member of the current group epoch")
     }
 
+    @Suppress("unused") // Retained recipient-routing API; current callers resolve recipients individually.
     suspend fun resolveMembers(groupId: String): Map<String, String> {
         require(groupId.isNotBlank()) { "Group ID must not be blank" }
         return currentMemberKeys(groupId)

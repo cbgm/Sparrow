@@ -129,7 +129,6 @@ import com.cbgm.sparrow.feature.membership.domain.usecase.RemoveGroupMemberUseCa
 import com.cbgm.sparrow.feature.membership.domain.usecase.SendGroupReadyAcknowledgementUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.StartGroupMembershipUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.TransferGroupAdminAndLeaveUseCase
-import com.cbgm.sparrow.feature.membership.domain.usecase.VerifyGroupKeyConfirmationUseCase
 
 /**
  * The only place in conversation orchestration that sequences public feature use cases.
@@ -200,7 +199,6 @@ internal class ConversationFlowHandler(
     private val markMembershipRemoved: MarkMembershipRemovedUseCase,
     private val getGroupLeaveRequirementUseCase: GetGroupLeaveRequirementUseCase,
     private val getGroupCurrentEpochUseCase: GetGroupCurrentEpochUseCase,
-    private val verifyGroupKeyConfirmationUseCase: VerifyGroupKeyConfirmationUseCase,
     private val promoteGroupMemberUseCase: PromoteGroupMemberUseCase,
     private val removeGroupMemberUseCase: RemoveGroupMemberUseCase,
     private val transferGroupAdminAndLeaveUseCase: TransferGroupAdminAndLeaveUseCase,
@@ -243,7 +241,7 @@ internal class ConversationFlowHandler(
     /** Only orchestration chooses whether to decline, revoke, or close the Identity-owned exchange. */
     private suspend fun revokePeerExchange(peerId: String) {
         val exchange = getIdentityExchangeClosure(peerId).getOrThrow()
-        if (exchange != null && exchange.phase != IdentityExchangeClosurePhase.ALREADY_CLOSED) {
+        if (exchange != null) {
             when (exchange.phase) {
                 IdentityExchangeClosurePhase.INCOMING_PENDING ->
                     declineIdentityExchange(exchange.exchangeId).getOrThrow()
@@ -253,8 +251,8 @@ internal class ConversationFlowHandler(
                         exchangeId = exchange.exchangeId,
                         inviteChallenge = exchange.inviteChallenge
                     ).getOrThrow()
-                IdentityExchangeClosurePhase.TERMINAL,
-                IdentityExchangeClosurePhase.ALREADY_CLOSED -> Unit
+                IdentityExchangeClosurePhase.TERMINAL -> Unit
+                IdentityExchangeClosurePhase.ALREADY_CLOSED -> return
             }
             closeIdentityExchange(exchange.exchangeId, peerId).getOrThrow()
         }
@@ -278,6 +276,7 @@ internal class ConversationFlowHandler(
         }
 
     /** Manual setup selection is a cross-feature workflow, not a Contacts use case. */
+    @Suppress("unused") // Retained manual identity setup entry point for navigation integration.
     suspend fun startManualIdentitySetup(peerId: String): Result<Unit> =
         runCatching {
             require(peerId.isNotBlank()) { "Peer ID must not be blank" }
@@ -412,6 +411,23 @@ internal class ConversationFlowHandler(
             }
 
             handleDirectInvitationResult(result)
+        }
+
+    /** Historical Invite results can outlive a removed or superseded membership handshake.
+     * Do not reapply those results on every restart, or create a new group membership.
+     * A newly accepted result still goes through onInvitationResult and remains an error
+     * if its staged handshake is unexpectedly missing.
+     */
+    suspend fun recoverAcceptedGroupInvitation(result: InvitationResult): Result<Unit> =
+        runCatching {
+            if (result.payloadType != InvitationPayloadType.GROUP ||
+                result.direction != InvitationDirection.INCOMING ||
+                result.response != InvitationResponse.ACCEPTED
+            ) {
+                return@runCatching
+            }
+            if (getMembershipHandshake(result.invitationId).getOrThrow() == null) return@runCatching
+            handleGroupInvitationResult(result)
         }
 
     suspend fun onInvitationResult(result: InvitationResult): Result<Unit> =
@@ -888,16 +904,20 @@ internal class ConversationFlowHandler(
                 is GroupInviteDeclinedPacket -> handleGroupInviteDeclined(context, packet)
                 is GroupJoinRequestPacket -> handleGroupJoinRequest(context, packet)
                 is GroupReadyAcknowledgementPacket -> {
-                    verifyGroupKeyConfirmationUseCase(
-                        groupId = packet.groupId,
-                        epoch = packet.epoch,
-                        confirmation = packet.keyConfirmation
-                    ).getOrThrow()
+                    // The owner discards old epoch keys on rotation. A delayed ACK
+                    // for that old welcome is obsolete, not a missing current key.
+                    // Do not project obsolete readiness into Chats either.
+                    if (packet.epoch < getGroupCurrentEpochUseCase(packet.groupId).getOrThrow()) {
+                        return@runCatching
+                    }
                     receiveGroupReadyAcknowledgement(
                         memberContactId = context.contactId,
                         packet = packet,
                         receivedAtEpochMilliseconds = context.receivedAtEpochMilliseconds
                     ).getOrThrow()
+                    if (packet.epoch != getGroupCurrentEpochUseCase(packet.groupId).getOrThrow()) {
+                        return@runCatching
+                    }
                     // The verified ready ACK has activated this membership. Install the Chats
                     // projection synchronously: group sends must not await a Flow observer.
                     val welcomePrefix = "group-welcome-${packet.groupId}-"

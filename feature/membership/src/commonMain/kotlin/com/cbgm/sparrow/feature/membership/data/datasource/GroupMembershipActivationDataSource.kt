@@ -22,6 +22,7 @@ internal class GroupMembershipActivationDataSource(
     private val membershipPacketProtocol: GroupMembershipPacketProtocol,
     private val membershipLock: GroupMembershipLock,
     private val securityStore: GroupSecurityStoreDataSource,
+    private val epochSecurity: GroupEpochSecurityDataSource,
     private val packetBroadcaster: GroupPacketBroadcaster
 ) {
     suspend fun receiveReadyAcknowledgement(
@@ -31,11 +32,25 @@ internal class GroupMembershipActivationDataSource(
     ): Result<Unit> =
         runCatching {
             membershipLock.withLock {
+                // A later accepted member may already have rotated the group to a
+                // newer epoch. The previous epoch key was intentionally pruned:
+                // its late ACK cannot activate anyone or be applied to the new epoch.
+                // The latest signed welcome will generate a ready ACK for that epoch.
+                val currentEpoch = securityStore.findCurrentEpoch(packet.groupId)
+                    ?: error("Group security state was not found")
+                if (packet.epoch < currentEpoch) return@withLock
+                check(packet.epoch == currentEpoch) {
+                    "Ready acknowledgement uses a future group epoch"
+                }
+
                 val membership = membershipStore.findByGroupAndContact(packet.groupId, memberContactId)
                 validateReadyAcknowledgement(memberContactId, packet, membership)
                 if (!shouldActivateReadyMember(memberContactId, packet.groupId, membership)) {
                     return@withLock
                 }
+                // Verification and activation share the membership lock with owner
+                // epoch rotation. Never load a pruned key before checking the epoch.
+                epochSecurity.verifyKeyConfirmation(packet.groupId, packet.epoch, packet.keyConfirmation)
 
                 val activationTimestamp =
                     maxOf(requireNotNull(membership).createdAtEpochMilliseconds, receivedAtEpochMilliseconds)

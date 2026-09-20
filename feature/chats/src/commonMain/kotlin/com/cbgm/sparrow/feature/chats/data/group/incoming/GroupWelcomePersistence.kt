@@ -96,7 +96,7 @@ internal class GroupWelcomePersistence(
         return removedParticipantIds
     }
 
-    private suspend fun removedMembershipMessages(
+    private fun removedMembershipMessages(
         packet: GroupCreatedPacket,
         previous: PreviousGroupMembershipDto,
         currentParticipantIds: Set<String>,
@@ -125,7 +125,7 @@ internal class GroupWelcomePersistence(
                 }
             }
 
-    private suspend fun addedMembershipMessages(
+    private fun addedMembershipMessages(
         packet: GroupCreatedPacket,
         current: List<ConversationParticipantEntity>,
         previousParticipantIds: Set<String>,

@@ -25,7 +25,7 @@ interface ConversationPort {
     ): Result<Set<String>>
 
     /** Replays the Chats-owned group metadata after Membership accepted readiness. */
-    suspend fun sendCurrentGroupMetadataTo(groupId: String, peerId: String): Unit
+    suspend fun sendCurrentGroupMetadataTo(groupId: String, peerId: String)
 
     /** Chats alone owns verification records and snapshot broadcasting. */
     suspend fun refreshOwnedGroupVerification(groupId: String): Result<Unit>

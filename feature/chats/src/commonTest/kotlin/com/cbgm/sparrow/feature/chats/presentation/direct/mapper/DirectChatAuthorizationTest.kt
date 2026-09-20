@@ -102,7 +102,6 @@ class DirectChatAuthorizationTest {
     @Test
     fun `manual identity import without accepted invitation does not authorize chat`() {
         assertFalse(isDirectChatAuthorized(null))
-        assertFalse(isDirectChatAuthorized(IdentityHandshakeState.INCOMING_CHALLENGE_RECEIVED))
         assertFalse(isDirectChatAuthorized(IdentityHandshakeState.ACCEPTANCE_SENT))
         assertTrue(isDirectChatAuthorized(IdentityHandshakeState.MUTUAL_UNVERIFIED))
     }

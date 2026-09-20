@@ -28,7 +28,25 @@ data class GroupVerificationMemberKey(
     val encryptionPublicKey: ByteArray,
     val signingPublicKey: ByteArray,
     val isAdmin: Boolean
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is GroupVerificationMemberKey) return false
+        if (contactId != other.contactId) return false
+        if (isAdmin != other.isAdmin) return false
+        if (!encryptionPublicKey.contentEquals(other.encryptionPublicKey)) return false
+        if (!signingPublicKey.contentEquals(other.signingPublicKey)) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = contactId.hashCode()
+        result = 31 * result + isAdmin.hashCode()
+        result = 31 * result + encryptionPublicKey.contentHashCode()
+        result = 31 * result + signingPublicKey.contentHashCode()
+        return result
+    }
+}
 
 data class GroupVerificationMembership(
     val contactId: String,

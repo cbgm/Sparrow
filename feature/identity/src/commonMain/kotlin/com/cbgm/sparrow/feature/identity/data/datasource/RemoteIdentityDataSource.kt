@@ -49,9 +49,10 @@ internal class RemoteIdentityDataSource(
             mailboxCapabilityLifecycle.revokeForContact(peerId).getOrThrow()
         }
 
-        if (sameIdentity && existing != null) {
+        if (sameIdentity) {
+            val matchingIdentity = requireNotNull(existing)
             remoteIdentityDao.upsert(
-                existing.copy(
+                matchingIdentity.copy(
                     remoteIdentityPacketReceived = true,
                     updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
                 )
@@ -108,7 +109,7 @@ internal class RemoteIdentityDataSource(
         }
         val verificationStatus = when {
             origin == RemoteIdentityImportOriginDto.TRUSTED_QR_IMPORT -> StoredVerificationStatusDto.VERIFIED
-            sameIdentity && existing?.verificationStatus == StoredVerificationStatusDto.VERIFIED.name -> StoredVerificationStatusDto.VERIFIED
+            existing?.let { sameIdentity && it.verificationStatus == StoredVerificationStatusDto.VERIFIED.name } == true -> StoredVerificationStatusDto.VERIFIED
             else -> StoredVerificationStatusDto.UNVERIFIED
         }
         val next = ContactPublicIdentityEntity(
@@ -116,7 +117,7 @@ internal class RemoteIdentityDataSource(
             encryptionPublicKey = encryptionPublicKey.copyOf(),
             signingPublicKey = signingPublicKey.copyOf(),
             verificationStatus = verificationStatus.name,
-            verifiedByContact = sameIdentity && existing?.verifiedByContact == true,
+            verifiedByContact = existing?.let { sameIdentity && it.verifiedByContact } == true,
             keyExchangeStatus = exchangeStatus.name,
             locallyImported = locallyImported,
             remoteIdentityPacketReceived = packetReceived,
@@ -205,7 +206,7 @@ internal class RemoteIdentityDataSource(
             existing != null &&
                 existing.encryptionPublicKey.contentEquals(encryptionPublicKey) &&
                 existing.signingPublicKey.contentEquals(signingPublicKey)
-        val alreadyMutual = sameIdentity && existing?.keyExchangeStatus == StoredKeyExchangeStatusDto.MUTUAL.name
+        val alreadyMutual = existing?.let { sameIdentity && it.keyExchangeStatus == StoredKeyExchangeStatusDto.MUTUAL.name } == true
         if (alreadyMutual) return
 
         if (!sameIdentity) {

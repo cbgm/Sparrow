@@ -111,7 +111,6 @@ val conversationOrchestrationModule =
                 markMembershipRemoved = get(),
                 getGroupLeaveRequirementUseCase = get(),
                 getGroupCurrentEpochUseCase = get(),
-                verifyGroupKeyConfirmationUseCase = get(),
                 promoteGroupMemberUseCase = get(),
                 removeGroupMemberUseCase = get(),
                 transferGroupAdminAndLeaveUseCase = get(),

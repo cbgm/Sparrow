@@ -31,7 +31,7 @@ class DirectMessageDeliveryCoordinator(
     suspend fun applyPacketEvent(
         packetId: String,
         event: MessageDeliveryEvent,
-        errorMessage: String? = null
+        @Suppress("UNUSED_PARAMETER") errorMessage: String? = null
     ) {
         require(packetId.isNotBlank()) { "Packet ID must not be blank" }
         val current = deliveryDataSource.findByPacketId(packetId)?.toMessageDeliveryStatus() ?: return

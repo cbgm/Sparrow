@@ -39,7 +39,7 @@ class InvitationResultObserver internal constructor(
                         result.payloadType == InvitationPayloadType.GROUP &&
                             result.direction == InvitationDirection.INCOMING &&
                             result.response == InvitationResponse.ACCEPTED ->
-                            flowHandler.onInvitationResult(result)
+                            flowHandler.recoverAcceptedGroupInvitation(result)
                         result.payloadType == InvitationPayloadType.DIRECT ->
                             flowHandler.recoverAcceptedDirectInvitation(result)
                         else -> null

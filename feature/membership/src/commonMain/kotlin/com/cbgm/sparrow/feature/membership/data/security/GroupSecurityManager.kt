@@ -73,14 +73,17 @@ internal class GroupSecurityManager internal constructor(
     suspend fun findCurrentEpoch(groupId: String): Result<Int?> =
         safeSuspendCall { groupSecurityStore.findState(groupId)?.currentEpoch }
 
+    @Suppress("unused") // Retained group-security helper; currently no production caller.
     suspend fun findLocalRole(groupId: String): Result<String?> =
         safeSuspendCall { groupSecurityStore.findState(groupId)?.localRole }
 
+    @Suppress("unused") // Retained group-security helper; currently no production caller.
     suspend fun isLocalMembershipRetired(groupId: String): Result<Boolean> =
         safeSuspendCall {
             groupSecurityStore.findState(groupId)?.localRole == GROUP_LEFT_ROLE
         }
 
+    @Suppress("unused") // Retained group-security helper; currently no production caller.
     suspend fun findRemoteMemberKey(
         groupId: String,
         contactId: String
@@ -94,6 +97,7 @@ internal class GroupSecurityManager internal constructor(
             )
         }
 
+    @Suppress("unused") // Retained group-security helper; currently no production caller.
     suspend fun requireRemoteAdmin(
         groupId: String,
         contactId: String,

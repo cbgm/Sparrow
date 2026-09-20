@@ -86,6 +86,7 @@ class GroupProtocolPayloadEncoder {
             ByteArrays.withLengthPrefix(packet.ownerSigningPublicKey)
         )
 
+    @Suppress("unused") // Retained protocol encoding API; current membership packet flow uses its feature encoder.
     fun encodeInviteReceived(packet: GroupInviteReceivedPacket): ByteArray =
         ByteArrays.concatenate(
             INVITE_RECEIVED_DOMAIN,
@@ -122,6 +123,7 @@ class GroupProtocolPayloadEncoder {
             ByteArrays.withLengthPrefix(packet.memberSigningPublicKey)
         )
 
+    @Suppress("unused") // Retained protocol encoding API; current membership packet flow uses its feature encoder.
     fun encodeLeaveRequest(packet: GroupLeaveRequestPacket): ByteArray =
         ByteArrays.concatenate(
             LEAVE_REQUEST_DOMAIN,
@@ -146,6 +148,7 @@ class GroupProtocolPayloadEncoder {
             ByteArrays.withLengthPrefix(packet.keyConfirmation)
         )
 
+    @Suppress("unused") // Retained protocol encoding API; current membership packet flow uses its feature encoder.
     fun encodeMemberActivated(packet: GroupMemberActivatedPacket): ByteArray =
         ByteArrays.concatenate(
             MEMBER_ACTIVATED_DOMAIN,
@@ -159,6 +162,7 @@ class GroupProtocolPayloadEncoder {
             ByteArrays.encodeInt(packet.activationRound)
         )
 
+    @Suppress("unused") // Retained protocol encoding API; current membership packet flow uses its feature encoder.
     fun encodeMemberActivationAcknowledgement(packet: GroupMemberActivationAcknowledgementPacket): ByteArray =
         ByteArrays.concatenate(
             MEMBER_ACTIVATION_ACKNOWLEDGEMENT_DOMAIN,
@@ -174,6 +178,7 @@ class GroupProtocolPayloadEncoder {
             ByteArrays.encodeLong(packet.acknowledgedAtEpochMilliseconds)
         )
 
+    @Suppress("unused") // Retained protocol encoding API; current membership packet flow uses its feature encoder.
     fun encodeMemberRemoved(packet: GroupMemberRemovedPacket): ByteArray =
         ByteArrays.concatenate(
             if (packet.reason == GroupMemberRemovedPacket.REASON_MEMBER_LEFT) {
