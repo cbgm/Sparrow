@@ -30,6 +30,7 @@ internal class GroupOwnerWelcomeDataSource(
         groupCreatedAtEpochMilliseconds: Long,
         memberEncryptionPublicKey: ByteArray,
         memberSigningPublicKey: ByteArray,
+        memberPhoneNumber: String,
         updatedAtEpochMilliseconds: Long
     ) = lock.withLock {
         val handshake = requireNotNull(store.findBySourceInvitationId(sourceId)) {
@@ -50,8 +51,9 @@ internal class GroupOwnerWelcomeDataSource(
         val peer = GroupMembershipPeerDto(
             id = handshake.contactId,
             displayName = null,
-            preferredPhoneNumber = null,
-            phoneNumbers = emptyList(),
+            preferredPhoneNumber = memberPhoneNumber.trim().takeIf(String::isNotEmpty)
+                ?: error("Accepted group member has no real phone number"),
+            phoneNumbers = listOf(memberPhoneNumber.trim()),
             encryptionPublicKey = memberEncryptionPublicKey.copyOf(),
             signingPublicKey = memberSigningPublicKey.copyOf(),
             hasMutualIdentity = true

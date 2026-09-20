@@ -15,7 +15,9 @@ import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipStoreDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupOwnerWelcomeDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupSecurityStoreDataSource
 import com.cbgm.sparrow.feature.membership.data.mapper.toMembershipResult
+import com.cbgm.sparrow.feature.membership.data.model.GROUP_LEFT_ROLE
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.data.protocol.GroupMembershipPacketProtocol
@@ -41,7 +43,8 @@ internal class MembershipRepositoryImpl(
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val protocolOutbox: ProtocolOutbox,
-    private val groupOwnerWelcome: GroupOwnerWelcomeDataSource
+    private val groupOwnerWelcome: GroupOwnerWelcomeDataSource,
+    private val securityStore: GroupSecurityStoreDataSource
 ) : MembershipRepository {
     override fun observeResults(): Flow<List<MembershipResult>> =
         membershipStore
@@ -322,7 +325,8 @@ internal class MembershipRepositoryImpl(
         updatedAtEpochMilliseconds: Long,
         context: GroupMembershipContext,
         memberEncryptionPublicKey: ByteArray,
-        memberSigningPublicKey: ByteArray
+        memberSigningPublicKey: ByteArray,
+        memberPhoneNumber: String
     ): Result<Unit> =
         runCatching {
             val membership = requireNotNull(membershipStore.findBySourceInvitationId(sourceId)) {
@@ -351,6 +355,7 @@ internal class MembershipRepositoryImpl(
                 groupCreatedAtEpochMilliseconds = context.createdAtEpochMilliseconds,
                 memberEncryptionPublicKey = memberEncryptionPublicKey,
                 memberSigningPublicKey = memberSigningPublicKey,
+                memberPhoneNumber = memberPhoneNumber,
                 updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
             )
         }
@@ -445,6 +450,16 @@ internal class MembershipRepositoryImpl(
         receivedAtEpochMilliseconds: Long
     ) {
         membershipLock.withLock {
+            // Original group flow: a *new, verified* invitation starts a new local
+            // membership after the previous one was left. The retired security state
+            // must not make its welcome look like an update of the old membership.
+            // Never clear a live group, or clear a retired group for a stale invite.
+            val retired = securityStore.findState(packet.groupId)
+            if (retired?.localRole == GROUP_LEFT_ROLE) {
+                check(packet.createdAtEpochMilliseconds > retired.updatedAtEpochMilliseconds) {
+                    "Group re-invitation predates local membership retirement"
+                }
+            }
             membershipStore.replaceForGroupAndContact(
                 GroupMembershipEntity(
                     membershipId = IdGenerator.generate(prefix = "group-membership"),
@@ -461,6 +476,9 @@ internal class MembershipRepositoryImpl(
                         maxOf(packet.createdAtEpochMilliseconds, receivedAtEpochMilliseconds)
                 )
             )
+            if (retired?.localRole == GROUP_LEFT_ROLE) {
+                securityStore.deleteGroup(packet.groupId)
+            }
         }
     }
 

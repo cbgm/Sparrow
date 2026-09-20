@@ -32,10 +32,23 @@ interface ConversationPort {
 
     suspend fun onLocalGroupMemberActivated(groupId: String): Result<Unit>
 
+    /** Persist a signed owner announcement without granting message-routing access. */
+    suspend fun recordRemoteGroupMemberAdded(
+        groupId: String,
+        contactId: String,
+        epoch: Int,
+        activationId: String,
+        memberDisplayName: String,
+        joinedAtEpochMilliseconds: Long
+    ): Result<Unit>
+
     suspend fun onRemoteGroupMemberActivated(
         groupId: String,
         contactId: String,
         role: String,
+        epoch: Int,
+        activationId: String,
+        memberDisplayName: String,
         joinedAtEpochMilliseconds: Long
     ): Result<Unit>
 

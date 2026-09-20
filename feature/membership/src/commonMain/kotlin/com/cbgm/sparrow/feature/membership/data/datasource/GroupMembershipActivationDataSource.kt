@@ -109,10 +109,38 @@ internal class GroupMembershipActivationDataSource(
                 ?: error("Activated group member is not part of the current group epoch")
         val adminSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
         val packetsByContactId = linkedMapOf<String, GroupMemberActivatedPacket>()
+        val previousEpochKeys = if (packet.epoch > 1) {
+            securityStore.findMemberKeys(packet.groupId, packet.epoch - 1)
+                .associateBy { it.contactId }
+        } else {
+            emptyMap()
+        }
 
         memberKeys
             .filterNot { memberKey -> memberKey.contactId == memberContactId }
             .forEach { activeMember ->
+                // A current-epoch key may belong to a still-pending invitation.
+                // Prefer the authoritative ACTIVE handshake where we own one.
+                // Existing peers who joined through another admin may have no
+                // owner-side handshake on this device; their key must already
+                // have existed unchanged in the PREVIOUS epoch to be notified.
+                val existingMembership = membershipStore.findByGroupAndContact(
+                    packet.groupId,
+                    activeMember.contactId
+                )
+                if (existingMembership != null) {
+                    if (existingMembership.status != GroupMembershipStatus.ACTIVE.name) {
+                        return@forEach
+                    }
+                } else {
+                    val previousKey = previousEpochKeys[activeMember.contactId]
+                        ?: return@forEach
+                    if (!previousKey.signingPublicKey.contentEquals(activeMember.signingPublicKey) ||
+                        !previousKey.encryptionPublicKey.contentEquals(activeMember.encryptionPublicKey)
+                    ) {
+                        return@forEach
+                    }
+                }
                 packetsByContactId[activeMember.contactId] =
                     createMemberActivation(
                         groupId = packet.groupId,
@@ -292,7 +320,7 @@ internal class GroupMembershipActivationDataSource(
                         encryptionPublicKey = member.encryptionPublicKey.copyOf(),
                         signingPublicKey = member.signingPublicKey.copyOf(),
                         role = member.role,
-                        phoneNumber = null
+                        phoneNumber = member.phoneNumber
                     ),
                 activatedAtEpochMilliseconds = activatedAtEpochMilliseconds,
                 activationRound = activationRound,

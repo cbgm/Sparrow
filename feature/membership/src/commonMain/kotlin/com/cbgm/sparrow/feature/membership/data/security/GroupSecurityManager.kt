@@ -337,7 +337,8 @@ internal class GroupSecurityManager internal constructor(
                     contactId = key.contactId,
                     encryptionPublicKey = key.encryptionPublicKey,
                     signingPublicKey = key.signingPublicKey,
-                    role = key.role
+                    role = key.role,
+                    phoneNumber = key.phoneNumber
                 )
             },
             receivedAtEpochMilliseconds = receivedAtEpochMilliseconds

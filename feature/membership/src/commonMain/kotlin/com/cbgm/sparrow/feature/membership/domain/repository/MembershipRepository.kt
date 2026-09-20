@@ -65,7 +65,8 @@ interface MembershipRepository {
         updatedAtEpochMilliseconds: Long,
         context: com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext,
         memberEncryptionPublicKey: ByteArray,
-        memberSigningPublicKey: ByteArray
+        memberSigningPublicKey: ByteArray,
+        memberPhoneNumber: String
     ): Result<Unit>
 
     suspend fun markRemoved(

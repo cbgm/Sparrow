@@ -101,7 +101,8 @@ internal class GroupIncomingActivationDataSource(
                 contactId = contactId,
                 encryptionPublicKey = packet.member.encryptionPublicKey.copyOf(),
                 signingPublicKey = packet.member.signingPublicKey.copyOf(),
-                role = packet.member.role
+                role = packet.member.role,
+                phoneNumber = packet.member.phoneNumber ?: oldKey?.phoneNumber
             )
         )
         if (packet.activationRound > GroupMemberActivatedPacket.FINAL_ROUND) {

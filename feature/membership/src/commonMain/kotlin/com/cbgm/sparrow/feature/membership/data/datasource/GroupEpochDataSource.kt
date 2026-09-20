@@ -34,8 +34,8 @@ internal class GroupEpochDataSource(
                 GroupMembershipPeerDto(
                     id = memberKey.contactId,
                     displayName = null,
-                    preferredPhoneNumber = null,
-                    phoneNumbers = emptyList(),
+                    preferredPhoneNumber = memberKey.phoneNumber,
+                    phoneNumbers = listOfNotNull(memberKey.phoneNumber),
                     encryptionPublicKey = memberKey.encryptionPublicKey.copyOf(),
                     signingPublicKey = memberKey.signingPublicKey.copyOf(),
                     hasMutualIdentity = true
@@ -73,6 +73,7 @@ internal class GroupEpochDataSource(
                         signingPublicKey = member.signingPublicKey.copyOf(),
                         role = roleOverrides[contact.id] ?: member.role,
                         phoneNumber = contact.preferredPhoneNumber ?: contact.phoneNumbers.firstOrNull()
+                            ?: error("Authenticated group member has no real phone number")
                     )
                 )
             }
@@ -93,7 +94,8 @@ internal class GroupEpochDataSource(
                 contactId = contact.id,
                 encryptionPublicKey = member.encryptionPublicKey.copyOf(),
                 signingPublicKey = member.signingPublicKey.copyOf(),
-                role = roleOverrides[contact.id] ?: member.role
+                role = roleOverrides[contact.id] ?: member.role,
+                phoneNumber = contact.preferredPhoneNumber ?: contact.phoneNumbers.firstOrNull()
             )
         }
 

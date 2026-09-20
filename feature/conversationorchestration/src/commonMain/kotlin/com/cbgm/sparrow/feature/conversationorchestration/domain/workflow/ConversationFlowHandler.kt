@@ -309,6 +309,9 @@ internal class ConversationFlowHandler(
                         peerDisplayName = title
                     )
                 ).getOrThrow()
+                // Include fresh and re-added STAGED memberships in the persisted
+                // verification/details projection immediately, before acceptance.
+                conversationPort.refreshOwnedGroupVerification(groupId).getOrThrow()
             }
         }
 
@@ -740,7 +743,8 @@ internal class ConversationFlowHandler(
                             contactId = contactId,
                             encryptionPublicKey = member.encryptionPublicKey.copyOf(),
                             signingPublicKey = member.signingPublicKey.copyOf(),
-                            role = member.role
+                            role = member.role,
+                            phoneNumber = member.phoneNumber
                         )
                     }
                     val continuingAdminId = if (opened.authorityLeft) {
@@ -823,11 +827,23 @@ internal class ConversationFlowHandler(
                     ).getOrThrow()
                     if (appliedLocal) {
                         conversationPort.onLocalGroupMemberActivated(packet.groupId).getOrThrow()
-                    } else if (packet.activationRound <= GroupMemberActivatedPacket.FINAL_ROUND) {
+                    } else if (packet.activationRound == GroupMemberActivatedPacket.DISCOVERY_ROUND) {
+                        conversationPort.recordRemoteGroupMemberAdded(
+                            groupId = packet.groupId,
+                            contactId = requireNotNull(memberContactId),
+                            epoch = packet.epoch,
+                            activationId = packet.activationId,
+                            memberDisplayName = groupMemberDisplayName(requireNotNull(memberContactId)),
+                            joinedAtEpochMilliseconds = packet.activatedAtEpochMilliseconds
+                        ).getOrThrow()
+                    } else if (packet.activationRound == GroupMemberActivatedPacket.FINAL_ROUND) {
                         conversationPort.onRemoteGroupMemberActivated(
                             groupId = packet.groupId,
                             contactId = requireNotNull(memberContactId),
                             role = packet.member.role,
+                            epoch = packet.epoch,
+                            activationId = packet.activationId,
+                            memberDisplayName = groupMemberDisplayName(requireNotNull(memberContactId)),
                             joinedAtEpochMilliseconds = packet.activatedAtEpochMilliseconds
                         ).getOrThrow()
                     }
@@ -882,6 +898,27 @@ internal class ConversationFlowHandler(
                         packet = packet,
                         receivedAtEpochMilliseconds = context.receivedAtEpochMilliseconds
                     ).getOrThrow()
+                    // The verified ready ACK has activated this membership. Install the Chats
+                    // projection synchronously: group sends must not await a Flow observer.
+                    val welcomePrefix = "group-welcome-${packet.groupId}-"
+                    val epochSuffix = "-${packet.epoch}"
+                    val sourceId = packet.welcomePacketId
+                        .takeIf { it.startsWith(welcomePrefix) && it.endsWith(epochSuffix) }
+                        ?.removePrefix(welcomePrefix)?.removeSuffix(epochSuffix)
+                    val activeHandshake = sourceId?.let { getMembershipHandshake(it).getOrThrow() }
+                    if (activeHandshake?.status == MembershipStatus.ACTIVE &&
+                        activeHandshake.groupId == packet.groupId &&
+                        activeHandshake.peerId == context.contactId
+                    ) {
+                        conversationPort.addGroupParticipant(
+                            groupId = packet.groupId,
+                            peerId = context.contactId,
+                            memberDisplayName = groupMemberDisplayName(context.contactId),
+                            epoch = packet.epoch,
+                            joinedAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
+                            eventId = activeHandshake.sourceId
+                        ).getOrThrow()
+                    }
                     conversationPort.refreshOwnedGroupVerification(packet.groupId).getOrThrow()
                     conversationPort.sendCurrentGroupMetadataTo(packet.groupId, context.contactId)
                 }
@@ -938,7 +975,8 @@ internal class ConversationFlowHandler(
                         updatedAtEpochMilliseconds = result.updatedAtEpochMilliseconds,
                         context = conversationPort.getGroupMembershipContext(result.groupId).getOrThrow(),
                         memberEncryptionPublicKey = peerIdentity.encryptionPublicKey,
-                        memberSigningPublicKey = peerIdentity.signingPublicKey
+                        memberSigningPublicKey = peerIdentity.signingPublicKey,
+                        memberPhoneNumber = requireGroupMemberPhoneNumber(result.peerId)
                     ).getOrThrow()
                 }
 
@@ -1235,11 +1273,18 @@ internal class ConversationFlowHandler(
                 updatedAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
                 context = conversationPort.getGroupMembershipContext(join.groupId).getOrThrow(),
                 memberEncryptionPublicKey = join.memberEncryptionPublicKey,
-                memberSigningPublicKey = join.memberSigningPublicKey
+                memberSigningPublicKey = join.memberSigningPublicKey,
+                memberPhoneNumber = requireGroupMemberPhoneNumber(join.peerId)
             ).getOrThrow()
         }
         applyPeerProfilePicture(context.contactId, packet.profilePicture)
     }
+
+    /** An invitation supplies a genuine contact phone once; membership then retains it per epoch. */
+    private suspend fun requireGroupMemberPhoneNumber(peerId: String): String =
+        getContact(peerId).getOrThrow()?.preferredPhoneNumber?.value
+            ?.trim()?.takeIf(String::isNotBlank)
+            ?: error("Accepted group member has no real phone number")
 
     private suspend fun applyPeerProfilePicture(
         contactId: String,

@@ -19,8 +19,15 @@ internal class GroupCreatedIncomingProcessor(
             packet.groupId,
             previousSigningKeysByContactId
         )
+        val previouslyActiveIds = previous.participants.mapTo(hashSetOf()) { it.contactId }
         val participants = packet.members.mapIndexedNotNull { index, member ->
             val contactId = contactIdsByMember[index] ?: return@mapIndexedNotNull null
+            // An updated signed welcome grants a group key but does not activate a
+            // newly joining peer. Existing members stay writable while that peer
+            // finishes the ready/activation acknowledgement handshake.
+            if (previouslyActiveIds.isNotEmpty() && contactId !in previouslyActiveIds) {
+                return@mapIndexedNotNull null
+            }
             ConversationParticipantEntity(
                 conversationId = packet.groupId,
                 contactId = contactId,

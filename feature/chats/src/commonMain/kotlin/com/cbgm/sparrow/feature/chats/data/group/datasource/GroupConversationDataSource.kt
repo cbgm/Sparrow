@@ -95,7 +95,12 @@ internal class GroupConversationDataSource(
         joinedAtEpochMilliseconds: Long,
         eventId: String
     ) {
-        val contactName = memberDisplayName
+        // The membership result stream also replays ACTIVE for members who were
+        // already in the conversation. Those replays must never produce another
+        // member-added event (or refresh an existing participant's join time).
+        val wasAlreadyActive = chatDao.findConversationParticipants(groupId)
+            .any { participant -> participant.contactId == peerId }
+        if (wasAlreadyActive) return
 
         chatDao.upsertConversationParticipant(
             ConversationParticipantEntity(
@@ -110,12 +115,80 @@ internal class GroupConversationDataSource(
                 conversationId = groupId,
                 epoch = epoch,
                 contactId = peerId,
-                contactName = contactName,
+                contactName = memberDisplayName,
                 createdAtEpochMilliseconds = joinedAtEpochMilliseconds,
                 eventId = eventId
             )
         )
         chatDao.updateConversationTimestamp(groupId, joinedAtEpochMilliseconds)
+    }
+
+    /** A signed DISCOVERY packet announces exactly the member being activated.
+     * Re-adds may leave old participant rows on another device; presence in that
+     * projection must not hide the new, independently signed activation event.
+     * This history event does not grant message-routing access before FINAL. */
+    suspend fun recordRemoteMemberAdded(
+        groupId: String,
+        peerId: String,
+        epoch: Int,
+        activationId: String,
+        memberDisplayName: String,
+        joinedAtEpochMilliseconds: Long
+    ) {
+        val event = GroupMembershipMessageFactory.memberAdded(
+            conversationId = groupId,
+            epoch = epoch,
+            contactId = peerId,
+            contactName = memberDisplayName,
+            createdAtEpochMilliseconds = joinedAtEpochMilliseconds,
+            eventId = activationId
+        )
+        // Deduplicate by the verified activation itself, not by an old participant
+        // row that can survive a leave/removal on another emulator.
+        if (chatDao.findMessageById(event.id) == null) {
+            chatDao.upsertMessage(event)
+            chatDao.updateConversationTimestamp(groupId, joinedAtEpochMilliseconds)
+        }
+    }
+
+    /** A rotated welcome contains a future member's key, but only the authenticated
+     * FINAL activation makes them an active conversation participant. Record the
+     * system event here, not when the welcome is installed. */
+    suspend fun activateRemoteParticipant(
+        groupId: String,
+        peerId: String,
+        role: String,
+        epoch: Int,
+        activationId: String,
+        memberDisplayName: String,
+        joinedAtEpochMilliseconds: Long
+    ) {
+        val alreadyPresent = chatDao.findConversationParticipants(groupId)
+            .any { participant -> participant.contactId == peerId }
+        chatDao.upsertConversationParticipant(
+            ConversationParticipantEntity(
+                conversationId = groupId,
+                contactId = peerId,
+                role = role,
+                joinedAtEpochMilliseconds = joinedAtEpochMilliseconds
+            )
+        )
+        if (!alreadyPresent) {
+            val event = GroupMembershipMessageFactory.memberAdded(
+                conversationId = groupId,
+                epoch = epoch,
+                contactId = peerId,
+                contactName = memberDisplayName,
+                createdAtEpochMilliseconds = joinedAtEpochMilliseconds,
+                eventId = activationId
+            )
+            // DISCOVERY may already have logged this signed activation. FINAL
+            // must not rewrite its timestamp or duplicate the system event.
+            if (chatDao.findMessageById(event.id) == null) {
+                chatDao.upsertMessage(event)
+                chatDao.updateConversationTimestamp(groupId, joinedAtEpochMilliseconds)
+            }
+        }
     }
 
     suspend fun promoteParticipant(

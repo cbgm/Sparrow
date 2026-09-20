@@ -3,7 +3,6 @@ package com.cbgm.sparrow.feature.chats.data.orchestration
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
-import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
 import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentRepository
 import com.cbgm.sparrow.feature.chats.data.direct.outgoing.DirectPendingAuthorizationMessageCoordinator
 import com.cbgm.sparrow.feature.chats.data.group.avatar.GroupAvatarBroadcaster
@@ -136,19 +135,41 @@ internal class ChatsConversationPort(
     override suspend fun onLocalGroupMemberActivated(groupId: String): Result<Unit> =
         verificationCoordinator.synchronize(groupId)
 
+    override suspend fun recordRemoteGroupMemberAdded(
+        groupId: String,
+        contactId: String,
+        epoch: Int,
+        activationId: String,
+        memberDisplayName: String,
+        joinedAtEpochMilliseconds: Long
+    ): Result<Unit> = runCatching {
+        groupConversationDataSource.recordRemoteMemberAdded(
+            groupId = groupId,
+            peerId = contactId,
+            epoch = epoch,
+            activationId = activationId,
+            memberDisplayName = memberDisplayName,
+            joinedAtEpochMilliseconds = joinedAtEpochMilliseconds
+        )
+    }
+
     override suspend fun onRemoteGroupMemberActivated(
         groupId: String,
         contactId: String,
         role: String,
+        epoch: Int,
+        activationId: String,
+        memberDisplayName: String,
         joinedAtEpochMilliseconds: Long
     ): Result<Unit> = runCatching {
-        incomingConversationDataSource.upsertConversationParticipant(
-            ConversationParticipantEntity(
-                conversationId = groupId,
-                contactId = contactId,
-                role = role,
-                joinedAtEpochMilliseconds = joinedAtEpochMilliseconds
-            )
+        groupConversationDataSource.activateRemoteParticipant(
+            groupId = groupId,
+            peerId = contactId,
+            role = role,
+            epoch = epoch,
+            activationId = activationId,
+            memberDisplayName = memberDisplayName,
+            joinedAtEpochMilliseconds = joinedAtEpochMilliseconds
         )
     }
 

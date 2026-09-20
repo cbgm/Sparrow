@@ -10,13 +10,15 @@ class ConfirmGroupMembershipIdentityUseCase(
         updatedAtEpochMilliseconds: Long,
         context: com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext,
         memberEncryptionPublicKey: ByteArray,
-        memberSigningPublicKey: ByteArray
+        memberSigningPublicKey: ByteArray,
+        memberPhoneNumber: String
     ): Result<Unit> =
         repository.confirmJoinIdentity(
             sourceId,
             updatedAtEpochMilliseconds,
             context,
             memberEncryptionPublicKey,
-            memberSigningPublicKey
+            memberSigningPublicKey,
+            memberPhoneNumber
         )
 }

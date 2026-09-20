@@ -7,5 +7,6 @@ data class GroupWelcomeMemberKey(
     val contactId: String,
     val encryptionPublicKey: ByteArray,
     val signingPublicKey: ByteArray,
-    val role: String
+    val role: String,
+    val phoneNumber: String? = null
 )
