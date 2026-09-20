@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.chats.presentation.direct.model
 
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectComposerState
 import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
+import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 
 data class DirectConversationUiState(
     val contactId: String = "",

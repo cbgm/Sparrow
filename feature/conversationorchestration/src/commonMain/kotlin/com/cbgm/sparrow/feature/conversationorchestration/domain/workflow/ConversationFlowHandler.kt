@@ -29,11 +29,9 @@ import com.cbgm.sparrow.core.protocol.packet.IdentityPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
-import com.cbgm.sparrow.core.security.ContactBlocklistRepository
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
-import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.contacts.domain.model.IncomingPeerContactCandidate
+import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.BlockContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveIncomingPeerContactsUseCase
@@ -43,6 +41,7 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.UpdateIncomingI
 import com.cbgm.sparrow.feature.conversationorchestration.domain.port.ConversationPort
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.ResolveIncomingIdentityPeerUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.ResolveSigningIdentityContactUseCase
+import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchange
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeAcceptance
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeClosurePhase
@@ -52,6 +51,7 @@ import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeReady
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityResult
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityResultStatus
 import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
+import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.feature.identity.domain.usecase.AcceptIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.AcceptRemoteIdentityHandshakeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ApplyRemoteProfilePictureMetadataUseCase

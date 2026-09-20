@@ -5,12 +5,12 @@ import com.cbgm.sparrow.core.protocol.packet.ChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.MessageDeletionPacket
 import com.cbgm.sparrow.core.protocol.packet.MessageEditPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
-import com.cbgm.sparrow.core.security.DirectChatAuthorizationRequiredException
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessageDeletionPacketHandler
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessageEditPacketHandler
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessagePacketHandler
 import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacketDto
+import com.cbgm.sparrow.feature.conversationorchestration.domain.error.DirectChatAuthorizationRequiredException
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
 
 class DirectIncomingPacketProcessor(

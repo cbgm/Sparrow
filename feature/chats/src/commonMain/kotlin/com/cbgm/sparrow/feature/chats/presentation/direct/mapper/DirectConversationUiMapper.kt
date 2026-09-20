@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.feature.chats.presentation.direct.mapper
 
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.chats.domain.model.MessageContentStatus
 import com.cbgm.sparrow.feature.chats.domain.model.MessagePart
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
@@ -16,6 +15,7 @@ import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageReplyU
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversationUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
+import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityHandshakeState
 import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.identity.domain.model.RemotePeerIdentity

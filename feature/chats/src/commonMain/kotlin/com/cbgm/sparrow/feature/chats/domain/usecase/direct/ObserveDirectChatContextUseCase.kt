@@ -1,12 +1,12 @@
 package com.cbgm.sparrow.feature.chats.domain.usecase.direct
 
-import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryCursor
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectChatContext
 import com.cbgm.sparrow.feature.chats.domain.model.direct.hasSameIdentityContent
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectConversationRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.ObserveConversationQueueAvailabilityUseCase
+import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveIdentityHandshakeStateUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalIdentitySharedUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveRemoteIdentitiesUseCase

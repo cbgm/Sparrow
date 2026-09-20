@@ -15,7 +15,6 @@ import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
 import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.result.safeSuspendCall
-import com.cbgm.sparrow.core.security.DirectChatAuthorizationRequiredException
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
@@ -35,6 +34,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessageDeliveryS
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectPendingAuthorizationMessagePolicy
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
+import com.cbgm.sparrow.feature.conversationorchestration.domain.error.DirectChatAuthorizationRequiredException
 import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase

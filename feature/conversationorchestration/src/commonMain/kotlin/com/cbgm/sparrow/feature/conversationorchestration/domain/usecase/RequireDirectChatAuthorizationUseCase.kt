@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.domain.usecase
 
-import com.cbgm.sparrow.core.security.ContactBlocklistRepository
-import com.cbgm.sparrow.core.security.DirectChatAuthorizationRequiredException
+import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
+import com.cbgm.sparrow.feature.conversationorchestration.domain.error.DirectChatAuthorizationRequiredException
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
 
 class RequireDirectChatAuthorizationUseCase(

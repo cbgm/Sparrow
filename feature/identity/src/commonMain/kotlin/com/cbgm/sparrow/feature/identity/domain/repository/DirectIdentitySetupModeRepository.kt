@@ -1,11 +1,7 @@
-package com.cbgm.sparrow.core.security
+package com.cbgm.sparrow.feature.identity.domain.repository
 
+import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import kotlinx.coroutines.flow.Flow
-
-enum class DirectIdentitySetupMode {
-    AUTOMATIC_INVITATION,
-    MANUAL_IDENTITY_SHARING
-}
 
 interface DirectIdentitySetupModeRepository {
     fun observeMode(): Flow<DirectIdentitySetupMode>

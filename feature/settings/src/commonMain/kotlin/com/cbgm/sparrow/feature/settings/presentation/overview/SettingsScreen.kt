@@ -46,13 +46,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingModelState
 import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingState
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyState
 import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo

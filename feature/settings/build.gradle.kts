@@ -20,6 +20,7 @@ kotlin {
             implementation(projects.core.embedding)
             implementation(projects.core.ui)
             implementation(projects.feature.identity)
+            implementation(projects.feature.contacts)
             implementation(projects.feature.avatar)
             implementation(projects.feature.autoreply)
             implementation(projects.feature.voice)

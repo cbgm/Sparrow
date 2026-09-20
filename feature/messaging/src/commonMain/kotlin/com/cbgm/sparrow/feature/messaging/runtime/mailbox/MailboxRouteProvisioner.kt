@@ -5,8 +5,8 @@ import com.cbgm.sparrow.core.protocol.mailbox.MailboxCapabilityLifecycle
 import com.cbgm.sparrow.core.protocol.mailbox.MailboxRouteRepository
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.MailboxRoutePacket
-import com.cbgm.sparrow.core.security.ContactBlocklistRepository
 import com.cbgm.sparrow.core.time.SystemClock
+import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.messaging.data.datasource.MailboxContactDataSource
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway

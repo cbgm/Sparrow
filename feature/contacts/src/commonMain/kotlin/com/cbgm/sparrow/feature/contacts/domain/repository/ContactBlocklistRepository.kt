@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.core.security
+package com.cbgm.sparrow.feature.contacts.domain.repository
 
 import kotlinx.coroutines.flow.Flow
 

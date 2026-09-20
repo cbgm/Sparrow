@@ -25,11 +25,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
+import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_verify
 import com.cbgm.sparrow.resources.feature_chats_chat_no_keys_description

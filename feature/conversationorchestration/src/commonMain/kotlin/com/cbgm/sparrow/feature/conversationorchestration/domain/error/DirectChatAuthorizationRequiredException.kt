@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.core.security
+package com.cbgm.sparrow.feature.conversationorchestration.domain.error
 
 class DirectChatAuthorizationRequiredException(
     message: String

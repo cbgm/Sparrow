@@ -18,13 +18,12 @@ import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvider
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.result.safeSuspendCall
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
-import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.IdentityExchangeEntity
 import com.cbgm.sparrow.feature.identity.data.model.IdentityExchangeBindingDto
 import com.cbgm.sparrow.feature.identity.data.model.IdentityExchangeStage
 import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
+import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchange
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeAcceptance
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeClosure
@@ -37,6 +36,7 @@ import com.cbgm.sparrow.feature.identity.domain.model.IdentityPeerState
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityResult
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityResultStatus
 import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
+import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentitySetupModeRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine

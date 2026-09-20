@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.contacts.domain.usecase
 
 import com.cbgm.sparrow.core.protocol.mailbox.MailboxCapabilityLifecycle
 import com.cbgm.sparrow.core.protocol.mailbox.NoOpMailboxCapabilityLifecycle
-import com.cbgm.sparrow.core.security.ContactBlocklistRepository
+import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 
 class BlockContactUseCase(

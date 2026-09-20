@@ -3,11 +3,11 @@ package com.cbgm.sparrow.feature.settings.presentation.overview
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingFeature
 import com.cbgm.sparrow.core.embedding.domain.usecase.SetLocalEmbeddingFeatureEnabledUseCase
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.ObserveActiveAutoReplyUseCase
+import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.search.domain.usecase.SetSemanticSearchEnabledUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetAppLanguageUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetBuildInfoUseCase

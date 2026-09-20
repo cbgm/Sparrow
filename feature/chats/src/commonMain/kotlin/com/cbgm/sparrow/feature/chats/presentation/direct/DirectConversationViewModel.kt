@@ -3,7 +3,6 @@ package com.cbgm.sparrow.feature.chats.presentation.direct
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
@@ -42,6 +41,7 @@ import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversati
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversationUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactResult
 import com.cbgm.sparrow.feature.contacts.domain.usecase.AddDeviceContactUseCase
+import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecordLocalIdentitySharedUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecoverManualIdentityExchangeUseCase

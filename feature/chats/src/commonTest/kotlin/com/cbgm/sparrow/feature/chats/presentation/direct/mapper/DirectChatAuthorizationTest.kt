@@ -1,10 +1,10 @@
 package com.cbgm.sparrow.feature.chats.presentation.direct.mapper
 
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectComposerState
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
+import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityHandshakeState
 import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.identity.domain.model.RemotePeerIdentity

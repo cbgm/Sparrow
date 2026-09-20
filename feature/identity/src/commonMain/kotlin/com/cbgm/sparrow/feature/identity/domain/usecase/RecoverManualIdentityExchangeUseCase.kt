@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.identity.domain.usecase
 
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
-import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
+import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
+import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentitySetupModeRepository
 
 /**
  * Retransmit an already initiated manual key exchange when an earlier identity

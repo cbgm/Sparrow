@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.contacts.domain.usecase
 
-import com.cbgm.sparrow.core.security.ContactBlocklistRepository
+import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 
 class UnblockContactUseCase(
     private val repository: ContactBlocklistRepository

@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.settings.presentation.overview.model
 
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
+import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 
 sealed interface SettingsUiEvent {
     data object LanguagePickerOpened : SettingsUiEvent

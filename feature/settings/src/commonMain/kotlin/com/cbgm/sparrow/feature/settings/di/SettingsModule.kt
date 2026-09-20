@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.settings.di
 
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.security.ContactBlocklistRepository
-import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
+import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
+import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.feature.settings.data.datasource.DeveloperErrorLogStorageDataSource
 import com.cbgm.sparrow.feature.settings.data.datasource.SettingsStorage
 import com.cbgm.sparrow.feature.settings.data.datasource.SettingsStorageImpl

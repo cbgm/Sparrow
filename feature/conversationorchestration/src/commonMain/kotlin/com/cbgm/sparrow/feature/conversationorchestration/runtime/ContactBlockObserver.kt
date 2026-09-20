@@ -1,7 +1,7 @@
 package com.cbgm.sparrow.feature.conversationorchestration.runtime
 
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.security.ContactBlocklistRepository
+import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.conversationorchestration.domain.workflow.ConversationFlowHandler
 
 /** Watches persisted Contact state; only the internal workflow handler performs cross-feature actions. */

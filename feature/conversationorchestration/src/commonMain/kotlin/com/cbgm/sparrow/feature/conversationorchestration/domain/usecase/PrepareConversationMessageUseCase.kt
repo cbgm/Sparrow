@@ -1,13 +1,13 @@
 package com.cbgm.sparrow.feature.conversationorchestration.domain.usecase
 
 import com.cbgm.sparrow.core.result.safeSuspendCall
-import com.cbgm.sparrow.core.security.ContactBlocklistRepository
-import com.cbgm.sparrow.core.security.DirectChatAuthorizationRequiredException
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
-import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
+import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
+import com.cbgm.sparrow.feature.conversationorchestration.domain.error.DirectChatAuthorizationRequiredException
 import com.cbgm.sparrow.feature.conversationorchestration.domain.model.ConversationMessagePlan
 import com.cbgm.sparrow.feature.conversationorchestration.domain.workflow.ConversationFlowHandler
+import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityHandshakeState
+import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveIdentityHandshakeStateUseCase
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationLifecycleStatus
