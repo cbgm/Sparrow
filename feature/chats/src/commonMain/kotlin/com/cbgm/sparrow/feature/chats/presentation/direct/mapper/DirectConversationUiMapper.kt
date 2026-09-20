@@ -115,23 +115,10 @@ internal fun RemotePeerIdentity?.toContactSecurityState(): ContactSecurityState 
 }
 
 internal fun isDirectChatAuthorized(
-    remoteIdentity: RemotePeerIdentity?,
-    identityHandshakeState: IdentityHandshakeState?,
-    identitySetupMode: DirectIdentitySetupMode
+    identityHandshakeState: IdentityHandshakeState?
 ): Boolean =
-    when (identitySetupMode) {
-        DirectIdentitySetupMode.AUTOMATIC_INVITATION ->
-            identityHandshakeState == IdentityHandshakeState.WAITING_FOR_READY ||
-                identityHandshakeState == IdentityHandshakeState.MUTUAL_UNVERIFIED
-
-        DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING ->
-            remoteIdentity?.locallyImported == true &&
-                remoteIdentity.keyExchangeStatus == KeyExchangeStatus.MUTUAL &&
-                (
-                    identityHandshakeState == IdentityHandshakeState.WAITING_FOR_READY ||
-                        identityHandshakeState == IdentityHandshakeState.MUTUAL_UNVERIFIED
-                )
-    }
+    identityHandshakeState == IdentityHandshakeState.WAITING_FOR_READY ||
+        identityHandshakeState == IdentityHandshakeState.MUTUAL_UNVERIFIED
 
 internal fun toDirectConversationUiState(
     contactId: String,
@@ -142,9 +129,10 @@ internal fun toDirectConversationUiState(
     handshake: IdentityHandshakeState?,
     canQueueMessages: Boolean,
     setupMode: DirectIdentitySetupMode,
+    localIdentityShared: Boolean = false,
     safetyAssessments: Map<String, MessageSafetyAssessment>
 ): DirectConversationUiState {
-    val isChatAuthorized = isDirectChatAuthorized(remoteIdentity, handshake, setupMode)
+    val isChatAuthorized = isDirectChatAuthorized(handshake)
     val composerState =
         resolveDirectComposerState(
             hasConversation = conversation != null,
@@ -170,17 +158,40 @@ internal fun toDirectConversationUiState(
                     )
                 }
             },
-        contactSecurityState =
-            if (setupMode == DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING &&
-                remoteIdentity?.locallyImported != true
-            ) {
-                ContactSecurityState.NO_REMOTE_PUBLIC_KEYS
-            } else {
-                remoteIdentity.toContactSecurityState()
-            },
+        contactSecurityState = resolveDirectSecurityState(
+            identity = remoteIdentity,
+            setupMode = setupMode,
+            localIdentityShared = localIdentityShared,
+            handshake = handshake
+        ),
         identitySetupMode = setupMode,
-        isLoading = contact == null,
+        isLoading = conversation == null,
         isChatAuthorized = isChatAuthorized,
         composerState = composerState
     )
+}
+
+/** Share progress is independent from imported remote keys. Never promote keys or trust here. */
+internal fun resolveDirectSecurityState(
+    identity: RemotePeerIdentity?,
+    setupMode: DirectIdentitySetupMode,
+    localIdentityShared: Boolean,
+    handshake: IdentityHandshakeState?
+): ContactSecurityState {
+    val keys = identity.toContactSecurityState()
+    if (identity?.locallyImported == true && identity.keyExchangeStatus == KeyExchangeStatus.MUTUAL) {
+        return keys
+    }
+    val shared = localIdentityShared || (
+        setupMode == DirectIdentitySetupMode.AUTOMATIC_INVITATION &&
+            handshake in setOf(
+                IdentityHandshakeState.WAITING_FOR_READY,
+                IdentityHandshakeState.MUTUAL_UNVERIFIED
+            )
+    )
+    return when {
+        shared && identity?.locallyImported == true -> ContactSecurityState.ONE_WAY_KEYS
+        shared -> ContactSecurityState.LOCAL_IDENTITY_SHARED
+        else -> ContactSecurityState.NO_REMOTE_PUBLIC_KEYS
+    }
 }

@@ -57,6 +57,23 @@ internal class GroupConversationDataSource(
         return true
     }
 
+    /** An accepted invitation owns a visible conversation even before the signed welcome arrives.
+     * Membership still controls when the receiver can send group messages.
+     */
+    suspend fun showAcceptedIncoming(groupId: String) {
+        val existing = requireNotNull(chatDao.findConversationById(groupId)) {
+            "The accepted group invitation has no staged conversation"
+        }
+        check(existing.type == GROUP_CONVERSATION_TYPE) { "Conversation is not a group" }
+        // Do not resurrect a group that the user explicitly removed.
+        val deletedAt = chatDao.findMessageTimestampByTransportMode(
+            conversationId = groupId,
+            transportMode = GroupMembershipMessageFactory.LOCAL_CONVERSATION_DELETED_TRANSPORT_MODE
+        )
+        if (deletedAt != null && existing.createdAtEpochMilliseconds <= deletedAt) return
+        if (!existing.isVisible) chatDao.upsertConversation(existing.copy(isVisible = true))
+    }
+
     suspend fun discardPending(
         groupId: String,
         updatedAtEpochMilliseconds: Long

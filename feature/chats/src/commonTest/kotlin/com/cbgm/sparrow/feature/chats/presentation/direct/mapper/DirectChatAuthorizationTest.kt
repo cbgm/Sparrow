@@ -18,9 +18,7 @@ class DirectChatAuthorizationTest {
     fun `acceptance sent is not yet authorized`() {
         assertFalse(
             isDirectChatAuthorized(
-                remoteIdentity = null,
-                identityHandshakeState = IdentityHandshakeState.ACCEPTANCE_SENT,
-                identitySetupMode = DirectIdentitySetupMode.AUTOMATIC_INVITATION
+                identityHandshakeState = IdentityHandshakeState.ACCEPTANCE_SENT
             )
         )
     }
@@ -29,9 +27,7 @@ class DirectChatAuthorizationTest {
     fun `waiting for ready is authorized after acceptance completed`() {
         assertTrue(
             isDirectChatAuthorized(
-                remoteIdentity = null,
-                identityHandshakeState = IdentityHandshakeState.WAITING_FOR_READY,
-                identitySetupMode = DirectIdentitySetupMode.AUTOMATIC_INVITATION
+                identityHandshakeState = IdentityHandshakeState.WAITING_FOR_READY
             )
         )
     }
@@ -40,9 +36,7 @@ class DirectChatAuthorizationTest {
     fun `mutual identity is authorized`() {
         assertTrue(
             isDirectChatAuthorized(
-                remoteIdentity = null,
-                identityHandshakeState = IdentityHandshakeState.MUTUAL_UNVERIFIED,
-                identitySetupMode = DirectIdentitySetupMode.AUTOMATIC_INVITATION
+                identityHandshakeState = IdentityHandshakeState.MUTUAL_UNVERIFIED
             )
         )
     }
@@ -84,33 +78,51 @@ class DirectChatAuthorizationTest {
     }
 
     @Test
-    fun `manual invitation does not authorize or import the peer identity`() {
-        val handshake = IdentityHandshakeState.MUTUAL_UNVERIFIED
-        val invitationOnlyIdentity = identity(KeyExchangeStatus.MUTUAL, locallyImported = false)
-        assertFalse(isDirectChatAuthorized(invitationOnlyIdentity, handshake, DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING))
+    fun `manual acceptance enables writing and sending without imported identity`() {
         val state = toDirectConversationUiState(
             contactId = "contact",
             fallbackContactName = "Contact",
             conversation = DirectConversation("conversation", "contact", emptyList(), 0),
             contact = null,
-            remoteIdentity = invitationOnlyIdentity,
-            handshake = handshake,
+            remoteIdentity = null,
+            handshake = IdentityHandshakeState.WAITING_FOR_READY,
             canQueueMessages = false,
             setupMode = DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING,
             safetyAssessments = emptyMap()
         )
+
+        assertTrue(state.isChatAuthorized)
+        assertEquals(DirectComposerState.READY, state.composerState)
+        assertTrue(state.composerState.isInputEnabled)
+        assertTrue(state.composerState.isSendActionEnabled)
         assertEquals(ContactSecurityState.NO_REMOTE_PUBLIC_KEYS, state.contactSecurityState)
-        assertFalse(state.isChatAuthorized)
+        assertFalse(state.isLoading)
     }
 
     @Test
-    fun `manual setup requires explicit import and established invitation`() {
-        val oneWay = identity(KeyExchangeStatus.ONE_WAY)
-        val mutual = identity(KeyExchangeStatus.MUTUAL)
-        val handshake = IdentityHandshakeState.MUTUAL_UNVERIFIED
-        assertFalse(isDirectChatAuthorized(oneWay, handshake, DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING))
-        assertFalse(isDirectChatAuthorized(mutual, null, DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING))
-        assertTrue(isDirectChatAuthorized(mutual, handshake, DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING))
+    fun `manual identity import without accepted invitation does not authorize chat`() {
+        assertFalse(isDirectChatAuthorized(null))
+        assertFalse(isDirectChatAuthorized(IdentityHandshakeState.INCOMING_CHALLENGE_RECEIVED))
+        assertFalse(isDirectChatAuthorized(IdentityHandshakeState.ACCEPTANCE_SENT))
+        assertTrue(isDirectChatAuthorized(IdentityHandshakeState.MUTUAL_UNVERIFIED))
+    }
+
+    @Test
+    fun `automatic and manual acceptance have the same composer state`() {
+        for (mode in DirectIdentitySetupMode.entries) {
+            val state = toDirectConversationUiState(
+                contactId = "contact",
+                fallbackContactName = "Contact",
+                conversation = DirectConversation("conversation", "contact", emptyList(), 0),
+                contact = null,
+                remoteIdentity = null,
+                handshake = IdentityHandshakeState.WAITING_FOR_READY,
+                canQueueMessages = false,
+                setupMode = mode,
+                safetyAssessments = emptyMap()
+            )
+            assertEquals(DirectComposerState.READY, state.composerState)
+        }
     }
 
     @Test
@@ -122,6 +134,71 @@ class DirectChatAuthorizationTest {
         assertEquals(
             ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_ME,
             identity(KeyExchangeStatus.MUTUAL, ContactVerificationStatus.VERIFIED).toContactSecurityState()
+        )
+    }
+
+    @Test
+    fun `manual share with no imported peer identity shows incomplete not setup`() {
+        assertEquals(
+            ContactSecurityState.LOCAL_IDENTITY_SHARED,
+            resolveDirectSecurityState(
+                identity = null,
+                setupMode = DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING,
+                localIdentityShared = true,
+                handshake = IdentityHandshakeState.WAITING_FOR_READY
+            )
+        )
+    }
+
+    @Test
+    fun `import alone does not claim mutual exchange or local share`() {
+        assertEquals(
+            ContactSecurityState.NO_REMOTE_PUBLIC_KEYS,
+            resolveDirectSecurityState(
+                identity = identity(KeyExchangeStatus.ONE_WAY, locallyImported = true),
+                setupMode = DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING,
+                localIdentityShared = false,
+                handshake = IdentityHandshakeState.WAITING_FOR_READY
+            )
+        )
+    }
+
+    @Test
+    fun `share followed by import remains incomplete until mutual keys are established`() {
+        assertEquals(
+            ContactSecurityState.ONE_WAY_KEYS,
+            resolveDirectSecurityState(
+                identity = identity(KeyExchangeStatus.ONE_WAY, locallyImported = true),
+                setupMode = DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING,
+                localIdentityShared = true,
+                handshake = IdentityHandshakeState.WAITING_FOR_READY
+            )
+        )
+    }
+
+    @Test
+    fun `persisted mutual identity restores verify state without resending invitation`() {
+        assertEquals(
+            ContactSecurityState.MUTUAL_KEYS_UNVERIFIED,
+            resolveDirectSecurityState(
+                identity = identity(KeyExchangeStatus.MUTUAL, locallyImported = true),
+                setupMode = DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING,
+                localIdentityShared = false,
+                handshake = IdentityHandshakeState.WAITING_FOR_READY
+            )
+        )
+    }
+
+    @Test
+    fun `automatic invitation acceptance shows incomplete while remote identity is missing`() {
+        assertEquals(
+            ContactSecurityState.LOCAL_IDENTITY_SHARED,
+            resolveDirectSecurityState(
+                identity = null,
+                setupMode = DirectIdentitySetupMode.AUTOMATIC_INVITATION,
+                localIdentityShared = false,
+                handshake = IdentityHandshakeState.WAITING_FOR_READY
+            )
         )
     }
 

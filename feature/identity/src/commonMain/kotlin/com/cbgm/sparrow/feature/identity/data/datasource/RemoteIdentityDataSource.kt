@@ -269,6 +269,26 @@ internal class RemoteIdentityDataSource(
         }
     }
 
+    /** Only call after the peer's acknowledgement signature and our local key binding were verified. */
+    suspend fun markMutualAfterVerifiedManualAcknowledgement(
+        peerId: String,
+        encryptionPublicKey: ByteArray,
+        signingPublicKey: ByteArray
+    ) {
+        requirePeerAndKeys(peerId, encryptionPublicKey, signingPublicKey)
+        val updatedRows =
+            remoteIdentityDao.markMutualAfterVerifiedManualAcknowledgementIfKeysMatch(
+                peerId = peerId,
+                expectedEncryptionPublicKey = encryptionPublicKey,
+                expectedSigningPublicKey = signingPublicKey,
+                mutualStatus = StoredKeyExchangeStatusDto.MUTUAL.name,
+                updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+            )
+        check(updatedRows == 1) {
+            "Remote identity changed before verified manual acknowledgement was applied"
+        }
+    }
+
     suspend fun ensureSigningIdentityMatches(
         peerId: String,
         signingPublicKey: ByteArray

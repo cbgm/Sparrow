@@ -11,19 +11,24 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversationUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.forwarding.ForwardingSelectionRoute
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @Composable
 fun DirectConversationRoute(
     contactId: String,
     modifier: Modifier = Modifier,
     targetMessageId: String? = null,
-    viewModel: DirectConversationViewModel = koinViewModel()
+    savedStateHandle: SavedStateHandle,
+    viewModel: DirectConversationViewModel = koinViewModel(
+        parameters = { parametersOf(savedStateHandle) }
+    )
 ) {
     val conversationState by viewModel.conversationState.collectAsStateWithLifecycle()
     val composerState by viewModel.composerState.collectAsStateWithLifecycle()

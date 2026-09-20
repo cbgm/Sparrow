@@ -19,7 +19,8 @@ class ContactInvitationRequestProtocol(
         profilePicture: ProfilePictureMetadata,
         inviteChallenge: ByteArray,
         encryptionPublicKey: ByteArray,
-        signingKeyPair: LocalSigningKeyPair
+        signingKeyPair: LocalSigningKeyPair,
+        autoSharesIdentity: Boolean = false
     ): Result<ContactInvitePacket> = runCatching {
         require(invitationId.isNotBlank()) { "Invitation ID must not be blank" }
         val packetId = "contact-invite-$invitationId"
@@ -34,7 +35,8 @@ class ContactInvitationRequestProtocol(
                 profilePicture = profilePicture,
                 inviteChallenge = inviteChallenge,
                 encryptionPublicKey = encryptionPublicKey,
-                signingPublicKey = signingKeyPair.publicKey
+                signingPublicKey = signingKeyPair.publicKey,
+                autoSharesIdentity = autoSharesIdentity
             ),
             signingKeyPair.privateKey
         ).getOrThrow()
@@ -48,6 +50,7 @@ class ContactInvitationRequestProtocol(
             inviteChallenge = inviteChallenge.copyOf(),
             encryptionPublicKey = encryptionPublicKey.copyOf(),
             signingPublicKey = signingKeyPair.publicKey.copyOf(),
+            autoSharesIdentity = autoSharesIdentity,
             signature = signature.copyOf()
         )
     }
@@ -70,7 +73,8 @@ class ContactInvitationRequestProtocol(
                 profilePicture = packet.profilePicture,
                 inviteChallenge = packet.inviteChallenge,
                 encryptionPublicKey = packet.encryptionPublicKey,
-                signingPublicKey = packet.signingPublicKey
+                signingPublicKey = packet.signingPublicKey,
+                autoSharesIdentity = packet.autoSharesIdentity
             ),
             packet.signingPublicKey,
             packet.signature

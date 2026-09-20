@@ -23,7 +23,11 @@ class MembershipResultObserver internal constructor(
                     seen += result.eventKey()
                     if (
                         result.perspective == MembershipPerspective.OWNER &&
-                        result.status == MembershipStatus.IDENTITY_READY
+                        result.status in setOf(
+                            MembershipStatus.IDENTITY_READY,
+                            MembershipStatus.WELCOME_SENT,
+                            MembershipStatus.ACTIVE
+                        )
                     ) {
                         forward(result)
                     }

@@ -7,7 +7,16 @@ class ConfirmGroupMembershipIdentityUseCase(
 ) {
     suspend operator fun invoke(
         sourceId: String,
-        updatedAtEpochMilliseconds: Long
+        updatedAtEpochMilliseconds: Long,
+        context: com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext,
+        memberEncryptionPublicKey: ByteArray,
+        memberSigningPublicKey: ByteArray
     ): Result<Unit> =
-        repository.confirmJoinIdentity(sourceId, updatedAtEpochMilliseconds)
+        repository.confirmJoinIdentity(
+            sourceId,
+            updatedAtEpochMilliseconds,
+            context,
+            memberEncryptionPublicKey,
+            memberSigningPublicKey
+        )
 }

@@ -37,9 +37,19 @@ fun NavGraphBuilder.chatsNavGraph() {
     ) { backStackEntry ->
         val destination = backStackEntry.toRoute<AppRoute.Chat>()
 
+        // The ViewModel needs both the navigation arguments and the restored draft state.
+        // Pass this handle as a Koin parameter instead of resolving it from the root scope.
+        val savedStateHandle = backStackEntry.savedStateHandle.apply {
+            set(AppRoute.Chat::conversationId.name, destination.conversationId)
+            set(AppRoute.Chat::contactId.name, destination.contactId)
+            set(AppRoute.Chat::contactName.name, destination.contactName)
+            set(AppRoute.Chat::targetMessageId.name, destination.targetMessageId)
+        }
+
         DirectConversationRoute(
             contactId = destination.contactId,
-            targetMessageId = destination.targetMessageId
+            targetMessageId = destination.targetMessageId,
+            savedStateHandle = savedStateHandle
         )
     }
 

@@ -49,8 +49,8 @@ import com.cbgm.sparrow.resources.feature_chats_chat_verified_by_me_keys_descrip
 import com.cbgm.sparrow.resources.feature_chats_chat_verified_by_me_title
 import com.cbgm.sparrow.resources.feature_chats_chat_verified_e2ee
 import com.cbgm.sparrow.resources.feature_chats_chat_verified_keys_description
+import com.cbgm.sparrow.resources.feature_chats_identity_not_fully_mutual_title
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_incomplete_description
-import com.cbgm.sparrow.resources.feature_chats_manual_identity_incomplete_title
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_required_description
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_required_title
 import com.cbgm.sparrow.resources.feature_chats_manual_identity_setup_action
@@ -60,6 +60,7 @@ import org.jetbrains.compose.resources.stringResource
 internal fun securityDescription(securityState: ContactSecurityState): String =
     when (securityState) {
         ContactSecurityState.NO_REMOTE_PUBLIC_KEYS -> stringResource(Res.string.feature_chats_chat_no_keys_description)
+        ContactSecurityState.LOCAL_IDENTITY_SHARED -> stringResource(Res.string.feature_chats_manual_identity_incomplete_description)
         ContactSecurityState.ONE_WAY_KEYS -> stringResource(Res.string.feature_chats_chat_one_way_keys_description)
         ContactSecurityState.MUTUAL_KEYS_UNVERIFIED -> stringResource(Res.string.feature_chats_chat_unverified_keys_description)
         ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_ME -> stringResource(Res.string.feature_chats_chat_verified_by_me_keys_description)
@@ -70,7 +71,7 @@ internal fun securityDescription(securityState: ContactSecurityState): String =
 @Composable
 internal fun SecurityBanner(
     securityState: ContactSecurityState,
-    identitySetupMode: DirectIdentitySetupMode,
+    @Suppress("UNUSED_PARAMETER") identitySetupMode: DirectIdentitySetupMode,
     isChatAuthorized: Boolean,
     onVerifyIdentity: () -> Unit,
     onManualIdentitySetup: () -> Unit,
@@ -82,10 +83,7 @@ internal fun SecurityBanner(
     }
 
     val state =
-        securityState(
-            securityState = securityState,
-            identitySetupMode = identitySetupMode
-        ) ?: return
+        securityState(securityState) ?: return
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -120,7 +118,6 @@ internal fun SecurityBanner(
             }
             SecurityAction(
                 securityState = securityState,
-                identitySetupMode = identitySetupMode,
                 contentColor = state.contentColor,
                 onVerifyIdentity = onVerifyIdentity,
                 onManualIdentitySetup = onManualIdentitySetup
@@ -132,17 +129,18 @@ internal fun SecurityBanner(
 @Composable
 private fun SecurityAction(
     securityState: ContactSecurityState,
-    identitySetupMode: DirectIdentitySetupMode,
     contentColor: Color,
     onVerifyIdentity: () -> Unit,
     onManualIdentitySetup: () -> Unit
 ) {
     when {
-        identitySetupMode == DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING &&
-            securityState in setOf(
-                ContactSecurityState.NO_REMOTE_PUBLIC_KEYS,
-                ContactSecurityState.ONE_WAY_KEYS
-            ) -> {
+        // Identity import is available even when automatic sharing is enabled:
+        // the other person may have chosen manual identity sharing.
+        securityState in setOf(
+            ContactSecurityState.NO_REMOTE_PUBLIC_KEYS,
+            ContactSecurityState.LOCAL_IDENTITY_SHARED,
+            ContactSecurityState.ONE_WAY_KEYS
+        ) -> {
             TextButton(onClick = onManualIdentitySetup) {
                 Text(
                     text = stringResource(Res.string.feature_chats_manual_identity_setup_action),
@@ -168,77 +166,47 @@ private fun SecurityAction(
 }
 
 @Composable
-private fun securityState(
-    securityState: ContactSecurityState,
-    identitySetupMode: DirectIdentitySetupMode
-): SecurityBannerState? {
-    val isManualSetup = identitySetupMode == DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING
+private fun securityState(securityState: ContactSecurityState): SecurityBannerState? = when (securityState) {
+    ContactSecurityState.NO_REMOTE_PUBLIC_KEYS ->
+        errorBanner(
+            icon = Icons.Default.LockOpen,
+            title = stringResource(Res.string.feature_chats_manual_identity_required_title),
+            description = stringResource(Res.string.feature_chats_manual_identity_required_description)
+        )
 
-    return when (securityState) {
-        ContactSecurityState.NO_REMOTE_PUBLIC_KEYS ->
-            errorBanner(
-                icon = Icons.Default.LockOpen,
-                title = stringResource(
-                    if (isManualSetup) {
-                        Res.string.feature_chats_manual_identity_required_title
-                    } else {
-                        Res.string.feature_chats_chat_unencrypted_title
-                    }
-                ),
-                description = stringResource(
-                    if (isManualSetup) {
-                        Res.string.feature_chats_manual_identity_required_description
-                    } else {
-                        Res.string.feature_chats_chat_unencrypted_description
-                    }
-                )
-            )
+    ContactSecurityState.LOCAL_IDENTITY_SHARED,
+    ContactSecurityState.ONE_WAY_KEYS ->
+        errorBanner(
+            icon = Icons.Default.LockOpen,
+            title = stringResource(Res.string.feature_chats_identity_not_fully_mutual_title),
+            description = stringResource(Res.string.feature_chats_manual_identity_incomplete_description)
+        )
 
-        ContactSecurityState.ONE_WAY_KEYS ->
-            errorBanner(
-                icon = Icons.Default.LockOpen,
-                title = stringResource(
-                    if (isManualSetup) {
-                        Res.string.feature_chats_manual_identity_incomplete_title
-                    } else {
-                        Res.string.feature_chats_chat_key_exchange_incomplete_title
-                    }
-                ),
-                description = stringResource(
-                    if (isManualSetup) {
-                        Res.string.feature_chats_manual_identity_incomplete_description
-                    } else {
-                        Res.string.feature_chats_chat_key_exchange_incomplete_description
-                    }
-                )
-            )
+    ContactSecurityState.MUTUAL_KEYS_UNVERIFIED ->
+        errorBanner(
+            title = stringResource(Res.string.feature_chats_chat_unverified_title),
+            description = stringResource(Res.string.feature_chats_chat_unverified_description)
+        )
 
-        ContactSecurityState.MUTUAL_KEYS_UNVERIFIED ->
-            errorBanner(
-                title = stringResource(Res.string.feature_chats_chat_unverified_title),
-                description = stringResource(Res.string.feature_chats_chat_unverified_description)
-            )
+    ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_ME ->
+        SecurityBannerState(
+            icon = Icons.Default.Schedule,
+            title = stringResource(Res.string.feature_chats_chat_verified_by_me_title),
+            description = stringResource(Res.string.feature_chats_chat_verified_by_me_description),
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+        )
 
-        ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_ME ->
-            SecurityBannerState(
-                icon = Icons.Default.Schedule,
-                title = stringResource(Res.string.feature_chats_chat_verified_by_me_title),
-                description = stringResource(Res.string.feature_chats_chat_verified_by_me_description),
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-            )
+    ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_CONTACT ->
+        SecurityBannerState(
+            icon = Icons.Default.Security,
+            title = stringResource(Res.string.feature_chats_chat_verified_by_contact_title),
+            description = stringResource(Res.string.feature_chats_chat_verified_by_contact_description),
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+        )
 
-        ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_CONTACT ->
-            SecurityBannerState(
-                icon = Icons.Default.Security,
-                title = stringResource(Res.string.feature_chats_chat_verified_by_contact_title),
-                description = stringResource(Res.string.feature_chats_chat_verified_by_contact_description),
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-
-        ContactSecurityState.MUTUAL_KEYS_VERIFIED -> null
-    }
+    ContactSecurityState.MUTUAL_KEYS_VERIFIED -> null
 }
 
 @Composable

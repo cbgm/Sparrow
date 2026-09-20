@@ -399,6 +399,7 @@
     <string name="feature_chats_manual_identity_setup_description">Teile deine Identität und importiere oder scanne anschließend die Identität des Kontakts auf beiden Geräten. Beim Öffnen des Chats wird keine automatische Einladung gesendet.</string>
     <string name="feature_chats_manual_identity_required_title">Manueller Identitätsaustausch erforderlich</string>
     <string name="feature_chats_manual_identity_required_description">Teile deine Identität und importiere die Identität des Kontakts, bevor Ende-zu-Ende-Verschlüsselung beginnen kann.</string>
+    <string name="feature_chats_identity_not_fully_mutual_title">Nicht vollständig gegenseitig</string>
     <string name="feature_chats_manual_identity_incomplete_title">Manueller Identitätsaustausch unvollständig</string>
     <string name="feature_chats_manual_identity_incomplete_description">Eine Identität ist bekannt. Auch das andere Gerät muss die passende Identität importieren.</string>
     <string name="feature_chats_manual_identity_setup_action">Einrichten</string>

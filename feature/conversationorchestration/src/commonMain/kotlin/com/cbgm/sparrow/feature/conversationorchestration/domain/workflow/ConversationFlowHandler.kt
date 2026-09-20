@@ -390,6 +390,27 @@ internal class ConversationFlowHandler(
             conversationPort.deleteLocalGroupConversation(groupId, deletedAt).getOrThrow()
         }
 
+    suspend fun recoverAcceptedDirectInvitation(result: InvitationResult): Result<Unit> =
+        runCatching {
+            if (result.payloadType != InvitationPayloadType.DIRECT ||
+                result.direction != InvitationDirection.INCOMING ||
+                result.response != InvitationResponse.ACCEPTED
+            ) {
+                return@runCatching
+            }
+
+            val exchange = getIdentityExchangeClosure(result.peerId).getOrThrow()
+                ?: return@runCatching
+            if (exchange.exchangeId != result.invitationId ||
+                exchange.phase == IdentityExchangeClosurePhase.TERMINAL ||
+                exchange.phase == IdentityExchangeClosurePhase.ALREADY_CLOSED
+            ) {
+                return@runCatching
+            }
+
+            handleDirectInvitationResult(result)
+        }
+
     suspend fun onInvitationResult(result: InvitationResult): Result<Unit> =
         runCatching {
             when (result.payloadType) {
@@ -415,18 +436,16 @@ internal class ConversationFlowHandler(
                             response = InvitationResponse.ACCEPTED
                         ).getOrThrow()
                     }
+                    // Invitation acceptance, not the identity setup mode, authorizes the
+                    // conversation. Release any previously queued messages in both modes.
+                    conversationPort.activateAuthorizedConversation(result.peerId).getOrThrow()
                     if (identitySetupModeRepository.getMode() == DirectIdentitySetupMode.AUTOMATIC_INVITATION) {
-                        conversationPort.activateAuthorizedConversation(result.peerId).getOrThrow()
                         sendContactVerificationReceipt(result.peerId)
                             .onFailure { error ->
                                 logger.warn(error) {
                                     "Could not queue contact verification receipt for ${result.peerId}"
                                 }
                             }
-                    } else {
-                        // An accepted manual invitation creates a conversation, not mutual identity.
-                        // Queued messages remain held until explicit manual sharing completes.
-                        conversationPort.getOrCreateConversation(result.peerId).getOrThrow()
                     }
                 }
 
@@ -503,8 +522,17 @@ internal class ConversationFlowHandler(
                         inviterEncryptionPublicKey = packet.inviterEncryptionPublicKey,
                         inviterSigningPublicKey = packet.inviterSigningPublicKey,
                         responderEncryptionPublicKey = packet.responderEncryptionPublicKey,
-                        responderSigningPublicKey = packet.responderSigningPublicKey
+                        responderSigningPublicKey = packet.responderSigningPublicKey,
+                        autoSharesIdentity = packet.autoSharesIdentity
                     )
+                ).getOrThrow()
+                // A verified acceptance creates the sender's chat immediately. The
+                // Identity observer can be behind this packet, especially on restart.
+                conversationPort.activateAuthorizedConversation(context.contactId).getOrThrow()
+                handleInvitationResponse(
+                    payloadType = InvitationPayloadType.DIRECT,
+                    invitationId = packet.invitationId,
+                    response = InvitationResponse.ACCEPTED
                 ).getOrThrow()
                 // The exchange validates the bound challenge, signing key and packet
                 // signature before profile metadata may be persisted.
@@ -626,7 +654,8 @@ internal class ConversationFlowHandler(
                     expiresAtEpochMilliseconds = packet.expiresAtEpochMilliseconds,
                     inviteChallenge = packet.inviteChallenge,
                     encryptionPublicKey = packet.encryptionPublicKey,
-                    signingPublicKey = packet.signingPublicKey
+                    signingPublicKey = packet.signingPublicKey,
+                    autoSharesIdentity = packet.autoSharesIdentity
                 ),
                 wasKnownPeerAtReceive = resolution.wasKnownPeer
             ).getOrThrow()
@@ -890,7 +919,30 @@ internal class ConversationFlowHandler(
             if (result.perspective != MembershipPerspective.OWNER) return@runCatching
 
             when (result.status) {
-                MembershipStatus.IDENTITY_READY ->
+                MembershipStatus.IDENTITY_READY -> {
+                    handleInvitationResponse(
+                        payloadType = InvitationPayloadType.GROUP,
+                        invitationId = result.sourceInvitationId,
+                        response = InvitationResponse.ACCEPTED
+                    ).getOrThrow()
+                    // Recover legacy owner memberships left at IDENTITY_READY if the
+                    // process stopped after the signed join request but before welcome.
+                    val peerIdentity = requireNotNull(getRemoteIdentity(result.peerId).getOrThrow()) {
+                        "Accepted group member identity was not found for welcome recovery"
+                    }
+                    check(peerIdentity.keyExchangeStatus == KeyExchangeStatus.MUTUAL) {
+                        "Group member identity exchange is not mutual"
+                    }
+                    confirmGroupMembershipIdentity(
+                        sourceId = result.sourceInvitationId,
+                        updatedAtEpochMilliseconds = result.updatedAtEpochMilliseconds,
+                        context = conversationPort.getGroupMembershipContext(result.groupId).getOrThrow(),
+                        memberEncryptionPublicKey = peerIdentity.encryptionPublicKey,
+                        memberSigningPublicKey = peerIdentity.signingPublicKey
+                    ).getOrThrow()
+                }
+
+                MembershipStatus.WELCOME_SENT ->
                     handleInvitationResponse(
                         payloadType = InvitationPayloadType.GROUP,
                         invitationId = result.sourceInvitationId,
@@ -915,8 +967,13 @@ internal class ConversationFlowHandler(
     private suspend fun handleDirectInvitationResult(result: InvitationResult) {
         when {
             result.direction == InvitationDirection.INCOMING &&
-                result.response == InvitationResponse.ACCEPTED ->
+                result.response == InvitationResponse.ACCEPTED -> {
                 acceptIdentityExchange(result.invitationId).getOrThrow()
+                // Both modes create the receiver's chat and release any locally
+                // queued messages as soon as the invitation is accepted.
+                // Manual identity exchange only changes the encryption mode.
+                conversationPort.activateAuthorizedConversation(result.peerId).getOrThrow()
+            }
 
             result.direction == InvitationDirection.INCOMING &&
                 result.response == InvitationResponse.DECLINED -> {
@@ -950,12 +1007,32 @@ internal class ConversationFlowHandler(
                 val signingKey = requireNotNull(handshake.ownerSigningPublicKey) {
                     "Group owner signing identity was not staged"
                 }
-                acceptRemoteIdentityHandshake(
-                    contactId = result.peerId,
-                    encryptionPublicKey = encryptionKey,
-                    signingPublicKey = signingKey
-                ).getOrThrow()
-                acceptGroupMembership(result.invitationId).getOrThrow()
+                if (handshake.status !in setOf(
+                        MembershipStatus.STAGED,
+                        MembershipStatus.JOIN_REQUEST_SENT,
+                        MembershipStatus.WAITING_FOR_ACTIVATION,
+                        MembershipStatus.ACTIVE
+                    )
+                ) {
+                    return
+                }
+                // The receiver accepted the invite: publish its staged chat even if
+                // joining the group is still waiting for transport or identity work.
+                conversationPort.showAcceptedIncomingGroupConversation(result.payloadId).getOrThrow()
+                when (handshake.status) {
+                    MembershipStatus.STAGED -> {
+                        acceptRemoteIdentityHandshake(
+                            contactId = result.peerId,
+                            encryptionPublicKey = encryptionKey,
+                            signingPublicKey = signingKey
+                        ).getOrThrow()
+                        acceptGroupMembership(result.invitationId).getOrThrow()
+                    }
+                    MembershipStatus.JOIN_REQUEST_SENT,
+                    MembershipStatus.WAITING_FOR_ACTIVATION,
+                    MembershipStatus.ACTIVE -> Unit // An accepted invitation is replayable after restart.
+                    else -> Unit // Exhausted by the active-status guard above.
+                }
             }
 
             InvitationResponse.DECLINED -> {
@@ -1136,6 +1213,18 @@ internal class ConversationFlowHandler(
                 signingPublicKey = join.memberSigningPublicKey
             ).getOrThrow()
         } else {
+            // receiveGroupMembershipJoinRequest has verified the join signature and
+            // bound its challenge to the staged membership. The group join therefore
+            // provides authenticated evidence of the member's remote identity.
+            // Persist that evidence *before* establishing mutual identity: an existing
+            // imported contact can have remoteIdentityPacketReceived = false, in which
+            // case markMutual's compare-and-set rightly refuses the update. Do not
+            // loosen that security check or mark unrelated manual chats mutual.
+            stageRemoteIdentity(
+                contactId = join.peerId,
+                encryptionPublicKey = join.memberEncryptionPublicKey,
+                signingPublicKey = join.memberSigningPublicKey
+            ).getOrThrow()
             establishMutualIdentity(
                 contactId = join.peerId,
                 encryptionPublicKey = join.memberEncryptionPublicKey,
@@ -1143,7 +1232,10 @@ internal class ConversationFlowHandler(
             ).getOrThrow()
             confirmGroupMembershipIdentity(
                 sourceId = join.sourceId,
-                updatedAtEpochMilliseconds = context.receivedAtEpochMilliseconds
+                updatedAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
+                context = conversationPort.getGroupMembershipContext(join.groupId).getOrThrow(),
+                memberEncryptionPublicKey = join.memberEncryptionPublicKey,
+                memberSigningPublicKey = join.memberSigningPublicKey
             ).getOrThrow()
         }
         applyPeerProfilePicture(context.contactId, packet.profilePicture)

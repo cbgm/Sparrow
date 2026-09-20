@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.chats.presentation.direct
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
@@ -41,6 +42,9 @@ import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversati
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversationUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactResult
 import com.cbgm.sparrow.feature.contacts.domain.usecase.AddDeviceContactUseCase
+import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
+import com.cbgm.sparrow.feature.identity.domain.usecase.RecordLocalIdentitySharedUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.RecoverManualIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyDetails
@@ -65,6 +69,8 @@ class DirectConversationViewModel(
     savedStateHandle: SavedStateHandle,
     observeChatContext: ObserveDirectChatContextUseCase,
     private val sendOrQueueDirectMessage: SendOrQueueDirectMessageUseCase,
+    private val recoverManualIdentityExchange: RecoverManualIdentityExchangeUseCase,
+    private val recordLocalIdentityShared: RecordLocalIdentitySharedUseCase,
     private val markConversationRead: MarkDirectConversationReadUseCase,
     private val retryMessage: RetryDirectMessageUseCase,
     private val toggleMessageReaction: ToggleDirectMessageReactionUseCase,
@@ -113,6 +119,26 @@ class DirectConversationViewModel(
             }
         }
 
+    init {
+        // Old chats may have lost the first IdentityPacket because the other device
+        // imported us only afterwards. Retransmit once for this chat instance after
+        // an explicit manual import, including when opening an existing conversation.
+        // The identity use case rechecks the current persisted state before sending.
+        viewModelScope.launch {
+            conversationContext.first { context ->
+                context.conversation != null &&
+                    context.setupMode == DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING &&
+                    context.remoteIdentity?.locallyImported == true
+            }.let { context ->
+                if (context.remoteIdentity?.keyExchangeStatus != KeyExchangeStatus.MUTUAL) {
+                    recoverManualIdentityExchange(contactId).onFailure { error ->
+                        logger.warn { "Manual identity exchange recovery failed: ${error.message}" }
+                    }
+                }
+            }
+        }
+    }
+
     private val indicatorController =
         IndicatorController(
             scope = viewModelScope,
@@ -156,6 +182,7 @@ class DirectConversationViewModel(
                 handshake = context.handshake,
                 canQueueMessages = context.canQueueMessages,
                 setupMode = context.setupMode,
+                localIdentityShared = context.localIdentityShared,
                 safetyAssessments = safetyAssessments
             )
         }.stateIn(
@@ -296,7 +323,13 @@ class DirectConversationViewModel(
             is DirectConversationUiEvent.SafetyWarningClicked ->
                 navigator.navigateTo(event.warning.toMessageSafetyDetails(event.messageId, contactId))
             DirectConversationUiEvent.VerifyIdentityClicked -> verifyIdentity()
-            DirectConversationUiEvent.ShareIdentityClicked -> navigator.navigateTo(AppRoute.ShareIdentity)
+            DirectConversationUiEvent.ShareIdentityClicked -> viewModelScope.launch {
+                // The explicit share action is tied to this contact; the global QR screen
+                // cannot otherwise tell which conversation initiated identity sharing.
+                recordLocalIdentityShared(contactId)
+                    .onSuccess { navigator.navigateTo(AppRoute.ShareIdentity) }
+                    .onFailure { setError(it.message ?: "Could not save identity sharing progress") }
+            }
             DirectConversationUiEvent.ImportIdentityClicked -> navigator.navigateTo(AppRoute.ImportContact(contactId))
             DirectConversationUiEvent.BackClicked ->
                 if (targetMessageId != null) {

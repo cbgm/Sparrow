@@ -399,6 +399,7 @@
     <string name="feature_chats_manual_identity_setup_description">Share your identity, then import or scan the contact identity on both devices. Opening the chat does not send an automatic invitation.</string>
     <string name="feature_chats_manual_identity_required_title">Manual identity exchange required</string>
     <string name="feature_chats_manual_identity_required_description">Share your identity and import the contact identity before end-to-end encryption can start.</string>
+    <string name="feature_chats_identity_not_fully_mutual_title">Not Fully Mutual</string>
     <string name="feature_chats_manual_identity_incomplete_title">Manual identity exchange incomplete</string>
     <string name="feature_chats_manual_identity_incomplete_description">One identity is known. The other device must also import the matching identity.</string>
     <string name="feature_chats_manual_identity_setup_action">Set up</string>

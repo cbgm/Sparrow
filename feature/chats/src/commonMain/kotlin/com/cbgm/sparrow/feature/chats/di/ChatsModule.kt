@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.di
 
+import androidx.lifecycle.SavedStateHandle
 import com.cbgm.sparrow.core.protocol.attachment.GroupPinnedAttachmentProvider
 import com.cbgm.sparrow.core.protocol.avatar.GroupAvatarProvider
 import com.cbgm.sparrow.core.protocol.handler.IncomingMessageHandler
@@ -155,6 +156,7 @@ import com.cbgm.sparrow.feature.chats.runtime.group.verification.GroupVerificati
 import com.cbgm.sparrow.feature.chats.runtime.group.verification.GroupVerificationState
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.port.ConversationPort
+import com.cbgm.sparrow.feature.identity.domain.usecase.RecordLocalIdentitySharedUseCase
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
@@ -437,11 +439,13 @@ private fun org.koin.core.module.Module.registerViewModels() {
         )
     }
 
-    viewModel {
+    viewModel { (savedStateHandle: SavedStateHandle) ->
         DirectConversationViewModel(
-            savedStateHandle = get(),
+            savedStateHandle = savedStateHandle,
             observeChatContext = get(),
             sendOrQueueDirectMessage = get(),
+            recoverManualIdentityExchange = get(),
+            recordLocalIdentityShared = get<RecordLocalIdentitySharedUseCase>(),
             markConversationRead = get(),
             retryMessage = get(),
             toggleMessageReaction = get(),

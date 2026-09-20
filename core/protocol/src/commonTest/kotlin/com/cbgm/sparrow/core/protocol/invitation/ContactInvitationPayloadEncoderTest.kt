@@ -37,6 +37,45 @@ class ContactInvitationPayloadEncoderTest {
         assertFalse(withoutPicture.contentEquals(removedPicture))
     }
 
+    @Test
+    fun automaticShareIsBoundToInviteSignedPayload() {
+        val manual = encodeInvite(ProfilePictureMetadata())
+        val automatic = encoder.encodeInvite(
+            packetId = "packet-1",
+            version = 1,
+            invitationId = "invitation-1",
+            displayName = "Alice",
+            createdAtEpochMilliseconds = 1L,
+            expiresAtEpochMilliseconds = 2L,
+            profilePicture = ProfilePictureMetadata(),
+            inviteChallenge = byteArrayOf(1),
+            encryptionPublicKey = byteArrayOf(2),
+            signingPublicKey = byteArrayOf(3),
+            autoSharesIdentity = true
+        )
+        assertFalse(manual.contentEquals(automatic))
+    }
+
+    @Test
+    fun automaticShareIsBoundToAcceptanceSignedPayload() {
+        val manual = encodeAccepted(ProfilePictureMetadata())
+        val automatic = encoder.encodeAccepted(
+            packetId = "packet-2",
+            version = 1,
+            invitationId = "invitation-1",
+            acceptedAtEpochMilliseconds = 2L,
+            profilePicture = ProfilePictureMetadata(),
+            inviteChallenge = byteArrayOf(1),
+            responseChallenge = byteArrayOf(2),
+            inviterEncryptionPublicKey = byteArrayOf(3),
+            inviterSigningPublicKey = byteArrayOf(4),
+            responderEncryptionPublicKey = byteArrayOf(5),
+            responderSigningPublicKey = byteArrayOf(6),
+            autoSharesIdentity = true
+        )
+        assertFalse(manual.contentEquals(automatic))
+    }
+
     private fun encodeInvite(profilePicture: ProfilePictureMetadata): ByteArray =
         encoder.encodeInvite(
             packetId = "packet-1",

@@ -23,12 +23,12 @@ class GroupConversationMembershipProjectorTest {
     }
 
     @Test
-    fun joiningMembershipTakesPriorityOverAnActiveMember() {
+    fun activeMemberMakesGroupReadyEvenWhileAnotherMemberIsJoining() {
         val snapshot = GroupConversationMembershipProjector.project(
             listOf(member("active", "ACTIVE"), member("joining", "JOIN_REQUEST_SENT")),
             isLocallyInactive = false
         )
-        assertEquals(GroupConversationState.JOINING, snapshot.state)
+        assertEquals(GroupConversationState.READY, snapshot.state)
         assertEquals(1, snapshot.pendingMemberCount)
         assertEquals(
             listOf(GroupMemberProgressStatus.ACTIVE, GroupMemberProgressStatus.JOINING),

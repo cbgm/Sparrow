@@ -201,6 +201,9 @@ internal class ChatsConversationPort(
             )
         }
 
+    override suspend fun showAcceptedIncomingGroupConversation(groupId: String): Result<Unit> =
+        runCatching { groupConversationDataSource.showAcceptedIncoming(groupId) }
+
     override suspend fun discardPendingGroupConversation(
         groupId: String,
         updatedAtEpochMilliseconds: Long

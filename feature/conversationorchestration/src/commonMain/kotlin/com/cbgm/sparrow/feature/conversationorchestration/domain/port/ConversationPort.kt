@@ -72,6 +72,9 @@ interface ConversationPort {
         updatedAtEpochMilliseconds: Long
     ): Result<Boolean>
 
+    /** Publish the receiver's already-staged group after local invitation acceptance. */
+    suspend fun showAcceptedIncomingGroupConversation(groupId: String): Result<Unit>
+
     suspend fun discardPendingGroupConversation(
         groupId: String,
         updatedAtEpochMilliseconds: Long

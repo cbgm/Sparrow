@@ -3,6 +3,9 @@ package com.cbgm.sparrow.feature.conversationorchestration.runtime
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.feature.conversationorchestration.domain.port.ConversationPort
 import com.cbgm.sparrow.feature.conversationorchestration.domain.workflow.ConversationFlowHandler
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationDirection
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationPayloadType
+import com.cbgm.sparrow.feature.invite.domain.model.InvitationResponse
 import com.cbgm.sparrow.feature.invite.domain.model.InvitationResult
 import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationResultsUseCase
 import kotlinx.coroutines.coroutineScope
@@ -27,7 +30,26 @@ class InvitationResultObserver internal constructor(
 
         observeInvitationResults().collect { results ->
             if (!initialized) {
-                seen += results.map { it.eventKey() }
+                // A receiver may have accepted before the observer was started.
+                // Replay only still-active incoming direct acceptances. The workflow
+                // checks that the exact exchange was not later closed/revoked.
+                results.forEach { result ->
+                    seen += result.eventKey()
+                    val recovery = when {
+                        result.payloadType == InvitationPayloadType.GROUP &&
+                            result.direction == InvitationDirection.INCOMING &&
+                            result.response == InvitationResponse.ACCEPTED ->
+                            flowHandler.onInvitationResult(result)
+                        result.payloadType == InvitationPayloadType.DIRECT ->
+                            flowHandler.recoverAcceptedDirectInvitation(result)
+                        else -> null
+                    }
+                    recovery?.onFailure { error ->
+                        logger.warn(error) {
+                            "Could not recover accepted invitation ${result.invitationId}"
+                        }
+                    }
+                }
                 initialized = true
                 return@collect
             }

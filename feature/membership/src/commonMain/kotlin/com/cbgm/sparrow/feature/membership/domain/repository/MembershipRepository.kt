@@ -62,7 +62,10 @@ interface MembershipRepository {
 
     suspend fun confirmJoinIdentity(
         sourceId: String,
-        updatedAtEpochMilliseconds: Long
+        updatedAtEpochMilliseconds: Long,
+        context: com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext,
+        memberEncryptionPublicKey: ByteArray,
+        memberSigningPublicKey: ByteArray
     ): Result<Unit>
 
     suspend fun markRemoved(

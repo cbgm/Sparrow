@@ -29,6 +29,13 @@ class GroupRoutingDataSource(
             .associate { memberKey -> memberKey.contactId to memberKey.toRoutingId() }
     }
 
+    suspend fun resolveIndicatorMembers(groupId: String): Map<String, String> {
+        require(groupId.isNotBlank()) { "Group ID must not be blank" }
+        val state = groupSecurityDao.findState(groupId) ?: return emptyMap()
+        return groupSecurityDao.findMemberKeys(groupId, state.currentEpoch)
+            .associate { memberKey -> memberKey.contactId to memberKey.toRoutingId() }
+    }
+
     fun resolveRemovedMember(signingPublicKey: ByteArray): String {
         require(signingPublicKey.isNotEmpty()) {
             "Removed member signing public key must not be empty"

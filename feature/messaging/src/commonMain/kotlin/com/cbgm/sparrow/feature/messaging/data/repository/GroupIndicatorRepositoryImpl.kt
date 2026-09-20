@@ -34,7 +34,7 @@ class GroupIndicatorRepositoryImpl(
         indicatorType: IndicatorType
     ): Result<Unit> =
         safeSuspendCall {
-            val recipientRoutingIds = groupRoutingDataSource.resolveMembers(groupId).values
+            val recipientRoutingIds = groupRoutingDataSource.resolveIndicatorMembers(groupId).values
 
             var firstFailure: Throwable? = null
             recipientRoutingIds.forEach { routingId ->

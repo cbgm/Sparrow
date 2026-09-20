@@ -10,7 +10,8 @@ class IdentityExchangeOffer(
     val expiresAtEpochMilliseconds: Long,
     inviteChallenge: ByteArray,
     encryptionPublicKey: ByteArray,
-    signingPublicKey: ByteArray
+    signingPublicKey: ByteArray,
+    val autoSharesIdentity: Boolean = false
 ) {
     val inviteChallenge = inviteChallenge.copyOf()
     val encryptionPublicKey = encryptionPublicKey.copyOf()
@@ -25,7 +26,8 @@ class IdentityExchangeAcceptance(
     inviterEncryptionPublicKey: ByteArray,
     inviterSigningPublicKey: ByteArray,
     responderEncryptionPublicKey: ByteArray,
-    responderSigningPublicKey: ByteArray
+    responderSigningPublicKey: ByteArray,
+    val autoSharesIdentity: Boolean = false
 ) {
     val inviteChallenge = inviteChallenge.copyOf()
     val responseChallenge = responseChallenge.copyOf()

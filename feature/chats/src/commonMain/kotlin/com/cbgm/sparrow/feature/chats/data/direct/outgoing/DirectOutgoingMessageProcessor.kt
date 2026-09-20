@@ -16,8 +16,6 @@ import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureMetadataProvide
 import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.security.DirectChatAuthorizationRequiredException
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
-import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
@@ -55,7 +53,6 @@ class DirectOutgoingMessageProcessor(
     private val protocolOutbox: ProtocolOutbox,
     private val getIdentityPeerState: GetIdentityPeerStateUseCase,
     private val getRemoteIdentity: GetRemoteIdentityUseCase,
-    private val identitySetupModeRepository: DirectIdentitySetupModeRepository,
     private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
     private val deliveryCoordinator: DirectMessageDeliveryCoordinator,
     private val attachmentTransfer: MessageAttachmentOperationsRepository
@@ -285,19 +282,10 @@ class DirectOutgoingMessageProcessor(
 
     private suspend fun requireDirectChatAuthorization(contactId: String): Result<Unit> =
         getIdentityPeerState(contactId).mapCatching { state ->
-            when (identitySetupModeRepository.getMode()) {
-                DirectIdentitySetupMode.AUTOMATIC_INVITATION ->
-                    if (!state.hasEstablishedExchange) {
-                        throw DirectChatAuthorizationRequiredException(
-                            "A contact invitation must be accepted before messages can be sent"
-                        )
-                    }
-                DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING ->
-                    if (!state.hasMutualIdentity) {
-                        throw DirectChatAuthorizationRequiredException(
-                            "Both identities must be exchanged before messages can be sent"
-                        )
-                    }
+            if (!state.hasEstablishedExchange) {
+                throw DirectChatAuthorizationRequiredException(
+                    "A contact invitation must be accepted before messages can be sent"
+                )
             }
         }
 

@@ -15,6 +15,7 @@ import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipAdmini
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipDeletionDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipLifecycleDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipStoreDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupOwnerWelcomeDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupPacketBroadcaster
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupReadyAcknowledgementDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupSecurityStoreDataSource
@@ -95,6 +96,7 @@ val membershipModule =
         singleOf(::GroupWelcomeSecurity)
         singleOf(::GroupSecurityManager) { bind<GroupSecurityRepository>() }
         singleOf(::VerifyGroupKeyConfirmationUseCase)
+        singleOf(::GroupOwnerWelcomeDataSource)
         singleOf(::GroupMembershipActivationDataSource)
         singleOf(::GroupIncomingActivationDataSource)
         singleOf(::GroupMemberPromotionDataSource)

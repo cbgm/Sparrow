@@ -14,20 +14,24 @@ class ContactInvitationPayloadEncoder {
         profilePicture: ProfilePictureMetadata,
         inviteChallenge: ByteArray,
         encryptionPublicKey: ByteArray,
-        signingPublicKey: ByteArray
+        signingPublicKey: ByteArray,
+        autoSharesIdentity: Boolean = false
     ): ByteArray =
-        encode(
-            domainSeparator = "Sparrow.ContactInvite",
-            packetId.encodeToByteArray(),
-            ByteArrays.encodeInt(version),
-            invitationId.encodeToByteArray(),
-            encodeNullableString(displayName),
-            ByteArrays.encodeLong(createdAtEpochMilliseconds),
-            ByteArrays.encodeLong(expiresAtEpochMilliseconds),
-            encodeProfilePicture(profilePicture),
-            inviteChallenge,
-            encryptionPublicKey,
-            signingPublicKey
+        withAuthenticatedSharingFlag(
+            autoSharesIdentity,
+            encode(
+                domainSeparator = "Sparrow.ContactInvite",
+                packetId.encodeToByteArray(),
+                ByteArrays.encodeInt(version),
+                invitationId.encodeToByteArray(),
+                encodeNullableString(displayName),
+                ByteArrays.encodeLong(createdAtEpochMilliseconds),
+                ByteArrays.encodeLong(expiresAtEpochMilliseconds),
+                encodeProfilePicture(profilePicture),
+                inviteChallenge,
+                encryptionPublicKey,
+                signingPublicKey
+            )
         )
 
     fun encodeAccepted(
@@ -41,21 +45,25 @@ class ContactInvitationPayloadEncoder {
         inviterEncryptionPublicKey: ByteArray,
         inviterSigningPublicKey: ByteArray,
         responderEncryptionPublicKey: ByteArray,
-        responderSigningPublicKey: ByteArray
+        responderSigningPublicKey: ByteArray,
+        autoSharesIdentity: Boolean = false
     ): ByteArray =
-        encode(
-            domainSeparator = "Sparrow.ContactInviteAccepted",
-            packetId.encodeToByteArray(),
-            ByteArrays.encodeInt(version),
-            invitationId.encodeToByteArray(),
-            ByteArrays.encodeLong(acceptedAtEpochMilliseconds),
-            encodeProfilePicture(profilePicture),
-            inviteChallenge,
-            responseChallenge,
-            inviterEncryptionPublicKey,
-            inviterSigningPublicKey,
-            responderEncryptionPublicKey,
-            responderSigningPublicKey
+        withAuthenticatedSharingFlag(
+            autoSharesIdentity,
+            encode(
+                domainSeparator = "Sparrow.ContactInviteAccepted",
+                packetId.encodeToByteArray(),
+                ByteArrays.encodeInt(version),
+                invitationId.encodeToByteArray(),
+                ByteArrays.encodeLong(acceptedAtEpochMilliseconds),
+                encodeProfilePicture(profilePicture),
+                inviteChallenge,
+                responseChallenge,
+                inviterEncryptionPublicKey,
+                inviterSigningPublicKey,
+                responderEncryptionPublicKey,
+                responderSigningPublicKey
+            )
         )
 
     fun encodeReady(
@@ -99,6 +107,16 @@ class ContactInvitationPayloadEncoder {
             inviteChallenge,
             declinerSigningPublicKey
         )
+
+    /** Preserve legacy manual signatures; a true flag adds an authenticated field.
+     *  Removing or changing the true flag invalidates the signature.
+     */
+    private fun withAuthenticatedSharingFlag(autoSharesIdentity: Boolean, payload: ByteArray): ByteArray =
+        if (autoSharesIdentity) {
+            ByteArrays.concatenate(payload, ByteArrays.withLengthPrefix(byteArrayOf(1)))
+        } else {
+            payload
+        }
 
     private fun encode(
         domainSeparator: String,

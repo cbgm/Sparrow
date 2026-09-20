@@ -66,7 +66,7 @@ internal class IdentityExchangeDataSource(
     // Invitation challenge/response authenticates chat acceptance in both modes.
     // It is not a manual identity import or acknowledgement: only the explicit
     // IdentityPacket/IdentityAcknowledgementPacket flow may establish manual keys.
-    private suspend fun canImportIdentityFromInvitation(): Boolean =
+    private suspend fun sharesIdentityAutomatically(): Boolean =
         identitySetupModeRepository.getMode() == DirectIdentitySetupMode.AUTOMATIC_INVITATION
 
     suspend fun start(contactId: String, invitationSenderLabel: String): Result<IdentityExchange?> =
@@ -134,7 +134,8 @@ internal class IdentityExchangeDataSource(
                     profilePicture = profilePicture,
                     inviteChallenge = challenge,
                     encryptionPublicKey = localIdentity.encryptionPublicKey,
-                    signingKeyPair = signingKeyPair
+                    signingKeyPair = signingKeyPair,
+                    autoSharesIdentity = sharesIdentityAutomatically()
                 ).getOrThrow()
 
                 val storedInvitation =
@@ -269,10 +270,10 @@ internal class IdentityExchangeDataSource(
                     inviterEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
                     inviterSigningPublicKey = invitation.remoteSigningPublicKey,
                     responderEncryptionPublicKey = localIdentity.encryptionPublicKey,
-                    signingKeyPair = signingKeyPair
+                    signingKeyPair = signingKeyPair,
+                    autoSharesIdentity = sharesIdentityAutomatically()
                 ).getOrThrow()
 
-                if (canImportIdentityFromInvitation()) prepareAcceptedRemoteIdentity(invitation)
                 store.upsert(
                     invitation.copy(
                         stage = IdentityExchangeStage.ACCEPTANCE_SENT.name,
@@ -293,13 +294,8 @@ internal class IdentityExchangeDataSource(
                     )
                     throw error
                 }
-                if (canImportIdentityFromInvitation()) {
-                    remoteIdentityDataSource.markMutual(
-                        peerId = invitation.contactId,
-                        encryptionPublicKey = invitation.remoteEncryptionPublicKey,
-                        signingPublicKey = invitation.remoteSigningPublicKey
-                    )
-                }
+                // Sending an acceptance does not establish that the peer imported OUR
+                // keys. Only a verified readiness/acknowledgement can mark mutual.
                 store.upsert(
                     requireNotNull(store.findById(invitationId)).copy(
                         stage = IdentityExchangeStage.WAITING_FOR_READY.name,
@@ -558,11 +554,18 @@ internal class IdentityExchangeDataSource(
                         }
                     }
 
-                if (canImportIdentityFromInvitation()) {
+                // The peer controls whether their identity is shared automatically.
+                // Never import their keys merely because OUR device uses automatic mode.
+                if (offer.autoSharesIdentity) {
                     stageIncomingInvitationIdentity(
                         contactId = contactId,
                         remoteEncryptionPublicKey = offer.encryptionPublicKey,
                         remoteSigningPublicKey = offer.signingPublicKey
+                    )
+                    remoteIdentityDataSource.accept(
+                        peerId = contactId,
+                        encryptionPublicKey = offer.encryptionPublicKey,
+                        signingPublicKey = offer.signingPublicKey
                     )
                 }
 
@@ -641,16 +644,18 @@ internal class IdentityExchangeDataSource(
                     check(invitation.remoteSigningPublicKey.contentEquals(acceptance.responderSigningPublicKey)) {
                         "Acceptance replay changed its signing key"
                     }
-                    queueReadyReplay(
-                        contactId = context.contactId,
-                        acceptance = acceptance
-                    )
+                    if (sharesIdentityAutomatically() && acceptance.autoSharesIdentity) {
+                        queueReadyReplay(
+                            contactId = context.contactId,
+                            acceptance = acceptance
+                        )
+                    }
                     return@withLock
                 }
 
                 requireState(invitation, IdentityExchangeStage.OUTGOING_CHALLENGE_SENT)
 
-                if (canImportIdentityFromInvitation()) {
+                if (acceptance.autoSharesIdentity) {
                     remoteIdentityDataSource.stage(
                         peerId = context.contactId,
                         encryptionPublicKey = acceptance.responderEncryptionPublicKey,
@@ -663,11 +668,13 @@ internal class IdentityExchangeDataSource(
                     )
                 }
                 val now = SystemClock.nowEpochMilliseconds()
-                queueReadyReplay(
-                    contactId = context.contactId,
-                    acceptance = acceptance
-                )
-                if (canImportIdentityFromInvitation()) {
+                // Manual invitation acceptance authorizes chat but must not initiate
+                // automatic identity exchange or queue a Ready packet requiring keys.
+                if (sharesIdentityAutomatically() && acceptance.autoSharesIdentity) {
+                    queueReadyReplay(
+                        contactId = context.contactId,
+                        acceptance = acceptance
+                    )
                     remoteIdentityDataSource.markMutual(
                         peerId = context.contactId,
                         encryptionPublicKey = acceptance.responderEncryptionPublicKey,
@@ -733,7 +740,7 @@ internal class IdentityExchangeDataSource(
                     "Ready confirmation cannot be applied from state ${invitation.stage}"
                 }
 
-                if (canImportIdentityFromInvitation()) {
+                if (remoteIdentityDataSource.findByPeerId(invitation.contactId)?.locallyImported == true) {
                     remoteIdentityDataSource.markMutual(
                         peerId = invitation.contactId,
                         encryptionPublicKey = invitation.remoteEncryptionPublicKey,
@@ -861,14 +868,6 @@ internal class IdentityExchangeDataSource(
                 }
             }
         }
-
-    private suspend fun prepareAcceptedRemoteIdentity(invitation: IdentityExchangeEntity) {
-        remoteIdentityDataSource.accept(
-            peerId = invitation.contactId,
-            encryptionPublicKey = invitation.remoteEncryptionPublicKey,
-            signingPublicKey = invitation.remoteSigningPublicKey
-        )
-    }
 
     private suspend fun stageIncomingInvitationIdentity(
         contactId: String,
@@ -1004,7 +1003,6 @@ internal class IdentityExchangeDataSource(
     }
 
     private suspend fun queueAcceptanceReplay(invitation: IdentityExchangeEntity) {
-        if (canImportIdentityFromInvitation()) prepareAcceptedRemoteIdentity(invitation)
         val responseChallenge =
             checkNotNull(invitation.responseChallenge) {
                 "Accepted invitation is missing its response challenge"
@@ -1026,16 +1024,10 @@ internal class IdentityExchangeDataSource(
             inviterEncryptionPublicKey = invitation.remoteEncryptionPublicKey,
             inviterSigningPublicKey = invitation.remoteSigningPublicKey,
             responderEncryptionPublicKey = localIdentity.encryptionPublicKey,
-            signingKeyPair = signingKeyPair
+            signingKeyPair = signingKeyPair,
+            autoSharesIdentity = sharesIdentityAutomatically()
         ).getOrThrow()
         enqueueOrResend(contactId = invitation.contactId, packet = packet).getOrThrow()
-        if (canImportIdentityFromInvitation()) {
-            remoteIdentityDataSource.markMutual(
-                peerId = invitation.contactId,
-                encryptionPublicKey = invitation.remoteEncryptionPublicKey,
-                signingPublicKey = invitation.remoteSigningPublicKey
-            )
-        }
         store.upsert(
             invitation.copy(
                 stage = IdentityExchangeStage.WAITING_FOR_READY.name,

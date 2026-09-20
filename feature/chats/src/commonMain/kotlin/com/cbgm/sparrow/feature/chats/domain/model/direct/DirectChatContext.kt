@@ -9,6 +9,7 @@ data class DirectChatContext(
     val conversation: DirectConversation?,
     val contact: Contact?,
     val remoteIdentity: RemotePeerIdentity? = null,
+    val localIdentityShared: Boolean = false,
     val handshake: IdentityHandshakeState?,
     val canQueueMessages: Boolean,
     val setupMode: DirectIdentitySetupMode

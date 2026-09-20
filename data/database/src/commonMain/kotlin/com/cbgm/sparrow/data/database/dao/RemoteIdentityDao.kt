@@ -97,6 +97,32 @@ interface RemoteIdentityDao {
         updatedAtEpochMilliseconds: Long
     ): Int
 
+    /**
+     * A signed manual identity acknowledgement proves that the already imported peer
+     * received our current public keys. The peer's earlier IdentityPacket may have
+     * arrived before our local import and thus was intentionally not accepted.
+     * Keep remoteIdentityPacketReceived unchanged: this path authenticates the ACK,
+     * not receipt of an IdentityPacket.
+     */
+    @Query(
+        """
+        UPDATE contact_public_identities
+        SET keyExchangeStatus = :mutualStatus,
+            updatedAtEpochMilliseconds = :updatedAtEpochMilliseconds
+        WHERE contactId = :peerId
+          AND encryptionPublicKey = :expectedEncryptionPublicKey
+          AND signingPublicKey = :expectedSigningPublicKey
+          AND locallyImported = 1
+        """
+    )
+    suspend fun markMutualAfterVerifiedManualAcknowledgementIfKeysMatch(
+        peerId: String,
+        expectedEncryptionPublicKey: ByteArray,
+        expectedSigningPublicKey: ByteArray,
+        mutualStatus: String,
+        updatedAtEpochMilliseconds: Long
+    ): Int
+
     @Query(
         """
         UPDATE contact_public_identities

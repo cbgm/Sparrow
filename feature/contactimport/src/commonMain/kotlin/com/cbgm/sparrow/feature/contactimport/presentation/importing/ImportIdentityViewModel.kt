@@ -25,12 +25,9 @@ class ImportIdentityViewModel(
     private val contactId = savedStateHandle.get<String>(AppRoute.ImportContact::contactId.name)
     private val scannedIdentity = savedStateHandle.get<String>(AppRoute.ImportContact::scannedIdentity.name)
 
-    private val _uiState =
-        MutableStateFlow(
-            ImportIdentityUiState(
-                encodedIdentity = savedStateHandle.get<String>(ENCODED_IDENTITY_KEY).orEmpty()
-            )
-        )
+    // Every new import screen starts with an empty text field. QR scans are
+    // handled explicitly via the scannedIdentity route argument.
+    private val _uiState = MutableStateFlow(ImportIdentityUiState())
     val uiState: StateFlow<ImportIdentityUiState> = _uiState.asStateFlow()
 
     init {
@@ -68,7 +65,16 @@ class ImportIdentityViewModel(
                     )
                 }
             }.onFailure {
-                updateEncodedIdentity(encodedIdentity)
+                // Ignore unrelated/stale QR payloads on entry. A QR value must never
+                // prefill the manual field or show a validation error before the user
+                // explicitly pastes an identity or confirms a valid scan.
+                _uiState.update {
+                    it.copy(
+                        scannedIdentityPreview = null,
+                        encodedIdentity = "",
+                        errorMessage = null
+                    )
+                }
             }
     }
 
@@ -93,7 +99,6 @@ class ImportIdentityViewModel(
     }
 
     private fun updateEncodedIdentity(value: String) {
-        savedStateHandle[ENCODED_IDENTITY_KEY] = value
         _uiState.update {
             it.copy(
                 encodedIdentity = value,
@@ -131,7 +136,6 @@ class ImportIdentityViewModel(
                 contactId = contactId,
                 identityImportTrust = identityImportTrust
             ).onSuccess { contact ->
-                savedStateHandle[ENCODED_IDENTITY_KEY] = ""
                 _uiState.update {
                     it.copy(
                         encodedIdentity = "",
@@ -152,9 +156,5 @@ class ImportIdentityViewModel(
                 }
             }
         }
-    }
-
-    private companion object {
-        const val ENCODED_IDENTITY_KEY = "encodedIdentity"
     }
 }

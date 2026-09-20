@@ -16,6 +16,7 @@ import com.cbgm.sparrow.feature.identity.data.datasource.IdentityExchangeDataSou
 import com.cbgm.sparrow.feature.identity.data.datasource.IdentityExchangeStoreDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.IdentityVerificationDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.LocalIdentityProfileDataSource
+import com.cbgm.sparrow.feature.identity.data.datasource.LocalIdentitySharingDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.LocalProfilePictureDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.ManualIdentityExchangeDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.PublicIdentityDataSource
@@ -28,6 +29,7 @@ import com.cbgm.sparrow.feature.identity.data.repository.IdentityRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityShareRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityVerificationRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.LocalIdentityProfileRepositoryImpl
+import com.cbgm.sparrow.feature.identity.data.repository.LocalIdentitySharingRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.LocalProfilePictureRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.RemoteIdentityImportRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.RemoteIdentityReadRepositoryImpl
@@ -37,6 +39,7 @@ import com.cbgm.sparrow.feature.identity.domain.repository.IdentityRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityShareRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityVerificationRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.LocalIdentityProfileRepository
+import com.cbgm.sparrow.feature.identity.domain.repository.LocalIdentitySharingRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.LocalProfilePictureRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.RemoteIdentityImportRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.RemoteIdentityReadRepository
@@ -67,6 +70,7 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.NormalizeLocalPhoneNumbe
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveIdentityHandshakeStateUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveIdentityResultsUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalIdentityReadyUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalIdentitySharedUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalProfilePictureUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveRemoteIdentitiesUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ReassignIdentityExchangePeerUseCase
@@ -75,8 +79,10 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.ReceiveIdentityExchangeA
 import com.cbgm.sparrow.feature.identity.domain.usecase.ReceiveIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ReceiveIdentityReadyUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ReceiveManualIdentityUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.RecordLocalIdentitySharedUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecordRemoteIdentityDeclineUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecoverIncompleteIdentityUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.RecoverManualIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RemoveLocalProfilePictureUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SaveLocalPhoneNameUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SendIdentityVerificationReceiptUseCase
@@ -100,6 +106,10 @@ val identityModule =
                 localIdentityDataResetter = get()
             )
         }
+        singleOf(::LocalIdentitySharingDataSource)
+        singleOf(::LocalIdentitySharingRepositoryImpl) { bind<LocalIdentitySharingRepository>() }
+        factory { ObserveLocalIdentitySharedUseCase(repository = get()) }
+        factory { RecordLocalIdentitySharedUseCase(repository = get()) }
         singleOf(::IdentityExchangeStoreDataSource)
         singleOf(::IdentityExchangeDataSource)
         singleOf(::ManualIdentityExchangeDataSource)
@@ -122,6 +132,13 @@ val identityModule =
 
         factory { StartIdentityExchangeUseCase(repository = get()) }
         factory { StartManualIdentityExchangeUseCase(repository = get()) }
+        factory {
+            RecoverManualIdentityExchangeUseCase(
+                setupModeRepository = get(),
+                getRemoteIdentity = get(),
+                startManualIdentityExchange = get()
+            )
+        }
         factory { AcceptIdentityExchangeUseCase(repository = get()) }
         factory { DeclineIdentityExchangeUseCase(repository = get()) }
         factory { ObserveIdentityResultsUseCase(repository = get()) }

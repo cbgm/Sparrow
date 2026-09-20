@@ -8,6 +8,7 @@ import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectConversatio
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.ObserveConversationQueueAvailabilityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveIdentityHandshakeStateUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalIdentitySharedUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveRemoteIdentitiesUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -19,6 +20,7 @@ class ObserveDirectChatContextUseCase(
     private val contactRepository: ContactRepository,
     private val observeIdentityHandshakeState: ObserveIdentityHandshakeStateUseCase,
     private val observeRemoteIdentities: ObserveRemoteIdentitiesUseCase,
+    private val observeLocalIdentityShared: ObserveLocalIdentitySharedUseCase,
     private val observeConversationQueueAvailability: ObserveConversationQueueAvailabilityUseCase,
     private val identitySetupModeRepository: DirectIdentitySetupModeRepository
 ) {
@@ -46,12 +48,15 @@ class ObserveDirectChatContextUseCase(
                     setupMode = setupMode
                 )
             },
-            observeRemoteIdentities()
-                .map { identities -> identities.firstOrNull { it.peerId == contactId } }
-                .distinctUntilChanged { previous, current ->
-                    previous.hasSameIdentityContent(current)
-                }
-        ) { chatContext, remoteIdentity ->
-            chatContext.copy(remoteIdentity = remoteIdentity)
+            combine(
+                observeRemoteIdentities()
+                    .map { identities -> identities.firstOrNull { it.peerId == contactId } }
+                    .distinctUntilChanged { previous, current ->
+                        previous.hasSameIdentityContent(current)
+                    },
+                observeLocalIdentityShared(contactId)
+            ) { remoteIdentity, localIdentityShared -> remoteIdentity to localIdentityShared }
+        ) { chatContext, (remoteIdentity, localIdentityShared) ->
+            chatContext.copy(remoteIdentity = remoteIdentity, localIdentityShared = localIdentityShared)
         }
 }

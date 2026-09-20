@@ -31,7 +31,8 @@ class ContactInvitationHandshakeProtocol(
                 inviterEncryptionPublicKey = packet.inviterEncryptionPublicKey,
                 inviterSigningPublicKey = packet.inviterSigningPublicKey,
                 responderEncryptionPublicKey = packet.responderEncryptionPublicKey,
-                responderSigningPublicKey = packet.responderSigningPublicKey
+                responderSigningPublicKey = packet.responderSigningPublicKey,
+                autoSharesIdentity = packet.autoSharesIdentity
             ),
             packet.responderSigningPublicKey,
             packet.signature
@@ -78,7 +79,8 @@ class ContactInvitationHandshakeProtocol(
         inviterEncryptionPublicKey: ByteArray,
         inviterSigningPublicKey: ByteArray,
         responderEncryptionPublicKey: ByteArray,
-        signingKeyPair: LocalSigningKeyPair
+        signingKeyPair: LocalSigningKeyPair,
+        autoSharesIdentity: Boolean = false
     ): Result<ContactInviteAcceptedPacket> = runCatching {
         val packetId = "contact-invite-accepted-$invitationId"
         val signature = signatureCrypto.sign(
@@ -93,7 +95,8 @@ class ContactInvitationHandshakeProtocol(
                 inviterEncryptionPublicKey = inviterEncryptionPublicKey,
                 inviterSigningPublicKey = inviterSigningPublicKey,
                 responderEncryptionPublicKey = responderEncryptionPublicKey,
-                responderSigningPublicKey = signingKeyPair.publicKey
+                responderSigningPublicKey = signingKeyPair.publicKey,
+                autoSharesIdentity = autoSharesIdentity
             ),
             signingKeyPair.privateKey
         ).getOrThrow()
@@ -108,6 +111,7 @@ class ContactInvitationHandshakeProtocol(
             inviterSigningPublicKey = inviterSigningPublicKey.copyOf(),
             responderEncryptionPublicKey = responderEncryptionPublicKey.copyOf(),
             responderSigningPublicKey = signingKeyPair.publicKey.copyOf(),
+            autoSharesIdentity = autoSharesIdentity,
             signature = signature.copyOf()
         )
     }

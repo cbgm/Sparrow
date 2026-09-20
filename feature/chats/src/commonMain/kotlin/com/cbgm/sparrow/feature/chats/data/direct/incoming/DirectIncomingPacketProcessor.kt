@@ -6,8 +6,6 @@ import com.cbgm.sparrow.core.protocol.packet.MessageDeletionPacket
 import com.cbgm.sparrow.core.protocol.packet.MessageEditPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.core.security.DirectChatAuthorizationRequiredException
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
-import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessageDeletionPacketHandler
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessageEditPacketHandler
@@ -20,8 +18,7 @@ class DirectIncomingPacketProcessor(
     private val messagePacketHandler: DirectMessagePacketHandler,
     private val deletionPacketHandler: DirectMessageDeletionPacketHandler,
     private val editPacketHandler: DirectMessageEditPacketHandler,
-    private val getIdentityPeerState: GetIdentityPeerStateUseCase,
-    private val identitySetupModeRepository: DirectIdentitySetupModeRepository
+    private val getIdentityPeerState: GetIdentityPeerStateUseCase
 ) {
     fun canProcess(packet: SparrowPacket): Boolean =
         packet is ChatMessagePacket || packet is MessageDeletionPacket || packet is MessageEditPacket
@@ -29,19 +26,10 @@ class DirectIncomingPacketProcessor(
     suspend fun process(incoming: DecodedIncomingPacketDto): Result<Unit> {
         val authorization =
             getIdentityPeerState(incoming.contactId).mapCatching { state ->
-                when (identitySetupModeRepository.getMode()) {
-                    DirectIdentitySetupMode.AUTOMATIC_INVITATION ->
-                        if (!state.hasEstablishedExchange) {
-                            throw DirectChatAuthorizationRequiredException(
-                                "A contact invitation must be accepted before messages can be sent"
-                            )
-                        }
-                    DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING ->
-                        if (!state.hasMutualIdentity) {
-                            throw DirectChatAuthorizationRequiredException(
-                                "Both identities must be exchanged before messages can be sent"
-                            )
-                        }
+                if (!state.hasEstablishedExchange) {
+                    throw DirectChatAuthorizationRequiredException(
+                        "A contact invitation must be accepted before messages can be received"
+                    )
                 }
             }
         authorization.exceptionOrNull()?.let { error ->

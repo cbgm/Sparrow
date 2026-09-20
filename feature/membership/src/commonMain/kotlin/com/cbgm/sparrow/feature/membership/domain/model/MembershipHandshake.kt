@@ -6,6 +6,7 @@ data class MembershipHandshake(
     val peerId: String,
     val createdAtEpochMilliseconds: Long,
     val updatedAtEpochMilliseconds: Long,
+    val status: MembershipStatus,
     val ownerEncryptionPublicKey: ByteArray? = null,
     val ownerSigningPublicKey: ByteArray? = null
 ) {
@@ -17,6 +18,7 @@ data class MembershipHandshake(
             peerId == other.peerId &&
             createdAtEpochMilliseconds == other.createdAtEpochMilliseconds &&
             updatedAtEpochMilliseconds == other.updatedAtEpochMilliseconds &&
+            status == other.status &&
             ownerEncryptionPublicKey.contentEqualsNullable(other.ownerEncryptionPublicKey) &&
             ownerSigningPublicKey.contentEqualsNullable(other.ownerSigningPublicKey)
     }
@@ -27,6 +29,7 @@ data class MembershipHandshake(
         result = 31 * result + peerId.hashCode()
         result = 31 * result + createdAtEpochMilliseconds.hashCode()
         result = 31 * result + updatedAtEpochMilliseconds.hashCode()
+        result = 31 * result + status.hashCode()
         result = 31 * result + (ownerEncryptionPublicKey?.contentHashCode() ?: 0)
         result = 31 * result + (ownerSigningPublicKey?.contentHashCode() ?: 0)
         return result

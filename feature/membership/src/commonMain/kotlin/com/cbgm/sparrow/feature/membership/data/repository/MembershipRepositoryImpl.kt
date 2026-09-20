@@ -14,10 +14,12 @@ import com.cbgm.sparrow.feature.membership.data.GroupMembershipEvent
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupMembershipStoreDataSource
+import com.cbgm.sparrow.feature.membership.data.datasource.GroupOwnerWelcomeDataSource
 import com.cbgm.sparrow.feature.membership.data.mapper.toMembershipResult
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.data.protocol.GroupMembershipPacketProtocol
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
 import com.cbgm.sparrow.feature.membership.domain.model.IncomingMembershipOffer
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipDeclineDisposition
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipDeclineResult
@@ -25,6 +27,7 @@ import com.cbgm.sparrow.feature.membership.domain.model.MembershipHandshake
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipJoinRequest
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipResult
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipSigningProof
+import com.cbgm.sparrow.feature.membership.domain.model.MembershipStatus
 import com.cbgm.sparrow.feature.membership.domain.model.StartedMembershipHandshake
 import com.cbgm.sparrow.feature.membership.domain.repository.MembershipRepository
 import kotlinx.coroutines.flow.Flow
@@ -37,7 +40,8 @@ internal class MembershipRepositoryImpl(
     private val membershipPacketProtocol: GroupMembershipPacketProtocol,
     private val localPublicIdentityProvider: LocalPublicIdentityProvider,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
-    private val protocolOutbox: ProtocolOutbox
+    private val protocolOutbox: ProtocolOutbox,
+    private val groupOwnerWelcome: GroupOwnerWelcomeDataSource
 ) : MembershipRepository {
     override fun observeResults(): Flow<List<MembershipResult>> =
         membershipStore
@@ -315,27 +319,40 @@ internal class MembershipRepositoryImpl(
 
     override suspend fun confirmJoinIdentity(
         sourceId: String,
-        updatedAtEpochMilliseconds: Long
+        updatedAtEpochMilliseconds: Long,
+        context: GroupMembershipContext,
+        memberEncryptionPublicKey: ByteArray,
+        memberSigningPublicKey: ByteArray
     ): Result<Unit> =
         runCatching {
-            val membership =
-                requireNotNull(membershipStore.findBySourceInvitationId(sourceId)) {
-                    "Membership handshake was not found"
-                }
-            when (membership.status) {
-                GroupMembershipStatus.STAGED.name ->
-                    transition(
-                        sourceId = sourceId,
-                        event = GroupMembershipEvent.IDENTITY_CONFIRMED,
-                        updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
-                    )
-
-                GroupMembershipStatus.IDENTITY_READY.name,
-                GroupMembershipStatus.WELCOME_SENT.name,
-                GroupMembershipStatus.ACTIVE.name -> Unit
-
-                else -> error("Unsupported membership status: ${membership.status}")
+            val membership = requireNotNull(membershipStore.findBySourceInvitationId(sourceId)) {
+                "Membership handshake was not found"
             }
+            check(membership.perspective == GroupMembershipPerspective.OWNER.name) {
+                "Only the owner may send a group welcome"
+            }
+            if (membership.status == GroupMembershipStatus.STAGED.name) {
+                transition(sourceId, GroupMembershipEvent.IDENTITY_CONFIRMED, updatedAtEpochMilliseconds)
+            } else {
+                check(
+                    membership.status in setOf(
+                        GroupMembershipStatus.IDENTITY_READY.name,
+                        GroupMembershipStatus.WELCOME_SENT.name,
+                        GroupMembershipStatus.ACTIVE.name
+                    )
+                ) { "Unsupported membership status: ${membership.status}" }
+            }
+            // A join acknowledgement is not an installed group epoch. Persist an
+            // authenticated owner epoch and enqueue a signed welcome before the
+            // membership can progress to member-ready/active.
+            groupOwnerWelcome.sendWelcome(
+                sourceId = sourceId,
+                title = context.title,
+                groupCreatedAtEpochMilliseconds = context.createdAtEpochMilliseconds,
+                memberEncryptionPublicKey = memberEncryptionPublicKey,
+                memberSigningPublicKey = memberSigningPublicKey,
+                updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
+            )
         }
 
     override suspend fun markRemoved(
@@ -533,6 +550,7 @@ internal class MembershipRepositoryImpl(
             peerId = contactId,
             createdAtEpochMilliseconds = createdAtEpochMilliseconds,
             updatedAtEpochMilliseconds = updatedAtEpochMilliseconds,
+            status = MembershipStatus.valueOf(status),
             ownerEncryptionPublicKey = ownerEncryptionPublicKey?.copyOf(),
             ownerSigningPublicKey = ownerSigningPublicKey?.copyOf()
         )

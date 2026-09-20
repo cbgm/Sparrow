@@ -94,7 +94,11 @@ internal class ManualIdentityExchangeDataSource(
                     signature = packet.signature
                 ).getOrThrow()
 
-            remoteIdentityDataSource.markMutual(
+            // The peer may have sent their IdentityPacket before we imported their
+            // identity. That early packet was ignored, but this signature-verified
+            // acknowledgement of our current keys is sufficient to complete manual
+            // exchange without requiring the lost packet to be resent.
+            remoteIdentityDataSource.markMutualAfterVerifiedManualAcknowledgement(
                 peerId = context.contactId,
                 encryptionPublicKey = remoteIdentity.encryptionPublicKey,
                 signingPublicKey = remoteIdentity.signingPublicKey

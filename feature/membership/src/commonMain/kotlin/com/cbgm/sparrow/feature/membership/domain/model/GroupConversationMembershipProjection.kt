@@ -19,8 +19,8 @@ object GroupConversationMembershipProjector {
             isLocallyInactive && currentStatuses.isEmpty() -> GroupConversationState.REMOVED
             currentStatuses.isEmpty() || currentStatuses.all { it == ACTIVE } -> GroupConversationState.READY
             LEAVING in currentStatuses -> GroupConversationState.LEAVING
-            JOIN_REQUEST_SENT in currentStatuses || WAITING_FOR_ACTIVATION in currentStatuses -> GroupConversationState.JOINING
             ACTIVE in currentStatuses -> GroupConversationState.READY
+            JOIN_REQUEST_SENT in currentStatuses || WAITING_FOR_ACTIVATION in currentStatuses -> GroupConversationState.JOINING
             IDENTITY_READY in currentStatuses || WELCOME_SENT in currentStatuses -> GroupConversationState.DISTRIBUTING_KEYS
             STAGED in currentStatuses -> GroupConversationState.WAITING_FOR_MEMBERS
             FAILED in currentStatuses -> GroupConversationState.FAILED
