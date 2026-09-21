@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.chats.presentation.overview
 
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.ChatOpenTrace
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
@@ -63,6 +64,7 @@ class OverviewViewModel(
             } else {
                 AppRoute.Chat(chat.conversationId, chat.contactId, chat.contactName)
             }
+        ChatOpenTrace.begin(if (chat.isGroup) "group" else "direct")
         navigator.navigateTo(route)
     }
 

@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.chats.presentation.direct
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.ChatOpenTrace
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
@@ -68,8 +69,11 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.time.TimeSource
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DirectConversationViewModel(
@@ -104,6 +108,11 @@ class DirectConversationViewModel(
     private val targetMessageId =
         savedStateHandle.get<String>(AppRoute.Chat::targetMessageId.name)
     private val logger = SparrowLog.withTag("DirectConversationViewModel")
+
+    init {
+        ChatOpenTrace.event("direct ViewModel constructed")
+    }
+
     private val messageText = savedStateHandle.getMutableStateFlow(MESSAGE_TEXT_KEY, "")
     private val replyToMessageId = savedStateHandle.getMutableStateFlow(REPLY_TO_MESSAGE_ID_KEY, "")
     private val editingMessageId = savedStateHandle.getMutableStateFlow(EDITING_MESSAGE_ID_KEY, "")
@@ -126,10 +135,18 @@ class DirectConversationViewModel(
                 conversationId = conversationId,
                 contactId = contactId,
                 oldestCursor = cursor
-            ).onEach {
+            ).onStart {
+                ChatOpenTrace.event("direct context collection started (cursorInitial=${cursor == null})")
+            }.onEach { context ->
+                ChatOpenTrace.event("direct context emitted messages=${context.conversation?.messages?.size ?: 0}")
                 observedHistoryCursor.value = cursor
             }
-        }
+        }.shareIn(
+            scope = viewModelScope,
+            // Start before the screen collects its states; no pre-navigation wait.
+            started = SharingStarted.Eagerly,
+            replay = 1
+        )
 
     init {
         // Old chats may have lost the first IdentityPacket because the other device
@@ -185,7 +202,8 @@ class DirectConversationViewModel(
             conversationContext,
             observeMessageSafetyAssessments()
         ) { context, safetyAssessments ->
-            toDirectConversationUiState(
+            val mappingStarted = TimeSource.Monotonic.markNow()
+            val mapped = toDirectConversationUiState(
                 contactId = contactId,
                 fallbackContactName = fallbackContactName,
                 conversation = context.conversation,
@@ -197,6 +215,8 @@ class DirectConversationViewModel(
                 localIdentityShared = context.localIdentityShared,
                 safetyAssessments = safetyAssessments
             )
+            ChatOpenTrace.event("direct UI mapping completed messages=${mapped.messages.size} duration=${mappingStarted.elapsedNow().inWholeMilliseconds}ms loading=${mapped.isLoading}")
+            mapped
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000L),

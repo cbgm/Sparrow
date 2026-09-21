@@ -18,9 +18,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.logging.ChatOpenTrace
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -36,6 +38,7 @@ import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageP
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionBurst
 import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionUi
 import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
+import kotlinx.coroutines.flow.first
 
 private const val LOAD_MORE_THRESHOLD = 8
 
@@ -58,6 +61,13 @@ internal fun MessageList(
     itemLeadingContent: (@Composable (MessageBubbleUi) -> Unit)? = null
 ) {
     val messages = dissolvingListState.messages
+
+    LaunchedEffect(listState) {
+        ChatOpenTrace.event("message list entered composition")
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.any { it.key != "history-loading" } }
+            .first { visible -> visible }
+        ChatOpenTrace.event("first message item laid out (not necessarily drawn yet)")
+    }
 
     val messageIds = remember(messages) { messages.map(MessageBubbleUi::id) }
 

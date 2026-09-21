@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cbgm.sparrow.core.logging.ChatOpenTrace
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversationUiEvent
@@ -31,6 +32,12 @@ fun DirectConversationRoute(
     )
 ) {
     val conversationState by viewModel.conversationState.collectAsStateWithLifecycle()
+    LaunchedEffect(viewModel) {
+        ChatOpenTrace.event("direct route first composition committed")
+    }
+    LaunchedEffect(conversationState.isLoading, conversationState.messages.size) {
+        ChatOpenTrace.event("direct route state loading=${conversationState.isLoading} messages=${conversationState.messages.size}")
+    }
     val composerState by viewModel.composerState.collectAsStateWithLifecycle()
     val contextState by viewModel.contextState.collectAsStateWithLifecycle()
     val indicatorState by viewModel.indicatorState.collectAsStateWithLifecycle()

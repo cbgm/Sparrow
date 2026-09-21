@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.data.direct.repository
 
+import com.cbgm.sparrow.core.logging.ChatOpenTrace
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessagesDto
@@ -13,11 +14,18 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryPolicy
 import com.cbgm.sparrow.feature.chats.domain.model.MessageReaction
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectConversationRepository
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.shareIn
+import kotlin.time.TimeSource
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class DirectConversationRepositoryImpl(
@@ -27,46 +35,64 @@ class DirectConversationRepositoryImpl(
     override fun observe(
         conversationId: String,
         oldestCursor: MessageHistoryCursor?
-    ): Flow<DirectConversation?> {
-        val messages =
-            oldestCursor?.let { cursor ->
-                conversationDataSource.observeMessagesFromCursor(
-                    conversationId = conversationId,
-                    fromTimestamp = cursor.createdAtEpochMilliseconds,
-                    fromMessageId = cursor.messageId
-                )
-            } ?: conversationDataSource.observeRecentMessages(conversationId, MessageHistoryPolicy.PAGE_SIZE)
-
-        val attachments = messages.map { loaded -> loaded.map { it.id } }.distinctUntilChanged().flatMapLatest { messageIds ->
-            messageAttachmentDataSource.observeByMessageIds(messageIds)
-        }
-        val reactions = observeReactions(conversationId, oldestCursor)
-
-        return combine(
-            conversationDataSource.observeConversationById(conversationId),
-            messages,
-            attachments,
-            reactions
-        ) { conversation, loadedMessages, attachmentsByMessageId, loadedReactions ->
-            conversation?.let {
-                DirectConversationSnapshotDto(
-                    conversation = ConversationWithMessagesDto(it, loadedMessages),
-                    partsByMessageId =
-                        attachmentsByMessageId.mapValues { (_, values) ->
-                            values.toMessagePartDtos()
-                        },
-                    reactionsByMessageId = loadedReactions.toDomainReactionsByMessageId()
-                )
+    ): Flow<DirectConversation?> = flow {
+        coroutineScope {
+            val messages =
+                oldestCursor?.let { cursor ->
+                    conversationDataSource.observeMessagesFromCursor(
+                        conversationId = conversationId,
+                        fromTimestamp = cursor.createdAtEpochMilliseconds,
+                        fromMessageId = cursor.messageId
+                    )
+                } ?: conversationDataSource.observeRecentMessages(conversationId, MessageHistoryPolicy.PAGE_SIZE)
+            val tracedMessages = messages.onEach { loaded ->
+                ChatOpenTrace.event("direct Room messages emitted count=${loaded.size}")
             }
-        }.map { result ->
-            result
-                ?.takeIf { it.conversation.conversation.type == DIRECT_CONVERSATION_TYPE }
-                ?.let { snapshot ->
-                    snapshot.conversation.toDirectConversation(
-                        partsByMessageId = snapshot.partsByMessageId,
-                        reactionsByMessageId = snapshot.reactionsByMessageId
+
+            val sharedMessages = tracedMessages.shareIn(
+                scope = this,
+                started = SharingStarted.Eagerly,
+                replay = 1
+            )
+
+            val attachments = sharedMessages.map { loaded -> loaded.map { it.id } }.distinctUntilChanged().flatMapLatest { messageIds ->
+                messageAttachmentDataSource.observeByMessageIds(messageIds)
+            }
+            val reactions = observeReactions(conversationId, oldestCursor)
+
+            combine(
+                conversationDataSource.observeConversationById(conversationId),
+                sharedMessages,
+                attachments,
+                reactions
+            ) { conversation, loadedMessages, attachmentsByMessageId, loadedReactions ->
+                conversation?.let {
+                    DirectConversationSnapshotDto(
+                        conversation = ConversationWithMessagesDto(it, loadedMessages),
+                        partsByMessageId =
+                            attachmentsByMessageId.mapValues { (_, values) ->
+                                values.toMessagePartDtos()
+                            },
+                        reactionsByMessageId = loadedReactions.toDomainReactionsByMessageId()
                     )
                 }
+            }.onEach { result ->
+                ChatOpenTrace.event("direct repo snapshot ready count=${result?.conversation?.messages?.size ?: 0}")
+            }.map { result ->
+                val mappingStarted = TimeSource.Monotonic.markNow()
+                val mapped = result
+                    ?.takeIf { it.conversation.conversation.type == DIRECT_CONVERSATION_TYPE }
+                    ?.let { snapshot ->
+                        snapshot.conversation.toDirectConversation(
+                            partsByMessageId = snapshot.partsByMessageId,
+                            reactionsByMessageId = snapshot.reactionsByMessageId
+                        )
+                    }
+                ChatOpenTrace.event("direct repo domain mapping completed duration=${mappingStarted.elapsedNow().inWholeMilliseconds}ms messages=${mapped?.messages?.size ?: 0}")
+                mapped
+            }.onStart {
+                ChatOpenTrace.event("direct repo subscribed")
+            }.collect { emit(it) }
         }
     }
 

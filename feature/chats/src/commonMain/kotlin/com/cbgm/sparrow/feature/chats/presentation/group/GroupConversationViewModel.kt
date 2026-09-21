@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.chats.presentation.group
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.ChatOpenTrace
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
@@ -62,7 +63,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -76,6 +76,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.time.TimeSource
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class GroupConversationViewModel(
@@ -106,6 +107,11 @@ class GroupConversationViewModel(
     private val targetMessageId =
         savedStateHandle.get<String>(AppRoute.GroupConversation::targetMessageId.name)
     private val logger = SparrowLog.withTag("GroupConversationViewModel")
+
+    init {
+        ChatOpenTrace.event("group ViewModel constructed")
+    }
+
     private val messageText = savedStateHandle.getMutableStateFlow(MESSAGE_TEXT_KEY, "")
     private val replyToMessageId = savedStateHandle.getMutableStateFlow(REPLY_TO_MESSAGE_ID_KEY, "")
     private val editingMessageId = savedStateHandle.getMutableStateFlow(EDITING_MESSAGE_ID_KEY, "")
@@ -135,19 +141,28 @@ class GroupConversationViewModel(
             observeChatContext(
                 groupId = groupId,
                 oldestCursor = cursor
-            ).onEach {
+            ).onStart {
+                ChatOpenTrace.event("group context collection started (cursorInitial=${cursor == null})")
+            }.onEach { context ->
+                ChatOpenTrace.event("group context emitted messages=${context.conversation?.messages?.size ?: 0}")
                 observedHistoryCursor.value = cursor
             }
         }
 
-    private val presentationContext: Flow<GroupContextObservation> =
+    // Share the error-aware presentation stream, so errors still become Failed.
+    // All UI states, indicators and forwarding now consume the same observation.
+    private val presentationContext: StateFlow<GroupContextObservation> =
         groupContext
             .map<GroupChatContext, GroupContextObservation> { context ->
                 GroupContextObservation.Loaded(context)
             }.onStart { emit(GroupContextObservation.Loading) }
             .catch { error ->
                 emit(GroupContextObservation.Failed(error.message ?: "Group conversation could not be loaded"))
-            }
+            }.stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = GroupContextObservation.Loading
+            )
 
     private val composerDraft =
         combine(messageText, replyToMessageId, editingMessageId) { text, replyId, editId ->
@@ -176,7 +191,8 @@ class GroupConversationViewModel(
             presentationContext,
             observeMessageSafetyAssessments()
         ) { presentation, safetyAssessments ->
-            toGroupConversationUiState(
+            val mappingStarted = TimeSource.Monotonic.markNow()
+            val mapped = toGroupConversationUiState(
                 groupId = groupId,
                 conversation = presentation.context?.conversation,
                 contacts = presentation.context?.contacts.orEmpty(),
@@ -185,6 +201,8 @@ class GroupConversationViewModel(
                 administration = presentation.context?.administration ?: GroupAdministrationState(),
                 pin = presentation.context?.pin
             )
+            ChatOpenTrace.event("group UI mapping completed messages=${mapped.messages.size} duration=${mappingStarted.elapsedNow().inWholeMilliseconds}ms loading=${mapped.isLoading}")
+            mapped
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
@@ -295,7 +313,11 @@ class GroupConversationViewModel(
         )
 
     init {
-        indicatorController.start(groupContext.map { context -> context.administration.currentMemberContactIds })
+        indicatorController.start(
+            presentationContext.map { observation ->
+                observation.context?.administration?.currentMemberContactIds.orEmpty()
+            }
+        )
         viewModelScope.launch {
             observeVoiceRecordingActive().collect { isRecording ->
                 indicatorController.onLocalVoiceRecordingChanged(
@@ -437,9 +459,10 @@ class GroupConversationViewModel(
     ) {
         viewModelScope.launch {
             val message =
-                groupContext
-                    .first()
-                    .conversation
+                presentationContext
+                    .first { observation -> observation !is GroupContextObservation.Loading }
+                    .context
+                    ?.conversation
                     ?.messages
                     ?.firstOrNull { message -> message.id == messageId }
                     ?.takeIf { message -> message.type == ChatMessageType.USER }
