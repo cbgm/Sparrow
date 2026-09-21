@@ -2,9 +2,16 @@ package com.cbgm.sparrow.feature.chats.presentation.direct
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,6 +59,10 @@ import com.cbgm.sparrow.feature.chats.presentation.direct.model.findMessage
 import com.cbgm.sparrow.feature.contacts.presentation.overview.ContactAttachmentSelectionRoute
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.common_copied
+import com.cbgm.sparrow.resources.feature_chats_reconnect_cancel
+import com.cbgm.sparrow.resources.feature_chats_reconnect_confirm
+import com.cbgm.sparrow.resources.feature_chats_reconnect_contact
+import com.cbgm.sparrow.resources.feature_chats_reconnect_warning
 import com.cbgm.sparrow.resources.feature_chats_start_conversation_with
 import org.jetbrains.compose.resources.stringResource
 
@@ -64,12 +75,16 @@ fun DirectConversationScreen(
     indicatorState: IndicatorUiState,
     historyState: MessageHistoryUiState,
     errorMessage: String?,
+    modifier: Modifier = Modifier,
     onUiEvent: (DirectConversationUiEvent) -> Unit,
     onForwardMessageRequested: (String) -> Unit,
-    modifier: Modifier = Modifier,
+    onReconnectRequested: () -> Unit = {},
+    reconnectBusy: Boolean = false,
+    reconnectFeedback: String? = null,
     targetMessageId: String? = null
 ) {
     var showIdentitySetupDialog by rememberSaveable { mutableStateOf(false) }
+    var showReconnectConfirmation by rememberSaveable { mutableStateOf(false) }
     var viewerMessageId by rememberSaveable { mutableStateOf<String?>(null) }
     var viewerAttachmentId by rememberSaveable { mutableStateOf<String?>(null) }
     var showContactSelection by rememberSaveable { mutableStateOf(false) }
@@ -78,6 +93,10 @@ fun DirectConversationScreen(
     var reactionBurst by remember { mutableStateOf<MessageReactionBurst?>(null) }
     var feedbackOverlay by remember { mutableStateOf<FeedbackOverlayData?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(reconnectFeedback) {
+        reconnectFeedback?.let { snackbarHostState.showSnackbar(it) }
+    }
 
     LaunchedEffect(errorMessage) {
         errorMessage?.let { message ->
@@ -98,6 +117,25 @@ fun DirectConversationScreen(
         messageContextAnchor?.takeIf { anchor ->
             anchor.messageId == contextState.message?.id
         }
+
+    if (showReconnectConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showReconnectConfirmation = false },
+            title = { Text(stringResource(Res.string.feature_chats_reconnect_contact)) },
+            text = { Text(stringResource(Res.string.feature_chats_reconnect_warning)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showReconnectConfirmation = false
+                    onReconnectRequested()
+                }) { Text(stringResource(Res.string.feature_chats_reconnect_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showReconnectConfirmation = false }) {
+                    Text(stringResource(Res.string.feature_chats_reconnect_cancel))
+                }
+            }
+        )
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
         MessageContextHost(
@@ -175,7 +213,18 @@ fun DirectConversationScreen(
                         model = uiState.toHeaderUiModel(),
                         containerColor = containerColor,
                         onBackClick = { onUiEvent(DirectConversationUiEvent.BackClicked) },
-                        onHeaderClick = { onUiEvent(DirectConversationUiEvent.HeaderClicked) }
+                        onHeaderClick = { onUiEvent(DirectConversationUiEvent.HeaderClicked) },
+                        actions = {
+                            IconButton(
+                                onClick = { showReconnectConfirmation = true },
+                                enabled = !reconnectBusy && !uiState.isLoading
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = stringResource(Res.string.feature_chats_reconnect_contact)
+                                )
+                            }
+                        }
                     ) {
                         if (!uiState.isLoading) {
                             SecurityBanner(

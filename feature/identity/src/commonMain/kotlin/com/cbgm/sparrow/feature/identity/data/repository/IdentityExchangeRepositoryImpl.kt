@@ -7,6 +7,8 @@ import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.identity.data.datasource.IdentityExchangeDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.ManualIdentityExchangeDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.RemoteIdentityDataSource
+import com.cbgm.sparrow.feature.identity.data.model.IdentityAcceptanceReviewRequiredDtoException
+import com.cbgm.sparrow.feature.identity.domain.error.IdentityAcceptanceRequiresReviewException
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchange
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeAcceptance
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeBinding
@@ -124,7 +126,15 @@ internal class IdentityExchangeRepositoryImpl(
     override suspend fun receiveAccepted(
         context: IncomingPacketContext,
         acceptance: IdentityExchangeAcceptance
-    ): Result<Unit> = dataSource.receiveAccepted(context, acceptance)
+    ): Result<Unit> = dataSource.receiveAccepted(context, acceptance).recoverCatching { error ->
+        if (error is IdentityAcceptanceReviewRequiredDtoException) {
+            throw IdentityAcceptanceRequiresReviewException(
+                peerId = error.peerId,
+                invitationExpiresAtEpochMilliseconds = error.invitationExpiresAtEpochMilliseconds
+            )
+        }
+        throw error
+    }
 
     override suspend fun recordRemoteDecline(
         exchangeId: String,

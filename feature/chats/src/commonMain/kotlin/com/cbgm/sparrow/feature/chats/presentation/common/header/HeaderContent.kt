@@ -24,6 +24,7 @@ fun HeaderContent(
     containerColor: Color,
     onBackClick: () -> Unit,
     onHeaderClick: () -> Unit,
+    actions: @Composable () -> Unit = {},
     belowHeader: @Composable () -> Unit = {}
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -35,6 +36,7 @@ fun HeaderContent(
                 navigationIconContentColor = MaterialTheme.colorScheme.onBackground
             ),
             title = { HeaderTitle(model = model, onClick = onHeaderClick) },
+            actions = { actions() },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
                     Icon(

@@ -660,4 +660,10 @@
     <string name="feature_identity_recovery_completed">Identity replaced. Your existing contact and conversation history were kept, but messaging remains locked until a fresh invitation is accepted. Send a new invitation below, or ask your contact to send one. Old queued packets cannot be resent.</string>
     <string name="feature_identity_recovery_send_invitation">Send a new invitation</string>
     <string name="feature_identity_recovery_invitation_queued">Invitation queued. Your contact must accept it before messaging can resume.</string>
+
+    <string name="feature_chats_reconnect_contact">Reconnect contact</string>
+    <string name="feature_chats_reconnect_warning">Send a new invitation to this contact? This ends the current conversation authorization until a new invitation is accepted. Your existing conversation and history are kept. If the contact reinstalled Sparrow with new keys, you must independently verify and approve the new identity before sending messages.</string>
+    <string name="feature_chats_reconnect_confirm">Send invitation</string>
+    <string name="feature_chats_reconnect_cancel">Cancel</string>
+    <string name="feature_chats_reconnect_queued">A new invitation has been queued. Wait for acceptance before sending messages.</string>
 </resources>

@@ -16,6 +16,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.Observe
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.PrepareConversationMessageUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.PrepareConversationOpenUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.PromoteConversationGroupMemberUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.ReconnectExistingConversationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.RemoveConversationGroupMemberUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.RequireDirectChatAuthorizationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.ResolveIncomingIdentityPeerUseCase
@@ -83,6 +84,7 @@ val conversationOrchestrationModule =
                 startIdentityExchange = get(),
                 getIdentityPeerState = get(),
                 localPhoneNumberProvider = get(),
+                resolveContactBootstrapRoutingId = get(),
                 acceptIdentityExchange = get(),
                 declineIdentityExchange = get(),
                 receiveIdentityExchange = get(),
@@ -179,6 +181,7 @@ val conversationOrchestrationModule =
         singleOf(::PrepareConversationMessageUseCase)
         singleOf(::PrepareConversationOpenUseCase)
         factory { StartRecoveryInvitationUseCase(get()) }
+        factory { ReconnectExistingConversationUseCase(get()) }
         singleOf(::AddConversationMembersUseCase)
         singleOf(::GetConversationGroupLeaveRequirementUseCase)
         singleOf(::PromoteConversationGroupMemberUseCase)

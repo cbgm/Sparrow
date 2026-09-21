@@ -34,6 +34,7 @@ import com.cbgm.sparrow.feature.contacts.domain.model.IncomingPeerContactCandida
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.BlockContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactBootstrapRoutingIdUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveIncomingPeerContactsUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.ApplyIdentityPeerMergeUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.GetIdentityPeerDisplayNameUseCase
@@ -42,6 +43,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.domain.error.RemoteIde
 import com.cbgm.sparrow.feature.conversationorchestration.domain.port.ConversationPort
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.ResolveIncomingIdentityPeerUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.ResolveSigningIdentityContactUseCase
+import com.cbgm.sparrow.feature.identity.domain.error.IdentityAcceptanceRequiresReviewException
 import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchange
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeAcceptance
@@ -143,6 +145,7 @@ internal class ConversationFlowHandler(
     private val startIdentityExchange: StartIdentityExchangeUseCase,
     private val getIdentityPeerState: GetIdentityPeerStateUseCase,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
+    private val resolveContactBootstrapRoutingId: ResolveContactBootstrapRoutingIdUseCase,
     private val acceptIdentityExchange: AcceptIdentityExchangeUseCase,
     private val declineIdentityExchange: DeclineIdentityExchangeUseCase,
     private val receiveIdentityExchange: ReceiveIdentityExchangeUseCase,
@@ -285,6 +288,31 @@ internal class ConversationFlowHandler(
             recordInvitation(
                 exchange.toInvitationLifecycleRecord(peerDisplayName)
             ).getOrThrow()
+        }
+
+    /**
+     * User-triggered reconnection from an EXISTING direct conversation. Ordinary
+     * contact selection must keep its existing no-duplicate behavior; this action
+     * deliberately closes a prior authorization before starting a fresh invite.
+     * The contact, keys and local conversation/history are never deleted here.
+     */
+    suspend fun startExplicitReconnection(peerId: String): Result<Unit> =
+        runCatching {
+            require(peerId.isNotBlank()) { "Peer ID must not be blank" }
+            check(!blocklistRepository.isBlocked(peerId)) { "Blocked contacts cannot be invited" }
+            check(conversationPort.findConversationId(peerId).getOrThrow() != null) {
+                "Reconnection requires an existing direct conversation"
+            }
+            check(getIdentityExchangeClosure(peerId).getOrThrow()?.phase != IdentityExchangeClosurePhase.INCOMING_PENDING) {
+                "Review or decline the pending invitation before starting a reconnection"
+            }
+            // Do not strand an authorized conversation if its number/bootstrap
+            // route is absent. The request still requires explicit acceptance.
+            resolveContactBootstrapRoutingId(peerId)
+            if (getIdentityPeerState(peerId).getOrThrow().hasEstablishedExchange) {
+                revokePeerExchange(peerId)
+            }
+            startDirectInvitation(peerId).getOrThrow()
         }
 
     /** Manual setup selection is a cross-feature workflow, not a Contacts use case. */
@@ -543,20 +571,42 @@ internal class ConversationFlowHandler(
                     packet = packet,
                     receivedAtEpochMilliseconds = context.receivedAtEpochMilliseconds
                 ).getOrThrow()
-                receiveIdentityExchangeAccepted(
-                    context,
-                    IdentityExchangeAcceptance(
-                        exchangeId = packet.invitationId,
-                        acceptedAtEpochMilliseconds = packet.acceptedAtEpochMilliseconds,
-                        inviteChallenge = packet.inviteChallenge,
-                        responseChallenge = packet.responseChallenge,
-                        inviterEncryptionPublicKey = packet.inviterEncryptionPublicKey,
-                        inviterSigningPublicKey = packet.inviterSigningPublicKey,
-                        responderEncryptionPublicKey = packet.responderEncryptionPublicKey,
-                        responderSigningPublicKey = packet.responderSigningPublicKey,
-                        autoSharesIdentity = packet.autoSharesIdentity
-                    )
-                ).getOrThrow()
+                try {
+                    receiveIdentityExchangeAccepted(
+                        context,
+                        IdentityExchangeAcceptance(
+                            exchangeId = packet.invitationId,
+                            acceptedAtEpochMilliseconds = packet.acceptedAtEpochMilliseconds,
+                            inviteChallenge = packet.inviteChallenge,
+                            responseChallenge = packet.responseChallenge,
+                            inviterEncryptionPublicKey = packet.inviterEncryptionPublicKey,
+                            inviterSigningPublicKey = packet.inviterSigningPublicKey,
+                            responderEncryptionPublicKey = packet.responderEncryptionPublicKey,
+                            responderSigningPublicKey = packet.responderSigningPublicKey,
+                            autoSharesIdentity = packet.autoSharesIdentity
+                        )
+                    ).getOrThrow()
+                } catch (review: IdentityAcceptanceRequiresReviewException) {
+                    // This branch is reached only AFTER the accepted packet signature,
+                    // local-key binding, challenge, invitation lifetime and outgoing
+                    // stage were verified. The newly signed key is NOT proof of the
+                    // original contact's identity; never accept or activate this chat.
+                    check(review.peerId == context.contactId) {
+                        "Identity review does not match the invitation contact"
+                    }
+                    stagePendingRemoteIdentityChange(
+                        PendingRemoteIdentityChange(
+                            peerId = review.peerId,
+                            sourcePeerId = context.contactId,
+                            invitationId = packet.invitationId,
+                            proposedEncryptionPublicKey = packet.responderEncryptionPublicKey.copyOf(),
+                            proposedSigningPublicKey = packet.responderSigningPublicKey.copyOf(),
+                            receivedAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
+                            expiresAtEpochMilliseconds = review.invitationExpiresAtEpochMilliseconds
+                        )
+                    ).getOrThrow()
+                    return@runCatching
+                }
                 // A verified acceptance creates the sender's chat immediately. The
                 // Identity observer can be behind this packet, especially on restart.
                 conversationPort.activateAuthorizedConversation(context.contactId).getOrThrow()

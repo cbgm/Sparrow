@@ -8,16 +8,21 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cbgm.sparrow.core.logging.ChatOpenTrace
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversationUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.forwarding.ForwardingSelectionRoute
+import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.feature_chats_reconnect_queued
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -27,22 +32,22 @@ fun DirectConversationRoute(
     modifier: Modifier = Modifier,
     targetMessageId: String? = null,
     savedStateHandle: SavedStateHandle,
+    onRequestReconnect: suspend (String) -> Result<Unit>,
     viewModel: DirectConversationViewModel = koinViewModel(
         parameters = { parametersOf(savedStateHandle) }
     )
 ) {
     val conversationState by viewModel.conversationState.collectAsStateWithLifecycle()
-    LaunchedEffect(viewModel) {
-        ChatOpenTrace.event("direct route first composition committed")
-    }
-    LaunchedEffect(conversationState.isLoading, conversationState.messages.size) {
-        ChatOpenTrace.event("direct route state loading=${conversationState.isLoading} messages=${conversationState.messages.size}")
-    }
     val composerState by viewModel.composerState.collectAsStateWithLifecycle()
     val contextState by viewModel.contextState.collectAsStateWithLifecycle()
     val indicatorState by viewModel.indicatorState.collectAsStateWithLifecycle()
     val historyState by viewModel.historyState.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
+
+    val scope = rememberCoroutineScope()
+    val reconnectSuccessText = stringResource(Res.string.feature_chats_reconnect_queued)
+    var reconnectBusy by remember { mutableStateOf(false) }
+    var reconnectFeedback by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(contactId) {
         viewModel.markConversationRead()
@@ -76,6 +81,26 @@ fun DirectConversationRoute(
             historyState = historyState,
             errorMessage = errorMessage,
             onUiEvent = viewModel::onUiEvent,
+            reconnectBusy = reconnectBusy,
+            reconnectFeedback = reconnectFeedback,
+            onReconnectRequested = {
+                if (!reconnectBusy) {
+                    reconnectBusy = true
+                    reconnectFeedback = null
+                    scope.launch {
+                        try {
+                            onRequestReconnect(contactId).fold(
+                                onSuccess = { reconnectFeedback = reconnectSuccessText },
+                                onFailure = { reconnectFeedback = it.message ?: "Could not queue a new invitation" }
+                            )
+                        } catch (error: Exception) {
+                            reconnectFeedback = error.message ?: "Could not queue a new invitation"
+                        } finally {
+                            reconnectBusy = false
+                        }
+                    }
+                }
+            },
             onForwardMessageRequested = { messageId -> forwardingMessageId = messageId },
             targetMessageId = targetMessageId,
             modifier = Modifier.fillMaxSize()

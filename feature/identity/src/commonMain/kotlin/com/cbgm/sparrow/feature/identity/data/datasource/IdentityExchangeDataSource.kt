@@ -20,6 +20,7 @@ import com.cbgm.sparrow.core.protocol.profile.ProfilePictureMetadata
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.IdentityExchangeEntity
+import com.cbgm.sparrow.feature.identity.data.model.IdentityAcceptanceReviewRequiredDtoException
 import com.cbgm.sparrow.feature.identity.data.model.IdentityExchangeBindingDto
 import com.cbgm.sparrow.feature.identity.data.model.IdentityExchangeStage
 import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
@@ -616,21 +617,33 @@ internal class IdentityExchangeDataSource(
                 require(acceptance.acceptedAtEpochMilliseconds <= invitation.expiresAtEpochMilliseconds) {
                     "Acceptance was created after the invitation expired"
                 }
-                check(
-                    invitation.remoteEncryptionPublicKey.isEmpty() ||
-                        invitation.remoteEncryptionPublicKey.contentEquals(
-                            acceptance.responderEncryptionPublicKey
+                val currentlyStoredIdentity = remoteIdentityDataSource.findByPeerId(context.contactId)
+                val responderIdentityChanged =
+                    (
+                        currentlyStoredIdentity != null &&
+                            (
+                                !currentlyStoredIdentity.encryptionPublicKey.contentEquals(acceptance.responderEncryptionPublicKey) ||
+                                    !currentlyStoredIdentity.signingPublicKey.contentEquals(acceptance.responderSigningPublicKey)
+                            )
+                    ) ||
+                        (
+                            invitation.remoteEncryptionPublicKey.isNotEmpty() &&
+                                !invitation.remoteEncryptionPublicKey.contentEquals(acceptance.responderEncryptionPublicKey)
+                        ) ||
+                        (
+                            invitation.remoteSigningPublicKey.isNotEmpty() &&
+                                !invitation.remoteSigningPublicKey.contentEquals(acceptance.responderSigningPublicKey)
                         )
-                ) {
-                    "Contact encryption identity changed during invitation acceptance"
-                }
-                check(
-                    invitation.remoteSigningPublicKey.isEmpty() ||
-                        invitation.remoteSigningPublicKey.contentEquals(
-                            acceptance.responderSigningPublicKey
-                        )
-                ) {
-                    "Contact signing identity changed during invitation acceptance"
+                if (responderIdentityChanged) {
+                    // The signed packet is checked by orchestration BEFORE this use case.
+                    // Only a still-current outgoing challenge may be presented for manual
+                    // review. Never stage a replay of a superseded or terminal exchange.
+                    requireState(invitation, IdentityExchangeStage.OUTGOING_CHALLENGE_SENT)
+                    ensureNotExpired(invitation)
+                    throw IdentityAcceptanceReviewRequiredDtoException(
+                        peerId = invitation.contactId,
+                        invitationExpiresAtEpochMilliseconds = invitation.expiresAtEpochMilliseconds
+                    )
                 }
 
                 if (invitation.stage == IdentityExchangeStage.MUTUAL_UNVERIFIED.name) {

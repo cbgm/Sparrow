@@ -664,4 +664,10 @@
     <string name="feature_identity_recovery_completed">Identität ersetzt. Der bestehende Kontakt und der Chatverlauf bleiben erhalten, aber Nachrichten bleiben bis zur Annahme einer neuen Einladung gesperrt. Sende unten eine neue Einladung oder bitte deinen Kontakt darum. Alte ausstehende Pakete können nicht erneut gesendet werden.</string>
     <string name="feature_identity_recovery_send_invitation">Neue Einladung senden</string>
     <string name="feature_identity_recovery_invitation_queued">Einladung in die Warteschlange gestellt. Dein Kontakt muss sie annehmen, bevor ihr wieder Nachrichten austauschen könnt.</string>
+
+    <string name="feature_chats_reconnect_contact">Kontakt erneut verbinden</string>
+    <string name="feature_chats_reconnect_warning">Eine neue Einladung an diesen Kontakt senden? Die bisherige Gesprächsautorisierung endet, bis die neue Einladung angenommen wurde. Dein Gespräch und der Verlauf bleiben erhalten. Falls der Kontakt Sparrow mit neuen Schlüsseln neu installiert hat, musst du die neue Identität vor dem Senden von Nachrichten unabhängig prüfen und bestätigen.</string>
+    <string name="feature_chats_reconnect_confirm">Einladung senden</string>
+    <string name="feature_chats_reconnect_cancel">Abbrechen</string>
+    <string name="feature_chats_reconnect_queued">Eine neue Einladung wurde vorgemerkt. Warte vor dem Senden von Nachrichten auf die Annahme.</string>
 </resources>
