@@ -32,6 +32,8 @@ kotlin {
             implementation(projects.feature.linkpreview)
             implementation(projects.feature.safety)
 
+            implementation(libs.compose.runtime)
+
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)
             implementation(libs.bundles.koin.compose)
