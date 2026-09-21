@@ -8,8 +8,8 @@ internal fun Contact.toContactDetailsUiState(
     safetyNumber: SafetyNumber?
 ): ContactDetailsUiState.Content =
     ContactDetailsUiState.Content(
-        contact = this,
-        safetyNumber = safetyNumber
+        contact = toContactDetailsUi(),
+        safetyNumber = safetyNumber?.singleLine
     )
 
 internal fun ContactDetailsUiState.withVerificationState(

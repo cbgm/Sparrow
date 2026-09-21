@@ -27,11 +27,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
@@ -39,22 +41,26 @@ import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
-import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.sparrow.feature.contacts.presentation.blocklist.components.AddBlockedContactDialog
 import com.cbgm.sparrow.feature.contacts.presentation.blocklist.model.BlockedContactsUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.blocklist.model.BlockedContactsUiState
+import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_contacts_blocked_contacts_empty
 import com.cbgm.sparrow.resources.feature_contacts_blocked_contacts_title
 import com.cbgm.sparrow.resources.feature_contacts_unblock_contact
 import com.cbgm.sparrow.resources.feature_contacts_unnamed_contact
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BlockedContactsScreen(
-    uiState: BlockedContactsUiState,
+    blockedContacts: StateFlow<List<ContactUi>>,
+    processingContactId: StateFlow<String?>,
+    addDialogVisible: StateFlow<Boolean>,
+    dialogState: StateFlow<BlockedContactsUiState>,
     onUiEvent: (BlockedContactsUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -91,63 +97,13 @@ fun BlockedContactsScreen(
                 Modifier
                     .fillMaxSize()
         ) {
-            if (uiState.blockedContacts.isEmpty()) {
-                Column(
-                    modifier =
-                        Modifier
-                            .align(Alignment.Center)
-                            .padding(MaterialTheme.spacing.medium),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Block,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.BlockedContactsScreen.icon),
-                        modifier = Modifier.size(Dimens.BlockedContactsScreen.avatarSize)
-                    )
-                    Text(
-                        text = stringResource(Res.string.feature_contacts_blocked_contacts_empty),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
-                    )
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    state = listState,
-                    contentPadding =
-                        PaddingValues(
-                            top = innerPadding.calculateTopPadding(),
-                            bottom = innerPadding.calculateBottomPadding()
-                        )
-                ) {
-                    items(
-                        items = uiState.blockedContacts,
-                        key = Contact::id
-                    ) { contact ->
-                        BlockedContactRow(
-                            contact = contact,
-                            enabled = uiState.processingContactId == null,
-                            onUnblock = {
-                                onUiEvent(
-                                    BlockedContactsUiEvent.UnblockContactClicked(
-                                        contact.id
-                                    )
-                                )
-                            }
-                        )
-
-                        HorizontalDivider(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(start = MaterialTheme.spacing.listDividerStart),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
-                        )
-                    }
-                }
-            }
+            BlockedContactsList(
+                blockedContacts = blockedContacts,
+                processingContactId = processingContactId,
+                innerPadding = innerPadding,
+                listState = listState,
+                onUiEvent = onUiEvent
+            )
 
             FloatingActionButton(
                 onClick = { onUiEvent(BlockedContactsUiEvent.AddContactClicked) },
@@ -158,34 +114,114 @@ fun BlockedContactsScreen(
                         .padding(MaterialTheme.spacing.screenPadding)
                         .align(Alignment.BottomEnd)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = null
-                )
+                Icon(imageVector = Icons.Default.Add, contentDescription = null)
             }
         }
     }
 
+    BlockedContactsDialogHost(
+        addDialogVisible = addDialogVisible,
+        dialogState = dialogState,
+        onUiEvent = onUiEvent
+    )
+}
+
+@Composable
+private fun BlockedContactsList(
+    blockedContacts: StateFlow<List<ContactUi>>,
+    processingContactId: StateFlow<String?>,
+    innerPadding: PaddingValues,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    onUiEvent: (BlockedContactsUiEvent) -> Unit
+) {
+    val contacts by blockedContacts.collectAsStateWithLifecycle()
+    val processing by processingContactId.collectAsStateWithLifecycle()
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (contacts.isEmpty()) {
+            Column(
+                modifier =
+                    Modifier
+                        .align(Alignment.Center)
+                        .padding(MaterialTheme.spacing.medium),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Block,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.BlockedContactsScreen.icon),
+                    modifier = Modifier.size(Dimens.BlockedContactsScreen.avatarSize)
+                )
+                Text(
+                    text = stringResource(Res.string.feature_contacts_blocked_contacts_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                state = listState,
+                contentPadding =
+                    PaddingValues(
+                        top = innerPadding.calculateTopPadding(),
+                        bottom = innerPadding.calculateBottomPadding()
+                    )
+            ) {
+                items(
+                    items = contacts,
+                    key = ContactUi::id
+                ) { contact ->
+                    BlockedContactRow(
+                        contact = contact,
+                        enabled = processing == null,
+                        onUnblock = {
+                            onUiEvent(
+                                BlockedContactsUiEvent.UnblockContactClicked(
+                                    contact.id
+                                )
+                            )
+                        }
+                    )
+
+                    HorizontalDivider(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(start = MaterialTheme.spacing.listDividerStart),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BlockedContactsDialogHost(
+    addDialogVisible: StateFlow<Boolean>,
+    dialogState: StateFlow<BlockedContactsUiState>,
+    onUiEvent: (BlockedContactsUiEvent) -> Unit
+) {
+    val visible by addDialogVisible.collectAsStateWithLifecycle()
+    if (!visible) return
+    val state by dialogState.collectAsStateWithLifecycle()
     AddBlockedContactDialog(
-        isVisible = uiState.showAddContacts,
-        phoneNumber = uiState.phoneNumber,
-        phoneNumberError = uiState.phoneNumberError,
-        contacts = uiState.availableContacts,
-        enabled = uiState.processingContactId == null,
-        onPhoneNumberChanged = { value ->
-            onUiEvent(BlockedContactsUiEvent.PhoneNumberChanged(value))
-        },
+        isVisible = true,
+        phoneNumber = state.phoneNumber,
+        phoneNumberError = state.phoneNumberError,
+        contacts = state.availableContacts,
+        enabled = state.processingContactId == null,
+        onPhoneNumberChanged = { value -> onUiEvent(BlockedContactsUiEvent.PhoneNumberChanged(value)) },
         onBlockPhoneNumber = { onUiEvent(BlockedContactsUiEvent.BlockPhoneNumberClicked) },
-        onContactSelected = { contact ->
-            onUiEvent(BlockedContactsUiEvent.BlockContactClicked(contact.id))
-        },
+        onContactSelected = { contact -> onUiEvent(BlockedContactsUiEvent.BlockContactClicked(contact.id)) },
         onDismiss = { onUiEvent(BlockedContactsUiEvent.AddContactsDismissed) }
     )
 }
 
 @Composable
 private fun BlockedContactRow(
-    contact: Contact,
+    contact: ContactUi,
     enabled: Boolean,
     onUnblock: () -> Unit
 ) {
@@ -193,14 +229,14 @@ private fun BlockedContactRow(
         ListItem(
             leadingContent = {
                 SparrowAvatar(
-                    name = contact.displayName ?: contact.preferredPhoneNumber?.value ?: "?",
+                    name = contact.displayName ?: contact.preferredPhoneNumber ?: "?",
                     target = AvatarTarget.User(contact.id)
                 )
             },
             headlineContent = {
                 Text(
                     text =
-                        contact.displayName ?: contact.preferredPhoneNumber?.value
+                        contact.displayName ?: contact.preferredPhoneNumber
                             ?: stringResource(Res.string.feature_contacts_unnamed_contact),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -209,7 +245,6 @@ private fun BlockedContactRow(
             },
             supportingContent = {
                 contact.preferredPhoneNumber
-                    ?.value
                     ?.takeIf { contact.displayName != null }
                     ?.let { phoneNumber ->
                         Text(
@@ -246,23 +281,21 @@ private fun BlockedContactRow(
 private fun BlockedContactsScreenPreview() {
     SparrowTheme {
         BlockedContactsScreen(
-            uiState =
-                BlockedContactsUiState(
-                    blockedContacts =
-                        listOf(
-                            Contact(
-                                id = "id",
-                                displayName = "John Doe",
-                                preferredPhoneNumberId = null,
-                                sparrowIdentity = null,
-                                phoneNumbers = emptyList(),
-                                deviceContactId = "",
-                                deviceContactLinkStatus = DeviceContactLinkStatus.MISSING,
-                                createdAtEpochMilliseconds = System.currentTimeMillis(),
-                                updatedAtEpochMilliseconds = System.currentTimeMillis()
-                            )
-                        )
-                ),
+            blockedContacts = MutableStateFlow(
+                listOf(
+                    ContactUi(
+                        id = "id",
+                        displayName = "John Doe",
+                        preferredPhoneNumber = null,
+                        phoneNumbers = emptyList(),
+                        hasSparrowIdentity = false,
+                        deviceContactMissing = true
+                    )
+                )
+            ),
+            processingContactId = MutableStateFlow(null),
+            addDialogVisible = MutableStateFlow(false),
+            dialogState = MutableStateFlow(BlockedContactsUiState()),
             onUiEvent = {}
         )
     }

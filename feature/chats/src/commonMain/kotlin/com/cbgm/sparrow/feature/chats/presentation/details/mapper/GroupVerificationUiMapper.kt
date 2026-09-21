@@ -13,7 +13,7 @@ import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupVerificati
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupVerificationUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.filterContacts
-import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.groupContactsByInitial
+import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.toContactGroups
 
 internal fun buildGroupVerificationSummary(
     isLocalAdmin: Boolean,
@@ -206,7 +206,7 @@ internal fun toGroupVerificationUiState(
                 availableContactGroups =
                     availableContacts
                         .filterContacts(searchQuery)
-                        .groupContactsByInitial(),
+                        .toContactGroups(),
                 selectedContactIds =
                     selectedContactIds.filterTo(mutableSetOf()) { contactId ->
                         availableContacts.any { contact -> contact.id == contactId }

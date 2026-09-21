@@ -22,13 +22,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.crypto.safety.SafetyNumber
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
+import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsContactUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_share_contact
 import com.cbgm.sparrow.resources.feature_attachments_media_and_files
@@ -37,8 +36,8 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun ContactDetailsContent(
-    contact: Contact,
-    safetyNumber: SafetyNumber?,
+    contact: ContactDetailsContactUi,
+    safetyNumber: String?,
     modifier: Modifier = Modifier,
     onShareContact: () -> Unit,
     onVerifyIdentity: () -> Unit,

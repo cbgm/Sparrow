@@ -8,8 +8,9 @@ import com.cbgm.sparrow.feature.chats.presentation.create.mapper.toCreateGroupCo
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupConversationUiState
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupEffect
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupUiEvent
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
+import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.toContactsUi
+import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactUi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -75,7 +76,7 @@ class CreateGroupViewModel(
 
     private fun contactsPresentationFlow() =
         observeContacts()
-            .map { contacts -> ContactsPresentation(contacts = contacts) }
+            .map { contacts -> ContactsPresentation(contacts = contacts.toContactsUi()) }
             .catch { error ->
                 emit(
                     ContactsPresentation(
@@ -142,7 +143,7 @@ class CreateGroupViewModel(
     }
 
     private data class ContactsPresentation(
-        val contacts: List<Contact>,
+        val contacts: List<ContactUi>,
         val errorMessage: String? = null
     )
 

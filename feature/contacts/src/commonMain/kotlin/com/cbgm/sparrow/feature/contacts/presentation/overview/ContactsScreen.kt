@@ -10,8 +10,11 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -19,7 +22,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.presentation.overview.components.ContactSelectionCircle
 import com.cbgm.sparrow.feature.contacts.presentation.overview.components.ContactStatus
 import com.cbgm.sparrow.feature.contacts.presentation.overview.components.ContactsErrorContent
@@ -33,6 +35,7 @@ import com.cbgm.sparrow.feature.contacts.presentation.overview.components.Member
 import com.cbgm.sparrow.feature.contacts.presentation.overview.components.OverviewContactsTopBar
 import com.cbgm.sparrow.feature.contacts.presentation.overview.components.contactGroups
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactGroupEntity
+import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactUi
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsScreenMode
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsUiState
@@ -47,11 +50,30 @@ fun ContactsScreen(
     onUiEvent: (ContactsUiEvent) -> Unit,
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState? = null,
-    onContactSelected: (Contact) -> Unit = {}
+    onContactSelected: (ContactUi) -> Unit = {}
 ) {
     var showImportSheet by rememberSaveable {
         mutableStateOf(false)
     }
+
+    // Updated without becoming an input to the contact-list composition.
+    // Read the current mode only from click callbacks, not while drawing rows.
+    val currentMode = rememberUpdatedState(mode)
+    val currentEventHandler = rememberUpdatedState(onUiEvent)
+    val currentContactHandler = rememberUpdatedState(onContactSelected)
+    val dispatchEvent: (ContactsUiEvent) -> Unit = remember {
+        { event -> currentEventHandler.value(event) }
+    }
+    val dispatchContact: (ContactUi) -> Unit = remember {
+        { contact -> currentContactHandler.value(contact) }
+    }
+    val selectedIds = rememberUpdatedState(
+        when (mode) {
+            is ContactsScreenMode.GroupSelection -> mode.selectedContactIds
+            is ContactsScreenMode.MemberSelection -> mode.selectedContactIds
+            else -> emptySet()
+        }
+    )
 
     SparrowLazyScaffold(
         modifier = modifier,
@@ -124,11 +146,14 @@ fun ContactsScreen(
         ) {
             ContactsContent(
                 uiState = uiState,
-                mode = mode,
+                isOverview = mode is ContactsScreenMode.Overview,
+                listMode = mode.toListMode(),
                 innerPadding = innerPadding,
                 listState = listState,
-                onUiEvent = onUiEvent,
-                onContactSelected = onContactSelected
+                onUiEvent = dispatchEvent,
+                onContactSelected = dispatchContact,
+                currentMode = currentMode,
+                selectedIds = selectedIds
             )
         }
     }
@@ -153,11 +178,14 @@ fun ContactsScreen(
 @Composable
 private fun ContactsContent(
     uiState: ContactsUiState,
-    mode: ContactsScreenMode,
+    isOverview: Boolean,
+    listMode: ContactsListMode,
     innerPadding: PaddingValues,
     listState: LazyListState,
     onUiEvent: (ContactsUiEvent) -> Unit,
-    onContactSelected: (Contact) -> Unit
+    onContactSelected: (ContactUi) -> Unit,
+    currentMode: androidx.compose.runtime.State<ContactsScreenMode>,
+    selectedIds: androidx.compose.runtime.State<Set<String>>
 ) {
     when (uiState) {
         is ContactsUiState.Loading -> {
@@ -181,18 +209,18 @@ private fun ContactsContent(
 
         is ContactsUiState.Content -> {
             ContactsList(
-                groups = uiState.groups,
-                mode = mode,
+                groups = remember(uiState.groups) { uiState.groups },
+                listMode = listMode,
                 innerPadding = innerPadding,
                 listState = listState,
                 onUiEvent = onUiEvent,
-                onContactSelected = onContactSelected
+                onContactSelected = onContactSelected,
+                currentMode = currentMode,
+                selectedIds = selectedIds
             )
         }
 
         is ContactsUiState.Error -> {
-            val isOverview = mode is ContactsScreenMode.Overview
-
             ContactsErrorContent(
                 message = uiState.message,
                 actionText =
@@ -219,11 +247,13 @@ private fun ContactsContent(
 @Composable
 private fun ContactsList(
     groups: List<ContactGroupEntity>,
-    mode: ContactsScreenMode,
+    listMode: ContactsListMode,
     innerPadding: PaddingValues,
     listState: LazyListState,
     onUiEvent: (ContactsUiEvent) -> Unit,
-    onContactSelected: (Contact) -> Unit
+    onContactSelected: (ContactUi) -> Unit,
+    currentMode: androidx.compose.runtime.State<ContactsScreenMode>,
+    selectedIds: androidx.compose.runtime.State<Set<String>>
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -235,7 +265,7 @@ private fun ContactsList(
             ),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
     ) {
-        if (mode is ContactsScreenMode.Overview) {
+        if (listMode == ContactsListMode.OVERVIEW) {
             item(key = "create_group") {
                 CreateGroupListItem(
                     onClick = { onUiEvent(ContactsUiEvent.CreateGroupClicked) }
@@ -246,7 +276,7 @@ private fun ContactsList(
         contactGroups(
             groups = groups,
             onContactClick = { contact ->
-                when (mode) {
+                when (currentMode.value) {
                     is ContactsScreenMode.Overview -> {
                         onUiEvent(
                             ContactsUiEvent.ContactClicked(
@@ -269,33 +299,39 @@ private fun ContactsList(
                 }
             },
             trailingContent = { contact ->
-                when (mode) {
-                    is ContactsScreenMode.Overview -> {
-                        ContactStatus(contact = contact)
-                    }
-
-                    is ContactsScreenMode.AttachmentSelection -> {
-                        ContactSelectionCircle(
-                            selected = false,
-                            enabled = contact.preferredPhoneNumber != null
-                        )
-                    }
-
-                    is ContactsScreenMode.GroupSelection -> {
-                        ContactSelectionCircle(
-                            selected = contact.id in mode.selectedContactIds
-                        )
-                    }
-
-                    is ContactsScreenMode.MemberSelection -> {
-                        ContactSelectionCircle(
-                            selected = contact.id in mode.selectedContactIds
-                        )
-                    }
+                when (listMode) {
+                    ContactsListMode.OVERVIEW -> ContactStatus(contact = contact)
+                    ContactsListMode.ATTACHMENT -> ContactSelectionCircle(
+                        selected = false,
+                        enabled = contact.preferredPhoneNumber != null
+                    )
+                    ContactsListMode.SELECTION -> ContactSelectionIndicator(
+                        contactId = contact.id,
+                        selectedIds = selectedIds
+                    )
                 }
             }
         )
     }
+}
+
+private enum class ContactsListMode { OVERVIEW, ATTACHMENT, SELECTION }
+
+private fun ContactsScreenMode.toListMode(): ContactsListMode = when (this) {
+    is ContactsScreenMode.Overview -> ContactsListMode.OVERVIEW
+    is ContactsScreenMode.AttachmentSelection -> ContactsListMode.ATTACHMENT
+    is ContactsScreenMode.GroupSelection, is ContactsScreenMode.MemberSelection -> ContactsListMode.SELECTION
+}
+
+@Composable
+private fun ContactSelectionIndicator(
+    contactId: String,
+    selectedIds: androidx.compose.runtime.State<Set<String>>
+) {
+    val selected = remember(contactId, selectedIds) {
+        derivedStateOf { contactId in selectedIds.value }
+    }
+    ContactSelectionCircle(selected = selected.value)
 }
 
 @Preview

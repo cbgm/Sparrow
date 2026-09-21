@@ -14,10 +14,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.core.ui.component.IdentityVerificationScreen
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
+import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsContactUi
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsUiState
-import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_contact
 import org.jetbrains.compose.resources.stringResource
@@ -32,7 +31,7 @@ private enum class ContactDetailsContent {
 fun ContactDetailsRoute(
     contactId: String,
     openVerification: Boolean,
-    onShareContact: (Contact) -> Unit,
+    onShareContact: (ContactDetailsContactUi) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ContactDetailsViewModel = koinViewModel()
 ) {
@@ -53,7 +52,7 @@ fun ContactDetailsRoute(
         contentState
             ?.contact
             ?.sparrowIdentity
-            ?.verificationStatus == ContactVerificationStatus.VERIFIED
+            ?.verifiedByMe == true
     val visibleContent =
         if (
             content == ContactDetailsContent.VerifyIdentity &&
@@ -124,7 +123,7 @@ fun ContactDetailsRoute(
                         contactName =
                             contact.displayName
                                 ?: stringResource(Res.string.base_contact),
-                        safetyNumber = safetyNumber.singleLine,
+                        safetyNumber = safetyNumber,
                         isLoadingSafetyNumber = false,
                         isVerifying = contentState.isSavingVerification,
                         errorMessage = contentState.verificationError,

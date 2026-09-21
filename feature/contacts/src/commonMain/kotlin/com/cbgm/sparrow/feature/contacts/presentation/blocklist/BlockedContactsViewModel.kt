@@ -10,11 +10,15 @@ import com.cbgm.sparrow.feature.contacts.presentation.blocklist.mapper.toBlocked
 import com.cbgm.sparrow.feature.contacts.presentation.blocklist.model.BlockedContactsEffect
 import com.cbgm.sparrow.feature.contacts.presentation.blocklist.model.BlockedContactsUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.blocklist.model.BlockedContactsUiState
+import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.toContactUi
+import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactUi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -39,13 +43,49 @@ class BlockedContactsViewModel(
             )
         }
 
+    // Each independently collected flow invalidates only the subtree that reads it.
+    // The list never receives dialog text or per-operation errors.
+    private val contactsContext = observeBlockedContactsContext().stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+        initialValue = null
+    )
+
+    val blockedContacts: StateFlow<List<ContactUi>> = contactsContext
+        .map { context -> context?.blocklist?.blockedContacts?.map { it.toContactUi() }.orEmpty() }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val processingContactId: StateFlow<String?> = actionState
+        .map { it.processingContactId }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val addDialogVisible: StateFlow<Boolean> = showAddContacts
+
+    val dialogState: StateFlow<BlockedContactsUiState> =
+        combine(contactsContext, formState, actionState) { context, form, action ->
+            BlockedContactsUiState(
+                availableContacts = context?.blocklist?.availableContacts?.map { it.toContactUi() }.orEmpty(),
+                showAddContacts = form.showAddContacts,
+                phoneNumber = form.phoneNumber,
+                phoneNumberError = action.phoneNumberError,
+                processingContactId = action.processingContactId
+            )
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BlockedContactsUiState())
+
     val uiState: StateFlow<BlockedContactsUiState> =
         combine(
-            observeBlockedContactsContext(),
+            contactsContext,
             formState,
             actionState
         ) { context, form, action ->
-            context.blocklist.toBlockedContactsUiState(
+            context?.blocklist?.toBlockedContactsUiState(
+                showAddContacts = form.showAddContacts,
+                phoneNumber = form.phoneNumber,
+                phoneNumberError = action.phoneNumberError,
+                processingContactId = action.processingContactId
+            ) ?: BlockedContactsUiState(
                 showAddContacts = form.showAddContacts,
                 phoneNumber = form.phoneNumber,
                 phoneNumberError = action.phoneNumberError,

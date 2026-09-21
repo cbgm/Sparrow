@@ -10,7 +10,6 @@ import com.cbgm.sparrow.feature.contacts.presentation.details.mapper.toContactDe
 import com.cbgm.sparrow.feature.contacts.presentation.details.mapper.withVerificationState
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsUiState
-import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.identity.domain.usecase.VerifyRemoteIdentityUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -97,7 +96,7 @@ class ContactDetailsViewModel(
 
     private fun confirmVerification() {
         val current = uiState.value as? ContactDetailsUiState.Content ?: return
-        if (current.contact.sparrowIdentity?.verificationStatus == ContactVerificationStatus.VERIFIED) return
+        if (current.contact.sparrowIdentity?.verifiedByMe == true) return
         if (!current.canVerify || verificationState.value.isSaving) return
 
         verificationState.value = VerificationActionState(isSaving = true)

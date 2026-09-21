@@ -48,7 +48,11 @@ fun DetailsRoute(
                 openVerification = openVerification,
                 onShareContact = { contact ->
                     scope.launch {
-                        encodeContactForSharing(contact)
+                        encodeContactForSharing(
+                            contactId = contact.id,
+                            displayName = contact.displayName,
+                            phoneNumber = contact.preferredPhoneNumber
+                        )
                             .onSuccess { encodedIdentity ->
                                 if (!encodedIdentity.isNullOrBlank()) {
                                     encodedContactToShare = encodedIdentity

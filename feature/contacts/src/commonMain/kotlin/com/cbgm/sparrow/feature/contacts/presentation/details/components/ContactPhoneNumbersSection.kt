@@ -13,7 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumber
+import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactPhoneNumberUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_phone_numbers
 import com.cbgm.sparrow.resources.feature_contacts_no_phone_numbers_stored
@@ -21,7 +21,7 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun ContactPhoneNumbersSection(
-    phoneNumbers: List<ContactPhoneNumber>,
+    phoneNumbers: List<ContactPhoneNumberUi>,
     preferredPhoneNumberId: String?
 ) {
     SectionTitle(

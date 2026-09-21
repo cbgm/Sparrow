@@ -10,15 +10,21 @@ class EncodeContactForSharingUseCase(
     private val identityShareRepository: IdentityShareRepository,
     private val getRemoteIdentity: GetRemoteIdentityUseCase
 ) {
-    suspend operator fun invoke(contact: Contact): Result<String?> {
-        val identity = getRemoteIdentity(contact.id).getOrElse { return Result.failure(it) }
+    suspend operator fun invoke(contact: Contact): Result<String?> = invoke(
+        contactId = contact.id,
+        displayName = contact.displayName,
+        phoneNumber = contact.preferredPhoneNumber?.value
+    )
+
+    suspend operator fun invoke(
+        contactId: String,
+        displayName: String?,
+        phoneNumber: String?
+    ): Result<String?> {
+        val identity = getRemoteIdentity(contactId).getOrElse { return Result.failure(it) }
             ?: return Result.success(null)
-        val phoneNumber =
-            contact
-                .preferredPhoneNumber
-                ?.value
-                ?.takeIf(String::isNotBlank)
-                ?: return Result.success(null)
+        val validatedPhoneNumber = phoneNumber?.takeIf(String::isNotBlank)
+            ?: return Result.success(null)
 
         return identityShareRepository
             .encode(
@@ -29,8 +35,8 @@ class EncodeContactForSharingUseCase(
                         signingPublicKey = identity.signingPublicKey,
                         contactDetails =
                             SharedContactDetails(
-                                displayName = contact.displayName,
-                                phoneNumber = phoneNumber
+                                displayName = displayName,
+                                phoneNumber = validatedPhoneNumber
                             )
                     )
             ).map { encoded -> encoded }

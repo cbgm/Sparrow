@@ -39,9 +39,8 @@ import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
-import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactGroupEntity
+import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_missing
 import com.cbgm.sparrow.resources.base_secure
@@ -55,8 +54,8 @@ import org.jetbrains.compose.resources.stringResource
 
 fun LazyListScope.contactGroups(
     groups: List<ContactGroupEntity>,
-    onContactClick: (Contact) -> Unit,
-    trailingContent: @Composable (Contact) -> Unit
+    onContactClick: (ContactUi) -> Unit,
+    trailingContent: @Composable (ContactUi) -> Unit
 ) {
     items(
         items = groups,
@@ -71,9 +70,9 @@ fun LazyListScope.contactGroups(
 }
 
 @Composable
-fun ContactStatus(contact: Contact) {
+fun ContactStatus(contact: ContactUi) {
     when {
-        contact.deviceContactLinkStatus == DeviceContactLinkStatus.MISSING -> {
+        contact.deviceContactMissing -> {
             SparrowStatusBadge(
                 text = stringResource(Res.string.base_missing),
                 icon = Icons.Default.Warning,
@@ -81,7 +80,7 @@ fun ContactStatus(contact: Contact) {
             )
         }
 
-        contact.sparrowIdentity != null -> {
+        contact.hasSparrowIdentity -> {
             SparrowStatusBadge(
                 text = stringResource(Res.string.base_secure),
                 icon = Icons.Default.Verified,
@@ -223,8 +222,8 @@ fun ContactsErrorContent(
 @Composable
 private fun ContactGroup(
     group: ContactGroupEntity,
-    onContactClick: (Contact) -> Unit,
-    trailingContent: @Composable (Contact) -> Unit
+    onContactClick: (ContactUi) -> Unit,
+    trailingContent: @Composable (ContactUi) -> Unit
 ) {
     Column {
         Text(
@@ -265,7 +264,7 @@ private fun ContactGroup(
 
 @Composable
 private fun ContactListItem(
-    contact: Contact,
+    contact: ContactUi,
     onClick: () -> Unit,
     trailingContent: @Composable () -> Unit
 ) {
@@ -298,8 +297,8 @@ private fun ContactListItem(
             supportingContent = {
                 Text(
                     text =
-                        contact.preferredPhoneNumber?.value
-                            ?: if (contact.sparrowIdentity != null) {
+                        contact.preferredPhoneNumber
+                            ?: if (contact.hasSparrowIdentity) {
                                 stringResource(Res.string.feature_contacts_sparrow_contact)
                             } else {
                                 stringResource(Res.string.feature_contacts_no_phone_number)

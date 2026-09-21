@@ -14,13 +14,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.crypto.safety.SafetyNumber
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.contacts.domain.model.SparrowIdentity
-import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
-import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
+import com.cbgm.sparrow.feature.contacts.presentation.details.model.SparrowIdentityUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_not_verified
 import com.cbgm.sparrow.resources.feature_contacts_compare_before_trusting
@@ -38,8 +35,8 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun SparrowIdentitySection(
-    identity: SparrowIdentity,
-    safetyNumber: SafetyNumber?,
+    identity: SparrowIdentityUi,
+    safetyNumber: String?,
     onVerifyIdentity: () -> Unit
 ) {
     SectionTitle(
@@ -49,10 +46,10 @@ internal fun SparrowIdentitySection(
     Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
 
     val verifiedByContact =
-        identity.keyExchangeStatus == KeyExchangeStatus.MUTUAL && identity.verifiedByContact
+        identity.mutualKeyExchange && identity.verifiedByContact
 
     when {
-        identity.verificationStatus == ContactVerificationStatus.VERIFIED && verifiedByContact ->
+        identity.verifiedByMe && verifiedByContact ->
             ContactStatusRow(
                 icon = Icons.Default.Link,
                 iconColor = MaterialTheme.colorScheme.tertiary,
@@ -61,7 +58,7 @@ internal fun SparrowIdentitySection(
                 description = stringResource(Res.string.feature_contacts_identity_verified_description)
             )
 
-        identity.verificationStatus == ContactVerificationStatus.VERIFIED ->
+        identity.verifiedByMe ->
             ContactStatusRow(
                 icon = Icons.Default.Schedule,
                 iconColor = MaterialTheme.colorScheme.primary,
@@ -92,7 +89,7 @@ internal fun SparrowIdentitySection(
     Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
     if (safetyNumber != null) {
-        if (identity.verificationStatus == ContactVerificationStatus.UNVERIFIED) {
+        if (!identity.verifiedByMe) {
             Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
             SparrowApprovalButton(
                 onClick = onVerifyIdentity,
@@ -112,12 +109,12 @@ internal fun SparrowIdentitySection(
 
     IdentityKeySection(
         title = stringResource(Res.string.feature_contacts_signing_fingerprint),
-        key = identity.signingPublicKey
+        fingerprint = identity.signingFingerprint
     )
     Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
     IdentityKeySection(
         title = stringResource(Res.string.feature_contacts_encryption_fingerprint),
-        key = identity.encryptionPublicKey
+        fingerprint = identity.encryptionFingerprint
     )
 }
 

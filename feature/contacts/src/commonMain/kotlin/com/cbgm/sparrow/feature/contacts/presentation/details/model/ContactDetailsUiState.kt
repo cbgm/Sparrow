@@ -1,14 +1,11 @@
 package com.cbgm.sparrow.feature.contacts.presentation.details.model
 
-import com.cbgm.sparrow.core.crypto.safety.SafetyNumber
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
-
 sealed interface ContactDetailsUiState {
     data object Loading : ContactDetailsUiState
 
     data class Content(
-        val contact: Contact,
-        val safetyNumber: SafetyNumber?,
+        val contact: ContactDetailsContactUi,
+        val safetyNumber: String?,
         val isSavingVerification: Boolean = false,
         val verificationError: String? = null
     ) : ContactDetailsUiState {

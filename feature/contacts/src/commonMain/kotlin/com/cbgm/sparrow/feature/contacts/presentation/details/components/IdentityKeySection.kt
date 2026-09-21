@@ -13,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.extensions.toFingerprint
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -21,7 +20,7 @@ import com.cbgm.sparrow.core.ui.theme.spacing
 @Composable
 internal fun IdentityKeySection(
     title: String,
-    key: ByteArray
+    fingerprint: String
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -32,7 +31,7 @@ internal fun IdentityKeySection(
         )
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.base))
         Text(
-            text = key.toFingerprint(),
+            text = fingerprint,
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -53,7 +52,7 @@ private fun IdentityKeySectionPreview() {
     SparrowTheme {
         IdentityKeySection(
             title = "Signing fingerprint",
-            key = byteArrayOf(1, 2, 3, 4)
+            fingerprint = "01 02 03 04"
         )
     }
 }

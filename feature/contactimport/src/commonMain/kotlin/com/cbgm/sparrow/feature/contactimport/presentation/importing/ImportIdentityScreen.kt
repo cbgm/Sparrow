@@ -39,9 +39,9 @@ import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.contactimport.presentation.importing.model.IdentityImportTrustUi
 import com.cbgm.sparrow.feature.contactimport.presentation.importing.model.ImportIdentityUiEvent
 import com.cbgm.sparrow.feature.contactimport.presentation.importing.model.ImportIdentityUiState
-import com.cbgm.sparrow.feature.contacts.domain.model.IdentityImportTrust
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_contactimport_import_identity
 import com.cbgm.sparrow.resources.feature_contactimport_import_unverified_identity
@@ -159,14 +159,14 @@ fun ImportIdentityScreen(
             uiState.importedContactName?.let { name ->
                 val statusText =
                     when (uiState.importedIdentityTrust) {
-                        IdentityImportTrust.VERIFIED_IN_PERSON -> {
+                        IdentityImportTrustUi.VERIFIED_IN_PERSON -> {
                             stringResource(
                                 Res.string.feature_contactimport_imported_verified_name,
                                 name
                             )
                         }
 
-                        IdentityImportTrust.UNVERIFIED -> {
+                        IdentityImportTrustUi.UNVERIFIED -> {
                             stringResource(
                                 Res.string.feature_contactimport_imported_unverified_name,
                                 name
@@ -182,7 +182,7 @@ fun ImportIdentityScreen(
                     icon = Icons.Default.CheckCircle,
                     text = statusText,
                     color =
-                        if (uiState.importedIdentityTrust == IdentityImportTrust.VERIFIED_IN_PERSON) {
+                        if (uiState.importedIdentityTrust == IdentityImportTrustUi.VERIFIED_IN_PERSON) {
                             MaterialTheme.colorScheme.tertiary
                         } else {
                             MaterialTheme.colorScheme.secondary

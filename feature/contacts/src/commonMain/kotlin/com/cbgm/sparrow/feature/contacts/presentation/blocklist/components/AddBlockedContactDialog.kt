@@ -30,7 +30,7 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
+import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_close
 import com.cbgm.sparrow.resources.feature_contacts_add_blocked_contact
@@ -49,11 +49,11 @@ fun AddBlockedContactDialog(
     isVisible: Boolean,
     phoneNumber: String,
     phoneNumberError: String?,
-    contacts: List<Contact>,
+    contacts: List<ContactUi>,
     enabled: Boolean,
     onPhoneNumberChanged: (String) -> Unit,
     onBlockPhoneNumber: () -> Unit,
-    onContactSelected: (Contact) -> Unit,
+    onContactSelected: (ContactUi) -> Unit,
     onDismiss: () -> Unit
 ) {
     SparrowAlertDialog(
@@ -115,7 +115,7 @@ fun AddBlockedContactDialog(
                     ) {
                         items(
                             items = contacts,
-                            key = Contact::id
+                            key = ContactUi::id
                         ) { contact ->
                             Row(
                                 modifier =
@@ -129,7 +129,7 @@ fun AddBlockedContactDialog(
                                 SparrowAvatar(
                                     name =
                                         contact.displayName
-                                            ?: contact.preferredPhoneNumber?.value ?: "?",
+                                            ?: contact.preferredPhoneNumber ?: "?",
                                     target = AvatarTarget.User(contact.id)
                                 )
                                 Spacer(modifier = Modifier.size(MaterialTheme.spacing.small))
@@ -137,7 +137,7 @@ fun AddBlockedContactDialog(
                                     Text(
                                         text =
                                             contact.displayName
-                                                ?: contact.preferredPhoneNumber?.value
+                                                ?: contact.preferredPhoneNumber
                                                 ?: stringResource(Res.string.feature_contacts_unnamed_contact),
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
@@ -168,9 +168,9 @@ fun AddBlockedContactDialog(
 }
 
 @Composable
-private fun Contact.subtitle(): String =
-    preferredPhoneNumber?.value
-        ?: if (sparrowIdentity != null) {
+private fun ContactUi.subtitle(): String =
+    preferredPhoneNumber
+        ?: if (hasSparrowIdentity) {
             stringResource(Res.string.feature_contacts_sparrow_contact)
         } else {
             stringResource(Res.string.feature_contacts_no_phone_number)

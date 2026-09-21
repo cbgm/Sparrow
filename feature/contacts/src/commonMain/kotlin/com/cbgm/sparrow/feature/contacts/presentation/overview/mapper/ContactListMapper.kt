@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.contacts.presentation.overview.mapper
 
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactGroupEntity
+import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactUi
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsUiState
 
 fun List<Contact>.filterContacts(query: String): List<Contact> {
@@ -29,7 +30,7 @@ fun List<Contact>.filterContacts(query: String): List<Contact> {
     }
 }
 
-fun List<Contact>.groupContactsByInitial(): List<ContactGroupEntity> =
+fun List<ContactUi>.groupContactsByInitial(): List<ContactGroupEntity> =
     sortedBy { contact ->
         contact.displayName.orEmpty().lowercase()
     }.groupBy { contact ->
@@ -58,8 +59,27 @@ internal fun List<Contact>.toContactsUiState(query: String): ContactsUiState {
             )
         else ->
             ContactsUiState.Content(
-                groups = filteredContacts.groupContactsByInitial(),
+                groups = filteredContacts.map(Contact::toContactUi).groupContactsByInitial(),
                 searchQuery = query
+            )
+    }
+}
+
+/** Converts domain contacts to presentation data before grouping. */
+fun List<Contact>.toContactGroups(): List<ContactGroupEntity> =
+    map(Contact::toContactUi).groupContactsByInitial()
+
+/** Search used by presentation-only contact lists such as the group picker. */
+fun List<ContactUi>.filterContactUi(query: String): List<ContactUi> {
+    val trimmedQuery = query.trim()
+    if (trimmedQuery.isEmpty()) return this
+    val phoneQuery = trimmedQuery.filter(Char::isDigit)
+    return filter { contact ->
+        contact.displayName?.contains(trimmedQuery, ignoreCase = true) == true ||
+            (
+                phoneQuery.isNotEmpty() && contact.phoneNumbers.any { number ->
+                    number.filter(Char::isDigit).contains(phoneQuery)
+                }
             )
     }
 }
