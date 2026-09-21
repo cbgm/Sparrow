@@ -6,6 +6,8 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import com.cbgm.sparrow.data.database.entity.ContactEntity
 import com.cbgm.sparrow.data.database.entity.ContactPublicIdentityEntity
+import com.cbgm.sparrow.data.database.entity.ConversationEntity
+import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.PendingRemoteIdentityChangeEntity
 import com.cbgm.sparrow.data.database.entity.ProtocolOutboxEntity
 import kotlinx.coroutines.Dispatchers
@@ -64,6 +66,59 @@ class PendingIdentityReplacementTransactionTest {
         assertFalse(current.remoteIdentityPacketReceived)
         assertEquals(null, dao.findByPeerId("contact"))
         assertFalse(dao.replaceConfirmedIdentity("contact", "invite", 200L))
+    }
+
+    @Test fun cutoverFailsOnlyUnconfirmedMessagesLinkedToQuarantinedPackets() = runBlocking {
+        seed()
+        database.chatDao().upsertConversation(
+            ConversationEntity(
+                id = "direct-chat",
+                contactId = "contact",
+                type = "DIRECT",
+                title = null,
+                createdAtEpochMilliseconds = 1L,
+                updatedAtEpochMilliseconds = 1L
+            )
+        )
+        listOf("QUEUED", "SENDING", "SENT", "FAILED", "DELIVERED", "READ").forEach { state ->
+            val packetId = "packet-$state"
+            seedOutbox(packetId, if (state == "SENDING") "FAILED" else "SENT")
+            seedMessage(packetId, state)
+        }
+        // Packets associated with an unrelated contact must never be touched.
+        seedMessage("other-packet", "QUEUED")
+        // Local drafts without an outbox record are not already-encrypted packets.
+        seedMessage("waiting", "WAITING_FOR_AUTHORIZATION", null)
+
+        assertTrue(database.pendingRemoteIdentityChangeDao().replaceConfirmedIdentity("contact", "invite", 200L))
+        for (state in listOf("QUEUED", "SENDING", "SENT", "FAILED", "DELIVERED", "READ")) {
+            val persisted = requireNotNull(database.chatDao().findMessageById("message-packet-$state"))
+            assertEquals(
+                if (state in listOf("QUEUED", "SENDING", "SENT")) "FAILED" else state,
+                persisted.deliveryStatus
+            )
+            assertEquals("packet-$state", persisted.packetId)
+        }
+        assertEquals("QUEUED", requireNotNull(database.chatDao().findMessageById("message-other-packet")).deliveryStatus)
+        assertEquals("WAITING_FOR_AUTHORIZATION", requireNotNull(database.chatDao().findMessageById("message-waiting")).deliveryStatus)
+    }
+
+    private suspend fun seedMessage(id: String, delivery: String, packetId: String? = id) {
+        database.chatDao().upsertMessage(
+            MessageEntity(
+                id = "message-$id",
+                conversationId = "direct-chat",
+                packetId = packetId,
+                text = "Keep my original message",
+                transportPayload = null,
+                transportMode = "END_TO_END_ENCRYPTED",
+                contentStatus = "READABLE",
+                deliveryStatus = delivery,
+                senderContactId = null,
+                isMine = true,
+                createdAtEpochMilliseconds = 1L
+            )
+        )
     }
 
     @Test fun inFlightPacketPreventsIdentityReplacementAndRollsBack() = runBlocking {

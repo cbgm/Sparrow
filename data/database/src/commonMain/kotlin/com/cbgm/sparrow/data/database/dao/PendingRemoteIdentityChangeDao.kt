@@ -97,6 +97,11 @@ interface PendingRemoteIdentityChangeDao {
         // Retain rows for audit / explicit future re-creation from source material,
         // but make normal retry, resend and restart recovery unable to send them.
         quarantineOldRecipientPackets(peerId, now)
+        // The outbox is the source of truth about which original packets are
+        // permanently quarantined. Only their LOCAL outgoing message projection
+        // changes: retain the text, attachments, IDs and historical receipts.
+        // Gateway SENT is not proof of delivery to the replaced installation.
+        failUnconfirmedMessagesWithQuarantinedPackets(peerId)
         // Old MUTUAL / WAITING_FOR_READY exchanges must never authorize the new keys.
         invalidatePreviousExchanges(peerId, now)
         check(deleteIfInvitationMatches(peerId, invitationId) == 1) {
@@ -118,6 +123,27 @@ interface PendingRemoteIdentityChangeDao {
     """
     )
     suspend fun quarantineOldRecipientPackets(peerId: String, now: Long): Int
+
+    /**
+     * A replaced device will never acknowledge packets prepared for its retired
+     * identity. Do not leave these messages spinning as QUEUED / SENDING / SENT.
+     * DELIVERED and READ are historical facts and must not be rewritten.
+     * WAITING_FOR_AUTHORIZATION has no packet and is deliberately untouched;
+     * fresh authorization may prepare it from retained source content.
+     */
+    @Query(
+        """
+        UPDATE messages
+        SET deliveryStatus = 'FAILED'
+        WHERE isMine = 1
+          AND deliveryStatus IN ('QUEUED', 'SENDING', 'SENT')
+          AND packetId IN (
+              SELECT packetId FROM protocol_outbox
+              WHERE contactId = :peerId AND status = 'QUARANTINED'
+          )
+    """
+    )
+    suspend fun failUnconfirmedMessagesWithQuarantinedPackets(peerId: String): Int
 
     /** Compare-and-set the precise OLD key pair captured during confirmation. */
     @Query(

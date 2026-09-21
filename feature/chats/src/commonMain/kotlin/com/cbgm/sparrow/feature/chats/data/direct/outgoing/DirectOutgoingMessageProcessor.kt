@@ -6,6 +6,7 @@ import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.core.protocol.message.MessageReactionPayload
+import com.cbgm.sparrow.core.protocol.outbox.OutboxStatus
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.ChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.MessageDeletionPacket
@@ -256,9 +257,15 @@ class DirectOutgoingMessageProcessor(
             }
 
             val target = loadTarget(message.conversationId)
-            requireDirectChatAuthorization(target.contactId).getOrThrow()
-
             val packetId = message.packetId?.takeIf(String::isNotBlank) ?: error("Message has no linked protocol packet")
+            // An explicit retry must not resurrect an obsolete packet after a
+            // contact changes cryptographic identity. Its stored transport payload
+            // was prepared for a different recipient key; creating a new message
+            // requires fresh authorization and new encryption, not an outbox resend.
+            check(protocolOutbox.findByPacketId(packetId).getOrThrow()?.status != OutboxStatus.QUARANTINED) {
+                "This message belongs to the contact's previous identity. After reconnecting, send its content as a new message."
+            }
+            requireDirectChatAuthorization(target.contactId).getOrThrow()
 
             protocolOutbox.resend(packetId).getOrThrow()
             deliveryCoordinator.applyRetryEvent(messageId)
