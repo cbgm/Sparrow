@@ -50,7 +50,11 @@ internal class DissolvingMessageListState<T>(
             val messageId = idOf(visibleMessages[index])
 
             incomingById[messageId]?.let { updatedMessage ->
-                visibleMessages[index] = updatedMessage
+                // SnapshotStateList entries should only change when the row's
+                // content changed. Unchanged rows keep their previous instance.
+                if (visibleMessages[index] != updatedMessage) {
+                    visibleMessages[index] = updatedMessage
+                }
 
                 if (messageId == dissolvingMessageId) {
                     dissolvingMessageId = null
