@@ -20,6 +20,7 @@ import com.cbgm.sparrow.feature.identity.data.datasource.LocalIdentityProfileDat
 import com.cbgm.sparrow.feature.identity.data.datasource.LocalIdentitySharingDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.LocalProfilePictureDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.ManualIdentityExchangeDataSource
+import com.cbgm.sparrow.feature.identity.data.datasource.PendingRemoteIdentityChangeDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.PublicIdentityDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.RemoteIdentityDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.RemoteProfilePictureDataSource
@@ -33,6 +34,7 @@ import com.cbgm.sparrow.feature.identity.data.repository.IdentityVerificationRep
 import com.cbgm.sparrow.feature.identity.data.repository.LocalIdentityProfileRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.LocalIdentitySharingRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.LocalProfilePictureRepositoryImpl
+import com.cbgm.sparrow.feature.identity.data.repository.PendingRemoteIdentityChangeRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.RemoteIdentityImportRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.RemoteIdentityReadRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.RemoteProfilePictureRepositoryImpl
@@ -45,6 +47,7 @@ import com.cbgm.sparrow.feature.identity.domain.repository.IdentityVerificationR
 import com.cbgm.sparrow.feature.identity.domain.repository.LocalIdentityProfileRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.LocalIdentitySharingRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.LocalProfilePictureRepository
+import com.cbgm.sparrow.feature.identity.domain.repository.PendingRemoteIdentityChangeRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.RemoteIdentityImportRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.RemoteIdentityReadRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.RemoteProfilePictureRepository
@@ -78,6 +81,7 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveIdentityResultsUs
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalIdentityReadyUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalIdentitySharedUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalProfilePictureUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ObservePendingRemoteIdentityChangesUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveRemoteIdentitiesUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.PrepareIdentityBackupUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ReassignIdentityExchangePeerUseCase
@@ -95,6 +99,7 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.RestoreIdentityBackupUse
 import com.cbgm.sparrow.feature.identity.domain.usecase.SaveLocalPhoneNameUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SendIdentityVerificationReceiptUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SetLocalProfilePictureUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.StagePendingRemoteIdentityChangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.StageRemoteIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.StartIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.StartManualIdentityExchangeUseCase
@@ -124,6 +129,10 @@ val identityModule =
         singleOf(::ManualIdentityExchangeDataSource)
         singleOf(::IdentityExchangeRepositoryImpl) { bind<IdentityExchangeRepository>() }
         singleOf(::RemoteIdentityDataSource)
+        singleOf(::PendingRemoteIdentityChangeDataSource)
+        singleOf(::PendingRemoteIdentityChangeRepositoryImpl) { bind<PendingRemoteIdentityChangeRepository>() }
+        factory { StagePendingRemoteIdentityChangeUseCase(repository = get()) }
+        factory { ObservePendingRemoteIdentityChangesUseCase(repository = get()) }
         singleOf(::RemoteIdentityReadRepositoryImpl) { bind<RemoteIdentityReadRepository>() }
         factory { GetRemoteIdentityUseCase(repository = get()) }
         factory { FindRemoteIdentityPeerIdUseCase(repository = get()) }

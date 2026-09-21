@@ -38,6 +38,7 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveIncomingPeerConta
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.ApplyIdentityPeerMergeUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.GetIdentityPeerDisplayNameUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.UpdateIncomingIdentityPeerMetadataUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.domain.error.RemoteIdentityReplacementRequiredException
 import com.cbgm.sparrow.feature.conversationorchestration.domain.port.ConversationPort
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.ResolveIncomingIdentityPeerUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.ResolveSigningIdentityContactUseCase
@@ -51,6 +52,7 @@ import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeReady
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityResult
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityResultStatus
 import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
+import com.cbgm.sparrow.feature.identity.domain.model.PendingRemoteIdentityChange
 import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.feature.identity.domain.usecase.AcceptIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.AcceptRemoteIdentityHandshakeUseCase
@@ -73,6 +75,7 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.ReceiveIdentityReadyUseC
 import com.cbgm.sparrow.feature.identity.domain.usecase.ReceiveManualIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecordRemoteIdentityDeclineUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SendIdentityVerificationReceiptUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.StagePendingRemoteIdentityChangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.StageRemoteIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.StartIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.StartManualIdentityExchangeUseCase
@@ -163,6 +166,7 @@ internal class ConversationFlowHandler(
     private val reassignIdentityExchangePeer: ReassignIdentityExchangePeerUseCase,
     private val getIdentityPeerDisplayName: GetIdentityPeerDisplayNameUseCase,
     private val resolveIncomingIdentityPeer: ResolveIncomingIdentityPeerUseCase,
+    private val stagePendingRemoteIdentityChange: StagePendingRemoteIdentityChangeUseCase,
     private val applyIdentityPeerMerge: ApplyIdentityPeerMergeUseCase,
     private val updateIncomingIdentityPeerMetadata: UpdateIncomingIdentityPeerMetadataUseCase,
     private val phoneNumberNormalizer: PhoneNumberNormalizer,
@@ -649,13 +653,31 @@ internal class ConversationFlowHandler(
                     ?.trim()
                     ?.takeIf(String::isNotBlank)
                     ?.let { value -> phoneNumberNormalizer.normalize(value).getOrNull() }
-            val resolution =
+            val resolution = try {
                 resolveIncomingIdentityPeer(
                     resolvedPeerId = context.contactId,
                     remotePhoneNumber = remotePhoneNumber,
                     remoteEncryptionPublicKey = packet.encryptionPublicKey,
                     remoteSigningPublicKey = packet.signingPublicKey
                 )
+            } catch (conflict: RemoteIdentityReplacementRequiredException) {
+                // The signature on this invitation authenticates the PROPOSED keys,
+                // not ownership of the previous identity or of the claimed number.
+                // Record it durably for later explicit review; never merge contacts,
+                // update their phone/profile or authorize delivery in this path.
+                stagePendingRemoteIdentityChange(
+                    PendingRemoteIdentityChange(
+                        peerId = conflict.peerId,
+                        sourcePeerId = context.contactId,
+                        invitationId = packet.invitationId,
+                        proposedEncryptionPublicKey = packet.encryptionPublicKey.copyOf(),
+                        proposedSigningPublicKey = packet.signingPublicKey.copyOf(),
+                        receivedAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
+                        expiresAtEpochMilliseconds = packet.expiresAtEpochMilliseconds
+                    )
+                ).getOrThrow()
+                return@runCatching
+            }
 
             resolution.merges.forEach { merge ->
                 reassignIdentityExchangePeer(

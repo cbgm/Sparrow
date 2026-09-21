@@ -4,7 +4,6 @@ import com.cbgm.sparrow.core.protocol.handler.TypedProtocolPacketHandler
 import com.cbgm.sparrow.core.protocol.mailbox.MailboxCapabilityLifecycle
 import com.cbgm.sparrow.core.protocol.outbox.OutboxProcessor
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
-import com.cbgm.sparrow.core.protocol.transport.OutgoingWireSender
 import com.cbgm.sparrow.feature.conversationorchestration.data.datasource.WebSocketIncomingEnvelopeGateway
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.AddConversationMembersUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.DeleteConversationGroupUseCase
@@ -44,17 +43,13 @@ import com.cbgm.sparrow.feature.conversationorchestration.runtime.outbox.Outgoin
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.outbox.OutgoingPacketTransportPolicy
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.outbox.OutgoingRecipientRoutingResolver
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.outbox.OutgoingTransportPayloadFactory
-import com.cbgm.sparrow.feature.conversationorchestration.runtime.outbox.OutgoingTransportRequirement
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.routing.GroupRoutingResolver
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.routing.GroupTransportKeyResolver
-import com.cbgm.sparrow.feature.messaging.domain.usecase.AcknowledgeMessagingFailureUseCase
-import com.cbgm.sparrow.feature.messaging.domain.usecase.ObserveMessagingFailureEventsUseCase
 import com.cbgm.sparrow.feature.messaging.domain.usecase.SendEncodedTransportUseCase
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeGateway
 import com.cbgm.sparrow.feature.messaging.runtime.incoming.IncomingEnvelopeProcessor
 import com.cbgm.sparrow.feature.messaging.runtime.indicator.MessagingIndicatorGateway
 import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxCoordinator
-import com.cbgm.sparrow.feature.messaging.runtime.mailbox.MailboxRoutePayloadEncoder
 import com.cbgm.sparrow.feature.messaging.runtime.outbox.DefaultOutboxProcessor
 import com.cbgm.sparrow.feature.transport.routing.RoutingIdGenerator
 import com.cbgm.sparrow.feature.transport.websocket.WebSocketTransportClient
@@ -110,6 +105,7 @@ val conversationOrchestrationModule =
                 reassignIdentityExchangePeer = get(),
                 getIdentityPeerDisplayName = get(),
                 resolveIncomingIdentityPeer = get(),
+                stagePendingRemoteIdentityChange = get(),
                 applyIdentityPeerMerge = get(),
                 updateIncomingIdentityPeerMetadata = get(),
                 phoneNumberNormalizer = get(),

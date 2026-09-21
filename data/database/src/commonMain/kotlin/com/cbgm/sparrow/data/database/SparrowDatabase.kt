@@ -22,6 +22,7 @@ import com.cbgm.sparrow.data.database.dao.MessageReactionDao
 import com.cbgm.sparrow.data.database.dao.MessageRecipientStateDao
 import com.cbgm.sparrow.data.database.dao.MessageSafetyDao
 import com.cbgm.sparrow.data.database.dao.MessageSearchDao
+import com.cbgm.sparrow.data.database.dao.PendingRemoteIdentityChangeDao
 import com.cbgm.sparrow.data.database.dao.ProtocolOutboxDao
 import com.cbgm.sparrow.data.database.dao.RemoteIdentityDao
 import com.cbgm.sparrow.data.database.entity.AttachmentMessageContextEntity
@@ -48,6 +49,7 @@ import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.data.database.entity.MessageSafetyAssessmentEntity
 import com.cbgm.sparrow.data.database.entity.MessageSearchEmbeddingEntity
+import com.cbgm.sparrow.data.database.entity.PendingRemoteIdentityChangeEntity
 import com.cbgm.sparrow.data.database.entity.ProtocolOutboxEntity
 import com.cbgm.sparrow.data.database.entity.ProtocolOutboxFailureEventEntity
 import com.cbgm.sparrow.data.database.entity.RemoteMailboxRouteEntity
@@ -60,6 +62,7 @@ import com.cbgm.sparrow.data.database.migration.IdentityExchangeMigration41To42
         ContactEntity::class,
         ContactPhoneNumberEntity::class,
         ContactPublicIdentityEntity::class,
+        PendingRemoteIdentityChangeEntity::class,
         ContactRoutingIdEntity::class,
         ConversationEntity::class,
         ConversationParticipantEntity::class,
@@ -83,7 +86,7 @@ import com.cbgm.sparrow.data.database.migration.IdentityExchangeMigration41To42
         RemoteMailboxRouteEntity::class,
         LinkPreviewEntity::class
     ],
-    version = 49,
+    version = 50,
     autoMigrations = [
         AutoMigration(from = 26, to = 27),
         AutoMigration(from = 27, to = 28),
@@ -125,6 +128,8 @@ abstract class SparrowDatabase : RoomDatabase() {
     abstract fun identityExchangeDao(): IdentityExchangeDao
 
     abstract fun remoteIdentityDao(): RemoteIdentityDao
+
+    abstract fun pendingRemoteIdentityChangeDao(): PendingRemoteIdentityChangeDao
 
     abstract fun contactRoutingIdDao(): ContactRoutingIdDao
 
