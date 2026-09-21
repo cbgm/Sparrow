@@ -5,6 +5,8 @@ data class PendingIdentityReviewUiState(
     val requests: List<PendingIdentityReviewUi> = emptyList(),
     val dismissingInvitationId: String? = null,
     val confirmingInvitationId: String? = null,
+    val approvingInvitationId: String? = null,
+    val replacementCompleted: Boolean = false,
     val errorMessage: String? = null
 )
 

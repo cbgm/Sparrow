@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.identity.data.repository
 
 import com.cbgm.sparrow.core.extensions.toFingerprint
+import com.cbgm.sparrow.core.protocol.mailbox.MailboxCapabilityLifecycle
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.PendingRemoteIdentityChangeEntity
@@ -11,7 +12,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 internal class PendingRemoteIdentityChangeRepositoryImpl(
-    private val source: PendingRemoteIdentityChangeDataSource
+    private val source: PendingRemoteIdentityChangeDataSource,
+    private val mailboxCapabilityLifecycle: MailboxCapabilityLifecycle
 ) : PendingRemoteIdentityChangeRepository {
     override suspend fun stage(candidate: PendingRemoteIdentityChange): Result<Unit> = safeSuspendCall {
         require(candidate.peerId.isNotBlank() && candidate.sourcePeerId.isNotBlank())
@@ -53,9 +55,42 @@ internal class PendingRemoteIdentityChangeRepositoryImpl(
         }
         val now = SystemClock.nowEpochMilliseconds()
         check(candidate.expiresAtEpochMilliseconds > now) { "Identity change request expired; ask for a new invitation" }
-        check(source.confirmFingerprintIfCurrent(peerId, invitationId, candidate.proposedSigningPublicKey, now) == 1) {
+        check(
+            source.confirmFingerprintIfCurrent(
+                peerId,
+                invitationId,
+                candidate.proposedSigningPublicKey,
+                candidate.proposedEncryptionPublicKey,
+                now
+            ) == 1
+        ) {
             "Identity change was already confirmed, changed, or no longer matches the stored identity"
         }
+    }
+
+    override suspend fun approveReplacement(peerId: String, invitationId: String): Result<Unit> = safeSuspendCall {
+        require(peerId.isNotBlank() && invitationId.isNotBlank())
+        val candidate = source.find(peerId) ?: error("Identity change request no longer exists")
+        check(candidate.invitationId == invitationId) { "A newer identity change request exists" }
+        check(
+            candidate.fingerprintConfirmedAtEpochMilliseconds != null &&
+                candidate.confirmedPreviousEncryptionPublicKey != null &&
+                candidate.confirmedPreviousSigningPublicKey != null
+        ) { "Verify the new fingerprint independently before approving" }
+        check(candidate.expiresAtEpochMilliseconds > SystemClock.nowEpochMilliseconds()) {
+            "Identity change request expired; ask your contact to resend an invitation"
+        }
+        // Both the cached recipient delivery route and the locally issued mailbox
+        // capability for the old device must be retired. A failure leaves the DB
+        // binding unchanged and the pending request available for an explicit retry.
+        // Never replace old keys when a mailbox revocation could not be confirmed.
+        mailboxCapabilityLifecycle.revokeForContact(peerId).getOrThrow()
+        check(source.replaceConfirmedIdentity(peerId, invitationId, SystemClock.nowEpochMilliseconds())) {
+            "Identity change is no longer current or an old-identity packet is still being sent; retry later"
+        }
+        // Do not automatically accept the original invite: only its proposed public
+        // keys were stored. The sender must resend a fresh signed invitation, whose
+        // challenge can then be verified by the normal invite/identity flow.
     }
 
     override suspend fun discard(peerId: String, invitationId: String): Result<Unit> = safeSuspendCall {

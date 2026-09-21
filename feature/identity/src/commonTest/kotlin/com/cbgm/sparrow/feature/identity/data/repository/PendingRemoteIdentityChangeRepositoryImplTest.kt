@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.feature.identity.data.repository
 
 import com.cbgm.sparrow.core.extensions.toFingerprint
+import com.cbgm.sparrow.core.protocol.mailbox.MailboxCapabilityLifecycle
+import com.cbgm.sparrow.core.protocol.mailbox.NoOpMailboxCapabilityLifecycle
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.PendingRemoteIdentityChangeDao
 import com.cbgm.sparrow.data.database.entity.PendingRemoteIdentityChangeEntity
@@ -18,7 +20,7 @@ class PendingRemoteIdentityChangeRepositoryImplTest {
     @Test
     fun stagesUnsignedContinuityAsCandidateWithoutAnAcceptanceOperation() = runBlocking {
         val dao = FakeDao()
-        val repository = PendingRemoteIdentityChangeRepositoryImpl(PendingRemoteIdentityChangeDataSource(dao))
+        val repository = PendingRemoteIdentityChangeRepositoryImpl(PendingRemoteIdentityChangeDataSource(dao), NoOpMailboxCapabilityLifecycle)
         repository.stage(candidate("new", 100L)).getOrThrow()
         val saved = repository.observeAll().first().single()
         assertEquals("existing", saved.peerId)
@@ -29,7 +31,7 @@ class PendingRemoteIdentityChangeRepositoryImplTest {
     @Test
     fun oldReplayedInvitationDoesNotReplaceNewerCandidate() = runBlocking {
         val dao = FakeDao()
-        val repository = PendingRemoteIdentityChangeRepositoryImpl(PendingRemoteIdentityChangeDataSource(dao))
+        val repository = PendingRemoteIdentityChangeRepositoryImpl(PendingRemoteIdentityChangeDataSource(dao), NoOpMailboxCapabilityLifecycle)
         repository.stage(candidate("new", 200L)).getOrThrow()
         repository.stage(candidate("old", 100L)).getOrThrow()
         assertEquals("new", repository.observeAll().first().single().invitationId)
@@ -38,7 +40,7 @@ class PendingRemoteIdentityChangeRepositoryImplTest {
     @Test
     fun replayDoesNotClearPreviousFingerprintConfirmation() = runBlocking {
         val dao = FakeDao()
-        val repository = PendingRemoteIdentityChangeRepositoryImpl(PendingRemoteIdentityChangeDataSource(dao))
+        val repository = PendingRemoteIdentityChangeRepositoryImpl(PendingRemoteIdentityChangeDataSource(dao), NoOpMailboxCapabilityLifecycle)
         val now = SystemClock.nowEpochMilliseconds()
         repository.stage(candidate("current", now)).getOrThrow()
         val confirmed = repository.confirmFingerprint("existing", "current", ByteArray(32) { 2 }.toFingerprint())
@@ -50,7 +52,7 @@ class PendingRemoteIdentityChangeRepositoryImplTest {
     @Test
     fun differentOrMalformedFingerprintCannotConfirm() = runBlocking {
         val dao = FakeDao()
-        val repository = PendingRemoteIdentityChangeRepositoryImpl(PendingRemoteIdentityChangeDataSource(dao))
+        val repository = PendingRemoteIdentityChangeRepositoryImpl(PendingRemoteIdentityChangeDataSource(dao), NoOpMailboxCapabilityLifecycle)
         repository.stage(candidate("current", SystemClock.nowEpochMilliseconds())).getOrThrow()
         assertTrue(repository.confirmFingerprint("existing", "current", "1234").isFailure)
         assertTrue(repository.confirmFingerprint("existing", "current", ByteArray(32) { 3 }.toFingerprint()).isFailure)
@@ -58,9 +60,36 @@ class PendingRemoteIdentityChangeRepositoryImplTest {
     }
 
     @Test
+    fun failedMailboxRevocationKeepsConfirmedIdentityChangePending() = runBlocking {
+        val dao = FakeDao()
+        val failingMailbox = object : MailboxCapabilityLifecycle {
+            override suspend fun revokeForContact(contactId: String): Result<Unit> =
+                Result.failure(IllegalStateException("Mailbox node is unavailable"))
+
+            override suspend fun revokeAll(): Result<Unit> = Result.success(Unit)
+
+            override suspend fun retryPendingRevocations(): Result<Int> = Result.success(0)
+        }
+        val repository = PendingRemoteIdentityChangeRepositoryImpl(
+            PendingRemoteIdentityChangeDataSource(dao),
+            failingMailbox
+        )
+        repository.stage(candidate("current", SystemClock.nowEpochMilliseconds())).getOrThrow()
+        repository.confirmFingerprint(
+            "existing",
+            "current",
+            ByteArray(32) { 2 }.toFingerprint()
+        ).getOrThrow()
+        assertTrue(repository.approveReplacement("existing", "current").isFailure)
+        val pending = repository.observeAll().first().single()
+        assertEquals("current", pending.invitationId)
+        assertTrue(pending.fingerprintConfirmedAtEpochMilliseconds != null)
+    }
+
+    @Test
     fun discardCannotDeleteDifferentInvitationForSameContact() = runBlocking {
         val dao = FakeDao()
-        val repository = PendingRemoteIdentityChangeRepositoryImpl(PendingRemoteIdentityChangeDataSource(dao))
+        val repository = PendingRemoteIdentityChangeRepositoryImpl(PendingRemoteIdentityChangeDataSource(dao), NoOpMailboxCapabilityLifecycle)
         repository.stage(candidate("new", 200L)).getOrThrow()
         repository.discard("existing", "old").getOrThrow()
         assertEquals("new", repository.observeAll().first().single().invitationId)
@@ -94,11 +123,13 @@ class PendingRemoteIdentityChangeRepositoryImplTest {
             peerId: String,
             invitationId: String,
             proposedSigningPublicKey: ByteArray,
+            proposedEncryptionPublicKey: ByteArray,
             confirmedAt: Long
         ): Int {
             val candidate = state.value.singleOrNull() ?: return 0
             if (candidate.peerId != peerId || candidate.invitationId != invitationId ||
                 !candidate.proposedSigningPublicKey.contentEquals(proposedSigningPublicKey) ||
+                !candidate.proposedEncryptionPublicKey.contentEquals(proposedEncryptionPublicKey) ||
                 candidate.fingerprintConfirmedAtEpochMilliseconds != null ||
                 candidate.expiresAtEpochMilliseconds <= confirmedAt
             ) {
@@ -113,6 +144,22 @@ class PendingRemoteIdentityChangeRepositoryImplTest {
             )
             return 1
         }
+
+        override suspend fun countProcessingOutboxForPeer(peerId: String): Int = 0
+
+        override suspend fun quarantineOldRecipientPackets(peerId: String, now: Long): Int = 0
+
+        override suspend fun replaceIdentityOnlyIfConfirmationStillMatches(
+            peerId: String,
+            invitationId: String,
+            oldEncryptionPublicKey: ByteArray,
+            oldSigningPublicKey: ByteArray,
+            proposedEncryptionPublicKey: ByteArray,
+            proposedSigningPublicKey: ByteArray,
+            now: Long
+        ): Int = 0
+
+        override suspend fun invalidatePreviousExchanges(peerId: String, now: Long): Int = 0
 
         override suspend fun deleteIfInvitationMatches(peerId: String, invitationId: String): Int {
             val oldSize = state.value.size

@@ -659,4 +659,7 @@
     <string name="feature_identity_recovery_fingerprint_label">Unabhängig geprüfter neuer Signaturschlüssel-Fingerabdruck</string>
     <string name="feature_identity_recovery_confirm_fingerprint">Fingerabdruck-Prüfung dokumentieren</string>
     <string name="feature_identity_recovery_fingerprint_recorded">Fingerabdruck-Prüfung für diese Anfrage dokumentiert. Vorhandene Identität, Vertrauensstatus und Chats bleiben unverändert. Ein sicherer Identitätswechsel und eine neue Autorisierung sind noch nicht freigeschaltet.</string>
+    <string name="feature_identity_recovery_approve">Identität ersetzen</string>
+    <string name="feature_identity_recovery_approve_warning">Nur bestätigen, wenn du den vollständigen neuen Fingerabdruck unabhängig mit deinem Kontakt geprüft hast. Die alten Postfach-Routen werden widerrufen, alte ausstehende Pakete nicht erneut gesendet und die bisherige Verifizierung zurückgesetzt. Dies nimmt keine Chat-Einladung an. Bitte deinen Kontakt anschließend, eine neue Einladung zu senden.</string>
+    <string name="feature_identity_recovery_completed">Identität ersetzt. Der bestehende Kontakt und der Chatverlauf bleiben erhalten, aber Nachrichten bleiben bis zur Annahme einer neuen Einladung gesperrt. Bitte deinen Kontakt um eine neue Einladung. Alte ausstehende Pakete können nicht erneut gesendet werden.</string>
 </resources>

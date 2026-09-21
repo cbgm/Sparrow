@@ -28,6 +28,9 @@ import com.cbgm.sparrow.feature.identity.presentation.setup.model.PendingIdentit
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.PendingIdentityReviewUiState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_close
+import com.cbgm.sparrow.resources.feature_identity_recovery_approve
+import com.cbgm.sparrow.resources.feature_identity_recovery_approve_warning
+import com.cbgm.sparrow.resources.feature_identity_recovery_completed
 import com.cbgm.sparrow.resources.feature_identity_recovery_confirm_fingerprint
 import com.cbgm.sparrow.resources.feature_identity_recovery_dismiss
 import com.cbgm.sparrow.resources.feature_identity_recovery_dismiss_warning
@@ -45,16 +48,17 @@ import com.cbgm.sparrow.resources.feature_identity_recovery_review_warning
 import com.cbgm.sparrow.resources.feature_identity_recovery_unavailable
 import org.jetbrains.compose.resources.stringResource
 
-/** A request is deliberately read-only: replacement is not wired until old trust and routing are handled safely. */
+/** Explicit manual approval only: stale packets are quarantined; normal invitation is still required. */
 @Composable
 internal fun PendingIdentityReviewSection(
     state: PendingIdentityReviewUiState,
     onDismiss: (String, String) -> Unit,
-    onConfirmFingerprint: (String, String, String) -> Unit
+    onConfirmFingerprint: (String, String, String) -> Unit,
+    onApprove: (String, String) -> Unit
 ) {
     var selected by remember { mutableStateOf<PendingIdentityReviewUi?>(null) }
     var enteredFingerprint by remember { mutableStateOf("") }
-    if (state.requests.isEmpty() && state.errorMessage == null) return
+    if (state.requests.isEmpty() && state.errorMessage == null && !state.replacementCompleted) return
 
     Spacer(Modifier.height(MaterialTheme.spacing.large))
     SparrowCard {
@@ -68,6 +72,12 @@ internal fun PendingIdentityReviewSection(
                 style = MaterialTheme.typography.bodyMedium
             )
             state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            if (state.replacementCompleted) {
+                Text(
+                    stringResource(Res.string.feature_identity_recovery_completed),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
             state.requests.forEach { candidate ->
                 Spacer(Modifier.height(MaterialTheme.spacing.small))
                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
@@ -90,7 +100,12 @@ internal fun PendingIdentityReviewSection(
     }
 
     val candidate = selected?.takeIf { chosen ->
-        state.requests.any { it.peerId == chosen.peerId && it.invitationId == chosen.invitationId }
+        state.requests.any {
+            it.peerId == chosen.peerId && it.invitationId == chosen.invitationId &&
+                it.proposedSigningKey == chosen.proposedSigningKey &&
+                it.proposedEncryptionKey == chosen.proposedEncryptionKey &&
+                it.fingerprintConfirmed == chosen.fingerprintConfirmed
+        }
     }
     if (candidate != null) {
         AlertDialog(
@@ -115,7 +130,10 @@ internal fun PendingIdentityReviewSection(
                         candidate.previousEncryptionKey ?: stringResource(Res.string.feature_identity_recovery_unavailable)
                     )
                     KeyReviewText(stringResource(Res.string.feature_identity_recovery_new_encryption), candidate.proposedEncryptionKey)
-                    if (!candidate.fingerprintConfirmed) {
+                    if (candidate.fingerprintConfirmed) {
+                        Spacer(Modifier.height(MaterialTheme.spacing.medium))
+                        Text(stringResource(Res.string.feature_identity_recovery_approve_warning))
+                    } else {
                         OutlinedTextField(
                             value = enteredFingerprint,
                             onValueChange = { enteredFingerprint = it.take(90) },
@@ -140,8 +158,19 @@ internal fun PendingIdentityReviewSection(
                             }
                         ) { Text(stringResource(Res.string.feature_identity_recovery_confirm_fingerprint)) }
                     }
+                    if (candidate.fingerprintConfirmed) {
+                        Button(
+                            enabled = state.approvingInvitationId == null &&
+                                state.dismissingInvitationId == null && state.confirmingInvitationId == null,
+                            onClick = {
+                                onApprove(candidate.peerId, candidate.invitationId)
+                                selected = null
+                            }
+                        ) { Text(stringResource(Res.string.feature_identity_recovery_approve)) }
+                    }
                     TextButton(
-                        enabled = state.dismissingInvitationId == null && state.confirmingInvitationId == null,
+                        enabled = state.dismissingInvitationId == null &&
+                            state.confirmingInvitationId == null && state.approvingInvitationId == null,
                         onClick = {
                             onDismiss(candidate.peerId, candidate.invitationId)
                             selected = null

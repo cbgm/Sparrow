@@ -54,6 +54,7 @@ import com.cbgm.sparrow.feature.identity.domain.repository.RemoteProfilePictureR
 import com.cbgm.sparrow.feature.identity.domain.usecase.AcceptIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.AcceptRemoteIdentityHandshakeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ApplyRemoteProfilePictureMetadataUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ApprovePendingRemoteIdentityChangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.CancelIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.CloseIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ConfirmPendingRemoteIdentityChangeFingerprintUseCase
@@ -137,6 +138,7 @@ val identityModule =
         factory { ObservePendingRemoteIdentityChangesUseCase(repository = get()) }
         factory { DismissPendingRemoteIdentityChangeUseCase(repository = get()) }
         factory { ConfirmPendingRemoteIdentityChangeFingerprintUseCase(repository = get()) }
+        factory { ApprovePendingRemoteIdentityChangeUseCase(repository = get()) }
         singleOf(::RemoteIdentityReadRepositoryImpl) { bind<RemoteIdentityReadRepository>() }
         factory { GetRemoteIdentityUseCase(repository = get()) }
         factory { FindRemoteIdentityPeerIdUseCase(repository = get()) }
@@ -342,7 +344,8 @@ val identityModule =
                 observePendingRemoteIdentityChanges = get(),
                 getRemoteIdentityForReview = get(),
                 dismissPendingRemoteIdentityChange = get(),
-                confirmPendingRemoteIdentityChangeFingerprint = get()
+                confirmPendingRemoteIdentityChangeFingerprint = get(),
+                approvePendingRemoteIdentityChange = get()
             )
         }
 

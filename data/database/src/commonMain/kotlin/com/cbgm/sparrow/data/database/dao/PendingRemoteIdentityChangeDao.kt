@@ -34,6 +34,7 @@ interface PendingRemoteIdentityChangeDao {
         WHERE peerId = :peerId
           AND invitationId = :invitationId
           AND proposedSigningPublicKey = :proposedSigningPublicKey
+          AND proposedEncryptionPublicKey = :proposedEncryptionPublicKey
           AND expiresAtEpochMilliseconds > :confirmedAt
           AND fingerprintConfirmedAtEpochMilliseconds IS NULL
           AND EXISTS (
@@ -52,6 +53,7 @@ interface PendingRemoteIdentityChangeDao {
         peerId: String,
         invitationId: String,
         proposedSigningPublicKey: ByteArray,
+        proposedEncryptionPublicKey: ByteArray,
         confirmedAt: Long
     ): Int
 

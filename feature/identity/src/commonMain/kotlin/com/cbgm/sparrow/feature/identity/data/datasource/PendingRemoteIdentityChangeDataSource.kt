@@ -15,6 +15,15 @@ internal class PendingRemoteIdentityChangeDataSource(
 
     suspend fun discard(peerId: String, invitationId: String) = dao.deleteIfInvitationMatches(peerId, invitationId)
 
-    suspend fun confirmFingerprintIfCurrent(peerId: String, invitationId: String, key: ByteArray, now: Long): Int =
-        dao.confirmFingerprintIfCurrent(peerId, invitationId, key, now)
+    suspend fun confirmFingerprintIfCurrent(
+        peerId: String,
+        invitationId: String,
+        signingKey: ByteArray,
+        encryptionKey: ByteArray,
+        now: Long
+    ): Int = dao.confirmFingerprintIfCurrent(peerId, invitationId, signingKey, encryptionKey, now)
+
+    /** The DAO performs the key swap, exchange invalidation and packet quarantine atomically. */
+    suspend fun replaceConfirmedIdentity(peerId: String, invitationId: String, now: Long): Boolean =
+        dao.replaceConfirmedIdentity(peerId, invitationId, now)
 }

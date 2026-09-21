@@ -80,6 +80,7 @@ fun IdentityScreen(
     pendingIdentityReview: PendingIdentityReviewUiState = PendingIdentityReviewUiState(),
     onDismissIdentityChange: (String, String) -> Unit = { _, _ -> },
     onConfirmIdentityChangeFingerprint: (String, String, String) -> Unit = { _, _, _ -> },
+    onApproveIdentityChange: (String, String) -> Unit = { _, _ -> },
     onExportIdentity: () -> Unit = {},
     onRestoreIdentity: () -> Unit = {}
 ) {
@@ -122,6 +123,7 @@ fun IdentityScreen(
                     pendingIdentityReview = pendingIdentityReview,
                     onDismissIdentityChange = onDismissIdentityChange,
                     onConfirmIdentityChangeFingerprint = onConfirmIdentityChangeFingerprint,
+                    onApproveIdentityChange = onApproveIdentityChange,
                     onExportIdentity = onExportIdentity
                 )
             }
@@ -252,6 +254,7 @@ private fun ReadyIdentityContent(
     pendingIdentityReview: PendingIdentityReviewUiState,
     onDismissIdentityChange: (String, String) -> Unit,
     onConfirmIdentityChangeFingerprint: (String, String, String) -> Unit,
+    onApproveIdentityChange: (String, String) -> Unit,
     onExportIdentity: () -> Unit
 ) {
     Column(
@@ -294,7 +297,8 @@ private fun ReadyIdentityContent(
         PendingIdentityReviewSection(
             state = pendingIdentityReview,
             onDismiss = onDismissIdentityChange,
-            onConfirmFingerprint = onConfirmIdentityChangeFingerprint
+            onConfirmFingerprint = onConfirmIdentityChangeFingerprint,
+            onApprove = onApproveIdentityChange
         )
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.large))
 
