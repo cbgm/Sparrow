@@ -33,11 +33,13 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.group.SendGroupMessageUseCa
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.SetGroupIndicatorUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.ToggleGroupMessageReactionUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.UnpinGroupMessageUseCase
-import com.cbgm.sparrow.feature.chats.presentation.component.model.IndicatorUiState
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageComposerUiState
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageContextUiState
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageHistoryUiState
+import com.cbgm.sparrow.feature.chats.presentation.common.composer.mapper.toComposerAvailabilityUi
+import com.cbgm.sparrow.feature.chats.presentation.common.composer.mapper.toIndicatorUiType
+import com.cbgm.sparrow.feature.chats.presentation.common.composer.model.IndicatorUiState
+import com.cbgm.sparrow.feature.chats.presentation.common.composer.model.MessageComposerUiState
+import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
+import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextUiState
+import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageHistoryUiState
 import com.cbgm.sparrow.feature.chats.presentation.group.mapper.toGroupConversationUiState
 import com.cbgm.sparrow.feature.chats.presentation.group.mapper.toGroupMembershipUiState
 import com.cbgm.sparrow.feature.chats.presentation.group.mapper.toGroupReplyPreview
@@ -220,8 +222,8 @@ class GroupConversationViewModel(
                 editingMessageId = draft.editingMessageId,
                 selectedMedia = runtime.media,
                 isSending = runtime.isSending,
-                locationShareState = runtime.locationShareState,
-                availability = availability
+                isLocationInProgress = runtime.locationShareState.isInProgress,
+                availability = availability.toComposerAvailabilityUi()
             )
         }.stateIn(
             scope = viewModelScope,
@@ -247,7 +249,7 @@ class GroupConversationViewModel(
             val indicatorType = indicators.preferredIndicatorType()
             val indicatorContactIds = indicators.filterValues { it == indicatorType }.keys
             IndicatorUiState(
-                type = indicatorType,
+                type = indicatorType.toIndicatorUiType(),
                 displayName = indicatorContactIds.toIndicatorDisplayName(presentation.context?.contacts.orEmpty())
             )
         }.stateIn(

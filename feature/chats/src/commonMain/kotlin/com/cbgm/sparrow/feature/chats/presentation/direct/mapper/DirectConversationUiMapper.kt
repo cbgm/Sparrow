@@ -7,11 +7,11 @@ import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectConversation
 import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectMessage
 import com.cbgm.sparrow.feature.chats.domain.model.direct.resolveDirectComposerState
 import com.cbgm.sparrow.feature.chats.domain.model.isEditable
-import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toMessagePartsUi
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessagePartUi
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageReactionUi
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageReplyUi
+import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toMessagePartsUi
+import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
+import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessagePartUi
+import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionUi
+import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReplyUi
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversationUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus

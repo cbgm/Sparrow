@@ -43,7 +43,7 @@ import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
-import com.cbgm.sparrow.feature.chats.presentation.component.ScrollToBottomButton
+import com.cbgm.sparrow.feature.chats.presentation.common.history.component.ScrollToBottomButton
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.ConversationListItem
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiState

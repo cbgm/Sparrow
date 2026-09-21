@@ -30,11 +30,13 @@ import com.cbgm.sparrow.feature.chats.domain.usecase.direct.SetDirectIndicatorUs
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ToggleDirectMessageReactionUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.forward.ForwardMessageUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.forward.LoadOlderMessagesUseCase
-import com.cbgm.sparrow.feature.chats.presentation.component.model.IndicatorUiState
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageComposerUiState
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageContextUiState
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageHistoryUiState
+import com.cbgm.sparrow.feature.chats.presentation.common.composer.mapper.toComposerAvailabilityUi
+import com.cbgm.sparrow.feature.chats.presentation.common.composer.mapper.toIndicatorUiType
+import com.cbgm.sparrow.feature.chats.presentation.common.composer.model.IndicatorUiState
+import com.cbgm.sparrow.feature.chats.presentation.common.composer.model.MessageComposerUiState
+import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
+import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextUiState
+import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageHistoryUiState
 import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.toDirectConversationUiState
 import com.cbgm.sparrow.feature.chats.presentation.direct.mapper.toDirectReplyPreview
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversationUiEvent
@@ -223,8 +225,8 @@ class DirectConversationViewModel(
                 editingMessageId = draft.editingMessageId,
                 selectedMedia = runtime.media,
                 isSending = runtime.isSending,
-                locationShareState = runtime.locationShareState,
-                availability = availability
+                isLocationInProgress = runtime.locationShareState.isInProgress,
+                availability = availability.toComposerAvailabilityUi()
             )
         }.stateIn(
             scope = viewModelScope,
@@ -248,7 +250,7 @@ class DirectConversationViewModel(
     val indicatorState: StateFlow<IndicatorUiState> =
         combine(indicatorController.remoteIndicatorType, conversationState) { indicatorType, conversation ->
             IndicatorUiState(
-                type = indicatorType,
+                type = indicatorType.toIndicatorUiType(),
                 displayName = conversation.contactName
             )
         }.stateIn(
