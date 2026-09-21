@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.notification.di
 
 import androidx.work.WorkerParameters
+import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
 import com.cbgm.sparrow.notification.device.AndroidNotificationRuntime
 import com.cbgm.sparrow.notification.device.PendingMessageSyncScheduler
 import com.cbgm.sparrow.notification.device.PendingMessageSyncWorker
@@ -56,6 +57,7 @@ val notificationAndroidModule =
                 appContext = androidContext(),
                 workerParameters = parameters.get<WorkerParameters>(),
                 synchronizePendingMessages = get(),
+                controlPlaneConfiguration = get<ControlPlaneConfiguration>(),
                 appVisibilityState = get(),
                 conversationNotificationPresenter = get()
             )
@@ -65,7 +67,8 @@ val notificationAndroidModule =
             PushTokenRegistrationWorker(
                 appContext = androidContext(),
                 workerParameters = parameters.get<WorkerParameters>(),
-                registerPushToken = get()
+                registerPushToken = get(),
+                controlPlaneConfiguration = get<ControlPlaneConfiguration>()
             )
         }
     }

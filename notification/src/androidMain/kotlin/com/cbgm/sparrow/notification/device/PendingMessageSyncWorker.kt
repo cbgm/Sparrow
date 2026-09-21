@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
 import com.cbgm.sparrow.notification.domain.model.AppVisibilityState
 import com.cbgm.sparrow.notification.domain.usecase.SynchronizePendingMessagesUseCase
 import com.cbgm.sparrow.notification.presentation.ConversationNotificationPresenter
@@ -12,6 +13,7 @@ class PendingMessageSyncWorker(
     appContext: Context,
     workerParameters: WorkerParameters,
     private val synchronizePendingMessages: SynchronizePendingMessagesUseCase,
+    private val controlPlaneConfiguration: ControlPlaneConfiguration,
     private val appVisibilityState: AppVisibilityState,
     private val conversationNotificationPresenter: ConversationNotificationPresenter
 ) : CoroutineWorker(appContext, workerParameters) {
@@ -27,7 +29,13 @@ class PendingMessageSyncWorker(
                 "wakeUpId=${wakeUpId.take(LOG_WAKE_UP_ID_LENGTH)}, attempt=$runAttemptCount"
         }
 
-        return synchronizePendingMessages(wakeUpId = wakeUpId).fold(
+        // WorkManager can start Sparrow's process without ever creating AppViewModel.
+        // The normal UI startup initializes the persisted control-plane endpoints,
+        // but a cold push must do that independently before making network requests.
+        return runCatching {
+            controlPlaneConfiguration.initialize()
+            synchronizePendingMessages(wakeUpId = wakeUpId).getOrThrow()
+        }.fold(
             onSuccess = { syncResult ->
                 if (!appVisibilityState.isVisible.value) {
                     syncResult.notifications.forEach { notification ->
