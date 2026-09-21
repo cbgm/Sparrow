@@ -81,9 +81,11 @@ class OutgoingPacketTransportPolicy {
 
                 is ChatMessagePacket ->
                     OutgoingTransportRequirement(
-                        requiresEncryption = packet.attachments.isNotEmpty(),
+                        // Text, reactions and attachments must all remain encrypted,
+                        // including when a remote installation loses its old identity.
+                        requiresEncryption = true,
                         encryptionUnavailableMessage =
-                            "Direct message attachments require an encrypted Sparrow transport"
+                            "Direct messages require an encrypted Sparrow transport"
                     )
 
                 is GroupAvatarUpdatedPacket,
