@@ -34,7 +34,7 @@ import kotlin.math.roundToInt
 @Composable
 actual fun rememberGalleryPickerLauncher(
     config: GalleryPickerConfig,
-    selectedMedia: List<GalleryMedia>,
+    selectedSourceReferences: List<String>,
     strings: GalleryPickerStrings,
     onMediaSelected: (List<GalleryMedia>) -> Unit,
     onDismissed: () -> Unit,

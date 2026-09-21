@@ -49,14 +49,19 @@ import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupConversation
 import com.cbgm.sparrow.feature.chats.presentation.group.model.GroupMembershipUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.device.AddDeviceContactResult
 import com.cbgm.sparrow.feature.contacts.domain.usecase.AddDeviceContactUseCase
+import com.cbgm.sparrow.feature.media.domain.repository.MediaSelectionFileRepository
 import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelectionType
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyAssessmentsUseCase
 import com.cbgm.sparrow.feature.safety.presentation.details.mapper.toMessageSafetyDetails
 import com.cbgm.sparrow.feature.voice.domain.usecase.GetRecordedVoiceAttachmentUseCase
 import com.cbgm.sparrow.feature.voice.domain.usecase.ObserveVoiceRecordingActiveUseCase
 import com.cbgm.sparrow.feature.voice.domain.usecase.ResetVoiceComposerUseCase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -93,7 +98,8 @@ class GroupConversationViewModel(
     private val findMessageHistoryCursor: FindMessageHistoryCursorUseCase,
     private val getRecordedVoiceAttachment: GetRecordedVoiceAttachmentUseCase,
     private val resetVoiceComposer: ResetVoiceComposerUseCase,
-    observeVoiceRecordingActive: ObserveVoiceRecordingActiveUseCase
+    observeVoiceRecordingActive: ObserveVoiceRecordingActiveUseCase,
+    private val mediaFiles: MediaSelectionFileRepository
 ) : BaseViewModel() {
     private val groupId =
         savedStateHandle.requireRouteArgument<String>(AppRoute.GroupConversation::conversationId.name)
@@ -105,6 +111,10 @@ class GroupConversationViewModel(
     private val editingMessageId = savedStateHandle.getMutableStateFlow(EDITING_MESSAGE_ID_KEY, "")
     private val mutableErrorMessage = MutableStateFlow<String?>(null)
     private val selectedMedia = MutableStateFlow<List<MediaSelection>>(emptyList())
+    private var preparingMediaSend = false
+
+    // Draft cleanup must survive ViewModel clearing (viewModelScope is cancelled).
+    private val mediaCleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val isSending = MutableStateFlow(false)
     private val contextMessageId = MutableStateFlow<String?>(null)
     private val locationShareState = MutableStateFlow(LocationShareState.IDLE)
@@ -466,13 +476,35 @@ class GroupConversationViewModel(
 
         val selections = selectedMedia.value
         if (text.isEmpty() && selections.isEmpty()) return
+        if (preparingMediaSend) return
+        if (selections.isEmpty()) {
+            dispatchSend(
+                text = text,
+                attachments = emptyList(),
+                clearComposerOnSuccess = true,
+                fallbackError = "Message could not be sent"
+            )
+            return
+        }
 
-        dispatchSend(
-            text = text,
-            attachments = selections.map(MediaSelection::toOutgoingMessageAttachment),
-            clearComposerOnSuccess = true,
-            fallbackError = "Message could not be sent"
-        )
+        preparingMediaSend = true
+        viewModelScope.launch {
+            try {
+                val attachments = selections.map { it.toOutgoingMessageAttachment(mediaFiles) }
+                // Selection could change while the files are being read.
+                if (selectedMedia.value != selections) return@launch
+                dispatchSend(
+                    text = text,
+                    attachments = attachments,
+                    clearComposerOnSuccess = true,
+                    fallbackError = "Message could not be sent"
+                )
+            } catch (error: Exception) {
+                setError(error.message ?: "Selected media could not be read")
+            } finally {
+                preparingMediaSend = false
+            }
+        }
     }
 
     private fun sendVoiceMessage() {
@@ -586,23 +618,77 @@ class GroupConversationViewModel(
 
     private fun updateMediaSelection(media: List<MediaSelection>) {
         runCatching {
-            MessageAttachmentPolicy.requireValid(
-                media.map(MediaSelection::toOutgoingMessageAttachment)
-            )
+            require(media.size <= MessageAttachmentPolicy.MAX_ATTACHMENTS_PER_MESSAGE) {
+                "Too many attachments selected"
+            }
+            require(media.map(MediaSelection::id).distinct().size == media.size) {
+                "Attachment IDs must be unique"
+            }
+            require(media.sumOf(MediaSelection::byteSize) <= MessageAttachmentPolicy.MAX_TOTAL_ATTACHMENT_BYTES) {
+                "Selected attachments exceed the total attachment size limit"
+            }
+            media.forEach { item ->
+                require(item.byteSize > 0L) { "Selected attachment is empty" }
+                when (item.type) {
+                    MediaSelectionType.IMAGE -> {
+                        require(item.byteSize <= MessageAttachmentPolicy.MAX_IMAGE_BYTES) { "Image attachment too large" }
+                        require(item.mimeType.startsWith("image/") && item.width != null && item.height != null) {
+                            "Invalid image attachment"
+                        }
+                    }
+                    MediaSelectionType.VIDEO -> {
+                        require(item.byteSize <= MessageAttachmentPolicy.MAX_VIDEO_BYTES && item.mimeType.startsWith("video/")) {
+                            "Invalid video attachment"
+                        }
+                    }
+                    MediaSelectionType.FILE -> {
+                        require(item.byteSize <= MessageAttachmentPolicy.MAX_FILE_BYTES && !item.fileName.isNullOrBlank()) {
+                            "Invalid file attachment"
+                        }
+                    }
+                }
+            }
         }.onSuccess {
+            val removed = selectedMedia.value.filterNot { current -> media.any { it.id == current.id } }
             selectedMedia.value = media
             clearError()
+            deletePendingSelections(removed)
         }.onFailure { error ->
+            // A rejected selection may already have been copied to private storage.
+            // Do not remove any file still referenced by the accepted composer state.
+            val acceptedIds = selectedMedia.value.mapTo(mutableSetOf(), MediaSelection::id)
+            deletePendingSelections(media.filterNot { it.id in acceptedIds })
             setError(error.message ?: "Selected attachments could not be attached")
         }
     }
 
     private fun clearComposer() {
+        val consumed = selectedMedia.value
         messageText.value = ""
         replyToMessageId.value = ""
         editingMessageId.value = ""
         selectedMedia.value = emptyList()
         indicatorController.stopLocalIndicator()
+        deletePendingSelections(consumed)
+    }
+
+    private fun deletePendingSelections(media: List<MediaSelection>) {
+        if (media.isEmpty()) return
+        mediaCleanupScope.launch {
+            media.forEach { item ->
+                // Delete each path independently: a missing original must not leak the thumbnail.
+                for (path in listOfNotNull(item.localFilePath, item.thumbnailFilePath).distinct()) {
+                    runCatching { mediaFiles.delete(path) }
+                        .onFailure { error -> logger.warn(error) { "Could not clean up pending media" } }
+                }
+            }
+        }
+    }
+
+    override fun onCleared() {
+        // The composer is ViewModel-owned; leaving the conversation discards unsent copies.
+        // Do not launch this in viewModelScope: that scope is cancelled during onCleared.
+        deletePendingSelections(selectedMedia.value)
     }
 
     private fun startReply(messageId: String) {

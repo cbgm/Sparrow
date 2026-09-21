@@ -161,7 +161,6 @@ import com.cbgm.sparrow.feature.chats.runtime.group.verification.GroupVerificati
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.port.ConversationPort
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecordLocalIdentitySharedUseCase
-import com.cbgm.sparrow.feature.transport.websocket.WebSocketTransportClient
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
@@ -421,7 +420,8 @@ private fun org.koin.core.module.Module.registerViewModels() {
             findMessageHistoryCursor = get(),
             getRecordedVoiceAttachment = get(),
             resetVoiceComposer = get(),
-            observeVoiceRecordingActive = get()
+            observeVoiceRecordingActive = get(),
+            mediaFiles = get()
         )
     }
 
@@ -477,7 +477,8 @@ private fun org.koin.core.module.Module.registerViewModels() {
             findMessageHistoryCursor = get(),
             getRecordedVoiceAttachment = get(),
             resetVoiceComposer = get(),
-            observeVoiceRecordingActive = get()
+            observeVoiceRecordingActive = get(),
+            mediaFiles = get()
         )
     }
 }

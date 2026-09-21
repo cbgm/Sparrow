@@ -7,6 +7,7 @@ import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.media.domain.model.FileBrowserDirectory
 import com.cbgm.sparrow.feature.media.domain.model.FileBrowserEntry
+import com.cbgm.sparrow.feature.media.domain.repository.MediaSelectionFileRepository
 import com.cbgm.sparrow.feature.media.domain.usecase.BrowseFileDirectoryUseCase
 import com.cbgm.sparrow.feature.media.domain.usecase.CheckFileBrowserAccessUseCase
 import com.cbgm.sparrow.feature.media.domain.usecase.GetFileBrowserRootUseCase
@@ -18,6 +19,7 @@ import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerSo
 import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerUiEvent
 import com.cbgm.sparrow.feature.media.presentation.filepicker.model.FilePickerUiState
 import com.cbgm.sparrow.feature.media.presentation.mapper.toMediaSelection
+import com.cbgm.sparrow.feature.media.presentation.model.MediaSelection
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,7 +33,8 @@ class FilePickerViewModel(
     private val setRoot: SetFileBrowserRootUseCase,
     private val getRoot: GetFileBrowserRootUseCase,
     private val browseDirectory: BrowseFileDirectoryUseCase,
-    private val readFile: ReadFileBrowserEntryUseCase
+    private val readFile: ReadFileBrowserEntryUseCase,
+    private val mediaFiles: MediaSelectionFileRepository
 ) : BaseViewModel() {
     private val sessionId = savedStateHandle.requireRouteArgument<String>(AppRoute.FilePicker::sessionId.name)
     private val session = sessions.snapshot(sessionId)
@@ -250,9 +253,20 @@ class FilePickerViewModel(
         _uiState.update { state -> state.copy(isConfirming = true, errorMessage = null) }
         viewModelScope.launch {
             runCatching {
-                selectedReferences.map { reference ->
-                    readFile(reference, currentSession.maxFileBytes).getOrThrow().toMediaSelection()
+                val prepared = mutableListOf<MediaSelection>()
+                try {
+                    selectedReferences.forEach { reference ->
+                        prepared += readFile(reference, currentSession.maxFileBytes).getOrThrow()
+                            .toMediaSelection(mediaFiles)
+                    }
+                } catch (error: Exception) {
+                    prepared.forEach { selection ->
+                        runCatching { mediaFiles.delete(selection.localFilePath) }
+                        selection.thumbnailFilePath?.let { path -> runCatching { mediaFiles.delete(path) } }
+                    }
+                    throw error
                 }
+                prepared
             }.onSuccess { files ->
                 sessions.complete(sessionId, files)
                 navigator.popBackStack()

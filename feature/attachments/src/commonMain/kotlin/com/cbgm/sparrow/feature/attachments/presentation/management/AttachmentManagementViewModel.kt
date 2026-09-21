@@ -15,6 +15,7 @@ import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachment
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -28,30 +29,33 @@ class AttachmentManagementViewModel(
         savedStateHandle.requireRouteArgument<String>(AppRoute.AttachmentManagement::conversationId.name)
     private val localState = MutableStateFlow(AttachmentManagementLocalState())
 
-    val uiState =
-        combine(
-            observeLocalAttachments(conversationId),
-            localState
-        ) { attachments, local ->
-            val attachmentIds = attachments.mapTo(mutableSetOf()) { attachment -> attachment.id }
-            val selectedIds = local.selectedIds.intersect(attachmentIds)
-            val viewerAttachmentId = local.viewerAttachmentId?.takeIf(attachmentIds::contains)
+    // Map attachments and index IDs only when the source emits, not on selection changes.
+    // uiState is the only exposed StateFlow; the snapshot is an intermediate Flow value.
+    val uiState = combine(
+        observeLocalAttachments(conversationId).map { records ->
+            val items = records.toMessageAttachmentsUi()
+            AttachmentSnapshot(items, items.mapTo(mutableSetOf()) { it.id })
+        },
+        localState
+    ) { snapshot, local ->
+        val selectedIds = local.selectedIds.intersect(snapshot.ids)
+        val viewerAttachmentId = local.viewerAttachmentId?.takeIf(snapshot.ids::contains)
 
-            AttachmentManagementUiState(
-                attachments = attachments.toMessageAttachmentsUi(),
-                selectedTab = local.selectedTab,
-                isSelectionMode = local.isSelectionMode,
-                selectedIds = selectedIds,
-                viewerAttachmentId = viewerAttachmentId,
-                isDeleting = local.isDeleting,
-                showDeleteConfirmation = local.showDeleteConfirmation,
-                deleteError = local.deleteError
-            )
-        }.stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = AttachmentManagementUiState()
+        AttachmentManagementUiState(
+            attachments = snapshot.items,
+            selectedTab = local.selectedTab,
+            isSelectionMode = local.isSelectionMode,
+            selectedIds = selectedIds,
+            viewerAttachmentId = viewerAttachmentId,
+            isDeleting = local.isDeleting,
+            showDeleteConfirmation = local.showDeleteConfirmation,
+            deleteError = local.deleteError
         )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = AttachmentManagementUiState()
+    )
 
     fun onUiEvent(event: AttachmentManagementUiEvent) {
         when (event) {
@@ -166,4 +170,9 @@ private data class AttachmentManagementLocalState(
     val isDeleting: Boolean = false,
     val showDeleteConfirmation: Boolean = false,
     val deleteError: String? = null
+)
+
+private data class AttachmentSnapshot(
+    val items: List<MessageAttachmentUi>,
+    val ids: Set<String>
 )

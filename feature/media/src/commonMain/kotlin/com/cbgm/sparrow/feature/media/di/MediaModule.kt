@@ -1,7 +1,9 @@
 package com.cbgm.sparrow.feature.media.di
 
 import com.cbgm.sparrow.feature.media.data.repository.FileBrowserRepositoryImpl
+import com.cbgm.sparrow.feature.media.data.repository.MediaSelectionFileRepositoryImpl
 import com.cbgm.sparrow.feature.media.domain.repository.FileBrowserRepository
+import com.cbgm.sparrow.feature.media.domain.repository.MediaSelectionFileRepository
 import com.cbgm.sparrow.feature.media.domain.usecase.BrowseFileDirectoryUseCase
 import com.cbgm.sparrow.feature.media.domain.usecase.CheckFileBrowserAccessUseCase
 import com.cbgm.sparrow.feature.media.domain.usecase.GetFileBrowserRootUseCase
@@ -17,6 +19,7 @@ import org.koin.dsl.module
 
 val mediaModule =
     module {
+        singleOf(::MediaSelectionFileRepositoryImpl) { bind<MediaSelectionFileRepository>() }
         singleOf(::FileBrowserRepositoryImpl) {
             bind<FileBrowserRepository>()
         }
@@ -36,7 +39,8 @@ val mediaModule =
                 setRoot = get(),
                 getRoot = get(),
                 browseDirectory = get(),
-                readFile = get()
+                readFile = get(),
+                mediaFiles = get()
             )
         }
     }

@@ -148,9 +148,9 @@ private fun MediaViewerPage(
     onEnsureMediaLoaded: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isLoaded = media.localFilePath != null || media.bytes != null
+    val isLoaded = media.localFilePath != null
 
-    LaunchedEffect(media.id, media.localFilePath, media.bytes) {
+    LaunchedEffect(media.id, media.localFilePath) {
         if (!isLoaded) {
             onEnsureMediaLoaded(media.id)
         }
@@ -168,7 +168,7 @@ private fun MediaViewerPage(
     when (media.type) {
         MediaType.IMAGE ->
             MediaImage(
-                data = media.bytes,
+                data = null,
                 localFilePath = media.localFilePath,
                 cacheKey = "media-full:${media.id}",
                 contentDescription = null,
@@ -236,7 +236,7 @@ private fun MediaViewerPreview() {
                         id = "preview-image",
                         type = MediaType.IMAGE,
                         mimeType = "image/jpeg",
-                        bytes = byteArrayOf()
+                        localFilePath = "/preview/image.jpg"
                     )
                 ),
             initialIndex = 0,
