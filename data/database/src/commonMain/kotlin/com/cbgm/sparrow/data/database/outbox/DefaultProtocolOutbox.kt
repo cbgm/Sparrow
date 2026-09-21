@@ -35,6 +35,9 @@ class DefaultProtocolOutbox(
             val existing = outboxDao.findByPacketId(packetId = packet.packetId)
 
             if (existing != null) {
+                check(existing.status != OutboxStatus.QUARANTINED.name) {
+                    "Packet is bound to a retired recipient identity; create a new packet after authorization"
+                }
                 return@runCatching existing.toProtocolOutboxItem()
             }
 
@@ -153,10 +156,12 @@ class DefaultProtocolOutbox(
                 event = OutboxEvent.PROCESSING_STARTED
             )
 
-            outboxDao.markProcessing(
-                itemId = itemId,
-                updatedAt = SystemClock.nowEpochMilliseconds()
-            )
+            check(
+                outboxDao.markProcessing(
+                    itemId = itemId,
+                    updatedAt = SystemClock.nowEpochMilliseconds()
+                ) == 1
+            ) { "Outbox packet changed state before processing; refusing stale send" }
         }
 
     override suspend fun requeueInterrupted(): Result<Unit> =
@@ -272,6 +277,9 @@ class DefaultProtocolOutbox(
                 OutboxStatus.PENDING,
                 OutboxStatus.PROCESSING -> Unit
 
+                OutboxStatus.QUARANTINED ->
+                    error("Packet belongs to a retired recipient identity and cannot be resent")
+
                 OutboxStatus.SENT,
                 OutboxStatus.FAILED,
                 OutboxStatus.EXPIRED -> {
@@ -319,6 +327,8 @@ class DefaultProtocolOutbox(
             OutboxStatus.FAILED.name -> OutboxStatus.FAILED
 
             OutboxStatus.EXPIRED.name -> OutboxStatus.EXPIRED
+
+            OutboxStatus.QUARANTINED.name -> OutboxStatus.QUARANTINED
 
             else -> error("Unknown outbox status: $this")
         }

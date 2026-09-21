@@ -76,6 +76,10 @@ interface PendingRemoteIdentityChangeDao {
             return false
         }
 
+        // The worker marks an item PROCESSING before invoking the network send.
+        // Do not rotate keys while any such attempt might still be in flight.
+        if (countProcessingOutboxForPeer(peerId) != 0) return false
+
         val changed = replaceIdentityOnlyIfConfirmationStillMatches(
             peerId = peerId,
             invitationId = invitationId,
@@ -86,6 +90,11 @@ interface PendingRemoteIdentityChangeDao {
             now = now
         )
         if (changed != 1) return false
+        // The exact encoded packet may carry old-identity bindings, and ciphertext
+        // already accepted by the server cannot be made safe by changing the DB key.
+        // Retain rows for audit / explicit future re-creation from source material,
+        // but make normal retry, resend and restart recovery unable to send them.
+        quarantineOldRecipientPackets(peerId, now)
         // Old MUTUAL / WAITING_FOR_READY exchanges must never authorize the new keys.
         invalidatePreviousExchanges(peerId, now)
         check(deleteIfInvitationMatches(peerId, invitationId) == 1) {
@@ -93,6 +102,20 @@ interface PendingRemoteIdentityChangeDao {
         }
         return true
     }
+
+    @Query("SELECT COUNT(*) FROM protocol_outbox WHERE contactId = :peerId AND status = 'PROCESSING'")
+    suspend fun countProcessingOutboxForPeer(peerId: String): Int
+
+    @Query(
+        """
+        UPDATE protocol_outbox
+        SET status = 'QUARANTINED',
+            lastError = 'Recipient identity replaced; original packet cannot be resent',
+            updatedAtEpochMilliseconds = :now
+        WHERE contactId = :peerId AND status IN ('PENDING', 'FAILED', 'EXPIRED', 'SENT')
+    """
+    )
+    suspend fun quarantineOldRecipientPackets(peerId: String, now: Long): Int
 
     /** Compare-and-set the precise OLD key pair captured during confirmation. */
     @Query(

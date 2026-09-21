@@ -18,7 +18,8 @@ class ObserveMessagingTransportResultsUseCase(
                     OutboxStatus.SENT -> MessagingTransportState.ACCEPTED_BY_RELAY
                     OutboxStatus.FAILED -> MessagingTransportState.FAILED
                     OutboxStatus.EXPIRED -> MessagingTransportState.EXPIRED
-                    OutboxStatus.PENDING, OutboxStatus.PROCESSING -> null
+                    OutboxStatus.PENDING, OutboxStatus.PROCESSING,
+                    OutboxStatus.QUARANTINED -> null
                 }
                 state?.let {
                     MessagingTransportResult(

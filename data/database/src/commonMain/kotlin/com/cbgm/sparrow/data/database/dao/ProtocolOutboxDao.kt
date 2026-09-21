@@ -126,7 +126,7 @@ interface ProtocolOutboxDao {
     suspend fun markProcessing(
         itemId: String,
         updatedAt: Long
-    )
+    ): Int
 
     @Query(
         """

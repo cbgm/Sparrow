@@ -980,6 +980,7 @@ internal class IdentityExchangeDataSource(
 
                 OutboxStatus.FAILED,
                 OutboxStatus.EXPIRED,
+                OutboxStatus.QUARANTINED,
                 null -> false
             }
         }

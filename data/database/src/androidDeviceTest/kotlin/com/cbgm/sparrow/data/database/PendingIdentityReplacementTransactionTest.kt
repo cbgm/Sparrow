@@ -7,6 +7,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.cbgm.sparrow.data.database.entity.ContactEntity
 import com.cbgm.sparrow.data.database.entity.ContactPublicIdentityEntity
 import com.cbgm.sparrow.data.database.entity.PendingRemoteIdentityChangeEntity
+import com.cbgm.sparrow.data.database.entity.ProtocolOutboxEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
@@ -38,8 +39,21 @@ class PendingIdentityReplacementTransactionTest {
 
     @Test fun confirmedReplacementKeepsContactAndClearsOldTrust() = runBlocking {
         seed()
+        seedOutbox("pending", "PENDING")
+        seedOutbox("failed", "FAILED")
+        seedOutbox("sent", "SENT")
+        seedOutbox("expired", "EXPIRED")
         val dao = database.pendingRemoteIdentityChangeDao()
         assertTrue(dao.replaceConfirmedIdentity("contact", "invite", 200L))
+        for (packet in listOf("pending", "failed", "sent", "expired")) {
+            val row = requireNotNull(database.protocolOutboxDao().findByPacketId(packet))
+            assertEquals("QUARANTINED", row.status)
+            assertEquals("contact", row.contactId)
+        }
+        assertEquals(0, database.protocolOutboxDao().getPending(20).size)
+        database.protocolOutboxDao().retryFailed(300L)
+        database.protocolOutboxDao().requeueInterrupted(300L)
+        assertEquals(0, database.protocolOutboxDao().getPending(20).size)
         val current = requireNotNull(database.remoteIdentityDao().findByPeerId("contact"))
         assertTrue(current.encryptionPublicKey.contentEquals(newEnc))
         assertTrue(current.signingPublicKey.contentEquals(newSig))
@@ -52,6 +66,19 @@ class PendingIdentityReplacementTransactionTest {
         assertFalse(dao.replaceConfirmedIdentity("contact", "invite", 200L))
     }
 
+    @Test fun inFlightPacketPreventsIdentityReplacementAndRollsBack() = runBlocking {
+        seed()
+        seedOutbox("active", "PROCESSING")
+        val dao = database.pendingRemoteIdentityChangeDao()
+        assertFalse(dao.replaceConfirmedIdentity("contact", "invite", 200L))
+        assertTrue(
+            requireNotNull(database.remoteIdentityDao().findByPeerId("contact"))
+                .signingPublicKey.contentEquals(oldSig)
+        )
+        assertEquals("PROCESSING", requireNotNull(database.protocolOutboxDao().findByPacketId("active")).status)
+        assertTrue(dao.findByPeerId("contact") != null)
+    }
+
     @Test fun expiredOrChangedOldIdentityCannotBeReplaced() = runBlocking {
         seed()
         val dao = database.pendingRemoteIdentityChangeDao()
@@ -60,6 +87,23 @@ class PendingIdentityReplacementTransactionTest {
         val current = requireNotNull(database.remoteIdentityDao().findByPeerId("contact"))
         assertTrue(current.signingPublicKey.contentEquals(oldSig))
         assertEquals("VERIFIED", current.verificationStatus)
+    }
+
+    private suspend fun seedOutbox(packetId: String, state: String) {
+        database.protocolOutboxDao().upsert(
+            ProtocolOutboxEntity(
+                id = "outbox-$packetId",
+                contactId = "contact",
+                packetId = packetId,
+                encodedPacket = byteArrayOf(1, 2, 3),
+                status = state,
+                attemptCount = 1,
+                lastError = null,
+                expiresAtEpochMilliseconds = null,
+                createdAtEpochMilliseconds = 1L,
+                updatedAtEpochMilliseconds = 1L
+            )
+        )
     }
 
     private suspend fun seed() {
