@@ -2,12 +2,14 @@ package com.cbgm.sparrow.feature.settings.presentation.overview
 
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingFeature
+import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingModelState
 import com.cbgm.sparrow.core.embedding.domain.usecase.SetLocalEmbeddingFeatureEnabledUseCase
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.ObserveActiveAutoReplyUseCase
 import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
+import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
 import com.cbgm.sparrow.feature.search.domain.usecase.SetSemanticSearchEnabledUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetAppLanguageUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetBuildInfoUseCase
@@ -29,7 +31,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -52,9 +57,29 @@ class SettingsViewModel(
     private val buildInfo = getBuildInfoUseCase()
     private val localState = MutableStateFlow(SettingsLocalState())
 
+    private val domainContext = observeSettingsDomainContext()
+        .shareIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+            replay = 1
+        )
+
+    val modelDownloadPercent: StateFlow<Int?> =
+        domainContext
+            .map { context ->
+                (context.localEmbeddingState.modelState as? LocalEmbeddingModelState.Downloading)
+                    ?.progress?.let { (it * 100).toInt().coerceIn(0, 100) }
+            }
+            .distinctUntilChanged()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                initialValue = null
+            )
+
     val uiState: StateFlow<SettingsUiState> =
         combine(
-            observeSettingsDomainContext(),
+            domainContext,
             localState,
             observeVoiceTranscriptionEnabled(),
             observeActiveAutoReply()
@@ -73,7 +98,23 @@ class SettingsViewModel(
                 developerModeTapCount = local.developerModeTapCount,
                 showLanguagePicker = local.showLanguagePicker
             )
-        }.stateIn(
+        }.map { state ->
+            // Keep download *status* in the screen state, but remove the
+            // continuously changing Float progress. Otherwise StateFlow emits
+            // a new SettingsUiState for every download tick.
+            val modelState = state.localEmbeddingState.modelState
+            state.copy(
+                localEmbeddingState = if (modelState is LocalEmbeddingModelState.Downloading) {
+                    state.localEmbeddingState.copy(modelState = LocalEmbeddingModelState.Downloading(null))
+                } else {
+                    state.localEmbeddingState
+                },
+                semanticSearchState = when (state.semanticSearchState) {
+                    is SemanticSearchState.DownloadingModel -> SemanticSearchState.DownloadingModel(null)
+                    else -> state.semanticSearchState
+                }
+            )
+        }.distinctUntilChanged().stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
             initialValue = SettingsUiState(buildInfo = buildInfo)
