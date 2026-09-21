@@ -632,7 +632,7 @@
     <string name="feature_identity_backup_title">Protect your identity</string>
     <string name="feature_identity_backup_warning">You have not backed up this identity. If you reinstall Sparrow or change devices, you may lose your original keys and your contacts may no longer recognize you. Export an encrypted backup. It saves your identity keys, not chats or message history.</string>
     <string name="feature_identity_backup_exported">Backup exported. Keep the file and password safe. You can export again at any time; chats and contacts are not included.</string>
-    <string name="feature_identity_backup_imported">Identity restored from a backup. Keep the file and password safe. Chats, contacts, and authorizations must be re-established.</string>
+    <string name="feature_identity_backup_imported">Your original identity keys have been restored. Chats, contacts, and authorizations are not in this backup. To reconnect, use Chats → New chat to invite your contact again, or ask them to open your old conversation and choose Reconnect contact. They do not need to replace your identity when you restored the original keys. Keep your backup file and password safe.</string>
     <string name="feature_identity_backup_export_action">Back up identity</string>
     <string name="feature_identity_backup_restore_action">Restore existing identity</string>
     <string name="feature_identity_backup_password">Backup password (12+ characters for export)</string>

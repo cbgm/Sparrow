@@ -8,6 +8,9 @@ interface ContactTransportRepository {
 
     suspend fun resolveBootstrapRoutingId(contactId: String): String
 
+    /** Resolve a DIRECT invitation route; prefer phone bootstrap, allow an existing key-only peer. */
+    suspend fun resolveInvitationRoutingId(contactId: String): String
+
     suspend fun resolveContactIdByRoutingId(routingId: String): String?
 
     suspend fun reconcileKnownContacts()

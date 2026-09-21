@@ -23,6 +23,33 @@ class ContactRoutingDataSource(
 
     suspend fun resolveBootstrap(contactId: String): String = persistAndReturnBootstrapRoutingId(requireContact(contactId))
 
+    /**
+     * Direct invitation/response packets are signed, explicit handshake traffic,
+     * not encrypted chat messages. Prefer phone bootstrap as before, including
+     * when the remote installation has different keys. If a known peer has NO
+     * phone/bootstrap address (e.g. a key-only contact who restored the ORIGINAL
+     * signing identity), the already-recorded public key supplies its canonical
+     * route. Never use this fallback for ordinary messages or groups.
+     *
+     * The fallback is delivery to that SAME signing identity, not an assertion
+     * that an installation with different keys owns the old address.
+     */
+    suspend fun resolveInvitation(contactId: String): String {
+        val contact = requireContact(contactId)
+        val savedBootstrap = contactRoutingIdDao.findRoutingIdByContactId(contactId)
+            ?.takeIf { it.startsWith(BOOTSTRAP_ROUTING_ID_PREFIX) }
+        val preferredPhone = contact.phoneNumbers
+            .firstOrNull { it.id == contact.contact.preferredPhoneNumberId }
+            ?.value?.trim()?.takeIf(String::isNotEmpty)
+        if (savedBootstrap != null || preferredPhone != null) {
+            return persistAndReturnBootstrapRoutingId(contact)
+        }
+        val signingKey = contact.publicIdentity?.signingPublicKey
+            ?.takeIf { it.isNotEmpty() }
+            ?: error("Contact has no phone/bootstrap address or known signing identity for an invitation")
+        return routingIdGenerator.deriveFromSigningPublicKey(signingKey).getOrThrow()
+    }
+
     private suspend fun requireContact(contactId: String): ContactWithPublicIdentityDto {
         require(contactId.isNotBlank()) { "Contact ID must not be blank" }
         return contactDao.findById(contactId) ?: error("Contact was not found")

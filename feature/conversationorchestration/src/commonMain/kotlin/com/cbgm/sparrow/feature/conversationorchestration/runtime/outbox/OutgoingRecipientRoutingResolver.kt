@@ -28,12 +28,14 @@ import com.cbgm.sparrow.core.protocol.packet.GroupVerificationSnapshotRequestPac
 import com.cbgm.sparrow.core.protocol.packet.ReadReceiptPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactBootstrapRoutingIdUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactInvitationRoutingIdUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactTransportRoutingIdUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.routing.GroupRoutingResolver
 
 class OutgoingRecipientRoutingResolver(
     private val resolveContactRoutingId: ResolveContactTransportRoutingIdUseCase,
     private val resolveContactBootstrapRoutingId: ResolveContactBootstrapRoutingIdUseCase,
+    private val resolveContactInvitationRoutingId: ResolveContactInvitationRoutingIdUseCase,
     private val groupRoutingResolver: GroupRoutingResolver
 ) {
     suspend fun resolve(
@@ -43,7 +45,9 @@ class OutgoingRecipientRoutingResolver(
         when (packet) {
             is ContactInvitePacket,
             is ContactInviteAcceptedPacket,
-            is ContactInviteDeclinedPacket,
+            is ContactInviteDeclinedPacket ->
+                resolveContactInvitationRoutingId(contactId)
+
             is GroupInvitePacket,
             is GroupInviteReceivedPacket,
             is GroupJoinRequestPacket,

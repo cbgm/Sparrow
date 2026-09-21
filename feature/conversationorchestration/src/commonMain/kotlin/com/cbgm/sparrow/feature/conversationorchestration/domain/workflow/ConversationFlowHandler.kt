@@ -34,7 +34,7 @@ import com.cbgm.sparrow.feature.contacts.domain.model.IncomingPeerContactCandida
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.BlockContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactBootstrapRoutingIdUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactInvitationRoutingIdUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveIncomingPeerContactsUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.ApplyIdentityPeerMergeUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.GetIdentityPeerDisplayNameUseCase
@@ -145,7 +145,7 @@ internal class ConversationFlowHandler(
     private val startIdentityExchange: StartIdentityExchangeUseCase,
     private val getIdentityPeerState: GetIdentityPeerStateUseCase,
     private val localPhoneNumberProvider: LocalPhoneNumberProvider,
-    private val resolveContactBootstrapRoutingId: ResolveContactBootstrapRoutingIdUseCase,
+    private val resolveContactInvitationRoutingId: ResolveContactInvitationRoutingIdUseCase,
     private val acceptIdentityExchange: AcceptIdentityExchangeUseCase,
     private val declineIdentityExchange: DeclineIdentityExchangeUseCase,
     private val receiveIdentityExchange: ReceiveIdentityExchangeUseCase,
@@ -306,9 +306,12 @@ internal class ConversationFlowHandler(
             check(getIdentityExchangeClosure(peerId).getOrThrow()?.phase != IdentityExchangeClosurePhase.INCOMING_PENDING) {
                 "Review or decline the pending invitation before starting a reconnection"
             }
-            // Do not strand an authorized conversation if its number/bootstrap
-            // route is absent. The request still requires explicit acceptance.
-            resolveContactBootstrapRoutingId(peerId)
+            // Preflight the SAME direct-invitation routing policy as the outbox
+            // before revoking a still-authorized conversation. A contact without
+            // a phone number can still reconnect when the other installation has
+            // restored the ORIGINAL public signing identity from its backup.
+            // An unrecognized replacement identity cannot claim that old route.
+            resolveContactInvitationRoutingId(peerId)
             if (getIdentityPeerState(peerId).getOrThrow().hasEstablishedExchange) {
                 revokePeerExchange(peerId)
             }

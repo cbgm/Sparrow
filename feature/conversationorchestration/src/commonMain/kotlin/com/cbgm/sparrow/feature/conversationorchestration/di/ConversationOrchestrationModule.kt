@@ -84,7 +84,7 @@ val conversationOrchestrationModule =
                 startIdentityExchange = get(),
                 getIdentityPeerState = get(),
                 localPhoneNumberProvider = get(),
-                resolveContactBootstrapRoutingId = get(),
+                resolveContactInvitationRoutingId = get(),
                 acceptIdentityExchange = get(),
                 declineIdentityExchange = get(),
                 receiveIdentityExchange = get(),
@@ -214,6 +214,7 @@ val conversationOrchestrationModule =
             OutgoingRecipientRoutingResolver(
                 resolveContactRoutingId = get(),
                 resolveContactBootstrapRoutingId = get(),
+                resolveContactInvitationRoutingId = get(),
                 groupRoutingResolver = get()
             )
         }

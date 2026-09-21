@@ -17,6 +17,8 @@ class ContactTransportRepositoryImpl(
 
     override suspend fun resolveBootstrapRoutingId(contactId: String): String = contactRouting.resolveBootstrap(contactId)
 
+    override suspend fun resolveInvitationRoutingId(contactId: String): String = contactRouting.resolveInvitation(contactId)
+
     override suspend fun resolveContactIdByRoutingId(routingId: String): String? = contactByRoutingId.resolveContactId(routingId)
 
     override suspend fun reconcileKnownContacts() = reconciliation.reconcileKnownContacts()

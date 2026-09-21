@@ -30,6 +30,7 @@ import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveIdentitySetupMode
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ReconcileContactTransportRoutingUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactBootstrapRoutingIdUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactIdByRoutingIdUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactInvitationRoutingIdUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactTransportRoutingIdUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveIncomingPeerContactsUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.UnblockContactUseCase
@@ -71,6 +72,7 @@ val contactsModule =
         }
         factory { ResolveContactTransportRoutingIdUseCase(repository = get()) }
         factory { ResolveContactBootstrapRoutingIdUseCase(repository = get()) }
+        factory { ResolveContactInvitationRoutingIdUseCase(repository = get()) }
         factory { ResolveContactIdByRoutingIdUseCase(repository = get()) }
         factory { ReconcileContactTransportRoutingUseCase(repository = get()) }
         factory { GetMailboxContactStatesUseCase(repository = get()) }
