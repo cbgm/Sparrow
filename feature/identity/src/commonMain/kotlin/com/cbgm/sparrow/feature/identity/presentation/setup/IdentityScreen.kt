@@ -37,6 +37,7 @@ import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
 import com.cbgm.sparrow.feature.identity.presentation.setup.components.IconBadge
 import com.cbgm.sparrow.feature.identity.presentation.setup.components.PublicKeySection
+import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityBackupUiState
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiEvent
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiState
 import com.cbgm.sparrow.feature.identity.presentation.setup.profile.IdentityProfilePictureSection
@@ -45,6 +46,7 @@ import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_retry
 import com.cbgm.sparrow.resources.base_sparrow
 import com.cbgm.sparrow.resources.feature_identity_approve_number_create_identity
+import com.cbgm.sparrow.resources.feature_identity_backup_restore_action
 import com.cbgm.sparrow.resources.feature_identity_check_again
 import com.cbgm.sparrow.resources.feature_identity_checking_secure_identity
 import com.cbgm.sparrow.resources.feature_identity_choose_phone_number_from_device
@@ -72,7 +74,10 @@ fun IdentityScreen(
     innerPadding: PaddingValues,
     modifier: Modifier = Modifier,
     profilePictureState: IdentityProfilePictureUiState? = null,
-    onEditProfilePicture: () -> Unit = {}
+    onEditProfilePicture: () -> Unit = {},
+    backupState: IdentityBackupUiState = IdentityBackupUiState(),
+    onExportIdentity: () -> Unit = {},
+    onRestoreIdentity: () -> Unit = {}
 ) {
     Column(
         modifier
@@ -96,7 +101,9 @@ fun IdentityScreen(
                     phoneNumberError = uiState.phoneNumberError,
                     onRequestPhoneNumberHint = { onUiEvent(IdentityUiEvent.RequestPhoneNumberHint) },
                     onPhoneNumberChanged = { onUiEvent(IdentityUiEvent.PhoneNumberChanged(it)) },
-                    onCreateIdentity = { onUiEvent(IdentityUiEvent.CreateIdentityClicked) }
+                    onCreateIdentity = { onUiEvent(IdentityUiEvent.CreateIdentityClicked) },
+                    onRestoreIdentity = onRestoreIdentity,
+                    restoreError = backupState.message?.takeIf { backupState.error }
                 )
             }
 
@@ -106,7 +113,9 @@ fun IdentityScreen(
                     localPhoneNumber = uiState.localPhoneNumber,
                     profilePictureState = profilePictureState,
                     onShareIdentity = { onUiEvent(IdentityUiEvent.ShareIdentityClicked) },
-                    onEditProfilePicture = onEditProfilePicture
+                    onEditProfilePicture = onEditProfilePicture,
+                    backupState = backupState,
+                    onExportIdentity = onExportIdentity
                 )
             }
 
@@ -153,7 +162,9 @@ private fun NoIdentityContent(
     phoneNumberError: String?,
     onRequestPhoneNumberHint: () -> Unit,
     onPhoneNumberChanged: (String) -> Unit,
-    onCreateIdentity: () -> Unit
+    onCreateIdentity: () -> Unit,
+    onRestoreIdentity: () -> Unit,
+    restoreError: String?
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -199,8 +210,7 @@ private fun NoIdentityContent(
                     modifier = Modifier.fillMaxWidth(),
                     label = stringResource(Res.string.feature_identity_your_phone_number),
                     placeholderText = "+491701234567",
-                    errorText = phoneNumberError
-                        ?: stringResource(Res.string.feature_identity_stable_routing_address_description),
+                    errorText = phoneNumberError ?: stringResource(Res.string.feature_identity_stable_routing_address_description),
                     isError = phoneNumberError != null,
                     isSingleLine = true
                 )
@@ -212,6 +222,13 @@ private fun NoIdentityContent(
                     enabled = phoneNumber.isNotBlank(),
                     text = stringResource(Res.string.feature_identity_approve_number_create_identity)
                 )
+                Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
+                SparrowSecondaryButton(
+                    onClick = onRestoreIdentity,
+                    modifier = Modifier.fillMaxWidth(),
+                    text = stringResource(Res.string.feature_identity_backup_restore_action)
+                )
+                restoreError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }
         }
     }
@@ -223,7 +240,9 @@ private fun ReadyIdentityContent(
     localPhoneNumber: String,
     profilePictureState: IdentityProfilePictureUiState?,
     onShareIdentity: () -> Unit,
-    onEditProfilePicture: () -> Unit
+    onEditProfilePicture: () -> Unit,
+    backupState: IdentityBackupUiState,
+    onExportIdentity: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -260,6 +279,8 @@ private fun ReadyIdentityContent(
                 )
             )
         }
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.large))
+        IdentityBackupSection(state = backupState, onExport = onExportIdentity)
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.large))
 
         SparrowCard {
@@ -332,10 +353,7 @@ private fun IncompleteIdentityContent(onRetry: () -> Unit) {
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
-        SparrowApprovalButton(
-            onClick = onRetry,
-            text = stringResource(Res.string.feature_identity_check_again)
-        )
+        SparrowApprovalButton(onClick = onRetry, text = stringResource(Res.string.feature_identity_check_again))
     }
 }
 

@@ -29,6 +29,7 @@ import com.cbgm.sparrow.resources.base_choose_phone_number
 import com.cbgm.sparrow.resources.base_generating_secure_identity
 import com.cbgm.sparrow.resources.base_identity_ready_opening
 import com.cbgm.sparrow.resources.base_phone_number
+import com.cbgm.sparrow.resources.feature_identity_backup_restore_action
 import com.cbgm.sparrow.resources.feature_onboarding_approve_create_identity
 import com.cbgm.sparrow.resources.feature_onboarding_approve_phone_number
 import com.cbgm.sparrow.resources.feature_onboarding_detected_automatically_confirm
@@ -50,6 +51,9 @@ fun PhonePage(
     onRetryAutomaticNumber: () -> Unit,
     onPhoneNumberChanged: (String) -> Unit,
     onApproveAndCreate: () -> Unit,
+    onRestoreIdentity: () -> Unit = {},
+    isRestoring: Boolean = false,
+    restoreError: String? = null,
     onNameChanged: (String) -> Unit
 ) {
     Column(
@@ -140,6 +144,14 @@ fun PhonePage(
                     enabled = identityState.phoneNumber.isNotBlank() && identityState.name.isNotBlank(),
                     text = stringResource(Res.string.feature_onboarding_approve_create_identity)
                 )
+                Spacer(Modifier.height(MaterialTheme.spacing.small))
+                SparrowSecondaryButton(
+                    onClick = onRestoreIdentity,
+                    enabled = identityState.phoneNumber.isNotBlank() && identityState.name.isNotBlank() && !isCreating && !isRestoring,
+                    modifier = Modifier.fillMaxWidth(),
+                    text = stringResource(Res.string.feature_identity_backup_restore_action)
+                )
+                restoreError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
             }
 
             is IdentityUiState.Ready -> {

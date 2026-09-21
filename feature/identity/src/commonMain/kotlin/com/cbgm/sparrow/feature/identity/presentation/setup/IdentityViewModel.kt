@@ -4,13 +4,20 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
+import com.cbgm.sparrow.feature.identity.domain.model.IdentityBackupStatus
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityStatus
 import com.cbgm.sparrow.feature.identity.domain.usecase.CreateIdentityUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityBackupStatusUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityStatusUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetLocalPhoneNumberUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetPublicIdentityUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.MarkIdentityBackupExportedUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.NormalizeLocalPhoneNumberUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.PrepareIdentityBackupUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.RestoreIdentityBackupUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.SaveLocalPhoneNameUseCase
+import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityBackupUiState
+import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityBackupUiStatus
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiEvent
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,11 +32,152 @@ class IdentityViewModel(
     private val createIdentity: CreateIdentityUseCase,
     private val getLocalPhoneNumber: GetLocalPhoneNumberUseCase,
     private val normalizeLocalPhoneNumber: NormalizeLocalPhoneNumberUseCase,
-    private val saveLocalPhoneName: SaveLocalPhoneNameUseCase
+    private val saveLocalPhoneName: SaveLocalPhoneNameUseCase,
+    private val prepareIdentityBackup: PrepareIdentityBackupUseCase,
+    private val restoreIdentityBackup: RestoreIdentityBackupUseCase,
+    private val markIdentityBackupExported: MarkIdentityBackupExportedUseCase,
+    private val getIdentityBackupStatus: GetIdentityBackupStatusUseCase
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow<IdentityUiState>(IdentityUiState.Loading)
 
     val uiState: StateFlow<IdentityUiState> = _uiState.asStateFlow()
+    private val _backupState = MutableStateFlow(IdentityBackupUiState())
+    val backupState: StateFlow<IdentityBackupUiState> = _backupState.asStateFlow()
+    private val _exportDocument = MutableStateFlow<ByteArray?>(null)
+    private var pendingSigningPublicKey: ByteArray? = null
+    private var pendingEncryptionPublicKey: ByteArray? = null
+    val exportDocument: StateFlow<ByteArray?> = _exportDocument.asStateFlow()
+
+    /** Passwords are never retained in the ViewModel or SavedStateHandle. */
+    fun prepareBackup(password: CharArray) {
+        val ready = _uiState.value as? IdentityUiState.Ready
+        if (ready == null || _backupState.value.busy || _exportDocument.value != null) {
+            password.fill('\u0000')
+            return
+        }
+        pendingSigningPublicKey = ready.publicIdentity.signingPublicKey.copyOf()
+        pendingEncryptionPublicKey = ready.publicIdentity.encryptionPublicKey.copyOf()
+        viewModelScope.launch {
+            _backupState.value = _backupState.value.copy(busy = true, message = null)
+            try {
+                prepareIdentityBackup(password).onSuccess { _exportDocument.value = it }
+                    .onFailure {
+                        pendingSigningPublicKey = null
+                        pendingEncryptionPublicKey = null
+                        _backupState.value = _backupState.value.copy(
+                            busy = false,
+                            message = it.message ?: "Backup encryption failed",
+                            error = true
+                        )
+                    }
+            } finally {
+                password.fill('\u0000')
+            }
+        }
+    }
+
+    fun backupFileWritten(success: Boolean, failure: String?) {
+        // The document picker and output stream must both succeed before the backup status changes.
+        val bytes = _exportDocument.value ?: return
+        _exportDocument.value = null
+        bytes.fill(0)
+        val expectedSigning = pendingSigningPublicKey
+        val expectedEncryption = pendingEncryptionPublicKey
+        pendingSigningPublicKey = null
+        pendingEncryptionPublicKey = null
+        viewModelScope.launch {
+            if (success && expectedSigning != null && expectedEncryption != null) {
+                markIdentityBackupExported(expectedSigning, expectedEncryption).onSuccess {
+                    refreshBackupStatus()
+                    _backupState.value = _backupState.value.copy(
+                        busy = false,
+                        message = "Identity backup exported. Keep the file and password safe.",
+                        error = false
+                    )
+                }.onFailure {
+                    _backupState.value = _backupState.value.copy(
+                        busy = false,
+                        message = it.message ?: "Backup status could not be saved",
+                        error = true
+                    )
+                }
+            } else {
+                _backupState.value = _backupState.value.copy(
+                    busy = false,
+                    message = failure ?: "Identity backup was not saved",
+                    error = true
+                )
+            }
+        }
+    }
+
+    fun showBackupError(message: String) {
+        _backupState.value = _backupState.value.copy(busy = false, message = message, error = true)
+    }
+
+    fun restoreBackup(document: ByteArray, password: CharArray) {
+        val state = _uiState.value as? IdentityUiState.NoIdentity ?: return
+
+        if (_backupState.value.busy) {
+            password.fill('\u0000')
+            return
+        }
+
+        val normalized = normalizeLocalPhoneNumber(state.phoneNumber).getOrElse { error ->
+            _uiState.value =
+                state.copy(phoneNumberError = error.message ?: "Enter your phone number first")
+            password.fill('\u0000')
+            return
+        }
+        viewModelScope.launch {
+            _backupState.value = _backupState.value.copy(busy = true, message = null)
+            // The restore use case decrypts first, then persists the profile and validated keys.
+            // A wrong password leaves the saved phone/profile and identity keys unchanged.
+            try {
+                restoreIdentityBackup(
+                    document,
+                    password,
+                    normalized,
+                    state.name
+                ).onSuccess { publicIdentity ->
+                    clearDraft()
+                    _uiState.value = IdentityUiState.Ready(publicIdentity, normalized)
+                    refreshBackupStatus()
+                    _backupState.value = _backupState.value.copy(
+                        busy = false,
+                        message = "Original identity keys restored. Chats and contacts must be re-established.",
+                        error = false
+                    )
+                }.onFailure {
+                    _backupState.value = _backupState.value.copy(
+                        busy = false,
+                        message = it.message ?: "Identity restore failed",
+                        error = true
+                    )
+                }
+            } catch (error: Throwable) {
+                _backupState.value = _backupState.value.copy(
+                    busy = false,
+                    message = error.message ?: "Identity restore failed",
+                    error = true
+                )
+            } finally {
+                password.fill('\u0000')
+            }
+        }
+    }
+
+    private suspend fun refreshBackupStatus() {
+        getIdentityBackupStatus().onSuccess { status ->
+            _backupState.value = _backupState.value.copy(
+                status = when (status) {
+                    IdentityBackupStatus.NOT_BACKED_UP -> IdentityBackupUiStatus.NOT_BACKED_UP
+                    IdentityBackupStatus.EXPORTED -> IdentityBackupUiStatus.EXPORTED
+                    IdentityBackupStatus.IMPORTED -> IdentityBackupUiStatus.IMPORTED
+                }
+            )
+        }
+    }
 
     init {
         loadIdentityState()
@@ -43,6 +191,7 @@ class IdentityViewModel(
                     value = event.value,
                     errorMessage = null
                 )
+
             is IdentityUiEvent.NameChanged -> updateName(event.value)
             IdentityUiEvent.CreateIdentityClicked -> createNewIdentity()
             IdentityUiEvent.RetryClicked -> loadIdentityState()
@@ -100,7 +249,9 @@ class IdentityViewModel(
             normalizeLocalPhoneNumber(phoneNumber = currentState.phoneNumber)
                 .getOrElse { error ->
                     _uiState.value =
-                        currentState.copy(phoneNumberError = error.message ?: "Invalid phone number")
+                        currentState.copy(
+                            phoneNumberError = error.message ?: "Invalid phone number"
+                        )
 
                     return
                 }
@@ -123,6 +274,7 @@ class IdentityViewModel(
             createIdentity()
                 .onSuccess { publicIdentity ->
                     clearDraft()
+                    refreshBackupStatus()
                     _uiState.value =
                         IdentityUiState.Ready(
                             publicIdentity = publicIdentity,
@@ -241,6 +393,7 @@ class IdentityViewModel(
                         message = error.message ?: "Failed to load public identity"
                     )
             }
+        if (_uiState.value is IdentityUiState.Ready) refreshBackupStatus()
     }
 
     private companion object {

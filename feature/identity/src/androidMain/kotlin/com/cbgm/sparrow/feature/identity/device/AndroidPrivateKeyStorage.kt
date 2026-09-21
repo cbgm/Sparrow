@@ -35,6 +35,12 @@ class AndroidPrivateKeyStorage(
         }
     }
 
+    override suspend fun hasAnyIdentityPrivateKeyMaterial(): Boolean =
+        dataStore.containsString(ENCRYPTION_PRIVATE_KEY_CIPHERTEXT) ||
+            dataStore.containsString(ENCRYPTION_PRIVATE_KEY_IV) ||
+            dataStore.containsString(SIGNING_PRIVATE_KEY_CIPHERTEXT) ||
+            dataStore.containsString(SIGNING_PRIVATE_KEY_IV)
+
     @OptIn(ExperimentalUnsignedTypes::class)
     override suspend fun hasIdentityPrivateKeys(): Boolean {
         val stored =

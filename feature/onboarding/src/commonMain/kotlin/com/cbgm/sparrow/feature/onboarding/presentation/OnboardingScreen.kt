@@ -48,6 +48,9 @@ import org.jetbrains.compose.resources.stringResource
 fun OnboardingScreen(
     state: OnboardingUiState,
     identityState: IdentityUiState,
+    backupError: String? = null,
+    isRestoring: Boolean = false,
+    onRestoreIdentity: () -> Unit = {},
     onUiEvent: (OnboardingUiEvent) -> Unit
 ) {
     Box(
@@ -103,6 +106,9 @@ fun OnboardingScreen(
                                     onUiEvent(OnboardingUiEvent.PhoneNumberChanged(value))
                                 },
                                 onApproveAndCreate = { onUiEvent(OnboardingUiEvent.ApproveAndCreateClicked) },
+                                onRestoreIdentity = onRestoreIdentity,
+                                isRestoring = isRestoring,
+                                restoreError = backupError,
                                 onNameChanged = { value ->
                                     onUiEvent(OnboardingUiEvent.NameChanged(value))
                                 }

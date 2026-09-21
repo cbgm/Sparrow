@@ -631,4 +631,15 @@
     <string name="feature_auto_reply_message">Nachricht</string>
     <string name="feature_auto_reply_save">Speichern</string>
 
+
+    <!-- Identity backup and restore -->
+    <string name="feature_identity_backup_title">Identität sichern</string>
+    <string name="feature_identity_backup_warning">Diese Identität wurde noch nicht gesichert. Nach einer Neuinstallation oder einem Gerätewechsel kannst du deine ursprünglichen Schlüssel und das Vertrauen deiner Kontakte verlieren. Exportiere ein verschlüsseltes Backup. Chats und Nachrichten werden nicht gesichert.</string>
+    <string name="feature_identity_backup_exported">Backup exportiert. Bewahre Datei und Passwort sicher auf. Du kannst jederzeit erneut exportieren; Chats und Kontakte sind nicht enthalten.</string>
+    <string name="feature_identity_backup_imported">Identität aus einem Backup wiederhergestellt. Bewahre Datei und Passwort sicher auf. Chats, Kontakte und Berechtigungen müssen erneut eingerichtet werden.</string>
+    <string name="feature_identity_backup_export_action">Identität sichern</string>
+    <string name="feature_identity_backup_restore_action">Vorhandene Identität wiederherstellen</string>
+    <string name="feature_identity_backup_password">Backup-Passwort (mindestens 12 Zeichen beim Export)</string>
+    <string name="feature_identity_backup_restore_hint">Wähle deine Backupdatei und gib das Passwort ein. Gib vor dem Wiederherstellen deine Telefonnummer auf dem Identitätsbildschirm ein. Nur die ursprünglichen Schlüssel werden wiederhergestellt, nicht Chats oder Kontakte.</string>
+
 </resources>

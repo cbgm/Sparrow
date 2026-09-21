@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.cbgm.sparrow.core.crypto.SodiumRuntime
 import com.cbgm.sparrow.core.crypto.identity.SodiumIdentityKeyGenerator
 import com.cbgm.sparrow.core.crypto.signature.SodiumDetachedSignatureCrypto
+import com.cbgm.sparrow.core.crypto.transport.SodiumTransportMessageCipher
 import com.cbgm.sparrow.data.datastore.createSparrowDataStore
 import com.cbgm.sparrow.feature.identity.data.datasource.SparrowDataStorePublicIdentityDataSource
 import com.cbgm.sparrow.feature.identity.device.AndroidPrivateKeyStorage
@@ -77,6 +78,7 @@ class IdentityRepositoryImplTest {
                     IdentityRepositoryImpl(
                         identityKeyGenerator = SodiumIdentityKeyGenerator(),
                         signatureCrypto = SodiumDetachedSignatureCrypto(),
+                        transportCipher = SodiumTransportMessageCipher(),
                         privateKeyStorage = privateKeyStorage,
                         publicIdentityDataSource = publicIdentityDataSource
                     )
@@ -209,6 +211,7 @@ class IdentityRepositoryImplTest {
                     IdentityRepositoryImpl(
                         identityKeyGenerator = SodiumIdentityKeyGenerator(),
                         signatureCrypto = SodiumDetachedSignatureCrypto(),
+                        transportCipher = SodiumTransportMessageCipher(),
                         privateKeyStorage = privateKeyStorage,
                         publicIdentityDataSource = publicIdentityDataSource
                     )
@@ -361,6 +364,7 @@ class IdentityRepositoryImplTest {
                     IdentityRepositoryImpl(
                         identityKeyGenerator = keyGenerator,
                         signatureCrypto = SodiumDetachedSignatureCrypto(),
+                        transportCipher = SodiumTransportMessageCipher(),
                         privateKeyStorage = privateKeyStorage,
                         publicIdentityDataSource = publicIdentityDataSource
                     )
