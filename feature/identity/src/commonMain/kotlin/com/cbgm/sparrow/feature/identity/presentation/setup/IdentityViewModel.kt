@@ -96,11 +96,15 @@ class IdentityViewModel(
             _pendingIdentityReview.value = _pendingIdentityReview.value.copy(
                 approvingInvitationId = invitationId,
                 errorMessage = null,
-                replacementCompleted = false
+                replacementCompleted = false,
+                approvedPeerId = null
             )
             approvePendingRemoteIdentityChange(peerId, invitationId)
                 .onSuccess {
-                    _pendingIdentityReview.value = _pendingIdentityReview.value.copy(replacementCompleted = true)
+                    _pendingIdentityReview.value = _pendingIdentityReview.value.copy(
+                        replacementCompleted = true,
+                        approvedPeerId = peerId
+                    )
                 }
                 .onFailure { error ->
                     _pendingIdentityReview.value = _pendingIdentityReview.value.copy(

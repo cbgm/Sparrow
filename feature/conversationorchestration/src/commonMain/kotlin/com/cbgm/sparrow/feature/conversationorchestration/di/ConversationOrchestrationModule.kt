@@ -21,6 +21,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.Require
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.ResolveIncomingIdentityPeerUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.ResolveSigningIdentityContactUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.SendConversationIndicatorUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.StartRecoveryInvitationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.TransferConversationGroupAdminAndLeaveUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.workflow.ConversationFlowHandler
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.ContactBlockObserver
@@ -177,6 +178,7 @@ val conversationOrchestrationModule =
         singleOf(::ObserveConversationQueueAvailabilityUseCase)
         singleOf(::PrepareConversationMessageUseCase)
         singleOf(::PrepareConversationOpenUseCase)
+        factory { StartRecoveryInvitationUseCase(get()) }
         singleOf(::AddConversationMembersUseCase)
         singleOf(::GetConversationGroupLeaveRequirementUseCase)
         singleOf(::PromoteConversationGroupMemberUseCase)

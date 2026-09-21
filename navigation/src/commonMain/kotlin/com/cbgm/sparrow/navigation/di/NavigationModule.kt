@@ -9,7 +9,8 @@ val navigationModule =
         viewModel {
             MainViewModel(
                 observePendingInvitationCount = get(),
-                observeSemanticSearchState = get()
+                observeSemanticSearchState = get(),
+                startRecoveryInvitation = get()
             )
         }
     }

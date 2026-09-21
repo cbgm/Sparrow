@@ -56,7 +56,10 @@ fun MainScreen(
     isMessageSearchAvailable: Boolean,
     onOpenSearch: () -> Unit,
     onOpenInvitations: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onStartRecoveryInvitation: suspend (String) -> Result<Unit> = {
+        Result.failure(IllegalStateException("Recovery invitation is unavailable"))
+    }
 ) {
     val coroutineScope = rememberCoroutineScope()
     val tabs = MainTab.entries
@@ -108,7 +111,8 @@ fun MainScreen(
             MainContent(
                 pagerState = pagerState,
                 innerPadding = innerPadding,
-                scrollStates = scrollStates
+                scrollStates = scrollStates,
+                onStartRecoveryInvitation = onStartRecoveryInvitation
             )
         }
 
@@ -239,7 +243,8 @@ private fun MainBottomBar(
 private fun MainContent(
     pagerState: PagerState,
     innerPadding: PaddingValues,
-    scrollStates: SparrowTabbedScrollStates<MainTab>
+    scrollStates: SparrowTabbedScrollStates<MainTab>,
+    onStartRecoveryInvitation: suspend (String) -> Result<Unit>
 ) {
     HorizontalPager(
         state = pagerState,
@@ -258,6 +263,7 @@ private fun MainContent(
                 IdentityRoute(
                     scrollState = scrollStates.scrollState(MainTab.Me),
                     innerPadding = innerPadding,
+                    onStartRecoveryInvitation = onStartRecoveryInvitation,
                     modifier = Modifier.fillMaxSize()
                 )
             }

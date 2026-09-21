@@ -81,6 +81,10 @@ fun IdentityScreen(
     onDismissIdentityChange: (String, String) -> Unit = { _, _ -> },
     onConfirmIdentityChangeFingerprint: (String, String, String) -> Unit = { _, _, _ -> },
     onApproveIdentityChange: (String, String) -> Unit = { _, _ -> },
+    recoveryInvitationBusy: Boolean = false,
+    recoveryInvitationFeedback: String? = null,
+    recoveryInvitationQueued: Boolean = false,
+    onStartRecoveryInvitation: (String) -> Unit = {},
     onExportIdentity: () -> Unit = {},
     onRestoreIdentity: () -> Unit = {}
 ) {
@@ -124,6 +128,10 @@ fun IdentityScreen(
                     onDismissIdentityChange = onDismissIdentityChange,
                     onConfirmIdentityChangeFingerprint = onConfirmIdentityChangeFingerprint,
                     onApproveIdentityChange = onApproveIdentityChange,
+                    recoveryInvitationBusy = recoveryInvitationBusy,
+                    recoveryInvitationFeedback = recoveryInvitationFeedback,
+                    recoveryInvitationQueued = recoveryInvitationQueued,
+                    onStartRecoveryInvitation = onStartRecoveryInvitation,
                     onExportIdentity = onExportIdentity
                 )
             }
@@ -219,7 +227,8 @@ private fun NoIdentityContent(
                     modifier = Modifier.fillMaxWidth(),
                     label = stringResource(Res.string.feature_identity_your_phone_number),
                     placeholderText = "+491701234567",
-                    errorText = phoneNumberError ?: stringResource(Res.string.feature_identity_stable_routing_address_description),
+                    errorText = phoneNumberError
+                        ?: stringResource(Res.string.feature_identity_stable_routing_address_description),
                     isError = phoneNumberError != null,
                     isSingleLine = true
                 )
@@ -255,6 +264,10 @@ private fun ReadyIdentityContent(
     onDismissIdentityChange: (String, String) -> Unit,
     onConfirmIdentityChangeFingerprint: (String, String, String) -> Unit,
     onApproveIdentityChange: (String, String) -> Unit,
+    recoveryInvitationBusy: Boolean,
+    recoveryInvitationFeedback: String?,
+    recoveryInvitationQueued: Boolean,
+    onStartRecoveryInvitation: (String) -> Unit,
     onExportIdentity: () -> Unit
 ) {
     Column(
@@ -298,7 +311,11 @@ private fun ReadyIdentityContent(
             state = pendingIdentityReview,
             onDismiss = onDismissIdentityChange,
             onConfirmFingerprint = onConfirmIdentityChangeFingerprint,
-            onApprove = onApproveIdentityChange
+            onApprove = onApproveIdentityChange,
+            recoveryInvitationBusy = recoveryInvitationBusy,
+            recoveryInvitationFeedback = recoveryInvitationFeedback,
+            recoveryInvitationQueued = recoveryInvitationQueued,
+            onStartRecoveryInvitation = onStartRecoveryInvitation
         )
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.large))
 
@@ -372,7 +389,10 @@ private fun IncompleteIdentityContent(onRetry: () -> Unit) {
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
-        SparrowApprovalButton(onClick = onRetry, text = stringResource(Res.string.feature_identity_check_again))
+        SparrowApprovalButton(
+            onClick = onRetry,
+            text = stringResource(Res.string.feature_identity_check_again)
+        )
     }
 }
 

@@ -656,6 +656,8 @@
     <string name="feature_identity_recovery_confirm_fingerprint">Record fingerprint check</string>
     <string name="feature_identity_recovery_fingerprint_recorded">Fingerprint check recorded for this request. Existing identity, verification and conversations remain unchanged. Secure replacement and fresh authorization are not enabled yet.</string>
     <string name="feature_identity_recovery_approve">Replace identity</string>
-    <string name="feature_identity_recovery_approve_warning">Only approve after independently checking the full new fingerprint with your contact. The old mailbox routes will be revoked, old queued packets will not be resent, and previous verification will be reset. This does not accept a chat invitation. Ask your contact to send a new invitation afterwards.</string>
-    <string name="feature_identity_recovery_completed">Identity replaced. Your existing contact and conversation history were kept, but messaging remains locked until a fresh invitation is accepted. Ask your contact to send a new invitation. Old queued packets cannot be resent.</string>
+    <string name="feature_identity_recovery_approve_warning">Only approve after independently checking the full new fingerprint with your contact. The old mailbox routes will be revoked, old queued packets will not be resent, and previous verification will be reset. This does not accept a chat invitation. You can then send a new invitation or ask your contact to do so.</string>
+    <string name="feature_identity_recovery_completed">Identity replaced. Your existing contact and conversation history were kept, but messaging remains locked until a fresh invitation is accepted. Send a new invitation below, or ask your contact to send one. Old queued packets cannot be resent.</string>
+    <string name="feature_identity_recovery_send_invitation">Send a new invitation</string>
+    <string name="feature_identity_recovery_invitation_queued">Invitation queued. Your contact must accept it before messaging can resume.</string>
 </resources>

@@ -37,6 +37,7 @@ import com.cbgm.sparrow.resources.feature_identity_recovery_dismiss_warning
 import com.cbgm.sparrow.resources.feature_identity_recovery_fingerprint_hint
 import com.cbgm.sparrow.resources.feature_identity_recovery_fingerprint_label
 import com.cbgm.sparrow.resources.feature_identity_recovery_fingerprint_recorded
+import com.cbgm.sparrow.resources.feature_identity_recovery_invitation_queued
 import com.cbgm.sparrow.resources.feature_identity_recovery_new_encryption
 import com.cbgm.sparrow.resources.feature_identity_recovery_new_signing
 import com.cbgm.sparrow.resources.feature_identity_recovery_old_encryption
@@ -45,6 +46,7 @@ import com.cbgm.sparrow.resources.feature_identity_recovery_peer
 import com.cbgm.sparrow.resources.feature_identity_recovery_review_action
 import com.cbgm.sparrow.resources.feature_identity_recovery_review_title
 import com.cbgm.sparrow.resources.feature_identity_recovery_review_warning
+import com.cbgm.sparrow.resources.feature_identity_recovery_send_invitation
 import com.cbgm.sparrow.resources.feature_identity_recovery_unavailable
 import org.jetbrains.compose.resources.stringResource
 
@@ -54,7 +56,11 @@ internal fun PendingIdentityReviewSection(
     state: PendingIdentityReviewUiState,
     onDismiss: (String, String) -> Unit,
     onConfirmFingerprint: (String, String, String) -> Unit,
-    onApprove: (String, String) -> Unit
+    onApprove: (String, String) -> Unit,
+    recoveryInvitationBusy: Boolean,
+    recoveryInvitationFeedback: String?,
+    recoveryInvitationQueued: Boolean,
+    onStartRecoveryInvitation: (String) -> Unit
 ) {
     var selected by remember { mutableStateOf<PendingIdentityReviewUi?>(null) }
     var enteredFingerprint by remember { mutableStateOf("") }
@@ -77,6 +83,21 @@ internal fun PendingIdentityReviewSection(
                     stringResource(Res.string.feature_identity_recovery_completed),
                     style = MaterialTheme.typography.bodyMedium
                 )
+                state.approvedPeerId?.let { peerId ->
+                    Spacer(Modifier.height(MaterialTheme.spacing.small))
+                    Button(
+                        enabled = !recoveryInvitationBusy && !recoveryInvitationQueued,
+                        onClick = { onStartRecoveryInvitation(peerId) }
+                    ) {
+                        Text(stringResource(Res.string.feature_identity_recovery_send_invitation))
+                    }
+                }
+                recoveryInvitationFeedback?.let { error ->
+                    Text(error, color = MaterialTheme.colorScheme.error)
+                }
+                if (recoveryInvitationQueued) {
+                    Text(stringResource(Res.string.feature_identity_recovery_invitation_queued))
+                }
             }
             state.requests.forEach { candidate ->
                 Spacer(Modifier.height(MaterialTheme.spacing.small))

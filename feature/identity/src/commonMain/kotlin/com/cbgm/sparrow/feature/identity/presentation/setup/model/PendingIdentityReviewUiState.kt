@@ -7,6 +7,7 @@ data class PendingIdentityReviewUiState(
     val confirmingInvitationId: String? = null,
     val approvingInvitationId: String? = null,
     val replacementCompleted: Boolean = false,
+    val approvedPeerId: String? = null,
     val errorMessage: String? = null
 )
 

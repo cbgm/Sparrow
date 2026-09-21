@@ -16,6 +16,7 @@ fun MainRoute(
         invitationCount = invitationCount,
         isMessageSearchAvailable = isMessageSearchAvailable,
         onOpenSearch = viewModel::openMessageSearch,
-        onOpenInvitations = viewModel::openInvitations
+        onOpenInvitations = viewModel::openInvitations,
+        onStartRecoveryInvitation = viewModel::sendRecoveryInvitation
     )
 }
