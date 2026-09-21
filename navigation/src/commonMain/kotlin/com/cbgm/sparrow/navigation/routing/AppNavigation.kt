@@ -41,132 +41,81 @@ import com.cbgm.sparrow.startup.domain.model.AppConnectionAvailability
 import com.cbgm.sparrow.startup.domain.usecase.ObserveAppConnectionAvailabilityUseCase
 import com.cbgm.sparrow.startup.presentation.start.model.StartupConnection
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
+import kotlin.time.Duration.Companion.milliseconds
+
+private const val OFFLINE_HINT_DELAY_MILLIS = 5_000L
 
 @Composable
 fun AppNavigation(
+    onStartupContentReady: () -> Unit = {},
     notificationNavigationController: NotificationNavigationController = koinInject(),
     resolveNotificationConversation: ResolveNotificationConversationUseCase = koinInject(),
     navigator: AppNavigator = koinInject(),
     observeAppConnectionAvailability: ObserveAppConnectionAvailabilityUseCase = koinInject()
 ) {
     val navController = rememberNavController()
-    val pendingNotificationTarget by notificationNavigationController.pendingTarget.collectAsStateWithLifecycle()
-    var startupComplete by rememberSaveable { mutableStateOf(false) }
-    var startupWasOffline by rememberSaveable { mutableStateOf(false) }
-    val snackbarHostState = remember { SnackbarHostState() }
-    val offlineHint = stringResource(Res.string.app_connection_offline_hint)
-    val reconnectedHint = stringResource(Res.string.app_connection_reconnected_hint)
+
+    val pendingNotificationTarget by notificationNavigationController
+        .pendingTarget
+        .collectAsStateWithLifecycle()
+
+    var startupComplete by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    var startupWasOffline by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    val snackbarHostState = remember {
+        SnackbarHostState()
+    }
 
     navController.bind(navigator)
 
-    LaunchedEffect(startupComplete) {
-        if (!startupComplete) return@LaunchedEffect
+    ObserveConnectionSnackbar(
+        startupComplete = startupComplete,
+        startupWasOffline = startupWasOffline,
+        snackbarHostState = snackbarHostState,
+        observeAppConnectionAvailability = observeAppConnectionAvailability
+    )
 
-        var connectionUnavailable = startupWasOffline
-        var connectionSnackbarJob: Job? = null
+    HandlePendingNotificationNavigation(
+        pendingNotificationTarget = pendingNotificationTarget,
+        startupComplete = startupComplete,
+        notificationNavigationController = notificationNavigationController,
+        resolveNotificationConversation = resolveNotificationConversation,
+        navigator = navigator
+    )
 
-        if (connectionUnavailable) {
-            connectionSnackbarJob =
-                launch {
-                    snackbarHostState.showSnackbar(
-                        message = offlineHint,
-                        duration = SnackbarDuration.Short
-                    )
-                }
-        }
-
-        observeAppConnectionAvailability().collect { availability ->
-            when {
-                availability == AppConnectionAvailability.UNAVAILABLE &&
-                    !connectionUnavailable -> {
-                    connectionUnavailable = true
-                    connectionSnackbarJob?.cancel()
-                    connectionSnackbarJob =
-                        launch {
-                            snackbarHostState.showSnackbar(
-                                message = offlineHint,
-                                duration = SnackbarDuration.Short
-                            )
-                        }
-                }
-
-                availability == AppConnectionAvailability.AVAILABLE &&
-                    connectionUnavailable -> {
-                    connectionUnavailable = false
-                    connectionSnackbarJob?.cancel()
-                    connectionSnackbarJob =
-                        launch {
-                            snackbarHostState.showSnackbar(
-                                message = reconnectedHint,
-                                duration = SnackbarDuration.Short
-                            )
-                        }
-                }
-            }
-        }
-    }
-
-    LaunchedEffect(pendingNotificationTarget, startupComplete) {
-        val target = pendingNotificationTarget ?: return@LaunchedEffect
-        if (!startupComplete) return@LaunchedEffect
-
-        when (target) {
-            is NotificationNavigationTarget.Conversation -> {
-                when (
-                    val conversation =
-                        resolveNotificationConversation(
-                            conversationId = target.conversationId
-                        )
-                ) {
-                    is NotificationConversationTarget.Direct -> {
-                        navigator.navigateTo(
-                            route =
-                                AppRoute.Chat(
-                                    conversationId = conversation.conversationId,
-                                    contactId = conversation.contactId,
-                                    contactName = conversation.contactName
-                                ),
-                            popUpTo = AppRoute.Main
-                        )
-                    }
-
-                    is NotificationConversationTarget.Group -> {
-                        navigator.navigateTo(
-                            route =
-                                AppRoute.GroupConversation(
-                                    conversationId = conversation.conversationId
-                                ),
-                            popUpTo = AppRoute.Main
-                        )
-                    }
-
-                    null -> Unit
-                }
-            }
-        }
-
-        notificationNavigationController.consume(target)
-    }
-
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
         NavHost(
             navController = navController,
             startDestination = AppRoute.Startup,
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background)
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
         ) {
             startupNavGraph(
                 onStartupReady = { connection ->
-                    startupWasOffline = connection == StartupConnection.OFFLINE
+                    startupWasOffline =
+                        connection == StartupConnection.OFFLINE
+
                     startupComplete = true
-                }
+                },
+                onStartupContentReady = onStartupContentReady
             )
-            mainNavGraph()
+
+            mainNavGraph(
+                onMainReady = onStartupContentReady
+            )
+
             chatsNavGraph()
             attachmentsNavGraph()
             mediaNavGraph()
@@ -180,5 +129,147 @@ fun AppNavigation(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
+    }
+}
+
+@Composable
+private fun ObserveConnectionSnackbar(
+    startupComplete: Boolean,
+    startupWasOffline: Boolean,
+    snackbarHostState: SnackbarHostState,
+    observeAppConnectionAvailability: ObserveAppConnectionAvailabilityUseCase
+) {
+    val offlineHint = stringResource(
+        Res.string.app_connection_offline_hint
+    )
+
+    val reconnectedHint = stringResource(
+        Res.string.app_connection_reconnected_hint
+    )
+
+    LaunchedEffect(
+        startupComplete,
+        offlineHint,
+        reconnectedHint
+    ) {
+        if (!startupComplete) return@LaunchedEffect
+
+        var connectionUnavailable = startupWasOffline
+        var offlineHintWasShown = false
+
+        var pendingOfflineHintJob: Job? = null
+        var connectionSnackbarJob: Job? = null
+
+        fun scheduleOfflineHint() {
+            pendingOfflineHintJob?.cancel()
+
+            pendingOfflineHintJob = launch {
+                // Do not report a transient Connecting state as offline.
+                delay(OFFLINE_HINT_DELAY_MILLIS.milliseconds)
+
+                offlineHintWasShown = true
+
+                connectionSnackbarJob?.cancel()
+
+                connectionSnackbarJob = launch {
+                    snackbarHostState.showSnackbar(
+                        message = offlineHint,
+                        duration = SnackbarDuration.Short
+                    )
+                }
+            }
+        }
+
+        if (connectionUnavailable) {
+            scheduleOfflineHint()
+        }
+
+        observeAppConnectionAvailability().collect { availability ->
+            when {
+                availability == AppConnectionAvailability.UNAVAILABLE &&
+                    !connectionUnavailable -> {
+                    connectionUnavailable = true
+                    offlineHintWasShown = false
+
+                    connectionSnackbarJob?.cancel()
+
+                    scheduleOfflineHint()
+                }
+
+                availability == AppConnectionAvailability.AVAILABLE &&
+                    connectionUnavailable -> {
+                    connectionUnavailable = false
+
+                    pendingOfflineHintJob?.cancel()
+                    connectionSnackbarJob?.cancel()
+
+                    // Do not announce a reconnection if the offline hint
+                    // was never displayed.
+                    if (offlineHintWasShown) {
+                        offlineHintWasShown = false
+
+                        connectionSnackbarJob = launch {
+                            snackbarHostState.showSnackbar(
+                                message = reconnectedHint,
+                                duration = SnackbarDuration.Short
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HandlePendingNotificationNavigation(
+    pendingNotificationTarget: NotificationNavigationTarget?,
+    startupComplete: Boolean,
+    notificationNavigationController: NotificationNavigationController,
+    resolveNotificationConversation: ResolveNotificationConversationUseCase,
+    navigator: AppNavigator
+) {
+    LaunchedEffect(
+        pendingNotificationTarget,
+        startupComplete
+    ) {
+        val target = pendingNotificationTarget
+            ?: return@LaunchedEffect
+
+        if (!startupComplete) return@LaunchedEffect
+
+        when (target) {
+            is NotificationNavigationTarget.Conversation -> {
+                when (
+                    val conversation = resolveNotificationConversation(
+                        conversationId = target.conversationId
+                    )
+                ) {
+                    is NotificationConversationTarget.Direct -> {
+                        navigator.navigateTo(
+                            route = AppRoute.Chat(
+                                conversationId = conversation.conversationId,
+                                contactId = conversation.contactId,
+                                contactName = conversation.contactName
+                            ),
+                            popUpTo = AppRoute.Main
+                        )
+                    }
+
+                    is NotificationConversationTarget.Group -> {
+                        navigator.navigateTo(
+                            route = AppRoute.GroupConversation(
+                                conversationId = conversation.conversationId
+                            ),
+                            popUpTo = AppRoute.Main
+                        )
+                    }
+
+                    null -> Unit
+                }
+            }
+        }
+
+        notificationNavigationController.consume(target)
     }
 }

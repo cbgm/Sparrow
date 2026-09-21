@@ -29,6 +29,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -52,7 +57,9 @@ import com.cbgm.sparrow.resources.feature_chats_attachment
 import com.cbgm.sparrow.resources.feature_chats_no_conversations_hint
 import com.cbgm.sparrow.resources.feature_chats_no_conversations_yet
 import com.cbgm.sparrow.resources.feature_chats_no_messages_yet
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun OverviewScreen(
@@ -79,13 +86,26 @@ private fun Content(
     innerPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
+    // Short Room startup loads should not flash a spinner immediately after the
+    // native splash. This only delays the indicator, never data or navigation.
+    var showLoadingIndicator by remember { mutableStateOf(false) }
+    LaunchedEffect(uiState.isLoading) {
+        showLoadingIndicator = false
+        if (uiState.isLoading) {
+            delay(400L.milliseconds)
+            showLoadingIndicator = true
+        }
+    }
+
     when {
         uiState.isLoading ->
             Box(
                 modifier = modifier.fillMaxSize().padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.onBackground)
+                if (showLoadingIndicator) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.onBackground)
+                }
             }
 
         uiState.conversations.isEmpty() ->

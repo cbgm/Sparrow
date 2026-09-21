@@ -47,7 +47,8 @@ val sharedModule =
             AppViewModel(
                 initAppLanguageUseCase = get(),
                 initialization = get(),
-                foreground = get()
+                foreground = get(),
+                startupRuntimeReadiness = get()
             )
         }
     }

@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.startup.presentation.start
 
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.StartupTrace
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.startup.presentation.start.model.AppInitializationResult
@@ -23,6 +24,7 @@ class StartupViewModel(
     private var initializationCompleted = false
 
     init {
+        StartupTrace.event("StartupViewModel created")
         initialize()
     }
 
@@ -37,6 +39,7 @@ class StartupViewModel(
     }
 
     fun completeStartup() {
+        StartupTrace.event("StartupViewModel navigation to Main requested")
         navigator.navigateTo(
             route = AppRoute.Main,
             popUpTo = AppRoute.Startup,
@@ -59,13 +62,17 @@ class StartupViewModel(
 
         viewModelScope.launch {
             mutableUiState.value = StartupUiState.Loading
+            StartupTrace.event("startup UI Loading emitted")
 
             appInitializer
                 .initialize()
                 .onSuccess { result ->
+                    StartupTrace.event("startup initializer result=$result")
                     initializationCompleted = result !is AppInitializationResult.IdentityRequired
                     mutableUiState.value = result.toStartupUiState()
+                    StartupTrace.event("startup UI state published=$result")
                 }.onFailure { error ->
+                    StartupTrace.event("startup initializer failure: ${error.message}")
                     mutableUiState.value =
                         StartupUiState.Error(
                             message = error.message ?: "Sparrow could not complete startup."

@@ -7,11 +7,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.BuildKonfig
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.logging.StartupTrace
 import com.cbgm.sparrow.core.transport.ControlPlaneReachability
 import com.cbgm.sparrow.feature.settings.domain.usecase.InitAppLanguageUseCase
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
 import com.cbgm.sparrow.presentation.model.AppInitializationDependencies
 import com.cbgm.sparrow.presentation.model.ForegroundRuntimeDependencies
+import com.cbgm.sparrow.startup.util.StartupRuntimeReadiness
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
@@ -28,7 +31,8 @@ import kotlin.time.Duration.Companion.milliseconds
 class AppViewModel(
     private val initAppLanguageUseCase: InitAppLanguageUseCase,
     private val initialization: AppInitializationDependencies,
-    private val foreground: ForegroundRuntimeDependencies
+    private val foreground: ForegroundRuntimeDependencies,
+    private val startupRuntimeReadiness: StartupRuntimeReadiness
 ) : ViewModel() {
     private val logger = SparrowLog.withTag("AppViewModel")
     private val isForeground = MutableStateFlow(false)
@@ -38,8 +42,16 @@ class AppViewModel(
         private set
 
     init {
+        StartupTrace.begin()
         viewModelScope.launch {
-            initializeApplication()
+            try {
+                initializeApplication()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Throwable) {
+                startupRuntimeReadiness.markFailed(error)
+                logger.error(error) { "Required application initialization failed" }
+            }
         }
         viewModelScope.launch {
             observeForegroundRuntime()
@@ -47,6 +59,7 @@ class AppViewModel(
     }
 
     fun onAppVisible() {
+        StartupTrace.event("app lifecycle visible")
         foreground.appVisibilityState.onAppVisible()
         initialization.platformNotificationRuntime.requestPushTokenRegistration()
         isForeground.value = true
@@ -58,25 +71,41 @@ class AppViewModel(
     }
 
     private suspend fun initializeApplication() {
-        initAppLanguageUseCase()
+        StartupTrace.event("application initialization started")
+        StartupTrace.measure("app language") { initAppLanguageUseCase() }
         isLanguageInitialized = true
+        StartupTrace.event("language ready; navigation composition now permitted")
 
-        initialization.initializeCryptoRuntime()
-            .getOrElse { error ->
-                throw IllegalStateException(
-                    "Sparrow could not initialize its cryptographic runtime",
-                    error
-                )
-            }
-        initialization.controlPlaneConfiguration.initialize()
-        initialization.platformNotificationRuntime.initialize()
-        initialization.conversationNotificationCoordinator.start()
+        StartupTrace.measure("crypto runtime") {
+            initialization.initializeCryptoRuntime()
+                .getOrElse { error ->
+                    throw IllegalStateException(
+                        "Sparrow could not initialize its cryptographic runtime",
+                        error
+                    )
+                }
+        }
+        StartupTrace.measure("load saved control-plane configuration") {
+            initialization.controlPlaneConfiguration.initialize()
+        }
+        StartupTrace.measure("notification runtime") {
+            initialization.platformNotificationRuntime.initialize()
+        }
+        StartupTrace.measure("conversation notification coordinator") {
+            initialization.conversationNotificationCoordinator.start()
+        }
+        StartupTrace.event("launching invitation/membership/identity result observers")
         startInvitationResultCoordinators()
-        initializeControlPlaneDirectory()
+        StartupTrace.measure("control-plane directory configuration/discovery") {
+            initializeControlPlaneDirectory()
+        }
+        StartupTrace.event("starting background control-plane maintenance")
         startControlPlaneMaintenance()
         observeControlPlaneRegistrationTargets()
         synchronizeDeviceContacts()
         isRuntimeReady.value = true
+        startupRuntimeReadiness.markReady()
+        StartupTrace.event("app runtime ready; foreground session allowed")
     }
 
     private suspend fun initializeControlPlaneDirectory() {
@@ -96,16 +125,23 @@ class AppViewModel(
                 }
         }
 
-        initialization.controlPlaneDirectorySynchronizer
-            .refresh()
-            .onSuccess { count ->
-                logger.info { "Control-plane directory synchronized; addresses=$count" }
-            }.onFailure { error ->
-                logger.warn {
-                    "Control-plane directory unavailable during startup: ${error.message}"
+        // Persisted endpoints are sufficient to start transport. Do not block
+        // the foreground runtime on an HTTP directory refresh or health probes
+        // every time the app opens: startControlPlaneMaintenance() performs both.
+        // A first run without any cached endpoints still needs initial discovery.
+        val cachedEndpointCount = initialization.controlPlaneConfiguration.endpoints.value.size
+        StartupTrace.event("saved control-plane endpoints=$cachedEndpointCount")
+        if (cachedEndpointCount == 0) {
+            initialization.controlPlaneDirectorySynchronizer
+                .refresh()
+                .onSuccess { count ->
+                    logger.info { "Initial control-plane directory synchronized; addresses=$count" }
+                }.onFailure { error ->
+                    logger.warn {
+                        "Initial control-plane directory unavailable: ${error.message}"
+                    }
                 }
-            }
-        initialization.controlPlaneHealthMonitor.refresh()
+        }
     }
 
     private fun startInvitationResultCoordinators() {
@@ -217,9 +253,10 @@ class AppViewModel(
     }
 
     private suspend fun runForegroundSession() {
-        waitUntilLocalIdentityIsReady()
-        foreground.incomingEnvelopeRunner.start()
-        foreground.transportConnectionManager.start()
+        StartupTrace.event("foreground session requested; waiting for local identity")
+        StartupTrace.measure("foreground local identity ready") { waitUntilLocalIdentityIsReady() }
+        StartupTrace.measure("incoming envelope runner start") { foreground.incomingEnvelopeRunner.start() }
+        StartupTrace.measure("transport connection manager start") { foreground.transportConnectionManager.start() }
 
         coroutineScope {
             val connectionObserver =
@@ -239,6 +276,14 @@ class AppViewModel(
     }
 
     private suspend fun handleConnectionState(state: TransportConnectionState) {
+        StartupTrace.event(
+            "foreground transport state=${when (state) {
+                is TransportConnectionState.Connected -> "Connected"
+                is TransportConnectionState.Connecting -> "Connecting"
+                is TransportConnectionState.Disconnected -> "Disconnected"
+                is TransportConnectionState.Failed -> "Failed"
+            }}"
+        )
         when (state) {
             is TransportConnectionState.Connected -> handleConnected(state)
             is TransportConnectionState.Connecting -> logger.debug { "Transport connecting" }
