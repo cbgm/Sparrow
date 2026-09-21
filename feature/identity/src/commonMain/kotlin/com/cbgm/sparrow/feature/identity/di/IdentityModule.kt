@@ -60,6 +60,7 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.CreateIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.CreateSharedIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.DeclineIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.DecodeSharedIdentityUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.DismissPendingRemoteIdentityChangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.EnsureRemoteSigningIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.EstablishMutualIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.FindRemoteIdentityPeerIdUseCase
@@ -133,6 +134,7 @@ val identityModule =
         singleOf(::PendingRemoteIdentityChangeRepositoryImpl) { bind<PendingRemoteIdentityChangeRepository>() }
         factory { StagePendingRemoteIdentityChangeUseCase(repository = get()) }
         factory { ObservePendingRemoteIdentityChangesUseCase(repository = get()) }
+        factory { DismissPendingRemoteIdentityChangeUseCase(repository = get()) }
         singleOf(::RemoteIdentityReadRepositoryImpl) { bind<RemoteIdentityReadRepository>() }
         factory { GetRemoteIdentityUseCase(repository = get()) }
         factory { FindRemoteIdentityPeerIdUseCase(repository = get()) }
@@ -334,7 +336,10 @@ val identityModule =
                 prepareIdentityBackup = get(),
                 restoreIdentityBackup = get(),
                 markIdentityBackupExported = get(),
-                getIdentityBackupStatus = get()
+                getIdentityBackupStatus = get(),
+                observePendingRemoteIdentityChanges = get(),
+                getRemoteIdentityForReview = get(),
+                dismissPendingRemoteIdentityChange = get()
             )
         }
 

@@ -638,4 +638,17 @@
     <string name="feature_identity_backup_password">Backup password (12+ characters for export)</string>
     <string name="feature_identity_backup_restore_hint">Select your backup file and enter its password. Enter your phone number on the identity setup screen before restoring. This restores your original keys only, not your previous chats or contacts.</string>
 
+
+    <!-- Incoming untrusted identity replacement review (not an accept action). -->
+    <string name="feature_identity_recovery_review_title">Contact identity change requests</string>
+    <string name="feature_identity_recovery_review_warning">A contact may have reinstalled Sparrow. The new keys are NOT verified as belonging to your existing contact. Existing chats and trust stay unchanged.</string>
+    <string name="feature_identity_recovery_review_action">Review</string>
+    <string name="feature_identity_recovery_peer">Contact reference</string>
+    <string name="feature_identity_recovery_old_signing">Previously stored signing key</string>
+    <string name="feature_identity_recovery_new_signing">Proposed signing key</string>
+    <string name="feature_identity_recovery_old_encryption">Previously stored encryption key</string>
+    <string name="feature_identity_recovery_new_encryption">Proposed encryption key</string>
+    <string name="feature_identity_recovery_unavailable">Unavailable — cannot verify against the prior key</string>
+    <string name="feature_identity_recovery_dismiss">Dismiss locally</string>
+    <string name="feature_identity_recovery_dismiss_warning">Compare the new keys directly with your contact through a trusted channel. This screen does not authorize replacement. Dismissing removes only your local pending review; an invitation may appear again if retransmitted.</string>
 </resources>

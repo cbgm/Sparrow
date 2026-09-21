@@ -52,6 +52,7 @@ fun IdentityRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val backupState by viewModel.backupState.collectAsStateWithLifecycle()
+    val pendingReview by viewModel.pendingIdentityReview.collectAsStateWithLifecycle()
     val exportDocument by viewModel.exportDocument.collectAsStateWithLifecycle()
     var showExportDialog by remember { mutableStateOf(false) }
     var importDocument by remember { mutableStateOf<ByteArray?>(null) }
@@ -138,6 +139,8 @@ fun IdentityRoute(
             profilePictureState = pictureState?.value,
             onEditProfilePicture = { showAvatarEditor = true },
             backupState = backupState,
+            pendingIdentityReview = pendingReview,
+            onDismissIdentityChange = viewModel::dismissIdentityChange,
             onExportIdentity = {
                 showExportDialog = true
                 password = ""

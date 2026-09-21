@@ -40,6 +40,7 @@ import com.cbgm.sparrow.feature.identity.presentation.setup.components.PublicKey
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityBackupUiState
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiEvent
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiState
+import com.cbgm.sparrow.feature.identity.presentation.setup.model.PendingIdentityReviewUiState
 import com.cbgm.sparrow.feature.identity.presentation.setup.profile.IdentityProfilePictureSection
 import com.cbgm.sparrow.feature.identity.presentation.setup.profile.IdentityProfilePictureUiState
 import com.cbgm.sparrow.resources.Res
@@ -68,14 +69,16 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun IdentityScreen(
+    modifier: Modifier = Modifier,
     uiState: IdentityUiState,
     onUiEvent: (IdentityUiEvent) -> Unit,
     scrollState: ScrollState,
     innerPadding: PaddingValues,
-    modifier: Modifier = Modifier,
     profilePictureState: IdentityProfilePictureUiState? = null,
     onEditProfilePicture: () -> Unit = {},
     backupState: IdentityBackupUiState = IdentityBackupUiState(),
+    pendingIdentityReview: PendingIdentityReviewUiState = PendingIdentityReviewUiState(),
+    onDismissIdentityChange: (String, String) -> Unit = { _, _ -> },
     onExportIdentity: () -> Unit = {},
     onRestoreIdentity: () -> Unit = {}
 ) {
@@ -115,6 +118,8 @@ fun IdentityScreen(
                     onShareIdentity = { onUiEvent(IdentityUiEvent.ShareIdentityClicked) },
                     onEditProfilePicture = onEditProfilePicture,
                     backupState = backupState,
+                    pendingIdentityReview = pendingIdentityReview,
+                    onDismissIdentityChange = onDismissIdentityChange,
                     onExportIdentity = onExportIdentity
                 )
             }
@@ -242,6 +247,8 @@ private fun ReadyIdentityContent(
     onShareIdentity: () -> Unit,
     onEditProfilePicture: () -> Unit,
     backupState: IdentityBackupUiState,
+    pendingIdentityReview: PendingIdentityReviewUiState,
+    onDismissIdentityChange: (String, String) -> Unit,
     onExportIdentity: () -> Unit
 ) {
     Column(
@@ -281,6 +288,10 @@ private fun ReadyIdentityContent(
         }
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.large))
         IdentityBackupSection(state = backupState, onExport = onExportIdentity)
+        PendingIdentityReviewSection(
+            state = pendingIdentityReview,
+            onDismiss = onDismissIdentityChange
+        )
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.large))
 
         SparrowCard {

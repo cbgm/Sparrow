@@ -642,4 +642,17 @@
     <string name="feature_identity_backup_password">Backup-Passwort (mindestens 12 Zeichen beim Export)</string>
     <string name="feature_identity_backup_restore_hint">Wähle deine Backupdatei und gib das Passwort ein. Gib vor dem Wiederherstellen deine Telefonnummer auf dem Identitätsbildschirm ein. Nur die ursprünglichen Schlüssel werden wiederhergestellt, nicht Chats oder Kontakte.</string>
 
+
+    <!-- Incoming untrusted identity replacement review (not an accept action). -->
+    <string name="feature_identity_recovery_review_title">Anfragen zur Änderung einer Kontaktidentität</string>
+    <string name="feature_identity_recovery_review_warning">Ein Kontakt hat Sparrow möglicherweise neu installiert. Die neuen Schlüssel sind NICHT als zugehörig zum bisherigen Kontakt verifiziert. Chats und Vertrauensstatus bleiben unverändert.</string>
+    <string name="feature_identity_recovery_review_action">Prüfen</string>
+    <string name="feature_identity_recovery_peer">Kontaktreferenz</string>
+    <string name="feature_identity_recovery_old_signing">Bisher gespeicherter Signaturschlüssel</string>
+    <string name="feature_identity_recovery_new_signing">Vorgeschlagener Signaturschlüssel</string>
+    <string name="feature_identity_recovery_old_encryption">Bisher gespeicherter Verschlüsselungsschlüssel</string>
+    <string name="feature_identity_recovery_new_encryption">Vorgeschlagener Verschlüsselungsschlüssel</string>
+    <string name="feature_identity_recovery_unavailable">Nicht verfügbar – kein Abgleich mit dem bisherigen Schlüssel möglich</string>
+    <string name="feature_identity_recovery_dismiss">Lokal ausblenden</string>
+    <string name="feature_identity_recovery_dismiss_warning">Gleiche die neuen Schlüssel direkt über einen vertrauenswürdigen Weg mit deinem Kontakt ab. Dieser Bildschirm autorisiert keinen Identitätswechsel. Das Ausblenden entfernt nur die lokale Anfrage. Bei erneuter Zustellung kann sie erneut erscheinen.</string>
 </resources>
