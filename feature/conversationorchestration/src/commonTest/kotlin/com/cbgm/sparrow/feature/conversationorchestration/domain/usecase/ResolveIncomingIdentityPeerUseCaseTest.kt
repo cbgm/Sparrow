@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.domain.usecase
 import com.cbgm.sparrow.feature.contacts.domain.model.identity.IdentityPeerMerge
 import com.cbgm.sparrow.feature.contacts.domain.repository.IdentityPeerRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.InspectContactPeerUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.domain.error.RemoteIdentityReplacementRequiredException
 import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
 import com.cbgm.sparrow.feature.identity.domain.model.RemotePeerIdentity
@@ -56,10 +57,45 @@ class ResolveIncomingIdentityPeerUseCaseTest {
                 keyPeerId = "existing",
                 records = mapOf("existing" to identity("existing", exchange, verified))
             )
-            assertFailsWith<IllegalStateException> {
+            assertFailsWith<RemoteIdentityReplacementRequiredException> {
                 resolve(contacts, identities)("incoming", null, byteArrayOf(9), byteArrayOf(2))
             }
         }
+    }
+
+    @Test
+    fun previouslyMutualPhoneContactDoesNotMergeWithNewInstallation() = runBlocking {
+        val contacts = FakeContacts(existingPeerIds = setOf("incoming", "existing"), phonePeerId = "existing")
+        val identities = FakeIdentities(
+            records = mapOf("existing" to identity("existing", KeyExchangeStatus.MUTUAL))
+        )
+
+        val conflict = assertFailsWith<RemoteIdentityReplacementRequiredException> {
+            resolve(contacts, identities)("incoming", "+491234567890", byteArrayOf(9), byteArrayOf(8))
+        }
+        assertEquals("existing", conflict.peerId)
+    }
+
+    @Test
+    fun evenUnverifiedPhoneContactRequiresExplicitIdentityReplacement(): Unit = runBlocking {
+        val contacts = FakeContacts(existingPeerIds = setOf("incoming", "existing"), phonePeerId = "existing")
+        val identities = FakeIdentities(records = mapOf("existing" to identity("existing")))
+
+        assertFailsWith<RemoteIdentityReplacementRequiredException> {
+            resolve(contacts, identities)("incoming", "+491234567890", byteArrayOf(9), byteArrayOf(8))
+        }
+    }
+
+    @Test
+    fun knownPhoneContactWithSameKeysKeepsItsStableContactId() = runBlocking {
+        val contacts = FakeContacts(existingPeerIds = setOf("incoming", "existing"), phonePeerId = "existing")
+        val identities = FakeIdentities(
+            keyPeerId = "existing",
+            records = mapOf("existing" to identity("existing", KeyExchangeStatus.MUTUAL))
+        )
+        val resolution = resolve(contacts, identities)("incoming", "+491234567890", byteArrayOf(1), byteArrayOf(2))
+        assertEquals("existing", resolution.peerId)
+        assertEquals(listOf(IdentityPeerMerge("incoming", "existing", true)), resolution.merges)
     }
 
     @Test

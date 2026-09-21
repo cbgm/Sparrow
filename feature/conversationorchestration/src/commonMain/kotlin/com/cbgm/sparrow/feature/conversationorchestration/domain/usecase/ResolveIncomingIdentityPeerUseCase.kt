@@ -3,8 +3,7 @@ package com.cbgm.sparrow.feature.conversationorchestration.domain.usecase
 import com.cbgm.sparrow.feature.contacts.domain.model.identity.IdentityPeerMerge
 import com.cbgm.sparrow.feature.contacts.domain.model.identity.IdentityPeerResolution
 import com.cbgm.sparrow.feature.contacts.domain.usecase.identity.InspectContactPeerUseCase
-import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
-import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
+import com.cbgm.sparrow.feature.conversationorchestration.domain.error.RemoteIdentityReplacementRequiredException
 import com.cbgm.sparrow.feature.identity.domain.model.RemotePeerIdentity
 import com.cbgm.sparrow.feature.identity.domain.usecase.FindRemoteIdentityPeerIdUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
@@ -30,13 +29,19 @@ class ResolveIncomingIdentityPeerUseCase(
             getRemoteIdentity(peerId).getOrThrow()?.let { identity -> peerId to identity }
         }.toMap()
 
-        if (phonePeerId == null && identityPeerId != null) {
-            val stored = identities[targetPeerId]
-            if (stored != null && !stored.matches(remoteEncryptionPublicKey, remoteSigningPublicKey)) {
-                check(
-                    stored.keyExchangeStatus != KeyExchangeStatus.MUTUAL &&
-                        stored.verificationStatus != ContactVerificationStatus.VERIFIED
-                ) { "Contact identity changed; reset the contact before accepting new keys" }
+        // A phone-number match is a contact lookup, NOT evidence of cryptographic
+        // continuity. In particular, when a peer reinstalls with fresh keys the
+        // phone match is often the *only* way to find their existing contact and
+        // conversation. Check it before returning any merge or applying metadata:
+        // the caller merges/deletes duplicate Contacts rows before Identity handles
+        // the packet, so detecting the mismatch later is too late.
+        //
+        // Even a ONE_WAY/unverified key must not be overwritten as a side effect
+        // of a self-declared phone number. The separate, explicit recovery flow
+        // will need to authorize replacement of the exact previous key binding.
+        identities[targetPeerId]?.let { stored ->
+            if (!stored.matches(remoteEncryptionPublicKey, remoteSigningPublicKey)) {
+                throw RemoteIdentityReplacementRequiredException(targetPeerId)
             }
         }
 
