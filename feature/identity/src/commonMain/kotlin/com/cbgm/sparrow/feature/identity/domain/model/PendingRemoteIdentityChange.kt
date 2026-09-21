@@ -8,5 +8,9 @@ class PendingRemoteIdentityChange(
     val proposedEncryptionPublicKey: ByteArray,
     val proposedSigningPublicKey: ByteArray,
     val receivedAtEpochMilliseconds: Long,
-    val expiresAtEpochMilliseconds: Long
+    val expiresAtEpochMilliseconds: Long,
+    /** A user checked the entire signing-key fingerprint outside Sparrow. This is NOT authorization. */
+    val fingerprintConfirmedAtEpochMilliseconds: Long? = null,
+    val confirmedPreviousEncryptionPublicKey: ByteArray? = null,
+    val confirmedPreviousSigningPublicKey: ByteArray? = null
 )

@@ -6,6 +6,7 @@ import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityBackupStatus
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityStatus
+import com.cbgm.sparrow.feature.identity.domain.usecase.ConfirmPendingRemoteIdentityChangeFingerprintUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.CreateIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.DismissPendingRemoteIdentityChangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityBackupStatusUseCase
@@ -45,7 +46,8 @@ class IdentityViewModel(
     private val getIdentityBackupStatus: GetIdentityBackupStatusUseCase,
     private val observePendingRemoteIdentityChanges: ObservePendingRemoteIdentityChangesUseCase,
     private val getRemoteIdentityForReview: GetRemoteIdentityUseCase,
-    private val dismissPendingRemoteIdentityChange: DismissPendingRemoteIdentityChangeUseCase
+    private val dismissPendingRemoteIdentityChange: DismissPendingRemoteIdentityChangeUseCase,
+    private val confirmPendingRemoteIdentityChangeFingerprint: ConfirmPendingRemoteIdentityChangeFingerprintUseCase
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow<IdentityUiState>(IdentityUiState.Loading)
 
@@ -53,8 +55,33 @@ class IdentityViewModel(
     private val _pendingIdentityReview = MutableStateFlow(PendingIdentityReviewUiState())
     val pendingIdentityReview: StateFlow<PendingIdentityReviewUiState> = _pendingIdentityReview.asStateFlow()
 
+    fun confirmIdentityChangeFingerprint(peerId: String, invitationId: String, independentlyCheckedFingerprint: String) {
+        if (_pendingIdentityReview.value.confirmingInvitationId != null ||
+            _pendingIdentityReview.value.dismissingInvitationId != null ||
+            _pendingIdentityReview.value.requests.none {
+                it.peerId == peerId && it.invitationId == invitationId && !it.fingerprintConfirmed
+            }
+        ) {
+            return
+        }
+        viewModelScope.launch {
+            _pendingIdentityReview.value = _pendingIdentityReview.value.copy(
+                confirmingInvitationId = invitationId,
+                errorMessage = null
+            )
+            confirmPendingRemoteIdentityChangeFingerprint(peerId, invitationId, independentlyCheckedFingerprint)
+                .onFailure { error ->
+                    _pendingIdentityReview.value = _pendingIdentityReview.value.copy(
+                        errorMessage = error.message ?: "Fingerprint confirmation failed"
+                    )
+                }
+            _pendingIdentityReview.value = _pendingIdentityReview.value.copy(confirmingInvitationId = null)
+        }
+    }
+
     fun dismissIdentityChange(peerId: String, invitationId: String) {
         if (_pendingIdentityReview.value.dismissingInvitationId != null ||
+            _pendingIdentityReview.value.confirmingInvitationId != null ||
             _pendingIdentityReview.value.requests.none { it.peerId == peerId && it.invitationId == invitationId }
         ) {
             return

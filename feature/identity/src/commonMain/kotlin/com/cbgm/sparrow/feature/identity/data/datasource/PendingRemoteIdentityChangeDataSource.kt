@@ -14,4 +14,7 @@ internal class PendingRemoteIdentityChangeDataSource(
     fun observeAll(): Flow<List<PendingRemoteIdentityChangeEntity>> = dao.observeAll()
 
     suspend fun discard(peerId: String, invitationId: String) = dao.deleteIfInvitationMatches(peerId, invitationId)
+
+    suspend fun confirmFingerprintIfCurrent(peerId: String, invitationId: String, key: ByteArray, now: Long): Int =
+        dao.confirmFingerprintIfCurrent(peerId, invitationId, key, now)
 }

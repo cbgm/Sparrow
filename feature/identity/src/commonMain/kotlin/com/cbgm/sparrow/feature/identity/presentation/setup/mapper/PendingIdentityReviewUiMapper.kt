@@ -13,5 +13,6 @@ internal fun PendingRemoteIdentityChange.toReviewUi(previous: RemotePeerIdentity
         previousSigningKey = previous?.signingPublicKey?.toFingerprint(),
         proposedSigningKey = proposedSigningPublicKey.toFingerprint(),
         previousEncryptionKey = previous?.encryptionPublicKey?.toFingerprint(),
-        proposedEncryptionKey = proposedEncryptionPublicKey.toFingerprint()
+        proposedEncryptionKey = proposedEncryptionPublicKey.toFingerprint(),
+        fingerprintConfirmed = fingerprintConfirmedAtEpochMilliseconds != null
     )

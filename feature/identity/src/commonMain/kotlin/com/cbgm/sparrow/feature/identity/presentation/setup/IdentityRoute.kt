@@ -141,6 +141,7 @@ fun IdentityRoute(
             backupState = backupState,
             pendingIdentityReview = pendingReview,
             onDismissIdentityChange = viewModel::dismissIdentityChange,
+            onConfirmIdentityChangeFingerprint = viewModel::confirmIdentityChangeFingerprint,
             onExportIdentity = {
                 showExportDialog = true
                 password = ""

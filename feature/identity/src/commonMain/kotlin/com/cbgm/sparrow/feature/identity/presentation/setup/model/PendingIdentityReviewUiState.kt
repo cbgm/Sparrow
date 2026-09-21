@@ -4,6 +4,7 @@ package com.cbgm.sparrow.feature.identity.presentation.setup.model
 data class PendingIdentityReviewUiState(
     val requests: List<PendingIdentityReviewUi> = emptyList(),
     val dismissingInvitationId: String? = null,
+    val confirmingInvitationId: String? = null,
     val errorMessage: String? = null
 )
 
@@ -13,5 +14,6 @@ data class PendingIdentityReviewUi(
     val previousSigningKey: String?,
     val proposedSigningKey: String,
     val previousEncryptionKey: String?,
-    val proposedEncryptionKey: String
+    val proposedEncryptionKey: String,
+    val fingerprintConfirmed: Boolean
 )

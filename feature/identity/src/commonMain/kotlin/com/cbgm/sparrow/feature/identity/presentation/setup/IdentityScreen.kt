@@ -69,8 +69,8 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun IdentityScreen(
-    modifier: Modifier = Modifier,
     uiState: IdentityUiState,
+    modifier: Modifier = Modifier,
     onUiEvent: (IdentityUiEvent) -> Unit,
     scrollState: ScrollState,
     innerPadding: PaddingValues,
@@ -79,6 +79,7 @@ fun IdentityScreen(
     backupState: IdentityBackupUiState = IdentityBackupUiState(),
     pendingIdentityReview: PendingIdentityReviewUiState = PendingIdentityReviewUiState(),
     onDismissIdentityChange: (String, String) -> Unit = { _, _ -> },
+    onConfirmIdentityChangeFingerprint: (String, String, String) -> Unit = { _, _, _ -> },
     onExportIdentity: () -> Unit = {},
     onRestoreIdentity: () -> Unit = {}
 ) {
@@ -120,6 +121,7 @@ fun IdentityScreen(
                     backupState = backupState,
                     pendingIdentityReview = pendingIdentityReview,
                     onDismissIdentityChange = onDismissIdentityChange,
+                    onConfirmIdentityChangeFingerprint = onConfirmIdentityChangeFingerprint,
                     onExportIdentity = onExportIdentity
                 )
             }
@@ -249,6 +251,7 @@ private fun ReadyIdentityContent(
     backupState: IdentityBackupUiState,
     pendingIdentityReview: PendingIdentityReviewUiState,
     onDismissIdentityChange: (String, String) -> Unit,
+    onConfirmIdentityChangeFingerprint: (String, String, String) -> Unit,
     onExportIdentity: () -> Unit
 ) {
     Column(
@@ -290,7 +293,8 @@ private fun ReadyIdentityContent(
         IdentityBackupSection(state = backupState, onExport = onExportIdentity)
         PendingIdentityReviewSection(
             state = pendingIdentityReview,
-            onDismiss = onDismissIdentityChange
+            onDismiss = onDismissIdentityChange,
+            onConfirmFingerprint = onConfirmIdentityChangeFingerprint
         )
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.large))
 

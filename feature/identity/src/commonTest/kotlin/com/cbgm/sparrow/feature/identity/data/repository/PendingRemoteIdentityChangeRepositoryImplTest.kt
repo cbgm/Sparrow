@@ -1,5 +1,7 @@
 package com.cbgm.sparrow.feature.identity.data.repository
 
+import com.cbgm.sparrow.core.extensions.toFingerprint
+import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.dao.PendingRemoteIdentityChangeDao
 import com.cbgm.sparrow.data.database.entity.PendingRemoteIdentityChangeEntity
 import com.cbgm.sparrow.feature.identity.data.datasource.PendingRemoteIdentityChangeDataSource
@@ -34,6 +36,28 @@ class PendingRemoteIdentityChangeRepositoryImplTest {
     }
 
     @Test
+    fun replayDoesNotClearPreviousFingerprintConfirmation() = runBlocking {
+        val dao = FakeDao()
+        val repository = PendingRemoteIdentityChangeRepositoryImpl(PendingRemoteIdentityChangeDataSource(dao))
+        val now = SystemClock.nowEpochMilliseconds()
+        repository.stage(candidate("current", now)).getOrThrow()
+        val confirmed = repository.confirmFingerprint("existing", "current", ByteArray(32) { 2 }.toFingerprint())
+        assertTrue(confirmed.isSuccess)
+        repository.stage(candidate("current", now)).getOrThrow()
+        assertTrue(repository.observeAll().first().single().fingerprintConfirmedAtEpochMilliseconds != null)
+    }
+
+    @Test
+    fun differentOrMalformedFingerprintCannotConfirm() = runBlocking {
+        val dao = FakeDao()
+        val repository = PendingRemoteIdentityChangeRepositoryImpl(PendingRemoteIdentityChangeDataSource(dao))
+        repository.stage(candidate("current", SystemClock.nowEpochMilliseconds())).getOrThrow()
+        assertTrue(repository.confirmFingerprint("existing", "current", "1234").isFailure)
+        assertTrue(repository.confirmFingerprint("existing", "current", ByteArray(32) { 3 }.toFingerprint()).isFailure)
+        assertTrue(repository.observeAll().first().single().fingerprintConfirmedAtEpochMilliseconds == null)
+    }
+
+    @Test
     fun discardCannotDeleteDifferentInvitationForSameContact() = runBlocking {
         val dao = FakeDao()
         val repository = PendingRemoteIdentityChangeRepositoryImpl(PendingRemoteIdentityChangeDataSource(dao))
@@ -65,6 +89,30 @@ class PendingRemoteIdentityChangeRepositoryImplTest {
             state.value.firstOrNull { it.peerId == peerId }
 
         override fun observeAll(): Flow<List<PendingRemoteIdentityChangeEntity>> = state
+
+        override suspend fun confirmFingerprintIfCurrent(
+            peerId: String,
+            invitationId: String,
+            proposedSigningPublicKey: ByteArray,
+            confirmedAt: Long
+        ): Int {
+            val candidate = state.value.singleOrNull() ?: return 0
+            if (candidate.peerId != peerId || candidate.invitationId != invitationId ||
+                !candidate.proposedSigningPublicKey.contentEquals(proposedSigningPublicKey) ||
+                candidate.fingerprintConfirmedAtEpochMilliseconds != null ||
+                candidate.expiresAtEpochMilliseconds <= confirmedAt
+            ) {
+                return 0
+            }
+            state.value = listOf(
+                candidate.copy(
+                    fingerprintConfirmedAtEpochMilliseconds = confirmedAt,
+                    confirmedPreviousEncryptionPublicKey = ByteArray(32) { 8 },
+                    confirmedPreviousSigningPublicKey = ByteArray(32) { 9 }
+                )
+            )
+            return 1
+        }
 
         override suspend fun deleteIfInvitationMatches(peerId: String, invitationId: String): Int {
             val oldSize = state.value.size

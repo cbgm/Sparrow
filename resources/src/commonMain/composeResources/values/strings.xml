@@ -651,4 +651,8 @@
     <string name="feature_identity_recovery_unavailable">Unavailable — cannot verify against the prior key</string>
     <string name="feature_identity_recovery_dismiss">Dismiss locally</string>
     <string name="feature_identity_recovery_dismiss_warning">Compare the new keys directly with your contact through a trusted channel. This screen does not authorize replacement. Dismissing removes only your local pending review; an invitation may appear again if retransmitted.</string>
+    <string name="feature_identity_recovery_fingerprint_hint">Check the NEW signing-key fingerprint directly with your contact through a separate trusted channel, not from this invitation. Enter the full value you independently checked. Confirmation records your check only; it does NOT replace keys, restore delivery, verify a phone number, or authorize messages.</string>
+    <string name="feature_identity_recovery_fingerprint_label">Independently checked new signing-key fingerprint</string>
+    <string name="feature_identity_recovery_confirm_fingerprint">Record fingerprint check</string>
+    <string name="feature_identity_recovery_fingerprint_recorded">Fingerprint check recorded for this request. Existing identity, verification and conversations remain unchanged. Secure replacement and fresh authorization are not enabled yet.</string>
 </resources>

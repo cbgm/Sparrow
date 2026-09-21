@@ -12,6 +12,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -27,8 +28,12 @@ import com.cbgm.sparrow.feature.identity.presentation.setup.model.PendingIdentit
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.PendingIdentityReviewUiState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_close
+import com.cbgm.sparrow.resources.feature_identity_recovery_confirm_fingerprint
 import com.cbgm.sparrow.resources.feature_identity_recovery_dismiss
 import com.cbgm.sparrow.resources.feature_identity_recovery_dismiss_warning
+import com.cbgm.sparrow.resources.feature_identity_recovery_fingerprint_hint
+import com.cbgm.sparrow.resources.feature_identity_recovery_fingerprint_label
+import com.cbgm.sparrow.resources.feature_identity_recovery_fingerprint_recorded
 import com.cbgm.sparrow.resources.feature_identity_recovery_new_encryption
 import com.cbgm.sparrow.resources.feature_identity_recovery_new_signing
 import com.cbgm.sparrow.resources.feature_identity_recovery_old_encryption
@@ -44,9 +49,11 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 internal fun PendingIdentityReviewSection(
     state: PendingIdentityReviewUiState,
-    onDismiss: (String, String) -> Unit
+    onDismiss: (String, String) -> Unit,
+    onConfirmFingerprint: (String, String, String) -> Unit
 ) {
     var selected by remember { mutableStateOf<PendingIdentityReviewUi?>(null) }
+    var enteredFingerprint by remember { mutableStateOf("") }
     if (state.requests.isEmpty() && state.errorMessage == null) return
 
     Spacer(Modifier.height(MaterialTheme.spacing.large))
@@ -71,7 +78,10 @@ internal fun PendingIdentityReviewSection(
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.bodySmall
                     )
-                    TextButton(onClick = { selected = candidate }) {
+                    TextButton(onClick = {
+                        selected = candidate
+                        enteredFingerprint = ""
+                    }) {
                         Text(stringResource(Res.string.feature_identity_recovery_review_action))
                     }
                 }
@@ -89,6 +99,11 @@ internal fun PendingIdentityReviewSection(
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     Text(stringResource(Res.string.feature_identity_recovery_dismiss_warning))
+                    if (candidate.fingerprintConfirmed) {
+                        Text(stringResource(Res.string.feature_identity_recovery_fingerprint_recorded))
+                    } else {
+                        Text(stringResource(Res.string.feature_identity_recovery_fingerprint_hint))
+                    }
                     KeyReviewText(stringResource(Res.string.feature_identity_recovery_peer), candidate.peerId)
                     KeyReviewText(
                         stringResource(Res.string.feature_identity_recovery_old_signing),
@@ -100,16 +115,39 @@ internal fun PendingIdentityReviewSection(
                         candidate.previousEncryptionKey ?: stringResource(Res.string.feature_identity_recovery_unavailable)
                     )
                     KeyReviewText(stringResource(Res.string.feature_identity_recovery_new_encryption), candidate.proposedEncryptionKey)
+                    if (!candidate.fingerprintConfirmed) {
+                        OutlinedTextField(
+                            value = enteredFingerprint,
+                            onValueChange = { enteredFingerprint = it.take(90) },
+                            label = { Text(stringResource(Res.string.feature_identity_recovery_fingerprint_label)) },
+                            singleLine = false,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             },
             confirmButton = {
-                Button(
-                    enabled = state.dismissingInvitationId == null,
-                    onClick = {
-                        onDismiss(candidate.peerId, candidate.invitationId)
-                        selected = null
+                Column {
+                    if (!candidate.fingerprintConfirmed) {
+                        Button(
+                            enabled = state.confirmingInvitationId == null &&
+                                state.dismissingInvitationId == null &&
+                                enteredFingerprint.trim().isNotEmpty(),
+                            onClick = {
+                                onConfirmFingerprint(candidate.peerId, candidate.invitationId, enteredFingerprint)
+                                enteredFingerprint = ""
+                                selected = null
+                            }
+                        ) { Text(stringResource(Res.string.feature_identity_recovery_confirm_fingerprint)) }
                     }
-                ) { Text(stringResource(Res.string.feature_identity_recovery_dismiss)) }
+                    TextButton(
+                        enabled = state.dismissingInvitationId == null && state.confirmingInvitationId == null,
+                        onClick = {
+                            onDismiss(candidate.peerId, candidate.invitationId)
+                            selected = null
+                        }
+                    ) { Text(stringResource(Res.string.feature_identity_recovery_dismiss)) }
+                }
             },
             dismissButton = {
                 TextButton(onClick = { selected = null }) {

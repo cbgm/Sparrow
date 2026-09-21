@@ -9,4 +9,11 @@ interface PendingRemoteIdentityChangeRepository {
     fun observeAll(): Flow<List<PendingRemoteIdentityChange>>
 
     suspend fun discard(peerId: String, invitationId: String): Result<Unit>
+
+    /** Records an explicit, out-of-band fingerprint confirmation; does NOT replace any keys. */
+    suspend fun confirmFingerprint(
+        peerId: String,
+        invitationId: String,
+        independentlyCheckedSigningFingerprint: String
+    ): Result<Unit>
 }

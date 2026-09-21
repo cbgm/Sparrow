@@ -23,7 +23,12 @@ data class PendingRemoteIdentityChangeEntity(
     val proposedEncryptionPublicKey: ByteArray,
     val proposedSigningPublicKey: ByteArray,
     val receivedAtEpochMilliseconds: Long,
-    val expiresAtEpochMilliseconds: Long
+    val expiresAtEpochMilliseconds: Long,
+    /** Local, out-of-band fingerprint confirmation only. Not a cryptographic identity replacement. */
+    val fingerprintConfirmedAtEpochMilliseconds: Long? = null,
+    /** Snapshots bind a later replacement decision to the exact old keys present at confirmation. */
+    val confirmedPreviousEncryptionPublicKey: ByteArray? = null,
+    val confirmedPreviousSigningPublicKey: ByteArray? = null
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -33,11 +38,14 @@ data class PendingRemoteIdentityChangeEntity(
 
         if (receivedAtEpochMilliseconds != other.receivedAtEpochMilliseconds) return false
         if (expiresAtEpochMilliseconds != other.expiresAtEpochMilliseconds) return false
+        if (fingerprintConfirmedAtEpochMilliseconds != other.fingerprintConfirmedAtEpochMilliseconds) return false
         if (peerId != other.peerId) return false
         if (sourcePeerId != other.sourcePeerId) return false
         if (invitationId != other.invitationId) return false
         if (!proposedEncryptionPublicKey.contentEquals(other.proposedEncryptionPublicKey)) return false
         if (!proposedSigningPublicKey.contentEquals(other.proposedSigningPublicKey)) return false
+        if (!confirmedPreviousEncryptionPublicKey.contentEquals(other.confirmedPreviousEncryptionPublicKey)) return false
+        if (!confirmedPreviousSigningPublicKey.contentEquals(other.confirmedPreviousSigningPublicKey)) return false
 
         return true
     }
@@ -45,11 +53,14 @@ data class PendingRemoteIdentityChangeEntity(
     override fun hashCode(): Int {
         var result = receivedAtEpochMilliseconds.hashCode()
         result = 31 * result + expiresAtEpochMilliseconds.hashCode()
+        result = 31 * result + (fingerprintConfirmedAtEpochMilliseconds?.hashCode() ?: 0)
         result = 31 * result + peerId.hashCode()
         result = 31 * result + sourcePeerId.hashCode()
         result = 31 * result + invitationId.hashCode()
         result = 31 * result + proposedEncryptionPublicKey.contentHashCode()
         result = 31 * result + proposedSigningPublicKey.contentHashCode()
+        result = 31 * result + (confirmedPreviousEncryptionPublicKey?.contentHashCode() ?: 0)
+        result = 31 * result + (confirmedPreviousSigningPublicKey?.contentHashCode() ?: 0)
         return result
     }
 }

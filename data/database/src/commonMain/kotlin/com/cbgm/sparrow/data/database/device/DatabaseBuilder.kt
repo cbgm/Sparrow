@@ -9,6 +9,7 @@ import com.cbgm.sparrow.data.database.migration.GroupMemberPhoneMigration47To48
 import com.cbgm.sparrow.data.database.migration.IdentityExchangeMigration43To44
 import com.cbgm.sparrow.data.database.migration.InvitationPeerDetailsMigration44To45
 import com.cbgm.sparrow.data.database.migration.PendingRemoteIdentityChangeMigration49To50
+import com.cbgm.sparrow.data.database.migration.PendingRemoteIdentityChangeMigration50To51
 import com.cbgm.sparrow.data.database.migration.ProtocolOutboxFailuresMigration48To49
 import kotlinx.coroutines.Dispatchers
 
@@ -26,6 +27,7 @@ fun buildSparrowDatabase(builder: RoomDatabase.Builder<SparrowDatabase>): Sparro
             AttachmentMessageContextMigration46To47,
             GroupMemberPhoneMigration47To48,
             ProtocolOutboxFailuresMigration48To49,
-            PendingRemoteIdentityChangeMigration49To50
+            PendingRemoteIdentityChangeMigration49To50,
+            PendingRemoteIdentityChangeMigration50To51
         )
         .build()

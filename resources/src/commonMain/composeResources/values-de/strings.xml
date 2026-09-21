@@ -655,4 +655,8 @@
     <string name="feature_identity_recovery_unavailable">Nicht verfügbar – kein Abgleich mit dem bisherigen Schlüssel möglich</string>
     <string name="feature_identity_recovery_dismiss">Lokal ausblenden</string>
     <string name="feature_identity_recovery_dismiss_warning">Gleiche die neuen Schlüssel direkt über einen vertrauenswürdigen Weg mit deinem Kontakt ab. Dieser Bildschirm autorisiert keinen Identitätswechsel. Das Ausblenden entfernt nur die lokale Anfrage. Bei erneuter Zustellung kann sie erneut erscheinen.</string>
+    <string name="feature_identity_recovery_fingerprint_hint">Prüfe den NEUEN Signaturschlüssel-Fingerabdruck direkt mit deinem Kontakt über einen separaten, vertrauenswürdigen Weg – nicht anhand dieser Einladung. Gib den vollständig unabhängig geprüften Wert ein. Die Bestätigung dokumentiert nur die Prüfung; sie ersetzt keine Schlüssel, stellt die Zustellung nicht wieder her, verifiziert keine Telefonnummer und autorisiert keine Nachrichten.</string>
+    <string name="feature_identity_recovery_fingerprint_label">Unabhängig geprüfter neuer Signaturschlüssel-Fingerabdruck</string>
+    <string name="feature_identity_recovery_confirm_fingerprint">Fingerabdruck-Prüfung dokumentieren</string>
+    <string name="feature_identity_recovery_fingerprint_recorded">Fingerabdruck-Prüfung für diese Anfrage dokumentiert. Vorhandene Identität, Vertrauensstatus und Chats bleiben unverändert. Ein sicherer Identitätswechsel und eine neue Autorisierung sind noch nicht freigeschaltet.</string>
 </resources>
