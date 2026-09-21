@@ -181,6 +181,9 @@ internal class ChatsConversationPort(
     override suspend fun getOrCreateConversation(peerId: String): Result<String> =
         conversationRepository.getOrCreate(peerId)
 
+    override suspend fun findConversationId(peerId: String): Result<String?> =
+        conversationRepository.findConversationId(peerId)
+
     override suspend fun activateAuthorizedConversation(peerId: String): Result<Unit> =
         activateAuthorizedDirectConversation(peerId)
 

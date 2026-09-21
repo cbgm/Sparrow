@@ -936,13 +936,14 @@ internal class IdentityExchangeDataSource(
         latestInvitation: IdentityExchangeEntity?,
         latestAuthorizationEvent: IdentityExchangeEntity?
     ): IdentityHandshakeState? {
+        // Never let an older exchange's (possibly replayed) MUTUAL event authorize
+        // a newly created or revoked exchange, even if its update timestamp is later.
+        // The newest exchange is selected by creation time in IdentityExchangeDao.
         val authorizationIsCurrent =
-            latestAuthorizationEvent?.stage == IdentityExchangeStage.MUTUAL_UNVERIFIED.name &&
-                (
-                    latestInvitation == null ||
-                        latestAuthorizationEvent.updatedAtEpochMilliseconds >=
-                        latestInvitation.updatedAtEpochMilliseconds
-                )
+            latestInvitation != null &&
+                latestAuthorizationEvent?.stage == IdentityExchangeStage.MUTUAL_UNVERIFIED.name &&
+                latestAuthorizationEvent.exchangeId == latestInvitation.exchangeId &&
+                latestInvitation.stage == IdentityExchangeStage.MUTUAL_UNVERIFIED.name
 
         if (authorizationIsCurrent) {
             return IdentityHandshakeState.MUTUAL_UNVERIFIED

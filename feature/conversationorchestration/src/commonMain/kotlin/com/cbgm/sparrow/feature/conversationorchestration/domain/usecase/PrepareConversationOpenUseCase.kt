@@ -13,10 +13,12 @@ class PrepareConversationOpenUseCase internal constructor(
         safeSuspendCall {
             require(peerId.isNotBlank()) { "Peer ID must not be blank" }
 
-            // Selecting a peer does not create a chat in either setup mode.
-            // Only an already authorized exchange may open an existing/new chat.
-            if (requireDirectChatAuthorization(peerId).isSuccess) {
-                conversationPort.getOrCreateConversation(peerId).getOrThrow()
+            // Authorization alone is not evidence that a locally deleted chat still
+            // exists. Reopening a missing chat must go through an explicit invitation;
+            // otherwise the other device may still be waiting for authorization.
+            val existingConversationId = conversationPort.findConversationId(peerId).getOrThrow()
+            if (existingConversationId != null && requireDirectChatAuthorization(peerId).isSuccess) {
+                existingConversationId
             } else {
                 flowHandler.startDirectInvitation(peerId).getOrThrow()
                 null

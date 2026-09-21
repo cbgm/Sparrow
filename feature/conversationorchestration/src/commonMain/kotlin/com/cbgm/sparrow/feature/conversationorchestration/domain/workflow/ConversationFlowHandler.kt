@@ -262,9 +262,17 @@ internal class ConversationFlowHandler(
         runCatching {
             require(peerId.isNotBlank()) { "Peer ID must not be blank" }
             check(!blocklistRepository.isBlocked(peerId)) { "Blocked contacts cannot be invited" }
-            // Orchestration decides whether an existing cryptographic exchange permits
-            // a new invitation. Identity only owns the exchange state and packet signing.
-            if (getIdentityPeerState(peerId).getOrThrow().hasEstablishedExchange) return@runCatching
+            // A peer can retain their original keys after deleting a local chat.
+            // If the conversation is missing, an explicit contact selection may start a
+            // fresh invitation even while an old authorization still appears active.
+            // Revoke ONLY that old conversation authorization: remote identity/trust
+            // records and the user's own keys are never reset.
+            if (getIdentityPeerState(peerId).getOrThrow().hasEstablishedExchange) {
+                if (conversationPort.findConversationId(peerId).getOrThrow() != null) {
+                    return@runCatching
+                }
+                revokePeerExchange(peerId)
+            }
             val peerDisplayName = getIdentityPeerDisplayName(peerId)
             val senderLabel = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow()
             val exchange = startIdentityExchange(peerId, senderLabel).getOrThrow() ?: return@runCatching

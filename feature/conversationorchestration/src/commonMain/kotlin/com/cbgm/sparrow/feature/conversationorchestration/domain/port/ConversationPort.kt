@@ -64,6 +64,9 @@ interface ConversationPort {
 
     suspend fun getOrCreateConversation(peerId: String): Result<String>
 
+    /** Lookup only; never create a conversation merely to check invitation eligibility. */
+    suspend fun findConversationId(peerId: String): Result<String?>
+
     suspend fun activateAuthorizedConversation(peerId: String): Result<Unit>
 
     suspend fun discardPendingAuthorizationMessages(peerId: String): Result<Unit>
