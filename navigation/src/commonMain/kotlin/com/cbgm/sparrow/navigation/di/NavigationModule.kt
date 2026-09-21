@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.navigation.di
 
+import com.cbgm.sparrow.navigation.presentation.inbox.RecoveryInboxViewModel
 import com.cbgm.sparrow.navigation.presentation.main.MainViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
@@ -10,7 +11,10 @@ val navigationModule =
             MainViewModel(
                 observePendingInvitationCount = get(),
                 observeSemanticSearchState = get(),
-                startRecoveryInvitation = get()
+                observeRecoveryRequests = get()
             )
+        }
+        viewModel {
+            RecoveryInboxViewModel(observeRequests = get(), getPeerDisplayName = get(), getContact = get())
         }
     }

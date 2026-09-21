@@ -11,6 +11,7 @@ import com.cbgm.sparrow.core.logging.StartupTrace
 import com.cbgm.sparrow.core.transport.ControlPlaneReachability
 import com.cbgm.sparrow.feature.settings.domain.usecase.InitAppLanguageUseCase
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
+import com.cbgm.sparrow.feature.transport.connection.isRecoverableConnectivityFailure
 import com.cbgm.sparrow.presentation.model.AppInitializationDependencies
 import com.cbgm.sparrow.presentation.model.ForegroundRuntimeDependencies
 import com.cbgm.sparrow.startup.util.StartupRuntimeReadiness
@@ -135,7 +136,14 @@ class AppViewModel(
                 .onSuccess { count ->
                     logger.info { "Initial control-plane directory synchronized; addresses=$count" }
                 }.onFailure { error ->
-                    logger.error(error) { "Initial control-plane directory unavailable" }
+                    if (error is CancellationException && !error.isRecoverableConnectivityFailure()) throw error
+                    if (error.isRecoverableConnectivityFailure()) {
+                        // Startup with the directory server down is already represented
+                        // by the existing global offline/reconnected hint.
+                        logger.debug { "Initial control-plane directory unreachable: ${error.message}" }
+                    } else {
+                        logger.error(error) { "Initial control-plane directory unavailable" }
+                    }
                 }
         }
     }
@@ -284,7 +292,9 @@ class AppViewModel(
             is TransportConnectionState.Connected -> handleConnected(state)
             is TransportConnectionState.Connecting -> logger.debug { "Transport connecting" }
             is TransportConnectionState.Disconnected -> logger.info { "Transport disconnected" }
-            is TransportConnectionState.Failed -> logger.error { "Transport failed: ${state.message}" }
+            // Failed is a connection state and already drives the offline/reconnected
+            // hint in AppNavigation. Unexpected causes are logged at their source.
+            is TransportConnectionState.Failed -> logger.debug { "Transport unavailable: ${state.message}" }
         }
     }
 

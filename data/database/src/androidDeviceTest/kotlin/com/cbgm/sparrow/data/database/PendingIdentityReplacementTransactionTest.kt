@@ -35,9 +35,7 @@ class PendingIdentityReplacementTransactionTest {
             .build()
     }
 
-    @AfterTest fun tearDown() {
-        database.close()
-    }
+    @AfterTest fun tearDown() { database.close() }
 
     @Test fun confirmedReplacementKeepsContactAndClearsOldTrust() = runBlocking {
         seed()
@@ -70,16 +68,10 @@ class PendingIdentityReplacementTransactionTest {
 
     @Test fun cutoverFailsOnlyUnconfirmedMessagesLinkedToQuarantinedPackets() = runBlocking {
         seed()
-        database.chatDao().upsertConversation(
-            ConversationEntity(
-                id = "direct-chat",
-                contactId = "contact",
-                type = "DIRECT",
-                title = null,
-                createdAtEpochMilliseconds = 1L,
-                updatedAtEpochMilliseconds = 1L
-            )
-        )
+        database.chatDao().upsertConversation(ConversationEntity(
+            id = "direct-chat", contactId = "contact", type = "DIRECT", title = null,
+            createdAtEpochMilliseconds = 1L, updatedAtEpochMilliseconds = 1L
+        ))
         listOf("QUEUED", "SENDING", "SENT", "FAILED", "DELIVERED", "READ").forEach { state ->
             val packetId = "packet-$state"
             seedOutbox(packetId, if (state == "SENDING") "FAILED" else "SENT")
@@ -104,21 +96,13 @@ class PendingIdentityReplacementTransactionTest {
     }
 
     private suspend fun seedMessage(id: String, delivery: String, packetId: String? = id) {
-        database.chatDao().upsertMessage(
-            MessageEntity(
-                id = "message-$id",
-                conversationId = "direct-chat",
-                packetId = packetId,
-                text = "Keep my original message",
-                transportPayload = null,
-                transportMode = "END_TO_END_ENCRYPTED",
-                contentStatus = "READABLE",
-                deliveryStatus = delivery,
-                senderContactId = null,
-                isMine = true,
-                createdAtEpochMilliseconds = 1L
-            )
-        )
+        database.chatDao().upsertMessage(MessageEntity(
+            id = "message-$id", conversationId = "direct-chat", packetId = packetId,
+            text = "Keep my original message", transportPayload = null,
+            transportMode = "END_TO_END_ENCRYPTED", contentStatus = "READABLE",
+            deliveryStatus = delivery, senderContactId = null, isMine = true,
+            createdAtEpochMilliseconds = 1L
+        ))
     }
 
     @Test fun inFlightPacketPreventsIdentityReplacementAndRollsBack() = runBlocking {
@@ -126,10 +110,8 @@ class PendingIdentityReplacementTransactionTest {
         seedOutbox("active", "PROCESSING")
         val dao = database.pendingRemoteIdentityChangeDao()
         assertFalse(dao.replaceConfirmedIdentity("contact", "invite", 200L))
-        assertTrue(
-            requireNotNull(database.remoteIdentityDao().findByPeerId("contact"))
-                .signingPublicKey.contentEquals(oldSig)
-        )
+        assertTrue(requireNotNull(database.remoteIdentityDao().findByPeerId("contact"))
+            .signingPublicKey.contentEquals(oldSig))
         assertEquals("PROCESSING", requireNotNull(database.protocolOutboxDao().findByPacketId("active")).status)
         assertTrue(dao.findByPeerId("contact") != null)
     }
@@ -145,56 +127,31 @@ class PendingIdentityReplacementTransactionTest {
     }
 
     private suspend fun seedOutbox(packetId: String, state: String) {
-        database.protocolOutboxDao().upsert(
-            ProtocolOutboxEntity(
-                id = "outbox-$packetId",
-                contactId = "contact",
-                packetId = packetId,
-                encodedPacket = byteArrayOf(1, 2, 3),
-                status = state,
-                attemptCount = 1,
-                lastError = null,
-                expiresAtEpochMilliseconds = null,
-                createdAtEpochMilliseconds = 1L,
-                updatedAtEpochMilliseconds = 1L
-            )
-        )
+        database.protocolOutboxDao().upsert(ProtocolOutboxEntity(
+            id = "outbox-$packetId", contactId = "contact", packetId = packetId,
+            encodedPacket = byteArrayOf(1, 2, 3), status = state, attemptCount = 1,
+            lastError = null, expiresAtEpochMilliseconds = null,
+            createdAtEpochMilliseconds = 1L, updatedAtEpochMilliseconds = 1L
+        ))
     }
 
     private suspend fun seed() {
-        database.contactDao().upsertContact(
-            ContactEntity(
-                id = "contact",
-                displayName = "Contact",
-                deviceContactId = null,
-                deviceContactLinkStatus = "NOT_LINKED",
-                preferredPhoneNumberId = null,
-                createdAtEpochMilliseconds = 1L,
-                updatedAtEpochMilliseconds = 1L
-            )
-        )
-        database.remoteIdentityDao().upsert(
-            ContactPublicIdentityEntity(
-                contactId = "contact",
-                encryptionPublicKey = oldEnc,
-                signingPublicKey = oldSig,
-                verificationStatus = "VERIFIED",
-                verifiedByContact = true,
-                keyExchangeStatus = "MUTUAL",
-                locallyImported = true,
-                remoteIdentityPacketReceived = true,
-                updatedAtEpochMilliseconds = 1L
-            )
-        )
+        database.contactDao().upsertContact(ContactEntity(
+            id = "contact", displayName = "Contact", deviceContactId = null,
+            deviceContactLinkStatus = "NOT_LINKED", preferredPhoneNumberId = null,
+            createdAtEpochMilliseconds = 1L, updatedAtEpochMilliseconds = 1L
+        ))
+        database.remoteIdentityDao().upsert(ContactPublicIdentityEntity(
+            contactId = "contact", encryptionPublicKey = oldEnc, signingPublicKey = oldSig,
+            verificationStatus = "VERIFIED", verifiedByContact = true,
+            keyExchangeStatus = "MUTUAL", locallyImported = true,
+            remoteIdentityPacketReceived = true, updatedAtEpochMilliseconds = 1L
+        ))
         database.pendingRemoteIdentityChangeDao().upsert(
             PendingRemoteIdentityChangeEntity(
-                peerId = "contact",
-                sourcePeerId = "bootstrap",
-                invitationId = "invite",
-                proposedEncryptionPublicKey = newEnc,
-                proposedSigningPublicKey = newSig,
-                receivedAtEpochMilliseconds = 100L,
-                expiresAtEpochMilliseconds = 1000L,
+                peerId = "contact", sourcePeerId = "bootstrap", invitationId = "invite",
+                proposedEncryptionPublicKey = newEnc, proposedSigningPublicKey = newSig,
+                receivedAtEpochMilliseconds = 100L, expiresAtEpochMilliseconds = 1000L,
                 fingerprintConfirmedAtEpochMilliseconds = 150L,
                 confirmedPreviousEncryptionPublicKey = oldEnc,
                 confirmedPreviousSigningPublicKey = oldSig

@@ -278,11 +278,15 @@ internal class ConversationFlowHandler(
                 if (conversationPort.findConversationId(peerId).getOrThrow() != null) {
                     return@runCatching
                 }
+                // Do not revoke still-valid authorization if the contact cannot
+                // be reached by the established invitation routing policy.
+                resolveContactInvitationRoutingId(peerId)
                 revokePeerExchange(peerId)
             }
             val peerDisplayName = getIdentityPeerDisplayName(peerId)
             val senderLabel = localPhoneNumberProvider.getLocalPhoneNumber().getOrThrow()
-            val exchange = startIdentityExchange(peerId, senderLabel).getOrThrow() ?: return@runCatching
+            val exchange = startIdentityExchange(peerId, senderLabel).getOrThrow()
+                ?: error("No new invitation was created; an existing exchange must be resolved first")
             // Only Invite persists user-facing contact metadata. The Identity exchange
             // stores remote cryptographic identity, never a local Contacts label.
             recordInvitation(
@@ -316,6 +320,38 @@ internal class ConversationFlowHandler(
                 revokePeerExchange(peerId)
             }
             startDirectInvitation(peerId).getOrThrow()
+        }
+
+    /**
+     * Called ONLY after an actual authorization failure. A retained chat with
+     * stale authorization must not cause startDirectInvitation's normal
+     * already-open-conversation guard to swallow a needed reconnection.
+     * A merely offline contact with valid authorization does not reach here.
+     */
+    suspend fun requestReauthorization(peerId: String): Result<Unit> =
+        runCatching {
+            require(peerId.isNotBlank())
+            if (conversationPort.findConversationId(peerId).getOrThrow() != null &&
+                getIdentityPeerState(peerId).getOrThrow().hasEstablishedExchange
+            ) {
+                startExplicitReconnection(peerId).getOrThrow()
+            } else {
+                startDirectInvitation(peerId).getOrThrow()
+            }
+        }
+
+    /**
+     * Restart-only reconciliation of a conversation which ALREADY exists and has
+     * CURRENT mutual authorization. Never replays old acceptance, makes a new
+     * conversation, or begins an identity exchange. The observer suppresses this
+     * while a replacement identity is pending independent verification.
+     */
+    suspend fun recoverExistingAuthorizedConversation(peerId: String): Result<Unit> =
+        runCatching {
+            require(peerId.isNotBlank())
+            if (conversationPort.findConversationId(peerId).getOrThrow() == null) return@runCatching
+            if (!getIdentityPeerState(peerId).getOrThrow().hasEstablishedExchange) return@runCatching
+            conversationPort.activateAuthorizedConversation(peerId).getOrThrow()
         }
 
     /** Manual setup selection is a cross-feature workflow, not a Contacts use case. */
@@ -504,7 +540,7 @@ internal class ConversationFlowHandler(
                     if (identitySetupModeRepository.getMode() == DirectIdentitySetupMode.AUTOMATIC_INVITATION) {
                         sendContactVerificationReceipt(result.peerId)
                             .onFailure { error ->
-                                logger.error(error) {
+                                logger.warn(error) {
                                     "Could not queue contact verification receipt for ${result.peerId}"
                                 }
                             }
@@ -574,21 +610,6 @@ internal class ConversationFlowHandler(
                     packet = packet,
                     receivedAtEpochMilliseconds = context.receivedAtEpochMilliseconds
                 ).getOrThrow()
-                // An acceptance may arrive after the inviter has reset its identity,
-                // deleted the original contact/exchange, or superseded that invitation.
-                // Its signature alone proves only possession of the RESPONDER's key;
-                // without our persisted challenge we cannot authorize a conversation.
-                // Returning successfully acknowledges this permanently stale packet,
-                // rather than retrying the same envelope and spamming error snackbars.
-                // Do not apply a remote identity, profile image, or invitation response.
-                val originalExchange = getIdentityExchangeBinding(packet.invitationId).getOrThrow()
-                if (originalExchange == null) {
-                    logger.warn {
-                        "Ignoring acceptance for missing local identity exchange " +
-                            "${packet.invitationId}; a new invitation is required"
-                    }
-                    return@runCatching
-                }
                 try {
                     receiveIdentityExchangeAccepted(
                         context,
@@ -1410,7 +1431,7 @@ internal class ConversationFlowHandler(
     ) {
         applyRemoteProfilePictureMetadata(contactId, metadata)
             .onFailure { error ->
-                logger.error(error) { "Could not store profile picture for $contactId" }
+                logger.warn(error) { "Could not store profile picture for $contactId" }
             }
     }
 

@@ -151,30 +151,56 @@ class GatewayEnvelopeRoutingTest {
         }
 
     @Test
-    fun queuedEnvelopeIsAcceptedBeforePushFallbackCompletes() =
+    fun queuedEnvelopeIsAcceptedOnlyAfterOfflineInboxStoresIt() =
         runTest {
             var pushCalls = 0
-            var scheduledEnvelope: TransportEnvelope? = null
-            var scheduledEnvelopeId: String? = null
+            var storedEnvelope: TransportEnvelope? = null
+            var markedStoredEnvelopeId: String? = null
             val accepted =
                 storeAndRouteFederatedEnvelope(
                     envelope = testEnvelope(),
-                    pushStorage = {
+                    pushStorage = { envelope ->
                         pushCalls += 1
-                        false
+                        storedEnvelope = envelope
+                        true
                     },
                     networkDelivery = { EnvelopeAcceptanceState.QUEUED_AT_GATEWAY },
-                    markFederationStored = { error("Queued envelope must stay in federation") },
-                    queuedPushFallback = { envelope, envelopeId ->
-                        scheduledEnvelope = envelope
-                        scheduledEnvelopeId = envelopeId
-                    }
+                    markFederationStored = { markedStoredEnvelopeId = it }
                 )
 
             assertTrue(accepted)
-            assertEquals(0, pushCalls)
-            assertEquals("envelope-1", scheduledEnvelopeId)
-            assertEquals("envelope-1", requireNotNull(scheduledEnvelope).envelopeId)
+            assertEquals(1, pushCalls)
+            assertEquals("envelope-1", requireNotNull(storedEnvelope).envelopeId)
+            assertEquals("envelope-1", markedStoredEnvelopeId)
+        }
+
+    @Test
+    fun queuedEnvelopeIsNotAcknowledgedWhenOfflineInboxCannotStoreIt() =
+        runTest {
+            var markedStored = false
+            val accepted =
+                storeAndRouteFederatedEnvelope(
+                    envelope = testEnvelope(),
+                    pushStorage = { false },
+                    networkDelivery = { EnvelopeAcceptanceState.QUEUED_AT_GATEWAY },
+                    markFederationStored = { markedStored = true }
+                )
+
+            assertEquals(false, accepted)
+            assertEquals(false, markedStored)
+        }
+
+    @Test
+    fun offlineInboxFailureAlsoRejectsWhenFederationCannotRoute() =
+        runTest {
+            val accepted =
+                storeAndRouteLegacyEnvelope(
+                    envelope = testTransportEnvelope(),
+                    pushStorage = { false },
+                    networkDelivery = { null },
+                    markFederationStored = { error("No envelope was stored") }
+                )
+            assertEquals(false, accepted)
         }
 
     @Test

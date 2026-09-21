@@ -22,11 +22,11 @@ import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversati
 import com.cbgm.sparrow.feature.chats.presentation.forwarding.ForwardingSelectionRoute
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_reconnect_queued
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+import kotlin.coroutines.cancellation.CancellationException
 
 @Composable
 fun DirectConversationRoute(

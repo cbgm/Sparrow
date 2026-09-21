@@ -149,6 +149,8 @@ class PendingRemoteIdentityChangeRepositoryImplTest {
 
         override suspend fun quarantineOldRecipientPackets(peerId: String, now: Long): Int = 0
 
+        override suspend fun failUnconfirmedMessagesWithQuarantinedPackets(peerId: String): Int = 0
+
         override suspend fun replaceIdentityOnlyIfConfirmationStillMatches(
             peerId: String,
             invitationId: String,

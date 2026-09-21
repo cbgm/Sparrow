@@ -107,6 +107,7 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.StageRemoteIdentityUseCa
 import com.cbgm.sparrow.feature.identity.domain.usecase.StartIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.StartManualIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.VerifyRemoteIdentityUseCase
+import com.cbgm.sparrow.feature.identity.presentation.recovery.IdentityRecoveryViewModel
 import com.cbgm.sparrow.feature.identity.presentation.setup.IdentityViewModel
 import com.cbgm.sparrow.feature.identity.presentation.setup.profile.IdentityProfilePictureViewModel
 import com.cbgm.sparrow.feature.identity.presentation.share.ShareIdentityViewModel
@@ -167,7 +168,7 @@ val identityModule =
         factory { DeclineIdentityExchangeUseCase(repository = get()) }
         factory { ObserveIdentityResultsUseCase(repository = get()) }
         factory { CancelIdentityExchangeUseCase(repository = get()) }
-        factory { GetIdentityPeerStateUseCase(repository = get()) }
+        factory { GetIdentityPeerStateUseCase(repository = get(), pendingRemoteIdentityChanges = get()) }
         factory { GetIdentityExchangeBindingUseCase(repository = get()) }
         factory { InvalidateIdentityExchangeUseCase(repository = get()) }
         factory { GetIdentityExchangeClosureUseCase(repository = get()) }
@@ -340,12 +341,19 @@ val identityModule =
                 prepareIdentityBackup = get(),
                 restoreIdentityBackup = get(),
                 markIdentityBackupExported = get(),
-                getIdentityBackupStatus = get(),
-                observePendingRemoteIdentityChanges = get(),
-                getRemoteIdentityForReview = get(),
-                dismissPendingRemoteIdentityChange = get(),
-                confirmPendingRemoteIdentityChangeFingerprint = get(),
-                approvePendingRemoteIdentityChange = get()
+                getIdentityBackupStatus = get()
+            )
+        }
+
+        viewModel {
+            IdentityRecoveryViewModel(
+                savedStateHandle = get(),
+                observePending = get(),
+                getRemoteIdentity = get(),
+                decodeSharedIdentity = get(),
+                confirmFingerprint = get(),
+                approveReplacement = get(),
+                dismissRequest = get()
             )
         }
 

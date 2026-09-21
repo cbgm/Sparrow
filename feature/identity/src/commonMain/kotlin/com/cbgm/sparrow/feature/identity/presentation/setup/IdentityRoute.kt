@@ -14,12 +14,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.feature.avatar.presentation.editor.AvatarEditor
 import com.cbgm.sparrow.feature.avatar.presentation.editor.AvatarEditorStrings
 import com.cbgm.sparrow.feature.identity.device.IdentityBackupDocumentLauncher
@@ -40,7 +38,6 @@ import com.cbgm.sparrow.resources.feature_settings_profile_picture_choose_galler
 import com.cbgm.sparrow.resources.feature_settings_profile_picture_crop
 import com.cbgm.sparrow.resources.feature_settings_profile_picture_remove
 import com.cbgm.sparrow.resources.feature_settings_profile_picture_take_photo
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -50,24 +47,11 @@ fun IdentityRoute(
     innerPadding: PaddingValues,
     modifier: Modifier = Modifier,
     onIdentityReady: () -> Unit = {},
-    /** Cross-feature workflow supplied by navigation; Identity does not depend on orchestration. */
-    onStartRecoveryInvitation: suspend (String) -> Result<Unit> = {
-        Result.failure(IllegalStateException("Recovery invitation is unavailable"))
-    },
     viewModel: IdentityViewModel =
         koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val backupState by viewModel.backupState.collectAsStateWithLifecycle()
-    val pendingReview by viewModel.pendingIdentityReview.collectAsStateWithLifecycle()
-    val recoveryScope = rememberCoroutineScope()
-    var recoveryInvitationBusy by remember { mutableStateOf(false) }
-    var recoveryInvitationFeedback by remember { mutableStateOf<String?>(null) }
-    var recoveryInvitationQueued by remember { mutableStateOf(false) }
-    LaunchedEffect(pendingReview.approvedPeerId) {
-        recoveryInvitationFeedback = null
-        recoveryInvitationQueued = false
-    }
     val exportDocument by viewModel.exportDocument.collectAsStateWithLifecycle()
     var showExportDialog by remember { mutableStateOf(false) }
     var importDocument by remember { mutableStateOf<ByteArray?>(null) }
@@ -154,35 +138,6 @@ fun IdentityRoute(
             profilePictureState = pictureState?.value,
             onEditProfilePicture = { showAvatarEditor = true },
             backupState = backupState,
-            pendingIdentityReview = pendingReview,
-            onDismissIdentityChange = viewModel::dismissIdentityChange,
-            onConfirmIdentityChangeFingerprint = viewModel::confirmIdentityChangeFingerprint,
-            onApproveIdentityChange = viewModel::approveIdentityChange,
-            recoveryInvitationBusy = recoveryInvitationBusy,
-            recoveryInvitationFeedback = recoveryInvitationFeedback,
-            recoveryInvitationQueued = recoveryInvitationQueued,
-            onStartRecoveryInvitation = { peerId ->
-                if (!recoveryInvitationBusy && peerId == pendingReview.approvedPeerId) {
-                    recoveryInvitationBusy = true
-                    recoveryInvitationFeedback = null
-                    recoveryScope.launch {
-                        try {
-                            onStartRecoveryInvitation(peerId).fold(
-                                onSuccess = { recoveryInvitationQueued = true },
-                                onFailure = { error ->
-                                    SparrowLog.error("IdentityRoute", "Unable to queue recovery invitation", error)
-                                    recoveryInvitationFeedback = error.message ?: "Unable to queue invitation"
-                                }
-                            )
-                        } catch (error: Exception) {
-                            SparrowLog.error("IdentityRoute", "Unable to queue recovery invitation", error)
-                            recoveryInvitationFeedback = error.message ?: "Unable to queue invitation"
-                        } finally {
-                            recoveryInvitationBusy = false
-                        }
-                    }
-                }
-            },
             onExportIdentity = {
                 showExportDialog = true
                 password = ""
@@ -257,7 +212,8 @@ fun IdentityRoute(
                     showAvatarEditor = false
                     pictureViewModel.removePicture()
                 },
-                onDismiss = { showAvatarEditor = false }
+                onDismiss = { showAvatarEditor = false },
+                cropInFullScreenDialog = true
             )
         }
     }

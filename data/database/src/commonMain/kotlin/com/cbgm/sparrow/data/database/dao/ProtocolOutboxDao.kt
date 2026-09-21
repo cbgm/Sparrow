@@ -227,9 +227,36 @@ interface ProtocolOutboxDao {
             expiresAtEpochMilliseconds = NULL,
             updatedAtEpochMilliseconds = :updatedAt
         WHERE status = 'FAILED'
+          AND lastError LIKE 'TRANSIENT_WIRE:%'
         """
     )
     suspend fun retryFailed(updatedAt: Long)
+
+    /**
+     * Periodic retry for a failure that occurred ONLY during wire delivery.
+     * Exponential, capped backoff prevents busy-looping while the network or
+     * recipient's relay is unavailable. Quarantined packets are never eligible.
+     * Updating the row to PENDING wakes the already-running outbox observer.
+     */
+    @Query(
+        """
+        UPDATE protocol_outbox
+        SET status = 'PENDING',
+            lastError = NULL,
+            expiresAtEpochMilliseconds = NULL,
+            updatedAtEpochMilliseconds = :now
+        WHERE status = 'FAILED'
+          AND lastError LIKE 'TRANSIENT_WIRE:%'
+          AND updatedAtEpochMilliseconds <= :now - CASE
+              WHEN attemptCount <= 1 THEN 15000
+              WHEN attemptCount = 2 THEN 30000
+              WHEN attemptCount = 3 THEN 60000
+              WHEN attemptCount = 4 THEN 120000
+              ELSE 300000
+          END
+        """
+    )
+    suspend fun retryTransientFailed(now: Long): Int
 
     @Query(
         """

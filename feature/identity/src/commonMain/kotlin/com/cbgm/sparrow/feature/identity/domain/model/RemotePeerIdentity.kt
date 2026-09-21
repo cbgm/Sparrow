@@ -11,3 +11,14 @@ class RemotePeerIdentity(
     val locallyImported: Boolean,
     val updatedAtEpochMilliseconds: Long
 )
+
+/**
+ * Direct message content must never fall back to plaintext when contact keys or
+ * mutual authorization are absent. Verification is intentionally independent:
+ * a mutually established but UNVERIFIED identity can still be encrypted.
+ */
+fun RemotePeerIdentity?.hasDirectMessageEncryptionKeys(): Boolean =
+    this != null &&
+        keyExchangeStatus == KeyExchangeStatus.MUTUAL &&
+        encryptionPublicKey.size == 32 &&
+        signingPublicKey.size == 32

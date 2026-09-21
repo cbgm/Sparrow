@@ -5,10 +5,13 @@ import com.cbgm.sparrow.feature.conversationorchestration.domain.workflow.Conver
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityResult
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityResultStatus
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveIdentityResultsUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ObservePendingRemoteIdentityChangesUseCase
+import kotlinx.coroutines.flow.first
 
 class IdentityResultObserver internal constructor(
     private val observeResults: ObserveIdentityResultsUseCase,
-    private val flowHandler: ConversationFlowHandler
+    private val flowHandler: ConversationFlowHandler,
+    private val observePendingRemoteIdentityChanges: ObservePendingRemoteIdentityChangesUseCase
 ) {
     private val logger = SparrowLog.withTag("IdentityResultObserver")
 
@@ -18,12 +21,31 @@ class IdentityResultObserver internal constructor(
 
         observeResults().collect { results ->
             if (!initialized) {
+                // A process can die after a direct exchange becomes MUTUAL but
+                // before its WAITING_FOR_AUTHORIZATION messages are released. Only
+                // reconcile existing conversations: do NOT replay historical
+                // invitation acceptance or recreate chats deliberately deleted.
+                val pendingReplacementPeers = observePendingRemoteIdentityChanges()
+                    .first().mapTo(mutableSetOf()) { it.peerId }
+                val reconciledPeers = mutableSetOf<String>()
                 results.forEach { result ->
                     seen += result.eventKey()
-                    if (result.status == IdentityResultStatus.INCOMING_EXCHANGE ||
-                        result.status == IdentityResultStatus.EXCHANGE_INVALIDATED
-                    ) {
-                        forward(result)
+                    when (result.status) {
+                        IdentityResultStatus.INCOMING_EXCHANGE,
+                        IdentityResultStatus.EXCHANGE_INVALIDATED -> forward(result)
+                        IdentityResultStatus.ESTABLISHED -> {
+                            if (result.peerId !in pendingReplacementPeers &&
+                                reconciledPeers.add(result.peerId)
+                            ) {
+                                flowHandler.recoverExistingAuthorizedConversation(result.peerId)
+                                    .onFailure { error ->
+                                        logger.warn(error) {
+                                            "Could not reconcile pending direct messages for ${result.peerId}"
+                                        }
+                                    }
+                            }
+                        }
+                        else -> Unit
                     }
                 }
                 initialized = true
@@ -41,7 +63,7 @@ class IdentityResultObserver internal constructor(
         flowHandler
             .onIdentityResult(result)
             .onFailure { error ->
-                logger.error(error) {
+                logger.warn(error) {
                     "Identity workflow failed for exchangeId=${result.exchangeId}, status=${result.status}"
                 }
             }

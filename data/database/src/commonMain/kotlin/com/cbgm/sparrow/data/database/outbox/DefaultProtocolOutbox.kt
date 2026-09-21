@@ -178,6 +178,13 @@ class DefaultProtocolOutbox(
             )
         }
 
+    override suspend fun retryTransientFailed(nowEpochMilliseconds: Long): Result<Unit> =
+        runCatching {
+            require(nowEpochMilliseconds >= 0L)
+            outboxDao.retryTransientFailed(nowEpochMilliseconds)
+            Unit
+        }
+
     override suspend fun findByPacketId(packetId: String): Result<ProtocolOutboxItem?> =
         runCatching {
             require(packetId.isNotBlank()) {

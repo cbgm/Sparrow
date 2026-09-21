@@ -18,8 +18,7 @@ class AndroidIdentityBackupCodecTest {
         val pair = SodiumIdentityKeyGenerator().generate().getOrThrow()
         val backup = IdentityBackup(
             PublicIdentity(pair.encryptionPublicKey.toByteArray(), pair.signingPublicKey.toByteArray()),
-            pair.encryptionPrivateKey.toByteArray(),
-            pair.signingPrivateKey.toByteArray()
+            pair.encryptionPrivateKey.toByteArray(), pair.signingPrivateKey.toByteArray()
         )
         val codec = AndroidIdentityBackupCodec()
         val file = codec.encrypt(backup, "long-test-password-123".toCharArray())

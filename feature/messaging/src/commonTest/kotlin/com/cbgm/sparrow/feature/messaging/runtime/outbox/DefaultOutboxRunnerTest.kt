@@ -7,12 +7,16 @@ import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxFailureEvent
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxItem
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.time.Duration.Companion.milliseconds
 
 class DefaultOutboxRunnerTest {
     @Test
@@ -33,6 +37,29 @@ class DefaultOutboxRunnerTest {
                 assertEquals(
                     expected = listOf("requeue", "retry-failed", "process"),
                     actual = receiveEvents(events, count = 3)
+                )
+            } finally {
+                runner.stop()
+            }
+        }
+
+    @Test
+    fun startupDoesNotProcessPendingPacketsBeforeInterruptedRecovery() =
+        runTest {
+            val events = Channel<String>(capacity = Channel.UNLIMITED)
+            val outbox = FakeProtocolOutbox(events)
+            outbox.pending.value = listOf(createItem())
+            val runner = DefaultOutboxRunner(
+                protocolOutbox = outbox,
+                outboxProcessor = RecordingOutboxProcessor(events)
+            )
+            try {
+                runner.start()
+                // First-start pending observation must not send a packet before
+                // PROCESSING rows from the previous process have been reconciled.
+                assertEquals(
+                    listOf("requeue", "retry-failed", "process"),
+                    receiveEvents(events, count = 3)
                 )
             } finally {
                 runner.stop()
@@ -67,7 +94,7 @@ class DefaultOutboxRunnerTest {
         }
 
     @Test
-    fun reconnectStartRunsRecoveryAgain() =
+    fun reconnectStartRetriesWireFailuresWithoutRequeueingActivePackets() =
         runTest {
             val events = Channel<String>(capacity = Channel.UNLIMITED)
             val outbox = FakeProtocolOutbox(events)
@@ -82,11 +109,61 @@ class DefaultOutboxRunnerTest {
                 runner.start()
                 val firstStartEvents = receiveEvents(events, count = 3)
 
+                // The first recovery event is recorded before that coroutine
+                // has actually returned. Let its tail finish before testing a
+                // separate connection notification.
+                withContext(Dispatchers.Default) { kotlinx.coroutines.delay(50L.milliseconds) }
                 runner.start()
-                val reconnectEvents = receiveEvents(events, count = 3)
+                val reconnectEvents = receiveEvents(events, count = 2)
 
                 assertEquals(listOf("requeue", "retry-failed", "process"), firstStartEvents)
-                assertEquals(listOf("requeue", "retry-failed", "process"), reconnectEvents)
+                // A reconnect must NOT claim an existing in-flight packet as
+                // interrupted and send it twice.
+                assertEquals(listOf("retry-failed", "process"), reconnectEvents)
+            } finally {
+                runner.stop()
+            }
+        }
+
+    @Test
+    fun startAfterStopRecoversInterruptedPackets() =
+        runTest {
+            val events = Channel<String>(capacity = Channel.UNLIMITED)
+            val outbox = FakeProtocolOutbox(events)
+            val runner = DefaultOutboxRunner(
+                protocolOutbox = outbox,
+                outboxProcessor = RecordingOutboxProcessor(events)
+            )
+            try {
+                runner.start()
+                assertEquals(listOf("requeue", "retry-failed", "process"), receiveEvents(events, 3))
+                runner.stop()
+                runner.start()
+                assertEquals(listOf("requeue", "retry-failed", "process"), receiveEvents(events, 3))
+            } finally {
+                runner.stop()
+            }
+        }
+
+    @Test
+    fun wireFailuresAreRetriedWithoutASecondConnectionEvent() =
+        runTest {
+            val events = Channel<String>(capacity = Channel.UNLIMITED)
+            val outbox = FakeProtocolOutbox(events)
+            val runner = DefaultOutboxRunner(
+                protocolOutbox = outbox,
+                outboxProcessor = RecordingOutboxProcessor(events),
+                retryIntervalMilliseconds = 30L
+            )
+            try {
+                runner.start()
+                receiveEvents(events, count = 3)
+                assertEquals(
+                    "retry-transient",
+                    withContext(Dispatchers.Default) {
+                        withTimeout(2_000L.milliseconds) { events.receive() }
+                    }
+                )
             } finally {
                 runner.stop()
             }
@@ -154,6 +231,11 @@ class DefaultOutboxRunnerTest {
 
         override suspend fun retryFailed(): Result<Unit> {
             events.send("retry-failed")
+            return Result.success(Unit)
+        }
+
+        override suspend fun retryTransientFailed(nowEpochMilliseconds: Long): Result<Unit> {
+            events.send("retry-transient")
             return Result.success(Unit)
         }
 

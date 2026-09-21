@@ -41,13 +41,18 @@ class InvitationViewModel(
     private val markInvitationsViewed: MarkInvitationsViewedUseCase
 ) : BaseViewModel() {
     private val initialTab =
-        if (savedStateHandle.requireRouteArgument<Boolean>(AppRoute.Invitations::showOutgoing.name)) {
+        if (savedStateHandle.requireRouteArgument(AppRoute.Invitations::showOutgoing.name)) {
             InvitationTab.OUTGOING
         } else {
             InvitationTab.INCOMING
         }
 
     private val selectedTab = MutableStateFlow(initialTab)
+    private val recoveryRequestCount = MutableStateFlow(-1)
+
+    fun setRecoveryRequestCount(count: Int) {
+        recoveryRequestCount.value = count
+    }
 
     private val invitations =
         observeInvitationsContext()
@@ -118,9 +123,10 @@ class InvitationViewModel(
         viewModelScope.launch {
             combine(
                 selectedTab,
-                invitations
-            ) { tab, invitationData ->
-                tab == InvitationTab.INCOMING && invitationData.incoming.isEmpty()
+                invitations,
+                recoveryRequestCount
+            ) { tab, invitationData, recoveryCount ->
+                tab == InvitationTab.INCOMING && invitationData.incoming.isEmpty() && recoveryCount == 0
             }.drop(1)
                 .distinctUntilChanged()
                 .filter { isEmpty -> isEmpty }

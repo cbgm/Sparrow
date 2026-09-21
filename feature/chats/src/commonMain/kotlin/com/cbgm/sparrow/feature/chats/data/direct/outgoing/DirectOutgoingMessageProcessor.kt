@@ -36,9 +36,11 @@ import com.cbgm.sparrow.feature.chats.domain.model.direct.DirectPendingAuthoriza
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactRepository
 import com.cbgm.sparrow.feature.conversationorchestration.domain.error.DirectChatAuthorizationRequiredException
-import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
+import com.cbgm.sparrow.feature.identity.domain.model.hasDirectMessageEncryptionKeys
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetRemoteIdentityUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ObservePendingRemoteIdentityChangesUseCase
+import kotlinx.coroutines.flow.first
 
 /**
  * Owns every outgoing direct-message operation.
@@ -54,6 +56,7 @@ class DirectOutgoingMessageProcessor(
     private val protocolOutbox: ProtocolOutbox,
     private val getIdentityPeerState: GetIdentityPeerStateUseCase,
     private val getRemoteIdentity: GetRemoteIdentityUseCase,
+    private val observePendingRemoteIdentityChanges: ObservePendingRemoteIdentityChangesUseCase,
     private val localProfilePictureMetadataProvider: LocalProfilePictureMetadataProvider,
     private val deliveryCoordinator: DirectMessageDeliveryCoordinator,
     private val attachmentTransfer: MessageAttachmentOperationsRepository
@@ -274,7 +277,9 @@ class DirectOutgoingMessageProcessor(
     suspend fun sendReadReceipts(conversationId: String): Result<Unit> =
         safeSuspendCall {
             require(conversationId.isNotBlank()) { "Conversation ID must not be blank" }
-            loadTarget(conversationId)
+            val target = loadTarget(conversationId)
+            // Do not mark a receipt sent while identity review blocks its packet.
+            requireDirectChatAuthorization(target.contactId).getOrThrow()
 
             conversationDataSource.findMessagesAwaitingReadReceipt(conversationId).forEach { message ->
                 enqueueReadReceipt(message.messageId, message.contactId)
@@ -288,10 +293,20 @@ class DirectOutgoingMessageProcessor(
         }
 
     private suspend fun requireDirectChatAuthorization(contactId: String): Result<Unit> =
-        getIdentityPeerState(contactId).mapCatching { state ->
-            if (!state.hasEstablishedExchange) {
+        safeSuspendCall {
+            // This is a backstop for direct message/reaction/edit/delete/retry
+            // APIs that do not necessarily enter conversation orchestration.
+            if (observePendingRemoteIdentityChanges().first().any { it.peerId == contactId }) {
                 throw DirectChatAuthorizationRequiredException(
-                    "A contact invitation must be accepted before messages can be sent"
+                    "Identity change pending verification; messages must wait for recovery"
+                )
+            }
+            val state = getIdentityPeerState(contactId).getOrThrow()
+            if (!state.hasEstablishedExchange ||
+                !getRemoteIdentity(contactId).getOrThrow().hasDirectMessageEncryptionKeys()
+            ) {
+                throw DirectChatAuthorizationRequiredException(
+                    "Mutual identity authorization and valid encryption keys are required before direct messages can be sent"
                 )
             }
         }
@@ -327,7 +342,35 @@ class DirectOutgoingMessageProcessor(
 
         runCatching { enqueue(contactId, packet) }
             .onFailure { error ->
-                logger.error(error) {
+                // The message was marked QUEUED before the outbox insert. If
+                // serialization/storage failed *without* persisting the packet,
+                // leaving it FAILED with a nonexistent packetId makes retries
+                // impossible. Restore the original local waiting message, text
+                // and attachment references so a later authorization or startup
+                // reconciliation can prepare a fresh encrypted packet.
+                // If the outbox DID persist it, never create another packet:
+                // its existing retry/transport result owns the message status.
+                protocolOutbox.findByPacketId(packet.packetId)
+                    .onSuccess { persisted ->
+                        if (persisted == null) {
+                            val current = conversationDataSource.findMessageById(message.id)
+                            if (current?.packetId == packet.packetId &&
+                                current.deliveryStatus in setOf(
+                                    MessageDeliveryStatus.QUEUED.name,
+                                    MessageDeliveryStatus.FAILED.name
+                                )
+                            ) {
+                                conversationDataSource.upsertMessage(
+                                    current.copy(
+                                        packetId = null,
+                                        transportPayload = null,
+                                        deliveryStatus = MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION.name
+                                    )
+                                )
+                            }
+                        }
+                    }
+                logger.warn(error) {
                     "Queued direct message could not be released after authorization: messageId=${message.id}"
                 }
             }
@@ -351,7 +394,13 @@ class DirectOutgoingMessageProcessor(
                 text = text,
                 replyToMessageId = replyToMessageId,
                 transportPayload = null,
-                transportMode = contact.plannedTransportMode().name,
+                // A waiting message has no transport packet yet. Recording the
+                // intended mode must not require keys that are still being exchanged.
+                transportMode = if (deliveryStatus == MessageDeliveryStatus.WAITING_FOR_AUTHORIZATION) {
+                    TransportEncryptionMode.SEALED_BOX.name
+                } else {
+                    contact.plannedTransportMode().name
+                },
                 contentStatus = MessageContentStatus.READABLE.name,
                 deliveryStatus = deliveryStatus.name,
                 senderContactId = null,
@@ -474,17 +523,10 @@ class DirectOutgoingMessageProcessor(
     }
 
     private suspend fun Contact.plannedTransportMode(): TransportEncryptionMode {
-        val identity = getRemoteIdentity(id).getOrThrow()
-        val canEncrypt =
-            identity != null &&
-                identity.encryptionPublicKey.isNotEmpty() &&
-                identity.keyExchangeStatus == KeyExchangeStatus.MUTUAL
-
-        return if (canEncrypt) {
-            TransportEncryptionMode.SEALED_BOX
-        } else {
-            TransportEncryptionMode.PLAINTEXT
+        check(getRemoteIdentity(id).getOrThrow().hasDirectMessageEncryptionKeys()) {
+            "Cannot prepare direct message without mutual identity and valid encryption keys"
         }
+        return TransportEncryptionMode.SEALED_BOX
     }
 
     private companion object {

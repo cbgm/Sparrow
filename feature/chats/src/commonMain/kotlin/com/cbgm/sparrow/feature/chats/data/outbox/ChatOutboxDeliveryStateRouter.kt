@@ -39,9 +39,20 @@ class ChatOutboxDeliveryStateRouter(
     ): Result<Unit> =
         applyEvent(
             packetId = packetId,
-            event = MessageDeliveryEvent.SEND_FAILED,
+            // The durable outbox still owns this packet and will retry a temporary
+            // relay/network failure. Do not show a terminal failure for that attempt.
+            // Identity, encryption or routing-preparation failures remain FAILED.
+            event = if (errorMessage.startsWith(TRANSIENT_WIRE_FAILURE_PREFIX)) {
+                MessageDeliveryEvent.TRANSPORT_RETRY_PENDING
+            } else {
+                MessageDeliveryEvent.SEND_FAILED
+            },
             errorMessage = errorMessage
         )
+
+    private companion object {
+        const val TRANSIENT_WIRE_FAILURE_PREFIX = "TRANSIENT_WIRE:"
+    }
 
     private suspend fun applyEvent(
         packetId: String,

@@ -57,7 +57,15 @@ interface ProtocolOutbox {
 
     suspend fun requeueInterrupted(): Result<Unit>
 
+    /** Requeue only retryable wire failures when the sender reconnects, not permanent errors. */
     suspend fun retryFailed(): Result<Unit>
+
+    /**
+     * Requeue only due wire-send failures; never requeue quarantined old-key
+     * packets or permanent preparation/authorization failures. Existing fake
+     * outboxes can retain their no-op behavior.
+     */
+    suspend fun retryTransientFailed(nowEpochMilliseconds: Long): Result<Unit> = Result.success(Unit)
 
     suspend fun findByPacketId(packetId: String): Result<ProtocolOutboxItem?>
 }

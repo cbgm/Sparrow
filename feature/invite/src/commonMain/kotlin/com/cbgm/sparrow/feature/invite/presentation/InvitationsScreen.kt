@@ -31,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -57,8 +58,12 @@ import com.cbgm.sparrow.feature.invite.presentation.model.InvitationUiEvent
 import com.cbgm.sparrow.feature.invite.presentation.model.InvitationUiPayloadType
 import com.cbgm.sparrow.feature.invite.presentation.model.InvitationUiState
 import com.cbgm.sparrow.feature.invite.presentation.model.InvitationUiStatus
+import com.cbgm.sparrow.feature.invite.presentation.model.MailboxReviewRequestUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_unknown
+import com.cbgm.sparrow.resources.feature_identity_recovery_inbox_action
+import com.cbgm.sparrow.resources.feature_identity_recovery_inbox_description
+import com.cbgm.sparrow.resources.feature_identity_recovery_inbox_title
 import com.cbgm.sparrow.resources.feature_invite_accept_invitation
 import com.cbgm.sparrow.resources.feature_invite_block_invitation
 import com.cbgm.sparrow.resources.feature_invite_decline_invitation
@@ -80,7 +85,9 @@ import org.jetbrains.compose.resources.stringResource
 fun InvitationsScreen(
     uiState: InvitationUiState,
     onUiEvent: (InvitationUiEvent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    recoveryRequests: List<MailboxReviewRequestUi> = emptyList(),
+    onReviewRecovery: (String, String) -> Unit = { _, _ -> }
 ) {
     SparrowLazyScaffold(
         modifier = modifier,
@@ -126,7 +133,7 @@ fun InvitationsScreen(
                 }
             )
 
-            if (uiState.selectedInvitations.isEmpty()) {
+            if (uiState.selectedInvitations.isEmpty() && (uiState.selectedTab != InvitationTab.INCOMING || recoveryRequests.isEmpty())) {
                 EmptyInvitations(
                     selectedTab = uiState.selectedTab,
                     modifier =
@@ -144,6 +151,31 @@ fun InvitationsScreen(
                             bottom = innerPadding.calculateBottomPadding()
                         )
                 ) {
+                    if (uiState.selectedTab == InvitationTab.INCOMING) {
+                        items(
+                            items = recoveryRequests,
+                            key = { "recovery:${it.peerId}:${it.invitationId}" }
+                        ) { request ->
+                            ListItem(
+                                headlineContent = {
+                                    Column {
+                                        Text(stringResource(Res.string.feature_identity_recovery_inbox_title), style = MaterialTheme.typography.labelMedium)
+                                        Text(request.peerDisplayName)
+                                    }
+                                },
+                                supportingContent = {
+                                    Text(stringResource(Res.string.feature_identity_recovery_inbox_description))
+                                },
+                                trailingContent = {
+                                    TextButton(onClick = { onReviewRecovery(request.peerId, request.invitationId) }) {
+                                        Text(stringResource(Res.string.feature_identity_recovery_inbox_action))
+                                    }
+                                },
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background)
+                            )
+                            InvitationDivider()
+                        }
+                    }
                     items(
                         items = uiState.selectedInvitations,
                         key = InvitationUi::invitationId

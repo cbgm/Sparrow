@@ -24,14 +24,19 @@ class MessagingTransportResultObserver internal constructor(
             var encounteredFailure = false
             failures.forEach { event ->
                 try {
-                    invitationFailureHandler.onFailed(event.encodedPacket).getOrThrow()
+                    // A temporary wire failure remains eligible for automatic retry.
+                    // Do not turn its user-visible invitation into FAILED while the
+                    // original signed packet is still queued for secure redelivery.
+                    if (!event.errorMessage.startsWith(TRANSIENT_WIRE_FAILURE_PREFIX)) {
+                        invitationFailureHandler.onFailed(event.encodedPacket).getOrThrow()
+                    }
                     // Acknowledge only after the application-side action succeeded.
                     acknowledgeFailure(event.eventId).getOrThrow()
                 } catch (error: CancellationException) {
                     throw error
                 } catch (error: Throwable) {
                     encounteredFailure = true
-                    logger.error(error) {
+                    logger.warn(error) {
                         "Failed to reconcile outgoing transport failure: packetId=${event.packetId}, attempt=${event.attemptCount}"
                     }
                 }
@@ -43,5 +48,6 @@ class MessagingTransportResultObserver internal constructor(
 
     private companion object {
         const val RETRY_DELAY_MILLISECONDS = 5_000L
+        const val TRANSIENT_WIRE_FAILURE_PREFIX = "TRANSIENT_WIRE:"
     }
 }

@@ -4,6 +4,7 @@ import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
+import com.cbgm.sparrow.feature.transport.connection.isRecoverableConnectivityFailure
 import com.cbgm.sparrow.feature.transport.gateway.model.FederatedEnvelope
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayBlobUploadTicket
 import com.cbgm.sparrow.feature.transport.gateway.model.GatewayBlobUploadTicketRequest
@@ -25,6 +26,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.Flow
@@ -307,10 +309,23 @@ class DefaultWebSocketTransportClient internal constructor(
                 mutableConnectionState.value = TransportConnectionState.Disconnected
             }
         } catch (error: CancellationException) {
-            mutableConnectionState.value = TransportConnectionState.Disconnected
-            throw error
+            if (error !is TimeoutCancellationException) {
+                mutableConnectionState.value = TransportConnectionState.Disconnected
+                throw error
+            }
+            logger.debug { "Gateway timed out; retrying: ${error.message}" }
+            mutableConnectionState.value =
+                TransportConnectionState.Failed(message = error.message ?: "Gateway timed out")
         } catch (error: Throwable) {
-            logger.error(error) { "WebSocket connection failed" }
+            if (error.isRecoverableConnectivityFailure()) {
+                // A node refusing a connection is an expected offline/retry event.
+                // SparrowLog.warn(throwable) also forwards to the red global snackbar,
+                // so use debug without the throwable here.
+                logger.debug { "Gateway unavailable: ${error.message ?: error::class.simpleName}" }
+            } else {
+                // Keep unexpected handshake, protocol, and implementation failures visible.
+                logger.error(error) { "WebSocket connection failed" }
+            }
             mutableConnectionState.value =
                 TransportConnectionState.Failed(
                     message = error.message ?: "WebSocket connection failed"

@@ -7,6 +7,7 @@ import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxItem
 import com.cbgm.sparrow.core.protocol.transport.OutgoingWireAcceptance
 import com.cbgm.sparrow.core.time.SystemClock
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -72,7 +73,9 @@ class DefaultOutboxProcessor(
                 send(item).getOrThrow()
             }
         if (sendResult.isFailure) {
-            return markFailed(item, sendResult.exceptionOrNull())
+            val failure = sendResult.exceptionOrNull()
+            if (failure is CancellationException) throw failure
+            return markFailed(item, failure)
         }
 
         val acceptance = sendResult.getOrThrow()

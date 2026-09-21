@@ -60,3 +60,10 @@ data class InvitationUiState(
                 InvitationTab.OUTGOING -> outgoingInvitations
             }
 }
+
+/** Additional incoming mailbox requests supplied by the navigation composition layer. */
+data class MailboxReviewRequestUi(
+    val peerId: String,
+    val invitationId: String,
+    val peerDisplayName: String
+)

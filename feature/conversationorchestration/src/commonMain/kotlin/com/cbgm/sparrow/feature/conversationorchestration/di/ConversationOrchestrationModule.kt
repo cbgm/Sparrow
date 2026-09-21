@@ -61,7 +61,7 @@ import org.koin.dsl.module
 
 val conversationOrchestrationModule =
     module {
-        factory { RequireDirectChatAuthorizationUseCase(get(), get()) }
+        factory { RequireDirectChatAuthorizationUseCase(get(), get(), get(), get()) }
         factory { GroupVerificationInputsUseCase(membershipRepository = get(), contacts = get(), getRemoteIdentity = get()) }
         factory { ResolveSigningIdentityContactUseCase(contacts = get(), findIdentityPeerId = get(), getRemoteIdentity = get()) }
         factory {
@@ -226,7 +226,8 @@ val conversationOrchestrationModule =
                 packetCodec = get(),
                 recipientRoutingResolver = get(),
                 sendEncodedTransport = get<SendEncodedTransportUseCase>(),
-                deliveryStateListener = get()
+                deliveryStateListener = get(),
+                observePendingRemoteIdentityChanges = get()
             )
         }
         single { InvitationTransportFailureHandler(packetCodec = get(), invitationOutboxDeliveryHandler = get()) }

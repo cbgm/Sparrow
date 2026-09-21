@@ -7,7 +7,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalContext
-import com.cbgm.sparrow.core.logging.SparrowLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -44,9 +43,6 @@ actual fun IdentityBackupDocumentLauncher(
                             }
                         }
                     }
-                    result.exceptionOrNull()?.let { failure ->
-                        SparrowLog.error("IdentityBackupDocumentLauncher", "Identity backup export failed", failure)
-                    }
                     exportCallback.value(result.isSuccess, result.exceptionOrNull()?.message)
                 }
             }
@@ -76,9 +72,6 @@ actual fun IdentityBackupDocumentLauncher(
                             output.toByteArray()
                         }
                     }
-                }
-                result.exceptionOrNull()?.let { failure ->
-                    SparrowLog.error("IdentityBackupDocumentLauncher", "Identity backup import failed", failure)
                 }
                 importCallback.value(result.getOrNull(), result.exceptionOrNull()?.message)
             }

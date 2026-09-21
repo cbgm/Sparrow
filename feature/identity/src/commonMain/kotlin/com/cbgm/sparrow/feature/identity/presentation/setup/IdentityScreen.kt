@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.extensions.toFingerprint
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowCard
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
@@ -40,7 +41,6 @@ import com.cbgm.sparrow.feature.identity.presentation.setup.components.PublicKey
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityBackupUiState
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiEvent
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiState
-import com.cbgm.sparrow.feature.identity.presentation.setup.model.PendingIdentityReviewUiState
 import com.cbgm.sparrow.feature.identity.presentation.setup.profile.IdentityProfilePictureSection
 import com.cbgm.sparrow.feature.identity.presentation.setup.profile.IdentityProfilePictureUiState
 import com.cbgm.sparrow.resources.Res
@@ -56,6 +56,8 @@ import com.cbgm.sparrow.resources.feature_identity_encryption_public_key_descrip
 import com.cbgm.sparrow.resources.feature_identity_identity_enter_phone_description
 import com.cbgm.sparrow.resources.feature_identity_incomplete_identity
 import com.cbgm.sparrow.resources.feature_identity_incomplete_identity_description
+import com.cbgm.sparrow.resources.feature_identity_own_fingerprint_description
+import com.cbgm.sparrow.resources.feature_identity_own_fingerprint_title
 import com.cbgm.sparrow.resources.feature_identity_private_keys_protected
 import com.cbgm.sparrow.resources.feature_identity_share_my_identity
 import com.cbgm.sparrow.resources.feature_identity_signing_public_key
@@ -77,14 +79,6 @@ fun IdentityScreen(
     profilePictureState: IdentityProfilePictureUiState? = null,
     onEditProfilePicture: () -> Unit = {},
     backupState: IdentityBackupUiState = IdentityBackupUiState(),
-    pendingIdentityReview: PendingIdentityReviewUiState = PendingIdentityReviewUiState(),
-    onDismissIdentityChange: (String, String) -> Unit = { _, _ -> },
-    onConfirmIdentityChangeFingerprint: (String, String, String) -> Unit = { _, _, _ -> },
-    onApproveIdentityChange: (String, String) -> Unit = { _, _ -> },
-    recoveryInvitationBusy: Boolean = false,
-    recoveryInvitationFeedback: String? = null,
-    recoveryInvitationQueued: Boolean = false,
-    onStartRecoveryInvitation: (String) -> Unit = {},
     onExportIdentity: () -> Unit = {},
     onRestoreIdentity: () -> Unit = {}
 ) {
@@ -124,14 +118,6 @@ fun IdentityScreen(
                     onShareIdentity = { onUiEvent(IdentityUiEvent.ShareIdentityClicked) },
                     onEditProfilePicture = onEditProfilePicture,
                     backupState = backupState,
-                    pendingIdentityReview = pendingIdentityReview,
-                    onDismissIdentityChange = onDismissIdentityChange,
-                    onConfirmIdentityChangeFingerprint = onConfirmIdentityChangeFingerprint,
-                    onApproveIdentityChange = onApproveIdentityChange,
-                    recoveryInvitationBusy = recoveryInvitationBusy,
-                    recoveryInvitationFeedback = recoveryInvitationFeedback,
-                    recoveryInvitationQueued = recoveryInvitationQueued,
-                    onStartRecoveryInvitation = onStartRecoveryInvitation,
                     onExportIdentity = onExportIdentity
                 )
             }
@@ -227,8 +213,7 @@ private fun NoIdentityContent(
                     modifier = Modifier.fillMaxWidth(),
                     label = stringResource(Res.string.feature_identity_your_phone_number),
                     placeholderText = "+491701234567",
-                    errorText = phoneNumberError
-                        ?: stringResource(Res.string.feature_identity_stable_routing_address_description),
+                    errorText = phoneNumberError ?: stringResource(Res.string.feature_identity_stable_routing_address_description),
                     isError = phoneNumberError != null,
                     isSingleLine = true
                 )
@@ -260,14 +245,6 @@ private fun ReadyIdentityContent(
     onShareIdentity: () -> Unit,
     onEditProfilePicture: () -> Unit,
     backupState: IdentityBackupUiState,
-    pendingIdentityReview: PendingIdentityReviewUiState,
-    onDismissIdentityChange: (String, String) -> Unit,
-    onConfirmIdentityChangeFingerprint: (String, String, String) -> Unit,
-    onApproveIdentityChange: (String, String) -> Unit,
-    recoveryInvitationBusy: Boolean,
-    recoveryInvitationFeedback: String?,
-    recoveryInvitationQueued: Boolean,
-    onStartRecoveryInvitation: (String) -> Unit,
     onExportIdentity: () -> Unit
 ) {
     Column(
@@ -307,16 +284,14 @@ private fun ReadyIdentityContent(
         }
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.large))
         IdentityBackupSection(state = backupState, onExport = onExportIdentity)
-        PendingIdentityReviewSection(
-            state = pendingIdentityReview,
-            onDismiss = onDismissIdentityChange,
-            onConfirmFingerprint = onConfirmIdentityChangeFingerprint,
-            onApprove = onApproveIdentityChange,
-            recoveryInvitationBusy = recoveryInvitationBusy,
-            recoveryInvitationFeedback = recoveryInvitationFeedback,
-            recoveryInvitationQueued = recoveryInvitationQueued,
-            onStartRecoveryInvitation = onStartRecoveryInvitation
-        )
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
+        SparrowCard {
+            Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
+                Text(stringResource(Res.string.feature_identity_own_fingerprint_title), style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(Res.string.feature_identity_own_fingerprint_description), style = MaterialTheme.typography.bodySmall)
+                Text(publicIdentity.signingPublicKey.toFingerprint(), style = MaterialTheme.typography.bodySmall)
+            }
+        }
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.large))
 
         SparrowCard {
@@ -389,10 +364,7 @@ private fun IncompleteIdentityContent(onRetry: () -> Unit) {
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
-        SparrowApprovalButton(
-            onClick = onRetry,
-            text = stringResource(Res.string.feature_identity_check_again)
-        )
+        SparrowApprovalButton(onClick = onRetry, text = stringResource(Res.string.feature_identity_check_again))
     }
 }
 

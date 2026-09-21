@@ -17,6 +17,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -79,7 +80,11 @@ class DefaultTransportConnectionManager(
                         },
                         onFailure = { error ->
                             if (error is CancellationException) throw error
-                            logger.error(error) { "Live transport diagnostics refresh failed" }
+                            if (error.isRecoverableConnectivityFailure() || error.isUnavailableNodeDirectory()) {
+                                logger.debug { "Transport diagnostics unavailable while offline: ${error.message}" }
+                            } else {
+                                logger.error(error) { "Live transport diagnostics refresh failed" }
+                            }
                         }
                     )
             }
@@ -165,15 +170,20 @@ class DefaultTransportConnectionManager(
 
                 else -> false
             }
-        } catch (error: CancellationException) {
-            throw error
         } catch (error: Throwable) {
+            // The connection-attempt timeout is an offline/retry condition, not
+            // cancellation of the foreground session. Preserve real job cancellation.
+            if (error is CancellationException && error !is TimeoutCancellationException) throw error
             val failure =
                 TransportConnectionState.Failed(
                     message = error.message ?: "Transport connection error"
                 )
             mutableConnectionState.value = failure
-            logger.error(error) { "Transport connection error" }
+            if (error.isRecoverableConnectivityFailure() || error.isUnavailableNodeDirectory()) {
+                logger.debug { "Transport unavailable; retrying: ${error.message ?: error::class.simpleName}" }
+            } else {
+                logger.error(error) { "Transport connection error" }
+            }
             selectedEndpoint?.let { endpoint ->
                 failedNodeTracker.recordFailure(endpoint.nodeId)
             }
@@ -257,7 +267,12 @@ class DefaultTransportConnectionManager(
             .onSuccess { count ->
                 logger.info { "Control-plane discovery synchronized $count trusted addresses" }
             }.onFailure { error ->
-                logger.error(error) { "Control-plane discovery failed" }
+                if (error is CancellationException) throw error
+                if (error.isRecoverableConnectivityFailure() || error.isUnavailableNodeDirectory()) {
+                    logger.debug { "Control-plane discovery unavailable: ${error.message}" }
+                } else {
+                    logger.error(error) { "Control-plane discovery failed" }
+                }
             }
     }
 
@@ -293,7 +308,10 @@ class DefaultTransportConnectionManager(
         message: String
     ) {
         failedNodeTracker.recordFailure(endpoint.nodeId)
-        logger.error { "Transport connection failed: $message" }
+        // The WebSocket client already reports unexpected causes at their source.
+        // Connection refusal/timeout is represented by the existing offline hint;
+        // do not report this derived retry state as a new application error.
+        logger.debug { "Transport connection unavailable; retrying: $message" }
         diagnosticsState.failed(
             endpoint = endpoint,
             message = message,
@@ -324,7 +342,12 @@ class DefaultTransportConnectionManager(
                                 )
                             },
                             onFailure = { error ->
-                                logger.error(error) { "Signed node directory refresh failed" }
+                                if (error is CancellationException) throw error
+                                if (error.isRecoverableConnectivityFailure() || error.isUnavailableNodeDirectory()) {
+                                    logger.debug { "Signed node directory refresh unavailable: ${error.message}" }
+                                } else {
+                                    logger.error(error) { "Signed node directory refresh failed" }
+                                }
                             }
                         )
                     }
@@ -336,7 +359,12 @@ class DefaultTransportConnectionManager(
                         controlPlaneDiscoverySynchronizer
                             .refreshFromNode(endpoint.websocketUrl)
                             .onFailure { error ->
-                                logger.error(error) { "Control-plane discovery refresh failed" }
+                                if (error is CancellationException) throw error
+                                if (error.isRecoverableConnectivityFailure() || error.isUnavailableNodeDirectory()) {
+                                    logger.debug { "Control-plane discovery refresh unavailable: ${error.message}" }
+                                } else {
+                                    logger.error(error) { "Control-plane discovery refresh failed" }
+                                }
                             }
                     }
                 }
