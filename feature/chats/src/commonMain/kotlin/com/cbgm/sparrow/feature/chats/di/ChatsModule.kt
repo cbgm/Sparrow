@@ -74,13 +74,17 @@ import com.cbgm.sparrow.feature.chats.data.orchestration.ChatsConversationPort
 import com.cbgm.sparrow.feature.chats.data.outbox.ChatOutboxDeliveryStateRouter
 import com.cbgm.sparrow.feature.chats.data.overview.datasource.ConversationOverviewDataSource
 import com.cbgm.sparrow.feature.chats.data.overview.repository.ConversationOverviewRepositoryImpl
+import com.cbgm.sparrow.feature.chats.data.repository.DirectIndicatorRepositoryImpl
+import com.cbgm.sparrow.feature.chats.data.repository.GroupIndicatorRepositoryImpl
 import com.cbgm.sparrow.feature.chats.data.repository.MessageHistoryRepositoryImpl
 import com.cbgm.sparrow.feature.chats.domain.repository.MessageHistoryRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectConversationRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectIndicatorRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectMessageRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupAvatarRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupConversationRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupDescriptionRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupIndicatorRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupKeyRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupMessageRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupPinRepository
@@ -157,6 +161,7 @@ import com.cbgm.sparrow.feature.chats.runtime.group.verification.GroupVerificati
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetContactSafetyNumberUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.port.ConversationPort
 import com.cbgm.sparrow.feature.identity.domain.usecase.RecordLocalIdentitySharedUseCase
+import com.cbgm.sparrow.feature.transport.websocket.WebSocketTransportClient
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
@@ -164,6 +169,18 @@ import org.koin.dsl.module
 
 val chatsModule =
     module {
+        single<DirectIndicatorRepository> {
+            DirectIndicatorRepositoryImpl(
+                sendConversationIndicator = get(),
+                observeConversationIndicator = get()
+            )
+        }
+        single<GroupIndicatorRepository> {
+            GroupIndicatorRepositoryImpl(
+                sendConversationIndicator = get(),
+                observeConversationIndicator = get()
+            )
+        }
         registerDirectData()
         registerGroupData()
         registerIncomingRouting()

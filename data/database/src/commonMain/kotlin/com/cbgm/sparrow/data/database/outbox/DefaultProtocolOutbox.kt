@@ -6,6 +6,7 @@ import com.cbgm.sparrow.core.protocol.outbox.OutboxEvent
 import com.cbgm.sparrow.core.protocol.outbox.OutboxStateMachine
 import com.cbgm.sparrow.core.protocol.outbox.OutboxStatus
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxFailureEvent
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxItem
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import com.cbgm.sparrow.core.time.SystemClock
@@ -72,6 +73,31 @@ class DefaultProtocolOutbox(
                     entity.toProtocolOutboxItem()
                 }
             }
+
+    override fun observeTransportStates(): Flow<List<ProtocolOutboxItem>> =
+        outboxDao.observeTransportStates().map { entities ->
+            entities.map { entity -> entity.toProtocolOutboxItem() }
+        }
+
+    override fun observeUnacknowledgedFailures(): Flow<List<ProtocolOutboxFailureEvent>> =
+        outboxDao.observeUnacknowledgedFailures().map { events ->
+            events.map { event ->
+                ProtocolOutboxFailureEvent(
+                    eventId = event.eventId,
+                    packetId = event.packetId,
+                    encodedPacket = event.encodedPacket.copyOf(),
+                    attemptCount = event.attemptCount,
+                    errorMessage = event.errorMessage,
+                    occurredAtEpochMilliseconds = event.occurredAtEpochMilliseconds
+                )
+            }
+        }
+
+    override suspend fun acknowledgeFailure(eventId: String): Result<Unit> =
+        runCatching {
+            require(eventId.isNotBlank()) { "Failure event ID must not be blank" }
+            outboxDao.acknowledgeFailure(eventId)
+        }
 
     override fun observeNextSentExpiry(): Flow<Long?> =
         outboxDao.observeNextSentExpiry()
@@ -208,7 +234,7 @@ class DefaultProtocolOutbox(
                 event = OutboxEvent.SEND_FAILED
             )
 
-            outboxDao.markFailed(
+            outboxDao.markFailedWithEvent(
                 itemId = itemId,
                 errorMessage = errorMessage.take(MAX_ERROR_LENGTH),
                 updatedAt = SystemClock.nowEpochMilliseconds()

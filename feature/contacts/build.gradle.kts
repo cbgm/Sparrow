@@ -19,6 +19,7 @@ kotlin {
             implementation(projects.core.ui)
             implementation(projects.feature.avatar)
             implementation(projects.feature.identity)
+            implementation(projects.feature.transport)
             implementation(projects.data.database)
 
             implementation(libs.bundles.compose)

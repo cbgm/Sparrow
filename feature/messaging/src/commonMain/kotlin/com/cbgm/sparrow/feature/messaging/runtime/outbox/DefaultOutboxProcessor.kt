@@ -1,28 +1,26 @@
 package com.cbgm.sparrow.feature.messaging.runtime.outbox
 
-import com.cbgm.sparrow.core.protocol.codec.PacketCodec
 import com.cbgm.sparrow.core.protocol.outbox.OutboxDeliveryStateListener
 import com.cbgm.sparrow.core.protocol.outbox.OutboxProcessingResult
 import com.cbgm.sparrow.core.protocol.outbox.OutboxProcessor
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxItem
-import com.cbgm.sparrow.core.protocol.packet.ContactInvitePacket
-import com.cbgm.sparrow.core.protocol.packet.GroupInvitePacket
+import com.cbgm.sparrow.core.protocol.transport.OutgoingWireAcceptance
 import com.cbgm.sparrow.core.time.SystemClock
-import com.cbgm.sparrow.feature.invite.data.outbox.InvitationOutboxDeliveryHandler
-import com.cbgm.sparrow.feature.invite.domain.model.InvitationPayloadType
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 
+/**
+ * Generic, persistent outbox lifecycle. Cross-feature preparation and routing
+ * are supplied by orchestration; Messaging never decodes the application packet.
+ */
 class DefaultOutboxProcessor(
     private val protocolOutbox: ProtocolOutbox,
-    private val packetSender: OutgoingPacketSender,
-    private val packetCodec: PacketCodec,
-    private val deliveryStateListener: OutboxDeliveryStateListener,
-    private val invitationOutboxDeliveryHandler: InvitationOutboxDeliveryHandler
+    private val send: suspend (ProtocolOutboxItem) -> Result<OutgoingWireAcceptance>,
+    private val deliveryStateListener: OutboxDeliveryStateListener
 ) : OutboxProcessor {
     override suspend fun processPending(limit: Int): Result<OutboxProcessingResult> =
         runCatching {
@@ -38,9 +36,7 @@ class DefaultOutboxProcessor(
     override suspend fun expireAccepted(): Result<Int> =
         runCatching {
             val expiredItems =
-                protocolOutbox
-                    .expireSent(SystemClock.nowEpochMilliseconds())
-                    .getOrThrow()
+                protocolOutbox.expireSent(SystemClock.nowEpochMilliseconds()).getOrThrow()
             expiredItems.forEach { item ->
                 deliveryStateListener.onExpired(item.packetId).getOrThrow()
             }
@@ -73,7 +69,7 @@ class DefaultOutboxProcessor(
         val sendResult =
             runCatching {
                 deliveryStateListener.onProcessing(item.packetId).getOrThrow()
-                packetSender.send(item).getOrThrow()
+                send(item).getOrThrow()
             }
         if (sendResult.isFailure) {
             return markFailed(item, sendResult.exceptionOrNull())
@@ -86,40 +82,16 @@ class DefaultOutboxProcessor(
         return deliveryStateListener.onSent(item.packetId)
     }
 
-    private suspend fun markFailed(
-        item: ProtocolOutboxItem,
-        error: Throwable?
-    ): Result<Unit> {
+    private suspend fun markFailed(item: ProtocolOutboxItem, error: Throwable?): Result<Unit> {
         val errorMessage = error?.message ?: "Outgoing packet could not be sent"
         protocolOutbox
             .markFailed(item.id, errorMessage)
             .getOrElse { markFailedError -> return Result.failure(markFailedError) }
-        markInvitationTransportFailed(item)
-            .getOrElse { invitationError -> return Result.failure(invitationError) }
         deliveryStateListener
             .onFailed(item.packetId, errorMessage)
             .getOrElse { listenerError -> return Result.failure(listenerError) }
         return Result.failure(error ?: IllegalStateException(errorMessage))
     }
-
-    private suspend fun markInvitationTransportFailed(item: ProtocolOutboxItem): Result<Unit> =
-        runCatching {
-            when (val packet = packetCodec.decode(item.encodedPacket).getOrNull()) {
-                is ContactInvitePacket ->
-                    invitationOutboxDeliveryHandler.onFailed(
-                        payloadType = InvitationPayloadType.DIRECT,
-                        invitationId = packet.invitationId
-                    )
-
-                is GroupInvitePacket ->
-                    invitationOutboxDeliveryHandler.onFailed(
-                        payloadType = InvitationPayloadType.GROUP,
-                        invitationId = packet.invitationId
-                    )
-
-                else -> Unit
-            }
-        }
 
     private companion object {
         const val MAX_CONCURRENT_RECIPIENTS = 8

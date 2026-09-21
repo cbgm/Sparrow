@@ -68,6 +68,12 @@ internal class GroupSecurityStoreDataSource(
         epoch: Int
     ): List<GroupMemberKeyEntity> = dao.findMemberKeys(groupId, epoch)
 
+    suspend fun findAllCurrentMemberKeys(): List<GroupMemberKeyEntity> =
+        dao.findAllCurrentMemberKeys()
+
+    suspend fun findLatestMemberKey(groupId: String, contactId: String): GroupMemberKeyEntity? =
+        dao.findLatestMemberKey(groupId, contactId)
+
     suspend fun findMemberKey(
         groupId: String,
         epoch: Int,

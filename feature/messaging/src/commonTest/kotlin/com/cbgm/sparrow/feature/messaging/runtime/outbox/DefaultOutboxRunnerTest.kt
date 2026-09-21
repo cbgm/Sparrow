@@ -4,6 +4,7 @@ import com.cbgm.sparrow.core.protocol.outbox.OutboxProcessingResult
 import com.cbgm.sparrow.core.protocol.outbox.OutboxProcessor
 import com.cbgm.sparrow.core.protocol.outbox.OutboxStatus
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxFailureEvent
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxItem
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import kotlinx.coroutines.channels.Channel
@@ -115,6 +116,11 @@ class DefaultOutboxRunnerTest {
     private class FakeProtocolOutbox(
         private val events: Channel<String>
     ) : ProtocolOutbox {
+        override fun observeUnacknowledgedFailures(): Flow<List<ProtocolOutboxFailureEvent>> =
+            kotlinx.coroutines.flow.flowOf(emptyList())
+
+        override suspend fun acknowledgeFailure(eventId: String): Result<Unit> = Result.success(Unit)
+
         val pending = MutableStateFlow<List<ProtocolOutboxItem>>(emptyList())
 
         override suspend fun enqueue(
@@ -123,6 +129,8 @@ class DefaultOutboxRunnerTest {
         ): Result<ProtocolOutboxItem> = Result.failure(UnsupportedOperationException())
 
         override fun observePending(): Flow<List<ProtocolOutboxItem>> = pending
+
+        override fun observeTransportStates(): Flow<List<ProtocolOutboxItem>> = kotlinx.coroutines.flow.flowOf(emptyList())
 
         override suspend fun getPending(limit: Int): Result<List<ProtocolOutboxItem>> = Result.success(pending.value.take(limit))
 

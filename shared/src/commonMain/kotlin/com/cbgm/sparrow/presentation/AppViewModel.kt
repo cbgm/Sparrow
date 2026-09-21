@@ -123,6 +123,10 @@ class AppViewModel(
         }
         viewModelScope.launch {
             waitUntilLocalIdentityIsReady()
+            initialization.messagingTransportResultObserver.run()
+        }
+        viewModelScope.launch {
+            waitUntilLocalIdentityIsReady()
             initialization.directIdentityResultObserver.run()
         }
         viewModelScope.launch {

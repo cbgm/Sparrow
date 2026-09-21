@@ -34,6 +34,7 @@ import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMessageMembershipAccess
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMetadataMessageSender
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMetadataSendContext
+import com.cbgm.sparrow.feature.membership.domain.model.GroupTransportRoutingMember
 import com.cbgm.sparrow.feature.membership.domain.model.GroupVerificationMemberKey
 import com.cbgm.sparrow.feature.membership.domain.model.GroupVerificationMembership
 import com.cbgm.sparrow.feature.membership.domain.model.GroupVerificationMembershipContext
@@ -240,6 +241,45 @@ internal class GroupMembershipRepositoryImpl(
     ): Result<Unit> = runCatching {
         epochSecurity.verifyKeyConfirmation(groupId, epoch, confirmation)
     }
+
+    override suspend fun resolveTransportEncryptionPublicKey(
+        groupId: String,
+        contactId: String,
+        useLatestMemberKey: Boolean
+    ): Result<ByteArray?> = runCatching {
+        require(groupId.isNotBlank()) { "Group ID must not be blank" }
+        require(contactId.isNotBlank()) { "Contact ID must not be blank" }
+        val memberKey =
+            if (useLatestMemberKey) {
+                securityStore.findLatestMemberKey(groupId, contactId)
+            } else {
+                securityStore.findCurrentRemoteMemberKey(groupId, contactId)
+            }
+        memberKey?.encryptionPublicKey?.copyOf()
+    }
+
+    override suspend fun getCurrentTransportRoutingMembers(
+        groupId: String
+    ): Result<List<GroupTransportRoutingMember>?> = runCatching {
+        require(groupId.isNotBlank()) { "Group ID must not be blank" }
+        val state = securityStore.findState(groupId) ?: return@runCatching null
+        securityStore.findMemberKeys(groupId, state.currentEpoch).map { member ->
+            GroupTransportRoutingMember(
+                contactId = member.contactId,
+                signingPublicKey = member.signingPublicKey.copyOf()
+            )
+        }
+    }
+
+    override suspend fun getAllCurrentTransportRoutingMembers(): Result<List<GroupTransportRoutingMember>> =
+        runCatching {
+            securityStore.findAllCurrentMemberKeys().map { member ->
+                GroupTransportRoutingMember(
+                    contactId = member.contactId,
+                    signingPublicKey = member.signingPublicKey.copyOf()
+                )
+            }
+        }
 
     override suspend fun getCurrentEpoch(groupId: String): Result<Int> = runCatching {
         securityStore.findState(groupId)?.currentEpoch

@@ -11,6 +11,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.runtime.ContactBlockOb
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.IdentityResultObserver
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.InvitationResultObserver
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.MembershipResultObserver
+import com.cbgm.sparrow.feature.conversationorchestration.runtime.MessagingTransportResultObserver
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalIdentityReadyUseCase
 import com.cbgm.sparrow.notification.device.PlatformNotificationRuntime
 import com.cbgm.sparrow.notification.presentation.ConversationNotificationCoordinator
@@ -23,6 +24,7 @@ data class AppInitializationDependencies(
     val attachmentConversationNameObserver: AttachmentConversationNameObserver,
     val invitationResultObserver: InvitationResultObserver,
     val membershipResultObserver: MembershipResultObserver,
+    val messagingTransportResultObserver: MessagingTransportResultObserver,
     val directIdentityResultObserver: IdentityResultObserver,
     val contactBlockObserver: ContactBlockObserver,
     val controlPlaneConfiguration: ControlPlaneConfiguration,

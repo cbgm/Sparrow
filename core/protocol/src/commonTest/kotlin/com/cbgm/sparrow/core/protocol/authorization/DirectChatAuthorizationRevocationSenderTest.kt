@@ -5,6 +5,7 @@ import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.core.protocol.outbox.OutboxStatus
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxFailureEvent
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxItem
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 import kotlinx.coroutines.flow.Flow
@@ -62,6 +63,10 @@ class DirectChatAuthorizationRevocationSenderTest {
     private class RecordingOutbox(
         private val failEnqueue: Boolean = false
     ) : ProtocolOutbox {
+        override fun observeUnacknowledgedFailures(): Flow<List<ProtocolOutboxFailureEvent>> = kotlinx.coroutines.flow.flowOf(emptyList())
+
+        override suspend fun acknowledgeFailure(eventId: String): Result<Unit> = Result.success(Unit)
+
         var enqueueCount = 0
         var resendCount = 0
         var peer: String? = null
@@ -89,6 +94,8 @@ class DirectChatAuthorizationRevocationSenderTest {
         }
 
         override fun observePending(): Flow<List<ProtocolOutboxItem>> = flowOf(emptyList())
+
+        override fun observeTransportStates(): Flow<List<ProtocolOutboxItem>> = flowOf(emptyList())
 
         override suspend fun getPending(limit: Int): Result<List<ProtocolOutboxItem>> = Result.success(emptyList())
 

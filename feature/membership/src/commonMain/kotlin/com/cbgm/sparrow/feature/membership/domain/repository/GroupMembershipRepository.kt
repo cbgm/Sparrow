@@ -17,6 +17,7 @@ import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMessageMembershipAccess
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMetadataMessageSender
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMetadataSendContext
+import com.cbgm.sparrow.feature.membership.domain.model.GroupTransportRoutingMember
 import com.cbgm.sparrow.feature.membership.domain.model.GroupVerificationMembershipContext
 import com.cbgm.sparrow.feature.membership.domain.model.MembershipVerificationSnapshot
 import kotlinx.coroutines.flow.Flow
@@ -119,6 +120,22 @@ interface GroupMembershipRepository {
         isMine: Boolean,
         senderContactId: String?
     ): Result<ByteArray?>
+
+    /** Key lookup for a pre-authorized outbound recipient. A removal packet may require
+     * the recipient's last installed epoch key rather than the current epoch key.
+     * Missing keys return null; no unencrypted fallback is permitted by the caller.
+     */
+    suspend fun resolveTransportEncryptionPublicKey(
+        groupId: String,
+        contactId: String,
+        useLatestMemberKey: Boolean
+    ): Result<ByteArray?>
+
+    /** Null if the group security state does not exist; empty list if it exists with no keys. */
+    suspend fun getCurrentTransportRoutingMembers(groupId: String): Result<List<GroupTransportRoutingMember>?>
+
+    /** Current-epoch keys across groups in Membership's persisted ordering. */
+    suspend fun getAllCurrentTransportRoutingMembers(): Result<List<GroupTransportRoutingMember>>
 
     suspend fun getCurrentEpoch(groupId: String): Result<Int>
 

@@ -256,6 +256,12 @@ class GroupVerificationStateTest {
             senderContactId: String?
         ): Result<ByteArray?> = error("Unused in verification projection tests")
 
+        override suspend fun resolveTransportEncryptionPublicKey(
+            groupId: String,
+            contactId: String,
+            useLatestMemberKey: Boolean
+        ): Result<ByteArray?> = error("Unused in verification projection tests")
+
         override suspend fun getCurrentEpoch(groupId: String): Result<Int> = error("Unused in verification projection tests")
 
         override suspend fun verifyGroupKeyConfirmation(

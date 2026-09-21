@@ -16,6 +16,15 @@ interface ProtocolOutbox {
 
     fun observePending(): Flow<List<ProtocolOutboxItem>>
 
+    /** Persistent outbox snapshots for packets accepted by the relay, failed, or expired. */
+    fun observeTransportStates(): Flow<List<ProtocolOutboxItem>>
+
+    /** Journaled attempts survive retries and app restarts until an application observer acknowledges them. */
+    fun observeUnacknowledgedFailures(): Flow<List<ProtocolOutboxFailureEvent>>
+
+    /** Acknowledge only after orchestration has processed the immutable failure event. */
+    suspend fun acknowledgeFailure(eventId: String): Result<Unit>
+
     suspend fun getPending(limit: Int): Result<List<ProtocolOutboxItem>>
 
     suspend fun markProcessing(itemId: String): Result<Unit>

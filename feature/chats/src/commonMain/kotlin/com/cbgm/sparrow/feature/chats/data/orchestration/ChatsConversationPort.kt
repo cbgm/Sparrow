@@ -9,6 +9,7 @@ import com.cbgm.sparrow.feature.chats.data.group.avatar.GroupAvatarBroadcaster
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupIncomingConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupLocalCleanupDataSource
+import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupOutgoingMessageDataSource
 import com.cbgm.sparrow.feature.chats.data.group.description.GroupDescriptionBroadcaster
 import com.cbgm.sparrow.feature.chats.data.group.incoming.GroupCreatedIncomingProcessor
 import com.cbgm.sparrow.feature.chats.data.group.incoming.GroupWelcomePersistence
@@ -30,6 +31,7 @@ internal class ChatsConversationPort(
     private val messageAttachmentRepository: MessageAttachmentRepository,
     private val groupConversationDataSource: GroupConversationDataSource,
     private val groupLocalCleanupDataSource: GroupLocalCleanupDataSource,
+    private val groupOutgoingMessageDataSource: GroupOutgoingMessageDataSource,
     private val verificationCoordinator: GroupVerificationCoordinator,
     private val incomingConversationDataSource: GroupIncomingConversationDataSource,
     private val createdIncomingProcessor: GroupCreatedIncomingProcessor,
@@ -191,6 +193,13 @@ internal class ChatsConversationPort(
 
     override suspend fun findPeerId(conversationId: String): Result<String?> =
         conversationRepository.findContactId(conversationId)
+
+    override suspend fun findGroupIdForMessage(messageId: String): Result<String?> = runCatching {
+        val message = groupOutgoingMessageDataSource.findMessage(messageId) ?: return@runCatching null
+        val conversation = groupOutgoingMessageDataSource.findConversation(message.conversationId)
+            ?: return@runCatching null
+        conversation.id.takeIf { conversation.type == "GROUP" }
+    }
 
     override suspend fun deleteConversation(conversationId: String): Result<Unit> =
         conversationRepository.delete(conversationId)

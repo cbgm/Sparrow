@@ -2,8 +2,10 @@ package com.cbgm.sparrow.data.database.dao
 
 import androidx.room.Dao
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Upsert
 import com.cbgm.sparrow.data.database.entity.ProtocolOutboxEntity
+import com.cbgm.sparrow.data.database.entity.ProtocolOutboxFailureEventEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -40,6 +42,42 @@ interface ProtocolOutboxDao {
         """
     )
     fun observePending(): Flow<List<ProtocolOutboxEntity>>
+
+    @Query("SELECT * FROM protocol_outbox_failure_events ORDER BY occurredAtEpochMilliseconds ASC, eventId ASC")
+    fun observeUnacknowledgedFailures(): Flow<List<ProtocolOutboxFailureEventEntity>>
+
+    @Query("DELETE FROM protocol_outbox_failure_events WHERE eventId = :eventId")
+    suspend fun acknowledgeFailure(eventId: String)
+
+    @Upsert
+    suspend fun upsertFailureEvent(event: ProtocolOutboxFailureEventEntity)
+
+    /** Mark FAILED and append its immutable failure event as ONE transaction. */
+    @Transaction
+    suspend fun markFailedWithEvent(itemId: String, errorMessage: String, updatedAt: Long) {
+        val item = findById(itemId) ?: error("Outbox packet was not found")
+        require(item.status == "PROCESSING") { "Only a processing packet can fail" }
+        markFailed(itemId, errorMessage, updatedAt)
+        upsertFailureEvent(
+            ProtocolOutboxFailureEventEntity(
+                eventId = "${item.id}:${item.attemptCount}",
+                packetId = item.packetId,
+                encodedPacket = item.encodedPacket.copyOf(),
+                attemptCount = item.attemptCount,
+                errorMessage = errorMessage,
+                occurredAtEpochMilliseconds = updatedAt
+            )
+        )
+    }
+
+    @Query(
+        """
+        SELECT * FROM protocol_outbox
+        WHERE status IN ('SENT', 'FAILED', 'EXPIRED')
+        ORDER BY updatedAtEpochMilliseconds ASC, id ASC
+        """
+    )
+    fun observeTransportStates(): Flow<List<ProtocolOutboxEntity>>
 
     @Query(
         """

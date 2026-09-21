@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.chats.data.group.outgoing
 
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
+import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxFailureEvent
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutboxItem
 import com.cbgm.sparrow.core.protocol.packet.GroupInvitePacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
@@ -51,6 +52,11 @@ class GroupPacketBroadcasterTest {
     private class RecordingProtocolOutbox(
         private val failingContactId: String
     ) : ProtocolOutbox {
+        override fun observeUnacknowledgedFailures(): Flow<List<ProtocolOutboxFailureEvent>> =
+            kotlinx.coroutines.flow.flowOf(emptyList())
+
+        override suspend fun acknowledgeFailure(eventId: String): Result<Unit> = Result.success(Unit)
+
         val attemptedContactIds = mutableListOf<String>()
 
         override suspend fun enqueue(
@@ -66,6 +72,8 @@ class GroupPacketBroadcasterTest {
         }
 
         override fun observePending(): Flow<List<ProtocolOutboxItem>> = flowOf(emptyList())
+
+        override fun observeTransportStates(): Flow<List<ProtocolOutboxItem>> = flowOf(emptyList())
 
         override suspend fun getPending(limit: Int): Result<List<ProtocolOutboxItem>> =
             Result.success(emptyList())

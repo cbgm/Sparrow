@@ -31,8 +31,7 @@ kotlin {
             implementation(projects.feature.voice)
             implementation(projects.feature.linkpreview)
             implementation(projects.feature.safety)
-
-            implementation(libs.compose.runtime)
+            implementation(projects.feature.transport)
 
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)

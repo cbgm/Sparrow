@@ -47,6 +47,7 @@ import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupCurrentEpochUs
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupLeaveRequirementUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupMessageMembershipAccessUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupPinSenderSigningKeyUseCase
+import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupTransportRoutingMembersUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetMembershipHandshakeUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.InspectIncomingGroupMembershipUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.LeaveGroupUseCase
@@ -64,6 +65,7 @@ import com.cbgm.sparrow.feature.membership.domain.usecase.ReceiveGroupMembership
 import com.cbgm.sparrow.feature.membership.domain.usecase.ReceiveGroupReadyAcknowledgementUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.ReceiveIncomingGroupMembershipUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.RemoveGroupMemberUseCase
+import com.cbgm.sparrow.feature.membership.domain.usecase.ResolveGroupTransportEncryptionPublicKeyUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.SendGroupReadyAcknowledgementUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.StartGroupMembershipUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.TransferGroupAdminAndLeaveUseCase
@@ -151,6 +153,8 @@ val membershipModule =
         singleOf(::GetGroupMessageMembershipAccessUseCase)
         singleOf(::GetGroupPinSenderSigningKeyUseCase)
         singleOf(::GetGroupCurrentEpochUseCase)
+        singleOf(::ResolveGroupTransportEncryptionPublicKeyUseCase)
+        singleOf(::GetGroupTransportRoutingMembersUseCase)
         singleOf(::DeclineGroupMembershipUseCase)
         singleOf(::DeleteGroupMembershipUseCase)
         singleOf(::ReceiveGroupMembershipReceiptUseCase)

@@ -72,6 +72,9 @@ interface ConversationPort {
 
     suspend fun findPeerId(conversationId: String): Result<String?>
 
+    /** Chats-owned lookup for group receipt routing; null if the message or group is absent. */
+    suspend fun findGroupIdForMessage(messageId: String): Result<String?>
+
     suspend fun deleteConversation(conversationId: String): Result<Unit>
 
     suspend fun getGroupTitle(groupId: String): Result<String>

@@ -20,6 +20,7 @@ val sharedModule =
                 attachmentConversationNameObserver = get(),
                 invitationResultObserver = get(),
                 membershipResultObserver = get(),
+                messagingTransportResultObserver = get(),
                 directIdentityResultObserver = get(),
                 contactBlockObserver = get(),
                 controlPlaneConfiguration = get(),
