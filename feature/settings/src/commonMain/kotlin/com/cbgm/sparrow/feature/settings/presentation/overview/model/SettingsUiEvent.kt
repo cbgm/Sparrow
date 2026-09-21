@@ -42,8 +42,6 @@ sealed interface SettingsUiEvent {
 
     data object BlockedContactsClicked : SettingsUiEvent
 
-    data object ProfileClicked : SettingsUiEvent
-
     data object AutoReplyClicked : SettingsUiEvent
 
     data object ControlPlanesClicked : SettingsUiEvent

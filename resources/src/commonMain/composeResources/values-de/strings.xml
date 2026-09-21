@@ -347,6 +347,7 @@
     <string name="feature_settings_status_disconnected">Getrennt</string>
     <string name="feature_settings_status_failed">Nicht zugestellt</string>
     <string name="feature_settings_disable_developer_mode">Entwicklermodus deaktivieren</string>
+    <string name="feature_settings_messaging">Nachrichten</string>
     <string name="feature_settings_profile">Profil</string>
     <string name="feature_settings_profile_picture">Profilbild</string>
     <string name="feature_settings_profile_subtitle">Profilbild verwalten</string>

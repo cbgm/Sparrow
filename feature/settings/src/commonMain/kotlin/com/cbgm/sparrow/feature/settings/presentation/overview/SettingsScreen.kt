@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonOff
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Search
@@ -94,14 +93,12 @@ import com.cbgm.sparrow.resources.feature_settings_message_safety_downloading
 import com.cbgm.sparrow.resources.feature_settings_message_safety_failed
 import com.cbgm.sparrow.resources.feature_settings_message_safety_ready
 import com.cbgm.sparrow.resources.feature_settings_message_safety_subtitle
+import com.cbgm.sparrow.resources.feature_settings_messaging
 import com.cbgm.sparrow.resources.feature_settings_network
 import com.cbgm.sparrow.resources.feature_settings_open_source_licenses
 import com.cbgm.sparrow.resources.feature_settings_privacy_and_data
 import com.cbgm.sparrow.resources.feature_settings_privacy_policy
 import com.cbgm.sparrow.resources.feature_settings_privacy_policy_subtitle
-import com.cbgm.sparrow.resources.feature_settings_profile
-import com.cbgm.sparrow.resources.feature_settings_profile_picture
-import com.cbgm.sparrow.resources.feature_settings_profile_subtitle
 import com.cbgm.sparrow.resources.feature_settings_security
 import com.cbgm.sparrow.resources.feature_settings_semantic_search
 import com.cbgm.sparrow.resources.feature_settings_semantic_search_building
@@ -157,16 +154,7 @@ fun SettingsScreen(
             LanguageSettingsRow(language, onUiEvent)
         }
 
-        SettingsSection(title = stringResource(Res.string.feature_settings_profile)) {
-            SettingsRow(
-                icon = Icons.Default.Person,
-                title = stringResource(Res.string.feature_settings_profile_picture),
-                subtitle = stringResource(Res.string.feature_settings_profile_subtitle),
-                onClick = { onUiEvent(SettingsUiEvent.ProfileClicked) }
-            )
-
-            SettingsDivider()
-
+        SettingsSection(title = stringResource(Res.string.feature_settings_messaging)) {
             AutoReplySettingsRow(autoReplyName, onUiEvent)
         }
 

@@ -1,11 +1,16 @@
 package com.cbgm.sparrow.presentation
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.cbgm.sparrow.core.ui.locale.AppLocaleEnvironment
+import com.cbgm.sparrow.core.ui.theme.Colors
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.navigation.routing.AppNavigation
 import org.koin.compose.viewmodel.koinViewModel
@@ -16,10 +21,14 @@ fun App(
 ) {
     ObserveAppLifecycle(appViewModel = appViewModel)
 
-    if (appViewModel.isLanguageInitialized) {
-        AppLocaleEnvironment {
-            SparrowTheme {
-                AppNavigation()
+    // Language loading can leave the first Compose frame without navigation content.
+    // Match the splash/window background instead of showing a white/transparent frame.
+    Box(modifier = Modifier.fillMaxSize().background(Colors.Background)) {
+        if (appViewModel.isLanguageInitialized) {
+            AppLocaleEnvironment {
+                SparrowTheme {
+                    AppNavigation()
+                }
             }
         }
     }

@@ -345,6 +345,7 @@
     <string name="feature_settings_status_disconnected">Disconnected</string>
     <string name="feature_settings_status_failed">Not delivered</string>
     <string name="feature_settings_disable_developer_mode">Disable developer mode</string>
+    <string name="feature_settings_messaging">Messaging</string>
     <string name="feature_settings_profile">Profile</string>
     <string name="feature_settings_profile_picture">Profile picture</string>
     <string name="feature_settings_profile_subtitle">Manage your profile picture</string>

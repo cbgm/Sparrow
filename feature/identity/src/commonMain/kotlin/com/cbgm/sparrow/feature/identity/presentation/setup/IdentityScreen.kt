@@ -15,7 +15,6 @@ import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -40,6 +39,8 @@ import com.cbgm.sparrow.feature.identity.presentation.setup.components.IconBadge
 import com.cbgm.sparrow.feature.identity.presentation.setup.components.PublicKeySection
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiEvent
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiState
+import com.cbgm.sparrow.feature.identity.presentation.setup.profile.IdentityProfilePictureSection
+import com.cbgm.sparrow.feature.identity.presentation.setup.profile.IdentityProfilePictureUiState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_retry
 import com.cbgm.sparrow.resources.base_sparrow
@@ -69,7 +70,9 @@ fun IdentityScreen(
     onUiEvent: (IdentityUiEvent) -> Unit,
     scrollState: ScrollState,
     innerPadding: PaddingValues,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    profilePictureState: IdentityProfilePictureUiState? = null,
+    onEditProfilePicture: () -> Unit = {}
 ) {
     Column(
         modifier
@@ -101,7 +104,9 @@ fun IdentityScreen(
                 ReadyIdentityContent(
                     publicIdentity = uiState.publicIdentity,
                     localPhoneNumber = uiState.localPhoneNumber,
-                    onShareIdentity = { onUiEvent(IdentityUiEvent.ShareIdentityClicked) }
+                    profilePictureState = profilePictureState,
+                    onShareIdentity = { onUiEvent(IdentityUiEvent.ShareIdentityClicked) },
+                    onEditProfilePicture = onEditProfilePicture
                 )
             }
 
@@ -194,7 +199,8 @@ private fun NoIdentityContent(
                     modifier = Modifier.fillMaxWidth(),
                     label = stringResource(Res.string.feature_identity_your_phone_number),
                     placeholderText = "+491701234567",
-                    errorText = phoneNumberError ?: stringResource(Res.string.feature_identity_stable_routing_address_description),
+                    errorText = phoneNumberError
+                        ?: stringResource(Res.string.feature_identity_stable_routing_address_description),
                     isError = phoneNumberError != null,
                     isSingleLine = true
                 )
@@ -215,7 +221,9 @@ private fun NoIdentityContent(
 private fun ReadyIdentityContent(
     publicIdentity: PublicIdentity,
     localPhoneNumber: String,
-    onShareIdentity: () -> Unit
+    profilePictureState: IdentityProfilePictureUiState?,
+    onShareIdentity: () -> Unit,
+    onEditProfilePicture: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -223,7 +231,10 @@ private fun ReadyIdentityContent(
     ) {
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
-        IconBadge(icon = Icons.Default.VerifiedUser)
+        // Avatar is the header image; no duplicate identity/verification icon.
+        profilePictureState?.let { picture ->
+            IdentityProfilePictureSection(state = picture, onEdit = onEditProfilePicture)
+        }
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
         Text(
@@ -321,7 +332,10 @@ private fun IncompleteIdentityContent(onRetry: () -> Unit) {
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
-        SparrowApprovalButton(onClick = onRetry, text = stringResource(Res.string.feature_identity_check_again))
+        SparrowApprovalButton(
+            onClick = onRetry,
+            text = stringResource(Res.string.feature_identity_check_again)
+        )
     }
 }
 

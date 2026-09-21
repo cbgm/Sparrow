@@ -19,6 +19,7 @@ kotlin {
             implementation(projects.core.crypto)
             implementation(projects.core.protocol)
             implementation(projects.core.ui)
+            implementation(projects.feature.avatar)
 
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)

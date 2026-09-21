@@ -92,6 +92,7 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.StartIdentityExchangeUse
 import com.cbgm.sparrow.feature.identity.domain.usecase.StartManualIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.VerifyRemoteIdentityUseCase
 import com.cbgm.sparrow.feature.identity.presentation.setup.IdentityViewModel
+import com.cbgm.sparrow.feature.identity.presentation.setup.profile.IdentityProfilePictureViewModel
 import com.cbgm.sparrow.feature.identity.presentation.share.ShareIdentityViewModel
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
@@ -303,6 +304,15 @@ val identityModule =
                 getLocalPhoneNumber = get<GetLocalPhoneNumberUseCase>(),
                 normalizeLocalPhoneNumber = get<NormalizeLocalPhoneNumberUseCase>(),
                 saveLocalPhoneName = get<SaveLocalPhoneNameUseCase>()
+            )
+        }
+
+        viewModel {
+            IdentityProfilePictureViewModel(
+                observeLocalProfilePicture = get(),
+                consumeAvatarEditResult = get(),
+                setLocalProfilePicture = get(),
+                removeLocalProfilePicture = get()
             )
         }
 

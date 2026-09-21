@@ -47,7 +47,6 @@ import com.cbgm.sparrow.feature.settings.presentation.profile.model.ProfileSetti
 import com.cbgm.sparrow.feature.settings.presentation.profile.model.ProfileSettingsUiState
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
-import com.cbgm.sparrow.resources.feature_settings_profile
 import com.cbgm.sparrow.resources.feature_settings_profile_picture
 import com.cbgm.sparrow.resources.feature_settings_profile_picture_add
 import com.cbgm.sparrow.resources.feature_settings_profile_picture_change
@@ -109,7 +108,7 @@ private fun TopBar(onBack: () -> Unit) {
     CenterAlignedTopAppBar(
         title = {
             Text(
-                text = stringResource(Res.string.feature_settings_profile),
+                text = stringResource(Res.string.feature_settings_profile_picture),
                 style = MaterialTheme.typography.titleSmall
             )
         },
