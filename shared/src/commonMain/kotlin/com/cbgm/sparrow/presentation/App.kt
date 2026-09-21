@@ -16,9 +16,11 @@ fun App(
 ) {
     ObserveAppLifecycle(appViewModel = appViewModel)
 
-    AppLocaleEnvironment {
-        SparrowTheme {
-            AppNavigation()
+    if (appViewModel.isLanguageInitialized) {
+        AppLocaleEnvironment {
+            SparrowTheme {
+                AppNavigation()
+            }
         }
     }
 }

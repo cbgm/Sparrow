@@ -1,5 +1,8 @@
 package com.cbgm.sparrow.presentation
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.BuildKonfig
@@ -31,6 +34,9 @@ class AppViewModel(
     private val isForeground = MutableStateFlow(false)
     private val isRuntimeReady = MutableStateFlow(false)
 
+    var isLanguageInitialized by mutableStateOf(false)
+        private set
+
     init {
         viewModelScope.launch {
             initializeApplication()
@@ -52,6 +58,9 @@ class AppViewModel(
     }
 
     private suspend fun initializeApplication() {
+        initAppLanguageUseCase()
+        isLanguageInitialized = true
+
         initialization.initializeCryptoRuntime()
             .getOrElse { error ->
                 throw IllegalStateException(
@@ -59,7 +68,6 @@ class AppViewModel(
                     error
                 )
             }
-        initAppLanguageUseCase()
         initialization.controlPlaneConfiguration.initialize()
         initialization.platformNotificationRuntime.initialize()
         initialization.conversationNotificationCoordinator.start()

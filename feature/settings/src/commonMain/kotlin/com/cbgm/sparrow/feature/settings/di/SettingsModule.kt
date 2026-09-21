@@ -58,7 +58,8 @@ val settingsModule =
         single<SettingsRepository> {
             SettingsRepositoryImpl(
                 buildInfoProvider = get(),
-                settingsStorage = get()
+                settingsStorage = get(),
+                systemLanguageProvider = get()
             )
         }
 
