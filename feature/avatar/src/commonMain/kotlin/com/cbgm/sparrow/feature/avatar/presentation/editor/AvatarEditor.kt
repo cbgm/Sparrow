@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.feature.avatar.presentation.editor
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -11,6 +13,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowDialogListItem
@@ -38,7 +42,8 @@ fun AvatarEditor(
     strings: AvatarEditorStrings,
     onAvatarSelected: (AvatarEditResult) -> Unit,
     onRemoveAvatar: (() -> Unit)? = null,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    cropInFullScreenDialog: Boolean = false
 ) {
     val viewModel = koinViewModel<AvatarEditorViewModel>()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -84,16 +89,40 @@ fun AvatarEditor(
         )
 
     uiState.image?.let { image ->
-        ProfilePictureCropScreen(
-            image = image,
-            title = strings.cropTitle,
-            isCropping = uiState.isCropping,
-            onConfirm = viewModel::onCropConfirmed,
-            onDismiss = {
-                viewModel.clear()
-                onDismiss()
+        val closeCrop = {
+            viewModel.clear()
+            onDismiss()
+        }
+        if (cropInFullScreenDialog) {
+            // Identity lives inside the main tab pager. An inline crop screen is
+            // constrained by that pager and can hide its Close/Confirm controls.
+            // Use a separate full-screen window, as the camera already does.
+            Dialog(
+                onDismissRequest = closeCrop,
+                properties = DialogProperties(
+                    usePlatformDefaultWidth = false,
+                    decorFitsSystemWindows = true
+                )
+            ) {
+                Box(Modifier.fillMaxSize()) {
+                    ProfilePictureCropScreen(
+                        image = image,
+                        title = strings.cropTitle,
+                        isCropping = uiState.isCropping,
+                        onConfirm = viewModel::onCropConfirmed,
+                        onDismiss = closeCrop
+                    )
+                }
             }
-        )
+        } else {
+            ProfilePictureCropScreen(
+                image = image,
+                title = strings.cropTitle,
+                isCropping = uiState.isCropping,
+                onConfirm = viewModel::onCropConfirmed,
+                onDismiss = closeCrop
+            )
+        }
         return
     }
 

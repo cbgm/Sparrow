@@ -254,7 +254,8 @@ fun IdentityRoute(
                     showAvatarEditor = false
                     pictureViewModel.removePicture()
                 },
-                onDismiss = { showAvatarEditor = false }
+                onDismiss = { showAvatarEditor = false },
+                cropInFullScreenDialog = true
             )
         }
     }
