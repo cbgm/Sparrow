@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.identity.presentation.setup
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityBackupStatus
@@ -27,6 +28,7 @@ import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityBackup
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiEvent
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiState
 import com.cbgm.sparrow.feature.identity.presentation.setup.model.PendingIdentityReviewUiState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -74,6 +76,7 @@ class IdentityViewModel(
             )
             confirmPendingRemoteIdentityChangeFingerprint(peerId, invitationId, independentlyCheckedFingerprint)
                 .onFailure { error ->
+                    SparrowLog.error("IdentityViewModel", "Identity operation failed", error)
                     _pendingIdentityReview.value = _pendingIdentityReview.value.copy(
                         errorMessage = error.message ?: "Fingerprint confirmation failed"
                     )
@@ -107,6 +110,7 @@ class IdentityViewModel(
                     )
                 }
                 .onFailure { error ->
+                    SparrowLog.error("IdentityViewModel", "Identity operation failed", error)
                     _pendingIdentityReview.value = _pendingIdentityReview.value.copy(
                         errorMessage = error.message ?: "Identity replacement failed"
                     )
@@ -130,6 +134,7 @@ class IdentityViewModel(
             )
             dismissPendingRemoteIdentityChange(peerId, invitationId)
                 .onFailure { error ->
+                    SparrowLog.error("IdentityViewModel", "Identity operation failed", error)
                     _pendingIdentityReview.value = _pendingIdentityReview.value.copy(
                         errorMessage = error.message ?: "Could not dismiss identity change"
                     )
@@ -153,7 +158,10 @@ class IdentityViewModel(
                         errorMessage = null
                     )
                 }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (error: Exception) {
+                SparrowLog.error("IdentityViewModel", "Could not load identity change requests", error)
                 _pendingIdentityReview.value = _pendingIdentityReview.value.copy(
                     errorMessage = error.message ?: "Could not load identity change requests"
                 )
@@ -182,10 +190,16 @@ class IdentityViewModel(
             try {
                 prepareIdentityBackup(password).onSuccess { _exportDocument.value = it }
                     .onFailure {
+                        SparrowLog.error("IdentityViewModel", "Backup encryption failed", it)
                         pendingSigningPublicKey = null
                         pendingEncryptionPublicKey = null
                         _backupState.value = _backupState.value.copy(busy = false, message = it.message ?: "Backup encryption failed", error = true)
                     }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                SparrowLog.error("IdentityViewModel", "Backup encryption failed", error)
+                _backupState.value = _backupState.value.copy(busy = false, message = error.message ?: "Backup encryption failed", error = true)
             } finally {
                 password.fill('\u0000')
             }
@@ -207,15 +221,18 @@ class IdentityViewModel(
                     refreshBackupStatus()
                     _backupState.value = _backupState.value.copy(busy = false, message = "Identity backup exported. Keep the file and password safe.", error = false)
                 }.onFailure {
+                    SparrowLog.error("IdentityViewModel", "Backup status could not be saved", it)
                     _backupState.value = _backupState.value.copy(busy = false, message = it.message ?: "Backup status could not be saved", error = true)
                 }
             } else {
+                SparrowLog.error("IdentityViewModel", failure ?: "Identity backup was not saved")
                 _backupState.value = _backupState.value.copy(busy = false, message = failure ?: "Identity backup was not saved", error = true)
             }
         }
     }
 
     fun showBackupError(message: String) {
+        SparrowLog.error("IdentityViewModel", message)
         _backupState.value = _backupState.value.copy(busy = false, message = message, error = true)
     }
 
@@ -227,6 +244,7 @@ class IdentityViewModel(
             return
         }
         val normalized = normalizeLocalPhoneNumber(state.phoneNumber).getOrElse { error ->
+            SparrowLog.error("IdentityViewModel", "Enter your phone number first", error)
             _uiState.value = state.copy(phoneNumberError = error.message ?: "Enter your phone number first")
             password.fill('\u0000')
             return
@@ -242,9 +260,13 @@ class IdentityViewModel(
                     refreshBackupStatus()
                     _backupState.value = _backupState.value.copy(busy = false, message = "Original identity keys restored. Chats and contacts must be re-established.", error = false)
                 }.onFailure {
+                    SparrowLog.error("IdentityViewModel", "Identity restore failed", it)
                     _backupState.value = _backupState.value.copy(busy = false, message = it.message ?: "Identity restore failed", error = true)
                 }
-            } catch (error: Throwable) {
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                SparrowLog.error("IdentityViewModel", "Identity restore failed", error)
                 _backupState.value = _backupState.value.copy(busy = false, message = error.message ?: "Identity restore failed", error = true)
             } finally {
                 password.fill('\u0000')
@@ -261,6 +283,8 @@ class IdentityViewModel(
                     IdentityBackupStatus.IMPORTED -> IdentityBackupUiStatus.IMPORTED
                 }
             )
+        }.onFailure { error ->
+            SparrowLog.error("IdentityViewModel", "Backup status could not be loaded", error)
         }
     }
 
@@ -292,6 +316,7 @@ class IdentityViewModel(
                 .onSuccess { status ->
                     handleIdentityStatus(status = status)
                 }.onFailure { error ->
+                    SparrowLog.error("IdentityViewModel", "Identity operation failed", error)
                     _uiState.value =
                         IdentityUiState.Error(
                             message = error.message ?: "Failed to load identity state"
@@ -317,6 +342,7 @@ class IdentityViewModel(
     }
 
     fun onPhoneNumberHintFailed(message: String) {
+        SparrowLog.error("IdentityViewModel", message.ifBlank { "Phone number picker could not be opened" })
         val currentState = _uiState.value
 
         if (currentState is IdentityUiState.NoIdentity) {
@@ -333,6 +359,7 @@ class IdentityViewModel(
         val normalizedPhoneNumber =
             normalizeLocalPhoneNumber(phoneNumber = currentState.phoneNumber)
                 .getOrElse { error ->
+                    SparrowLog.error("IdentityViewModel", "Invalid phone number", error)
                     _uiState.value =
                         currentState.copy(phoneNumberError = error.message ?: "Invalid phone number")
 
@@ -344,6 +371,7 @@ class IdentityViewModel(
 
             saveLocalPhoneName(phoneNumber = normalizedPhoneNumber, name = currentState.name)
                 .onFailure { error ->
+                    SparrowLog.error("IdentityViewModel", "Identity operation failed", error)
                     _uiState.value =
                         IdentityUiState.NoIdentity(
                             phoneNumber = normalizedPhoneNumber,
@@ -364,6 +392,7 @@ class IdentityViewModel(
                             localPhoneNumber = normalizedPhoneNumber
                         )
                 }.onFailure { error ->
+                    SparrowLog.error("IdentityViewModel", "Identity operation failed", error)
                     _uiState.value =
                         IdentityUiState.Error(
                             message = error.message ?: "Failed to create identity"
@@ -403,7 +432,10 @@ class IdentityViewModel(
     private suspend fun handleIdentityStatus(status: IdentityStatus) {
         when (status) {
             IdentityStatus.NOT_CREATED -> {
-                val storedPhoneNumber = getLocalPhoneNumber().getOrNull().orEmpty()
+                val storedPhoneNumber = getLocalPhoneNumber().getOrElse { error ->
+                    SparrowLog.error("IdentityViewModel", "Stored phone number could not be loaded", error)
+                    null
+                }.orEmpty()
                 val phoneNumber =
                     if (savedStateHandle.contains(PHONE_NUMBER_KEY)) {
                         savedStateHandle.get<String>(PHONE_NUMBER_KEY).orEmpty()
@@ -471,6 +503,7 @@ class IdentityViewModel(
                         IdentityUiState.IncompleteIdentity
                     }
             }.onFailure { error ->
+                SparrowLog.error("IdentityViewModel", "Identity operation failed", error)
                 _uiState.value =
                     IdentityUiState.Error(
                         message = error.message ?: "Failed to load public identity"

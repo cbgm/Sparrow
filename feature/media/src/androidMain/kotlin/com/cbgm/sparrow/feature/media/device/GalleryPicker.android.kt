@@ -37,6 +37,7 @@ import androidx.core.graphics.scale
 import androidx.photopicker.compose.EmbeddedPhotoPicker
 import androidx.photopicker.compose.ExperimentalPhotoPickerComposeApi
 import androidx.photopicker.compose.rememberEmbeddedPhotoPickerState
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.component.SparrowStaticScaffold
 import com.cbgm.sparrow.core.ui.theme.rectangle
@@ -91,6 +92,8 @@ actual fun rememberGalleryPickerLauncher(
                 }
             }.onSuccess(currentOnMediaSelected.value)
                 .onFailure { error ->
+                    SparrowLog.error("GalleryPicker", "Media operation failed", error)
+
                     currentOnError.value(error.message ?: "Selected gallery media could not be read")
                 }
         }

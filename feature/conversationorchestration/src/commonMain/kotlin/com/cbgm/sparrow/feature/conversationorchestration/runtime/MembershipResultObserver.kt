@@ -47,7 +47,7 @@ class MembershipResultObserver internal constructor(
         flowHandler
             .onMembershipResult(result)
             .onFailure { error ->
-                logger.warn(error) {
+                logger.error(error) {
                     "Membership result workflow failed for membershipId=${result.membershipId}"
                 }
             }

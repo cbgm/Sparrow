@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.settings.presentation.profile
 
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarEditResult
 import com.cbgm.sparrow.feature.avatar.domain.usecase.ConsumeAvatarEditResultUseCase
@@ -60,6 +61,7 @@ class ProfileSettingsViewModel(
                 ).onSuccess {
                     actionState.value = ProfilePictureActionState()
                 }.onFailure { error ->
+                    SparrowLog.error("ProfileSettingsViewModel", "Profile picture operation failed", error)
                     actionState.value =
                         ProfilePictureActionState(
                             errorMessage = error.message ?: "Profile picture could not be saved"
@@ -77,6 +79,7 @@ class ProfileSettingsViewModel(
                 .onSuccess {
                     actionState.value = ProfilePictureActionState()
                 }.onFailure { error ->
+                    SparrowLog.error("ProfileSettingsViewModel", "Profile picture operation failed", error)
                     actionState.value =
                         ProfilePictureActionState(
                             errorMessage = error.message ?: "Profile picture could not be removed"

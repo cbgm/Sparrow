@@ -59,30 +59,30 @@ class DefaultTransportConnectionManager(
     override val diagnostics: StateFlow<TransportDiagnostics> = diagnosticsState.diagnostics
 
     override val refreshDiagnostics: suspend () -> Unit = {
-        localRoutingIdProvider.getLocalRoutingId().getOrNull()?.let { routingId ->
-            nodeEndpointResolver
-                .resolve(
-                    localRoutingId = routingId,
-                    forceRefresh = true
-                ).fold(
-                    onSuccess = { endpoints ->
-                        resolvedEndpoints = endpoints
-                        diagnosticsState.resolved(
-                            endpoints = endpoints,
-                            cooldownUntilEpochMillisecondsByNodeId =
-                                failedNodeTracker.cooldownUntilEpochMillisecondsByNodeId(endpoints),
-                            registryAuthorityVerified = true,
-                            registryUrl = controlPlaneConfiguration.activeEndpoint.value?.baseUrl
-                        )
-                    },
-                    onFailure = { error ->
-                        logger.warn {
-                            "Live transport diagnostics refresh failed: " +
-                                (error.message ?: "unknown error")
+        localRoutingIdProvider.getLocalRoutingId()
+            .onFailure { failure -> logger.error(failure) { "Could not obtain local routing ID for diagnostics" } }
+            .getOrNull()?.let { routingId ->
+                nodeEndpointResolver
+                    .resolve(
+                        localRoutingId = routingId,
+                        forceRefresh = true
+                    ).fold(
+                        onSuccess = { endpoints ->
+                            resolvedEndpoints = endpoints
+                            diagnosticsState.resolved(
+                                endpoints = endpoints,
+                                cooldownUntilEpochMillisecondsByNodeId =
+                                    failedNodeTracker.cooldownUntilEpochMillisecondsByNodeId(endpoints),
+                                registryAuthorityVerified = true,
+                                registryUrl = controlPlaneConfiguration.activeEndpoint.value?.baseUrl
+                            )
+                        },
+                        onFailure = { error ->
+                            if (error is CancellationException) throw error
+                            logger.error(error) { "Live transport diagnostics refresh failed" }
                         }
-                    }
-                )
-        }
+                    )
+            }
     }
 
     private val mutableConnectionState =
@@ -257,9 +257,7 @@ class DefaultTransportConnectionManager(
             .onSuccess { count ->
                 logger.info { "Control-plane discovery synchronized $count trusted addresses" }
             }.onFailure { error ->
-                logger.warn {
-                    "Control-plane discovery failed: ${error.message ?: "unknown error"}"
-                }
+                logger.error(error) { "Control-plane discovery failed" }
             }
     }
 
@@ -295,7 +293,7 @@ class DefaultTransportConnectionManager(
         message: String
     ) {
         failedNodeTracker.recordFailure(endpoint.nodeId)
-        logger.warn { "Transport connection failed: $message" }
+        logger.error { "Transport connection failed: $message" }
         diagnosticsState.failed(
             endpoint = endpoint,
             message = message,
@@ -326,10 +324,7 @@ class DefaultTransportConnectionManager(
                                 )
                             },
                             onFailure = { error ->
-                                logger.warn {
-                                    "Signed node directory refresh failed: " +
-                                        (error.message ?: "unknown error")
-                                }
+                                logger.error(error) { "Signed node directory refresh failed" }
                             }
                         )
                     }
@@ -341,10 +336,7 @@ class DefaultTransportConnectionManager(
                         controlPlaneDiscoverySynchronizer
                             .refreshFromNode(endpoint.websocketUrl)
                             .onFailure { error ->
-                                logger.warn {
-                                    "Control-plane discovery refresh failed: " +
-                                        (error.message ?: "unknown error")
-                                }
+                                logger.error(error) { "Control-plane discovery refresh failed" }
                             }
                     }
                 }

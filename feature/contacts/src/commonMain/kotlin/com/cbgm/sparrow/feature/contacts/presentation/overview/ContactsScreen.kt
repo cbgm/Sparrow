@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -49,7 +48,6 @@ fun ContactsScreen(
     mode: ContactsScreenMode,
     onUiEvent: (ContactsUiEvent) -> Unit,
     modifier: Modifier = Modifier,
-    snackbarHostState: SnackbarHostState? = null,
     onContactSelected: (ContactUi) -> Unit = {}
 ) {
     var showImportSheet by rememberSaveable {
@@ -77,7 +75,6 @@ fun ContactsScreen(
 
     SparrowLazyScaffold(
         modifier = modifier,
-        snackbarHostState = snackbarHostState,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { containerColor ->
             when (mode) {

@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.chats.presentation.create
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.CreateGroupConversationUseCase
 import com.cbgm.sparrow.feature.chats.presentation.create.mapper.toCreateGroupConversationUiState
@@ -78,6 +79,7 @@ class CreateGroupViewModel(
         observeContacts()
             .map { contacts -> ContactsPresentation(contacts = contacts.toContactsUi()) }
             .catch { error ->
+                SparrowLog.error("CreateGroupViewModel", "Contacts could not be loaded", error)
                 emit(
                     ContactsPresentation(
                         contacts = emptyList(),
@@ -123,6 +125,7 @@ class CreateGroupViewModel(
                     clearForm()
                     _effects.send(CreateGroupEffect.GroupCreated)
                 }.onFailure { error ->
+                    SparrowLog.error("CreateGroupViewModel", "Group could not be created", error)
                     actionState.value =
                         CreateGroupActionState(
                             errorMessage = error.message ?: "Group could not be created"

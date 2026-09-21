@@ -41,7 +41,7 @@ class IdentityResultObserver internal constructor(
         flowHandler
             .onIdentityResult(result)
             .onFailure { error ->
-                logger.warn(error) {
+                logger.error(error) {
                     "Identity workflow failed for exchangeId=${result.exchangeId}, status=${result.status}"
                 }
             }

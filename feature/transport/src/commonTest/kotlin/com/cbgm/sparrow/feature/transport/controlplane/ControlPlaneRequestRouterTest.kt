@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class ControlPlaneRequestRouterTest {
@@ -40,7 +41,7 @@ class ControlPlaneRequestRouterTest {
         }
 
     @Test
-    fun executeAllVisitsEveryEndpointAndFailsWhenOneIsUnavailable() =
+    fun executeAllVisitsEveryEndpointAndSucceedsWhenOneIsAvailable() =
         runTest {
             val configuration = FakeControlPlaneConfiguration()
             val router = ControlPlaneRequestRouter(configuration, configuration)
@@ -54,7 +55,7 @@ class ControlPlaneRequestRouterTest {
                     }
                 }
 
-            assertTrue(result.isFailure)
+            assertTrue(result.isSuccess)
             assertEquals(
                 listOf("https://primary", "https://secondary"),
                 visited
@@ -67,7 +68,31 @@ class ControlPlaneRequestRouterTest {
                 ControlPlaneReachability.AVAILABLE,
                 configuration.statusFor("https://secondary").reachability
             )
-            assertEquals("https://primary", configuration.activeEndpoint.value.baseUrl)
+            assertEquals("https://secondary", configuration.activeEndpoint.value.baseUrl)
+        }
+
+    @Test
+    fun executeAllFailsWhenNoEndpointCanCompleteTheRequest() =
+        runTest {
+            val configuration = FakeControlPlaneConfiguration()
+            val router = ControlPlaneRequestRouter(configuration, configuration)
+            val visited = mutableListOf<String>()
+
+            val result = router.executeAll { endpoint ->
+                visited += endpoint.baseUrl
+                error("offline")
+            }
+
+            assertIs<ControlPlaneUnavailableException>(result.exceptionOrNull())
+            assertEquals(listOf("https://primary", "https://secondary"), visited)
+            assertEquals(
+                ControlPlaneReachability.UNREACHABLE,
+                configuration.statusFor("https://primary").reachability
+            )
+            assertEquals(
+                ControlPlaneReachability.UNREACHABLE,
+                configuration.statusFor("https://secondary").reachability
+            )
         }
 
     @Test
@@ -85,6 +110,37 @@ class ControlPlaneRequestRouterTest {
 
             assertTrue(result.isSuccess)
             assertEquals(listOf("https://secondary"), visited)
+        }
+
+    @Test
+    fun executeAllReturnsOfflineResultWhenEveryEndpointWasAlreadyUnreachable() =
+        runTest {
+            val configuration = FakeControlPlaneConfiguration()
+            configuration.endpoints.value.forEach(configuration::markUnreachable)
+            val router = ControlPlaneRequestRouter(configuration, configuration)
+
+            val result = router.executeAll { error("Must not attempt an unreachable endpoint") }
+
+            assertIs<ControlPlaneUnavailableException>(result.exceptionOrNull())
+        }
+
+    @Test
+    fun executeAllPreservesServerRejectionInsteadOfCallingItOffline() =
+        runTest {
+            val configuration = FakeControlPlaneConfiguration()
+            val router = ControlPlaneRequestRouter(configuration, configuration)
+
+            val result = router.executeAll {
+                throw ControlPlaneRequestRejectedException("Push registration rejected")
+            }
+
+            assertIs<ControlPlaneRequestRejectedException>(result.exceptionOrNull())
+            configuration.endpoints.value.forEach { endpoint ->
+                assertEquals(
+                    ControlPlaneReachability.AVAILABLE,
+                    configuration.statusFor(endpoint.baseUrl).reachability
+                )
+            }
         }
 
     private class FakeControlPlaneConfiguration :

@@ -119,9 +119,7 @@ class AppViewModel(
             initialization.controlPlaneConfiguration
                 .setDirectoryUrl(configuredDirectoryUrl)
                 .onFailure { error ->
-                    logger.warn {
-                        "Control-plane directory configuration could not be stored: ${error.message}"
-                    }
+                    logger.error(error) { "Control-plane directory configuration could not be stored" }
                 }
         }
 
@@ -137,9 +135,7 @@ class AppViewModel(
                 .onSuccess { count ->
                     logger.info { "Initial control-plane directory synchronized; addresses=$count" }
                 }.onFailure { error ->
-                    logger.warn {
-                        "Initial control-plane directory unavailable: ${error.message}"
-                    }
+                    logger.error(error) { "Initial control-plane directory unavailable" }
                 }
         }
     }
@@ -299,14 +295,14 @@ class AppViewModel(
             .onSuccess { provisioned ->
                 logger.info { "Mailbox routes ready; newly provisioned=$provisioned" }
             }.onFailure { error ->
-                logger.warn { "Mailbox route provisioning failed: ${error.message}" }
+                logger.error(error) { "Mailbox route provisioning failed" }
             }
         foreground.mailboxCoordinator
             .synchronizePending()
             .onSuccess { processed ->
                 logger.info { "Mailbox synchronization completed; processed=$processed" }
             }.onFailure { error ->
-                logger.warn { "Mailbox synchronization failed: ${error.message}" }
+                logger.error(error) { "Mailbox synchronization failed" }
             }
         foreground.outboxRunner.start()
     }

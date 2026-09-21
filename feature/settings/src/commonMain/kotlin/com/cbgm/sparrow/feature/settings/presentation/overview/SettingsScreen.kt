@@ -32,7 +32,6 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -115,7 +114,6 @@ import org.jetbrains.compose.resources.stringResource
 fun SettingsScreen(
     uiState: State<SettingsUiState>,
     modelDownloadPercent: State<Int?>,
-    snackbarHostState: SnackbarHostState,
     onUiEvent: (SettingsUiEvent) -> Unit,
     scrollState: ScrollState,
     innerPadding: PaddingValues,
@@ -644,7 +642,6 @@ fun SettingsScreenPreview() {
                 )
             },
             modelDownloadPercent = remember { mutableStateOf(null) },
-            snackbarHostState = SnackbarHostState(),
             onUiEvent = {},
             scrollState = ScrollState(0),
             innerPadding = PaddingValues(MaterialTheme.spacing.zero)

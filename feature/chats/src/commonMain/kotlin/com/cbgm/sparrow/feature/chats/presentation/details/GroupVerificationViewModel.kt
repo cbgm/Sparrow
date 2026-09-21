@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.chats.presentation.details
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
@@ -233,6 +234,7 @@ class GroupVerificationViewModel(
                 ).onSuccess {
                     avatarActionState.value = GroupAvatarActionState()
                 }.onFailure { error ->
+                    SparrowLog.error("GroupVerificationViewModel", "Group operation failed", error)
                     avatarActionState.value =
                         GroupAvatarActionState(
                             errorMessage = error.message ?: "Group avatar could not be saved"
@@ -249,6 +251,7 @@ class GroupVerificationViewModel(
             removeGroupAvatar(conversationId)
                 .onSuccess { avatarActionState.value = GroupAvatarActionState() }
                 .onFailure { error ->
+                    SparrowLog.error("GroupVerificationViewModel", "Group operation failed", error)
                     avatarActionState.value =
                         GroupAvatarActionState(
                             errorMessage = error.message ?: "Group avatar could not be removed"
@@ -268,6 +271,7 @@ class GroupVerificationViewModel(
             setGroupTitle(conversationId, normalizedTitle)
                 .onSuccess { titleActionState.value = GroupTitleActionState() }
                 .onFailure { error ->
+                    SparrowLog.error("GroupVerificationViewModel", "Group operation failed", error)
                     titleActionState.value =
                         GroupTitleActionState(
                             errorMessage = error.message ?: "Group name could not be saved"
@@ -284,6 +288,7 @@ class GroupVerificationViewModel(
             setGroupDescription(conversationId, description)
                 .onSuccess { descriptionActionState.value = GroupDescriptionActionState() }
                 .onFailure { error ->
+                    SparrowLog.error("GroupVerificationViewModel", "Group operation failed", error)
                     descriptionActionState.value =
                         GroupDescriptionActionState(
                             errorMessage = error.message ?: "Group description could not be saved"
@@ -314,6 +319,7 @@ class GroupVerificationViewModel(
         viewModelScope.launch {
             synchronizeGroupVerification(conversationId)
                 .onFailure { error ->
+                    SparrowLog.error("GroupVerificationViewModel", "Group operation failed", error)
                     verificationState.update { state ->
                         state.copy(
                             errorMessage =
@@ -364,6 +370,7 @@ class GroupVerificationViewModel(
                         }
                     }
                 }.onFailure { error ->
+                    SparrowLog.error("GroupVerificationViewModel", "Group operation failed", error)
                     verificationState.update { current ->
                         if (current.selectedContactId != contactId) {
                             current
@@ -407,6 +414,7 @@ class GroupVerificationViewModel(
             ).onSuccess {
                 clearVerificationSelection()
             }.onFailure { error ->
+                SparrowLog.error("GroupVerificationViewModel", "Group operation failed", error)
                 verificationState.update { state ->
                     state.copy(
                         isVerifying = false,
@@ -475,6 +483,7 @@ class GroupVerificationViewModel(
                         )
                     }
                 }.onFailure { error ->
+                    SparrowLog.error("GroupVerificationViewModel", "Group operation failed", error)
                     memberManagementState.update { state ->
                         state.copy(
                             isUpdating = false,
@@ -528,6 +537,7 @@ class GroupVerificationViewModel(
                         )
                     }
                 }.onFailure { error ->
+                    SparrowLog.error("GroupVerificationViewModel", "Group operation failed", error)
                     memberManagementState.update { state ->
                         state.copy(
                             isUpdating = false,
@@ -571,6 +581,7 @@ class GroupVerificationViewModel(
                         )
                     }
                 }.onFailure { error ->
+                    SparrowLog.error("GroupVerificationViewModel", "Group operation failed", error)
                     memberManagementState.update { state ->
                         state.copy(isUpdating = false, errorMessage = error.message ?: "Group member could not be promoted")
                     }
@@ -589,6 +600,7 @@ class GroupVerificationViewModel(
                     leaveState.value = GroupLeaveUiState(isLeaveRequested = true)
                     navigator.popBackStackTo(AppRoute.Main)
                 }.onFailure { error ->
+                    SparrowLog.error("GroupVerificationViewModel", "Group operation failed", error)
                     leaveState.update { state ->
                         state.copy(
                             prompt = GroupLeavePrompt.PROMOTE_ADMIN,
@@ -615,6 +627,7 @@ class GroupVerificationViewModel(
                         }
                     leaveState.value = GroupLeaveUiState(prompt = prompt)
                 }.onFailure { error ->
+                    SparrowLog.error("GroupVerificationViewModel", "Group operation failed", error)
                     leaveState.value =
                         GroupLeaveUiState(
                             errorMessage = error.message ?: "The group leave state could not be loaded"
@@ -644,6 +657,7 @@ class GroupVerificationViewModel(
                     leaveState.value = GroupLeaveUiState(isLeaveRequested = true)
                     navigator.popBackStackTo(AppRoute.Main)
                 }.onFailure { error ->
+                    SparrowLog.error("GroupVerificationViewModel", "Group operation failed", error)
                     leaveState.value =
                         GroupLeaveUiState(
                             prompt = GroupLeavePrompt.CONFIRM,

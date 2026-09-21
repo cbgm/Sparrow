@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.attachments.presentation.management
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
@@ -151,6 +152,7 @@ class AttachmentManagementViewModel(
                         )
                     }
                 }.onFailure { error ->
+                    SparrowLog.error("AttachmentManagementViewModel", "Could not delete attachments", error)
                     localState.update { state ->
                         state.copy(
                             isDeleting = false,

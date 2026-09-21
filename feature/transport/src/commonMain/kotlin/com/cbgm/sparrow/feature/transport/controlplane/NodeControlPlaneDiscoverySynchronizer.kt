@@ -37,10 +37,7 @@ class NodeControlPlaneDiscoverySynchronizer(
         candidate: String,
         error: Throwable
     ) {
-        logger.warn {
-            "Ignoring untrusted control plane $candidate: " +
-                (error.message ?: "verification failed")
-        }
+        logger.warn { "Ignoring untrusted control plane $candidate: ${error.message ?: error::class.simpleName}" }
     }
 
     private fun List<String>.normalizedCandidates(): List<String> =

@@ -79,13 +79,13 @@ internal class ChatsConversationPort(
 
     override suspend fun sendCurrentGroupMetadataTo(groupId: String, peerId: String) {
         groupAvatarBroadcaster.sendCurrentTo(groupId, peerId)
-            .onFailure { error -> logger.warn(error) { "Could not queue current group avatar for $peerId" } }
+            .onFailure { error -> logger.error(error) { "Could not queue current group avatar for $peerId" } }
         groupTitleBroadcaster.sendCurrentTo(groupId, peerId)
-            .onFailure { error -> logger.warn(error) { "Could not queue current group title for $peerId" } }
+            .onFailure { error -> logger.error(error) { "Could not queue current group title for $peerId" } }
         groupDescriptionBroadcaster.sendCurrentTo(groupId, peerId)
-            .onFailure { error -> logger.warn(error) { "Could not queue current group description for $peerId" } }
+            .onFailure { error -> logger.error(error) { "Could not queue current group description for $peerId" } }
         groupPinBroadcaster.sendCurrentTo(groupId, peerId)
-            .onFailure { error -> logger.warn(error) { "Could not queue current group pin for $peerId" } }
+            .onFailure { error -> logger.error(error) { "Could not queue current group pin for $peerId" } }
     }
 
     override suspend fun applyIncomingGroupRemoval(

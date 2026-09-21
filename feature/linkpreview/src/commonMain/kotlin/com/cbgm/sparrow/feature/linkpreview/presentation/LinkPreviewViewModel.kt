@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.linkpreview.presentation
 
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.linkpreview.domain.usecase.GetLinkPreviewUseCase
 import com.cbgm.sparrow.feature.linkpreview.presentation.mapper.toUi
@@ -27,6 +28,7 @@ class LinkPreviewViewModel(
                 .onSuccess { preview ->
                     _uiState.value = LinkPreviewUiState.Success(preview.toUi())
                 }.onFailure { throwable ->
+                    SparrowLog.error("LinkPreviewViewModel", "Link preview could not be loaded", throwable)
                     _uiState.value = LinkPreviewUiState.Error(throwable)
                 }
         }

@@ -164,7 +164,7 @@ internal class MessageAttachmentDataSource(
                         try {
                             loadBytes(entity.id)
                         } catch (error: Exception) {
-                            logger.warn(error) { "Could not cache message attachment ${entity.id}" }
+                            logger.error(error) { "Could not cache message attachment ${entity.id}" }
                         }
                     }
                 }.awaitAll()
@@ -241,7 +241,7 @@ internal class MessageAttachmentDataSource(
                         )
                     )
                 } catch (error: Throwable) {
-                    logger.warn(error) { "Could not delete remote attachment blob ${entity.blobId}" }
+                    logger.error(error) { "Could not delete remote attachment blob ${entity.blobId}" }
                 }
             }
         }
@@ -261,7 +261,7 @@ internal class MessageAttachmentDataSource(
                     )
                 }
             } catch (e: Exception) {
-                logger.warn(e) { "Failed to cleanup prepared attachment during rollback" }
+                logger.error(e) { "Failed to cleanup prepared attachment during rollback" }
             }
         }
     }

@@ -11,6 +11,7 @@ import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingFeature
 import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingModelState
 import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingState
 import com.cbgm.sparrow.core.embedding.domain.repository.LocalEmbeddingRepository
+import com.cbgm.sparrow.core.logging.SparrowLog
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
@@ -41,6 +42,7 @@ class LocalEmbeddingRepositoryImpl(
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (throwable: Throwable) {
+                SparrowLog.error("LocalEmbeddingRepository", "Could not restore local intelligence settings", throwable)
                 mutableState.value =
                     LocalEmbeddingState(
                         modelState =
@@ -66,7 +68,7 @@ class LocalEmbeddingRepositoryImpl(
     override suspend fun setFeatureEnabled(
         feature: LocalEmbeddingFeature,
         enabled: Boolean
-    ) = lifecycleMutex.withLock {
+    ): Unit = lifecycleMutex.withLock {
         when (feature) {
             LocalEmbeddingFeature.MESSAGE_SEARCH -> settingsStorage.setSemanticSearchEnabled(enabled)
             LocalEmbeddingFeature.MESSAGE_SAFETY -> settingsStorage.setMessageSafetyEnabled(enabled)
@@ -113,6 +115,7 @@ class LocalEmbeddingRepositoryImpl(
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (throwable: Throwable) {
+            SparrowLog.error("LocalEmbeddingRepository", "Could not prepare local embedding model", throwable)
             updateModelState(
                 LocalEmbeddingModelState.Failed(
                     throwable.message ?: "Local embedding model could not be prepared"

@@ -4,9 +4,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarVisuals
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -16,9 +18,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppNavigator
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.navigation.routing.graph.attachmentsNavGraph
@@ -49,6 +53,19 @@ import kotlin.time.Duration.Companion.milliseconds
 
 private const val OFFLINE_HINT_DELAY_MILLIS = 5_000L
 
+private enum class FeedbackKind { ERROR, HINT }
+
+/** Keep the feedback kind attached to each queued snackbar; never infer it from text. */
+private data class FeedbackSnackbarVisuals(
+    override val message: String,
+    val kind: FeedbackKind,
+    override val duration: SnackbarDuration,
+    override val actionLabel: String? = null,
+    override val withDismissAction: Boolean = false
+) : SnackbarVisuals
+
+private val ErrorSnackbarColor = Color(0xFFB3261E)
+
 @Composable
 fun AppNavigation(
     onStartupContentReady: () -> Unit = {},
@@ -77,10 +94,11 @@ fun AppNavigation(
 
     navController.bind(navigator)
 
+    ObserveGlobalFeedback(snackbarHostState)
+
     ObserveConnectionSnackbar(
         startupComplete = startupComplete,
         startupWasOffline = startupWasOffline,
-        snackbarHostState = snackbarHostState,
         observeAppConnectionAvailability = observeAppConnectionAvailability
     )
 
@@ -128,7 +146,45 @@ fun AppNavigation(
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter)
-        )
+        ) { data ->
+            val isError = (data.visuals as? FeedbackSnackbarVisuals)?.kind == FeedbackKind.ERROR
+            Snackbar(
+                snackbarData = data,
+                containerColor = if (isError) ErrorSnackbarColor else Color.White,
+                contentColor = if (isError) Color.White else Color.Black
+            )
+        }
+    }
+}
+
+/** Collect for the whole lifetime of AppNavigation, independent of destinations. */
+@Composable
+private fun ObserveGlobalFeedback(
+    host: SnackbarHostState
+) {
+    LaunchedEffect(host) {
+        launch {
+            SparrowLog.errors.collect { message ->
+                host.showSnackbar(
+                    FeedbackSnackbarVisuals(
+                        message = message,
+                        kind = FeedbackKind.ERROR,
+                        duration = SnackbarDuration.Long
+                    )
+                )
+            }
+        }
+        launch {
+            SparrowLog.hints.collect { message ->
+                host.showSnackbar(
+                    FeedbackSnackbarVisuals(
+                        message = message,
+                        kind = FeedbackKind.HINT,
+                        duration = SnackbarDuration.Short
+                    )
+                )
+            }
+        }
     }
 }
 
@@ -136,7 +192,6 @@ fun AppNavigation(
 private fun ObserveConnectionSnackbar(
     startupComplete: Boolean,
     startupWasOffline: Boolean,
-    snackbarHostState: SnackbarHostState,
     observeAppConnectionAvailability: ObserveAppConnectionAvailabilityUseCase
 ) {
     val offlineHint = stringResource(
@@ -158,7 +213,6 @@ private fun ObserveConnectionSnackbar(
         var offlineHintWasShown = false
 
         var pendingOfflineHintJob: Job? = null
-        var connectionSnackbarJob: Job? = null
 
         fun scheduleOfflineHint() {
             pendingOfflineHintJob?.cancel()
@@ -169,14 +223,7 @@ private fun ObserveConnectionSnackbar(
 
                 offlineHintWasShown = true
 
-                connectionSnackbarJob?.cancel()
-
-                connectionSnackbarJob = launch {
-                    snackbarHostState.showSnackbar(
-                        message = offlineHint,
-                        duration = SnackbarDuration.Short
-                    )
-                }
+                SparrowLog.hint(offlineHint)
             }
         }
 
@@ -191,8 +238,6 @@ private fun ObserveConnectionSnackbar(
                     connectionUnavailable = true
                     offlineHintWasShown = false
 
-                    connectionSnackbarJob?.cancel()
-
                     scheduleOfflineHint()
                 }
 
@@ -201,19 +246,12 @@ private fun ObserveConnectionSnackbar(
                     connectionUnavailable = false
 
                     pendingOfflineHintJob?.cancel()
-                    connectionSnackbarJob?.cancel()
-
                     // Do not announce a reconnection if the offline hint
                     // was never displayed.
                     if (offlineHintWasShown) {
                         offlineHintWasShown = false
 
-                        connectionSnackbarJob = launch {
-                            snackbarHostState.showSnackbar(
-                                message = reconnectedHint,
-                                duration = SnackbarDuration.Short
-                            )
-                        }
+                        SparrowLog.hint(reconnectedHint)
                     }
                 }
             }

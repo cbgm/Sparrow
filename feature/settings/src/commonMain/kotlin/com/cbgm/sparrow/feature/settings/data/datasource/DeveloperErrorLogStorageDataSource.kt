@@ -2,19 +2,23 @@ package com.cbgm.sparrow.feature.settings.data.datasource
 
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowErrorSink
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.data.datastore.SparrowDataStore
 import com.cbgm.sparrow.feature.settings.data.model.DeveloperErrorDto
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import kotlin.time.Duration.Companion.milliseconds
 
 class DeveloperErrorLogStorageDataSource(
     private val dataStore: SparrowDataStore
@@ -25,6 +29,7 @@ class DeveloperErrorLogStorageDataSource(
             encodeDefaults = true
         }
     private val serializer = ListSerializer(DeveloperErrorDto.serializer())
+    private var corruptDataReported = false
     private val commands = Channel<Command>(capacity = Channel.UNLIMITED)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -33,10 +38,19 @@ class DeveloperErrorLogStorageDataSource(
             for (command in commands) {
                 when (command) {
                     is Command.Record -> {
-                        try {
-                            persist(command.error)
-                        } catch (_: Throwable) {
-                            // Error logging must never terminate the storage actor.
+                        // A successful enqueue is not a successful write. Retry storage
+                        // failures instead of dropping records silently.
+                        while (true) {
+                            try {
+                                persist(command.error)
+                                break
+                            } catch (cancellation: CancellationException) {
+                                throw cancellation
+                            } catch (failure: Exception) {
+                                // Never call SparrowLog.error here: it would write to this sink again.
+                                SparrowLog.reportErrorStorageFailure(failure)
+                                delay(PERSISTENCE_RETRY_MILLIS.milliseconds)
+                            }
                         }
                     }
 
@@ -45,6 +59,7 @@ class DeveloperErrorLogStorageDataSource(
                             clearPersistedErrors()
                             command.completion.complete(Unit)
                         } catch (error: Throwable) {
+                            SparrowLog.reportErrorStorageFailure(error)
                             command.completion.completeExceptionally(error)
                         }
                     }
@@ -71,7 +86,7 @@ class DeveloperErrorLogStorageDataSource(
         message: String,
         throwable: Throwable?
     ) {
-        commands.trySend(
+        val queued = commands.trySend(
             Command.Record(
                 DeveloperErrorDto(
                     id = IdGenerator.generate(prefix = ERROR_ID_PREFIX),
@@ -83,6 +98,7 @@ class DeveloperErrorLogStorageDataSource(
                 )
             )
         )
+        check(queued.isSuccess) { "Developer error log queue is closed" }
     }
 
     private suspend fun persist(error: DeveloperErrorDto) {
@@ -112,7 +128,11 @@ class DeveloperErrorLogStorageDataSource(
 
         return try {
             json.decodeFromString(serializer, value)
-        } catch (_: Throwable) {
+        } catch (failure: Throwable) {
+            if (!corruptDataReported) {
+                corruptDataReported = true
+                SparrowLog.reportErrorStorageFailure(failure)
+            }
             emptyList()
         }
     }
@@ -128,6 +148,7 @@ class DeveloperErrorLogStorageDataSource(
     }
 
     private companion object {
+        const val PERSISTENCE_RETRY_MILLIS = 2_000L
         const val KEY_ERRORS = "settings.developer_error_log.errors"
         const val ERROR_ID_PREFIX = "developer-error"
         const val FALLBACK_EXCEPTION_TYPE = "Throwable"

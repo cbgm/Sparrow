@@ -87,7 +87,7 @@ internal class GatewayServerMessageHandler(
             }
 
             is GatewayServerMessage.Error -> {
-                logger.warn { "Gateway error ${message.code}: ${message.message}" }
+                logger.error { "Gateway error ${message.code}: ${message.message}" }
                 handleGatewayError(message, onRouteRejected)
             }
         }

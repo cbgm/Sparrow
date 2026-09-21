@@ -504,7 +504,7 @@ internal class ConversationFlowHandler(
                     if (identitySetupModeRepository.getMode() == DirectIdentitySetupMode.AUTOMATIC_INVITATION) {
                         sendContactVerificationReceipt(result.peerId)
                             .onFailure { error ->
-                                logger.warn(error) {
+                                logger.error(error) {
                                     "Could not queue contact verification receipt for ${result.peerId}"
                                 }
                             }
@@ -574,6 +574,21 @@ internal class ConversationFlowHandler(
                     packet = packet,
                     receivedAtEpochMilliseconds = context.receivedAtEpochMilliseconds
                 ).getOrThrow()
+                // An acceptance may arrive after the inviter has reset its identity,
+                // deleted the original contact/exchange, or superseded that invitation.
+                // Its signature alone proves only possession of the RESPONDER's key;
+                // without our persisted challenge we cannot authorize a conversation.
+                // Returning successfully acknowledges this permanently stale packet,
+                // rather than retrying the same envelope and spamming error snackbars.
+                // Do not apply a remote identity, profile image, or invitation response.
+                val originalExchange = getIdentityExchangeBinding(packet.invitationId).getOrThrow()
+                if (originalExchange == null) {
+                    logger.warn {
+                        "Ignoring acceptance for missing local identity exchange " +
+                            "${packet.invitationId}; a new invitation is required"
+                    }
+                    return@runCatching
+                }
                 try {
                     receiveIdentityExchangeAccepted(
                         context,
@@ -1395,7 +1410,7 @@ internal class ConversationFlowHandler(
     ) {
         applyRemoteProfilePictureMetadata(contactId, metadata)
             .onFailure { error ->
-                logger.warn(error) { "Could not store profile picture for $contactId" }
+                logger.error(error) { "Could not store profile picture for $contactId" }
             }
     }
 

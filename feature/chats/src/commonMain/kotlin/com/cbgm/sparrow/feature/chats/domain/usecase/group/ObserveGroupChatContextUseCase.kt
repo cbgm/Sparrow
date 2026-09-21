@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.domain.usecase.group
 
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryCursor
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupChatContext
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
@@ -30,19 +31,28 @@ class ObserveGroupChatContextUseCase(
             conversationRepository
                 .observe(groupId, oldestCursor)
                 .map { conversation -> ConversationSnapshot(conversation = conversation) }
-                .catch { error -> emit(ConversationSnapshot(conversation = null, error = error)) }
+                .catch { error ->
+                    SparrowLog.error("ObserveGroupChatContextUseCase", "Could not observe group conversation", error)
+                    emit(ConversationSnapshot(conversation = null, error = error))
+                }
 
         val contactsFlow: Flow<List<Contact>> =
             contactRepository
                 .observeContacts()
                 .onStart { emit(emptyList()) }
-                .catch { emit(emptyList()) }
+                .catch { error ->
+                    SparrowLog.error("ObserveGroupChatContextUseCase", "Could not observe group contacts", error)
+                    emit(emptyList())
+                }
 
         val pinFlow: Flow<GroupPin?> =
             pinRepository
                 .observe(groupId)
                 .onStart { emit(null) }
-                .catch { emit(null) }
+                .catch { error ->
+                    SparrowLog.error("ObserveGroupChatContextUseCase", "Could not observe group pin", error)
+                    emit(null)
+                }
 
         val metadataFlow =
             combine(

@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.contacts.presentation.details
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
@@ -77,6 +78,7 @@ class ContactDetailsViewModel(
                 }.onStart {
                     emit(ContactDetailsUiState.Loading)
                 }.catch { error ->
+                    SparrowLog.error("ContactDetailsViewModel", "Could not load contact details", error)
                     emit(
                         ContactDetailsUiState.Error(
                             message = error.message ?: "Failed to load contact"
@@ -107,6 +109,7 @@ class ContactDetailsViewModel(
                     verificationState.value = VerificationActionState()
                     reloadRevision.update { revision -> revision + 1 }
                 }.onFailure { error ->
+                    SparrowLog.error("ContactDetailsViewModel", "Contact verification failed", error)
                     verificationState.value =
                         VerificationActionState(
                             errorMessage = error.message ?: "Failed to verify identity"

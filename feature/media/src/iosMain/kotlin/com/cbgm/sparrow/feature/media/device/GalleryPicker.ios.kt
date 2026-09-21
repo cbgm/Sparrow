@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.uikit.LocalUIViewController
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.feature.media.domain.model.GalleryMedia
 import com.cbgm.sparrow.feature.media.domain.model.GalleryPickerConfig
 import com.cbgm.sparrow.feature.media.domain.model.MediaContentType
@@ -100,7 +101,9 @@ private class GalleryPickerDelegate(
                     provider.loadDataRepresentationForTypeIdentifier(IMAGE_TYPE_IDENTIFIER) { data, error ->
                         val selection =
                             if (data != null && error == null) {
-                                runCatching { decodeGalleryImage(data, config) }.getOrNull()
+                                runCatching { decodeGalleryImage(data, config) }
+                                    .onFailure { failure -> SparrowLog.error("GalleryPicker", "Could not decode chosen image", failure) }
+                                    .getOrNull()
                             } else {
                                 null
                             }
@@ -117,7 +120,9 @@ private class GalleryPickerDelegate(
                     provider.loadDataRepresentationForTypeIdentifier(VIDEO_TYPE_IDENTIFIER) { data, error ->
                         val selection =
                             if (data != null && error == null) {
-                                runCatching { decodeGalleryVideo(data, config) }.getOrNull()
+                                runCatching { decodeGalleryVideo(data, config) }
+                                    .onFailure { failure -> SparrowLog.error("GalleryPicker", "Could not decode chosen video", failure) }
+                                    .getOrNull()
                             } else {
                                 null
                             }

@@ -82,7 +82,7 @@ class InitializeMessageSafetyUseCase(
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (throwable: Throwable) {
-                logger.warn { "Local message safety analysis failed; retrying" }
+                logger.error(throwable) { "Local message safety analysis failed; retrying" }
                 repository.updateState(MessageSafetyState.Failed("Local message safety analysis failed"))
                 delay(RETRY_DELAY_MILLISECONDS.milliseconds)
                 currentCoroutineContext().ensureActive()

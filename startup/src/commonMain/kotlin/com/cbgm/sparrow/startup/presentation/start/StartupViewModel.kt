@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.startup.presentation.start
 
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.logging.StartupTrace
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
@@ -73,6 +74,7 @@ class StartupViewModel(
                     StartupTrace.event("startup UI state published=$result")
                 }.onFailure { error ->
                     StartupTrace.event("startup initializer failure: ${error.message}")
+                    SparrowLog.error("StartupViewModel", "Sparrow could not complete startup", error)
                     mutableUiState.value =
                         StartupUiState.Error(
                             message = error.message ?: "Sparrow could not complete startup."

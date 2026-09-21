@@ -12,8 +12,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -30,7 +28,6 @@ fun SparrowLazyScaffold(
     barColor: Color = MaterialTheme.colorScheme.background,
     fadedAlpha: Float = Alpha.OpaqueBar,
     containerColor: Color = Color.Transparent,
-    snackbarHostState: SnackbarHostState? = null,
     floatingActionButtonPosition: FabPosition = FabPosition.End,
     background: @Composable BoxScope.() -> Unit = {},
     topBar: @Composable (containerColor: Color) -> Unit = {},
@@ -72,12 +69,7 @@ fun SparrowLazyScaffold(
                 bottomBar(bottomBarColor)
             },
             floatingActionButton = floatingActionButton,
-            floatingActionButtonPosition = floatingActionButtonPosition,
-            snackbarHost = {
-                snackbarHostState?.let { state ->
-                    SnackbarHost(hostState = state)
-                }
-            }
+            floatingActionButtonPosition = floatingActionButtonPosition
         ) { innerPadding ->
             content(
                 innerPadding,
@@ -160,19 +152,6 @@ fun SparrowStaticScaffold(
             content = content
         )
     }
-}
-
-@Stable
-data class SparrowMainScrollStates(
-    val chats: LazyListState,
-    val identity: ScrollState,
-    val settings: ScrollState
-)
-
-enum class SparrowMainScrollTarget {
-    Chats,
-    Identity,
-    Settings
 }
 
 @Stable

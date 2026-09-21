@@ -30,7 +30,7 @@ internal class MessageAttachmentCacheCoordinator(
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (error: Throwable) {
-                logger.warn(error) { "Could not cache attachments for message $messageId" }
+                logger.error(error) { "Could not cache attachments for message $messageId" }
             } finally {
                 mutex.withLock { activeMessageIds.remove(messageId) }
             }

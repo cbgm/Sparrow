@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.domain.usecase
 
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ResolveContactTransportRoutingIdUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.routing.GroupRoutingResolver
 import com.cbgm.sparrow.feature.messaging.domain.usecase.ObserveMessagingIndicatorsUseCase
@@ -25,7 +26,8 @@ class ObserveConversationIndicatorUseCase(
                 resolveSenderRoutingId()
             } catch (error: CancellationException) {
                 throw error
-            } catch (_: Throwable) {
+            } catch (failure: Throwable) {
+                SparrowLog.error("ObserveConversationIndicatorUseCase", "Could not resolve indicator sender", failure)
                 return@transform
             }
             if (event.senderRoutingId == expectedSender) emit(event.indicatorType)

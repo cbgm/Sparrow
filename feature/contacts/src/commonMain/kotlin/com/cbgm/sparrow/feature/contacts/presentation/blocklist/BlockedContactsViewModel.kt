@@ -2,24 +2,22 @@ package com.cbgm.sparrow.feature.contacts.presentation.blocklist
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.contacts.domain.usecase.BlockContactUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveBlockedContactsContextUseCase
 import com.cbgm.sparrow.feature.contacts.domain.usecase.UnblockContactUseCase
 import com.cbgm.sparrow.feature.contacts.presentation.blocklist.mapper.toBlockedContactsUiState
-import com.cbgm.sparrow.feature.contacts.presentation.blocklist.model.BlockedContactsEffect
 import com.cbgm.sparrow.feature.contacts.presentation.blocklist.model.BlockedContactsUiEvent
 import com.cbgm.sparrow.feature.contacts.presentation.blocklist.model.BlockedContactsUiState
 import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.toContactUi
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactUi
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -97,9 +95,6 @@ class BlockedContactsViewModel(
             initialValue = BlockedContactsUiState()
         )
 
-    private val _effects = Channel<BlockedContactsEffect>(capacity = Channel.BUFFERED)
-    val effects = _effects.receiveAsFlow()
-
     fun onUiEvent(event: BlockedContactsUiEvent) {
         when (event) {
             BlockedContactsUiEvent.BackClicked -> navigator.popBackStack()
@@ -150,6 +145,7 @@ class BlockedContactsViewModel(
                 .onSuccess {
                     clearAddContactForm()
                 }.onFailure { error ->
+                    SparrowLog.error("BlockedContactsViewModel", "Phone number could not be blocked", error)
                     actionState.update {
                         it.copy(
                             phoneNumberError = error.message ?: "Phone number could not be blocked"
@@ -190,11 +186,7 @@ class BlockedContactsViewModel(
                 .onSuccess {
                     clearAddContactForm()
                 }.onFailure { error ->
-                    _effects.send(
-                        BlockedContactsEffect.ShowError(
-                            message = error.message ?: "Blocked contacts could not be updated"
-                        )
-                    )
+                    SparrowLog.error("BlockedContactsViewModel", "Blocked contacts could not be updated", error)
                 }
 
             actionState.update { it.copy(processingContactId = null) }

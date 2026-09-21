@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.safety.presentation.details
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
@@ -89,6 +90,7 @@ class MessageSafetyDetailsViewModel(
                 .onSuccess {
                     blockActionState.value = BlockActionState()
                 }.onFailure { error ->
+                    SparrowLog.error("MessageSafetyDetailsViewModel", "Could not block contact", error)
                     blockActionState.value =
                         BlockActionState(
                             errorMessage = error.message ?: "Failed to block contact"

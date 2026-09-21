@@ -9,11 +9,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -74,13 +72,11 @@ fun DirectConversationScreen(
     contextState: MessageContextUiState<MessageBubbleUi>,
     indicatorState: IndicatorUiState,
     historyState: MessageHistoryUiState,
-    errorMessage: String?,
     modifier: Modifier = Modifier,
     onUiEvent: (DirectConversationUiEvent) -> Unit,
     onForwardMessageRequested: (String) -> Unit,
     onReconnectRequested: () -> Unit = {},
     reconnectBusy: Boolean = false,
-    reconnectFeedback: String? = null,
     targetMessageId: String? = null
 ) {
     var showIdentitySetupDialog by rememberSaveable { mutableStateOf(false) }
@@ -92,17 +88,6 @@ fun DirectConversationScreen(
     var messageContextAnchor by remember { mutableStateOf<MessageContextAnchor?>(null) }
     var reactionBurst by remember { mutableStateOf<MessageReactionBurst?>(null) }
     var feedbackOverlay by remember { mutableStateOf<FeedbackOverlayData?>(null) }
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    LaunchedEffect(reconnectFeedback) {
-        reconnectFeedback?.let { snackbarHostState.showSnackbar(it) }
-    }
-
-    LaunchedEffect(errorMessage) {
-        errorMessage?.let { message ->
-            snackbarHostState.showSnackbar(message)
-        }
-    }
 
     val clipboardWriter = rememberClipboardWriter()
     val copiedText = stringResource(Res.string.common_copied)
@@ -200,7 +185,6 @@ fun DirectConversationScreen(
             SparrowLazyScaffold(
                 modifier = Modifier.fillMaxSize(),
                 barColor = MaterialTheme.colorScheme.background,
-                snackbarHostState = snackbarHostState,
                 background = {
                     PatternBackground(
                         modifier = Modifier.fillMaxSize(),

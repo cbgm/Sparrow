@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.BinaryBitmap
 import com.google.zxing.DecodeHintType
@@ -42,6 +43,7 @@ actual fun QrScanner(
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
 
     val hasScanned = remember { AtomicBoolean(false) }
+    val frameFailureReported = remember { AtomicBoolean(false) }
 
     val previewView =
         remember {
@@ -62,7 +64,12 @@ actual fun QrScanner(
 
         val listener =
             Runnable {
-                val cameraProvider = cameraProviderFuture.get()
+                val cameraProvider = try {
+                    cameraProviderFuture.get()
+                } catch (failure: Exception) {
+                    SparrowLog.error("QrScanner", "Could not initialize camera", failure)
+                    return@Runnable
+                }
 
                 val preview =
                     Preview.Builder().build().also { cameraPreview ->
@@ -92,6 +99,7 @@ actual fun QrScanner(
                                     imageProxy = imageProxy,
                                     reader = reader,
                                     hasScanned = hasScanned,
+                                    frameFailureReported = frameFailureReported,
                                     onQrCodeScanned = { decodedValue ->
 
                                         ContextCompat
@@ -111,11 +119,8 @@ actual fun QrScanner(
                         preview,
                         imageAnalysis
                     )
-                } catch (_: Exception) {
-                /*
-                 * The UI remains visible. Camera errors can be
-                 * surfaced through a dedicated callback later.
-                 */
+                } catch (failure: Exception) {
+                    SparrowLog.error("QrScanner", "Could not bind camera to lifecycle", failure)
                 }
             }
 
@@ -144,6 +149,7 @@ private fun analyzeQrImage(
     imageProxy: ImageProxy,
     reader: MultiFormatReader,
     hasScanned: AtomicBoolean,
+    frameFailureReported: AtomicBoolean,
     onQrCodeScanned: (String) -> Unit
 ) {
     try {
@@ -194,10 +200,11 @@ private fun analyzeQrImage(
         /*
          * No QR code exists in this frame.
          */
-    } catch (_: Exception) {
-        /*
-         * Ignore malformed frames and continue scanning.
-         */
+    } catch (failure: Exception) {
+        // One report per camera session: a broken frame stream can fail 30 times/second.
+        if (frameFailureReported.compareAndSet(false, true)) {
+            SparrowLog.error("QrScanner", "QR frame could not be analyzed", failure)
+        }
     } finally {
         reader.reset()
         imageProxy.close()

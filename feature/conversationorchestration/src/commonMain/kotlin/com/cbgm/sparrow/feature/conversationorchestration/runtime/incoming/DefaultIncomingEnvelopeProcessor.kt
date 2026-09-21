@@ -49,8 +49,8 @@ class DefaultIncomingEnvelopeProcessor(
                     localEncryptionPrivateKey = keyPair.privateKey
                 )
             } catch (error: IncomingMessageRejectedException) {
-                logger.warn {
-                    "Incoming envelope rejected permanently: envelopeId=$envelopeId, reason=${error.message}"
+                logger.error(error) {
+                    "Incoming envelope rejected permanently: envelopeId=$envelopeId"
                 }
                 return@safeSuspendCall IncomingEnvelopeProcessingResult.Rejected
             }
@@ -58,8 +58,9 @@ class DefaultIncomingEnvelopeProcessor(
             try {
                 reconcileContactTransportRouting()
             } catch (error: Throwable) {
-                logger.warn {
-                    "Contact routing reconciliation failed after envelope $envelopeId: ${error.message}"
+                if (error is kotlinx.coroutines.CancellationException) throw error
+                logger.error(error) {
+                    "Contact routing reconciliation failed after envelope $envelopeId"
                 }
             }
 

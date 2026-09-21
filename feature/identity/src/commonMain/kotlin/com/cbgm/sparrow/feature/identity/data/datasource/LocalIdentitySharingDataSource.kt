@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.identity.data.datasource
 
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentityProvider
 import com.cbgm.sparrow.data.datastore.SparrowDataStore
 import kotlinx.coroutines.flow.Flow
@@ -24,7 +25,9 @@ internal class LocalIdentitySharingDataSource(
     }
 
     private suspend fun currentIdentityFingerprint(): String? =
-        localIdentity.getLocalPublicIdentity().getOrNull()?.signingPublicKey
+        localIdentity.getLocalPublicIdentity()
+            .onFailure { error -> SparrowLog.error("LocalIdentitySharingDataSource", "Could not read local identity", error) }
+            .getOrNull()?.signingPublicKey
             ?.joinToString(separator = "") { byte ->
                 (byte.toInt() and 0xff).toString(16).padStart(2, '0')
             }

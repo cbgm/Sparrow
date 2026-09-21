@@ -87,7 +87,7 @@ class SynchronizePendingMessagesUseCase(
         mailboxCoordinator
             .synchronizePending()
             .getOrElse { error ->
-                logger.warn(error) {
+                logger.error(error) {
                     "Mailbox synchronization failed during push wake-up; " +
                         "central push synchronization already completed"
                 }

@@ -161,7 +161,7 @@ class DirectConversationViewModel(
             }.let { context ->
                 if (context.remoteIdentity?.keyExchangeStatus != KeyExchangeStatus.MUTUAL) {
                     recoverManualIdentityExchange(contactId).onFailure { error ->
-                        logger.warn { "Manual identity exchange recovery failed: ${error.message}" }
+                        logger.error(error) { "Manual identity exchange recovery failed" }
                     }
                 }
             }
@@ -377,7 +377,7 @@ class DirectConversationViewModel(
     fun markConversationRead() {
         viewModelScope.launch {
             markConversationRead(conversationId)
-                .onFailure { error -> logger.warn(error) { "Could not mark direct conversation as read" } }
+                .onFailure { error -> logger.error(error) { "Could not mark direct conversation as read" } }
         }
     }
 
@@ -394,7 +394,7 @@ class DirectConversationViewModel(
                     result.oldestCursor?.let { cursor -> historyCursor.value = cursor }
                     hasMoreMessages.value = result.hasMore
                 }.onFailure { error ->
-                    logger.warn(error) { "Could not load older direct messages" }
+                    logger.error(error) { "Could not load older direct messages" }
                 }
             } finally {
                 isLoadingOlderMessages.value = false
@@ -412,7 +412,7 @@ class DirectConversationViewModel(
                         historyCursor.value = cursor
                     }
                 }.onFailure { error ->
-                    logger.warn(error) { "Could not load message history target $messageId" }
+                    logger.error(error) { "Could not load message history target $messageId" }
                 }
         }
     }
@@ -427,7 +427,7 @@ class DirectConversationViewModel(
                 .onSuccess { cursor ->
                     cursor?.let { historyCursor.value = it }
                 }.onFailure { error ->
-                    logger.warn(error) { "Could not load target direct message $messageId" }
+                    logger.error(error) { "Could not load target direct message $messageId" }
                 }
         }
     }
@@ -684,7 +684,7 @@ class DirectConversationViewModel(
                 // Delete each path independently: a missing original must not leak the thumbnail.
                 for (path in listOfNotNull(item.localFilePath, item.thumbnailFilePath).distinct()) {
                     runCatching { mediaFiles.delete(path) }
-                        .onFailure { error -> logger.warn(error) { "Could not clean up pending media" } }
+                        .onFailure { error -> logger.error(error) { "Could not clean up pending media" } }
                 }
             }
         }

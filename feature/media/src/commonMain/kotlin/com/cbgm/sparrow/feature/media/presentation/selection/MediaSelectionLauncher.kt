@@ -8,6 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.feature.media.device.GalleryPickerStrings
 import com.cbgm.sparrow.feature.media.device.rememberCameraCaptureLauncher
 import com.cbgm.sparrow.feature.media.device.rememberGalleryPickerLauncher
@@ -174,7 +175,10 @@ private fun rememberSubGalleryLauncher(
                     throw error
                 }
                 currentResult.value(MediaSelectionResult.Selected((nonGallery + mapped).take(maxItems)))
-            }.onFailure { error -> currentResult.value(MediaSelectionResult.Error(error.message ?: "Selected media could not be stored")) }
+            }.onFailure { error ->
+                SparrowLog.error("MediaSelectionLauncher", "Selected media could not be stored", error)
+                currentResult.value(MediaSelectionResult.Error(error.message ?: "Selected media could not be stored"))
+            }
         }
     },
     onDismissed = { currentResult.value(MediaSelectionResult.Dismissed) },
@@ -201,7 +205,10 @@ private fun rememberSubCameraLauncher(
         scope.launch {
             runCatching { captured.toMediaSelection(mediaFiles) }
                 .onSuccess { tryAdd(listOf(it)) }
-                .onFailure { currentResult.value(MediaSelectionResult.Error(it.message ?: "Camera media could not be stored")) }
+                .onFailure { error ->
+                    SparrowLog.error("MediaSelectionLauncher", "Camera media could not be stored", error)
+                    currentResult.value(MediaSelectionResult.Error(error.message ?: "Camera media could not be stored"))
+                }
         }
     },
     onDismissed = { currentResult.value(MediaSelectionResult.Dismissed) },

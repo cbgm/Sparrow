@@ -327,7 +327,7 @@ class DirectOutgoingMessageProcessor(
 
         runCatching { enqueue(contactId, packet) }
             .onFailure { error ->
-                logger.warn(error) {
+                logger.error(error) {
                     "Queued direct message could not be released after authorization: messageId=${message.id}"
                 }
             }

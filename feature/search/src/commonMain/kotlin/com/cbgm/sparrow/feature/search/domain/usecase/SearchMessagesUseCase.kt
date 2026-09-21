@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.search.domain.usecase
 
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchResult
 import com.cbgm.sparrow.feature.search.domain.repository.MessageSearchRepository
 import com.cbgm.sparrow.feature.search.domain.repository.SemanticSearchRepository
@@ -32,7 +33,8 @@ class SearchMessagesUseCase(
                 )
             } catch (cancellation: CancellationException) {
                 throw cancellation
-            } catch (_: Throwable) {
+            } catch (failure: Throwable) {
+                SparrowLog.error("SearchMessagesUseCase", "Semantic search failed; using exact matches", failure)
                 return exactResults
             }
 

@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.transport.push
 
+import com.cbgm.sparrow.feature.transport.controlplane.ControlPlaneRequestRejectedException
 import com.cbgm.sparrow.feature.transport.controlplane.ControlPlaneRequestRouter
 import com.cbgm.sparrow.feature.transport.routing.LocalRoutingIdProvider
 import io.ktor.client.HttpClient
@@ -44,8 +45,10 @@ class HttpPushTokenRegistrationGateway(
                             )
                         }
 
-                    check(response.status == HttpStatusCode.NoContent) {
-                        "Push-token registration failed with ${response.status}"
+                    if (response.status != HttpStatusCode.NoContent) {
+                        throw ControlPlaneRequestRejectedException(
+                            "Push-token registration rejected with ${response.status}"
+                        )
                     }
                 }.getOrThrow()
         }

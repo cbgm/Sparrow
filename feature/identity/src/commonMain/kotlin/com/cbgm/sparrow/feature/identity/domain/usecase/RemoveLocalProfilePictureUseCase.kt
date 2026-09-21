@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.identity.domain.usecase
 
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.identity.domain.repository.LocalProfilePictureRepository
 
@@ -10,9 +11,12 @@ class RemoveLocalProfilePictureUseCase(
         val previousChangedAt =
             repository
                 .get()
-                .getOrNull()
-                ?.changedAtEpochMilliseconds
-                ?: 0L
+                .getOrElse { failure ->
+                    SparrowLog.error("RemoveLocalProfilePictureUseCase", "Could not load existing profile picture", failure)
+                    return Result.failure(failure)
+                }
+                .changedAtEpochMilliseconds
+
         val changedAt =
             maxOf(
                 SystemClock.nowEpochMilliseconds(),

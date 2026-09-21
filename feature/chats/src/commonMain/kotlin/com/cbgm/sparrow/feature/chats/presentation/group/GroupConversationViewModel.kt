@@ -68,6 +68,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -313,6 +314,15 @@ class GroupConversationViewModel(
         )
 
     init {
+        // Context-load failures are not guaranteed to pass through setError().
+        viewModelScope.launch {
+            presentationContext
+                .map { observation -> observation.errorMessage }
+                .distinctUntilChanged()
+                .collect { message ->
+                    if (message != null) SparrowLog.error("GroupConversationViewModel", message)
+                }
+        }
         indicatorController.start(
             presentationContext.map { observation ->
                 observation.context?.administration?.currentMemberContactIds.orEmpty()
@@ -380,7 +390,7 @@ class GroupConversationViewModel(
     fun markConversationRead() {
         viewModelScope.launch {
             markConversationRead(groupId)
-                .onFailure { error -> logger.warn(error) { "Could not mark group conversation as read" } }
+                .onFailure { error -> logger.error(error) { "Could not mark group conversation as read" } }
         }
     }
 
@@ -397,7 +407,7 @@ class GroupConversationViewModel(
                     result.oldestCursor?.let { cursor -> historyCursor.value = cursor }
                     hasMoreMessages.value = result.hasMore
                 }.onFailure { error ->
-                    logger.warn(error) { "Could not load older group messages" }
+                    logger.error(error) { "Could not load older group messages" }
                 }
             } finally {
                 isLoadingOlderMessages.value = false
@@ -415,7 +425,7 @@ class GroupConversationViewModel(
                         historyCursor.value = cursor
                     }
                 }.onFailure { error ->
-                    logger.warn(error) { "Could not load message history target $messageId" }
+                    logger.error(error) { "Could not load message history target $messageId" }
                 }
         }
     }
@@ -430,7 +440,7 @@ class GroupConversationViewModel(
                 .onSuccess { cursor ->
                     cursor?.let { historyCursor.value = it }
                 }.onFailure { error ->
-                    logger.warn(error) { "Could not load target group message $messageId" }
+                    logger.error(error) { "Could not load target group message $messageId" }
                 }
         }
     }
@@ -702,7 +712,7 @@ class GroupConversationViewModel(
                 // Delete each path independently: a missing original must not leak the thumbnail.
                 for (path in listOfNotNull(item.localFilePath, item.thumbnailFilePath).distinct()) {
                     runCatching { mediaFiles.delete(path) }
-                        .onFailure { error -> logger.warn(error) { "Could not clean up pending media" } }
+                        .onFailure { error -> logger.error(error) { "Could not clean up pending media" } }
                 }
             }
         }

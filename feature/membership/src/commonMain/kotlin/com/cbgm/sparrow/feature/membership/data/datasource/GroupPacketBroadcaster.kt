@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.membership.data.datasource
 
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
 
@@ -12,6 +13,7 @@ internal class GroupPacketBroadcaster(
             packetsByContactId.forEach { (contactId, packet) ->
                 protocolOutbox.enqueue(contactId, packet)
                     .onFailure { error ->
+                        SparrowLog.error("GroupPacketBroadcaster", "Could not queue group packet for $contactId", error)
                         failures += "$contactId: ${error.message ?: error::class.simpleName.orEmpty()}"
                     }
             }

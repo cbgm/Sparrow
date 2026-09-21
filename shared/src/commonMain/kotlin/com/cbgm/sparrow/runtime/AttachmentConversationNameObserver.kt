@@ -38,7 +38,7 @@ class AttachmentConversationNameObserver internal constructor(
                         isGroup = isGroup
                     )
                 }.onFailure { error ->
-                    logger.warn(error) { "Could not update attachment display name for $conversationId" }
+                    logger.error(error) { "Could not update attachment display name for $conversationId" }
                 }
             }
         }

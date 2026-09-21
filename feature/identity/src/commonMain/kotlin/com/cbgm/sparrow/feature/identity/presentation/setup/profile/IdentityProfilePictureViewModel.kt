@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.identity.presentation.setup.profile
 
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarEditResult
 import com.cbgm.sparrow.feature.avatar.domain.usecase.ConsumeAvatarEditResultUseCase
@@ -47,6 +48,7 @@ class IdentityProfilePictureViewModel(
                 ).onSuccess {
                     action.value = Action()
                 }.onFailure { error ->
+                    SparrowLog.error("IdentityProfilePictureViewModel", "Profile picture change failed", error)
                     action.value = Action(errorMessage = error.message ?: "Profile picture could not be saved")
                 }
         }
@@ -59,6 +61,7 @@ class IdentityProfilePictureViewModel(
             removeLocalProfilePicture()
                 .onSuccess { action.value = Action() }
                 .onFailure { error ->
+                    SparrowLog.error("IdentityProfilePictureViewModel", "Profile picture change failed", error)
                     action.value = Action(errorMessage = error.message ?: "Profile picture could not be removed")
                 }
         }

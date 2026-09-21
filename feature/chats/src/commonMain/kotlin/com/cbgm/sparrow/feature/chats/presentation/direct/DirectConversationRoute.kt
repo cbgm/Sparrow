@@ -15,12 +15,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversationUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.forwarding.ForwardingSelectionRoute
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_chats_reconnect_queued
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -42,12 +44,10 @@ fun DirectConversationRoute(
     val contextState by viewModel.contextState.collectAsStateWithLifecycle()
     val indicatorState by viewModel.indicatorState.collectAsStateWithLifecycle()
     val historyState by viewModel.historyState.collectAsStateWithLifecycle()
-    val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
 
     val scope = rememberCoroutineScope()
     val reconnectSuccessText = stringResource(Res.string.feature_chats_reconnect_queued)
     var reconnectBusy by remember { mutableStateOf(false) }
-    var reconnectFeedback by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(contactId) {
         viewModel.markConversationRead()
@@ -79,22 +79,21 @@ fun DirectConversationRoute(
             contextState = contextState,
             indicatorState = indicatorState,
             historyState = historyState,
-            errorMessage = errorMessage,
             onUiEvent = viewModel::onUiEvent,
             reconnectBusy = reconnectBusy,
-            reconnectFeedback = reconnectFeedback,
             onReconnectRequested = {
                 if (!reconnectBusy) {
                     reconnectBusy = true
-                    reconnectFeedback = null
                     scope.launch {
                         try {
                             onRequestReconnect(contactId).fold(
-                                onSuccess = { reconnectFeedback = reconnectSuccessText },
-                                onFailure = { reconnectFeedback = it.message ?: "Could not queue a new invitation" }
+                                onSuccess = { SparrowLog.hint(reconnectSuccessText) },
+                                onFailure = { SparrowLog.error("DirectConversationRoute", "Could not queue a new invitation", it) }
                             )
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
                         } catch (error: Exception) {
-                            reconnectFeedback = error.message ?: "Could not queue a new invitation"
+                            SparrowLog.error("DirectConversationRoute", "Could not queue a new invitation", error)
                         } finally {
                             reconnectBusy = false
                         }

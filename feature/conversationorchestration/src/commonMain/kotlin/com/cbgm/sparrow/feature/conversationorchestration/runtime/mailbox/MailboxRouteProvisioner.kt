@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.runtime.mailbox
 
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.mailbox.LocalMailboxCredential
 import com.cbgm.sparrow.core.protocol.mailbox.MailboxCapabilityLifecycle
 import com.cbgm.sparrow.core.protocol.mailbox.MailboxRouteRepository
@@ -8,7 +9,6 @@ import com.cbgm.sparrow.core.protocol.packet.MailboxRoutePacket
 import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.GetMailboxContactStatesUseCase
-import com.cbgm.sparrow.feature.conversationorchestration.runtime.mailbox.MailboxCredentialFactory
 import com.cbgm.sparrow.feature.transport.discovery.NodeEndpointResolver
 import com.cbgm.sparrow.feature.transport.mailbox.MailboxGateway
 import com.cbgm.sparrow.feature.transport.routing.LocalRoutingIdProvider
@@ -28,14 +28,16 @@ class MailboxRouteProvisioner(
         runCatching {
             val now = SystemClock.nowEpochMilliseconds()
             val node = resolveMailboxNode()
-            mailboxCapabilityLifecycle.retryPendingRevocations().getOrNull()
+            mailboxCapabilityLifecycle.retryPendingRevocations()
+                .onFailure { failure -> SparrowLog.error("MailboxRouteProvisioner", "Retrying mailbox revocations failed", failure) }
             val blockedContactIds = contactBlocklistRepository.getBlockedContactIds()
             var provisioned = 0
 
             getMailboxContactStates().forEach { contactState ->
                 val contactId = contactState.contactId
                 if (contactId in blockedContactIds) {
-                    mailboxCapabilityLifecycle.revokeForContact(contactId).getOrNull()
+                    mailboxCapabilityLifecycle.revokeForContact(contactId)
+                        .onFailure { failure -> SparrowLog.error("MailboxRouteProvisioner", "Mailbox revocation failed for $contactId", failure) }
                     return@forEach
                 }
                 if (!contactState.isProvisioningEligible) return@forEach
@@ -92,14 +94,16 @@ class MailboxRouteProvisioner(
         if (current != null) {
             mailboxRouteRepository.markLocalRevocationPending(contactId).getOrThrow()
             mailboxGateway.revoke(current).getOrElse { revocationError ->
-                mailboxGateway.revoke(replacement).getOrNull()
+                mailboxGateway.revoke(replacement)
+                    .onFailure { failure -> SparrowLog.error("MailboxRouteProvisioner", "Mailbox replacement cleanup failed for $contactId", failure) }
                 throw revocationError
             }
             mailboxRouteRepository.deleteLocal(contactId).getOrThrow()
         }
 
         mailboxRouteRepository.saveLocal(replacement).getOrElse { persistenceError ->
-            mailboxGateway.revoke(replacement).getOrNull()
+            mailboxGateway.revoke(replacement)
+                .onFailure { failure -> SparrowLog.error("MailboxRouteProvisioner", "Mailbox replacement cleanup failed for $contactId", failure) }
             throw persistenceError
         }
     }

@@ -106,7 +106,7 @@ internal class ClientPresenceRouteSession(
             }
 
             is ClientPresenceRouteEffect.Fail -> {
-                logger.warn { "Presence route failed: ${effect.error.message ?: "unknown error"}" }
+                logger.error(effect.error) { "Presence route failed" }
                 onFailure(effect.error)
             }
         }
@@ -147,8 +147,8 @@ internal class ClientPresenceRouteSession(
         val aliases =
             localBootstrapRoutingIdProvider
                 .getLocalBootstrapRoutingId()
-                .getOrNull()
-                ?.let(::listOf)
+                .onFailure { failure -> SparrowLog.error("ClientPresenceRouteCoordinator", "Could not load bootstrap routing ID", failure) }
+                .getOrNull()?.let(::listOf)
                 .orEmpty()
 
         registrationFactory.create(
@@ -178,6 +178,7 @@ internal class ClientPresenceRouteSession(
 
     private suspend fun publishRegistration(registration: ClientRouteRegistration) {
         publishRoute(registration).onFailure { error ->
+            SparrowLog.error("ClientPresenceRouteCoordinator", "Client route publication failed", error)
             events.send(
                 ClientPresenceRouteEvent.RoutePublicationFailed(
                     error = error

@@ -162,9 +162,7 @@ class DefaultNodeEndpointResolver(
                 )
             )
         }.onFailure { error ->
-            logger.warn {
-                "Signed node directory could not be cached: ${error.message ?: "unknown error"}"
-            }
+            logger.error(error) { "Signed node directory could not be cached" }
         }
     }
 

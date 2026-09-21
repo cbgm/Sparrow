@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.search.presentation.overview
 
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchConversationType
@@ -103,7 +104,8 @@ class MessageSearchViewModel(
                         )
                 } catch (cancellation: CancellationException) {
                     throw cancellation
-                } catch (_: Throwable) {
+                } catch (failure: Throwable) {
+                    SparrowLog.error("MessageSearchViewModel", "Message search failed", failure)
                     if (_uiState.value.query != query) return@launch
                     _uiState.value =
                         _uiState.value.copy(

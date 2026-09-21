@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.settings.presentation.network
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
 import com.cbgm.sparrow.core.transport.ControlPlaneDirectorySynchronizer
 import com.cbgm.sparrow.core.transport.ControlPlaneEndpoint
@@ -140,7 +141,8 @@ class ControlPlaneSettingsViewModel(
                     clearAddDialogForm()
                     actionState.update { it.copy(addError = null) }
                     refreshAllNow()
-                }.onFailure {
+                }.onFailure { error ->
+                    SparrowLog.error("ControlPlaneSettingsViewModel", "Could not add control plane", error)
                     actionState.update { it.copy(addError = ControlPlaneSettingsError.SAVE_FAILED) }
                 }
         }
@@ -151,7 +153,8 @@ class ControlPlaneSettingsViewModel(
             configuration
                 .removeManual(url)
                 .onSuccess { refreshAllNow() }
-                .onFailure {
+                .onFailure { error ->
+                    SparrowLog.error("ControlPlaneSettingsViewModel", "Could not remove control plane", error)
                     actionState.update { state ->
                         state.copy(addError = ControlPlaneSettingsError.KEEP_ONE)
                     }
@@ -173,7 +176,8 @@ class ControlPlaneSettingsViewModel(
                 .onSuccess {
                     setDirectoryDraft(null)
                     refreshAllNow()
-                }.onFailure {
+                }.onFailure { error ->
+                    SparrowLog.error("ControlPlaneSettingsViewModel", "Could not save directory URL", error)
                     actionState.update { state ->
                         state.copy(directoryError = ControlPlaneDirectoryError.SAVE_FAILED)
                     }
@@ -224,6 +228,9 @@ class ControlPlaneSettingsViewModel(
                 directorySynchronizer.refresh()
             }
 
+        directoryResult.exceptionOrNull()?.let { error ->
+            SparrowLog.error("ControlPlaneSettingsViewModel", "Directory synchronization failed", error)
+        }
         healthMonitor.refresh()
         actionState.update { current ->
             current.copy(

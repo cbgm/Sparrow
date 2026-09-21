@@ -32,6 +32,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.FunctionalColors
@@ -282,6 +283,7 @@ private fun MessageFileList(
                     fileName = attachment.fileName,
                     mimeType = attachment.mimeType
                 ).onFailure { error ->
+                    SparrowLog.error("MessageAttachments", "File could not be opened", error)
                     onOpenError(error.message ?: "File could not be opened")
                 }
                 pendingFileId = null

@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.chats.presentation.verification
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
@@ -93,7 +94,8 @@ class GroupMemberQrVerificationViewModel(
                     )
                 }
                 navigator.popBackStack()
-            }.onFailure {
+            }.onFailure { failure ->
+                SparrowLog.error("GroupMemberQrVerificationViewModel", "Group member verification failed", failure)
                 _uiState.update { state ->
                     state.copy(
                         isProcessing = false,
@@ -125,12 +127,14 @@ class GroupMemberQrVerificationViewModel(
     private suspend fun validateIdentity(encodedIdentity: String): ScannedIdentityPreview? {
         val scannedIdentity =
             decodeSharedIdentity(encodedIdentity)
-                .getOrElse {
+                .getOrElse { failure ->
+                    SparrowLog.error("GroupMemberQrVerificationViewModel", "Invalid group identity QR", failure)
                     setError(GroupMemberQrVerificationError.INVALID_QR)
                     return null
                 }
         val expectedIdentity =
             getRemoteIdentity(contactId)
+                .onFailure { failure -> SparrowLog.error("GroupMemberQrVerificationViewModel", "Could not load remote identity", failure) }
                 .getOrNull()
 
         if (

@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.feature.avatar.presentation.editor.AvatarEditor
 import com.cbgm.sparrow.feature.avatar.presentation.editor.AvatarEditorStrings
 import com.cbgm.sparrow.feature.identity.device.IdentityBackupDocumentLauncher
@@ -169,10 +170,12 @@ fun IdentityRoute(
                             onStartRecoveryInvitation(peerId).fold(
                                 onSuccess = { recoveryInvitationQueued = true },
                                 onFailure = { error ->
+                                    SparrowLog.error("IdentityRoute", "Unable to queue recovery invitation", error)
                                     recoveryInvitationFeedback = error.message ?: "Unable to queue invitation"
                                 }
                             )
                         } catch (error: Exception) {
+                            SparrowLog.error("IdentityRoute", "Unable to queue recovery invitation", error)
                             recoveryInvitationFeedback = error.message ?: "Unable to queue invitation"
                         } finally {
                             recoveryInvitationBusy = false
@@ -254,8 +257,7 @@ fun IdentityRoute(
                     showAvatarEditor = false
                     pictureViewModel.removePicture()
                 },
-                onDismiss = { showAvatarEditor = false },
-                cropInFullScreenDialog = true
+                onDismiss = { showAvatarEditor = false }
             )
         }
     }

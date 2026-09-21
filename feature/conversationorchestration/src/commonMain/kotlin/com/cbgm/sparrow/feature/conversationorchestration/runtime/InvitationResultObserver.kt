@@ -45,7 +45,7 @@ class InvitationResultObserver internal constructor(
                         else -> null
                     }
                     recovery?.onFailure { error ->
-                        logger.warn(error) {
+                        logger.error(error) {
                             "Could not recover accepted invitation ${result.invitationId}"
                         }
                     }
@@ -59,7 +59,7 @@ class InvitationResultObserver internal constructor(
                 flowHandler
                     .onInvitationResult(result)
                     .onFailure { error ->
-                        logger.warn(error) {
+                        logger.error(error) {
                             "Invitation result workflow failed for invitationId=${result.invitationId}"
                         }
                     }

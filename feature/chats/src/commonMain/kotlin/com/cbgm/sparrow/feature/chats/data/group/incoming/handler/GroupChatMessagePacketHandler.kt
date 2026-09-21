@@ -99,7 +99,7 @@ class GroupChatMessagePacketHandler(
             remoteProfilePictureMetadataProcessor
                 .apply(context.contactId, groupPacket.profilePicture)
                 .onFailure { error ->
-                    logger.warn(error) { "Could not store profile picture for ${context.contactId}" }
+                    logger.error(error) { "Could not store profile picture for ${context.contactId}" }
                 }
 
             incomingMessageDataSource.saveMessage(

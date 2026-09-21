@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -78,7 +77,6 @@ fun GroupConversationScreen(
     indicatorState: IndicatorUiState,
     membershipState: GroupMembershipUiState,
     historyState: MessageHistoryUiState,
-    errorMessage: String?,
     onUiEvent: (GroupConversationUiEvent) -> Unit,
     onForwardMessageRequested: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -93,11 +91,6 @@ fun GroupConversationScreen(
     var messageContextAnchor by remember { mutableStateOf<MessageContextAnchor?>(null) }
     var reactionBurst by remember { mutableStateOf<MessageReactionBurst?>(null) }
     var feedbackOverlay by remember { mutableStateOf<FeedbackOverlayData?>(null) }
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    LaunchedEffect(errorMessage) {
-        errorMessage?.let { message -> snackbarHostState.showSnackbar(message) }
-    }
 
     LaunchedEffect(uiState.pinnedMessage) {
         if (uiState.pinnedMessage == null) showPinnedMessage = false
@@ -190,7 +183,6 @@ fun GroupConversationScreen(
             SparrowLazyScaffold(
                 modifier = Modifier.fillMaxSize(),
                 barColor = MaterialTheme.colorScheme.background,
-                snackbarHostState = snackbarHostState,
                 background = {
                     PatternBackground(
                         modifier = Modifier.fillMaxSize(),

@@ -25,7 +25,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -64,14 +63,12 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun AutoReplySettingsScreen(
     uiState: AutoReplyUiState,
-    snackbarHostState: SnackbarHostState,
     onUiEvent: (AutoReplyUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     SparrowLazyScaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
-        snackbarHostState = snackbarHostState,
         topBar = { color ->
             CenterAlignedTopAppBar(
                 title = {
@@ -346,7 +343,6 @@ private fun AutoReplySettingsScreenPreview() {
                                 )
                             )
                     ),
-                snackbarHostState = SnackbarHostState(),
                 onUiEvent = {}
             )
         }

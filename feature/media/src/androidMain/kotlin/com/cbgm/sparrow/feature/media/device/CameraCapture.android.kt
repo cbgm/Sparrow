@@ -42,6 +42,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.theme.FunctionalColors
 import com.cbgm.sparrow.feature.media.domain.model.CameraCaptureConfig
 import com.cbgm.sparrow.feature.media.domain.model.CameraCaptureType
@@ -193,6 +194,8 @@ private fun CameraCaptureDialog(
                         boundCamera.cameraControl.enableTorch(true)
                     }
                 }.onFailure { error ->
+                    SparrowLog.error("CameraCapture", "Media operation failed", error)
+
                     currentOnError(error.message ?: "Camera could not be opened")
                 }
             }
@@ -368,7 +371,10 @@ private fun capturePhoto(
                         bitmap.recycle()
                     }
                 }.onSuccess(onCaptured)
-                    .onFailure { error -> onError(error.message ?: "Photo could not be captured") }
+                    .onFailure { error ->
+                        SparrowLog.error("CameraCapture", "Photo could not be captured", error)
+                        onError(error.message ?: "Photo could not be captured")
+                    }
                 outputFile.delete()
             }
 
@@ -435,6 +441,8 @@ private fun startVideoRecording(
                                 outputFile.delete()
                                 onFinalized(captured, null)
                             }.onFailure { error ->
+                                SparrowLog.error("CameraCapture", "Media operation failed", error)
+
                                 outputFile.delete()
                                 onFinalized(null, error.message ?: "Video recording could not be read")
                             }

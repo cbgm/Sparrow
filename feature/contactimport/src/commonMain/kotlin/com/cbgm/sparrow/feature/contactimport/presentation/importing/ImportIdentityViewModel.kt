@@ -3,6 +3,7 @@ package com.cbgm.sparrow.feature.contactimport.presentation.importing
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.extensions.toFingerprint
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.contactimport.domain.usecase.ImportSharedIdentityUseCase
@@ -147,6 +148,7 @@ class ImportIdentityViewModel(
                     )
                 }
             }.onFailure { error ->
+                SparrowLog.error("ImportIdentityViewModel", "Could not import identity", error)
                 _uiState.update {
                     it.copy(
                         isImporting = false,

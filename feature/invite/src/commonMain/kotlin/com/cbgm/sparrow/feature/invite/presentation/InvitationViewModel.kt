@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.invite.presentation
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
@@ -14,13 +15,11 @@ import com.cbgm.sparrow.feature.invite.domain.usecase.ObserveInvitationsContextU
 import com.cbgm.sparrow.feature.invite.presentation.mapper.toInvitationDirection
 import com.cbgm.sparrow.feature.invite.presentation.mapper.toInvitationUiState
 import com.cbgm.sparrow.feature.invite.presentation.mapper.toInvitationsUiData
-import com.cbgm.sparrow.feature.invite.presentation.model.InvitationEffect
 import com.cbgm.sparrow.feature.invite.presentation.model.InvitationTab
 import com.cbgm.sparrow.feature.invite.presentation.model.InvitationUi
 import com.cbgm.sparrow.feature.invite.presentation.model.InvitationUiEvent
 import com.cbgm.sparrow.feature.invite.presentation.model.InvitationUiState
 import com.cbgm.sparrow.feature.invite.presentation.model.InvitationsUiData
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,7 +28,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -78,9 +76,6 @@ class InvitationViewModel(
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
             initialValue = InvitationUiState(selectedTab = initialTab)
         )
-
-    private val _effects = Channel<InvitationEffect>(capacity = Channel.BUFFERED)
-    val effects = _effects.receiveAsFlow()
 
     init {
         observeViewedTab()
@@ -169,11 +164,7 @@ class InvitationViewModel(
             processingInvitationId.value = invitationId
             val result = operation()
             result.onFailure { error ->
-                _effects.send(
-                    InvitationEffect.ShowError(
-                        message = error.message ?: "Invitation could not be updated"
-                    )
-                )
+                SparrowLog.error("InvitationViewModel", "Invitation could not be updated", error)
             }
 
             processingInvitationId.value = null

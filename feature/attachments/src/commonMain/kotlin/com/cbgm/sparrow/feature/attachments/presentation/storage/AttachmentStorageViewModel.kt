@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.attachments.presentation.storage
 
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.attachments.domain.usecase.ObserveAttachmentStorageSummariesUseCase
@@ -17,7 +18,10 @@ class AttachmentStorageViewModel(
     val uiState =
         observeAttachmentStorageSummaries()
             .map { summaries -> AttachmentStorageUiState.Content(summaries) as AttachmentStorageUiState }
-            .catch { error -> emit(AttachmentStorageUiState.Error(error.message ?: "Could not load attachment storage")) }
+            .catch { error ->
+                SparrowLog.error("AttachmentStorageViewModel", "Could not load attachment storage", error)
+                emit(AttachmentStorageUiState.Error(error.message ?: "Could not load attachment storage"))
+            }
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),

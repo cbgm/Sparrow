@@ -7,6 +7,7 @@ import com.cbgm.sparrow.feature.messaging.domain.usecase.ObserveMessagingFailure
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlin.time.Duration.Companion.milliseconds
 
 /** Application-specific recovery of durable, attempt-scoped Messaging failures. */
 class MessagingTransportResultObserver internal constructor(
@@ -30,13 +31,13 @@ class MessagingTransportResultObserver internal constructor(
                     throw error
                 } catch (error: Throwable) {
                     encounteredFailure = true
-                    logger.warn(error) {
+                    logger.error(error) {
                         "Failed to reconcile outgoing transport failure: packetId=${event.packetId}, attempt=${event.attemptCount}"
                     }
                 }
             }
             // Avoid spinning if a handler/DB error leaves a journal entry unacknowledged.
-            if (encounteredFailure) delay(RETRY_DELAY_MILLISECONDS)
+            if (encounteredFailure) delay(RETRY_DELAY_MILLISECONDS.milliseconds)
         }
     }
 

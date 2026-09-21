@@ -43,7 +43,7 @@ internal class LocalAttachmentDataSource(
                 fileDataSource.deleteLegacyContactAttachment(senderContactId, entity.id)
             }
         } catch (error: Throwable) {
-            logger.warn(error) { "Could not save Sparrow conversation copy for attachment ${entity.id}" }
+            logger.error(error) { "Could not save Sparrow conversation copy for attachment ${entity.id}" }
         }
     }
 

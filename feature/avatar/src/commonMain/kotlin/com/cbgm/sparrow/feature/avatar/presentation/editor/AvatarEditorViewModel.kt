@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.avatar.presentation.editor
 
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarEditResult
 import com.cbgm.sparrow.feature.avatar.domain.model.ProfilePictureCropRegion
@@ -36,6 +37,7 @@ internal class AvatarEditorViewModel(
                 .onSuccess { source ->
                     _uiState.value = AvatarEditorUiState(image = source.image)
                 }.onFailure { error ->
+                    SparrowLog.error("AvatarEditorViewModel", "Could not prepare profile picture", error)
                     _uiState.value = AvatarEditorUiState(error = error)
                 }
         }
@@ -52,6 +54,7 @@ internal class AvatarEditorViewModel(
                     _uiState.value = AvatarEditorUiState()
                     _result.emit(result)
                 }.onFailure { error ->
+                    SparrowLog.error("AvatarEditorViewModel", "Could not crop profile picture", error)
                     _uiState.value = current.copy(isCropping = false, error = error)
                 }
         }

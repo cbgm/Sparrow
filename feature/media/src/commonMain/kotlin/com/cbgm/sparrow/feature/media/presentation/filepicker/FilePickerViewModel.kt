@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.media.presentation.filepicker
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.navigation.requireRouteArgument
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
@@ -78,6 +79,7 @@ class FilePickerViewModel(
     }
 
     private fun handleFileAccessError(message: String) {
+        SparrowLog.error("FilePickerViewModel", message)
         sessions.reportError(sessionId, message)
         _uiState.update { state -> state.copy(errorMessage = message, isLoading = false) }
     }
@@ -282,6 +284,7 @@ class FilePickerViewModel(
     }
 
     private fun showError(error: Throwable) {
+        SparrowLog.error("FilePickerViewModel", "Files could not be loaded", error)
         val message = error.message ?: "Files could not be loaded"
         sessions.reportError(sessionId, message)
         _uiState.update { state -> state.copy(isLoading = false, isConfirming = false, errorMessage = message) }

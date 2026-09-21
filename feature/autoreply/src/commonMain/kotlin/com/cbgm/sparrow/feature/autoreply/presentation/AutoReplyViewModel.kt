@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.autoreply.presentation
 
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.ActivateAutoReplyUseCase
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.CreateAutoReplyUseCase
@@ -10,15 +11,12 @@ import com.cbgm.sparrow.feature.autoreply.domain.usecase.ObserveAutoRepliesUseCa
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.UpdateAutoReplyUseCase
 import com.cbgm.sparrow.feature.autoreply.presentation.mapper.toUiItem
 import com.cbgm.sparrow.feature.autoreply.presentation.model.AutoReplyEditorUiState
-import com.cbgm.sparrow.feature.autoreply.presentation.model.AutoReplyEffect
 import com.cbgm.sparrow.feature.autoreply.presentation.model.AutoReplyUiEvent
 import com.cbgm.sparrow.feature.autoreply.presentation.model.AutoReplyUiState
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -47,9 +45,6 @@ class AutoReplyViewModel(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = AutoReplyUiState()
         )
-
-    private val _effects = Channel<AutoReplyEffect>(capacity = Channel.BUFFERED)
-    val effects = _effects.receiveAsFlow()
 
     fun onUiEvent(event: AutoReplyUiEvent) {
         when (event) {
@@ -135,11 +130,7 @@ class AutoReplyViewModel(
         }
     }
 
-    private suspend fun showError(error: Throwable) {
-        _effects.send(
-            AutoReplyEffect.ShowSnackbar(
-                error.message ?: "Auto reply action failed"
-            )
-        )
+    private fun showError(error: Throwable) {
+        SparrowLog.error("AutoReplyViewModel", "Auto reply action failed", error)
     }
 }

@@ -57,7 +57,7 @@ class DirectMessagePacketHandler(
             remoteProfilePictureMetadataProcessor
                 .apply(context.contactId, packet.profilePicture)
                 .onFailure { error ->
-                    logger.warn(error) { "Could not store profile picture for ${context.contactId}" }
+                    logger.error(error) { "Could not store profile picture for ${context.contactId}" }
                 }
             updateSenderDisplayName(context.contactId, packet, context.receivedAtEpochMilliseconds)
 
@@ -153,7 +153,9 @@ class DirectMessagePacketHandler(
         conversationId: String,
         contactId: String
     ) {
-        val claimedReply = claimAutoReplyForContact(contactId).getOrNull() ?: return
+        val claimedReply = claimAutoReplyForContact(contactId)
+            .onFailure { failure -> logger.error(failure) { "Could not claim automatic reply for $contactId" } }
+            .getOrNull() ?: return
 
         val sendResult =
             outgoingMessageProcessor.send(
@@ -165,7 +167,7 @@ class DirectMessagePacketHandler(
 
         if (sendResult.isSuccess) return
 
-        logger.warn(sendResult.exceptionOrNull()) {
+        logger.error(sendResult.exceptionOrNull()) {
             "Auto reply could not be sent to contactId=$contactId"
         }
 
@@ -176,7 +178,7 @@ class DirectMessagePacketHandler(
                 expectedActivationSessionId = activationSessionId
             ).getOrThrow()
         }.onFailure { error ->
-            logger.warn(error) {
+            logger.error(error) {
                 "Could not release failed auto-reply claim for contactId=$contactId"
             }
         }

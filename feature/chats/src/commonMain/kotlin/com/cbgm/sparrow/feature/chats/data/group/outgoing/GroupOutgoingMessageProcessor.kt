@@ -434,7 +434,7 @@ class GroupOutgoingMessageProcessor(
                         errorMessage = error.message
                     )
                 }.onFailure { stateError ->
-                    logger.warn(stateError) {
+                    logger.error(stateError) {
                         "Could not persist failed group recipient state: packetId=${packet.packetId}"
                     }
                 }

@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.domain.usecase.group
 
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupDetailsContext
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupVerificationState
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupAvatarRepository
@@ -48,7 +49,10 @@ class ObserveGroupDetailsContextUseCase(
             conversationRepository
                 .observe(groupId)
                 .onStart { emit(null) }
-                .catch { emit(null) },
+                .catch { error ->
+                    SparrowLog.error("ObserveGroupDetailsContextUseCase", "Could not observe group details", error)
+                    emit(null)
+                },
             avatarRepository.observeMetadata(groupId),
             descriptionRepository.observe(groupId)
         ) { verification, administration, conversation, avatarMetadata, description ->

@@ -29,7 +29,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -80,14 +79,12 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun InvitationsScreen(
     uiState: InvitationUiState,
-    snackbarHostState: SnackbarHostState,
     onUiEvent: (InvitationUiEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
     SparrowLazyScaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
-        snackbarHostState = snackbarHostState,
         topBar = { containerColor ->
             TopAppBar(
                 title = {
@@ -572,7 +569,6 @@ private fun InvitationsScreenPreview() {
                             )
                         )
                 ),
-            snackbarHostState = SnackbarHostState(),
             onUiEvent = {}
         )
     }

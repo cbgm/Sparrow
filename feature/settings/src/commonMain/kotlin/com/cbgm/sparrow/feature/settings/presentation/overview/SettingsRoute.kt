@@ -2,13 +2,10 @@ package com.cbgm.sparrow.feature.settings.presentation.overview
 
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsEffect
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsUiEvent
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -28,20 +25,10 @@ fun SettingsRoute(
             viewModel.onUiEvent(event)
         }
     }
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    LaunchedEffect(viewModel) {
-        viewModel.effects.collect { event ->
-            when (event) {
-                is SettingsEffect.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
-            }
-        }
-    }
 
     SettingsScreen(
         uiState = uiState,
         modelDownloadPercent = modelDownloadPercent,
-        snackbarHostState = snackbarHostState,
         onUiEvent = onUiEvent,
         scrollState = scrollState,
         innerPadding = innerPadding,

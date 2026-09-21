@@ -19,7 +19,7 @@ class ContactBlockObserver internal constructor(
                 flowHandler.onContactBlocked(peerId)
                     .onSuccess { completed = completed + peerId }
                     .onFailure { error ->
-                        logger.warn(error) { "Could not revoke exchange for blocked contact $peerId" }
+                        logger.error(error) { "Could not revoke exchange for blocked contact $peerId" }
                     }
             }
         }

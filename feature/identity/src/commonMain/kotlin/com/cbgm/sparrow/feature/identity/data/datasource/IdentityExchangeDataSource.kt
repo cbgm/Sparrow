@@ -222,7 +222,9 @@ internal class IdentityExchangeDataSource(
                     IdentityHandshakeState.MUTUAL_UNVERIFIED -> latestAuthorizationEvent
                     else -> null
                 }
-            val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrNull()
+            val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity()
+                .onFailure { failure -> SparrowLog.error("IdentityExchangeDataSource", "Could not load local identity for exchange", failure) }
+                .getOrNull()
             if (
                 authorizationEvent != null &&
                 localIdentity != null &&

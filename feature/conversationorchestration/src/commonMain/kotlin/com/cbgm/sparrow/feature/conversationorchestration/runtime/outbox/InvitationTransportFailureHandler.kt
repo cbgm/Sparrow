@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.conversationorchestration.runtime.outbox
 
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.codec.PacketCodec
 import com.cbgm.sparrow.core.protocol.packet.ContactInvitePacket
 import com.cbgm.sparrow.core.protocol.packet.GroupInvitePacket
@@ -13,7 +14,11 @@ class InvitationTransportFailureHandler(
 ) {
     suspend fun onFailed(encodedPacket: ByteArray): Result<Unit> =
         runCatching {
-            when (val packet = packetCodec.decode(encodedPacket).getOrNull()) {
+            when (
+                val packet = packetCodec.decode(encodedPacket)
+                    .onFailure { failure -> SparrowLog.error("InvitationTransportFailureHandler", "Could not decode failed invitation packet", failure) }
+                    .getOrNull()
+            ) {
                 is ContactInvitePacket ->
                     invitationOutboxDeliveryHandler.onFailed(
                         payloadType = InvitationPayloadType.DIRECT,

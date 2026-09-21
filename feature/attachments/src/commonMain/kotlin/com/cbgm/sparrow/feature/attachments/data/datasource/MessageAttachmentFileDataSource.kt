@@ -1,6 +1,7 @@
 package com.cbgm.sparrow.feature.attachments.data.datasource
 
 import com.cbgm.sparrow.core.id.IdGenerator
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import okio.FileSystem
 import okio.Path
@@ -212,7 +213,8 @@ class MessageAttachmentFileDataSource(
     private fun readUtf8OrNull(path: Path): String? =
         try {
             fileSystem.read(path) { readUtf8() }
-        } catch (_: Throwable) {
+        } catch (error: Exception) {
+            SparrowLog.error("MessageAttachmentFileDataSource", "Could not read conversation ownership marker", error)
             null
         }
 
