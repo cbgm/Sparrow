@@ -3,14 +3,19 @@ package com.cbgm.sparrow.feature.settings.presentation.network.model
 data class ControlPlaneSettingsUiState(
     val entries: List<ControlPlaneUiModel> = emptyList(),
     val showAddDialog: Boolean = false,
+    val isEditingDirectory: Boolean = false,
     val newUrl: String = "",
+    val addSource: ControlPlaneAddSource = ControlPlaneAddSource.PLANE,
+    val jsonDirectoryUrl: String = "",
     val addError: ControlPlaneSettingsError? = null,
     val directoryUrl: String = "",
     val directoryDraft: String = "",
     val directoryError: ControlPlaneDirectoryError? = null,
+    val directoryFailureDetail: String? = null,
     val isRefreshing: Boolean = false,
     val isDirectorySyncing: Boolean = false,
-    val lastDirectoryCount: Int? = null
+    val lastDirectoryCount: Int? = null,
+    val manualRemovalError: String? = null
 ) {
     val availableCount: Int
         get() =
@@ -37,10 +42,19 @@ enum class ControlPlaneUiStatus {
     CHECKING
 }
 
+enum class ControlPlaneAddSource {
+    PLANE,
+    SIGNED_DIRECTORY,
+    JSON_LIST
+}
+
 enum class ControlPlaneUiSource {
     MANUAL,
     DIRECTORY,
-    MANUAL_AND_DIRECTORY
+    MANUAL_AND_DIRECTORY,
+    JSON_LIST,
+    MANUAL_AND_JSON_LIST,
+    NODE_HINT
 }
 
 enum class ControlPlaneSettingsError {
@@ -51,13 +65,13 @@ enum class ControlPlaneSettingsError {
 }
 
 enum class ControlPlaneDirectoryError {
-    INVALID_URL,
-    SAVE_FAILED,
     SYNC_FAILED
 }
 
 sealed interface ControlPlaneSettingsUiEvent {
     data object BackClicked : ControlPlaneSettingsUiEvent
+
+    data object EditDirectoryClicked : ControlPlaneSettingsUiEvent
 
     data object AddClicked : ControlPlaneSettingsUiEvent
 
@@ -68,6 +82,14 @@ sealed interface ControlPlaneSettingsUiEvent {
     data object Refresh : ControlPlaneSettingsUiEvent
 
     data object DirectoryApply : ControlPlaneSettingsUiEvent
+
+    data class AddSourceChanged(
+        val source: ControlPlaneAddSource
+    ) : ControlPlaneSettingsUiEvent
+
+    data object ClearJsonDirectory : ControlPlaneSettingsUiEvent
+
+    data object RemoveDirectory : ControlPlaneSettingsUiEvent
 
     data class NewUrlChanged(
         val value: String

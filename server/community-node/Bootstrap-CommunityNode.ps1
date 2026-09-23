@@ -237,7 +237,7 @@ function Read-LauncherConfiguration {
     $hint = New-Object System.Windows.Forms.Label
     $hint.Location = New-Object System.Drawing.Point(220, 176)
     $hint.Size = New-Object System.Drawing.Size(460, 36)
-    $hint.Text = "The directory URL must return JSON containing a controlPlanes array. This is the only configured source of control-plane addresses."
+    $hint.Text = "Directory Server HTTPS base URL; remote planes require a separately pinned Ed25519 verification key."
     $panel.Controls.Add($hint)
 
     $imageTagLabel = New-Object System.Windows.Forms.Label
@@ -397,67 +397,16 @@ function Initialize-NetworkConfiguration {
 function Get-DirectoryControlPlaneUrls {
     param(
         [Parameter(Mandatory = $true)][string]$DirectoryUrl,
-        [Parameter(Mandatory = $true)][string]$Mode
+        [Parameter(Mandatory = $true)][string]$Mode,
+        [Parameter(Mandatory = $true)][string]$PinnedPublicKey
     )
-
-    $response = Invoke-WebRequest -Uri $DirectoryUrl -Method Get -TimeoutSec 8 -UseBasicParsing
-    try {
-        $document = $response.Content | ConvertFrom-Json -ErrorAction Stop
-    } catch {
-        throw "Control-plane directory response is not valid JSON: $($_.Exception.Message)"
-    }
-
-    if ($null -eq $document.controlPlanes) {
-        throw "Control-plane directory response does not contain controlPlanes."
-    }
-
-    $urls = @(
-        $document.controlPlanes |
-            ForEach-Object { Normalize-ControlPlaneUrl -Value $_.ToString() -Mode $Mode } |
-            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
-            Select-Object -Unique
-    )
-
-    if ($urls.Count -eq 0) {
-        throw "Control-plane directory returned no control-plane addresses."
-    }
-
-    return $urls
-}
-
-function Get-CachedControlPlaneUrls {
-    param([Parameter(Mandatory = $true)][string]$Mode)
-
-    if (-not (Test-Path -LiteralPath $runtimeEnvironmentPath -PathType Leaf)) {
-        return @()
-    }
-
-    $runtime = Read-EnvironmentFile -Path $runtimeEnvironmentPath
-    $cachedValue = if ($runtime.ContainsKey("ADVERTISED_CONTROL_PLANE_URLS")) {
-            $runtime["ADVERTISED_CONTROL_PLANE_URLS"]
-        } elseif ($runtime.ContainsKey("CONTROL_PLANE_URLS")) {
-            $runtime["CONTROL_PLANE_URLS"]
-        } else {
-            ""
-        }
-
-    if ([string]::IsNullOrWhiteSpace($cachedValue)) {
-        return @()
-    }
-
-    $urls = [System.Collections.Generic.List[string]]::new()
-    foreach ($rawValue in ($cachedValue -split '[,;]')) {
-        try {
-            $normalized = Normalize-ControlPlaneUrl -Value $rawValue -Mode $Mode
-            if (-not [string]::IsNullOrWhiteSpace($normalized) -and -not $urls.Contains($normalized)) {
-                $urls.Add($normalized)
-            }
-        } catch {
-            Write-Log "Ignoring cached control-plane address '$rawValue': $($_.Exception.Message)"
-        }
-    }
-
-    return @($urls)
+    . (Join-Path (Split-Path -Parent $PSScriptRoot) 'Get-SparrowVerifiedDirectory.ps1')
+    $verified = @(Get-SparrowVerifiedDirectoryUrls `
+        -DirectoryUrl $DirectoryUrl `
+        -PinnedPublicKey $PinnedPublicKey `
+        -CacheFile (Join-Path $PSScriptRoot '.control-plane-directory-verified.json') `
+        -ClientScript (Join-Path (Split-Path -Parent $PSScriptRoot) 'control_plane_directory_client.py'))
+    return @($verified | ForEach-Object { Normalize-ControlPlaneUrl -Value $_ -Mode $Mode } | Select-Object -Unique)
 }
 
 function Wait-RetryInterval {
@@ -490,25 +439,29 @@ function Resolve-ConfiguredControlPlaneUrls {
         if ($localUrls.Count -eq 0) { throw 'sparrow.conf is missing CONTROL_PLANE_DIRECTORY_URL and CONTROL_PLANE_URLS.' }
         return @($localUrls)
     }
+    $pin = ([string]$Config['CONTROL_PLANE_DIRECTORY_PUBLIC_KEY']).Trim()
+    if (-not $pin) {
+        Write-Detail 'Directory signing key not pinned; continuing with local Control Plane only.'
+        if ($localUrls.Count -eq 0) { throw 'No local Control Plane and no trusted directory key are configured.' }
+        return @($localUrls)
+    }
     # Always consult a configured directory, even in Combined mode. The local
     # Control Plane is an additional candidate, not a replacement for wider
     # network discovery. Keep installed local connectivity if directory is down.
     while ($true) {
         Set-Status 'Loading control-plane directory...'
         try {
-            $remoteUrls = @(Get-DirectoryControlPlaneUrls -DirectoryUrl $directoryUrl -Mode $Mode)
+            $remoteUrls = @(Get-DirectoryControlPlaneUrls -DirectoryUrl $directoryUrl -Mode $Mode -PinnedPublicKey $pin)
             foreach ($url in $remoteUrls) {
                 if (-not $localUrls.Contains($url)) { $localUrls.Add($url) }
             }
             return @($localUrls)
         } catch {
             Write-Log "Control-plane directory unavailable: $($_.Exception.Message)"
-            $cachedUrls = @(Get-CachedControlPlaneUrls -Mode $Mode)
-            foreach ($url in $cachedUrls) {
-                if ($url -and -not $localUrls.Contains($url)) { $localUrls.Add($url) }
-            }
+            # The helper already authenticated the persistent directory cache.
+            # Never resurrect old unverified runtime addresses here.
             if ($localUrls.Count -gt 0) {
-                Write-Detail 'Directory unavailable; continuing with the local or cached control-plane addresses.'
+                Write-Detail 'Directory unavailable; continuing with locally configured or authenticated cached control planes.'
                 return @($localUrls)
             }
             Set-Status 'Control-plane directory unavailable. Retrying in 5 seconds...'
@@ -1355,6 +1308,8 @@ try {
         "CONTROL_PLANE_URL=$($controlPlane.ContainerUrl)",
         "CONTROL_PLANE_URLS=$($controlPlane.ContainerUrls -join ',')",
         "ADVERTISED_CONTROL_PLANE_URLS=$($controlPlane.AdvertisedUrls -join ',')",
+        "LOCAL_CONTROL_PLANE_DOMAIN=$($config['LOCAL_CONTROL_PLANE_DOMAIN'])",
+        "MANUAL_CONTROL_PLANE_URLS=$($config['CONTROL_PLANE_URLS'])",
         "CLIENT_ENDPOINT=$clientEndpoint",
         "FEDERATION_ENDPOINT=$httpEndpoint",
         "MAILBOX_ENDPOINT=$httpEndpoint",

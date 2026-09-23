@@ -7,7 +7,7 @@ if ! command -v python3 >/dev/null 2>&1; then
 fi
 if [[ $# -eq 0 ]]; then
   cat <<'HELP'
-Sparrow unified server — macOS/Linux terminal manager.
+Sparrow unified server — Control Plane + Community Node (macOS/Linux).
 
 Install both components for LAN:
   ./Start-SparrowServer.sh install --component combined --mode lan
@@ -28,7 +28,7 @@ Explicit destructive reinstall (not used by install):
     --confirm-delete-data
 
 Manage: replace status with start, stop, logs, or preflight;
-select --component node, control-plane, combined or proxy.
+the public installer always installs both components; --component node/control-plane/proxy is for internal lifecycle diagnostics only.
 
 For available options: ./Start-SparrowServer.sh --help
 

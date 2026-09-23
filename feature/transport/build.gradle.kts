@@ -1,3 +1,4 @@
+
 val isMacOs =
     System
         .getProperty("os.name")
@@ -10,6 +11,9 @@ plugins {
     alias(libs.plugins.sparrow.kmp.serialization)
     alias(libs.plugins.sparrow.kmp.testing)
 }
+
+// The directory signing key is learned on initial, verified HTTPS bootstrap
+// and pinned in persistent storage; it is never required in local.properties.
 
 kotlin {
     android {

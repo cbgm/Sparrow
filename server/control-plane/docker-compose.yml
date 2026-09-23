@@ -23,6 +23,7 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./index.html:/srv/index.html:ro
+      - ./directory-registration-proofs:/srv/directory-proofs:ro
       - caddy-data:/data
       - caddy-config:/config
     depends_on:

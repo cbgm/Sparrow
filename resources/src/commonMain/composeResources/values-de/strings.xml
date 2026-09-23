@@ -696,4 +696,12 @@
     <string name="feature_identity_own_fingerprint_description">Wenn ein Kontakt deine neue Identität prüfen muss, teile diesen Wert über einen anderen vertrauenswürdigen Kanal.</string>
     <string name="feature_identity_recovery_screen_scan">Identitäts-QR des Kontakts scannen</string>
     <string name="feature_identity_recovery_screen_scan_instructions">Bitte deinen Kontakt, auf seinem Telefon „Ich → Identität → Meine Identität teilen“ zu öffnen. Scanne den QR-Code auf DIESEM Telefon.</string>
+    <string name="feature_settings_control_plane_json_list">JSON-Liste</string>
+    <string name="feature_settings_control_plane_json_unverified">Unsignierte JSON-Liste: Adressen sind Vorschläge, keine signierten Verzeichnisidentitäten.</string>
+    <string name="feature_settings_control_plane_json_remove">JSON-Liste entfernen</string>
+
+    <string name="feature_settings_control_plane_directory_edit">Verzeichnis bearbeiten</string>
+    <string name="feature_settings_control_planes_discovered">Gefundene Control Planes</string>
+    <string name="feature_settings_control_planes_manually_added">Manuell hinzugefügte Control Planes</string>
+    <string name="feature_settings_control_plane_source_node_hint">Node-Erkennung</string>
 </resources>

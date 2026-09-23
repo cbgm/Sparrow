@@ -692,4 +692,12 @@
     <string name="feature_identity_own_fingerprint_description">When a contact needs to verify your new identity, share this value through a separate trusted channel.</string>
     <string name="feature_identity_recovery_screen_scan">Scan contact\'s identity QR</string>
     <string name="feature_identity_recovery_screen_scan_instructions">On your contact\'s phone, open Me → Identity → Share my identity. Scan the QR code displayed on THAT phone.</string>
+    <string name="feature_settings_control_plane_json_list">JSON list</string>
+    <string name="feature_settings_control_plane_json_unverified">Unsigned JSON list: addresses are suggestions, not signed directory identities.</string>
+    <string name="feature_settings_control_plane_json_remove">Remove JSON list</string>
+
+    <string name="feature_settings_control_plane_directory_edit">Edit directory</string>
+    <string name="feature_settings_control_planes_discovered">Discovered Control Planes</string>
+    <string name="feature_settings_control_planes_manually_added">Manually added Control Planes</string>
+    <string name="feature_settings_control_plane_source_node_hint">Node discovery</string>
 </resources>

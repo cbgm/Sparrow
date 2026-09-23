@@ -48,14 +48,14 @@ function Read-Settings([string]$Path) {
 $nodeSettings = Read-Settings (Join-Path $root 'community-node\sparrow.conf')
 $cpSettings = Read-Settings (Join-Path $root 'control-plane\sparrow.conf')
 
-$heading = New-Label 'One manager — independent Community Node and Control Plane' 22 12 780
+$heading = New-Label 'Sparrow Server — Control Plane + Community Node' 22 12 780
 $heading.Font = [System.Drawing.Font]::new('Segoe UI', 12, [System.Drawing.FontStyle]::Bold)
-New-Label 'Components' 22 52 | Out-Null
+New-Label 'Installed components' 22 52 | Out-Null
 $components = [System.Windows.Forms.ComboBox]::new()
 $components.Location = [System.Drawing.Point]::new(245, 48)
 $components.Size = [System.Drawing.Size]::new(535, 28)
 $components.DropDownStyle = 'DropDownList'
-[void]$components.Items.AddRange([object[]]@('Combined (default)', 'Community Node only', 'Control Plane only'))
+[void]$components.Items.Add('Control Plane + Community Node')
 $components.SelectedIndex = 0; $form.Controls.Add($components)
 New-Label 'Reachability' 22 88 | Out-Null
 $mode = [System.Windows.Forms.ComboBox]::new()
@@ -69,9 +69,9 @@ $nodeDomain.Text = [string]$nodeSettings['PUBLIC_DOMAIN']
 $cpLabel = New-Label 'Control Plane hostname (Public)' 22 160
 $cpDomain = New-Input 245 156 535
 $cpDomain.Text = [string]$cpSettings['PUBLIC_DOMAIN']
-$directoryLabel = New-Label 'Control Plane directory URL (optional for Combined)' 22 196
+$directoryLabel = New-Label 'Directory Server URL (HTTPS)' 22 196
 $directoryUrl = New-Input 245 192 535
-$directoryUrl.Text = [string]$nodeSettings['CONTROL_PLANE_DIRECTORY_URL']
+$directoryUrl.Text = if ($nodeSettings['CONTROL_PLANE_DIRECTORY_URL']) { [string]$nodeSettings['CONTROL_PLANE_DIRECTORY_URL'] } elseif ($cpSettings['CONTROL_PLANE_DIRECTORY_URL']) { [string]$cpSettings['CONTROL_PLANE_DIRECTORY_URL'] } else { [string]$env:CONTROL_PLANE_DIRECTORY_URL }
 New-Label 'Image prefix' 22 232 | Out-Null
 $imagePrefix = New-Input 245 228 535
 $imagePrefix.Text = if ($cpSettings['SPARROW_IMAGE_PREFIX']) { $cpSettings['SPARROW_IMAGE_PREFIX'] } elseif ($nodeSettings['SPARROW_IMAGE_PREFIX']) { $nodeSettings['SPARROW_IMAGE_PREFIX'] } else { 'ghcr.io/cbgm/sparrow' }
@@ -216,17 +216,11 @@ function Append-WorkerErrors([string]$Raw) {
 }
 function Update-Selection {
     $hasAttachment = Test-Path -LiteralPath $attachmentFile -PathType Leaf
-    if ($hasAttachment -and $components.Items.Count -eq 3) {
-        [void]$components.Items.Add('Shared public proxy only')
-    } elseif (-not $hasAttachment -and $components.Items.Count -eq 4) {
-        if ($components.SelectedIndex -eq 3) { $components.SelectedIndex = 0 }
-        $components.Items.RemoveAt(3)
-    }
     $start.Text = if ($hasAttachment) { 'Start existing' } else { 'Install / Start' }
     if ($hasAttachment) { $activity.Text = 'Cutover attached (validated on every action).' }
     $isPublic = $mode.SelectedIndex -eq 1
-    $nodeSelected = $components.SelectedIndex -in @(0,1)
-    $cpSelected = $components.SelectedIndex -in @(0,2)
+    $nodeSelected = $true
+    $cpSelected = $true
     $reinstallPublic.Enabled = -not $hasAttachment -and $components.SelectedIndex -eq 0 -and $isPublic
     $reinstallPublic.Visible = $isPublic
     $autoDns.Enabled = $isPublic -and -not $hasAttachment
@@ -235,7 +229,7 @@ function Update-Selection {
     $nodeLabel.Enabled = $nodeDomain.Enabled
     $cpDomain.Enabled = $isPublic -and $cpSelected -and -not $autoDns.Checked
     $cpLabel.Enabled = $cpDomain.Enabled
-    $directoryUrl.Enabled = -not $hasAttachment -and $components.SelectedIndex -in @(0,1)
+    $directoryUrl.Enabled = -not $hasAttachment
     $directoryLabel.Enabled = $directoryUrl.Enabled
     $firebase.Enabled = -not $hasAttachment -and $cpSelected -and $enablePush.Checked
     $browse.Enabled = $firebase.Enabled; $enablePush.Enabled = -not $hasAttachment -and $cpSelected
@@ -357,7 +351,7 @@ function Test-NeedsPublicReinstall {
 function Start-Task([string]$Action) {
     if ($script:busy) { return }
     $hasAttachment = Test-Path -LiteralPath $attachmentFile -PathType Leaf
-    $selection = @('Combined', 'Node', 'ControlPlane', 'Proxy')[$components.SelectedIndex]
+    $selection = 'Combined'
     if ($selection -eq 'Proxy' -and -not $hasAttachment) {
         [System.Windows.Forms.MessageBox]::Show('Attach a completed Step 8f cutover to manage its original shared proxy.', 'Sparrow Server') | Out-Null
         return
@@ -372,8 +366,7 @@ function Start-Task([string]$Action) {
     # action with its own confirmation is the only path that can erase data.
     # Do not change $Action to Reinstall based on incomplete local metadata.
     if ($Action -in @('Start','Reinstall') -and -not (Test-Path -LiteralPath $attachmentFile -PathType Leaf) -and $mode.SelectedIndex -eq 1 -and -not $autoDns.Checked) {
-        if (($selection -ne 'ControlPlane' -and -not $nodeDomain.Text.Trim()) -or
-            ($selection -ne 'Node' -and -not $cpDomain.Text.Trim())) {
+        if (-not $nodeDomain.Text.Trim() -or -not $cpDomain.Text.Trim()) {
             [System.Windows.Forms.MessageBox]::Show('Enter a hostname or select Caddy automatic public hostnames (no owned domain).','Sparrow Server') | Out-Null
             return
         }

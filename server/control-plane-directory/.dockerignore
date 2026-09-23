@@ -1,0 +1,9 @@
+**/*.pem
+**/*.sqlite*
+**/*.env
+private/
+**/__pycache__/
+test_*.py
+Start-SparrowDirectory.ps1
+Start-SparrowDirectory.cmd
+*.zip

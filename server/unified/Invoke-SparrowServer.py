@@ -466,18 +466,29 @@ def sync_installed_node_discovery(directory_url):
     require(mode in ("lan", "public"), "Installed node has invalid network mode.")
     selected_directory = directory_url or settings.get("CONTROL_PLANE_DIRECTORY_URL", "")
     raw = [u.strip() for u in settings.get("CONTROL_PLANE_URLS", "").replace(";", ",").split(",") if u.strip()]
+    # Runtime routing uses ONLY explicit local/manual endpoints as its static
+    # fallback. Signed directory entries belong to the dynamic, revocable
+    # worker publication, not to CONTROL_PLANE_URLS forever.
+    explicit_raw = list(raw)
     if selected_directory:
-        try:
-            with urlopen(selected_directory, timeout=10) as response:
-                document = json.load(response)
-            candidates = document.get("controlPlanes")
-            require(isinstance(candidates, list) and candidates and
-                    all(isinstance(entry, str) and entry.strip() for entry in candidates),
-                    "Control Plane directory requires a nonempty controlPlanes string list.")
-            raw.extend(candidates)
-        except Exception as exc:
-            require(raw, f"Control Plane directory unavailable; installed node unchanged: {exc}")
-            print(f"Control Plane directory unavailable; using configured local Control Plane: {exc}")
+        key = (settings.get("CONTROL_PLANE_DIRECTORY_PUBLIC_KEY") or
+               config("control-plane").get("CONTROL_PLANE_DIRECTORY_PUBLIC_KEY", ""))
+        if not key:
+            print("Signed Control Plane discovery disabled: no pinned directory verification key; keeping local/manual addresses.")
+        else:
+            try:
+                # Cryptography is optional for a self-contained local combined
+                # installation; never parse unverified remote data if absent.
+                from control_plane_directory_client import DirectoryError, discover
+                candidates, cache_status = discover(
+                    selected_directory, key,
+                    ROOT / "community-node" / ".control-plane-directory-verified.json")
+                raw.extend(candidates)
+                print("Control Plane directory:", cache_status)
+            except (ImportError, ValueError, OSError) as exc:
+                # A network failure or invalid response must not be treated as an
+                # unsigned JSON directory. Local/manual CP remains available.
+                print(f"Verified directory unavailable; keeping local/manual addresses: {exc}")
     advertised, inside = [], []
     for candidate in raw:
         value = candidate.strip().rstrip("/")
@@ -498,8 +509,26 @@ def sync_installed_node_discovery(directory_url):
         if internal not in inside:
             inside.append(internal)
     require(inside, "No available Control Planes; installed node unchanged.")
-    updates = {"CONTROL_PLANE_URL": inside[0], "CONTROL_PLANE_URLS": ",".join(inside),
-               "ADVERTISED_CONTROL_PLANE_URLS": ",".join(advertised)}
+    static_inside = []
+    for candidate in explicit_raw:
+        value = candidate.strip().rstrip("/")
+        parsed = urlparse(value)
+        internal = ("http://host.docker.internal:" + str(parsed.port or 80)
+                    if parsed.hostname in ("localhost", "127.0.0.1", "::1")
+                    else "http://sparrow-control-edge:8080"
+                    if mode == "public" and settings.get("SHARED_PROXY") == "true" and
+                    parsed.hostname == settings.get("LOCAL_CONTROL_PLANE_DOMAIN")
+                    else value)
+        if internal not in static_inside:
+            static_inside.append(internal)
+    require(static_inside, "Combined installation has no configured local Control Plane.")
+    updates = {"CONTROL_PLANE_URL": static_inside[0], "CONTROL_PLANE_URLS": ",".join(static_inside),
+               "ADVERTISED_CONTROL_PLANE_URLS": ",".join(advertised),
+               "LOCAL_CONTROL_PLANE_DOMAIN": settings.get("LOCAL_CONTROL_PLANE_DOMAIN", ""),
+               "MANUAL_CONTROL_PLANE_URLS": settings.get("CONTROL_PLANE_URLS", "")}
+    # Only configured local/manual URLs plus authenticated snapshot entries
+    # are advertised. Never restore opaque, previously unverified runtime URLs
+    # on an outage; the signed persistent cache above is the offline fallback.
     existing_config = settings.get("CONTROL_PLANE_DIRECTORY_URL", "")
     runtime_changed = any(values.get(key) != value for key, value in updates.items())
     if not runtime_changed and existing_config == selected_directory:
@@ -534,9 +563,113 @@ def update_backends(component, image_prefix, image_tag):
     dc(component, "up", "-d", "--no-deps", "--pull", "never", *BACKEND_SERVICES[component])
 
 
+def refresh_installed_control_plane_directory():
+    """Cache a cryptographically verified directory for this Control Plane.
+
+    This read-only operation is best effort, never writes Control Plane identity,
+    and retains an earlier verified snapshot on central directory failure.
+    """
+    if not runtime("control-plane").is_file():
+        return
+    settings = config("control-plane")
+    url = settings.get("CONTROL_PLANE_DIRECTORY_URL", "")
+    pin = settings.get("CONTROL_PLANE_DIRECTORY_PUBLIC_KEY", "")
+    if not url or not pin:
+        return
+    try:
+        from control_plane_directory_client import discover
+        _, state = discover(url, pin, ROOT / "control-plane" / ".control-plane-directory-verified.json")
+        print("Control Plane signed directory:", state)
+    except (ImportError, OSError, ValueError) as exc:
+        print("Control Plane directory refresh deferred; local Control Plane remains available: " + str(exc)[:200])
+
+
+def start_directory_sync_best_effort():
+    """Start the persistent Docker worker separately from message transport.
+
+    The image is built from public verifier files only. Build/polling failures
+    are never fatal to running Caddy, node, or Control Plane containers.
+    """
+    cp = config("control-plane")
+    if (cp.get("MODE") != "public" or not cp.get("CONTROL_PLANE_DIRECTORY_URL") or not cp.get("CONTROL_PLANE_DIRECTORY_PUBLIC_KEY")):
+        return
+    if not runtime("node").is_file() or not (ROOT / "public-proxy" / "Caddyfile").is_file():
+        return
+    try:
+        result = run([*compose("proxy")[:], "--profile", "directory", "up", "-d", "--no-deps", "directory-sync"],
+                     cwd=ROOT / "public-proxy", capture=True, check=False)
+        if result.returncode:
+            print("Directory background refresh unavailable; paired server remains online: " +
+                  ((result.stderr or result.stdout) or "worker image not available")[:250])
+        else:
+            print("Directory background synchronization enabled (15-minute interval).")
+    except (OSError, ValueError, subprocess.TimeoutExpired, InstallerError) as exc:
+        print("Directory background refresh deferred; paired server remains online: " + str(exc)[:200])
+
+
+def register_installed_public_control_plane():
+    """Best effort only: a central directory outage must never block messaging.
+
+    Provisioned URL + independently pinned signer opt the public plane in.
+    Directory approval remains a separate action performed by its operator.
+    """
+    cp = config("control-plane")
+    if cp.get("MODE") != "public" or not runtime("control-plane").is_file():
+        return
+    url = cp.get("CONTROL_PLANE_DIRECTORY_URL", "")
+    pin = cp.get("CONTROL_PLANE_DIRECTORY_PUBLIC_KEY", "")
+    hostname = cp.get("PUBLIC_DOMAIN", "")
+    if not url or not pin or not hostname:
+        return
+    identity = ROOT / "control-plane" / "secrets" / "registry-root.identity"
+    if not identity.is_file():
+        print("Directory registration skipped: existing Control Plane root identity not ready.")
+        return
+    if not (ROOT / "public-proxy" / "Caddyfile").is_file():
+        print("Directory registration skipped: public HTTPS proxy is not ready.")
+        return
+    marker = ROOT / "control-plane" / ".directory-registration-last-attempt"
+    import time
+    if (marker.is_file() and marker.stat().st_mtime >= max(
+            identity.stat().st_mtime, (ROOT / "control-plane" / "sparrow.conf").stat().st_mtime)
+            and time.time() - marker.stat().st_mtime < 9 * 60):
+        return
+    helper = ROOT / "control_plane_directory_registration.py"
+    if not helper.is_file():
+        print("Directory registration client missing; local Control Plane remains available.")
+        return
+    # The manager needs only its standard-library Python. Ed25519 lives in a
+    # tightly scoped one-shot Docker client; no cryptography on the host.
+    # DO NOT use --env-file control-plane/sparrow.conf: it may hold other data.
+    # Only three explicit, non-admin configuration values cross this boundary.
+    cmd_base = [*compose("proxy"), "--profile", "registration"]
+    built = run([*cmd_base, "build", "directory-register"],
+                cwd=ROOT / "public-proxy", capture=True, check=False)
+    if built.returncode:
+        print("Directory registration deferred: one-shot client image unavailable; local server remains online: " +
+              ((built.stderr or built.stdout) or "Docker build failed")[:230])
+        return
+    result = run([*cmd_base, "run", "--rm", "--no-deps",
+                  "-e", "CONTROL_PLANE_DIRECTORY_URL=" + url,
+                  "-e", "CONTROL_PLANE_DIRECTORY_PUBLIC_KEY=" + pin,
+                  "-e", "SPARROW_REGISTRATION_PLANE_URL=https://" + hostname,
+                  "directory-register"], cwd=ROOT / "public-proxy",
+                 capture=True, check=False)
+    if result.returncode:
+        print("Directory registration deferred (local server remains online): " +
+              (result.stderr.strip() or "registration client failed")[:250])
+        return
+    print("Directory registration: " + result.stdout.strip()[:220])
+    marker.touch()
+
+
 def install(args):
     components = selected(args.component)
-    require(args.component != "proxy", "Select Node, Control Plane, or Combined to install.")
+    require(args.component == "combined", "Sparrow installation requires Combined (Control Plane + Community Node).")
+    # Reuse the installed directory bootstrap if the operator leaves the field
+    # unspecified on a normal update; a provided URL overrides it explicitly.
+    args.directory_url = (args.directory_url or config("node").get("CONTROL_PLANE_DIRECTORY_URL", "")
+                          or config("control-plane").get("CONTROL_PLANE_DIRECTORY_URL", ""))
     validate_hosts(args.node_domain, args.control_domain)
     if args.mode == "public" and (ROOT / "public-proxy" / "Caddyfile").is_file():
         # Do not start a new backend before discovering that its hostname would
@@ -589,11 +722,20 @@ def install(args):
     if "node" in components and runtime("node").is_file():
         sync_installed_node_discovery(args.directory_url)
     # Read-only preflight above is complete; no existing runtime or old volume is overwritten.
+    if runtime("control-plane").is_file():
+        update_installed_properties(ROOT / "control-plane" / "sparrow.conf",
+                                    {"CONTROL_PLANE_DIRECTORY_URL": args.directory_url})
     if args.mode == "public":
+        # Docker must mount a user-writable, non-secret proof directory; do not
+        # let Compose create an unwritable root-owned host directory.
+        (ROOT / "control-plane" / "directory-registration-proofs").mkdir(
+            parents=True, exist_ok=True)
         ensure_public_network()
     if "control-plane" in components and not runtime("control-plane").exists():
         write_config("control-plane", {"CONFIGURED": "true", "MODE": args.mode,
                       "PUBLIC_DOMAIN": args.control_domain, "SHARED_PROXY": "true" if args.mode == "public" else "false",
+                      "CONTROL_PLANE_DIRECTORY_URL": args.directory_url,
+                      "CONTROL_PLANE_DIRECTORY_PUBLIC_KEY": config("control-plane").get("CONTROL_PLANE_DIRECTORY_PUBLIC_KEY", ""),
                       "SPARROW_IMAGE_PREFIX": args.image_prefix, "SPARROW_IMAGE_TAG": args.image_tag})
         if args.firebase_file:
             dest = ROOT / "control-plane" / "secrets" / "firebase-admin.json"
@@ -608,6 +750,8 @@ def install(args):
                       "SHARED_PROXY": "true" if args.mode == "public" else "false",
                       "LOCAL_CONTROL_PLANE_DOMAIN": args.control_domain if args.component == "combined" and args.mode == "public" else "",
                       "CONTROL_PLANE_DIRECTORY_URL": args.directory_url,
+                      "CONTROL_PLANE_DIRECTORY_PUBLIC_KEY": (config("node").get("CONTROL_PLANE_DIRECTORY_PUBLIC_KEY", "") or
+                                                             config("control-plane").get("CONTROL_PLANE_DIRECTORY_PUBLIC_KEY", "")),
                       "CONTROL_PLANE_URLS": cp_url,
                       "SPARROW_IMAGE_PREFIX": args.image_prefix, "SPARROW_IMAGE_TAG": args.image_tag})
         run(["bash", str(ROOT / "community-node" / "bootstrap-community-node.sh")])
@@ -615,15 +759,32 @@ def install(args):
         entries = installed_public()
         candidate = render_proxy(entries)
         proxy = ROOT / "public-proxy" / "Caddyfile"
-        if proxy.exists():
-            # Reconfiguration of live certificate routing requires separate review.
-            require(proxy.read_text(encoding="utf-8") == candidate,
+        if proxy.exists() and proxy.read_text(encoding="utf-8") != candidate:
+            # Allow ONLY this revision's additive proof route on an already
+            # configured Combined installation. Keep all existing hostnames,
+            # HTTPS certificates, identities and any unrelated routing intact.
+            previous = candidate.replace(
+                "    # Serve only short-lived proof files from a dedicated non-secret directory.\n"
+                "    # A separate proxy mounts this directory at the same absolute location.\n"
+                "    @directory_registration path_regexp directory_registration ^/\\.well-known/sparrow-directory-registration/[A-Za-z0-9_-]{32}$\n"
+                "    handle @directory_registration {\n"
+                "        root * /srv/control-plane/directory-proofs\n"
+                "        header Cache-Control \"no-store\"\n"
+                "        file_server\n"
+                "    }\n\n", "")
+            require(proxy.read_text(encoding="utf-8") == previous,
                     "Existing Public proxy routes differ. Refusing automatic mutation; use a reviewed cutover.")
-        else:
             proxy.write_text(candidate, encoding="utf-8")
+        elif not proxy.exists():
+            proxy.write_text(candidate, encoding="utf-8")
+        # The shared Caddy container binds this dedicated public-only folder read-only.
+        # Never mount the Control Plane secrets directory into the public proxy.
+        (ROOT / "control-plane" / "directory-registration-proofs").mkdir(parents=True, exist_ok=True)
         existing_proxy = docker("ps", "--all", "--filter", "label=com.docker.compose.project=sparrow-public-proxy",
                                 "--format", "{{.ID}}", capture=True).stdout.strip()
-        dc("proxy", "start") if existing_proxy else dc("proxy", "up", "-d")
+        # Compose up recreates Caddy only when needed (new read-only proof mount)
+        # and retains its persistent certificate volumes.
+        dc("proxy", "up", "-d")
     # Configure new credentials on an already installed Control Plane before the
     # normal backend update. A freshly bootstrapped CP already imported them.
     if args.firebase_file and runtime("control-plane").is_file():
@@ -634,6 +795,13 @@ def install(args):
         if runtime(component).is_file():
             update_backends(component, args.image_prefix, args.image_tag)
     public_addresses()
+    start_directory_sync_best_effort()
+    refresh_installed_control_plane_directory()
+    if args.mode == "public":
+        try:
+            register_installed_public_control_plane()
+        except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
+            print("Directory registration deferred; local server remains available: " + str(exc)[:200])
     if args.verify_public and args.component == "combined" and args.mode == "public":
         verify_combined_public()
     print("Sparrow installed/started; backend images checked via GHCR. Verify health and messaging on real devices.")
@@ -660,17 +828,30 @@ def lifecycle(args):
     # Combined stop/start only touches proxy when both backends are selected.
     if args.component == "combined" and (ROOT / "public-proxy" / "Caddyfile").is_file():
         if args.action == "stop":
+            # Profiled services are NOT included in an ordinary compose stop.
+            # Stop the autonomous worker as well when the combined server stops.
+            run([*compose("proxy"), "--profile", "directory", "stop", "directory-sync"],
+                cwd=ROOT / "public-proxy", check=False, capture=True)
             dc("proxy", "stop")
         elif args.action in {"start", "restart"}:
             dc("proxy", "start")
         elif args.action in {"status", "logs"}:
             dc("proxy", "ps", "--all") if args.action == "status" else dc("proxy", "logs", "--no-color", "--tail", "120")
+    if args.action in {"start", "restart"} and "control-plane" in components:
+        start_directory_sync_best_effort()
+        refresh_installed_control_plane_directory()
+        if config("control-plane").get("MODE") == "public":
+            try:
+                register_installed_public_control_plane()
+            except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
+                print("Directory registration deferred; server is still running: " + str(exc)[:200])
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Sparrow unified server — macOS/Linux terminal manager")
     parser.add_argument("action", choices=("install", "reinstall-public", "start", "stop", "restart", "status", "logs", "preflight"))
-    parser.add_argument("--component", choices=("combined", "node", "control-plane", "proxy"), default="combined")
+    parser.add_argument("--component", choices=("combined", "node", "control-plane", "proxy"), default="combined",
+                        help="install: combined only; individual components are for internal lifecycle diagnostics")
     parser.add_argument("--mode", choices=("lan", "public"), default=None)
     parser.add_argument("--node-domain", default="")
     parser.add_argument("--control-domain", default="")

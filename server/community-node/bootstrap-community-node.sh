@@ -75,67 +75,45 @@ http_ready() {
   return 1
 }
 
-fetch_url() {
-  local url="$1"
-  if command -v curl >/dev/null 2>&1; then
-    curl --fail --silent --show-error --max-time 8 "$url" 2>/dev/null
-    return
-  fi
-  if command -v wget >/dev/null 2>&1; then
-    wget --quiet --timeout=8 --output-document=- "$url" 2>/dev/null
-    return
-  fi
-  return 1
-}
-
-parse_control_plane_directory() {
-  # The cross-platform manager already requires Python3. Parse the actual JSON
-  # document instead of guessing at a JSON array with sed (which can accept
-  # malformed data and accidentally copy objects into an endpoint list).
-  python3 -c 'import json, sys
-try:
-    entries = json.load(sys.stdin)["controlPlanes"]
-    if not isinstance(entries, list) or not entries or any(not isinstance(x, str) or not x.strip() for x in entries):
-        raise ValueError("controlPlanes must be a nonempty string list")
-    print(",".join(dict.fromkeys(x.strip() for x in entries)))
-except (ValueError, TypeError, KeyError, json.JSONDecodeError):
-    sys.exit(1)' <<< "$1"
-}
-
 resolve_configured_control_planes() {
   local local_urls="$CONTROL_PLANE_URLS"
-  local directory_urls=""
   if [[ -z "${CONTROL_PLANE_DIRECTORY_URL:-}" ]]; then
-    if [[ -z "$local_urls" ]]; then
-      echo "sparrow.conf is missing CONTROL_PLANE_DIRECTORY_URL and CONTROL_PLANE_URLS." >&2
-      exit 1
-    fi
+    [[ -n "$local_urls" ]] || { echo "No local Control Plane is configured." >&2; exit 1; }
     return
   fi
-
-  # A Combined installation supplies a local Control Plane AND optionally a
-  # wider directory. The local address must not suppress directory discovery.
-  while [[ -z "$directory_urls" ]]; do
-    local document
-    document="$(fetch_url "$CONTROL_PLANE_DIRECTORY_URL" || true)"
-    directory_urls="$(parse_control_plane_directory "$document" || true)"
-    if [[ -z "$directory_urls" ]]; then
-      if [[ -n "$local_urls" ]]; then
-        echo "Control-plane directory unavailable; continuing with locally configured control plane." >&2
-        return
-      fi
-      # Preserve the last known valid addresses if the directory is offline.
-      if [[ -f "$RUNTIME_ENV" ]]; then
-        local cached
-        cached="$(grep -E '^ADVERTISED_CONTROL_PLANE_URLS=' "$RUNTIME_ENV" | tail -n 1 | cut -d= -f2- || true)"
-        if [[ -n "$cached" ]]; then CONTROL_PLANE_URLS="$cached"; return; fi
-      fi
-      echo "Control-plane directory unavailable; retrying in 5 seconds." >&2
-      sleep 5
-    fi
-  done
-  # Deduplicate the comma-separated addresses so registration can reach both.
-  CONTROL_PLANE_URLS="$(printf '%s\n' "$local_urls,$directory_urls" | tr ',;' '\n' | awk 'NF && !seen[$0]++' | paste -sd, -)"
+  # The combined installation has its own CP even if the external directory
+  # is offline, unsigned, expired or the optional Python crypto dependency is
+  # unavailable. Never parse unsigned remote JSON into candidate addresses.
+  if [[ -z "${CONTROL_PLANE_DIRECTORY_PUBLIC_KEY:-}" ]]; then
+    echo "No pinned directory public key; using local Control Plane only." >&2
+    [[ -n "$local_urls" ]] || exit 1
+    return
+  fi
+  local client="$SCRIPT_DIR/../control_plane_directory_client.py"
+  if [[ ! -f "$client" ]]; then
+    echo "Signed directory client missing; continuing with local Control Plane." >&2
+    [[ -n "$local_urls" ]] || exit 1
+    return
+  fi
+  local verified
+  verified="$(python3 "$client" --url "$CONTROL_PLANE_DIRECTORY_URL" \
+    --public-key "$CONTROL_PLANE_DIRECTORY_PUBLIC_KEY" \
+    --cache "$SCRIPT_DIR/.control-plane-directory-verified.json" 2>/dev/null || true)"
+  local directory_urls=""
+  if [[ -n "$verified" ]]; then
+    directory_urls="$(python3 -c 'import json,sys
+try:
+ v=json.load(sys.stdin)["controlPlanes"]
+ if not isinstance(v,list) or any(not isinstance(x,str) for x in v): raise ValueError()
+ print(",".join(v))
+except (ValueError, KeyError, TypeError): sys.exit(1)' <<< "$verified" || true)"
+  fi
+  if [[ -n "$directory_urls" ]]; then
+    CONTROL_PLANE_URLS="$(printf '%s\n' "$local_urls,$directory_urls" | tr ',;' '\n' | awk 'NF && !seen[$0]++' | paste -sd, -)"
+  else
+    echo "Verified directory unavailable; keeping the local Control Plane." >&2
+    [[ -n "$local_urls" ]] || exit 1
+  fi
 }
 
 resolve_configured_control_planes
@@ -320,6 +298,8 @@ COMMUNITY_NODE_DOMAIN=$PUBLIC_DOMAIN
 CONTROL_PLANE_URL=$(container_control_plane_url "$CONTROL_PLANE_URL")
 CONTROL_PLANE_URLS=$(container_control_plane_urls)
 ADVERTISED_CONTROL_PLANE_URLS=$(advertised_control_plane_urls)
+LOCAL_CONTROL_PLANE_DOMAIN=$(grep -E '^LOCAL_CONTROL_PLANE_DOMAIN=' "$CONFIG_FILE" | tail -n 1 | cut -d= -f2- || true)
+MANUAL_CONTROL_PLANE_URLS=$(grep -E '^CONTROL_PLANE_URLS=' "$CONFIG_FILE" | tail -n 1 | cut -d= -f2- || true)
 CLIENT_ENDPOINT=$CLIENT_ENDPOINT
 FEDERATION_ENDPOINT=$HTTP_ENDPOINT
 MAILBOX_ENDPOINT=$HTTP_ENDPOINT

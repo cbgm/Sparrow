@@ -21,6 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import java.nio.file.Path
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 
 internal fun createManagedHttpClient(suppliedHttpClient: HttpClient?): ManagedHttpClient =
@@ -41,13 +42,20 @@ internal fun createFederationRuntime(
     config: FederationConfig,
     httpClient: HttpClient
 ): FederationRuntime {
+    // The worker publishes only directory-signature-verified public origins.
+    // Configured local/manual planes remain separate and always take priority.
+    val discoveryFile = System.getenv("DIRECTORY_DISCOVERY_PATH")
+        ?.takeIf(String::isNotBlank)
+        ?.let { Path.of(it) }
     val registryEndpointPool =
         ControlPlaneEndpointPool(
-            config.controlPlaneUrls.ifEmpty { listOf(config.nodeRegistryUrl) }
+            config.controlPlaneUrls.ifEmpty { listOf(config.nodeRegistryUrl) },
+            discoveryFile = discoveryFile
         )
     val presenceEndpointPool =
         ControlPlaneEndpointPool(
-            config.controlPlaneUrls.ifEmpty { listOf(config.presenceDirectoryUrl) }
+            config.controlPlaneUrls.ifEmpty { listOf(config.presenceDirectoryUrl) },
+            discoveryFile = discoveryFile
         )
     val registry = CachingNodeRegistryClient(httpClient, registryEndpointPool)
     val localGateway =

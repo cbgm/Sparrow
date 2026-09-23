@@ -32,10 +32,12 @@ import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlane
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiSource
 import com.cbgm.sparrow.feature.settings.presentation.network.model.ControlPlaneUiStatus
 import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.feature_settings_control_plane_json_list
 import com.cbgm.sparrow.resources.feature_settings_control_plane_remove
 import com.cbgm.sparrow.resources.feature_settings_control_plane_source_directory
 import com.cbgm.sparrow.resources.feature_settings_control_plane_source_manual
 import com.cbgm.sparrow.resources.feature_settings_control_plane_source_manual_and_directory
+import com.cbgm.sparrow.resources.feature_settings_control_plane_source_node_hint
 import com.cbgm.sparrow.resources.feature_settings_control_plane_status_active
 import com.cbgm.sparrow.resources.feature_settings_control_plane_status_available
 import com.cbgm.sparrow.resources.feature_settings_control_plane_status_checking
@@ -155,6 +157,9 @@ private fun sourceText(source: ControlPlaneUiSource): String =
 
         ControlPlaneUiSource.MANUAL_AND_DIRECTORY ->
             stringResource(Res.string.feature_settings_control_plane_source_manual_and_directory)
+        ControlPlaneUiSource.JSON_LIST -> stringResource(Res.string.feature_settings_control_plane_json_list)
+        ControlPlaneUiSource.MANUAL_AND_JSON_LIST -> stringResource(Res.string.feature_settings_control_plane_json_list)
+        ControlPlaneUiSource.NODE_HINT -> stringResource(Res.string.feature_settings_control_plane_source_node_hint)
     }
 
 @Composable

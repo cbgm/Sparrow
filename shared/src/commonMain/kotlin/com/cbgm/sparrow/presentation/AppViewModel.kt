@@ -110,19 +110,22 @@ class AppViewModel(
     }
 
     private suspend fun initializeControlPlaneDirectory() {
-        val configuredDirectoryUrl =
-            BuildKonfig.CONTROL_PLANE_DIRECTORY_URL
-                .trim()
-                .takeIf(String::isNotBlank)
-        if (initialization.controlPlaneConfiguration.directoryUrl.value == null &&
-            configuredDirectoryUrl != null
-        ) {
-            initialization.controlPlaneConfiguration
-                .setDirectoryUrl(configuredDirectoryUrl)
-                .onFailure { error ->
-                    logger.error(error) { "Control-plane directory configuration could not be stored" }
-                }
-        }
+        // Consume the optional build URL on the first app launch only. Passing
+        // an empty URL also records that the initial bootstrap was considered:
+        // later APK rebuilds cannot silently override a user's configuration.
+        initialization.controlPlaneConfiguration
+            .useDefaultDirectoryUrlIfUnconfigured(BuildKonfig.CONTROL_PLANE_DIRECTORY_URL.trim())
+            .onFailure { error ->
+                logger.error(error) { "Initial control-plane directory configuration could not be stored" }
+            }
+
+        // Restore the signed, last-good directory without any HTTP request first.
+        // This keeps transport startup immediate when the directory is offline.
+        initialization.controlPlaneDirectorySynchronizer.restoreCached()
+            .onFailure { error ->
+                if (error is CancellationException) throw error
+                logger.warn { "Verified Control Plane cache could not be restored: ${error.message}" }
+            }
 
         // Persisted endpoints are sufficient to start transport. Do not block
         // the foreground runtime on an HTTP directory refresh or health probes
@@ -142,7 +145,7 @@ class AppViewModel(
                         // by the existing global offline/reconnected hint.
                         logger.debug { "Initial control-plane directory unreachable: ${error.message}" }
                     } else {
-                        logger.error(error) { "Initial control-plane directory unavailable" }
+                        logger.warn { "Initial control-plane directory unavailable: ${error.message}" }
                     }
                 }
         }

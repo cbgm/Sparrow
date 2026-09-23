@@ -18,11 +18,12 @@ New-Item -ItemType Directory -Path $bundleRoot -Force | Out-Null
 # Do not require deleted Test-* files when producing the end-user installer.
 $sharedFiles = @(
     'Invoke-SparrowServer.ps1', 'Get-SparrowDockerLabel.ps1',
+    'Get-SparrowVerifiedDirectory.ps1',
     'Start-SparrowServer.ps1', 'Backup-SparrowDeployment.ps1',
     'Stage-SparrowPublicTls.ps1', 'Invoke-SparrowPublicCutover.ps1',
     'Attached-SparrowDeployment.ps1', 'Update-SparrowServerBundle.ps1',
     'Update-SparrowFromGitHub.ps1',
-    'Invoke-SparrowServer.py', 'Start-SparrowServer.sh',
+    'Invoke-SparrowServer.py', 'control_plane_directory_client.py', 'control_plane_directory_registration.py', 'control_plane_directory_sync.py', '.dockerignore', 'Start-SparrowServer.sh',
     'Start-SparrowServer.command'
 )
 foreach ($name in $sharedFiles) {
@@ -47,10 +48,47 @@ $managerContent = $managerContent.Replace('Reset-SparrowTestDeployment.ps1', 'Re
 [System.IO.File]::WriteAllText($managerFile, $managerContent, [System.Text.UTF8Encoding]::new($false))
 # Bundle a concise runtime README instead of source-only verification instructions.
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README_RUNTIME.md') -Destination (Join-Path $bundleRoot 'README.md') -Force
+foreach ($name in @('Dockerfile')) {
+    $target = Join-Path $bundleRoot 'directory-sync'
+    New-Item -ItemType Directory -Path $target -Force | Out-Null
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot "directory-sync/$name") -Destination $target -Force
+}
+# Distribute only the one-shot PUBLIC registration client image definition.
+# Never copy server/control-plane-directory or any server identities/secrets.
+$registrationTarget = Join-Path $bundleRoot 'directory-registration'
+New-Item -ItemType Directory -Path $registrationTarget -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'directory-registration/Dockerfile') `
+    -Destination $registrationTarget -Force
 foreach ($name in @('docker-compose.yml')) {
     $target = Join-Path $bundleRoot 'public-proxy'
     New-Item -ItemType Directory -Path $target -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot "public-proxy/$name") -Destination $target -Force
+}
+# The existing build/release variable is a Directory Server base address, not
+# a legacy JSON list path. Operators can override it in the installer.
+$defaultDirectoryUrl = if ($env:CONTROL_PLANE_RELEASE_DIRECTORY_URL) {
+    $env:CONTROL_PLANE_RELEASE_DIRECTORY_URL.Trim()
+} elseif ($env:CONTROL_PLANE_DIRECTORY_URL) {
+    $env:CONTROL_PLANE_DIRECTORY_URL.Trim()
+} else { '' }
+if ($defaultDirectoryUrl) {
+    $directoryUri = $null
+    if (-not [Uri]::TryCreate($defaultDirectoryUrl, [UriKind]::Absolute, [ref]$directoryUri) -or
+        $directoryUri.Scheme -ne 'https' -or -not $directoryUri.Host -or
+        $directoryUri.UserInfo -or $directoryUri.Fragment -or $directoryUri.Query -or
+        $directoryUri.AbsolutePath -ne '/') {
+        throw 'CONTROL_PLANE_DIRECTORY_URL must be an HTTPS Directory Server base URL without path, query or credentials.'
+    }
+    $defaultDirectoryUrl = $directoryUri.GetLeftPart([System.UriPartial]::Authority).TrimEnd('/')
+}
+# The public verification key is a trust pin, NOT an administrator credential.
+# Must be provisioned out of band and must never be downloaded from the
+# directory URL we are about to trust. An empty value disables remote discovery.
+$defaultDirectoryPublicKey = if ($env:CONTROL_PLANE_DIRECTORY_PUBLIC_KEY) {
+    $env:CONTROL_PLANE_DIRECTORY_PUBLIC_KEY.Trim()
+} else { '' }
+if ($defaultDirectoryPublicKey -and $defaultDirectoryPublicKey -notmatch '^[A-Za-z0-9_-]{58,100}$') {
+    throw 'CONTROL_PLANE_DIRECTORY_PUBLIC_KEY must be a base64url-encoded DER Ed25519 public key.'
 }
 $componentFiles = @{
     'community-node' = @(
@@ -76,7 +114,9 @@ foreach ($component in $componentFiles.Keys) {
     [System.IO.File]::WriteAllLines($configPath, @(
         'CONFIGURED=false', 'MODE=lan', 'PUBLIC_DOMAIN=', 'SHARED_PROXY=false',
         "SPARROW_IMAGE_PREFIX=$ImagePrefix", "SPARROW_IMAGE_TAG=$ImageTag",
-        $(if ($component -eq 'control-plane') { 'CONTROL_PLANE_ID=' } else { 'CONTROL_PLANE_DIRECTORY_URL=' })
+        $(if ($component -eq 'control-plane') { 'CONTROL_PLANE_ID=' } else { 'CONTROL_PLANE_URLS=' }),
+        "CONTROL_PLANE_DIRECTORY_URL=$defaultDirectoryUrl",
+        "CONTROL_PLANE_DIRECTORY_PUBLIC_KEY=$defaultDirectoryPublicKey"
     ), [System.Text.UTF8Encoding]::new($false))
 }
 # The repository is embedded at build time, not selected by the server operator.

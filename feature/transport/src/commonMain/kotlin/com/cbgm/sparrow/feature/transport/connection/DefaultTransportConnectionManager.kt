@@ -346,7 +346,10 @@ class DefaultTransportConnectionManager(
                                 if (error.isRecoverableConnectivityFailure() || error.isUnavailableNodeDirectory()) {
                                     logger.debug { "Signed node directory refresh unavailable: ${error.message}" }
                                 } else {
-                                    logger.error(error) { "Signed node directory refresh failed" }
+                                    // Discovery is optional while the existing connection is active.
+                                    // Keep the verified cached route; never publish a transient
+                                    // directory refresh failure as an app-wide transport error.
+                                    logger.warn { "Signed node directory refresh rejected: ${error.message}" }
                                 }
                             }
                         )

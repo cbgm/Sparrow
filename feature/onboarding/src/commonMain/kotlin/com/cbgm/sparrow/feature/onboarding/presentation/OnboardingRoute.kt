@@ -5,22 +5,16 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.runtime.mutableStateOf
-import com.cbgm.sparrow.feature.identity.device.IdentityBackupDocumentLauncher
-import com.cbgm.sparrow.resources.Res
-import com.cbgm.sparrow.resources.base_cancel
-import com.cbgm.sparrow.resources.feature_identity_backup_restore_action
-import com.cbgm.sparrow.resources.feature_identity_backup_password
-import com.cbgm.sparrow.resources.feature_identity_backup_restore_hint
-import org.jetbrains.compose.resources.stringResource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cbgm.sparrow.feature.identity.device.IdentityBackupDocumentLauncher
 import com.cbgm.sparrow.feature.identity.device.PhoneNumberHintLauncher
 import com.cbgm.sparrow.feature.identity.device.PhoneNumberHintResult
 import com.cbgm.sparrow.feature.identity.presentation.setup.IdentityViewModel
@@ -31,6 +25,12 @@ import com.cbgm.sparrow.feature.onboarding.device.AutomaticPhoneNumberResult
 import com.cbgm.sparrow.feature.onboarding.device.OnboardingPermissionRequester
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingPage
 import com.cbgm.sparrow.feature.onboarding.presentation.model.OnboardingUiEvent
+import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.base_cancel
+import com.cbgm.sparrow.resources.feature_identity_backup_password
+import com.cbgm.sparrow.resources.feature_identity_backup_restore_action
+import com.cbgm.sparrow.resources.feature_identity_backup_restore_hint
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -60,7 +60,10 @@ fun OnboardingRoute(
     )
     if (importDocument != null && identityState is IdentityUiState.NoIdentity) {
         AlertDialog(
-            onDismissRequest = { importDocument = null; backupPassword = "" },
+            onDismissRequest = {
+                importDocument = null
+                backupPassword = ""
+            },
             title = { Text(stringResource(Res.string.feature_identity_backup_restore_action)) },
             text = {
                 androidx.compose.foundation.layout.Column {
@@ -86,7 +89,10 @@ fun OnboardingRoute(
                 ) { Text(stringResource(Res.string.feature_identity_backup_restore_action)) }
             },
             dismissButton = {
-                TextButton(onClick = { importDocument = null; backupPassword = "" }) {
+                TextButton(onClick = {
+                    importDocument = null
+                    backupPassword = ""
+                }) {
                     Text(stringResource(Res.string.base_cancel))
                 }
             }

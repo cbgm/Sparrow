@@ -59,10 +59,16 @@ class DefaultNodeEndpointResolver(
         // Older cache entries do not record their source; preserve their short-lived
         // fallback until we can associate a verified response with an endpoint.
         val cachedSourceIsConfigured =
-            cached?.sourceControlPlaneBaseUrl == null ||
-                controlPlaneConfiguration.endpoints.value.any { endpoint ->
-                    endpoint.baseUrl == cached.sourceControlPlaneBaseUrl
-                }
+            cached?.sourceControlPlaneBaseUrl?.let { source ->
+                controlPlaneConfiguration.endpoints.value.any { it.baseUrl == source } &&
+                    (
+                        source in controlPlaneConfiguration.manualBaseUrls.value ||
+                            controlPlaneConfiguration.verifiedDirectoryRootId(source) == cached.trustedRootForSource()
+                    )
+            } ?: (
+                controlPlaneConfiguration.manualBaseUrls.value.isNotEmpty() &&
+                    controlPlaneConfiguration.directoryUrl.value == null
+            )
         if (
             !forceRefresh && cachedSourceIsConfigured &&
             isReusable(cachedDirectory, trustedRootNodeId, currentTime)
@@ -175,6 +181,26 @@ class DefaultNodeEndpointResolver(
         // A root pinned for Control Plane A must not be applied to Control Plane B.
         // The previous implementation used one cached root globally; switching to
         // another independently signed plane then failed until the app was reinstalled.
+        val directoryRoot = controlPlaneConfiguration.verifiedDirectoryRootId(endpoint.baseUrl)
+        // An explicit/manual CP keeps its existing trust behavior. Dynamically
+        // discovered CPs MUST match the directory's signed root ID, not TOFU.
+        if (endpoint.baseUrl !in controlPlaneConfiguration.manualBaseUrls.value &&
+            endpoint.baseUrl in controlPlaneConfiguration.directoryBaseUrls.value &&
+            controlPlaneConfiguration.directoryUrl.value != null
+        ) {
+            require(directoryRoot != null) { "Discovered Control Plane has no verified identity" }
+            require(
+                config.trustedRegistryRootNodeId == null ||
+                    config.trustedRegistryRootNodeId == directoryRoot
+            ) { "Control Plane identity conflicts with explicitly pinned root" }
+            val remoteRoot = verifier.rootNodeId(remoteDirectory).getOrThrow()
+            require(remoteRoot == directoryRoot) { "Discovered Control Plane signing root does not match directory" }
+            val previousRoot = cached?.trustedRootFor(endpoint.baseUrl)
+            require(previousRoot == null || previousRoot == directoryRoot) {
+                "Previously pinned Control Plane identity differs from directory listing"
+            }
+            return directoryRoot
+        }
         config.trustedRegistryRootNodeId?.let { return it }
         val previousRoot =
             cached?.trustedRootFor(endpoint.baseUrl)

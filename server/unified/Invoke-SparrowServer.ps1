@@ -25,6 +25,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'Get-SparrowDockerLabel.ps1')
+. (Join-Path $PSScriptRoot 'Get-SparrowVerifiedDirectory.ps1')
 $root = $PSScriptRoot
 $nodeRoot = Join-Path $root 'community-node'
 $cpRoot = Join-Path $root 'control-plane'
@@ -33,6 +34,82 @@ $attachmentFile = Join-Path $root '.sparrow-attached.json'
 $nodeSelected = $Component -in @('Node', 'Combined')
 $cpSelected = $Component -in @('ControlPlane', 'Combined')
 $shared = $Mode -eq 'public'
+
+function Start-SparrowDirectoryBackgroundSync {
+    $cpConfig = Read-Properties (Join-Path $cpRoot 'sparrow.conf')
+    if ($cpConfig['MODE'] -ne 'public' -or
+        [string]::IsNullOrWhiteSpace([string]$cpConfig['CONTROL_PLANE_DIRECTORY_URL']) -or
+        [string]::IsNullOrWhiteSpace([string]$cpConfig['CONTROL_PLANE_DIRECTORY_PUBLIC_KEY']) -or
+        -not (Test-Path -LiteralPath (Join-Path $proxyRoot 'Caddyfile') -PathType Leaf)) { return }
+    # The dedicated discovery container cannot block the existing server on
+    # image-build failure or directory downtime; it has no server secrets.
+    try {
+        $composeFile = Join-Path $proxyRoot 'docker-compose.yml'
+        & docker compose -f $composeFile --profile directory up -d --no-deps directory-sync 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) { Write-Host 'Directory background sync unavailable; local server remains online.' }
+        else { Write-Host 'Directory background sync enabled (15-minute interval).' }
+    } catch {
+        Write-Host "Directory background sync deferred: $($_.Exception.Message)"
+    }
+}
+
+function Refresh-PublicControlPlaneDirectory {
+    # Separate durable CP cache: never replace an authenticated snapshot with
+    # an unsigned/invalid result, and never block local chat on an outage.
+    $settings = Read-Properties (Join-Path $cpRoot 'sparrow.conf')
+    if (-not $settings['CONTROL_PLANE_DIRECTORY_URL'] -or -not $settings['CONTROL_PLANE_DIRECTORY_PUBLIC_KEY']) { return }
+    try {
+        $null = @(Get-SparrowVerifiedDirectoryUrls `
+            -DirectoryUrl $settings['CONTROL_PLANE_DIRECTORY_URL'] `
+            -PinnedPublicKey $settings['CONTROL_PLANE_DIRECTORY_PUBLIC_KEY'] `
+            -CacheFile (Join-Path $cpRoot '.control-plane-directory-verified.json') `
+            -ClientScript (Join-Path $root 'control_plane_directory_client.py'))
+        Write-Host 'Control Plane signed-directory cache refreshed or reused.'
+    } catch {
+        Write-Host 'Control Plane directory unavailable; local server and previous verified cache remain unchanged.'
+    }
+}
+
+function Register-PublicControlPlaneInDirectory {
+    # This is an opt-in, best-effort registration attempt. Admin approval
+    # remains central and directory failure never prevents chat delivery.
+    $settings = Read-Properties (Join-Path $cpRoot 'sparrow.conf')
+    if ($settings['MODE'] -ne 'public' -or
+        [string]::IsNullOrWhiteSpace($settings['CONTROL_PLANE_DIRECTORY_URL']) -or
+        [string]::IsNullOrWhiteSpace($settings['CONTROL_PLANE_DIRECTORY_PUBLIC_KEY']) -or
+        [string]::IsNullOrWhiteSpace($settings['PUBLIC_DOMAIN'])) { return }
+    $identity = Join-Path $cpRoot 'secrets/registry-root.identity'
+    if (-not (Test-Path -LiteralPath $identity -PathType Leaf)) { return }
+    $marker = Join-Path $cpRoot '.directory-registration-last-attempt'
+    if ((Test-Path -LiteralPath $marker -PathType Leaf) -and
+        (Get-Item -LiteralPath $marker).LastWriteTime -ge (Get-Item -LiteralPath $identity).LastWriteTime -and
+        (Get-Item -LiteralPath $marker).LastWriteTime -ge (Get-Item -LiteralPath (Join-Path $cpRoot 'sparrow.conf')).LastWriteTime -and
+        ((Get-Date) - (Get-Item -LiteralPath $marker).LastWriteTime).TotalMinutes -lt 9) { return }
+    # Docker contains the pinned crypto dependency; no host Python required.
+    # The registration job is one-shot, with no admin credential, Docker socket,
+    # or access to any secret other than this existing single-file identity.
+    $composeFile = Join-Path $proxyRoot 'docker-compose.yml'
+    try {
+        $buildOutput = @(& docker compose -f $composeFile --profile registration build directory-register 2>&1)
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host 'Directory registration deferred: client image could not be built. Local server remains online.'
+            return
+        }
+        $directoryArgument = 'CONTROL_PLANE_DIRECTORY_URL=' + [string]$settings['CONTROL_PLANE_DIRECTORY_URL']
+        $pinArgument = 'CONTROL_PLANE_DIRECTORY_PUBLIC_KEY=' + [string]$settings['CONTROL_PLANE_DIRECTORY_PUBLIC_KEY']
+        $planeArgument = 'SPARROW_REGISTRATION_PLANE_URL=https://' + [string]$settings['PUBLIC_DOMAIN']
+        $result = @(& docker compose -f $composeFile --profile registration run --rm --no-deps `
+            -e $directoryArgument -e $pinArgument -e $planeArgument directory-register 2>&1)
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host 'Directory registration deferred; local Control Plane continues operating.'
+            return
+        }
+        Write-Host "Directory registration: $($result -join ' ')"
+        [System.IO.File]::WriteAllText($marker, (Get-Date).ToUniversalTime().ToString('o'))
+    } catch {
+        Write-Host "Directory registration deferred; local Control Plane remains available: $($_.Exception.Message)"
+    }
+}
 
 function Read-Properties([string]$Path) {
     $properties = @{}
@@ -497,29 +574,39 @@ function Sync-InstalledNodeDiscovery([string]$RequestedDirectoryUrl) {
     foreach ($item in ([string]$config['CONTROL_PLANE_URLS'] -split '[,;]')) {
         & $addCandidate $item
     }
+    # Preserve only the explicit local/manual routes as static endpoints.
+    # The signed worker is authoritative for dynamic additions/removals.
+    $staticInside = @($inside)
     if ($RequestedDirectoryUrl) {
-        try {
-            $response = Invoke-WebRequest -Uri $RequestedDirectoryUrl -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop
-            $document = $response.Content | ConvertFrom-Json -ErrorAction Stop
-            if ($null -eq $document.controlPlanes -or $document.controlPlanes -isnot [array] -or
-                @($document.controlPlanes).Count -eq 0) {
-                throw 'JSON must contain a nonempty controlPlanes array.'
+        $controlPlaneDirectorySettings = Read-Properties (Join-Path $cpRoot 'sparrow.conf')
+        $pin = if ($config['CONTROL_PLANE_DIRECTORY_PUBLIC_KEY']) {
+            [string]$config['CONTROL_PLANE_DIRECTORY_PUBLIC_KEY']
+        } else {
+            [string]$controlPlaneDirectorySettings['CONTROL_PLANE_DIRECTORY_PUBLIC_KEY']
+        }
+        if (-not $pin) {
+            Write-Host 'No pinned directory public key; using local/manual Control Plane addresses only.'
+        } else {
+            try {
+                $remoteUrls = @(Get-SparrowVerifiedDirectoryUrls `
+                    -DirectoryUrl $RequestedDirectoryUrl `
+                    -PinnedPublicKey $pin `
+                    -CacheFile (Join-Path $nodeRoot '.control-plane-directory-verified.json') `
+                    -ClientScript (Join-Path $root 'control_plane_directory_client.py'))
+                foreach ($remote in $remoteUrls) { & $addCandidate $remote }
+            } catch {
+                Write-Host "Verified directory unavailable; using local/manual addresses: $($_.Exception.Message)"
             }
-            foreach ($remote in $document.controlPlanes) {
-                if ($remote -isnot [string] -or -not $remote.Trim()) { throw 'Control Plane directory contains a non-string or empty address.' }
-                & $addCandidate $remote
-            }
-        } catch {
-            if ($advertised.Count -eq 0) { throw "Cannot refresh Control Plane directory: $($_.Exception.Message)" }
-            Write-Host "Control Plane directory is temporarily unavailable: $($_.Exception.Message). Continuing with the installed local Control Plane only."
         }
     }
-    if ($inside.Count -eq 0) { throw 'No usable Control Plane candidates. Keep the existing node configuration.' }
-    $selected = $inside[0]
+    if ($staticInside.Count -eq 0) { throw 'No configured local Control Plane. Keep the existing node configuration.' }
+    $selected = $staticInside[0]
     for ($index = 0; $index -lt $probeUrls.Count; $index++) {
         try {
             $null = Invoke-WebRequest -Uri "$($probeUrls[$index])/v1/nodes" -UseBasicParsing -TimeoutSec 4 -ErrorAction Stop
-            $selected = $inside[$index]
+            # Remote verified endpoints are never frozen as the local static
+            # CONTROL_PLANE_URL: they may later be revoked by the directory.
+            if ($inside[$index] -in $staticInside) { $selected = $inside[$index] }
             break
         } catch { }
     }
@@ -527,9 +614,13 @@ function Sync-InstalledNodeDiscovery([string]$RequestedDirectoryUrl) {
     # regenerate node.identity, database passwords, secrets or named volumes.
     $updates = @{
         CONTROL_PLANE_URL = $selected
-        CONTROL_PLANE_URLS = ($inside -join ',')
+        CONTROL_PLANE_URLS = ($staticInside -join ',')
         ADVERTISED_CONTROL_PLANE_URLS = ($advertised -join ',')
+        MANUAL_CONTROL_PLANE_URLS = [string]$config['CONTROL_PLANE_URLS']
+        LOCAL_CONTROL_PLANE_DOMAIN = [string]$config['LOCAL_CONTROL_PLANE_DOMAIN']
     }
+    # Never resurrect opaque unsigned runtime addresses on failure. The
+    # separately authenticated snapshot cache is the only remote fallback.
     $changed = ([string]$runtime['CONTROL_PLANE_URL'] -ne $updates.CONTROL_PLANE_URL -or
         [string]$runtime['CONTROL_PLANE_URLS'] -ne $updates.CONTROL_PLANE_URLS -or
         [string]$runtime['ADVERTISED_CONTROL_PLANE_URLS'] -ne $updates.ADVERTISED_CONTROL_PLANE_URLS -or
@@ -1258,6 +1349,11 @@ try {
         Write-TaskResult 'SUCCESS'
         exit 0
     }
+    # Public installer installs both services together. Component-specific lifecycle
+    # remains an internal diagnostic capability, not a selectable install mode.
+    if ($Action -eq 'Start' -and $Component -ne 'Combined') {
+        throw 'Sparrow installation requires Combined (Control Plane + Community Node).'
+    }
     if ($Action -eq 'Start') {
         if ($ImagePrefix -notmatch '^[a-z0-9.-]+(?:/[a-z0-9._-]+)+$') { throw 'Invalid image prefix.' }
         if ($ImageTag -notmatch '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$') { throw 'Invalid image tag.' }
@@ -1360,7 +1456,10 @@ try {
         }
         if ($nodeSelected) {
             $priorNode = Read-Properties (Join-Path $nodeRoot 'sparrow.conf')
-            if (-not $DirectoryUrl) { $DirectoryUrl = [string]$priorNode['CONTROL_PLANE_DIRECTORY_URL'] }
+            if (-not $DirectoryUrl) {
+                $priorCp = Read-Properties (Join-Path $cpRoot 'sparrow.conf')
+                $DirectoryUrl = if ($priorNode['CONTROL_PLANE_DIRECTORY_URL']) { [string]$priorNode['CONTROL_PLANE_DIRECTORY_URL'] } else { [string]$priorCp['CONTROL_PLANE_DIRECTORY_URL'] }
+            }
             if ($Component -eq 'Node' -and -not $DirectoryUrl) {
                 throw 'Node-only installation requires a Control Plane directory URL.'
             }
@@ -1444,12 +1543,14 @@ try {
                 # hostname, push mode, or existing configuration.
                 Write-Properties (Join-Path $cpRoot 'sparrow.conf') @{
                     SPARROW_IMAGE_PREFIX = $ImagePrefix; SPARROW_IMAGE_TAG = $ImageTag
+                    CONTROL_PLANE_DIRECTORY_URL = $DirectoryUrl
                 }
             } else {
                 Write-Properties (Join-Path $cpRoot 'sparrow.conf') @{
                     CONFIGURED = 'true'; CONTROL_PLANE_ID = $cpId; MODE = $Mode
                     PUBLIC_DOMAIN = $ControlPlaneDomain
                     SHARED_PROXY = $(if ($shared) { 'true' } else { 'false' })
+                    CONTROL_PLANE_DIRECTORY_URL = $DirectoryUrl
                     SPARROW_IMAGE_PREFIX = $ImagePrefix; SPARROW_IMAGE_TAG = $ImageTag
                 }
                 if ($FirebaseMode -eq 'Disabled') {
@@ -1461,6 +1562,12 @@ try {
                     $credential = Get-PushCredential
                     if ($credential) { $env:FIREBASE_ADMIN_CREDENTIALS = $credential }
                 }
+            }
+            if ($shared) {
+                # Create this non-secret, host-writable directory BEFORE Compose mounts it.
+                # Otherwise Docker may create a root-owned directory that the
+                # registration client cannot write to.
+                New-Item -ItemType Directory -Path (Join-Path $cpRoot 'directory-registration-proofs') -Force | Out-Null
             }
             Start-OrUpdateComponent $cpRoot 'Bootstrap-ControlPlane.ps1' @('node-registry', 'presence-directory', 'push')
         }
@@ -1488,12 +1595,20 @@ try {
             Start-OrUpdateComponent $nodeRoot 'Bootstrap-CommunityNode.ps1' @('mailbox', 'federation', 'gateway')
         }
         if ($shared) {
+            # The only proof directory mounted by the public proxy. Not secrets/.
+            $proofDirectory = Join-Path $cpRoot 'directory-registration-proofs'
+            if (-not (Test-Path -LiteralPath $proofDirectory -PathType Container)) {
+                New-Item -ItemType Directory -Path $proofDirectory -Force | Out-Null
+            }
             Write-ProxyConfig
             Invoke-Docker -Arguments @('compose', '-f', (Join-Path $proxyRoot 'docker-compose.yml'), 'up', '-d')
             Invoke-Docker -Arguments @('compose', '-f', (Join-Path $proxyRoot 'docker-compose.yml'), 'exec', '-T', 'caddy', 'caddy', 'reload', '--config', '/etc/caddy/Caddyfile')
             Write-Host 'Shared proxy started. DNS/TLS and external WebSocket reachability still need verification.'
         }
         if ($Component -eq 'Combined') { Assert-CombinedNodeDiscoverable }
+        if ($shared) { Start-SparrowDirectoryBackgroundSync }
+        if ($cpSelected) { Refresh-PublicControlPlaneDirectory }
+        if ($shared -and $cpSelected) { Register-PublicControlPlaneInDirectory }
     } elseif ($Action -in @('Stop', 'Restart', 'Status', 'Logs')) {
         $directories = @()
         if ($cpSelected) { $directories += $cpRoot }
@@ -1523,7 +1638,7 @@ try {
             } elseif ($Action -eq 'Stop' -and $Component -eq 'Combined') {
                 # Only stop the shared proxy when stopping both components. A
                 # single-component stop must not interrupt the other hostname.
-                Invoke-Docker -Arguments @('compose', '-f', $proxyCompose, 'stop')
+                Invoke-Docker -Arguments @('compose', '-f', $proxyCompose, '--profile', 'directory', 'stop')
             } elseif ($Action -eq 'Restart' -and $Component -eq 'Combined') {
                 # After Stop Combined, compose restart will not start stopped
                 # services. Restore the public entry point without re-creating
@@ -1533,6 +1648,7 @@ try {
                 if (($nodeCfg['MODE'] -eq 'public' -and $nodeCfg['SHARED_PROXY'] -eq 'true') -or
                     ($cpCfg['MODE'] -eq 'public' -and $cpCfg['SHARED_PROXY'] -eq 'true')) {
                     Invoke-Docker -Arguments @('compose', '-f', $proxyCompose, 'up', '-d', '--no-recreate')
+                    Start-SparrowDirectoryBackgroundSync
                 }
             } elseif ($Action -eq 'Restart') {
                 Write-Host 'Shared proxy is unchanged by single-component restart.'

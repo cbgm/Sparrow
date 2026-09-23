@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.transport.di
 
+import com.cbgm.sparrow.core.crypto.hash.CryptoHash
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningPublicKeyProvider
@@ -21,6 +22,7 @@ import com.cbgm.sparrow.feature.transport.controlplane.HttpControlPlaneHealthMon
 import com.cbgm.sparrow.feature.transport.controlplane.HttpNodeControlPlaneDirectorySource
 import com.cbgm.sparrow.feature.transport.controlplane.NodeControlPlaneDirectorySource
 import com.cbgm.sparrow.feature.transport.controlplane.NodeControlPlaneDiscoverySynchronizer
+import com.cbgm.sparrow.feature.transport.controlplane.SignedControlPlaneDirectoryVerifier
 import com.cbgm.sparrow.feature.transport.controlplane.SignedDirectoryControlPlaneCandidateVerifier
 import com.cbgm.sparrow.feature.transport.device.createPlatformHttpClient
 import com.cbgm.sparrow.feature.transport.discovery.DataStoreNodeDirectoryCache
@@ -209,10 +211,20 @@ val transportModule =
             )
         }
 
+        single {
+            SignedControlPlaneDirectoryVerifier(
+                json = get(qualifier = named(GATEWAY_JSON_QUALIFIER)),
+                signatureCrypto = get<DetachedSignatureCrypto>(),
+                hash = get<CryptoHash>()
+            )
+        }
+
         single<ControlPlaneDirectorySynchronizer> {
             HttpControlPlaneDirectorySynchronizer(
                 httpClient = get<HttpClient>(),
                 configuration = get<ControlPlaneConfiguration>(),
+                verifier = get<SignedControlPlaneDirectoryVerifier>(),
+                dataStore = get(),
                 json = get(qualifier = named(GATEWAY_JSON_QUALIFIER))
             )
         }

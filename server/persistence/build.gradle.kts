@@ -9,5 +9,6 @@ kotlin {
 
 dependencies {
     implementation(projects.server.protocol)
+    implementation(libs.kotlinx.serialization.json)
     testImplementation(kotlin("test"))
 }
