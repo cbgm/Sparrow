@@ -9,6 +9,7 @@ services:
       - "443:443/udp"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../node-instances/routes:/etc/caddy/node-routes:ro
       - ../community-node/index.html:/srv/community-node/index.html:ro
       - ../control-plane/index.html:/srv/control-plane/index.html:ro
       - ../control-plane/directory-registration-proofs:/srv/control-plane/directory-proofs:ro

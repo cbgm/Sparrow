@@ -39,43 +39,57 @@ private class GatewayControlPlaneDiscovery(
     private val manualUrls = System.getenv("MANUAL_CONTROL_PLANE_URLS")
         ?.split(',', ';')
         ?.map(String::trim)
-        ?.filter(::isSafePublicPlaneOrigin)
+        ?.filter(::isSafeManualPlaneOrigin)
         .orEmpty()
 
     fun readUrls(): List<String> {
-        val local = localUrl ?: return configuredUrls
-        val publication = publicationPath ?: return configuredUrls
-        // Missing/invalid publication must not resurrect retired remote URLs
-        // from the startup configuration. Keep only the paired and manual planes.
-        return (listOf(local) + manualUrls + readPublishedUrls(publication)).distinct()
+        val publication = publicationPath?.let(::readPublishedUrls) ?: return configuredUrls
+        // Node-only has no paired local Control Plane. Still consume its own
+        // verified directory worker's publication, retaining explicit manual
+        // planes separately. A signed *empty* publication must not resurrect
+        // previously discovered, now-revoked entries from startup config.
+        return (listOfNotNull(localUrl) + manualUrls + publication).distinct()
     }
 
-    private fun readPublishedUrls(path: Path): List<String> = try {
+    private fun readPublishedUrls(path: Path): List<String>? = try {
         if (!Files.isRegularFile(path) || Files.size(path) > MAX_PUBLICATION_BYTES) {
-            emptyList()
+            null
         } else {
             parsePublication(Files.readString(path))
         }
     } catch (_: Exception) {
-        // A broken cache must not break discovery or the running Gateway.
-        emptyList()
+        // No valid publication: keep the existing configured fallback, so a
+        // directory outage never erases the already selected Control Plane.
+        null
     }
 
-    private fun parsePublication(content: String): List<String> {
+    private fun parsePublication(content: String): List<String>? {
         val root = Json.parseToJsonElement(content).jsonObject
-        if (root.keys != PUBLICATION_FIELDS) return emptyList()
+        if (root.keys != PUBLICATION_FIELDS) return null
 
         val urls = root.getValue("controlPlanes").jsonArray.map { it.jsonPrimitive.content }
         if (urls.size > MAX_CONTROL_PLANES || urls.size != urls.distinct().size ||
             urls.any { !isSafePublicPlaneOrigin(it) }
         ) {
-            return emptyList()
+            return null
         }
 
         val entryUrls = root.getValue("entries").jsonArray.map { entry ->
             entry.jsonObject.getValue("baseUrl").jsonPrimitive.content
         }
-        return if (urls == entryUrls) urls else emptyList()
+        return if (urls == entryUrls) urls else null
+    }
+}
+
+private fun isSafeManualPlaneOrigin(value: String): Boolean {
+    if (isSafePublicPlaneOrigin(value)) return true
+    return try {
+        val uri = URI(value)
+        uri.scheme == "http" && uri.host != null && uri.rawUserInfo == null &&
+            uri.port in 1..65535 && uri.rawQuery == null && uri.rawFragment == null &&
+            (uri.rawPath.isNullOrEmpty() || uri.rawPath == "/") && DOMAIN.matches(uri.host)
+    } catch (_: IllegalArgumentException) {
+        false
     }
 }
 

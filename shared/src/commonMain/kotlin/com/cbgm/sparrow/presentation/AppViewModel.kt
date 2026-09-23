@@ -306,26 +306,84 @@ class AppViewModel(
 
     private suspend fun handleConnected(state: TransportConnectionState.Connected) {
         logger.info { "Transport connected: ${state.routingId}" }
-        foreground.mailboxCoordinator
-            .provisionRoutes()
-            .onSuccess { provisioned ->
-                logger.info { "Mailbox routes ready; newly provisioned=$provisioned" }
-            }.onFailure { error ->
-                logger.error(error) { "Mailbox route provisioning failed" }
-            }
-        foreground.mailboxCoordinator
-            .synchronizePending()
+        // A brief shared-proxy reload may reset an HTTPS handshake while the
+        // gateway remains connected. Do not block mailbox synchronization and
+        // outbox startup behind retry delays or expose an internal stack trace
+        // as a global snackbar; online/offline is handled by AppNavigation.
+        val initialProvisioning = foreground.mailboxCoordinator.provisionRoutes()
+        val initialFailure = initialProvisioning.exceptionOrNull()
+        if (initialFailure is CancellationException) throw initialFailure
+        initialProvisioning.onSuccess { provisioned ->
+            logger.info { "Mailbox routes ready; newly provisioned=$provisioned" }
+        }.onFailure { error ->
+            SparrowLog.diagnostic("AppViewModel", "Mailbox route provisioning deferred", error)
+        }
+        foreground.mailboxCoordinator.synchronizePending()
             .onSuccess { processed ->
                 logger.info { "Mailbox synchronization completed; processed=$processed" }
             }.onFailure { error ->
-                logger.error(error) { "Mailbox synchronization failed" }
+                if (error is CancellationException) throw error
+                SparrowLog.diagnostic("AppViewModel", "Mailbox synchronization deferred", error)
             }
         foreground.outboxRunner.start()
+
+        // collectLatest cancels this retry loop immediately when transport is
+        // disconnected, the routing ID changes, or the foreground session ends.
+        // Never regenerate credentials, bypass TLS validation, or retire a route
+        // solely because an HTTPS request failed during a proxy restart.
+        if (initialFailure != null && initialFailure.isTransientMailboxNetworkFailure()) {
+            retryMailboxProvisioning()
+        }
+    }
+
+    private suspend fun retryMailboxProvisioning() {
+        var backoffMilliseconds = MAILBOX_PROVISIONING_INITIAL_RETRY_MILLISECONDS
+        var attempt = 0
+        while (true) {
+            delay(backoffMilliseconds.milliseconds)
+            val result = foreground.mailboxCoordinator.provisionRoutes()
+            val failure = result.exceptionOrNull()
+            if (failure is CancellationException) throw failure
+            if (failure == null) {
+                logger.info { "Mailbox route provisioning recovered; newly provisioned=${result.getOrThrow()}" }
+                return
+            }
+            attempt += 1
+            // Throttle persistent failures in the developer log; they are not
+            // foreground errors and should not flood the storage sink.
+            if (attempt <= 3 || attempt % 10 == 0 || !failure.isTransientMailboxNetworkFailure()) {
+                SparrowLog.diagnostic(
+                    "AppViewModel",
+                    "Mailbox route provisioning retry $attempt deferred",
+                    failure
+                )
+            }
+            if (!failure.isTransientMailboxNetworkFailure()) return
+            backoffMilliseconds = (backoffMilliseconds * 2).coerceAtMost(MAILBOX_PROVISIONING_MAX_RETRY_MILLISECONDS)
+        }
+    }
+
+    /** A proxy's temporary TLS internal-error alert is not a certificate-trust error. */
+    private fun Throwable.isTransientMailboxNetworkFailure(): Boolean {
+        if (isRecoverableConnectivityFailure()) return true
+        var current: Throwable? = this
+        repeat(8) {
+            val cause = current ?: return false
+            if (cause::class.simpleName == "SSLProtocolException" &&
+                cause.message?.contains("TLSV1_ALERT_INTERNAL_ERROR", ignoreCase = true) == true
+            ) {
+                return true
+            }
+            current = cause.cause
+        }
+        return false
     }
 
     private companion object {
         const val CONTROL_PLANE_DIRECTORY_REFRESH_MILLISECONDS = 300_000L
         const val CONTROL_PLANE_DIRECTORY_RETRY_MILLISECONDS = 5_000L
         const val CONTROL_PLANE_HEALTH_REFRESH_MILLISECONDS = 60_000L
+        const val MAILBOX_PROVISIONING_INITIAL_RETRY_MILLISECONDS = 2_000L
+        const val MAILBOX_PROVISIONING_MAX_RETRY_MILLISECONDS = 60_000L
     }
 }

@@ -885,6 +885,10 @@ function Write-ProxyConfig {
         $entries += "$(Check-Domain $cpHost) {`n    import sparrow_control_routes`n}"
     }
     if ($routes.Count -eq 0) { throw 'Cannot start public proxy without a hostname.' }
+    $managedRoutes = Join-Path $root 'node-instances/routes'
+    if ((Test-Path -LiteralPath $managedRoutes -PathType Container) -and @(Get-ChildItem -LiteralPath $managedRoutes -Filter '*.caddy' -File).Count -gt 0) {
+        $entries += 'import /etc/caddy/node-routes/*.caddy'
+    }
     $caddyfile = Join-Path $proxyRoot 'Caddyfile'
     $temp = "$caddyfile.pending"
     [System.IO.File]::WriteAllText($temp, (($routes + $entries) -join "`n"), [System.Text.UTF8Encoding]::new($false))
@@ -1600,6 +1604,7 @@ try {
             if (-not (Test-Path -LiteralPath $proofDirectory -PathType Container)) {
                 New-Item -ItemType Directory -Path $proofDirectory -Force | Out-Null
             }
+            New-Item -ItemType Directory -Path (Join-Path $root 'node-instances/routes') -Force | Out-Null
             Write-ProxyConfig
             Invoke-Docker -Arguments @('compose', '-f', (Join-Path $proxyRoot 'docker-compose.yml'), 'up', '-d')
             Invoke-Docker -Arguments @('compose', '-f', (Join-Path $proxyRoot 'docker-compose.yml'), 'exec', '-T', 'caddy', 'caddy', 'reload', '--config', '/etc/caddy/Caddyfile')
@@ -1635,6 +1640,8 @@ try {
                 Invoke-Docker -Arguments @('compose', '-f', $proxyCompose, 'ps', '--all')
             } elseif ($Action -eq 'Logs') {
                 Invoke-Docker -Arguments @('compose', '-f', $proxyCompose, 'logs', '--no-color', '--tail', '120')
+            } elseif ($Action -eq 'Stop' -and $Component -eq 'Combined' -and (Test-Path -LiteralPath (Join-Path $root 'node-instances/routes') -PathType Container) -and @(Get-ChildItem -LiteralPath (Join-Path $root 'node-instances/routes') -Filter '*.caddy' -File).Count -gt 0) {
+                Write-Host 'Shared public proxy remains online for separately managed Community Nodes.'
             } elseif ($Action -eq 'Stop' -and $Component -eq 'Combined') {
                 # Only stop the shared proxy when stopping both components. A
                 # single-component stop must not interrupt the other hostname.

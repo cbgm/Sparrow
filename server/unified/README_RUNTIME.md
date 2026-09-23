@@ -1,6 +1,6 @@
 # Sparrow unified server installer (Windows, Linux, macOS)
 
-The server bundle contains only the combined Control Plane + Community Node installer, component configuration, and runtime-management scripts. Source-only validation and recovery rehearsal scripts are not distributed.
+The server bundle includes a Combined Control Plane + Community Node installer (default) and a separate manager for one or more independent Community Node-only instances. Every managed node runs in its own Docker Compose project and retains its own signing identity, credentials and databases. Source-only validation and recovery rehearsal scripts are not distributed.
 
 Windows: Start-SparrowServer.cmd
 Linux: ./Start-SparrowServer.sh --help
@@ -25,7 +25,7 @@ The installed public addresses are printed by `status` and `install`. Operation 
 
 Only the explicit `reinstall-public --component combined --mode public --confirm-delete-data` action deletes data and generates fresh server identities. Never use this for a server whose stored state must be retained. Never extract a new distribution ZIP over a configured deployment; update the manager scripts in its original folder and keep runtime files, secrets, and volumes.
 
-The public installer always installs both services. In Public mode, set the
+Combined Public installation always installs both services. The Community Node-only manager installs no Control Plane. In Combined Public mode, set the
 editable **Directory Server URL** to the operator-managed HTTPS base address;
 it is saved in each component's `sparrow.conf`, so it survives normal updates.
 When the bundle is built with `CONTROL_PLANE_RELEASE_DIRECTORY_URL` (or
@@ -57,6 +57,77 @@ full identity-rotation recovery is not yet implemented.
 
 The independent Directory Server itself and all its admin credentials are
 **not** in the public server bundle.
+
+
+### Independent Community Nodes — Node only and multi-node
+
+Use the **Community Node only — manage instances** choice in the Windows
+installer, or on Linux/macOS use the `nodes` subcommand. The Windows manager
+requires Python 3; signed directory lookups additionally require the Python
+`cryptography` package. On Linux/macOS both are required for signed directory
+lookup, while explicit manually configured Control Plane URLs require Python 3
+only. A Node-only install does **not** create a Control Plane or register
+with the independent central directory server; it registers each node with
+its configured existing Control Plane using the existing node protocol.
+
+For example, to create two publicly addressable nodes on one Docker host:
+
+    ./Start-SparrowServer.sh nodes add --name "Node A" --mode public --auto-dns \
+      --control-plane-url https://existing-control.example.org
+    ./Start-SparrowServer.sh nodes add --name "Node B" --mode public --auto-dns \
+      --control-plane-url https://existing-control.example.org
+    ./Start-SparrowServer.sh nodes list
+    ./Start-SparrowServer.sh nodes install --id <node-a-id>
+    ./Start-SparrowServer.sh nodes install --id <node-b-id>
+    ./Start-SparrowServer.sh nodes status --id <node-a-id>
+
+When an existing Combined Control Plane is installed in the same runtime
+folder, **Add Node** automatically selects its public HTTPS origin (or its
+advertised LAN origin when applicable); no signing-key field, second plane or
+separate directory is needed for the usual multi-node setup. The Windows UI
+keeps the optional signed-directory URL under **Advanced** and never asks for
+a verification key. A matching independently provisioned trust pin is reused
+from the release bundle or existing Combined configuration. It is **not**
+downloaded from the directory URL; an untrusted custom URL is rejected rather
+than accepted without signature verification.
+
+For a custom independent directory, an advanced operator may use
+`--directory-url` together with an **independently obtained**
+`--directory-public-key` on the CLI, or provision a matching trusted URL/key
+pair when building the bundle. Set `--control-plane-url` as well if you want
+manual fallback addresses. The per-instance client authenticates
+the signed directory and retains its last verified cache; the optional
+per-instance Docker worker refreshes that cache without holding node identity
+keys. To edit an existing instance's Directory URL without changing its
+selected registration target or its signer pin:
+
+    ./Start-SparrowServer.sh nodes configure-directory --id <node-id> \
+      --directory-url https://directory.example.org
+
+An installed node's signing identity, selected Control Plane registration
+origin, existing database and named volumes are not replaced by this edit.
+Changing a pinned directory signing key or switching its registered Control
+Plane requires a **separate authenticated migration**, not an ordinary Update.
+The central directory lists Control Planes (`/v1/control-planes`), whereas
+an individual Control Plane publishes its registered nodes (`/v1/nodes`).
+
+Use `nodes start|stop|update|status|logs|remove --id <node-id>` to manage
+one node without touching another. **Remove** stops and unpublishes a node
+but deliberately keeps the instance folder, credentials and all Docker
+volumes; `start` restores it. Public nodes use a shared Caddy on TCP 80/443
+with distinct TLS hostnames and independent routes per node. The public
+proxy remains running when Combined is stopped if independent node routes
+exist. The installer cannot take over an unrelated proxy that already binds
+80/443. In LAN mode, each node advertises a separate local host port, starting
+at 8500 and increasing by 5 for each additional managed instance. Check
+that the chosen ports and the advertised LAN address are reachable from
+clients. Public DNS, TLS/ACME, HTTPS/WSS, node registry publication, Firebase
+wakeups, message delivery, and multi-host behavior still require live tests
+on the target deployment.
+
+Node-only instances are stored under `node-instances/<id>` in the **original
+installation directory**. Never extract a new installer ZIP over this
+configured folder or delete its named volumes as part of a routine update.
 
 ### Public Control Plane registration (directory opt-in)
 

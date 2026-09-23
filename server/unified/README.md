@@ -1,6 +1,6 @@
 # Sparrow Server — unified cross-platform bundle (Windows GUI; Linux/macOS terminal manager)
 
-The unified bundle contains the Community Node and Control Plane as **independent Compose projects**, plus a separate shared Caddy proxy only when Public mode is chosen. Extract to a new, protected directory. `Start-SparrowServer.cmd` opens one WinForms manager. Defaults: Combined + LAN. Docker work runs in a separate PowerShell worker process so the manager remains movable and minimizable. Node-only installations require a Control Plane directory URL. Combined installations allow the same optional directory input **as well as** the local Control Plane (LAN) or its configured public hostname (Public). Without a wider directory, Combined mode does not discover independent Control Planes automatically.
+The unified bundle contains the Community Node and Control Plane as **independent Compose projects**, plus a separate shared Caddy proxy only when Public mode is chosen. Extract to a new, protected directory. `Start-SparrowServer.cmd` opens one WinForms manager. Defaults: Combined + LAN. The Node-only choice opens a separate multi-instance manager; it never installs an extra Control Plane. Docker work runs in a separate PowerShell worker process so the manager remains movable and minimizable. Node-only instances require an existing Control Plane URL or an HTTPS signed Directory URL with an independently pinned public key; they do not require installing a new Control Plane. Combined installations allow the same optional directory input **as well as** the local Control Plane (LAN) or its configured public hostname (Public). Without a wider directory, Combined mode does not discover independent Control Planes automatically.
 
 ## Install / Start pulls backend updates from GitHub Container Registry
 
@@ -29,17 +29,33 @@ version; image updates may run incompatible database migrations and are not
 an automatic rollback guarantee. An existing deployment owned by another folder
 cannot be taken over by Install / Start.
 
-### Control Plane directory at installation
+### Node-only instances and the signed Control Plane directory
 
-For **Node only**, enter the existing Control Plane directory URL as before.
-For **Combined**, the same field is optional but editable. When provided, the
-Node reads that JSON directory's `controlPlanes` list on bootstrap and uses
-those addresses **in addition to** the locally installed Control Plane. If the
-directory is unreachable, the local or last cached addresses keep startup
-possible; an independent Node without cached addresses retries the directory.
-Use HTTPS for Public mode. Merely configuring a directory does not by itself
-publish a new Control Plane into that directory or prove cross-server
-federation, Android client bootstrap or external reachability.
+Select **Community Node only — manage instances** in the Windows installer.
+Enter a display name and LAN or Public mode; when Combined is already installed
+in this same runtime folder, its existing Control Plane URL is preselected.
+The normal setup requires no directory URL or public-key input. An optional
+signed-directory URL is available under **Advanced** and reuses only a matching,
+independently configured trust pin; unknown custom directories must have their
+key provisioned through the advanced CLI. Choose **Add Node** and then
+**Install / Start**. Each new
+instance receives a distinct Compose project, node signing identity, secret
+files, cache and named volumes. You can install multiple instances under one
+Docker host; they are **not** multiple unrelated nodes in one container.
+The manager offers Start, Stop, Update, Status, Logs, Remove (keep data) and
+Save Directory URL per selected node. Public node hostnames share a single
+Caddy process and distinct virtual host routes. Linux/macOS users can run
+`./Start-SparrowServer.sh nodes --help` for equivalent commands. Node-only
+Windows management requires Python 3; signed directory lookups additionally
+require the `cryptography` package. Read `README_RUNTIME.md` for commands,
+identity/volume preservation, external Control Plane selection and limits.
+
+The independent Directory Server lists and authenticates **Control Planes**;
+only the selected existing Control Plane registers and publishes the new node.
+A signed directory public key must be pinned independently, never fetched from
+the service being verified. An outage retains the previously verified cache
+and manual origins. Status reports Control Plane publication as best effort,
+without claiming cryptographic verification of `/v1/nodes` by the status UI.
 
 The Windows GUI output pane now normalizes LF/CRLF and split CR progress output,
 keeps split UTF-8 characters intact, and wraps long log lines.

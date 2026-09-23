@@ -405,7 +405,11 @@ def render_proxy(entries):
     for component, hostname in entries:
         snippet = "sparrow_community_routes" if component == "node" else "sparrow_control_routes"
         output.append(f"{hostname} {{\n    import {snippet}\n}}")
-    return "\n\n".join(output) + "\n"
+    output_text = "\n\n".join(output) + "\n"
+    managed = ROOT / "node-instances" / "routes"
+    if managed.is_dir() and any(managed.glob("*.caddy")):
+        output_text = output_text.rstrip() + "\n\nimport /etc/caddy/node-routes/*.caddy\n"
+    return output_text
 
 
 def installed_public():
@@ -671,14 +675,24 @@ def install(args):
     args.directory_url = (args.directory_url or config("node").get("CONTROL_PLANE_DIRECTORY_URL", "")
                           or config("control-plane").get("CONTROL_PLANE_DIRECTORY_URL", ""))
     validate_hosts(args.node_domain, args.control_domain)
+    node_only_proxy = "# Sparrow public edge (node-only)\nimport /etc/caddy/node-routes/*.caddy"
     if args.mode == "public" and (ROOT / "public-proxy" / "Caddyfile").is_file():
-        # Do not start a new backend before discovering that its hostname would
-        # need an unreviewed live proxy reconfiguration.
-        require(not any(not runtime(component).is_file() for component in components),
+        existing_proxy_text = (ROOT / "public-proxy" / "Caddyfile").read_text(encoding="utf-8").strip()
+        # The *same installation* may add Combined after independent nodes;
+        # this one exact marker is ours, with the imported routes kept intact.
+        require(not any(not runtime(component).is_file() for component in components) or
+                existing_proxy_text == node_only_proxy,
                 "Adding a Public component to an existing proxy requires a reviewed route/TLS cutover; no files changed.")
     require(bool(IMAGE_PREFIX.fullmatch(args.image_prefix)), "Invalid image prefix.")
     require(bool(IMAGE_TAG.fullmatch(args.image_tag)), "Invalid image tag.")
     if args.mode == "public":
+        other_routes = ROOT / "node-instances"
+        for item in other_routes.iterdir() if other_routes.is_dir() else ():
+            manifest = item / "node-instance.json"
+            if manifest.is_file():
+                configured_node = json.loads(manifest.read_text(encoding="utf-8"))
+                require(configured_node.get("hostname") not in (args.node_domain, args.control_domain),
+                        "A managed Community Node already uses the requested public hostname.")
         require(not ("node" in components and not args.node_domain), "--node-domain required in Public mode.")
         require(not ("control-plane" in components and not args.control_domain),
                 "--control-domain required in Public mode.")
@@ -772,7 +786,7 @@ def install(args):
                 "        header Cache-Control \"no-store\"\n"
                 "        file_server\n"
                 "    }\n\n", "")
-            require(proxy.read_text(encoding="utf-8") == previous,
+            require(proxy.read_text(encoding="utf-8") in (previous, node_only_proxy + "\n"),
                     "Existing Public proxy routes differ. Refusing automatic mutation; use a reviewed cutover.")
             proxy.write_text(candidate, encoding="utf-8")
         elif not proxy.exists():
@@ -780,6 +794,7 @@ def install(args):
         # The shared Caddy container binds this dedicated public-only folder read-only.
         # Never mount the Control Plane secrets directory into the public proxy.
         (ROOT / "control-plane" / "directory-registration-proofs").mkdir(parents=True, exist_ok=True)
+        (ROOT / "node-instances" / "routes").mkdir(parents=True, exist_ok=True)
         existing_proxy = docker("ps", "--all", "--filter", "label=com.docker.compose.project=sparrow-public-proxy",
                                 "--format", "{{.ID}}", capture=True).stdout.strip()
         # Compose up recreates Caddy only when needed (new read-only proof mount)
@@ -827,7 +842,10 @@ def lifecycle(args):
             dc(component, "start")
     # Combined stop/start only touches proxy when both backends are selected.
     if args.component == "combined" and (ROOT / "public-proxy" / "Caddyfile").is_file():
-        if args.action == "stop":
+        other_routes = ROOT / "node-instances" / "routes"
+        if args.action == "stop" and other_routes.is_dir() and any(other_routes.glob("*.caddy")):
+            print("Shared Public proxy stays online: independently managed Community Nodes still use it.")
+        elif args.action == "stop":
             # Profiled services are NOT included in an ordinary compose stop.
             # Stop the autonomous worker as well when the combined server stops.
             run([*compose("proxy"), "--profile", "directory", "stop", "directory-sync"],

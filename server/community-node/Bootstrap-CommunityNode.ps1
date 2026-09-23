@@ -400,12 +400,13 @@ function Get-DirectoryControlPlaneUrls {
         [Parameter(Mandatory = $true)][string]$Mode,
         [Parameter(Mandatory = $true)][string]$PinnedPublicKey
     )
-    . (Join-Path (Split-Path -Parent $PSScriptRoot) 'Get-SparrowVerifiedDirectory.ps1')
+    $helperRoot = if (Test-Path -LiteralPath (Join-Path (Split-Path -Parent $PSScriptRoot) 'Get-SparrowVerifiedDirectory.ps1')) { Split-Path -Parent $PSScriptRoot } else { Split-Path -Parent (Split-Path -Parent $PSScriptRoot) }
+    . (Join-Path $helperRoot 'Get-SparrowVerifiedDirectory.ps1')
     $verified = @(Get-SparrowVerifiedDirectoryUrls `
         -DirectoryUrl $DirectoryUrl `
         -PinnedPublicKey $PinnedPublicKey `
         -CacheFile (Join-Path $PSScriptRoot '.control-plane-directory-verified.json') `
-        -ClientScript (Join-Path (Split-Path -Parent $PSScriptRoot) 'control_plane_directory_client.py'))
+        -ClientScript (Join-Path $helperRoot 'control_plane_directory_client.py'))
     return @($verified | ForEach-Object { Normalize-ControlPlaneUrl -Value $_ -Mode $Mode } | Select-Object -Unique)
 }
 
@@ -1220,6 +1221,7 @@ try {
     }
 
     $mode = Get-NetworkMode -Config $config
+    $publicPort = if ($config['COMMUNITY_NODE_HTTP_PORT']) { [int]$config['COMMUNITY_NODE_HTTP_PORT'] } else { 8490 }
     $script:ComposeFileArguments = @("-f", $composePath, "-f", $releaseComposePath)
 
     if ($mode -eq "public") {
@@ -1300,9 +1302,15 @@ try {
     Write-Detail "Federation/mailbox endpoint: $httpEndpoint"
 
     $runtimeEnvironment = @(
-        "COMMUNITY_NODE_PROJECT_NAME=sparrow-community-node",
+        "COMMUNITY_NODE_PROJECT_NAME=$(if ($config['COMMUNITY_NODE_PROJECT_NAME']) { $config['COMMUNITY_NODE_PROJECT_NAME'] } else { 'sparrow-community-node' })",
         "COMMUNITY_NODE_BIND_ADDRESS=0.0.0.0",
         "COMMUNITY_NODE_HTTP_PORT=$publicPort",
+        "MAILBOX_DIAGNOSTIC_PORT=$(if ($config['MAILBOX_DIAGNOSTIC_PORT']) { $config['MAILBOX_DIAGNOSTIC_PORT'] } else { '8492' })",
+        "FEDERATION_DIAGNOSTIC_PORT=$(if ($config['FEDERATION_DIAGNOSTIC_PORT']) { $config['FEDERATION_DIAGNOSTIC_PORT'] } else { '8493' })",
+        "GATEWAY_DIAGNOSTIC_PORT=$(if ($config['GATEWAY_DIAGNOSTIC_PORT']) { $config['GATEWAY_DIAGNOSTIC_PORT'] } else { '8494' })",
+        "MAILBOX_DATABASE_PORT=$(if ($config['MAILBOX_DATABASE_PORT']) { $config['MAILBOX_DATABASE_PORT'] } else { '5636' })",
+        "FEDERATION_DATABASE_PORT=$(if ($config['FEDERATION_DATABASE_PORT']) { $config['FEDERATION_DATABASE_PORT'] } else { '5638' })",
+        "COMMUNITY_NODE_DIRECTORY_CACHE_VOLUME=$(if ($config['COMMUNITY_NODE_DIRECTORY_CACHE_VOLUME']) { $config['COMMUNITY_NODE_DIRECTORY_CACHE_VOLUME'] } else { 'sparrow-node-directory-cache' })",
         "COMMUNITY_NODE_SITE_ADDRESS=$siteAddress",
         "COMMUNITY_NODE_DOMAIN=$publicDomain",
         "CONTROL_PLANE_URL=$($controlPlane.ContainerUrl)",

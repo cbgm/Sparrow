@@ -56,6 +56,7 @@ $components.Location = [System.Drawing.Point]::new(245, 48)
 $components.Size = [System.Drawing.Size]::new(535, 28)
 $components.DropDownStyle = 'DropDownList'
 [void]$components.Items.Add('Control Plane + Community Node')
+[void]$components.Items.Add('Community Node only — manage instances')
 $components.SelectedIndex = 0; $form.Controls.Add($components)
 New-Label 'Reachability' 22 88 | Out-Null
 $mode = [System.Windows.Forms.ComboBox]::new()
@@ -455,6 +456,17 @@ $form.Add_FormClosing({
     if ($script:busy) {
         $choice = [System.Windows.Forms.MessageBox]::Show('A deployment is still running. Keep this manager open or minimize it until the command finishes. Close anyway and leave the deployment running?', 'Sparrow Server', [System.Windows.Forms.MessageBoxButtons]::YesNo)
         if ($choice -ne [System.Windows.Forms.DialogResult]::Yes) { $_.Cancel = $true }
+    }
+})
+$components.Add_SelectedIndexChanged({
+    if ($components.SelectedIndex -eq 1) {
+        $components.SelectedIndex = 0
+        $manager = Join-Path $root 'Manage-SparrowNodes.ps1'
+        try {
+            Start-Process -FilePath 'powershell.exe' -ArgumentList @('-STA', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ('"' + $manager + '"')) -WorkingDirectory $root | Out-Null
+        } catch {
+            [System.Windows.Forms.MessageBox]::Show($_.Exception.Message, 'Sparrow Nodes') | Out-Null
+        }
     }
 })
 [System.Windows.Forms.Application]::Run($form)

@@ -79,6 +79,15 @@ object SparrowLog {
         withTag(tag).error(throwable) { message }
     }
 
+    /**
+     * Background diagnostics are stored in the developer error log (and Logcat),
+     * but do not appear in the user-facing global snackbar. Use for recovered or
+     * retried infrastructure failures, not for failures needing user action.
+     */
+    fun diagnostic(tag: String, message: String, throwable: Throwable? = null) {
+        recordError(tag = tag, message = message, throwable = throwable, showSnackbar = false)
+    }
+
     /** Informational feedback is not an error and does not pollute the developer error log. */
     fun hint(message: String) {
         if (message.isNotBlank()) hintQueue.trySend(message)
@@ -100,7 +109,7 @@ object SparrowLog {
         sinkInstalled.trySend(Unit)
     }
 
-    internal fun recordError(tag: String, message: String, throwable: Throwable?) {
+    internal fun recordError(tag: String, message: String, throwable: Throwable?, showSnackbar: Boolean = true) {
         val resolved = message.ifBlank { throwable?.message?.takeIf(String::isNotBlank) ?: "Unexpected error" }
         val event = PendingError(tag, SystemClock.nowEpochMilliseconds(), resolved, throwable)
         // Logcat uses the full message and the original throwable (including its stack trace).
@@ -110,7 +119,7 @@ object SparrowLog {
             logErrorToPlatform(tag, resolved, throwable)
         } finally {
             pendingErrors.trySend(event)
-            errorQueue.trySend("$tag: ${resolved.take(MAX_SNACKBAR_LENGTH)}")
+            if (showSnackbar) errorQueue.trySend("$tag: ${resolved.take(MAX_SNACKBAR_LENGTH)}")
         }
     }
 

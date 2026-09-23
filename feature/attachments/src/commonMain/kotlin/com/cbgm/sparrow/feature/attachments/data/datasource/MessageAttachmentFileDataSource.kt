@@ -83,9 +83,19 @@ class MessageAttachmentFileDataSource(
         val target = targetDirectory / fileName
 
         if (!fileSystem.exists(target)) {
-            val temporary = targetDirectory / "$fileName.tmp"
-            fileSystem.write(temporary) { write(bytes) }
-            fileSystem.atomicMove(temporary, target)
+            // The same attachment may be loaded by the thumbnail and viewer at once.
+            // A shared "$fileName.tmp" lets one writer move the other writer's file,
+            // leaving that writer with a missing temporary file on atomicMove.
+            val temporary = targetDirectory / "$fileName.${IdGenerator.generate()}.tmp"
+            try {
+                fileSystem.write(temporary) { write(bytes) }
+                // Another load might have completed the saved copy in the meantime.
+                if (!fileSystem.exists(target)) {
+                    fileSystem.atomicMove(temporary, target)
+                }
+            } finally {
+                fileSystem.delete(temporary, mustExist = false)
+            }
         }
         return target.toString()
     }

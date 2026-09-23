@@ -89,7 +89,7 @@ resolve_configured_control_planes() {
     [[ -n "$local_urls" ]] || exit 1
     return
   fi
-  local client="$SCRIPT_DIR/../control_plane_directory_client.py"
+  local client="${CONTROL_PLANE_DIRECTORY_CLIENT:-$SCRIPT_DIR/../control_plane_directory_client.py}"
   if [[ ! -f "$client" ]]; then
     echo "Signed directory client missing; continuing with local Control Plane." >&2
     [[ -n "$local_urls" ]] || exit 1
@@ -173,6 +173,10 @@ container_control_plane_url() {
   local value="$1"
   local host
   host="$(printf '%s' "$value" | sed -E 's#^[a-zA-Z]+://([^/:]+).*#\1#')"
+  if [[ "$MODE" == "public" && -n "${LOCAL_CONTROL_PLANE_DOMAIN:-}" && "$host" == "$LOCAL_CONTROL_PLANE_DOMAIN" ]]; then
+    printf '%s' 'http://sparrow-control-edge:8080'
+    return
+  fi
   if [[ "$host" == "localhost" || "$host" == "127.0.0.1" ]]; then
     printf '%s' "$value" | sed -E 's#(https?://)(localhost|127\.0\.0\.1)#\1host.docker.internal#'
     return
@@ -271,8 +275,8 @@ if [[ "$MODE" == "public" ]]; then
   HTTP_ENDPOINT="https://$PUBLIC_DOMAIN"
 else
   SITE_ADDRESS=":80"
-  CLIENT_ENDPOINT="ws://$HOST_ADDRESS:8490/v1/gateway"
-  HTTP_ENDPOINT="http://$HOST_ADDRESS:8490"
+  CLIENT_ENDPOINT="ws://$HOST_ADDRESS:${COMMUNITY_NODE_HTTP_PORT:-8490}/v1/gateway"
+  HTTP_ENDPOINT="http://$HOST_ADDRESS:${COMMUNITY_NODE_HTTP_PORT:-8490}"
 fi
 
 mkdir -p "$SECRETS_DIR"
@@ -290,9 +294,15 @@ ensure_secret "$SECRETS_DIR/federation-internal-api-token.txt"
 ensure_secret "$SECRETS_DIR/gateway-internal-api-token.txt"
 
 cat > "$RUNTIME_ENV" <<EOF_RUNTIME
-COMMUNITY_NODE_PROJECT_NAME=sparrow-community-node
-COMMUNITY_NODE_BIND_ADDRESS=0.0.0.0
-COMMUNITY_NODE_HTTP_PORT=8490
+COMMUNITY_NODE_PROJECT_NAME=${COMMUNITY_NODE_PROJECT_NAME:-sparrow-community-node}
+COMMUNITY_NODE_BIND_ADDRESS=${COMMUNITY_NODE_BIND_ADDRESS:-0.0.0.0}
+COMMUNITY_NODE_HTTP_PORT=${COMMUNITY_NODE_HTTP_PORT:-8490}
+MAILBOX_DIAGNOSTIC_PORT=${MAILBOX_DIAGNOSTIC_PORT:-8492}
+MAILBOX_DATABASE_PORT=${MAILBOX_DATABASE_PORT:-5636}
+FEDERATION_DATABASE_PORT=${FEDERATION_DATABASE_PORT:-5638}
+FEDERATION_DIAGNOSTIC_PORT=${FEDERATION_DIAGNOSTIC_PORT:-8493}
+GATEWAY_DIAGNOSTIC_PORT=${GATEWAY_DIAGNOSTIC_PORT:-8494}
+COMMUNITY_NODE_DIRECTORY_CACHE_VOLUME=${COMMUNITY_NODE_DIRECTORY_CACHE_VOLUME:-sparrow-node-directory-cache}
 COMMUNITY_NODE_SITE_ADDRESS=$SITE_ADDRESS
 COMMUNITY_NODE_DOMAIN=$PUBLIC_DOMAIN
 CONTROL_PLANE_URL=$(container_control_plane_url "$CONTROL_PLANE_URL")

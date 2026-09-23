@@ -23,7 +23,7 @@ $sharedFiles = @(
     'Stage-SparrowPublicTls.ps1', 'Invoke-SparrowPublicCutover.ps1',
     'Attached-SparrowDeployment.ps1', 'Update-SparrowServerBundle.ps1',
     'Update-SparrowFromGitHub.ps1',
-    'Invoke-SparrowServer.py', 'control_plane_directory_client.py', 'control_plane_directory_registration.py', 'control_plane_directory_sync.py', '.dockerignore', 'Start-SparrowServer.sh',
+    'Invoke-SparrowServer.py', 'Manage-SparrowNodes.py', 'Manage-SparrowNodes.ps1', 'control_plane_directory_client.py', 'control_plane_directory_registration.py', 'control_plane_directory_sync.py', '.dockerignore', 'Start-SparrowServer.sh',
     'Start-SparrowServer.command'
 )
 foreach ($name in $sharedFiles) {
@@ -59,6 +59,7 @@ $registrationTarget = Join-Path $bundleRoot 'directory-registration'
 New-Item -ItemType Directory -Path $registrationTarget -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'directory-registration/Dockerfile') `
     -Destination $registrationTarget -Force
+New-Item -ItemType Directory -Path (Join-Path $bundleRoot 'node-instances/routes') -Force | Out-Null
 foreach ($name in @('docker-compose.yml')) {
     $target = Join-Path $bundleRoot 'public-proxy'
     New-Item -ItemType Directory -Path $target -Force | Out-Null
@@ -93,7 +94,7 @@ if ($defaultDirectoryPublicKey -and $defaultDirectoryPublicKey -notmatch '^[A-Za
 $componentFiles = @{
     'community-node' = @(
         'docker-compose.yml', 'docker-compose.release.yml', 'docker-compose.production.yml',
-        'docker-compose.shared-proxy.yml', 'Caddyfile', 'index.html',
+        'docker-compose.shared-proxy.yml', 'docker-compose.directory-sync.yml', 'Caddyfile', 'index.html',
         'Bootstrap-CommunityNode.ps1', 'bootstrap-community-node.sh', 'start-sparrow-node.sh', 'Start-SparrowNode.command'
     )
     'control-plane' = @(

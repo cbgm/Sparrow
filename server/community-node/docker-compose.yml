@@ -146,7 +146,9 @@ services:
     restart: "no"
     user: "0:0"
     entrypoint: ["/bin/sh", "-ec"]
-    command: "mkdir -p /var/lib/sparrow/blobs && chown -R 65532:65532 /var/lib/sparrow/blobs"
+    # Pass the entire shell program as ONE argv element to /bin/sh -ec.
+    # Compose splits a scalar command, which leaves sh running bare `mkdir`.
+    command: ["mkdir -p /var/lib/sparrow/blobs && chown -R 65532:65532 /var/lib/sparrow/blobs"]
     volumes:
       - gateway-blob-data:/var/lib/sparrow/blobs
 
@@ -196,4 +198,4 @@ volumes:
   federation-database-data:
   gateway-blob-data:
   node-directory-cache:
-    name: sparrow-node-directory-cache
+    name: ${COMMUNITY_NODE_DIRECTORY_CACHE_VOLUME:-sparrow-node-directory-cache}

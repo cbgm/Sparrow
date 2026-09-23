@@ -43,7 +43,7 @@ class MailboxRouteProvisioner(
                             "Mailbox revocation deferred while its server is unreachable"
                         }
                     } else {
-                        SparrowLog.error("MailboxRouteProvisioner", "Retrying mailbox revocations failed", failure)
+                        SparrowLog.diagnostic("MailboxRouteProvisioner", "Retrying mailbox revocations failed", failure)
                     }
                 }
             val blockedContactIds = contactBlocklistRepository.getBlockedContactIds()
@@ -60,7 +60,7 @@ class MailboxRouteProvisioner(
                                     "Mailbox revocation deferred for blocked contact while its node is offline"
                                 }
                             } else {
-                                SparrowLog.error("MailboxRouteProvisioner", "Mailbox revocation failed for $contactId", failure)
+                                SparrowLog.diagnostic("MailboxRouteProvisioner", "Mailbox revocation failed for $contactId", failure)
                             }
                         }
                     return@forEach
@@ -137,7 +137,7 @@ class MailboxRouteProvisioner(
             mailboxRouteRepository.markLocalRevocationPending(contactId).getOrThrow()
             mailboxGateway.revoke(current).getOrElse { revocationError ->
                 mailboxGateway.revoke(replacement)
-                    .onFailure { failure -> SparrowLog.error("MailboxRouteProvisioner", "Mailbox replacement cleanup failed for $contactId", failure) }
+                    .onFailure { failure -> SparrowLog.diagnostic("MailboxRouteProvisioner", "Mailbox replacement cleanup failed for $contactId", failure) }
                 throw revocationError
             }
             mailboxRouteRepository.deleteLocal(contactId).getOrThrow()
@@ -145,7 +145,7 @@ class MailboxRouteProvisioner(
 
         mailboxRouteRepository.saveLocal(replacement).getOrElse { persistenceError ->
             mailboxGateway.revoke(replacement)
-                .onFailure { failure -> SparrowLog.error("MailboxRouteProvisioner", "Mailbox replacement cleanup failed for $contactId", failure) }
+                .onFailure { failure -> SparrowLog.diagnostic("MailboxRouteProvisioner", "Mailbox replacement cleanup failed for $contactId", failure) }
             throw persistenceError
         }
     }
