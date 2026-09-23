@@ -1,0 +1,35 @@
+# In-place LAN -> public exposure: use existing credentials and named volumes.
+# Do NOT include docker-compose.production.yml: it changes the database/Redis
+# authentication mode and can invalidate a LAN deployment's existing secrets.
+services:
+  caddy:
+    ports: !override
+      - "127.0.0.1:${CONTROL_PLANE_HTTP_PORT:-8390}:80"
+    networks:
+      default:
+      public-edge:
+        aliases:
+          - sparrow-control-edge
+  node-registry:
+    networks:
+      default:
+      public-edge:
+        aliases:
+          - sparrow-control-registry
+  presence-directory:
+    networks:
+      default:
+      public-edge:
+        aliases:
+          - sparrow-control-presence
+  push:
+    networks:
+      default:
+      public-edge:
+        aliases:
+          - sparrow-control-push
+networks:
+  default: {}
+  public-edge:
+    external: true
+    name: sparrow-public-edge

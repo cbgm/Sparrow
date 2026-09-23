@@ -41,6 +41,59 @@ class ControlPlaneRequestRouter(
         )
     }
 
+    /**
+     * Best-effort single-target request (e.g. push token registration). Try
+     * configured endpoints in the normal active/reachability order, including
+     * formerly unreachable endpoints as fallbacks. Stop at the first success.
+     *
+     * Unlike executeAll this does not broadcast a token to every registry and
+     * it never reports successful completion if all candidates failed.
+     */
+    suspend fun <T> executeFirstAvailable(
+        block: suspend (ControlPlaneEndpoint) -> T
+    ): Result<T> {
+        var rejection: ControlPlaneRequestRejectedException? = null
+        var lastConnectionFailure: Throwable? = null
+
+        // orderedEndpoints includes manually added and directory endpoints.
+        // Previously unreachable entries are at the end, NOT excluded forever.
+        for (endpoint in configuration.orderedEndpoints().distinct()) {
+            val attempt = runCatching { block(endpoint) }
+            if (attempt.isSuccess) {
+                statusStore.markAvailable(endpoint)
+                configuration.markActive(endpoint)
+                return attempt
+            }
+
+            val error = attempt.exceptionOrNull() ?: continue
+            if (error is CancellationException) throw error
+            if (error is ControlPlaneRequestRejectedException) {
+                // The host answered, but rejected the request; do not mark it
+                // offline or obscure the rejection as a connectivity issue.
+                statusStore.markAvailable(endpoint)
+                if (rejection == null) rejection = error
+                logger.debug {
+                    "Control-plane request rejected (${endpoint.baseUrl}); trying fallback: " +
+                        (error.message ?: "Request rejected")
+                }
+            } else {
+                statusStore.markUnreachable(endpoint)
+                lastConnectionFailure = error
+                logger.debug {
+                    "Control-plane endpoint unavailable (${endpoint.baseUrl}); trying fallback: " +
+                        (error.message ?: error::class.simpleName)
+                }
+            }
+        }
+
+        return Result.failure(
+            rejection ?: ControlPlaneUnavailableException(
+                "No control plane could complete the request",
+                lastConnectionFailure
+            )
+        )
+    }
+
     suspend fun executeAll(
         block: suspend (ControlPlaneEndpoint) -> Unit
     ): Result<Unit> {

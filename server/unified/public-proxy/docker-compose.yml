@@ -1,0 +1,24 @@
+name: sparrow-public-proxy
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../community-node/index.html:/srv/community-node/index.html:ro
+      - ../control-plane/index.html:/srv/control-plane/index.html:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - public-edge
+networks:
+  public-edge:
+    external: true
+    name: sparrow-public-edge
+volumes:
+  caddy-data:
+  caddy-config:

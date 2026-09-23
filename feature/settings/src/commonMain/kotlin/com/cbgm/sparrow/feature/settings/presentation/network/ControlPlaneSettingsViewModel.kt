@@ -24,6 +24,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.time.Duration.Companion.milliseconds
 
 class ControlPlaneSettingsViewModel(
@@ -40,6 +42,10 @@ class ControlPlaneSettingsViewModel(
     private val directoryDraft =
         MutableStateFlow(savedStateHandle.get<String>(DIRECTORY_DRAFT_KEY))
     private val actionState = MutableStateFlow(ControlPlaneActionState())
+
+    // Serialize remove, add and directory refresh. A user may tap Add immediately
+    // after Remove; those operations must not race the automatic refresh.
+    private val configurationActionMutex = Mutex()
     private val formState =
         combine(showAddDialog, newUrl, directoryDraft) { showAddDialog, newUrl, directoryDraft ->
             ControlPlaneFormState(
@@ -110,78 +116,94 @@ class ControlPlaneSettingsViewModel(
     }
 
     private fun addControlPlane() {
-        val candidate = newUrl.value.normalizeHttpUrl()
-        if (candidate == null) {
-            actionState.update { it.copy(addError = ControlPlaneSettingsError.INVALID_URL) }
-            return
-        }
-        if (candidate in configuration.manualBaseUrls.value) {
-            actionState.update { it.copy(addError = ControlPlaneSettingsError.DUPLICATE) }
-            return
-        }
-
         viewModelScope.launch {
-            val directoryResult = directorySynchronizer.synchronizeFrom(candidate)
-            if (directoryResult.isSuccess) {
-                clearAddDialogForm()
-                actionState.update {
-                    it.copy(
-                        addError = null,
-                        directoryError = null,
-                        lastDirectoryCount = directoryResult.getOrThrow()
-                    )
+            configurationActionMutex.withLock {
+                // Read the value after any pending removal has completed.
+                val candidate = newUrl.value.normalizeHttpUrl()
+                if (candidate == null) {
+                    actionState.update { it.copy(addError = ControlPlaneSettingsError.INVALID_URL) }
+                    return@withLock
                 }
-                healthMonitor.refresh()
-                return@launch
-            }
+                if (candidate in configuration.manualBaseUrls.value) {
+                    actionState.update { it.copy(addError = ControlPlaneSettingsError.DUPLICATE) }
+                    return@withLock
+                }
 
-            configuration
-                .addManual(candidate)
-                .onSuccess {
+                // A JSON directory URL remains supported by the Add field. A normal
+                // Control Plane base URL is added manually if it is not a directory.
+                val directoryResult = directorySynchronizer.synchronizeFrom(candidate)
+                if (directoryResult.isSuccess) {
                     clearAddDialogForm()
-                    actionState.update { it.copy(addError = null) }
-                    refreshAllNow()
-                }.onFailure { error ->
-                    SparrowLog.error("ControlPlaneSettingsViewModel", "Could not add control plane", error)
-                    actionState.update { it.copy(addError = ControlPlaneSettingsError.SAVE_FAILED) }
+                    actionState.update {
+                        it.copy(
+                            addError = null,
+                            directoryError = null,
+                            lastDirectoryCount = directoryResult.getOrThrow()
+                        )
+                    }
+                    healthMonitor.refresh()
+                    return@withLock
                 }
+
+                configuration.addManual(candidate).fold(
+                    onSuccess = {
+                        clearAddDialogForm()
+                        actionState.update { it.copy(addError = null) }
+                        healthMonitor.refresh()
+                    },
+                    onFailure = { error ->
+                        SparrowLog.error("ControlPlaneSettingsViewModel", "Could not add control plane", error)
+                        actionState.update { it.copy(addError = ControlPlaneSettingsError.SAVE_FAILED) }
+                    }
+                )
+            }
         }
     }
 
     private fun removeControlPlane(url: String) {
         viewModelScope.launch {
-            configuration
-                .removeManual(url)
-                .onSuccess { refreshAllNow() }
-                .onFailure { error ->
-                    SparrowLog.error("ControlPlaneSettingsViewModel", "Could not remove control plane", error)
-                    actionState.update { state ->
-                        state.copy(addError = ControlPlaneSettingsError.KEEP_ONE)
+            configurationActionMutex.withLock {
+                configuration.removeManual(url).fold(
+                    onSuccess = {
+                        // Update reachability before accepting an immediate re-add.
+                        // Do not refresh the external directory here: it can re-import
+                        // the entry while the user is removing the manual one.
+                        healthMonitor.refresh()
+                    },
+                    onFailure = { error ->
+                        SparrowLog.error("ControlPlaneSettingsViewModel", "Could not remove control plane", error)
+                        actionState.update { state ->
+                            state.copy(addError = ControlPlaneSettingsError.KEEP_ONE)
+                        }
                     }
-                }
+                )
+            }
         }
     }
 
     private fun saveDirectoryUrl() {
-        val draft = directoryDraft.value ?: configuration.directoryUrl.value.orEmpty()
-        val normalized = draft.takeIf(String::isNotBlank)?.normalizeHttpUrl()
-        if (draft.isNotBlank() && normalized == null) {
-            actionState.update { it.copy(directoryError = ControlPlaneDirectoryError.INVALID_URL) }
-            return
-        }
-
         viewModelScope.launch {
-            configuration
-                .setDirectoryUrl(normalized)
-                .onSuccess {
-                    setDirectoryDraft(null)
-                    refreshAllNow()
-                }.onFailure { error ->
-                    SparrowLog.error("ControlPlaneSettingsViewModel", "Could not save directory URL", error)
-                    actionState.update { state ->
-                        state.copy(directoryError = ControlPlaneDirectoryError.SAVE_FAILED)
-                    }
+            configurationActionMutex.withLock {
+                val draft = directoryDraft.value ?: configuration.directoryUrl.value.orEmpty()
+                val normalized = draft.takeIf(String::isNotBlank)?.normalizeHttpUrl()
+                if (draft.isNotBlank() && normalized == null) {
+                    actionState.update { it.copy(directoryError = ControlPlaneDirectoryError.INVALID_URL) }
+                    return@withLock
                 }
+
+                configuration.setDirectoryUrl(normalized).fold(
+                    onSuccess = {
+                        clearDirectoryDraft()
+                        refreshAllNow()
+                    },
+                    onFailure = { error ->
+                        SparrowLog.error("ControlPlaneSettingsViewModel", "Could not save directory URL", error)
+                        actionState.update { state ->
+                            state.copy(directoryError = ControlPlaneDirectoryError.SAVE_FAILED)
+                        }
+                    }
+                )
+            }
         }
     }
 
@@ -190,13 +212,9 @@ class ControlPlaneSettingsViewModel(
         newUrl.value = ""
     }
 
-    private fun setDirectoryDraft(value: String?) {
-        directoryDraft.value = value
-        if (value == null) {
-            savedStateHandle.remove<String>(DIRECTORY_DRAFT_KEY)
-        } else {
-            savedStateHandle[DIRECTORY_DRAFT_KEY] = value
-        }
+    private fun clearDirectoryDraft() {
+        directoryDraft.value = null
+        savedStateHandle.remove<String>(DIRECTORY_DRAFT_KEY)
     }
 
     private fun startHealthRefresh() {
@@ -209,7 +227,9 @@ class ControlPlaneSettingsViewModel(
     }
 
     private fun refreshAll() {
-        viewModelScope.launch { refreshAllNow() }
+        viewModelScope.launch {
+            configurationActionMutex.withLock { refreshAllNow() }
+        }
     }
 
     private suspend fun refreshAllNow() {

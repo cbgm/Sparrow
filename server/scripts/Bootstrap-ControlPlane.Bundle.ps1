@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param()
+param([switch]$Headless)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -53,7 +53,9 @@ $form.Size = New-Object System.Drawing.Size(760, 430)
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
 $form.MaximizeBox = $false
-$form.TopMost = $true
+# Do not keep the installer above other applications. It must remain movable,
+# minimizable and permit normal Alt+Tab during Docker operations.
+$form.TopMost = $false
 
 $title = New-Object System.Windows.Forms.Label
 $title.Location = New-Object System.Drawing.Point(24, 22)
@@ -85,8 +87,10 @@ $details.WordWrap = $false
 $details.Font = New-Object System.Drawing.Font("Consolas", 9)
 $form.Controls.Add($details)
 
-$form.Show()
-[System.Windows.Forms.Application]::DoEvents()
+if (-not $Headless) {
+    $form.Show()
+    [System.Windows.Forms.Application]::DoEvents()
+}
 
 function Write-Log {
     param([string]$Message)
@@ -104,6 +108,7 @@ function Write-Detail {
         return
     }
 
+    if ($Headless) { Write-Host $Message; return }
     $details.AppendText("[$(Get-Date -Format HH:mm:ss)] $Message`r`n")
     $details.SelectionStart = $details.Text.Length
     $details.ScrollToCaret()
@@ -167,6 +172,11 @@ function Fail {
         }
     } catch {
         Write-Log "Could not collect Docker diagnostics: $($_.Exception.Message)"
+    }
+
+    if ($Headless) {
+        [Console]::Error.WriteLine("$Message`nDiagnostic log: $logPath")
+        exit 1
     }
 
     [System.Windows.Forms.MessageBox]::Show(
@@ -411,6 +421,13 @@ function New-ControlPlaneId {
 
 function Initialize-NetworkConfiguration {
     param([Parameter(Mandatory = $true)][hashtable]$Config)
+
+    if ($Headless) {
+        if ($Config['CONFIGURED'] -ne 'true' -or [string]::IsNullOrWhiteSpace($Config['CONTROL_PLANE_ID'])) {
+            throw 'Headless setup requires CONFIGURED=true and CONTROL_PLANE_ID in sparrow.conf.'
+        }
+        return $Config
+    }
 
     $controlPlaneId =
         if ($Config.ContainsKey("CONTROL_PLANE_ID") -and -not [string]::IsNullOrWhiteSpace($Config["CONTROL_PLANE_ID"])) {
@@ -719,13 +736,19 @@ function Ensure-RegistryAuthority {
 }
 
 function Find-FirebaseCredentials {
-    $candidate = Join-Path $secretsDirectory "firebase-admin.json"
+    if ($env:SPARROW_DISABLE_FCM -eq '1') { return $null }
 
+    if (-not [string]::IsNullOrWhiteSpace($env:FIREBASE_ADMIN_CREDENTIALS) -and
+        (Test-Path -LiteralPath $env:FIREBASE_ADMIN_CREDENTIALS -PathType Leaf)) {
+        return (Resolve-Path -LiteralPath $env:FIREBASE_ADMIN_CREDENTIALS).Path
+    }
+
+    $candidate = Join-Path $secretsDirectory "firebase-admin.json"
     if (Test-Path -LiteralPath $candidate -PathType Leaf) {
         return $candidate
     }
 
-    throw "firebase-admin.json is missing from the secrets folder."
+    return $null
 }
 
 function ConvertTo-ProcessArgument {
@@ -869,17 +892,18 @@ function Invoke-ComposeStreaming {
 }
 
 function Invoke-Compose {
-    param([string[]]$Arguments)
+    param([Parameter(Mandatory = $true)][string[]]$Arguments)
 
-    $composeFileArguments = $script:ComposeFileArguments
-    & $script:Docker compose `
-        --env-file $runtimeEnvironmentPath `
-        @composeFileArguments `
-        @Arguments
-
-    if ($LASTEXITCODE -ne 0) {
-        throw "Docker Compose command failed: $($Arguments -join ' ')"
+    # Compose can run for minutes even after image pulls (container recreation,
+    # image extraction, database initialization). Reuse the process-backed reader
+    # here, not a synchronous native invocation that freezes the window. The
+    # streaming reader logs both output streams and checks the exit code.
+    $activity = if ($Arguments.Count -gt 1) {
+        "Docker Compose $($Arguments[0]) $($Arguments[1])"
+    } else {
+        "Docker Compose $($Arguments[0])"
     }
+    Invoke-ComposeStreaming -Arguments $Arguments -Activity $activity
 }
 
 function Wait-ForContainerRunning {
@@ -1115,6 +1139,13 @@ try {
 
     if ($mode -eq "public") {
         $script:ComposeFileArguments += @("-f", $productionComposePath)
+        if ($config['SHARED_PROXY'] -eq 'true') {
+            $sharedComposePath = Join-Path $deploymentDirectory "docker-compose.shared-proxy.yml"
+            if (-not (Test-Path -LiteralPath $sharedComposePath -PathType Leaf)) {
+                throw "Shared-proxy deployment override is missing: $sharedComposePath"
+            }
+            $script:ComposeFileArguments += @("-f", $sharedComposePath)
+        }
     }
 
     Set-ProgressValue -Value 5
@@ -1150,6 +1181,12 @@ try {
     $pushToken = (Get-Content $pushTokenPath -Raw).Trim()
 
     $firebaseCredentials = Find-FirebaseCredentials
+    if ($null -ne $firebaseCredentials) {
+        $script:ComposeFileArguments += @("-f", (Join-Path $deploymentDirectory "docker-compose.firebase.yml"))
+        Write-Detail "FCM configured using a separately supplied service account."
+    } else {
+        Write-Detail "FCM disabled: no service account was supplied. Messaging remains available."
+    }
     Ensure-RegistryAuthority -Config $config
 
     $siteAddress = if ($mode -eq "public") { $publicDomain } else { ":80" }
@@ -1160,7 +1197,7 @@ try {
         "CONTROL_PLANE_HTTP_PORT=$controlPlanePort",
         "CONTROL_PLANE_SITE_ADDRESS=$siteAddress",
         "CONTROL_PLANE_DOMAIN=$publicDomain",
-        "FIREBASE_ADMIN_CREDENTIALS=$($firebaseCredentials.Replace('\','/'))",
+        "FIREBASE_ADMIN_CREDENTIALS=$(if ($null -ne $firebaseCredentials) { $firebaseCredentials.Replace('\','/') } else { '' })",
         "REGISTRY_AUTHORITY_IDENTITY_FILE=./secrets/registry-authority.identity",
         "REGISTRY_AUTHORITY_CERTIFICATE_FILE=./secrets/registry-authority-certificate.json",
         "NODE_REGISTRY_DATABASE_PASSWORD=$registryPassword",
@@ -1295,7 +1332,7 @@ try {
     Write-Log "SUCCESS: $url"
 
     [System.Windows.Forms.Application]::DoEvents()
-    Start-Sleep -Seconds 3
+    if (-not $Headless) { Start-Sleep -Seconds 3 }
 
     $form.Close()
     exit 0

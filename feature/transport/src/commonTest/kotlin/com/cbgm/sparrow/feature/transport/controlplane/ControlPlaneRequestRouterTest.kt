@@ -143,6 +143,102 @@ class ControlPlaneRequestRouterTest {
             }
         }
 
+    @Test
+    fun firstAvailableStopsAfterFirstSuccessfulRegistration() =
+        runTest {
+            val configuration = FakeControlPlaneConfiguration()
+            val router = ControlPlaneRequestRouter(configuration, configuration)
+            val visited = mutableListOf<String>()
+
+            val result = router.executeFirstAvailable { endpoint ->
+                visited += endpoint.baseUrl
+                "accepted"
+            }
+
+            assertEquals("accepted", result.getOrThrow())
+            assertEquals(listOf("https://primary"), visited)
+            assertEquals("https://primary", configuration.activeEndpoint.value.baseUrl)
+        }
+
+    @Test
+    fun firstAvailableFallsBackEvenToPreviouslyUnreachableEndpoint() =
+        runTest {
+            val configuration = FakeControlPlaneConfiguration()
+            configuration.markUnreachable(ControlPlaneEndpoint("https://secondary"))
+            val router = ControlPlaneRequestRouter(configuration, configuration)
+            val visited = mutableListOf<String>()
+
+            val result = router.executeFirstAvailable { endpoint ->
+                visited += endpoint.baseUrl
+                if (endpoint.baseUrl == "https://primary") error("offline")
+                "accepted"
+            }
+
+            assertEquals("accepted", result.getOrThrow())
+            assertEquals(listOf("https://primary", "https://secondary"), visited)
+            assertEquals("https://secondary", configuration.activeEndpoint.value.baseUrl)
+            assertEquals(
+                ControlPlaneReachability.AVAILABLE,
+                configuration.statusFor("https://secondary").reachability
+            )
+        }
+
+    @Test
+    fun firstAvailableMarksServerRejectionAvailableAndAttemptsFallback() =
+        runTest {
+            val configuration = FakeControlPlaneConfiguration()
+            val router = ControlPlaneRequestRouter(configuration, configuration)
+
+            val result = router.executeFirstAvailable { endpoint ->
+                if (endpoint.baseUrl == "https://primary") {
+                    throw ControlPlaneRequestRejectedException("Registration rejected")
+                }
+                "accepted"
+            }
+
+            assertEquals("accepted", result.getOrThrow())
+            assertEquals("https://secondary", configuration.activeEndpoint.value.baseUrl)
+            assertEquals(
+                ControlPlaneReachability.AVAILABLE,
+                configuration.statusFor("https://primary").reachability
+            )
+        }
+
+    @Test
+    fun firstAvailableReturnsRetryableFailureWhenAllEndpointsAreOffline() =
+        runTest {
+            val configuration = FakeControlPlaneConfiguration()
+            val router = ControlPlaneRequestRouter(configuration, configuration)
+            val visited = mutableListOf<String>()
+            val result = router.executeFirstAvailable { endpoint ->
+                visited += endpoint.baseUrl
+                error("offline")
+            }
+
+            assertIs<ControlPlaneUnavailableException>(result.exceptionOrNull())
+            assertEquals(listOf("https://primary", "https://secondary"), visited)
+        }
+
+    @Test
+    fun firstAvailableDoesNotTurnAnExplicitRejectionIntoOffline() =
+        runTest {
+            val configuration = FakeControlPlaneConfiguration()
+            val router = ControlPlaneRequestRouter(configuration, configuration)
+
+            val result = router.executeFirstAvailable { endpoint ->
+                if (endpoint.baseUrl == "https://primary") {
+                    throw ControlPlaneRequestRejectedException("Registration rejected")
+                }
+                error("offline")
+            }
+
+            assertIs<ControlPlaneRequestRejectedException>(result.exceptionOrNull())
+            assertEquals(
+                ControlPlaneReachability.AVAILABLE,
+                configuration.statusFor("https://primary").reachability
+            )
+        }
+
     private class FakeControlPlaneConfiguration :
         ControlPlaneConfiguration,
         ControlPlaneStatusStore {

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# Runtime env contains database passwords; never make new files world-readable.
+umask 077
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/sparrow.conf"
@@ -87,36 +89,53 @@ fetch_url() {
 }
 
 parse_control_plane_directory() {
-  local document="$1"
-  local array
-  array="$(printf '%s' "$document" | tr '\r\n' ' ' | sed -n 's/.*"controlPlanes"[[:space:]]*:[[:space:]]*\[\([^]]*\)\].*/\1/p')"
-  [[ -n "$array" ]] || return 1
-  printf '%s' "$array" |
-    tr ',' '\n' |
-    sed -E 's/^[[:space:]]*"([^"]+)"[[:space:]]*$/\1/' |
-    awk 'NF' |
-    paste -sd, -
+  # The cross-platform manager already requires Python3. Parse the actual JSON
+  # document instead of guessing at a JSON array with sed (which can accept
+  # malformed data and accidentally copy objects into an endpoint list).
+  python3 -c 'import json, sys
+try:
+    entries = json.load(sys.stdin)["controlPlanes"]
+    if not isinstance(entries, list) or not entries or any(not isinstance(x, str) or not x.strip() for x in entries):
+        raise ValueError("controlPlanes must be a nonempty string list")
+    print(",".join(dict.fromkeys(x.strip() for x in entries)))
+except (ValueError, TypeError, KeyError, json.JSONDecodeError):
+    sys.exit(1)' <<< "$1"
 }
 
 resolve_configured_control_planes() {
-  if [[ -n "$CONTROL_PLANE_URLS" ]]; then
+  local local_urls="$CONTROL_PLANE_URLS"
+  local directory_urls=""
+  if [[ -z "${CONTROL_PLANE_DIRECTORY_URL:-}" ]]; then
+    if [[ -z "$local_urls" ]]; then
+      echo "sparrow.conf is missing CONTROL_PLANE_DIRECTORY_URL and CONTROL_PLANE_URLS." >&2
+      exit 1
+    fi
     return
   fi
 
-  if [[ -z "${CONTROL_PLANE_DIRECTORY_URL:-}" ]]; then
-    echo "sparrow.conf is missing CONTROL_PLANE_DIRECTORY_URL." >&2
-    exit 1
-  fi
-
-  while [[ -z "$CONTROL_PLANE_URLS" ]]; do
+  # A Combined installation supplies a local Control Plane AND optionally a
+  # wider directory. The local address must not suppress directory discovery.
+  while [[ -z "$directory_urls" ]]; do
     local document
     document="$(fetch_url "$CONTROL_PLANE_DIRECTORY_URL" || true)"
-    CONTROL_PLANE_URLS="$(parse_control_plane_directory "$document" || true)"
-    if [[ -z "$CONTROL_PLANE_URLS" ]]; then
+    directory_urls="$(parse_control_plane_directory "$document" || true)"
+    if [[ -z "$directory_urls" ]]; then
+      if [[ -n "$local_urls" ]]; then
+        echo "Control-plane directory unavailable; continuing with locally configured control plane." >&2
+        return
+      fi
+      # Preserve the last known valid addresses if the directory is offline.
+      if [[ -f "$RUNTIME_ENV" ]]; then
+        local cached
+        cached="$(grep -E '^ADVERTISED_CONTROL_PLANE_URLS=' "$RUNTIME_ENV" | tail -n 1 | cut -d= -f2- || true)"
+        if [[ -n "$cached" ]]; then CONTROL_PLANE_URLS="$cached"; return; fi
+      fi
       echo "Control-plane directory unavailable; retrying in 5 seconds." >&2
       sleep 5
     fi
   done
+  # Deduplicate the comma-separated addresses so registration can reach both.
+  CONTROL_PLANE_URLS="$(printf '%s\n' "$local_urls,$directory_urls" | tr ',;' '\n' | awk 'NF && !seen[$0]++' | paste -sd, -)"
 }
 
 resolve_configured_control_planes
@@ -246,6 +265,19 @@ if [[ -z "$HOST_ADDRESS" ]]; then
   exit 1
 fi
 
+# Host-side localhost is appropriate for probing a Combined LAN Control Plane,
+# but clients must see the reachable LAN address advertised by the node.
+advertised_control_plane_urls() {
+  local converted=() candidate
+  for candidate in "${NORMALIZED_CONTROL_PLANE_URLS[@]}"; do
+    if [[ "$MODE" == "lan" && "$candidate" =~ ^http://(localhost|127\.0\.0\.1):([0-9]+)$ ]]; then
+      candidate="http://$HOST_ADDRESS:${BASH_REMATCH[2]}"
+    fi
+    converted+=("$candidate")
+  done
+  printf '%s\n' "${converted[@]}" | awk 'NF && !seen[$0]++' | paste -sd, -
+}
+
 if [[ "$MODE" == "public" ]]; then
   if [[ -z "$PUBLIC_DOMAIN" ]]; then
     PUBLIC_IP="$(public_ipv4 || true)"
@@ -256,6 +288,7 @@ if [[ "$MODE" == "public" ]]; then
     PUBLIC_DOMAIN="${PUBLIC_IP//./-}.sslip.io"
   fi
   SITE_ADDRESS="$PUBLIC_DOMAIN"
+  if [[ "${SHARED_PROXY:-false}" == "true" ]]; then SITE_ADDRESS=":80"; fi
   CLIENT_ENDPOINT="wss://$PUBLIC_DOMAIN/v1/gateway"
   HTTP_ENDPOINT="https://$PUBLIC_DOMAIN"
 else
@@ -286,7 +319,7 @@ COMMUNITY_NODE_SITE_ADDRESS=$SITE_ADDRESS
 COMMUNITY_NODE_DOMAIN=$PUBLIC_DOMAIN
 CONTROL_PLANE_URL=$(container_control_plane_url "$CONTROL_PLANE_URL")
 CONTROL_PLANE_URLS=$(container_control_plane_urls)
-ADVERTISED_CONTROL_PLANE_URLS=$(IFS=,; printf '%s' "${NORMALIZED_CONTROL_PLANE_URLS[*]}")
+ADVERTISED_CONTROL_PLANE_URLS=$(advertised_control_plane_urls)
 CLIENT_ENDPOINT=$CLIENT_ENDPOINT
 FEDERATION_ENDPOINT=$HTTP_ENDPOINT
 MAILBOX_ENDPOINT=$HTTP_ENDPOINT
@@ -307,6 +340,9 @@ COMPOSE=(
 )
 if [[ "$MODE" == "public" ]]; then
   COMPOSE+=( -f "$PRODUCTION_COMPOSE" )
+  if [[ "${SHARED_PROXY:-false}" == "true" ]]; then
+    COMPOSE+=( -f "$SCRIPT_DIR/docker-compose.shared-proxy.yml" )
+  fi
 fi
 
 cd "$SCRIPT_DIR"

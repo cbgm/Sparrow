@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.transport.push
 
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.feature.transport.controlplane.ControlPlaneRequestRejectedException
 import com.cbgm.sparrow.feature.transport.controlplane.ControlPlaneRequestRouter
 import com.cbgm.sparrow.feature.transport.routing.LocalRoutingIdProvider
@@ -15,6 +16,8 @@ class HttpPushTokenRegistrationGateway(
     private val localRoutingIdProvider: LocalRoutingIdProvider,
     private val controlPlaneRequestRouter: ControlPlaneRequestRouter
 ) : PushTokenRegistrationGateway {
+    private val logger = SparrowLog.withTag("HttpPushTokenRegistrationGateway")
+
     override suspend fun register(
         token: String,
         platform: PushPlatform
@@ -30,7 +33,7 @@ class HttpPushTokenRegistrationGateway(
                     .getOrThrow()
 
             controlPlaneRequestRouter
-                .executeAll { endpoint ->
+                .executeFirstAvailable { endpoint ->
                     val response =
                         httpClient.post(
                             urlString = "${endpoint.baseUrl}/push/devices"
@@ -47,9 +50,12 @@ class HttpPushTokenRegistrationGateway(
 
                     if (response.status != HttpStatusCode.NoContent) {
                         throw ControlPlaneRequestRejectedException(
-                            "Push-token registration rejected with ${response.status}"
+                            "Push-token registration rejected with ${response.status} " +
+                                "at ${endpoint.baseUrl}"
                         )
                     }
+                    // Never include FCM token or routing ID in diagnostic logs.
+                    logger.info { "Push-token registration accepted by ${endpoint.baseUrl}" }
                 }.getOrThrow()
         }
 }

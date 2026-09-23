@@ -15,7 +15,8 @@ class PendingMessageSyncWorker(
     private val synchronizePendingMessages: SynchronizePendingMessagesUseCase,
     private val controlPlaneConfiguration: ControlPlaneConfiguration,
     private val appVisibilityState: AppVisibilityState,
-    private val conversationNotificationPresenter: ConversationNotificationPresenter
+    private val conversationNotificationPresenter: ConversationNotificationPresenter,
+    private val backgroundDeliveryReceiptSender: BackgroundDeliveryReceiptSender
 ) : CoroutineWorker(appContext, workerParameters) {
     private val logger = SparrowLog.withTag("PendingMessageSyncWorker")
 
@@ -32,35 +33,49 @@ class PendingMessageSyncWorker(
         // WorkManager can start Sparrow's process without ever creating AppViewModel.
         // The normal UI startup initializes the persisted control-plane endpoints,
         // but a cold push must do that independently before making network requests.
-        return runCatching {
-            controlPlaneConfiguration.initialize()
-            synchronizePendingMessages(wakeUpId = wakeUpId).getOrThrow()
-        }.fold(
-            onSuccess = { syncResult ->
-                if (!appVisibilityState.isVisible.value) {
-                    syncResult.notifications.forEach { notification ->
-                        conversationNotificationPresenter.show(notification)
-                    }
+        val syncResult =
+            runCatching {
+                controlPlaneConfiguration.initialize()
+                synchronizePendingMessages(wakeUpId = wakeUpId).getOrThrow()
+            }.getOrElse { error ->
+                if (error is kotlinx.coroutines.CancellationException &&
+                    error !is kotlinx.coroutines.TimeoutCancellationException
+                ) {
+                    throw error
                 }
+                logger.error(error) { "Pending-message sync failed; attempt=$runAttemptCount" }
+                return if (runAttemptCount >= MAX_RETRY_COUNT) Result.failure() else Result.retry()
+            }
 
+        // The received message has already been persisted. Show its notification
+        // now, rather than delaying it until the separate outgoing receipt is sent.
+        if (!appVisibilityState.isVisible.value) {
+            syncResult.notifications.forEach { notification ->
+                conversationNotificationPresenter.show(notification)
+            }
+        }
+
+        return runCatching {
+            backgroundDeliveryReceiptSender.flush()
+        }.fold(
+            onSuccess = {
                 logger.info {
                     "Pending-message sync succeeded; " +
                         "processed=${syncResult.processedEnvelopeCount}, " +
-                        "notifications=${syncResult.notifications.size}"
+                        "notifications=${syncResult.notifications.size}; delivery receipts checked"
                 }
-
                 Result.success()
             },
             onFailure = { error ->
-                logger.error(error) {
-                    "Pending-message sync failed; attempt=$runAttemptCount"
+                if (error is kotlinx.coroutines.CancellationException &&
+                    error !is kotlinx.coroutines.TimeoutCancellationException
+                ) {
+                    throw error
                 }
-
-                if (runAttemptCount >= MAX_RETRY_COUNT) {
-                    Result.failure()
-                } else {
-                    Result.retry()
-                }
+                // Ordinary background unavailability must not produce a global
+                // error popup. Receipts stay in ProtocolOutbox until accepted.
+                logger.warn { "Delivery receipts remain queued for background retry: ${error.message}" }
+                if (runAttemptCount >= MAX_RETRY_COUNT) Result.failure() else Result.retry()
             }
         )
     }

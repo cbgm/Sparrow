@@ -74,7 +74,6 @@ services:
 
   push:
     ports: !reset []
-    volumes: !reset []
     environment:
       TRUST_PROXY_HEADERS: "true"
       PUSH_DATABASE_PASSWORD: !reset null
@@ -84,8 +83,6 @@ services:
     secrets:
       - push-database-password
       - push-internal-api-token
-      - source: firebase-admin
-        target: firebase-admin.json
     networks:
       - edge
       - backend
@@ -104,5 +101,3 @@ secrets:
     file: ${PUSH_DATABASE_PASSWORD_FILE:?Set push password file}
   push-internal-api-token:
     file: ${PUSH_INTERNAL_API_TOKEN_FILE:?Set push token file}
-  firebase-admin:
-    file: ${FIREBASE_ADMIN_CREDENTIALS:?Set Firebase Admin credential file}

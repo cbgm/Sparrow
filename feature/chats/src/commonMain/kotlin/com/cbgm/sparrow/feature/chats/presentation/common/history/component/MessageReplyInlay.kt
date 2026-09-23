@@ -40,8 +40,11 @@ internal fun MessageReplyInlay(
     color: Color,
     isMine: Boolean
 ) {
-    val isAvailable = reply.isMine != null
-    val clickModifier = if (isAvailable && onClick != null) {
+    // Only the currently loaded history page is used to resolve reply previews.
+    // A null isMine therefore does NOT mean that the original was deleted: it can
+    // simply be in an older page. Keep the preview clickable so MessageList can
+    // request that page and scroll to the original message once it is loaded.
+    val clickModifier = if (onClick != null && reply.messageId.isNotBlank()) {
         Modifier.clickable(onClick = onClick)
     } else {
         Modifier

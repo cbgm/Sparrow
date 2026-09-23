@@ -203,8 +203,9 @@ class AppViewModel(
             waitUntilLocalIdentityIsReady()
             combine(
                 initialization.controlPlaneConfiguration.endpoints,
-                initialization.controlPlaneStatusStore.statuses
-            ) { endpoints, statuses ->
+                initialization.controlPlaneStatusStore.statuses,
+                initialization.controlPlaneConfiguration.activeEndpoint
+            ) { endpoints, statuses, activeEndpoint ->
                 val reachabilityByUrl =
                     statuses.associate { status ->
                         status.endpoint.baseUrl to status.reachability
@@ -213,9 +214,11 @@ class AppViewModel(
                     .filter { endpoint ->
                         reachabilityByUrl[endpoint.baseUrl] != ControlPlaneReachability.UNREACHABLE
                     }.map { endpoint -> endpoint.baseUrl }
-                    .toSet()
+                    .toSet() to activeEndpoint?.baseUrl
             }.distinctUntilChanged()
                 .collectLatest {
+                    // Register again when the active control plane changes,
+                    // even if the set of available endpoints remains identical.
                     initialization.platformNotificationRuntime.requestPushTokenRegistration()
                 }
         }

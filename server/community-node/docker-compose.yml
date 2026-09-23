@@ -134,6 +134,18 @@ services:
       federation-database:
         condition: service_healthy
 
+  # Docker creates new named volumes as root. The gateway runs as 65532,
+  # so image-layer chown does not grant write permission to a mounted volume.
+  # Run once before the gateway, without deleting blobs or elevating gateway.
+  blob-storage-init:
+    image: alpine:3.21
+    restart: "no"
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-ec"]
+    command: "mkdir -p /var/lib/sparrow/blobs && chown -R 65532:65532 /var/lib/sparrow/blobs"
+    volumes:
+      - gateway-blob-data:/var/lib/sparrow/blobs
+
   gateway:
     <<: *community-service
     image: sparrow-gateway:local
@@ -165,6 +177,8 @@ services:
     depends_on:
       federation:
         condition: service_healthy
+      blob-storage-init:
+        condition: service_completed_successfully
 
 volumes:
   caddy-data:

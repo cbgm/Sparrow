@@ -596,7 +596,11 @@ internal class IdentityExchangeDataSource(
         context: IncomingPacketContext,
         acceptance: IdentityExchangeAcceptance
     ): Result<Unit> =
-        safeSuspendCall {
+        // A verified acceptance carrying changed remote keys is staged for the
+        // user's recovery inbox by orchestration. It must not enter the global
+        // error/snackbar channel before that expected review state is handled.
+        // Invalid signatures, challenges and storage failures still log normally.
+        safeSuspendCall(expectedFailure = { it is IdentityAcceptanceReviewRequiredDtoException }) {
             mutex.withLock {
                 val invitation = requireInvitation(acceptance.exchangeId, IdentityExchangeDirection.OUTGOING)
                 check(invitation.contactId == context.contactId) {

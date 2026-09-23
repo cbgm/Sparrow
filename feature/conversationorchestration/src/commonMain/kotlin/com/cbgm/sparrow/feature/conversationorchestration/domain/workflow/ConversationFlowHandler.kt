@@ -572,23 +572,26 @@ internal class ConversationFlowHandler(
         packet: DirectChatAuthorizationRevokedPacket
     ): Result<Unit> =
         runCatching {
-            check(packet.packetId == "direct-chat-authorization-revoked-${packet.invitationId}") {
-                "Packet ID does not match the invitation transition"
-            }
             val binding = getIdentityExchangeBinding(packet.invitationId).getOrThrow()
                 ?: error("Invitation was not found: ${packet.invitationId}")
-            check(binding.peerId == context.contactId) {
-                "Authorization revocation contact does not match invitation"
-            }
-            check(binding.inviteChallenge.contentEquals(packet.inviteChallenge)) {
-                "Authorization revocation challenge does not match invitation"
-            }
-            check(binding.remoteSigningPublicKey.contentEquals(packet.revokerSigningPublicKey)) {
-                "Authorization revocation signing key does not match the contact identity"
-            }
+            // Verify the packet signature before distinguishing an old/replaced sender
+            // from the key pinned to this invitation. A self-signed packet from a new
+            // identity is NOT authorization to revoke the previous identity's chat.
             revocationProtocol.verifyPacket(packet).getOrThrow()
-            require(packet.revokedAtEpochMilliseconds <= context.receivedAtEpochMilliseconds + 5L * 60L * 1_000L) {
-                "Authorization revocation was created too far in the future"
+            when (decideIncomingAuthorizationRevocation(context, packet, binding)) {
+                IncomingAuthorizationRevocationDecision.IGNORE_UNRECOGNIZED_SIGNER -> {
+                    // The invitation can outlive a deleted chat / identity replacement.
+                    // Acknowledge this packet as handled so the envelope is not retried
+                    // and reported as a failure on every reconnect. No identity, trust,
+                    // pending messages, or conversation is modified here.
+                    logger.info {
+                        "Ignoring authorization revocation with a signing key that does not match " +
+                            "the stored invitation identity: invitationId=${packet.invitationId}"
+                    }
+                    return@runCatching
+                }
+
+                IncomingAuthorizationRevocationDecision.APPLY -> Unit
             }
             invalidateIdentityExchange(
                 exchangeId = packet.invitationId,
@@ -610,6 +613,19 @@ internal class ConversationFlowHandler(
                     packet = packet,
                     receivedAtEpochMilliseconds = context.receivedAtEpochMilliseconds
                 ).getOrThrow()
+                // An acceptance may arrive after its outgoing exchange has been
+                // cancelled, replaced, or removed locally. It cannot establish a
+                // conversation without the original exchange/challenge binding.
+                // Verify the packet above, then acknowledge the unmatched response
+                // as handled rather than retrying this envelope forever.
+                // A failed binding lookup (e.g. database error) still propagates.
+                if (getIdentityExchangeBinding(packet.invitationId).getOrThrow() == null) {
+                    logger.warn {
+                        "Ignoring unmatched invitation acceptance: invitationId=${packet.invitationId}, " +
+                            "contactId=${context.contactId}"
+                    }
+                    return@runCatching
+                }
                 try {
                     receiveIdentityExchangeAccepted(
                         context,

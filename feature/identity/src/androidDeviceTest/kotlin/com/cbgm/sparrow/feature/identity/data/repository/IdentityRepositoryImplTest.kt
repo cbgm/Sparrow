@@ -6,6 +6,7 @@ import com.cbgm.sparrow.core.crypto.SodiumRuntime
 import com.cbgm.sparrow.core.crypto.identity.SodiumIdentityKeyGenerator
 import com.cbgm.sparrow.core.crypto.signature.SodiumDetachedSignatureCrypto
 import com.cbgm.sparrow.core.crypto.transport.SodiumTransportMessageCipher
+import com.cbgm.sparrow.core.protocol.identity.LocalIdentityUnavailableException
 import com.cbgm.sparrow.data.datastore.createSparrowDataStore
 import com.cbgm.sparrow.feature.identity.data.datasource.SparrowDataStorePublicIdentityDataSource
 import com.cbgm.sparrow.feature.identity.device.AndroidPrivateKeyStorage
@@ -15,6 +16,7 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -96,6 +98,12 @@ class IdentityRepositoryImplTest {
                     "Identity should not exist before creation"
                 )
 
+                // A push-token worker may request this before onboarding finishes.
+                // It must be able to distinguish "not created yet" from real failures.
+                assertIs<LocalIdentityUnavailableException>(
+                    repository.getSigningPublicKey().exceptionOrNull()
+                )
+
                 /**
                  * Create a completely new identity.
                  */
@@ -112,6 +120,11 @@ class IdentityRepositoryImplTest {
                 assertTrue(
                     createdIdentity.signingPublicKey.isNotEmpty(),
                     "Created signing public key must not be empty"
+                )
+                assertContentEquals(
+                    createdIdentity.signingPublicKey,
+                    repository.getSigningPublicKey().getOrThrow(),
+                    "Once onboarding creates the identity, the public-key provider must succeed"
                 )
 
                 /**

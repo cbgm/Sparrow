@@ -70,7 +70,7 @@ val transportModule =
         }
 
         single<ControlPlaneConfigurationImpl> {
-            ControlPlaneConfigurationImpl(dataStore = get())
+            ControlPlaneConfigurationImpl(dataStore = get(), nodeDirectoryCache = get())
         }
 
         single<ControlPlaneConfiguration> {

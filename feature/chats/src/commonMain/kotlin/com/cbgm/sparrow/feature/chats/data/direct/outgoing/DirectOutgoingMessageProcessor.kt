@@ -62,6 +62,7 @@ class DirectOutgoingMessageProcessor(
     private val attachmentTransfer: MessageAttachmentOperationsRepository
 ) {
     private val logger = SparrowLog.withTag("DirectOutgoingMessageProcessor")
+    private val automaticAuthorizationGate = DirectAutomaticOutgoingGate(::authorizationBlockReason)
 
     suspend fun send(
         conversationId: String,
@@ -219,24 +220,32 @@ class DirectOutgoingMessageProcessor(
 
     suspend fun releaseWaitingForAuthorization(contactId: String): Result<Unit> =
         safeSuspendCall {
-            requireDirectChatAuthorization(contactId).getOrThrow()
-            val contact = contactRepository.getContact(contactId).getOrThrow() ?: error("Contact was not found")
-            val nowEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+            // Onboarding, invitation acceptance and restart reconciliation may all
+            // attempt release before the mutual exchange and recipient keys exist.
+            // No work must not trigger an authorization error; pending work stays
+            // persisted until a later identity result/startup reconciliation retries.
             val waitingMessages = findWaitingMessages(contactId)
-            val expiredMessages =
-                waitingMessages.filter { message ->
-                    DirectPendingAuthorizationMessagePolicy.isExpired(
-                        createdAtEpochMilliseconds = message.createdAtEpochMilliseconds,
-                        nowEpochMilliseconds = nowEpochMilliseconds
-                    )
-                }
+            val released = automaticAuthorizationGate.run(contactId, waitingMessages.isNotEmpty()) {
+                val contact = contactRepository.getContact(contactId).getOrThrow() ?: error("Contact was not found")
+                val nowEpochMilliseconds = SystemClock.nowEpochMilliseconds()
+                val expiredMessages =
+                    waitingMessages.filter { message ->
+                        DirectPendingAuthorizationMessagePolicy.isExpired(
+                            createdAtEpochMilliseconds = message.createdAtEpochMilliseconds,
+                            nowEpochMilliseconds = nowEpochMilliseconds
+                        )
+                    }
 
-            discardMessages(expiredMessages)
-            val expiredMessageIds = expiredMessages.mapTo(mutableSetOf(), MessageEntity::id)
+                discardMessages(expiredMessages)
+                val expiredMessageIds = expiredMessages.mapTo(mutableSetOf(), MessageEntity::id)
 
-            waitingMessages
-                .filterNot { message -> message.id in expiredMessageIds }
-                .forEach { message -> releaseMessage(message, contactId, contact) }
+                waitingMessages
+                    .filterNot { message -> message.id in expiredMessageIds }
+                    .forEach { message -> releaseMessage(message, contactId, contact) }
+            }
+            if (!released && waitingMessages.isNotEmpty()) {
+                logger.debug { "Deferred ${waitingMessages.size} direct messages until mutual identity/keys are ready" }
+            }
         }
 
     suspend fun discardWaitingForAuthorization(contactId: String): Result<Unit> =
@@ -278,38 +287,47 @@ class DirectOutgoingMessageProcessor(
         safeSuspendCall {
             require(conversationId.isNotBlank()) { "Conversation ID must not be blank" }
             val target = loadTarget(conversationId)
-            // Do not mark a receipt sent while identity review blocks its packet.
-            requireDirectChatAuthorization(target.contactId).getOrThrow()
-
-            conversationDataSource.findMessagesAwaitingReadReceipt(conversationId).forEach { message ->
-                enqueueReadReceipt(message.messageId, message.contactId)
-                check(conversationDataSource.markReadReceiptSent(message.messageId)) {
-                    "Incoming direct message could not be marked as read"
+            val awaitingReceipts = conversationDataSource.findMessagesAwaitingReadReceipt(conversationId)
+            // Opening a conversation while onboarding must not report missing
+            // encryption keys when there is nothing to acknowledge. If receipt
+            // work exists, leave its DB flag untouched until authorization arrives.
+            val sent = automaticAuthorizationGate.run(target.contactId, awaitingReceipts.isNotEmpty()) {
+                awaitingReceipts.forEach { message ->
+                    enqueueReadReceipt(message.messageId, message.contactId)
+                    check(conversationDataSource.markReadReceiptSent(message.messageId)) {
+                        "Incoming direct message could not be marked as read"
+                    }
+                    logger.debug {
+                        "Direct read receipt queued: messageId=${message.messageId}, contactId=${message.contactId}"
+                    }
                 }
-                logger.debug {
-                    "Direct read receipt queued: messageId=${message.messageId}, contactId=${message.contactId}"
-                }
+            }
+            if (!sent && awaitingReceipts.isNotEmpty()) {
+                logger.debug { "Deferred ${awaitingReceipts.size} direct read receipts until mutual identity/keys are ready" }
             }
         }
 
     private suspend fun requireDirectChatAuthorization(contactId: String): Result<Unit> =
         safeSuspendCall {
-            // This is a backstop for direct message/reaction/edit/delete/retry
-            // APIs that do not necessarily enter conversation orchestration.
-            if (observePendingRemoteIdentityChanges().first().any { it.peerId == contactId }) {
-                throw DirectChatAuthorizationRequiredException(
-                    "Identity change pending verification; messages must wait for recovery"
-                )
-            }
-            val state = getIdentityPeerState(contactId).getOrThrow()
-            if (!state.hasEstablishedExchange ||
-                !getRemoteIdentity(contactId).getOrThrow().hasDirectMessageEncryptionKeys()
-            ) {
-                throw DirectChatAuthorizationRequiredException(
-                    "Mutual identity authorization and valid encryption keys are required before direct messages can be sent"
-                )
+            // Explicit message/reaction/edit/delete/retry operations fail closed;
+            // only background release and receipts may defer normal missing-key state.
+            authorizationBlockReason(contactId)?.let { reason ->
+                throw DirectChatAuthorizationRequiredException(reason)
             }
         }
+
+    private suspend fun authorizationBlockReason(contactId: String): String? {
+        if (observePendingRemoteIdentityChanges().first().any { it.peerId == contactId }) {
+            return "Identity change pending verification; messages must wait for recovery"
+        }
+        val state = getIdentityPeerState(contactId).getOrThrow()
+        if (!state.hasEstablishedExchange ||
+            !getRemoteIdentity(contactId).getOrThrow().hasDirectMessageEncryptionKeys()
+        ) {
+            return "Mutual identity authorization and valid encryption keys are required before direct messages can be sent"
+        }
+        return null
+    }
 
     private suspend fun releaseMessage(
         message: MessageEntity,

@@ -3,6 +3,7 @@ package com.cbgm.sparrow.notification.di
 import androidx.work.WorkerParameters
 import com.cbgm.sparrow.core.transport.ControlPlaneConfiguration
 import com.cbgm.sparrow.notification.device.AndroidNotificationRuntime
+import com.cbgm.sparrow.notification.device.BackgroundDeliveryReceiptSender
 import com.cbgm.sparrow.notification.device.PendingMessageSyncScheduler
 import com.cbgm.sparrow.notification.device.PendingMessageSyncWorker
 import com.cbgm.sparrow.notification.device.PlatformNotificationRuntime
@@ -52,6 +53,15 @@ val notificationAndroidModule =
             )
         }
 
+        single {
+            BackgroundDeliveryReceiptSender(
+                protocolOutbox = get(),
+                transportConnectionManager = get(),
+                outboxRunner = get(),
+                appVisibilityState = get()
+            )
+        }
+
         worker { parameters ->
             PendingMessageSyncWorker(
                 appContext = androidContext(),
@@ -59,7 +69,8 @@ val notificationAndroidModule =
                 synchronizePendingMessages = get(),
                 controlPlaneConfiguration = get<ControlPlaneConfiguration>(),
                 appVisibilityState = get(),
-                conversationNotificationPresenter = get()
+                conversationNotificationPresenter = get(),
+                backgroundDeliveryReceiptSender = get()
             )
         }
 

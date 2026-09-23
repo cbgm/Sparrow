@@ -5,6 +5,7 @@ import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
 import com.cbgm.sparrow.core.crypto.transport.TransportMessageCipher
 import com.cbgm.sparrow.core.protocol.identity.LocalEncryptionKeyPair
 import com.cbgm.sparrow.core.protocol.identity.LocalEncryptionKeyPairProvider
+import com.cbgm.sparrow.core.protocol.identity.LocalIdentityUnavailableException
 import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentity
 import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentityProvider
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair
@@ -239,7 +240,10 @@ class IdentityRepositoryImpl(
 
     override suspend fun getSigningPublicKey(): Result<ByteArray> =
         runCatching {
-            val identity = getIdentity().getOrThrow() ?: error("Local Sparrow identity does not exist")
+            // FCM may ask for a routing ID before onboarding has created the identity.
+            // Use the typed absence signal so PushTokenRegistrationWorker can defer
+            // registration without publishing an expected startup state as a global error.
+            val identity = getIdentity().getOrThrow() ?: throw LocalIdentityUnavailableException()
             identity.signingPublicKey.copyOf()
         }
 
