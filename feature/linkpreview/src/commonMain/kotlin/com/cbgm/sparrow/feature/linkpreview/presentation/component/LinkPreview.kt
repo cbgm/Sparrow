@@ -68,29 +68,42 @@ private fun LinkPreviewContent(
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
 
-            is LinkPreviewUiState.Success ->
-                LinkPreviewCard(
-                    preview = uiState.preview,
-                    onClick = { uriHandler.openUri(url) }
-                )
-
-            is LinkPreviewUiState.Error -> {
-                Surface(
-                    modifier = Modifier.fillMaxWidth().clickable { uriHandler.openUri(url) },
-                    shape = MaterialTheme.shapes.medium,
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    Text(
-                        text = url,
-                        modifier = Modifier.padding(MaterialTheme.spacing.base),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+            is LinkPreviewUiState.Success -> {
+                if (uiState.preview.imageBytes != null) {
+                    LinkPreviewCard(
+                        preview = uiState.preview,
+                        onClick = { uriHandler.openUri(url) }
                     )
+                } else {
+                    // No image is a normal outcome, not an error or snackbar event.
+                    LinkPreviewFallback(url = url, onClick = { uriHandler.openUri(url) })
                 }
             }
+
+            is LinkPreviewUiState.Error ->
+                LinkPreviewFallback(url = url, onClick = { uriHandler.openUri(url) })
         }
+    }
+}
+
+@Composable
+private fun LinkPreviewFallback(
+    url: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Text(
+            text = url,
+            modifier = Modifier.padding(MaterialTheme.spacing.base),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 

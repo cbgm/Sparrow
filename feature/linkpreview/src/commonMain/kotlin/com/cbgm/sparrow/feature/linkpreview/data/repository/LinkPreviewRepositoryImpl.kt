@@ -6,7 +6,6 @@ import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.linkpreview.data.datasource.LocalLinkPreviewDataSource
 import com.cbgm.sparrow.feature.linkpreview.data.datasource.RemoteLinkPreviewDataSource
 import com.cbgm.sparrow.feature.linkpreview.data.mapper.toDomain
-import com.cbgm.sparrow.feature.linkpreview.data.model.LinkPreviewUnavailableException
 import com.cbgm.sparrow.feature.linkpreview.domain.model.LinkPreview
 import com.cbgm.sparrow.feature.linkpreview.domain.repository.LinkPreviewRepository
 import kotlinx.coroutines.Dispatchers
@@ -42,18 +41,12 @@ class LinkPreviewRepositoryImpl(
 
     override suspend fun getPreview(url: String): Result<LinkPreview> =
         safeSuspendCall {
-            localLinkPreviewDataSource
-                .getPreview(url)
-                ?.takeIf { cached -> cached.imageBytes != null }
-                ?.toDomain()
-                ?: remoteLinkPreviewDataSource
-                    .getPreview(url)
-                    .also { preview ->
-                        localLinkPreviewDataSource.insertPreview(preview)
-                    }
-                    .takeIf { preview -> preview.imageBytes != null }
-                    ?.toDomain()
-                ?: throw LinkPreviewUnavailableException(url)
+            // A page may legitimately have no preview image. Cache that result as well,
+            // so opening a chat or prefetching its messages does not fetch it repeatedly.
+            localLinkPreviewDataSource.getPreview(url)?.toDomain()
+                ?: remoteLinkPreviewDataSource.getPreview(url)
+                    .also { preview -> localLinkPreviewDataSource.insertPreview(preview) }
+                    .toDomain()
         }
 }
 
