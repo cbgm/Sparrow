@@ -50,6 +50,7 @@ import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowDetailRow
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
+import com.cbgm.sparrow.core.ui.component.rememberDelayedVisibility
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -112,6 +113,7 @@ fun IdentityScreen(
     page: MeDetailPage = MeDetailPage.Overview
 ) {
     var copiedEvent by remember { mutableIntStateOf(0) }
+    val showLoading = rememberDelayedVisibility(uiState is IdentityUiState.Loading)
     Box(modifier = modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -126,7 +128,7 @@ fun IdentityScreen(
         ) {
             when (uiState) {
                 IdentityUiState.Loading -> {
-                    LoadingContent()
+                    if (showLoading) LoadingContent()
                 }
 
                 is IdentityUiState.NoIdentity -> {
