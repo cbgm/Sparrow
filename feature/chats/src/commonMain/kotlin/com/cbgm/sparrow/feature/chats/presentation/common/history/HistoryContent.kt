@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.component.rememberDelayedVisibility
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.HistoryEmptyContent
@@ -46,15 +47,27 @@ internal fun HistoryContent(
             shouldDissolve = { !it.isMine }
         )
 
-    when {
-        model.isLoading -> HistoryLoadingContent(modifier = fillModifier)
+    // Do not briefly show a spinner or "no messages" before the first DB emission arrives.
+    // Visible messages are always rendered immediately; only placeholders are delayed.
+    val showLoading = rememberDelayedVisibility(model.isLoading)
+    val showEmpty = rememberDelayedVisibility(
+        !model.isLoading && dissolvingListState.messages.isEmpty()
+    )
 
-        dissolvingListState.messages.isEmpty() ->
-            HistoryEmptyContent(
-                title = model.emptyTitle,
-                description = model.emptyDescription,
-                modifier = fillModifier
-            )
+    when {
+        model.isLoading -> {
+            if (showLoading) HistoryLoadingContent(modifier = fillModifier)
+        }
+
+        dissolvingListState.messages.isEmpty() -> {
+            if (showEmpty) {
+                HistoryEmptyContent(
+                    title = model.emptyTitle,
+                    description = model.emptyDescription,
+                    modifier = fillModifier
+                )
+            }
+        }
 
         else -> MessageList(
             dissolvingListState = dissolvingListState,
