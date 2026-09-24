@@ -335,6 +335,8 @@
     <string name="feature_settings_last_failed_node">Last failed node</string>
     <string name="feature_settings_last_disconnect">Last disconnect</string>
     <string name="feature_settings_network_nodes">Discovered nodes</string>
+    <string name="feature_settings_network_show_all_nodes">View all nodes (%1$d)</string>
+    <string name="feature_settings_network_no_active_node">No node connected</string>
     <string name="feature_settings_network_no_nodes">No nodes discovered yet</string>
     <string name="feature_settings_network_active_connections">Connections: %1$d</string>
     <string name="feature_settings_node_current">CURRENT</string>

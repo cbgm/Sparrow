@@ -5,6 +5,7 @@ import androidx.navigation.compose.composable
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.feature.autoreply.presentation.AutoReplySettingsRoute
 import com.cbgm.sparrow.feature.settings.presentation.developer.DeveloperMenuRoute
+import com.cbgm.sparrow.feature.settings.presentation.developer.nodes.DeveloperNodesRoute
 import com.cbgm.sparrow.feature.settings.presentation.disclaimer.DisclaimerRoute
 import com.cbgm.sparrow.feature.settings.presentation.disclaimer.model.DisclaimerType
 import com.cbgm.sparrow.feature.settings.presentation.errors.DeveloperErrorLogRoute
@@ -40,6 +41,13 @@ fun NavGraphBuilder.settingsNavGraph() {
         exitTransition = { slideOutToRight() }
     ) {
         DeveloperMenuRoute()
+    }
+
+    composable<AppRoute.DeveloperNodes>(
+        enterTransition = { slideInFromRight() },
+        exitTransition = { slideOutToRight() }
+    ) {
+        DeveloperNodesRoute()
     }
 
     composable<AppRoute.DeveloperErrorLog>(

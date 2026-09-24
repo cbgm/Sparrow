@@ -88,7 +88,10 @@ fun DeveloperMenuScreen(
         ) {
             BuildInfoCard(buildInfo = uiState.buildInfo)
 
-            NetworkDiagnosticsCard(diagnostics = uiState.transportDiagnostics)
+            NetworkDiagnosticsCard(
+                diagnostics = uiState.transportDiagnostics,
+                onShowAllNodes = { onUiEvent(DeveloperMenuUiEvent.NodesClicked) }
+            )
 
             DeveloperErrorLogCard(
                 savedErrorCount = uiState.savedErrorCount,

@@ -1,4 +1,4 @@
-package com.cbgm.sparrow.feature.settings.presentation.developer
+package com.cbgm.sparrow.feature.settings.presentation.developer.nodes
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -8,18 +8,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun DeveloperMenuRoute(
+fun DeveloperNodesRoute(
     modifier: Modifier = Modifier,
-    viewModel: DeveloperMenuViewModel = koinViewModel()
+    viewModel: DeveloperNodesViewModel = koinViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val diagnostics by viewModel.diagnostics.collectAsStateWithLifecycle()
 
-    // Only refresh diagnostics while this destination is displayed.
     LaunchedEffect(Unit) { viewModel.refreshTransportDiagnosticsWhileVisible() }
 
-    DeveloperMenuScreen(
-        uiState = uiState,
-        onUiEvent = viewModel::onUiEvent,
+    DeveloperNodesScreen(
+        diagnostics = diagnostics,
+        onBack = viewModel::onBackClicked,
         modifier = modifier
     )
 }

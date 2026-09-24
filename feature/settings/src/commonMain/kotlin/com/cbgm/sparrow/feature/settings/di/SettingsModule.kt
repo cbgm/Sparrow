@@ -32,6 +32,7 @@ import com.cbgm.sparrow.feature.settings.domain.usecase.SetBlockUnknownContactIn
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetDeveloperEnabledUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetDirectIdentitySetupModeUseCase
 import com.cbgm.sparrow.feature.settings.presentation.developer.DeveloperMenuViewModel
+import com.cbgm.sparrow.feature.settings.presentation.developer.nodes.DeveloperNodesViewModel
 import com.cbgm.sparrow.feature.settings.presentation.disclaimer.DisclaimerViewModel
 import com.cbgm.sparrow.feature.settings.presentation.errors.DeveloperErrorLogViewModel
 import com.cbgm.sparrow.feature.settings.presentation.licenses.LicensesViewModel
@@ -190,6 +191,10 @@ val settingsModule =
                 setDeveloperEnabledUseCase = get(),
                 transportDiagnosticsProvider = get()
             )
+        }
+
+        viewModel {
+            DeveloperNodesViewModel(transportDiagnosticsProvider = get())
         }
 
         viewModel {
