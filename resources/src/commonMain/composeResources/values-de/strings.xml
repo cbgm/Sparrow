@@ -648,59 +648,18 @@
     <string name="feature_identity_backup_restore_hint">Wähle deine Backupdatei und gib das Passwort ein. Gib vor dem Wiederherstellen deine Telefonnummer auf dem Identitätsbildschirm ein. Nur die ursprünglichen Schlüssel werden wiederhergestellt, nicht Chats oder Kontakte.</string>
 
 
-    <!-- Incoming untrusted identity replacement review (not an accept action). -->
-    <string name="feature_identity_recovery_review_title">Anfragen zur Änderung einer Kontaktidentität</string>
-    <string name="feature_identity_recovery_review_warning">Ein Kontakt hat Sparrow möglicherweise neu installiert. Die neuen Schlüssel sind NICHT als zugehörig zum bisherigen Kontakt verifiziert. Chats und Vertrauensstatus bleiben unverändert.</string>
-    <string name="feature_identity_recovery_review_action">Prüfen</string>
-    <string name="feature_identity_recovery_peer">Kontaktreferenz</string>
-    <string name="feature_identity_recovery_old_signing">Bisher gespeicherter Signaturschlüssel</string>
-    <string name="feature_identity_recovery_new_signing">Vorgeschlagener Signaturschlüssel</string>
-    <string name="feature_identity_recovery_old_encryption">Bisher gespeicherter Verschlüsselungsschlüssel</string>
-    <string name="feature_identity_recovery_new_encryption">Vorgeschlagener Verschlüsselungsschlüssel</string>
-    <string name="feature_identity_recovery_unavailable">Nicht verfügbar – kein Abgleich mit dem bisherigen Schlüssel möglich</string>
-    <string name="feature_identity_recovery_dismiss">Lokal ausblenden</string>
-    <string name="feature_identity_recovery_dismiss_warning">Gleiche die neuen Schlüssel direkt über einen vertrauenswürdigen Weg mit deinem Kontakt ab. Dieser Bildschirm autorisiert keinen Identitätswechsel. Das Ausblenden entfernt nur die lokale Anfrage. Bei erneuter Zustellung kann sie erneut erscheinen.</string>
-    <string name="feature_identity_recovery_fingerprint_hint">Prüfe den NEUEN Signaturschlüssel-Fingerabdruck direkt mit deinem Kontakt über einen separaten, vertrauenswürdigen Weg – nicht anhand dieser Einladung. Gib den vollständig unabhängig geprüften Wert ein. Die Bestätigung dokumentiert nur die Prüfung; sie ersetzt keine Schlüssel, stellt die Zustellung nicht wieder her, verifiziert keine Telefonnummer und autorisiert keine Nachrichten.</string>
-    <string name="feature_identity_recovery_fingerprint_label">Unabhängig geprüfter neuer Signaturschlüssel-Fingerabdruck</string>
-    <string name="feature_identity_recovery_confirm_fingerprint">Fingerabdruck-Prüfung dokumentieren</string>
-    <string name="feature_identity_recovery_fingerprint_recorded">Fingerabdruck-Prüfung für diese Anfrage dokumentiert. Vorhandene Identität, Vertrauensstatus und Chats bleiben unverändert. Ein sicherer Identitätswechsel und eine neue Autorisierung sind noch nicht freigeschaltet.</string>
-    <string name="feature_identity_recovery_approve">Identität ersetzen</string>
-    <string name="feature_identity_recovery_approve_warning">Nur bestätigen, wenn du den vollständigen neuen Fingerabdruck unabhängig mit deinem Kontakt geprüft hast. Die alten Postfach-Routen werden widerrufen, alte ausstehende Pakete nicht erneut gesendet und die bisherige Verifizierung zurückgesetzt. Dies nimmt keine Chat-Einladung an. Anschließend kannst du selbst eine neue Einladung senden oder deinen Kontakt darum bitten.</string>
-    <string name="feature_identity_recovery_completed">Identität ersetzt. Der bestehende Kontakt und der Chatverlauf bleiben erhalten, aber Nachrichten bleiben bis zur Annahme einer neuen Einladung gesperrt. Sende unten eine neue Einladung oder bitte deinen Kontakt darum. Alte ausstehende Pakete können nicht erneut gesendet werden.</string>
-    <string name="feature_identity_recovery_send_invitation">Neue Einladung senden</string>
-    <string name="feature_identity_recovery_invitation_queued">Einladung in die Warteschlange gestellt. Dein Kontakt muss sie annehmen, bevor ihr wieder Nachrichten austauschen könnt.</string>
-
     <string name="feature_chats_reconnect_contact">Kontakt erneut verbinden</string>
-    <string name="feature_chats_reconnect_warning">Eine neue Einladung an diesen Kontakt senden? Die bisherige Gesprächsautorisierung endet, bis die neue Einladung angenommen wurde. Dein Gespräch und der Verlauf bleiben erhalten. Falls der Kontakt Sparrow mit neuen Schlüsseln neu installiert hat, musst du die neue Identität vor dem Senden von Nachrichten unabhängig prüfen und bestätigen.</string>
+    <string name="feature_chats_reconnect_warning">Eine neue Einladung an diesen Kontakt senden? Die bisherige Gesprächsautorisierung endet, bis die neue Einladung angenommen wurde. Dein Gespräch und der Verlauf bleiben erhalten. Falls der Kontakt neue Schlüssel hat, erscheint eine Einladung zum Identitätswechsel im Postfach. Du kannst sie annehmen, ablehnen oder den Kontakt blockieren.</string>
     <string name="feature_chats_reconnect_confirm">Einladung senden</string>
     <string name="feature_chats_reconnect_cancel">Abbrechen</string>
     <string name="feature_chats_reconnect_queued">Eine neue Einladung wurde vorgemerkt. Warte vor dem Senden von Nachrichten auf die Annahme.</string>
+    <string name="feature_identity_recovery_block_action">Blockieren</string>
     <string name="feature_identity_recovery_inbox_title">Identitätswechsel angefragt</string>
-    <string name="feature_identity_recovery_inbox_description">Ein Kontakt verwendet neue Identitätsschlüssel. Überprüfe sie vor dem erneuten Verbinden.</string>
-    <string name="feature_identity_recovery_inbox_action">Identität prüfen</string>
-    <string name="feature_identity_recovery_screen_title">Identität wiederherstellen</string>
-    <string name="feature_identity_recovery_screen_approved">Neue Identität bestätigt</string>
-    <string name="feature_identity_recovery_screen_queued">Eine neue Einladung wurde in die Warteschlange gestellt. Dein Kontakt muss sie annehmen, bevor verschlüsselte Nachrichten wieder gesendet werden können. Dein bisheriger Chatverlauf bleibt erhalten.</string>
-    <string name="feature_identity_recovery_screen_starting">Sparrow startet eine neue Einladung für die neue Identität. Die bisherige Autorisierung kann nicht wiederverwendet werden.</string>
-    <string name="feature_identity_recovery_screen_retry">Verbindung erneut versuchen</string>
-    <string name="feature_identity_recovery_screen_return">Zurück zum Posteingang</string>
-    <string name="feature_identity_recovery_screen_missing">Diese Wiederherstellungsanfrage ist nicht mehr verfügbar. Möglicherweise wurde sie durch eine neuere Einladung ersetzt.</string>
-    <string name="feature_identity_recovery_screen_warning">Dieser Kontakt verwendet andere kryptografische Schlüssel. Eine übereinstimmende Telefonnummer beweist nicht, dass die neue Identität derselben Person gehört.</string>
-    <string name="feature_identity_recovery_screen_previous_signing">Bisheriger Signatur-Fingerabdruck</string>
-    <string name="feature_identity_recovery_screen_proposed_signing">Neuer Signatur-Fingerabdruck</string>
-    <string name="feature_identity_recovery_screen_previous_encryption">Bisheriger Verschlüsselungs-Fingerabdruck</string>
-    <string name="feature_identity_recovery_screen_proposed_encryption">Neuer Verschlüsselungs-Fingerabdruck</string>
-    <string name="feature_identity_recovery_screen_compare">Bitte deinen Kontakt, auf dem neuen Gerät „Ich → Identität“ zu öffnen und dir SEINEN Signatur-Fingerabdruck über einen anderen vertrauenswürdigen Kanal mitzuteilen. Vergleiche den gesamten Wert. Kopiere nicht einfach den Wert aus dieser Anfrage.</string>
-    <string name="feature_identity_recovery_screen_fingerprint">Unabhängig geprüfter Signatur-Fingerabdruck</string>
-    <string name="feature_identity_recovery_screen_confirm">Fingerabdruck bestätigen</string>
-    <string name="feature_identity_recovery_screen_confirmed">Fingerabdruck bestätigt. Bei der Freigabe werden die Schlüssel des Kontakts ersetzt und die bisherige Verifizierung und Autorisierung zurückgesetzt. Dein bestehender Chatverlauf bleibt auf diesem Gerät.</string>
-    <string name="feature_identity_recovery_screen_approve">Bestätigen und verbinden</string>
-    <string name="feature_identity_recovery_screen_dismiss">Wiederherstellungsanfrage verwerfen</string>
-    <string name="feature_identity_recovery_screen_unavailable">Nicht verfügbar</string>
+    <string name="feature_identity_recovery_inbox_warning">Diese Einladung enthält neue Schlüssel. Sie kann von einer anderen Person stammen: Eine übereinstimmende Telefonnummer beweist keine Identität. Durch das Akzeptieren vertraust du den unten gezeigten Schlüsseln und setzt die signierte Einladung mit der neuen Identität fort. Dein bestehender Chat auf diesem Gerät bleibt erhalten.</string>
+    <string name="feature_identity_recovery_inbox_signing">Neuer Signatur-Fingerabdruck</string>
+    <string name="feature_identity_recovery_inbox_encryption">Neuer Verschlüsselungs-Fingerabdruck</string>
     <string name="feature_identity_own_fingerprint_title">Dein Signatur-Fingerabdruck</string>
     <string name="feature_identity_own_fingerprint_description">Wenn ein Kontakt deine neue Identität prüfen muss, teile diesen Wert über einen anderen vertrauenswürdigen Kanal.</string>
-    <string name="feature_identity_recovery_screen_scan">Identitäts-QR des Kontakts scannen</string>
-    <string name="feature_identity_recovery_screen_scan_instructions">Bitte deinen Kontakt, auf seinem Telefon „Ich → Identität → Meine Identität teilen“ zu öffnen. Scanne den QR-Code auf DIESEM Telefon.</string>
     <string name="feature_settings_control_plane_json_list">JSON-Liste</string>
     <string name="feature_settings_control_plane_json_unverified">Unsignierte JSON-Liste: Adressen sind Vorschläge, keine signierten Verzeichnisidentitäten.</string>
     <string name="feature_settings_control_plane_json_remove">JSON-Liste entfernen</string>
@@ -709,4 +668,5 @@
     <string name="feature_settings_control_planes_discovered">Gefundene Control Planes</string>
     <string name="feature_settings_control_planes_manually_added">Manuell hinzugefügte Control Planes</string>
     <string name="feature_settings_control_plane_source_node_hint">Node-Erkennung</string>
+    <string name="feature_invite_group_identity_review_required">Prüfe zuerst oben die geänderte Identität des einladenden Kontakts, bevor du die Gruppeneinladung annimmst.</string>
 </resources>

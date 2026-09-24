@@ -1,9 +1,12 @@
 package com.cbgm.sparrow.data.database.dao
 
 import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Upsert
+import com.cbgm.sparrow.data.database.entity.ApprovedIdentityReconnectionEntity
 import com.cbgm.sparrow.data.database.entity.PendingRemoteIdentityChangeEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -18,8 +21,9 @@ interface PendingRemoteIdentityChangeDao {
     @Query("SELECT * FROM pending_remote_identity_changes ORDER BY receivedAtEpochMilliseconds DESC")
     fun observeAll(): Flow<List<PendingRemoteIdentityChangeEntity>>
 
-    /** Atomic confirmation: pin the current old identity to the still-current invitation.
-     * Confirmation does not update contact_public_identities, routing, or authorizations.
+    /** Atomic acknowledgement of the displayed public keys: pin the old identity to
+     * the exact current proposal. This is one part of the user's ONE approval action;
+     * it is not independent cryptographic verification, nor authorization.
      */
     @Query(
         """
@@ -59,8 +63,8 @@ interface PendingRemoteIdentityChangeDao {
 
     /**
      * Local-only cutover primitive. Callers must first stop old-identity delivery and
-     * revoke old mailbox capabilities. A fingerprint confirmation by itself MUST
-     * NOT call this method. All DB state changes are rolled back together on error.
+     * revoke old mailbox capabilities. Only the user's explicit approval workflow
+     * may call this method. All DB state changes are rolled back together on error.
      *
      * The existing contact row is UPDATED in place; never delete it or its chats.
      */
@@ -104,11 +108,35 @@ interface PendingRemoteIdentityChangeDao {
         failUnconfirmedMessagesWithQuarantinedPackets(peerId)
         // Old MUTUAL / WAITING_FOR_READY exchanges must never authorize the new keys.
         invalidatePreviousExchanges(peerId, now)
+        // This insert and the key cutover share ONE Room transaction. A process death
+        // after approval cannot strand the user with changed keys and no invitation.
+        saveApprovedReconnection(
+            ApprovedIdentityReconnectionEntity(
+                peerId = peerId,
+                approvalId = invitationId,
+                approvedAtEpochMilliseconds = now,
+                originalInviteChallenge = proposal.originalInviteChallenge?.copyOf(),
+                originalInviteCreatedAtEpochMilliseconds = proposal.originalInviteCreatedAtEpochMilliseconds,
+                originalInviteExpiresAtEpochMilliseconds = proposal.expiresAtEpochMilliseconds.takeIf {
+                    proposal.originalInviteChallenge != null
+                },
+                originalInviteAutoSharesIdentity = proposal.originalInviteAutoSharesIdentity,
+                originalInviterEncryptionPublicKey = proposal.proposedEncryptionPublicKey.copyOf().takeIf {
+                    proposal.originalInviteChallenge != null
+                },
+                originalInviterSigningPublicKey = proposal.proposedSigningPublicKey.copyOf().takeIf {
+                    proposal.originalInviteChallenge != null
+                }
+            )
+        )
         check(deleteIfInvitationMatches(peerId, invitationId) == 1) {
             "Identity-change request changed during replacement"
         }
         return true
     }
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun saveApprovedReconnection(intent: ApprovedIdentityReconnectionEntity)
 
     @Query("SELECT COUNT(*) FROM protocol_outbox WHERE contactId = :peerId AND status = 'PROCESSING'")
     suspend fun countProcessingOutboxForPeer(peerId: String): Int

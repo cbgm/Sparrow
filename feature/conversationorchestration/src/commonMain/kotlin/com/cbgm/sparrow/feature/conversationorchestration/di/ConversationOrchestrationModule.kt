@@ -26,6 +26,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.SendCon
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.StartRecoveryInvitationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.TransferConversationGroupAdminAndLeaveUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.workflow.ConversationFlowHandler
+import com.cbgm.sparrow.feature.conversationorchestration.runtime.ApprovedIdentityReconnectionObserver
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.ContactBlockObserver
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.GroupMembershipPacketObserver
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.IdentityExchangePacketObserver
@@ -116,7 +117,6 @@ val conversationOrchestrationModule =
                 startGroupMembership = get(),
                 inspectIncomingGroupMembership = get(),
                 receiveIncomingGroupMembership = get(),
-                discardSupersededMemberships = get(),
                 getMembershipHandshake = get(),
                 acceptGroupMembership = get(),
                 declineGroupMembership = get(),
@@ -177,11 +177,12 @@ val conversationOrchestrationModule =
         singleOf(::SendConversationIndicatorUseCase)
         singleOf(::ObserveConversationIndicatorUseCase)
         singleOf(::IdentityResultObserver)
+        singleOf(::ApprovedIdentityReconnectionObserver)
         singleOf(::ContactBlockObserver)
         singleOf(::ObserveConversationQueueAvailabilityUseCase)
         singleOf(::PrepareConversationMessageUseCase)
         singleOf(::PrepareConversationOpenUseCase)
-        factory { StartRecoveryInvitationUseCase(get()) }
+        factory { StartRecoveryInvitationUseCase(get(), get(), get()) }
         factory { ReconnectExistingConversationUseCase(get()) }
         singleOf(::AddConversationMembersUseCase)
         singleOf(::CreateConversationGroupUseCase)

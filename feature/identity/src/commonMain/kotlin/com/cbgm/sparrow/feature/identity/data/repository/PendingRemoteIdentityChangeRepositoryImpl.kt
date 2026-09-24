@@ -20,6 +20,13 @@ internal class PendingRemoteIdentityChangeRepositoryImpl(
         require(candidate.invitationId.isNotBlank())
         require(candidate.proposedEncryptionPublicKey.size == 32 && candidate.proposedSigningPublicKey.size == 32)
         require(candidate.expiresAtEpochMilliseconds > candidate.receivedAtEpochMilliseconds)
+        check(
+            candidate.originalInviteChallenge == null || (
+                candidate.originalInviteChallenge.size == 32 &&
+                    candidate.originalInviteCreatedAtEpochMilliseconds != null &&
+                    candidate.originalInviteCreatedAtEpochMilliseconds < candidate.expiresAtEpochMilliseconds
+            )
+        ) { "Invalid staged invitation challenge" }
         // Replays must not push an older candidate over a more recent signed invitation.
         val current = source.find(candidate.peerId)
         // Idempotent retransmission MUST NOT erase a user's prior fingerprint confirmation.
@@ -37,60 +44,52 @@ internal class PendingRemoteIdentityChangeRepositoryImpl(
     override fun observeAll(): Flow<List<PendingRemoteIdentityChange>> =
         source.observeAll().map { rows -> rows.map { it.toDomain() } }
 
-    override suspend fun confirmFingerprint(
+    override suspend fun approveReplacement(
         peerId: String,
         invitationId: String,
-        independentlyCheckedSigningFingerprint: String
+        presentedSigningFingerprint: String,
+        presentedEncryptionFingerprint: String
     ): Result<Unit> = safeSuspendCall {
         require(peerId.isNotBlank() && invitationId.isNotBlank())
+        // Bind the user gesture to BOTH key fingerprints rendered in Mailbox.
+        // A superseding invitation cannot inherit a previous approval.
         val candidate = source.find(peerId) ?: error("Identity change request no longer exists")
         check(candidate.invitationId == invitationId) { "A newer identity change request exists" }
-        val supplied = independentlyCheckedSigningFingerprint.trim().uppercase()
-            .filterNot { it == '-' || it.isWhitespace() }
-        require(supplied.length == 64 && supplied.all { it in '0'..'9' || it in 'A'..'F' }) {
-            "Enter the complete signing-key fingerprint verified directly with your contact"
-        }
-        check(supplied == candidate.proposedSigningPublicKey.toFingerprint().replace("-", "")) {
-            "Fingerprint does not match the proposed identity"
-        }
+        check(
+            candidate.proposedSigningPublicKey.toFingerprint() == presentedSigningFingerprint &&
+                candidate.proposedEncryptionPublicKey.toFingerprint() == presentedEncryptionFingerprint
+        ) { "The proposed keys changed. Review the new request before approving" }
         val now = SystemClock.nowEpochMilliseconds()
-        check(candidate.expiresAtEpochMilliseconds > now) { "Identity change request expired; ask for a new invitation" }
-        check(
-            source.confirmFingerprintIfCurrent(
-                peerId,
-                invitationId,
-                candidate.proposedSigningPublicKey,
-                candidate.proposedEncryptionPublicKey,
-                now
-            ) == 1
-        ) {
-            "Identity change was already confirmed, changed, or no longer matches the stored identity"
-        }
-    }
-
-    override suspend fun approveReplacement(peerId: String, invitationId: String): Result<Unit> = safeSuspendCall {
-        require(peerId.isNotBlank() && invitationId.isNotBlank())
-        val candidate = source.find(peerId) ?: error("Identity change request no longer exists")
-        check(candidate.invitationId == invitationId) { "A newer identity change request exists" }
-        check(
-            candidate.fingerprintConfirmedAtEpochMilliseconds != null &&
-                candidate.confirmedPreviousEncryptionPublicKey != null &&
-                candidate.confirmedPreviousSigningPublicKey != null
-        ) { "Verify the new fingerprint independently before approving" }
-        check(candidate.expiresAtEpochMilliseconds > SystemClock.nowEpochMilliseconds()) {
+        check(candidate.expiresAtEpochMilliseconds > now) {
             "Identity change request expired; ask your contact to resend an invitation"
         }
-        // Both the cached recipient delivery route and the locally issued mailbox
-        // capability for the old device must be retired. A failure leaves the DB
-        // binding unchanged and the pending request available for an explicit retry.
-        // Never replace old keys when a mailbox revocation could not be confirmed.
+        // The existing DB column 'fingerprintConfirmedAt...' is now an explicit
+        // acknowledgement of the SHOWN proposal, not independent verification.
+        // Atomic DB compare-and-set pins the old keys AND exact proposed keys.
+        if (candidate.fingerprintConfirmedAtEpochMilliseconds == null) {
+            check(
+                source.confirmFingerprintIfCurrent(
+                    peerId,
+                    invitationId,
+                    candidate.proposedSigningPublicKey,
+                    candidate.proposedEncryptionPublicKey,
+                    now
+                ) == 1
+            ) { "Identity change was superseded or no longer matches the displayed keys" }
+        } else {
+            // A retry of the SAME accepted proposal is allowed after a transient
+            // capability failure. The DB replacement still validates the old keys.
+            check(
+                candidate.confirmedPreviousEncryptionPublicKey != null &&
+                    candidate.confirmedPreviousSigningPublicKey != null
+            ) { "Identity change has no previous-key binding" }
+        }
         mailboxCapabilityLifecycle.revokeForContact(peerId).getOrThrow()
         check(source.replaceConfirmedIdentity(peerId, invitationId, SystemClock.nowEpochMilliseconds())) {
             "Identity change is no longer current or an old-identity packet is still being sent; retry later"
         }
-        // Do not automatically accept the original invite: only its proposed public
-        // keys were stored. The sender must resend a fresh signed invitation, whose
-        // challenge can then be verified by the normal invite/identity flow.
+        // The approved-intent observer completes the ORIGINAL signed invitation when
+        // its verified offer was durably stored. No second user approval is needed.
     }
 
     override suspend fun discard(peerId: String, invitationId: String): Result<Unit> = safeSuspendCall {
@@ -109,7 +108,10 @@ private fun PendingRemoteIdentityChange.toEntity() = PendingRemoteIdentityChange
     expiresAtEpochMilliseconds,
     fingerprintConfirmedAtEpochMilliseconds,
     confirmedPreviousEncryptionPublicKey?.copyOf(),
-    confirmedPreviousSigningPublicKey?.copyOf()
+    confirmedPreviousSigningPublicKey?.copyOf(),
+    originalInviteChallenge?.copyOf(),
+    originalInviteCreatedAtEpochMilliseconds,
+    originalInviteAutoSharesIdentity
 )
 
 private fun PendingRemoteIdentityChangeEntity.toDomain() = PendingRemoteIdentityChange(
@@ -122,5 +124,8 @@ private fun PendingRemoteIdentityChangeEntity.toDomain() = PendingRemoteIdentity
     expiresAtEpochMilliseconds,
     fingerprintConfirmedAtEpochMilliseconds,
     confirmedPreviousEncryptionPublicKey?.copyOf(),
-    confirmedPreviousSigningPublicKey?.copyOf()
+    confirmedPreviousSigningPublicKey?.copyOf(),
+    originalInviteChallenge?.copyOf(),
+    originalInviteCreatedAtEpochMilliseconds,
+    originalInviteAutoSharesIdentity
 )

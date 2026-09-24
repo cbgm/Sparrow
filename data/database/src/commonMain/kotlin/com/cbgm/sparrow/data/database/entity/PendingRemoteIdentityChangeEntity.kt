@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.data.database.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
@@ -24,11 +25,16 @@ data class PendingRemoteIdentityChangeEntity(
     val proposedSigningPublicKey: ByteArray,
     val receivedAtEpochMilliseconds: Long,
     val expiresAtEpochMilliseconds: Long,
-    /** Local, out-of-band fingerprint confirmation only. Not a cryptographic identity replacement. */
+    /** The user approved the shown new keys. Does not prove continuity with the old identity. */
     val fingerprintConfirmedAtEpochMilliseconds: Long? = null,
     /** Snapshots bind a later replacement decision to the exact old keys present at confirmation. */
     val confirmedPreviousEncryptionPublicKey: ByteArray? = null,
-    val confirmedPreviousSigningPublicKey: ByteArray? = null
+    val confirmedPreviousSigningPublicKey: ByteArray? = null,
+    /** Captured ONLY from a signature-verified incoming ContactInvitePacket. Null on
+     * an unexpected changed-key ACCEPTANCE, which uses the older reverse-invite fallback. */
+    val originalInviteChallenge: ByteArray? = null,
+    val originalInviteCreatedAtEpochMilliseconds: Long? = null,
+    @ColumnInfo(defaultValue = "0") val originalInviteAutoSharesIdentity: Boolean = false
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -46,6 +52,9 @@ data class PendingRemoteIdentityChangeEntity(
         if (!proposedSigningPublicKey.contentEquals(other.proposedSigningPublicKey)) return false
         if (!confirmedPreviousEncryptionPublicKey.contentEquals(other.confirmedPreviousEncryptionPublicKey)) return false
         if (!confirmedPreviousSigningPublicKey.contentEquals(other.confirmedPreviousSigningPublicKey)) return false
+        if (!originalInviteChallenge.contentEquals(other.originalInviteChallenge)) return false
+        if (originalInviteCreatedAtEpochMilliseconds != other.originalInviteCreatedAtEpochMilliseconds) return false
+        if (originalInviteAutoSharesIdentity != other.originalInviteAutoSharesIdentity) return false
 
         return true
     }
@@ -61,6 +70,9 @@ data class PendingRemoteIdentityChangeEntity(
         result = 31 * result + proposedSigningPublicKey.contentHashCode()
         result = 31 * result + (confirmedPreviousEncryptionPublicKey?.contentHashCode() ?: 0)
         result = 31 * result + (confirmedPreviousSigningPublicKey?.contentHashCode() ?: 0)
+        result = 31 * result + (originalInviteChallenge?.contentHashCode() ?: 0)
+        result = 31 * result + (originalInviteCreatedAtEpochMilliseconds?.hashCode() ?: 0)
+        result = 31 * result + originalInviteAutoSharesIdentity.hashCode()
         return result
     }
 }

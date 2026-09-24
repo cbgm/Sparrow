@@ -23,8 +23,9 @@ class IdentityResultObserver internal constructor(
             if (!initialized) {
                 // A process can die after a direct exchange becomes MUTUAL but
                 // before its WAITING_FOR_AUTHORIZATION messages are released. Only
-                // reconcile existing conversations: do NOT replay historical
-                // invitation acceptance or recreate chats deliberately deleted.
+                // reconcile established exchanges. Only an exact still-active
+                // exchange can create a chat missing due to a crash during acceptance;
+                // a closed exchange cannot resurrect a deliberately deleted chat.
                 val pendingReplacementPeers = observePendingRemoteIdentityChanges()
                     .first().mapTo(mutableSetOf()) { it.peerId }
                 val reconciledPeers = mutableSetOf<String>()
@@ -37,7 +38,7 @@ class IdentityResultObserver internal constructor(
                             if (result.peerId !in pendingReplacementPeers &&
                                 reconciledPeers.add(result.peerId)
                             ) {
-                                flowHandler.recoverExistingAuthorizedConversation(result.peerId)
+                                flowHandler.recoverAuthorizedConversationFromExchange(result)
                                     .onFailure { error ->
                                         logger.warn(error) {
                                             "Could not reconcile pending direct messages for ${result.peerId}"

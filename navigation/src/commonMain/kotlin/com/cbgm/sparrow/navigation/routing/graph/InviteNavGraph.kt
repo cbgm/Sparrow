@@ -19,6 +19,16 @@ fun NavGraphBuilder.inviteNavGraph() {
         val recoveryViewModel: RecoveryInboxViewModel = koinViewModel()
         val requests by recoveryViewModel.requests.collectAsStateWithLifecycle()
         val loaded by recoveryViewModel.loaded.collectAsStateWithLifecycle()
-        InvitationRoute(recoveryRequests = requests, recoveryRequestsLoaded = loaded, onReviewRecovery = recoveryViewModel::review)
+        val processing by recoveryViewModel.processing.collectAsStateWithLifecycle()
+        val error by recoveryViewModel.error.collectAsStateWithLifecycle()
+        InvitationRoute(
+            recoveryRequests = requests,
+            recoveryRequestsLoaded = loaded,
+            processingRecoveryId = processing,
+            recoveryError = error,
+            onApproveRecovery = recoveryViewModel::approve,
+            onDeclineRecovery = recoveryViewModel::decline,
+            onBlockRecovery = recoveryViewModel::block
+        )
     }
 }

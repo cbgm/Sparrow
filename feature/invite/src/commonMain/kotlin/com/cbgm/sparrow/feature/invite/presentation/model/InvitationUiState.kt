@@ -65,5 +65,7 @@ data class InvitationUiState(
 data class MailboxReviewRequestUi(
     val peerId: String,
     val invitationId: String,
-    val peerDisplayName: String
+    val peerDisplayName: String,
+    val proposedSigningFingerprint: String,
+    val proposedEncryptionFingerprint: String
 )

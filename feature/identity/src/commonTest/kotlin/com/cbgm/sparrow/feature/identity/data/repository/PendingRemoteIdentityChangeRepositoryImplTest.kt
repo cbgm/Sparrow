@@ -38,25 +38,23 @@ class PendingRemoteIdentityChangeRepositoryImplTest {
     }
 
     @Test
-    fun replayDoesNotClearPreviousFingerprintConfirmation() = runBlocking {
+    fun oldInviteReplayDoesNotEraseAnAcceptedProposal() = runBlocking {
         val dao = FakeDao()
-        val repository = PendingRemoteIdentityChangeRepositoryImpl(PendingRemoteIdentityChangeDataSource(dao), NoOpMailboxCapabilityLifecycle)
+        val repository = PendingRemoteIdentityChangeRepositoryImpl(
+            PendingRemoteIdentityChangeDataSource(dao),
+            NoOpMailboxCapabilityLifecycle
+        )
         val now = SystemClock.nowEpochMilliseconds()
         repository.stage(candidate("current", now)).getOrThrow()
-        val confirmed = repository.confirmFingerprint("existing", "current", ByteArray(32) { 2 }.toFingerprint())
-        assertTrue(confirmed.isSuccess)
+        dao.confirmFingerprintIfCurrent(
+            "existing",
+            "current",
+            ByteArray(32) { 2 },
+            ByteArray(32) { 1 },
+            now
+        )
         repository.stage(candidate("current", now)).getOrThrow()
         assertTrue(repository.observeAll().first().single().fingerprintConfirmedAtEpochMilliseconds != null)
-    }
-
-    @Test
-    fun differentOrMalformedFingerprintCannotConfirm() = runBlocking {
-        val dao = FakeDao()
-        val repository = PendingRemoteIdentityChangeRepositoryImpl(PendingRemoteIdentityChangeDataSource(dao), NoOpMailboxCapabilityLifecycle)
-        repository.stage(candidate("current", SystemClock.nowEpochMilliseconds())).getOrThrow()
-        assertTrue(repository.confirmFingerprint("existing", "current", "1234").isFailure)
-        assertTrue(repository.confirmFingerprint("existing", "current", ByteArray(32) { 3 }.toFingerprint()).isFailure)
-        assertTrue(repository.observeAll().first().single().fingerprintConfirmedAtEpochMilliseconds == null)
     }
 
     @Test
@@ -75,15 +73,36 @@ class PendingRemoteIdentityChangeRepositoryImplTest {
             failingMailbox
         )
         repository.stage(candidate("current", SystemClock.nowEpochMilliseconds())).getOrThrow()
-        repository.confirmFingerprint(
-            "existing",
-            "current",
-            ByteArray(32) { 2 }.toFingerprint()
-        ).getOrThrow()
-        assertTrue(repository.approveReplacement("existing", "current").isFailure)
+        assertTrue(
+            repository.approveReplacement(
+                "existing",
+                "current",
+                ByteArray(32) { 2 }.toFingerprint(),
+                ByteArray(32) { 1 }.toFingerprint()
+            ).isFailure
+        )
         val pending = repository.observeAll().first().single()
         assertEquals("current", pending.invitationId)
         assertTrue(pending.fingerprintConfirmedAtEpochMilliseconds != null)
+    }
+
+    @Test
+    fun oneTapApprovalPinsTheExactShownKeysAndPreservesPreviousKeySnapshot() = runBlocking {
+        val dao = FakeDao()
+        val repository = PendingRemoteIdentityChangeRepositoryImpl(
+            PendingRemoteIdentityChangeDataSource(dao),
+            NoOpMailboxCapabilityLifecycle
+        )
+        repository.stage(candidate("current", SystemClock.nowEpochMilliseconds())).getOrThrow()
+        val signing = ByteArray(32) { 2 }.toFingerprint()
+        val encryption = ByteArray(32) { 1 }.toFingerprint()
+        assertTrue(repository.approveReplacement("existing", "current", signing, "wrong").isFailure)
+        assertTrue(repository.observeAll().first().single().fingerprintConfirmedAtEpochMilliseconds == null)
+        // There was NO prior out-of-band verification button. This single call is
+        // responsible for acknowledgement, safe key cutover and reconnect intent.
+        repository.approveReplacement("existing", "current", signing, encryption).getOrThrow()
+        assertTrue(repository.observeAll().first().isEmpty())
+        assertEquals("current", dao.approvedInvitationId)
     }
 
     @Test
@@ -108,6 +127,12 @@ class PendingRemoteIdentityChangeRepositoryImplTest {
     )
 
     private class FakeDao : PendingRemoteIdentityChangeDao {
+        var approvedInvitationId: String? = null
+
+        override suspend fun saveApprovedReconnection(intent: com.cbgm.sparrow.data.database.entity.ApprovedIdentityReconnectionEntity) {
+            approvedInvitationId = intent.approvalId
+        }
+
         private val state = MutableStateFlow<List<PendingRemoteIdentityChangeEntity>>(emptyList())
 
         override suspend fun upsert(candidate: PendingRemoteIdentityChangeEntity) {
@@ -159,7 +184,19 @@ class PendingRemoteIdentityChangeRepositoryImplTest {
             proposedEncryptionPublicKey: ByteArray,
             proposedSigningPublicKey: ByteArray,
             now: Long
-        ): Int = 0
+        ): Int {
+            val candidate = state.value.singleOrNull() ?: return 0
+            return if (candidate.peerId == peerId && candidate.invitationId == invitationId &&
+                candidate.proposedEncryptionPublicKey.contentEquals(proposedEncryptionPublicKey) &&
+                candidate.proposedSigningPublicKey.contentEquals(proposedSigningPublicKey) &&
+                candidate.confirmedPreviousEncryptionPublicKey.contentEquals(oldEncryptionPublicKey) &&
+                candidate.confirmedPreviousSigningPublicKey.contentEquals(oldSigningPublicKey)
+            ) {
+                1
+            } else {
+                0
+            }
+        }
 
         override suspend fun invalidatePreviousExchanges(peerId: String, now: Long): Int = 0
 

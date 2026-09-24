@@ -116,12 +116,6 @@ sealed interface AppRoute {
     data object BlockedContacts : AppRoute
 
     @Serializable
-    data class IdentityRecovery(
-        val peerId: String,
-        val invitationId: String
-    ) : AppRoute
-
-    @Serializable
     data class Invitations(
         val showOutgoing: Boolean = false
     ) : AppRoute

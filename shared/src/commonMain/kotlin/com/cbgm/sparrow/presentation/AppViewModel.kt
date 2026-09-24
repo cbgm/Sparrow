@@ -176,6 +176,10 @@ class AppViewModel(
             waitUntilLocalIdentityIsReady()
             initialization.contactBlockObserver.run()
         }
+        viewModelScope.launch {
+            waitUntilLocalIdentityIsReady()
+            initialization.approvedIdentityReconnectionObserver.run()
+        }
     }
 
     private fun startControlPlaneMaintenance() {

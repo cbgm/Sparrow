@@ -22,6 +22,7 @@ val sharedModule =
                 membershipResultObserver = get(),
                 messagingTransportResultObserver = get(),
                 directIdentityResultObserver = get(),
+                approvedIdentityReconnectionObserver = get(),
                 contactBlockObserver = get(),
                 controlPlaneConfiguration = get(),
                 controlPlaneStatusStore = get(),

@@ -25,13 +25,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -39,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -62,13 +60,12 @@ import com.cbgm.sparrow.feature.invite.presentation.model.InvitationUiStatus
 import com.cbgm.sparrow.feature.invite.presentation.model.MailboxReviewRequestUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_unknown
-import com.cbgm.sparrow.resources.feature_identity_recovery_inbox_action
-import com.cbgm.sparrow.resources.feature_identity_recovery_inbox_description
 import com.cbgm.sparrow.resources.feature_identity_recovery_inbox_title
 import com.cbgm.sparrow.resources.feature_invite_accept_invitation
 import com.cbgm.sparrow.resources.feature_invite_block_invitation
 import com.cbgm.sparrow.resources.feature_invite_decline_invitation
 import com.cbgm.sparrow.resources.feature_invite_delete_outgoing_invitation
+import com.cbgm.sparrow.resources.feature_invite_group_identity_review_required
 import com.cbgm.sparrow.resources.feature_invite_invitation_status_declined
 import com.cbgm.sparrow.resources.feature_invite_invitation_status_expired
 import com.cbgm.sparrow.resources.feature_invite_invitation_status_failed
@@ -88,7 +85,11 @@ fun InvitationsScreen(
     onUiEvent: (InvitationUiEvent) -> Unit,
     modifier: Modifier = Modifier,
     recoveryRequests: List<MailboxReviewRequestUi> = emptyList(),
-    onReviewRecovery: (String, String) -> Unit = { _, _ -> }
+    processingRecoveryId: String? = null,
+    recoveryError: String? = null,
+    onApproveRecovery: (MailboxReviewRequestUi) -> Unit = {},
+    onDeclineRecovery: (MailboxReviewRequestUi) -> Unit = {},
+    onBlockRecovery: (MailboxReviewRequestUi) -> Unit = {}
 ) {
     SparrowLazyScaffold(
         modifier = modifier,
@@ -154,50 +155,142 @@ fun InvitationsScreen(
                         end = MaterialTheme.spacing.screenPadding
                     )
                 ) {
-                    item(key = "invitations-settings-group") {
-                        SparrowCardNoAnimation {
-                            Column {
-                                if (uiState.selectedTab == InvitationTab.INCOMING) {
-                                    recoveryRequests.forEachIndexed { index, request ->
-                                        androidx.compose.runtime.key(request.peerId, request.invitationId) {
+                    if (uiState.selectedTab == InvitationTab.INCOMING) {
+                        if (recoveryError != null) {
+                            item(key = "identity-change-error") {
+                                Text(
+                                    text = recoveryError,
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.padding(MaterialTheme.spacing.medium)
+                                )
+                            }
+                        }
+                        recoveryRequests.forEach { request ->
+                            item(key = "identity-change:${request.peerId}:${request.invitationId}") {
+                                SparrowCardNoAnimation(
+                                    modifier = Modifier.padding(bottom = MaterialTheme.spacing.small)
+                                ) {
+                                    IdentityChangeInvitationItem(
+                                        request = request,
+                                        isProcessing = processingRecoveryId == request.invitationId,
+                                        actionsEnabled = processingRecoveryId == null && uiState.processingInvitationId == null,
+                                        onAccept = { onApproveRecovery(request) },
+                                        onDecline = { onDeclineRecovery(request) },
+                                        onBlock = { onBlockRecovery(request) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    if (uiState.selectedInvitations.isNotEmpty()) {
+                        item(key = "invitations-settings-group") {
+                            SparrowCardNoAnimation {
+                                Column {
+                                    uiState.selectedInvitations.forEachIndexed { index, invitation ->
+                                        androidx.compose.runtime.key(invitation.invitationId) {
                                             if (index > 0) InvitationDivider()
-                                            ListItem(
-                                                headlineContent = {
-                                                    Column {
-                                                        Text(stringResource(Res.string.feature_identity_recovery_inbox_title), style = MaterialTheme.typography.labelMedium)
-                                                        Text(request.peerDisplayName)
-                                                    }
-                                                },
-                                                supportingContent = {
-                                                    Text(stringResource(Res.string.feature_identity_recovery_inbox_description))
-                                                },
-                                                trailingContent = {
-                                                    TextButton(onClick = { onReviewRecovery(request.peerId, request.invitationId) }) {
-                                                        Text(stringResource(Res.string.feature_identity_recovery_inbox_action))
-                                                    }
-                                                },
-                                                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                                            InvitationItem(
+                                                invitation = invitation,
+                                                isProcessing = uiState.processingInvitationId == invitation.invitationId,
+                                                actionsEnabled = uiState.processingInvitationId == null && processingRecoveryId == null,
+                                                identityApprovalPending = invitation.payloadType == InvitationUiPayloadType.GROUP &&
+                                                    invitation.direction == InvitationUiDirection.INCOMING &&
+                                                    recoveryRequests.any { it.peerId == invitation.peerId },
+                                                onUiEvent = onUiEvent
                                             )
                                         }
-                                    }
-                                }
-                                uiState.selectedInvitations.forEachIndexed { index, invitation ->
-                                    androidx.compose.runtime.key(invitation.invitationId) {
-                                        if (index > 0 || (uiState.selectedTab == InvitationTab.INCOMING && recoveryRequests.isNotEmpty())) {
-                                            InvitationDivider()
-                                        }
-                                        InvitationItem(
-                                            invitation = invitation,
-                                            isProcessing = uiState.processingInvitationId == invitation.invitationId,
-                                            actionsEnabled = uiState.processingInvitationId == null,
-                                            onUiEvent = onUiEvent
-                                        )
                                     }
                                 }
                             }
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+/** A changed identity is an ordinary, compact Mailbox row. Only the
+ * SIGNING fingerprint is displayed: this is the identifier the user compares.
+ * Approval still binds BOTH signing and encryption keys in Identity's use case.
+ */
+@Composable
+private fun IdentityChangeInvitationItem(
+    request: MailboxReviewRequestUi,
+    isProcessing: Boolean,
+    actionsEnabled: Boolean,
+    onAccept: () -> Unit,
+    onDecline: () -> Unit,
+    onBlock: () -> Unit
+) {
+    SparrowSwipeRevealItem(
+        enabled = actionsEnabled,
+        actions = listOf(
+            SwipeRevealAction(
+                backgroundColor = MaterialTheme.colorScheme.tertiaryContainer,
+                contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                onClick = onAccept
+            ) {
+                InvitationSwipeActionContent(Icons.Default.Check, stringResource(Res.string.feature_invite_accept_invitation))
+            },
+            SwipeRevealAction(
+                backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                // Deleting an incoming identity proposal is a DECLINE: remove
+                // the pending row and send its signed decline when available.
+                onClick = onDecline
+            ) {
+                InvitationSwipeActionContent(Icons.Default.DeleteOutline, stringResource(Res.string.feature_invite_decline_invitation))
+            },
+            SwipeRevealAction(
+                backgroundColor = MaterialTheme.colorScheme.error,
+                contentColor = MaterialTheme.colorScheme.onError,
+                onClick = onBlock
+            ) {
+                InvitationSwipeActionContent(Icons.Default.Block, stringResource(Res.string.feature_invite_block_invitation))
+            }
+        )
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(
+                horizontal = MaterialTheme.spacing.small,
+                vertical = MaterialTheme.spacing.small
+            ),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            SparrowAvatar(
+                name = request.peerDisplayName,
+                target = AvatarTarget.User(request.peerId)
+            )
+            Spacer(Modifier.size(MaterialTheme.spacing.small))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
+            ) {
+                Text(
+                    text = request.peerDisplayName,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = stringResource(Res.string.feature_identity_recovery_inbox_title),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = request.proposedSigningFingerprint,
+                    fontFamily = FontFamily.Monospace,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (isProcessing) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(Dimens.InvitationsScreen.progressSize),
+                    strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
+                )
             }
         }
     }
@@ -268,6 +361,7 @@ private fun InvitationItem(
     invitation: InvitationUi,
     isProcessing: Boolean,
     actionsEnabled: Boolean,
+    identityApprovalPending: Boolean,
     onUiEvent: (InvitationUiEvent) -> Unit
 ) {
     when (invitation.direction) {
@@ -276,6 +370,7 @@ private fun InvitationItem(
                 invitation = invitation,
                 isProcessing = isProcessing,
                 actionsEnabled = actionsEnabled,
+                identityApprovalPending = identityApprovalPending,
                 onUiEvent = onUiEvent
             )
 
@@ -294,11 +389,12 @@ private fun IncomingInvitationItem(
     invitation: InvitationUi,
     isProcessing: Boolean,
     actionsEnabled: Boolean,
+    identityApprovalPending: Boolean,
     onUiEvent: (InvitationUiEvent) -> Unit
 ) {
     SparrowSwipeRevealItem(
         modifier = Modifier,
-        enabled = actionsEnabled,
+        enabled = actionsEnabled && !identityApprovalPending,
         actions =
             buildList {
                 add(
@@ -347,7 +443,11 @@ private fun IncomingInvitationItem(
                 }
             }
     ) {
-        InvitationRow(invitation = invitation, isProcessing = isProcessing)
+        InvitationRow(
+            invitation = invitation,
+            isProcessing = isProcessing,
+            identityApprovalPending = identityApprovalPending
+        )
     }
 }
 
@@ -440,7 +540,8 @@ private fun EmptyInvitations(
 private fun InvitationRow(
     invitation: InvitationUi,
     isProcessing: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    identityApprovalPending: Boolean = false
 ) {
     val displayName =
         invitation.peerDisplayName
@@ -480,6 +581,13 @@ private fun InvitationRow(
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (identityApprovalPending) {
+                Text(
+                    text = stringResource(Res.string.feature_invite_group_identity_review_required),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
                 )
             }
             if (invitation.direction == InvitationUiDirection.OUTGOING) {

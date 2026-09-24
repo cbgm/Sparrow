@@ -15,6 +15,16 @@ val navigationModule =
             )
         }
         viewModel {
-            RecoveryInboxViewModel(observeRequests = get(), getPeerDisplayName = get(), getContact = get())
+            RecoveryInboxViewModel(
+                observeRequests = get(),
+                getPeerDisplayName = get(),
+                getContact = get(),
+                approveReplacement = get(),
+                dismissReplacement = get(),
+                declineReplacement = get(),
+                blockContact = get(),
+                getMembershipHandshake = get(),
+                declineGroupInvitation = get()
+            )
         }
     }

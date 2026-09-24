@@ -4,6 +4,7 @@ import androidx.room.AutoMigration
 import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import com.cbgm.sparrow.data.database.dao.ApprovedIdentityReconnectionDao
 import com.cbgm.sparrow.data.database.dao.AutoReplyDao
 import com.cbgm.sparrow.data.database.dao.ChatDao
 import com.cbgm.sparrow.data.database.dao.ContactDao
@@ -25,6 +26,7 @@ import com.cbgm.sparrow.data.database.dao.MessageSearchDao
 import com.cbgm.sparrow.data.database.dao.PendingRemoteIdentityChangeDao
 import com.cbgm.sparrow.data.database.dao.ProtocolOutboxDao
 import com.cbgm.sparrow.data.database.dao.RemoteIdentityDao
+import com.cbgm.sparrow.data.database.entity.ApprovedIdentityReconnectionEntity
 import com.cbgm.sparrow.data.database.entity.AttachmentMessageContextEntity
 import com.cbgm.sparrow.data.database.entity.AutoReplyEntity
 import com.cbgm.sparrow.data.database.entity.AutoReplyRecipientEntity
@@ -63,6 +65,7 @@ import com.cbgm.sparrow.data.database.migration.IdentityExchangeMigration41To42
         ContactPhoneNumberEntity::class,
         ContactPublicIdentityEntity::class,
         PendingRemoteIdentityChangeEntity::class,
+        ApprovedIdentityReconnectionEntity::class,
         ContactRoutingIdEntity::class,
         ConversationEntity::class,
         ConversationParticipantEntity::class,
@@ -86,7 +89,7 @@ import com.cbgm.sparrow.data.database.migration.IdentityExchangeMigration41To42
         RemoteMailboxRouteEntity::class,
         LinkPreviewEntity::class
     ],
-    version = 51,
+    version = 53,
     autoMigrations = [
         AutoMigration(from = 26, to = 27),
         AutoMigration(from = 27, to = 28),
@@ -130,6 +133,8 @@ abstract class SparrowDatabase : RoomDatabase() {
     abstract fun remoteIdentityDao(): RemoteIdentityDao
 
     abstract fun pendingRemoteIdentityChangeDao(): PendingRemoteIdentityChangeDao
+
+    abstract fun approvedIdentityReconnectionDao(): ApprovedIdentityReconnectionDao
 
     abstract fun contactRoutingIdDao(): ContactRoutingIdDao
 

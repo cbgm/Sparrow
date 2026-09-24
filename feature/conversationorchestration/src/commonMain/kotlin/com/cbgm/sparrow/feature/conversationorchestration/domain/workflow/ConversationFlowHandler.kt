@@ -44,6 +44,7 @@ import com.cbgm.sparrow.feature.conversationorchestration.domain.port.Conversati
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.ResolveIncomingIdentityPeerUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.ResolveSigningIdentityContactUseCase
 import com.cbgm.sparrow.feature.identity.domain.error.IdentityAcceptanceRequiresReviewException
+import com.cbgm.sparrow.feature.identity.domain.model.ApprovedIdentityReconnection
 import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchange
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityExchangeAcceptance
@@ -113,7 +114,6 @@ import com.cbgm.sparrow.feature.membership.domain.usecase.CompleteIncomingGroupW
 import com.cbgm.sparrow.feature.membership.domain.usecase.ConfirmGroupMembershipIdentityUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.DeclineGroupMembershipUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.DeleteGroupMembershipUseCase
-import com.cbgm.sparrow.feature.membership.domain.usecase.DiscardSupersededMembershipsUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupCurrentEpochUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetGroupLeaveRequirementUseCase
 import com.cbgm.sparrow.feature.membership.domain.usecase.GetMembershipHandshakeUseCase
@@ -176,7 +176,6 @@ internal class ConversationFlowHandler(
     private val startGroupMembership: StartGroupMembershipUseCase,
     private val inspectIncomingGroupMembership: InspectIncomingGroupMembershipUseCase,
     private val receiveIncomingGroupMembership: ReceiveIncomingGroupMembershipUseCase,
-    private val discardSupersededMemberships: DiscardSupersededMembershipsUseCase,
     private val getMembershipHandshake: GetMembershipHandshakeUseCase,
     private val acceptGroupMembership: AcceptGroupMembershipUseCase,
     private val declineGroupMembership: DeclineGroupMembershipUseCase,
@@ -322,6 +321,56 @@ internal class ConversationFlowHandler(
             startDirectInvitation(peerId).getOrThrow()
         }
 
+    /** The original invitation came from the NEW identity and its exact keys,
+     * challenge and timestamps were staged only after signature verification. The
+     * recipient has now explicitly accepted those keys. Reuse its protocol
+     * challenge: this one action sends the normal signed acceptance to the sender;
+     * the sender's existing outgoing exchange can complete without a second invite.
+     */
+    suspend fun acceptApprovedOriginalIdentityChange(approval: ApprovedIdentityReconnection): Result<Unit> =
+        runCatching {
+            val challenge = requireNotNull(approval.originalInviteChallenge)
+            val createdAt = requireNotNull(approval.originalInviteCreatedAtEpochMilliseconds)
+            val expiresAt = requireNotNull(approval.originalInviteExpiresAtEpochMilliseconds)
+            val encryption = requireNotNull(approval.originalInviterEncryptionPublicKey)
+            val signing = requireNotNull(approval.originalInviterSigningPublicKey)
+            check(challenge.size == 32 && encryption.size == 32 && signing.size == 32)
+            check(createdAt < expiresAt && expiresAt > SystemClock.nowEpochMilliseconds()) {
+                "Approved original identity invitation expired"
+            }
+            val bound = requireNotNull(getRemoteIdentity(approval.peerId).getOrThrow()) {
+                "Approved replacement identity is missing"
+            }
+            check(
+                bound.encryptionPublicKey.contentEquals(encryption) &&
+                    bound.signingPublicKey.contentEquals(signing)
+            ) { "Approved invitation no longer matches the pinned contact identity" }
+
+            val context = IncomingPacketContext(
+                contactId = approval.peerId,
+                conversationId = approval.peerId,
+                encodedTransportPayload = "persisted-signed-invitation:${approval.approvalId}",
+                transportMode = "approved-local-proposal",
+                receivedAtEpochMilliseconds = approval.approvedAtEpochMilliseconds
+            )
+            receiveIdentityExchange(
+                context,
+                IdentityExchangeOffer(
+                    exchangeId = approval.approvalId,
+                    createdAtEpochMilliseconds = createdAt,
+                    expiresAtEpochMilliseconds = expiresAt,
+                    inviteChallenge = challenge,
+                    encryptionPublicKey = encryption,
+                    signingPublicKey = signing,
+                    autoSharesIdentity = approval.originalInviteAutoSharesIdentity
+                ),
+                wasKnownPeerAtReceive = true
+            ).getOrThrow()
+            acceptIdentityExchange(approval.approvalId).getOrThrow()
+            // DO NOT call activateAuthorizedConversation here. The new recipient's
+            // READY/identity result (bound to this exchange) does that later.
+        }
+
     /**
      * Called ONLY after an actual authorization failure. A retained chat with
      * stale authorization must not cause startDirectInvitation's normal
@@ -341,17 +390,26 @@ internal class ConversationFlowHandler(
         }
 
     /**
-     * Restart-only reconciliation of a conversation which ALREADY exists and has
-     * CURRENT mutual authorization. Never replays old acceptance, makes a new
-     * conversation, or begins an identity exchange. The observer suppresses this
-     * while a replacement identity is pending independent verification.
+     * Restart-only reconciliation. An ESTABLISHED exchange can have been persisted
+     * immediately before a process death, without its chat being created yet.
+     * Only a STILL ACTIVE, exact exchange may create the missing chat; a revoked
+     * (deliberately deleted) conversation must never be resurrected from history.
+     * If a conversation exists, getOrCreate retains its ID and all message rows.
      */
-    suspend fun recoverExistingAuthorizedConversation(peerId: String): Result<Unit> =
+    suspend fun recoverAuthorizedConversationFromExchange(result: IdentityResult): Result<Unit> =
         runCatching {
-            require(peerId.isNotBlank())
-            if (conversationPort.findConversationId(peerId).getOrThrow() == null) return@runCatching
-            if (!getIdentityPeerState(peerId).getOrThrow().hasEstablishedExchange) return@runCatching
-            conversationPort.activateAuthorizedConversation(peerId).getOrThrow()
+            if (result.status != IdentityResultStatus.ESTABLISHED) return@runCatching
+            if (!getIdentityPeerState(result.peerId).getOrThrow().hasEstablishedExchange) return@runCatching
+            val existingId = conversationPort.findConversationId(result.peerId).getOrThrow()
+            if (existingId == null) {
+                val current = getIdentityExchangeClosure(result.peerId).getOrThrow() ?: return@runCatching
+                if (current.exchangeId != result.exchangeId ||
+                    current.phase != IdentityExchangeClosurePhase.ACTIVE
+                ) {
+                    return@runCatching
+                }
+            }
+            conversationPort.activateAuthorizedConversation(result.peerId).getOrThrow()
         }
 
     /** Manual setup selection is a cross-feature workflow, not a Contacts use case. */
@@ -642,6 +700,7 @@ internal class ConversationFlowHandler(
                         )
                     ).getOrThrow()
                 } catch (review: IdentityAcceptanceRequiresReviewException) {
+                    if (blocklistRepository.isBlocked(review.peerId)) return@runCatching
                     // This branch is reached only AFTER the accepted packet signature,
                     // local-key binding, challenge, invitation lifetime and outgoing
                     // stage were verified. The newly signed key is NOT proof of the
@@ -766,6 +825,7 @@ internal class ConversationFlowHandler(
                     remoteSigningPublicKey = packet.signingPublicKey
                 )
             } catch (conflict: RemoteIdentityReplacementRequiredException) {
+                if (blocklistRepository.isBlocked(conflict.peerId)) return@runCatching
                 // The signature on this invitation authenticates the PROPOSED keys,
                 // not ownership of the previous identity or of the claimed number.
                 // Record it durably for later explicit review; never merge contacts,
@@ -778,7 +838,10 @@ internal class ConversationFlowHandler(
                         proposedEncryptionPublicKey = packet.encryptionPublicKey.copyOf(),
                         proposedSigningPublicKey = packet.signingPublicKey.copyOf(),
                         receivedAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
-                        expiresAtEpochMilliseconds = packet.expiresAtEpochMilliseconds
+                        expiresAtEpochMilliseconds = packet.expiresAtEpochMilliseconds,
+                        originalInviteChallenge = packet.inviteChallenge.copyOf(),
+                        originalInviteCreatedAtEpochMilliseconds = packet.createdAtEpochMilliseconds,
+                        originalInviteAutoSharesIdentity = packet.autoSharesIdentity
                     )
                 ).getOrThrow()
                 return@runCatching
@@ -1225,11 +1288,18 @@ internal class ConversationFlowHandler(
                 ) {
                     return
                 }
-                // The receiver accepted the invite: publish its staged chat even if
-                // joining the group is still waiting for transport or identity work.
-                conversationPort.showAcceptedIncomingGroupConversation(result.payloadId).getOrThrow()
                 when (handshake.status) {
                     MembershipStatus.STAGED -> {
+                        // The original signed offer was verified when this exact
+                        // membership was staged. After an explicit identity-change
+                        // approval, mark receipt of THOSE keys before local acceptance.
+                        // If the old pinned identity is still present, stage refuses
+                        // the key change without opening a group or sending a join.
+                        stageRemoteIdentity(
+                            contactId = result.peerId,
+                            encryptionPublicKey = encryptionKey,
+                            signingPublicKey = signingKey
+                        ).getOrThrow()
                         acceptRemoteIdentityHandshake(
                             contactId = result.peerId,
                             encryptionPublicKey = encryptionKey,
@@ -1242,6 +1312,9 @@ internal class ConversationFlowHandler(
                     MembershipStatus.ACTIVE -> Unit // An accepted invitation is replayable after restart.
                     else -> Unit // Exhausted by the active-status guard above.
                 }
+                // Do not show a half-joined group if the identity or join preflight
+                // failed. A waiting join still gets its normal visible chat shell.
+                conversationPort.showAcceptedIncomingGroupConversation(result.payloadId).getOrThrow()
             }
 
             InvitationResponse.DECLINED -> {
@@ -1305,6 +1378,13 @@ internal class ConversationFlowHandler(
         packet: GroupInvitePacket
     ) {
         val offer = inspectIncomingGroupMembership(context.contactId, packet).getOrThrow()
+        // Cryptographically valid but expired or blocked offers must not enter
+        // Mailbox or poison the incoming retry queue.
+        if (blocklistRepository.isBlocked(context.contactId) ||
+            offer.expiresAtEpochMilliseconds <= context.receivedAtEpochMilliseconds
+        ) {
+            return
+        }
         val record =
             InvitationLifecycleRecord(
                 invitationId = offer.sourceId,
@@ -1327,7 +1407,15 @@ internal class ConversationFlowHandler(
                 receivedAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
                 shouldStage = false
             ).getOrThrow()
-            applyPeerProfilePicture(context.contactId, packet.profilePicture)
+            // An already-handled replay must not let an obsolete key silently
+            // update the trusted contact's avatar/profile metadata.
+            val pinnedOwner = getRemoteIdentity(context.contactId).getOrThrow()
+            if (pinnedOwner != null &&
+                pinnedOwner.encryptionPublicKey.contentEquals(offer.ownerEncryptionPublicKey) &&
+                pinnedOwner.signingPublicKey.contentEquals(offer.ownerSigningPublicKey)
+            ) {
+                applyPeerProfilePicture(context.contactId, packet.profilePicture)
+            }
             return
         }
 
@@ -1349,38 +1437,79 @@ internal class ConversationFlowHandler(
             return
         }
 
-        val identityChanged =
+        // A signed GROUP invitation is not an authorization to silently rotate a
+        // previously trusted DIRECT identity. Previously this call threw for a
+        // changed inviter, preventing the group invitation from reaching Mailbox
+        // and causing the same envelope to be retried indefinitely.
+        val storedOwner = getRemoteIdentity(context.contactId).getOrThrow()
+        val ownerIdentityDisposition = GroupInvitationIdentityPolicy.evaluate(
+            storedEncryptionPublicKey = storedOwner?.encryptionPublicKey,
+            storedSigningPublicKey = storedOwner?.signingPublicKey,
+            offeredEncryptionPublicKey = offer.ownerEncryptionPublicKey,
+            offeredSigningPublicKey = offer.ownerSigningPublicKey
+        )
+        val ownerKeysChanged =
+            ownerIdentityDisposition == GroupInvitationIdentityDisposition.REQUIRES_REVIEW
+        if (ownerIdentityDisposition == GroupInvitationIdentityDisposition.FIRST_CONTACT) {
+            // The receipt uses the sender's current transport key; for a brand-new
+            // contact the untrusted keys must first be staged, as in the original
+            // first-contact path. This is NOT an update to a previously trusted key.
             stageRemoteIdentity(
                 contactId = context.contactId,
                 encryptionPublicKey = offer.ownerEncryptionPublicKey,
                 signingPublicKey = offer.ownerSigningPublicKey
             ).getOrThrow()
-        if (identityChanged) {
-            discardSupersededMemberships(
-                peerId = context.contactId,
-                currentSourceId = offer.sourceId
-            ).getOrThrow()
         }
-
+        // Persist the verified group offer BEFORE publishing an identity-change
+        // review row. An approval worker must always find the exact staged group
+        // invitation ID after a restart, never misclassify it as a direct invite.
         receiveIncomingGroupMembership(
             peerId = context.contactId,
             packet = packet,
             receivedAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
             shouldStage = true
         ).getOrThrow()
+
+        if (ownerKeysChanged) {
+            // The group offer is kept as a pending membership. A separate ordinary
+            // Mailbox identity-change request shows BOTH proposed keys; group
+            // acceptance is disabled until that request has been accepted. No
+            // trusted key, existing conversation or historical message changes here.
+            stagePendingRemoteIdentityChange(
+                PendingRemoteIdentityChange(
+                    peerId = context.contactId,
+                    sourcePeerId = context.contactId,
+                    invitationId = offer.sourceId,
+                    proposedEncryptionPublicKey = offer.ownerEncryptionPublicKey.copyOf(),
+                    proposedSigningPublicKey = offer.ownerSigningPublicKey.copyOf(),
+                    receivedAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
+                    expiresAtEpochMilliseconds = offer.expiresAtEpochMilliseconds
+                )
+            ).getOrThrow()
+        }
+
         recordInvitation(record).getOrThrow()
-        applyPeerProfilePicture(context.contactId, packet.profilePicture)
+        // A signed proposal under unapproved new keys is not authorization to
+        // replace the previously trusted contact's avatar or other profile data.
+        if (!ownerKeysChanged) {
+            applyPeerProfilePicture(context.contactId, packet.profilePicture)
+        }
     }
 
     private suspend fun handleGroupInviteReceived(
         context: IncomingPacketContext,
         packet: GroupInviteReceivedPacket
     ) {
-        val proof = receiveGroupMembershipReceipt(context.contactId, packet).getOrThrow() ?: return
-        ensureRemoteSigningIdentity(
-            contactId = proof.peerId,
-            signingPublicKey = proof.signingPublicKey
-        ).getOrThrow()
+        // Membership validates the invitation ID, group ID, challenge, sender and
+        // signature before returning a proof. This packet is only a delivery
+        // receipt: it does NOT accept membership, establish mutual identity or
+        // authorize sending a group welcome. In particular, a restored member
+        // may acknowledge an invite using NEW signing keys while the owner's
+        // previous trusted identity is still pinned. Comparing the receipt key
+        // against that old identity would poison the same durable envelope on
+        // every replay. Keep the pin unchanged; the subsequent join/identity
+        // workflow must still establish authorization for the member's keys.
+        receiveGroupMembershipReceipt(context.contactId, packet).getOrThrow() ?: return
     }
 
     private suspend fun handleGroupInviteDeclined(
@@ -1388,10 +1517,15 @@ internal class ConversationFlowHandler(
         packet: GroupInviteDeclinedPacket
     ) {
         val decline = receiveGroupMembershipDecline(context.contactId, packet).getOrThrow() ?: return
-        ensureRemoteSigningIdentity(
-            contactId = decline.peerId,
-            signingPublicKey = decline.signingPublicKey
-        ).getOrThrow()
+        // A pending group's decline is authenticated by its signed original
+        // challenge and must not silently change an older pinned contact key.
+        // Removing an ACTIVE member, in contrast, requires the accepted identity.
+        if (decline.disposition == MembershipDeclineDisposition.ACTIVE_MEMBER) {
+            ensureRemoteSigningIdentity(
+                contactId = decline.peerId,
+                signingPublicKey = decline.signingPublicKey
+            ).getOrThrow()
+        }
 
         when (decline.disposition) {
             MembershipDeclineDisposition.PENDING_HANDSHAKE -> {
@@ -1416,39 +1550,112 @@ internal class ConversationFlowHandler(
         packet: GroupJoinRequestPacket
     ) {
         val join = receiveGroupMembershipJoinRequest(context.contactId, packet).getOrThrow() ?: return
-        if (join.alreadyAccepted) {
-            ensureRemoteSigningIdentity(
-                contactId = join.peerId,
-                signingPublicKey = join.memberSigningPublicKey
+        // A duplicate JOIN after the welcome has no membership transition to
+        // authorize. It may have been signed before a later identity rotation.
+        if (join.alreadyAccepted) return
+
+        // Membership verified the signature, group, sender, invitation ID and
+        // original challenge. Unlike the earlier receipt, JOIN binds both keys.
+        // A different signing OR encryption key always requires user acceptance,
+        // including when the previously stored identity was only ONE_WAY.
+        val storedMember = getRemoteIdentity(join.peerId).getOrThrow()
+        val disposition = GroupInvitationIdentityPolicy.evaluate(
+            storedEncryptionPublicKey = storedMember?.encryptionPublicKey,
+            storedSigningPublicKey = storedMember?.signingPublicKey,
+            offeredEncryptionPublicKey = join.memberEncryptionPublicKey,
+            offeredSigningPublicKey = join.memberSigningPublicKey
+        )
+        if (disposition == GroupInvitationIdentityDisposition.REQUIRES_REVIEW) {
+            val handshake = requireNotNull(getMembershipHandshake(join.sourceId).getOrThrow()) {
+                "Verified JOIN has no pending group membership"
+            }
+            check(
+                handshake.peerId == join.peerId && handshake.groupId == join.groupId &&
+                    handshake.ownerSigningPublicKey == null
+            ) { "Verified JOIN does not belong to the owner-side group invitation" }
+            val expiresAt = handshake.createdAtEpochMilliseconds + GROUP_INVITATION_VALIDITY_MILLISECONDS
+            check(expiresAt > SystemClock.nowEpochMilliseconds()) {
+                "Group invitation expired before identity change could be approved"
+            }
+            // The verified JOIN is the evidence for this review. Keep membership
+            // STAGED, acknowledge the transport envelope and await the *one-tap*
+            // acceptance in Mailbox. No previous trusted key is changed here.
+            stagePendingRemoteIdentityChange(
+                PendingRemoteIdentityChange(
+                    peerId = join.peerId,
+                    sourcePeerId = join.peerId,
+                    invitationId = join.sourceId,
+                    proposedEncryptionPublicKey = join.memberEncryptionPublicKey.copyOf(),
+                    proposedSigningPublicKey = join.memberSigningPublicKey.copyOf(),
+                    receivedAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
+                    expiresAtEpochMilliseconds = expiresAt
+                )
             ).getOrThrow()
-        } else {
-            // receiveGroupMembershipJoinRequest has verified the join signature and
-            // bound its challenge to the staged membership. The group join therefore
-            // provides authenticated evidence of the member's remote identity.
-            // Persist that evidence *before* establishing mutual identity: an existing
-            // imported contact can have remoteIdentityPacketReceived = false, in which
-            // case markMutual's compare-and-set rightly refuses the update. Do not
-            // loosen that security check or mark unrelated manual chats mutual.
-            stageRemoteIdentity(
-                contactId = join.peerId,
-                encryptionPublicKey = join.memberEncryptionPublicKey,
-                signingPublicKey = join.memberSigningPublicKey
-            ).getOrThrow()
-            establishMutualIdentity(
-                contactId = join.peerId,
-                encryptionPublicKey = join.memberEncryptionPublicKey,
-                signingPublicKey = join.memberSigningPublicKey
-            ).getOrThrow()
-            confirmGroupMembershipIdentity(
-                sourceId = join.sourceId,
-                updatedAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
-                context = conversationPort.getGroupMembershipContext(join.groupId).getOrThrow(),
-                memberEncryptionPublicKey = join.memberEncryptionPublicKey,
-                memberSigningPublicKey = join.memberSigningPublicKey,
-                memberPhoneNumber = requireGroupMemberPhoneNumber(join.peerId)
-            ).getOrThrow()
+            return
         }
+
+        stageRemoteIdentity(
+            contactId = join.peerId,
+            encryptionPublicKey = join.memberEncryptionPublicKey,
+            signingPublicKey = join.memberSigningPublicKey
+        ).getOrThrow()
+        establishMutualIdentity(
+            contactId = join.peerId,
+            encryptionPublicKey = join.memberEncryptionPublicKey,
+            signingPublicKey = join.memberSigningPublicKey
+        ).getOrThrow()
+        confirmGroupMembershipIdentity(
+            sourceId = join.sourceId,
+            updatedAtEpochMilliseconds = context.receivedAtEpochMilliseconds,
+            context = conversationPort.getGroupMembershipContext(join.groupId).getOrThrow(),
+            memberEncryptionPublicKey = join.memberEncryptionPublicKey,
+            memberSigningPublicKey = join.memberSigningPublicKey,
+            memberPhoneNumber = requireGroupMemberPhoneNumber(join.peerId)
+        ).getOrThrow()
         applyPeerProfilePicture(context.contactId, packet.profilePicture)
+    }
+
+    /** Continue an authenticated pending owner-side JOIN after user approval.
+     * The durable approval ID is the exact original group source ID. Re-running
+     * after a crash uses that same membership and does not create a direct chat.
+     */
+    suspend fun resumeApprovedGroupJoin(sourceId: String, peerId: String): Result<Unit> = runCatching {
+        val handshake = requireNotNull(getMembershipHandshake(sourceId).getOrThrow()) {
+            "Approved group join no longer has a membership"
+        }
+        check(handshake.peerId == peerId && handshake.ownerSigningPublicKey == null) {
+            "Approved identity does not belong to the owner-side group join"
+        }
+        if (handshake.status == MembershipStatus.WELCOME_SENT ||
+            handshake.status == MembershipStatus.WAITING_FOR_ACTIVATION ||
+            handshake.status == MembershipStatus.ACTIVE
+        ) {
+            return@runCatching
+        }
+        check(
+            handshake.status == MembershipStatus.STAGED ||
+                handshake.status == MembershipStatus.IDENTITY_READY
+        ) { "Approved group join is no longer pending" }
+        val identity = requireNotNull(getRemoteIdentity(peerId).getOrThrow()) {
+            "Approved member identity is missing"
+        }
+        // Approval changes the pinned keys in place but deliberately resets
+        // mutual authorization. Mark the original signed JOIN's key receipt
+        // before the membership transition and do not inherit old verification.
+        stageRemoteIdentity(peerId, identity.encryptionPublicKey, identity.signingPublicKey).getOrThrow()
+        establishMutualIdentity(peerId, identity.encryptionPublicKey, identity.signingPublicKey).getOrThrow()
+        confirmGroupMembershipIdentity(
+            sourceId = sourceId,
+            updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
+            context = conversationPort.getGroupMembershipContext(handshake.groupId).getOrThrow(),
+            memberEncryptionPublicKey = identity.encryptionPublicKey,
+            memberSigningPublicKey = identity.signingPublicKey,
+            memberPhoneNumber = requireGroupMemberPhoneNumber(peerId)
+        ).getOrThrow()
+    }
+
+    private companion object {
+        const val GROUP_INVITATION_VALIDITY_MILLISECONDS = 7L * 24L * 60L * 60L * 1_000L
     }
 
     /** An invitation supplies a genuine contact phone once; membership then retains it per epoch. */

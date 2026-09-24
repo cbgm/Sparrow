@@ -12,6 +12,7 @@ import com.cbgm.sparrow.core.protocol.profile.LocalProfilePictureProvider
 import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureMetadataProcessor
 import com.cbgm.sparrow.core.protocol.profile.RemoteProfilePictureProvider
 import com.cbgm.sparrow.feature.identity.data.IdentityLocalResetHandler
+import com.cbgm.sparrow.feature.identity.data.datasource.ApprovedIdentityReconnectionDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.IdentityBackupStatusDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.IdentityExchangeDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.IdentityExchangeStoreDataSource
@@ -26,6 +27,7 @@ import com.cbgm.sparrow.feature.identity.data.datasource.RemoteIdentityDataSourc
 import com.cbgm.sparrow.feature.identity.data.datasource.RemoteProfilePictureDataSource
 import com.cbgm.sparrow.feature.identity.data.datasource.SparrowDataStorePublicIdentityDataSource
 import com.cbgm.sparrow.feature.identity.data.protocol.IdentityVerificationReceiptEncoder
+import com.cbgm.sparrow.feature.identity.data.repository.ApprovedIdentityReconnectionRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityBackupRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityExchangeRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.IdentityRepositoryImpl
@@ -39,6 +41,7 @@ import com.cbgm.sparrow.feature.identity.data.repository.RemoteIdentityImportRep
 import com.cbgm.sparrow.feature.identity.data.repository.RemoteIdentityReadRepositoryImpl
 import com.cbgm.sparrow.feature.identity.data.repository.RemoteProfilePictureRepositoryImpl
 import com.cbgm.sparrow.feature.identity.device.IdentityBackupCodec
+import com.cbgm.sparrow.feature.identity.domain.repository.ApprovedIdentityReconnectionRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityBackupRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityExchangeRepository
 import com.cbgm.sparrow.feature.identity.domain.repository.IdentityRepository
@@ -53,19 +56,21 @@ import com.cbgm.sparrow.feature.identity.domain.repository.RemoteIdentityReadRep
 import com.cbgm.sparrow.feature.identity.domain.repository.RemoteProfilePictureRepository
 import com.cbgm.sparrow.feature.identity.domain.usecase.AcceptIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.AcceptRemoteIdentityHandshakeUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.AcknowledgeQueuedRecoveryInvitationUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ApplyRemoteProfilePictureMetadataUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ApprovePendingRemoteIdentityChangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.CancelIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.CloseIdentityExchangeUseCase
-import com.cbgm.sparrow.feature.identity.domain.usecase.ConfirmPendingRemoteIdentityChangeFingerprintUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.CreateIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.CreateSharedIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.DeclineIdentityExchangeUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.DeclinePendingRemoteIdentityChangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.DecodeSharedIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.DismissPendingRemoteIdentityChangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.EnsureRemoteSigningIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.EstablishMutualIdentityUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.FindRemoteIdentityPeerIdUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.GetApprovedIdentityReconnectionUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityBackupStatusUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityExchangeBindingUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityExchangeClosureUseCase
@@ -79,6 +84,7 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.ImportRemoteIdentityUseC
 import com.cbgm.sparrow.feature.identity.domain.usecase.InvalidateIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.MarkIdentityBackupExportedUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.NormalizeLocalPhoneNumberUseCase
+import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveApprovedIdentityReconnectionsUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveIdentityHandshakeStateUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveIdentityResultsUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.ObserveLocalIdentityReadyUseCase
@@ -107,7 +113,6 @@ import com.cbgm.sparrow.feature.identity.domain.usecase.StageRemoteIdentityUseCa
 import com.cbgm.sparrow.feature.identity.domain.usecase.StartIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.StartManualIdentityExchangeUseCase
 import com.cbgm.sparrow.feature.identity.domain.usecase.VerifyRemoteIdentityUseCase
-import com.cbgm.sparrow.feature.identity.presentation.recovery.IdentityRecoveryViewModel
 import com.cbgm.sparrow.feature.identity.presentation.setup.IdentityViewModel
 import com.cbgm.sparrow.feature.identity.presentation.setup.profile.IdentityProfilePictureViewModel
 import com.cbgm.sparrow.feature.identity.presentation.share.ShareIdentityViewModel
@@ -133,12 +138,17 @@ val identityModule =
         singleOf(::ManualIdentityExchangeDataSource)
         singleOf(::IdentityExchangeRepositoryImpl) { bind<IdentityExchangeRepository>() }
         singleOf(::RemoteIdentityDataSource)
+        singleOf(::ApprovedIdentityReconnectionDataSource)
+        singleOf(::ApprovedIdentityReconnectionRepositoryImpl) { bind<ApprovedIdentityReconnectionRepository>() }
+        factory { ObserveApprovedIdentityReconnectionsUseCase(repository = get()) }
+        factory { GetApprovedIdentityReconnectionUseCase(repository = get()) }
+        factory { AcknowledgeQueuedRecoveryInvitationUseCase(repository = get()) }
         singleOf(::PendingRemoteIdentityChangeDataSource)
         singleOf(::PendingRemoteIdentityChangeRepositoryImpl) { bind<PendingRemoteIdentityChangeRepository>() }
         factory { StagePendingRemoteIdentityChangeUseCase(repository = get()) }
         factory { ObservePendingRemoteIdentityChangesUseCase(repository = get()) }
         factory { DismissPendingRemoteIdentityChangeUseCase(repository = get()) }
-        factory { ConfirmPendingRemoteIdentityChangeFingerprintUseCase(repository = get()) }
+        factory { DeclinePendingRemoteIdentityChangeUseCase(get(), get(), get(), get(), get()) }
         factory { ApprovePendingRemoteIdentityChangeUseCase(repository = get()) }
         singleOf(::RemoteIdentityReadRepositoryImpl) { bind<RemoteIdentityReadRepository>() }
         factory { GetRemoteIdentityUseCase(repository = get()) }
@@ -342,18 +352,6 @@ val identityModule =
                 restoreIdentityBackup = get(),
                 markIdentityBackupExported = get(),
                 getIdentityBackupStatus = get()
-            )
-        }
-
-        viewModel {
-            IdentityRecoveryViewModel(
-                savedStateHandle = get(),
-                observePending = get(),
-                getRemoteIdentity = get(),
-                decodeSharedIdentity = get(),
-                confirmFingerprint = get(),
-                approveReplacement = get(),
-                dismissRequest = get()
             )
         }
 

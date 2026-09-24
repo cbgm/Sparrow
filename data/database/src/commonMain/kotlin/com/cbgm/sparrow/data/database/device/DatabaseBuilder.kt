@@ -3,6 +3,8 @@ package com.cbgm.sparrow.data.database.factory
 import androidx.room.RoomDatabase
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.cbgm.sparrow.data.database.SparrowDatabase
+import com.cbgm.sparrow.data.database.migration.ApprovedIdentityOfferMigration52To53
+import com.cbgm.sparrow.data.database.migration.ApprovedIdentityReconnectionMigration51To52
 import com.cbgm.sparrow.data.database.migration.AttachmentMessageContextMigration45To46
 import com.cbgm.sparrow.data.database.migration.AttachmentMessageContextMigration46To47
 import com.cbgm.sparrow.data.database.migration.GroupMemberPhoneMigration47To48
@@ -28,6 +30,8 @@ fun buildSparrowDatabase(builder: RoomDatabase.Builder<SparrowDatabase>): Sparro
             GroupMemberPhoneMigration47To48,
             ProtocolOutboxFailuresMigration48To49,
             PendingRemoteIdentityChangeMigration49To50,
-            PendingRemoteIdentityChangeMigration50To51
+            PendingRemoteIdentityChangeMigration50To51,
+            ApprovedIdentityReconnectionMigration51To52,
+            ApprovedIdentityOfferMigration52To53
         )
         .build()

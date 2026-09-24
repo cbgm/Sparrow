@@ -10,16 +10,15 @@ interface PendingRemoteIdentityChangeRepository {
 
     suspend fun discard(peerId: String, invitationId: String): Result<Unit>
 
-    /** Records an explicit, out-of-band fingerprint confirmation; does NOT replace any keys.
-
-     * Only an independently confirmed request may proceed. Revoke old mailbox routes first.
-     * This does NOT authorize a conversation or mark the new keys as verified.
+    /** Explicit approval of exactly the public keys displayed in Mailbox. This is a user
+     * decision to trust new keys, NOT proof that the old identity controls them.
+     * The signature on the incoming invitation is verified before it is staged.
+     * Never silently promote a request based on a matching phone number.
      */
-    suspend fun approveReplacement(peerId: String, invitationId: String): Result<Unit>
-
-    suspend fun confirmFingerprint(
+    suspend fun approveReplacement(
         peerId: String,
         invitationId: String,
-        independentlyCheckedSigningFingerprint: String
+        presentedSigningFingerprint: String,
+        presentedEncryptionFingerprint: String
     ): Result<Unit>
 }

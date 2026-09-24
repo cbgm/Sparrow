@@ -7,6 +7,7 @@ import com.cbgm.sparrow.core.transport.ControlPlaneHealthMonitor
 import com.cbgm.sparrow.core.transport.ControlPlaneStatusStore
 import com.cbgm.sparrow.feature.contacts.domain.repository.DeviceContactsPermissionRepository
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportDeviceContactsUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.runtime.ApprovedIdentityReconnectionObserver
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.ContactBlockObserver
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.IdentityResultObserver
 import com.cbgm.sparrow.feature.conversationorchestration.runtime.InvitationResultObserver
@@ -26,6 +27,7 @@ data class AppInitializationDependencies(
     val membershipResultObserver: MembershipResultObserver,
     val messagingTransportResultObserver: MessagingTransportResultObserver,
     val directIdentityResultObserver: IdentityResultObserver,
+    val approvedIdentityReconnectionObserver: ApprovedIdentityReconnectionObserver,
     val contactBlockObserver: ContactBlockObserver,
     val controlPlaneConfiguration: ControlPlaneConfiguration,
     val controlPlaneStatusStore: ControlPlaneStatusStore,

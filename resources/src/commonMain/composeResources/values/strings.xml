@@ -644,59 +644,18 @@
     <string name="feature_identity_backup_restore_hint">Select your backup file and enter its password. Enter your phone number on the identity setup screen before restoring. This restores your original keys only, not your previous chats or contacts.</string>
 
 
-    <!-- Incoming untrusted identity replacement review (not an accept action). -->
-    <string name="feature_identity_recovery_review_title">Contact identity change requests</string>
-    <string name="feature_identity_recovery_review_warning">A contact may have reinstalled Sparrow. The new keys are NOT verified as belonging to your existing contact. Existing chats and trust stay unchanged.</string>
-    <string name="feature_identity_recovery_review_action">Review</string>
-    <string name="feature_identity_recovery_peer">Contact reference</string>
-    <string name="feature_identity_recovery_old_signing">Previously stored signing key</string>
-    <string name="feature_identity_recovery_new_signing">Proposed signing key</string>
-    <string name="feature_identity_recovery_old_encryption">Previously stored encryption key</string>
-    <string name="feature_identity_recovery_new_encryption">Proposed encryption key</string>
-    <string name="feature_identity_recovery_unavailable">Unavailable — cannot verify against the prior key</string>
-    <string name="feature_identity_recovery_dismiss">Dismiss locally</string>
-    <string name="feature_identity_recovery_dismiss_warning">Compare the new keys directly with your contact through a trusted channel. This screen does not authorize replacement. Dismissing removes only your local pending review; an invitation may appear again if retransmitted.</string>
-    <string name="feature_identity_recovery_fingerprint_hint">Check the NEW signing-key fingerprint directly with your contact through a separate trusted channel, not from this invitation. Enter the full value you independently checked. Confirmation records your check only; it does NOT replace keys, restore delivery, verify a phone number, or authorize messages.</string>
-    <string name="feature_identity_recovery_fingerprint_label">Independently checked new signing-key fingerprint</string>
-    <string name="feature_identity_recovery_confirm_fingerprint">Record fingerprint check</string>
-    <string name="feature_identity_recovery_fingerprint_recorded">Fingerprint check recorded for this request. Existing identity, verification and conversations remain unchanged. Secure replacement and fresh authorization are not enabled yet.</string>
-    <string name="feature_identity_recovery_approve">Replace identity</string>
-    <string name="feature_identity_recovery_approve_warning">Only approve after independently checking the full new fingerprint with your contact. The old mailbox routes will be revoked, old queued packets will not be resent, and previous verification will be reset. This does not accept a chat invitation. You can then send a new invitation or ask your contact to do so.</string>
-    <string name="feature_identity_recovery_completed">Identity replaced. Your existing contact and conversation history were kept, but messaging remains locked until a fresh invitation is accepted. Send a new invitation below, or ask your contact to send one. Old queued packets cannot be resent.</string>
-    <string name="feature_identity_recovery_send_invitation">Send a new invitation</string>
-    <string name="feature_identity_recovery_invitation_queued">Invitation queued. Your contact must accept it before messaging can resume.</string>
-
     <string name="feature_chats_reconnect_contact">Reconnect contact</string>
-    <string name="feature_chats_reconnect_warning">Send a new invitation to this contact? This ends the current conversation authorization until a new invitation is accepted. Your existing conversation and history are kept. If the contact reinstalled Sparrow with new keys, you must independently verify and approve the new identity before sending messages.</string>
+    <string name="feature_chats_reconnect_warning">Send a new invitation to this contact? This ends the current conversation authorization until a new invitation is accepted. Your existing conversation and history are kept. If the contact has new keys, an identity-change invitation appears in your Mailbox. You can accept, decline or block it.</string>
     <string name="feature_chats_reconnect_confirm">Send invitation</string>
     <string name="feature_chats_reconnect_cancel">Cancel</string>
     <string name="feature_chats_reconnect_queued">A new invitation has been queued. Wait for acceptance before sending messages.</string>
+    <string name="feature_identity_recovery_block_action">Block</string>
     <string name="feature_identity_recovery_inbox_title">Identity change request</string>
-    <string name="feature_identity_recovery_inbox_description">A contact is proposing new identity keys. Verify them before reconnecting.</string>
-    <string name="feature_identity_recovery_inbox_action">Review identity</string>
-    <string name="feature_identity_recovery_screen_title">Identity recovery</string>
-    <string name="feature_identity_recovery_screen_approved">New identity approved</string>
-    <string name="feature_identity_recovery_screen_queued">A fresh invitation was queued. Your contact must accept it before encrypted messages resume. Your existing conversation and history are preserved.</string>
-    <string name="feature_identity_recovery_screen_starting">Sparrow is starting a fresh invitation for the new identity. Previous authorization cannot be reused.</string>
-    <string name="feature_identity_recovery_screen_retry">Retry reconnection</string>
-    <string name="feature_identity_recovery_screen_return">Return to inbox</string>
-    <string name="feature_identity_recovery_screen_missing">This recovery request is no longer available. It may have been replaced by a newer invitation.</string>
-    <string name="feature_identity_recovery_screen_warning">This contact is proposing different cryptographic keys. A matching phone number does not prove the new identity belongs to the same person.</string>
-    <string name="feature_identity_recovery_screen_previous_signing">Previous signing fingerprint</string>
-    <string name="feature_identity_recovery_screen_proposed_signing">Proposed signing fingerprint</string>
-    <string name="feature_identity_recovery_screen_previous_encryption">Previous encryption fingerprint</string>
-    <string name="feature_identity_recovery_screen_proposed_encryption">Proposed encryption fingerprint</string>
-    <string name="feature_identity_recovery_screen_compare">Ask your contact to open Me → Identity on their new device and read THEIR signing-key fingerprint to you through a separate trusted channel. Compare the entire value. Do not copy the value shown in this request as verification.</string>
-    <string name="feature_identity_recovery_screen_fingerprint">Independently checked signing fingerprint</string>
-    <string name="feature_identity_recovery_screen_confirm">Confirm fingerprint</string>
-    <string name="feature_identity_recovery_screen_confirmed">Fingerprint confirmed. Approval replaces the remote keys and clears the old verification and authorization. Your existing chat history remains on this device.</string>
-    <string name="feature_identity_recovery_screen_approve">Approve and reconnect</string>
-    <string name="feature_identity_recovery_screen_dismiss">Dismiss recovery request</string>
-    <string name="feature_identity_recovery_screen_unavailable">Unavailable</string>
+    <string name="feature_identity_recovery_inbox_warning">This invitation proposes new keys. It may be from someone else: a matching phone number does not prove identity. Accepting trusts the keys shown below and continues the signed invitation with the new identity. Your existing chat stays on this device.</string>
+    <string name="feature_identity_recovery_inbox_signing">Proposed signing fingerprint</string>
+    <string name="feature_identity_recovery_inbox_encryption">Proposed encryption fingerprint</string>
     <string name="feature_identity_own_fingerprint_title">Your signing-key fingerprint</string>
     <string name="feature_identity_own_fingerprint_description">When a contact needs to verify your new identity, share this value through a separate trusted channel.</string>
-    <string name="feature_identity_recovery_screen_scan">Scan contact\'s identity QR</string>
-    <string name="feature_identity_recovery_screen_scan_instructions">On your contact\'s phone, open Me → Identity → Share my identity. Scan the QR code displayed on THAT phone.</string>
     <string name="feature_settings_control_plane_json_list">JSON list</string>
     <string name="feature_settings_control_plane_json_unverified">Unsigned JSON list: addresses are suggestions, not signed directory identities.</string>
     <string name="feature_settings_control_plane_json_remove">Remove JSON list</string>
@@ -705,4 +664,5 @@
     <string name="feature_settings_control_planes_discovered">Discovered Control Planes</string>
     <string name="feature_settings_control_planes_manually_added">Manually added Control Planes</string>
     <string name="feature_settings_control_plane_source_node_hint">Node discovery</string>
+    <string name="feature_invite_group_identity_review_required">Review the inviting contact’s changed identity above before accepting this group invitation.</string>
 </resources>
