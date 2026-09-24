@@ -2,14 +2,15 @@ package com.cbgm.sparrow.feature.chats.presentation.forwarding.component
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
 import com.cbgm.sparrow.feature.chats.presentation.forwarding.model.ForwardingTargetUi
 
@@ -23,6 +24,10 @@ internal fun ForwardingTargetItem(
         modifier =
             modifier
                 .fillMaxWidth()
+                .padding(
+                    horizontal = MaterialTheme.spacing.screenPadding,
+                    vertical = MaterialTheme.spacing.micro
+                )
                 .clickable(onClick = onClick),
         leadingContent = {
             SparrowAvatar(
@@ -39,10 +44,6 @@ internal fun ForwardingTargetItem(
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onBackground
             )
-        },
-        colors =
-            ListItemDefaults.colors(
-                containerColor = MaterialTheme.colorScheme.background
-            )
+        }
     )
 }

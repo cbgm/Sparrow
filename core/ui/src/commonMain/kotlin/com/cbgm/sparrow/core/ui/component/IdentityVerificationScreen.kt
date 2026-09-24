@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.core.ui.component
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +19,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -30,7 +31,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
@@ -82,30 +82,38 @@ fun IdentityVerificationScreen(
                         end = MaterialTheme.spacing.screenPadding
                     ),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
         ) {
-            Text(
-                text = stringResource(Res.string.feature_chats_scan_identity_qr_description),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-
-            SparrowSecondaryButton(
-                onClick = onScanQrCode,
-                enabled = !isVerifying,
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                content = {
-                    Icon(
-                        imageVector = Icons.Default.QrCodeScanner,
-                        contentDescription = null,
-                        modifier = Modifier.size(Dimens.IdentityVerificationScreen.iconSize)
+                color = MaterialTheme.colorScheme.background,
+                shape = MaterialTheme.shapes.large
+            ) {
+                Column(
+                    modifier = Modifier.padding(MaterialTheme.spacing.medium),
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
+                ) {
+                    Text(
+                        text = stringResource(Res.string.feature_chats_scan_identity_qr_description),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-
-                    Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
-
-                    Text(text = stringResource(Res.string.feature_chats_scan_identity_qr))
+                    SparrowSecondaryButton(
+                        onClick = onScanQrCode,
+                        enabled = !isVerifying,
+                        modifier = Modifier.fillMaxWidth(),
+                        content = {
+                            Icon(
+                                imageVector = Icons.Default.QrCodeScanner,
+                                contentDescription = null,
+                                modifier = Modifier.size(Dimens.IdentityVerificationScreen.iconSize)
+                            )
+                            Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
+                            Text(text = stringResource(Res.string.feature_chats_scan_identity_qr))
+                        }
+                    )
                 }
-            )
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -123,35 +131,53 @@ fun IdentityVerificationScreen(
                 HorizontalDivider(modifier = Modifier.weight(1f))
             }
 
-            Text(
-                text =
-                    stringResource(
-                        Res.string.feature_chats_compare_safety_number_contact,
-                        contactName
-                    ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-
-            SafetyNumberContent(
-                safetyNumber = safetyNumber,
-                isLoadingSafetyNumber = isLoadingSafetyNumber
-            )
-
-            Text(
-                text = stringResource(Res.string.feature_chats_confirm_matching_numbers_only),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
-            )
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.background,
+                shape = MaterialTheme.shapes.large
+            ) {
+                Column(
+                    modifier = Modifier.padding(MaterialTheme.spacing.medium),
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
+                ) {
+                    Text(
+                        text = stringResource(
+                            Res.string.feature_chats_compare_safety_number_contact,
+                            contactName
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    SafetyNumberContent(
+                        safetyNumber = safetyNumber,
+                        isLoadingSafetyNumber = isLoadingSafetyNumber
+                    )
+                    Text(
+                        text = stringResource(Res.string.feature_chats_confirm_matching_numbers_only),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
 
             if (errorMessage != null) {
-                Text(
-                    text = errorMessage,
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    textAlign = TextAlign.Center
-                )
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.error.copy(alpha = 0.09f),
+                    border = BorderStroke(
+                        Dimens.Base.borderStrokeWidth,
+                        MaterialTheme.colorScheme.error.copy(alpha = 0.35f)
+                    )
+                ) {
+                    Text(
+                        text = errorMessage,
+                        modifier = Modifier.padding(MaterialTheme.spacing.medium),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
 
             SparrowApprovalButton(
@@ -203,18 +229,25 @@ private fun SafetyNumberContent(
             }
 
             else -> {
-                Text(
-                    text = safetyNumber,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceContainer)
-                            .padding(vertical = MaterialTheme.spacing.small),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center
-                )
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.background,
+                    border = BorderStroke(
+                        Dimens.Base.borderStrokeWidth,
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
+                    )
+                ) {
+                    Text(
+                        text = safetyNumber,
+                        modifier = Modifier.padding(MaterialTheme.spacing.medium),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
     }

@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
@@ -72,6 +73,12 @@ internal fun SendButton(
         label = "SendIconAreaWidth"
     )
 
+    val animatedShape = MorphingSendButtonShape(
+        progress = morphProgress,
+        notchRadius = messageInputShapes.buttonNotchRadius,
+        rightCornerRadius = messageInputShapes.buttonRightCornerRadius
+    )
+
     SendButtonSlot(
         buttonWidth = buttonWidth,
         buttonHeight = buttonHeight,
@@ -81,14 +88,13 @@ internal fun SendButton(
             modifier = Modifier
                 .width(buttonWidth)
                 .height(buttonHeight)
-                .clip(
-                    MorphingSendButtonShape(
-                        progress = morphProgress,
-                        notchRadius = messageInputShapes.buttonNotchRadius,
-                        rightCornerRadius = messageInputShapes.buttonRightCornerRadius
-                    )
+                .clip(animatedShape)
+                .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                .border(
+                    width = Dimens.Base.borderStrokeWidth,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
+                    shape = animatedShape
                 )
-                .background(MaterialTheme.colorScheme.surfaceContainer)
                 .clickable(
                     enabled = enabled,
                     onClick = onSendClick

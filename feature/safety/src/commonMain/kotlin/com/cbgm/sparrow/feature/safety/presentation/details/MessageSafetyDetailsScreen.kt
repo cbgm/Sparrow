@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.safety.presentation.details
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,7 +15,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -258,7 +258,11 @@ private fun SafetySummary(
 
     Surface(
         modifier = modifier,
-        shape = MaterialTheme.shapes.small,
+        shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(
+            Dimens.Base.borderStrokeWidth,
+            MaterialTheme.colorScheme.error.copy(alpha = 0.6f)
+        ),
         color = MaterialTheme.colorScheme.errorContainer,
         contentColor = MaterialTheme.colorScheme.onErrorContainer
     ) {
@@ -318,23 +322,20 @@ private fun ReasonLink(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Text(
-        text = stringResource(reasonTitle(reason)),
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(
-                    vertical = MaterialTheme.spacing.base
-                ),
-        style = MaterialTheme.typography.bodySmall,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.secondary
-    )
-    HorizontalDivider(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
-    )
+    Surface(
+        modifier = modifier.fillMaxWidth().padding(bottom = MaterialTheme.spacing.base),
+        color = MaterialTheme.colorScheme.background,
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Text(
+            text = stringResource(reasonTitle(reason)),
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
+                .padding(MaterialTheme.spacing.medium),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
 }
 
 @Composable
@@ -346,8 +347,8 @@ private fun ReasonExplanation(
     val backgroundColor =
         rememberHighlightColor(
             isHighlighted = isHighlighted,
-            baseColor = Color.Transparent,
-            highlightColor = MaterialTheme.colorScheme.errorContainer // .copy(alpha = Alpha.Subtle)
+            baseColor = MaterialTheme.colorScheme.surfaceContainer,
+            highlightColor = MaterialTheme.colorScheme.errorContainer
         )
 
     Surface(
@@ -355,7 +356,7 @@ private fun ReasonExplanation(
             modifier
                 .fillMaxWidth()
                 .padding(bottom = MaterialTheme.spacing.medium),
-        shape = MaterialTheme.shapes.small,
+        shape = MaterialTheme.shapes.medium,
         color = backgroundColor
     ) {
         Column(

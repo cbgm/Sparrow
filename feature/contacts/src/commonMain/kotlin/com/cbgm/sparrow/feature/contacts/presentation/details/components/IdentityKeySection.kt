@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.feature.contacts.presentation.details.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,7 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 
@@ -31,17 +29,19 @@ internal fun IdentityKeySection(
         )
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.base))
         Text(
-            text = fingerprint,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .background(
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
-                        shape = MaterialTheme.shapes.medium
-                    ).padding(MaterialTheme.spacing.small),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.ContactDetailsScreen.identityKey),
-            fontFamily = FontFamily.Monospace
+            text = fingerprint
+                .split('-')
+                .chunked(6)
+                .joinToString("\n") {
+                    it.joinToString("-")
+                },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = MaterialTheme.spacing.small),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontFamily = FontFamily.Monospace,
+            softWrap = true
         )
     }
 }

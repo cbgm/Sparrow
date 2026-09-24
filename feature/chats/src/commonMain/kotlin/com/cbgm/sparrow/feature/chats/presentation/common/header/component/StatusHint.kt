@@ -49,6 +49,10 @@ internal fun StatusHint(
 @Composable
 private fun PendingMessageHint(membershipState: GroupMembershipUiState) {
     Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = MaterialTheme.spacing.small, vertical = MaterialTheme.spacing.micro),
+        shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         contentColor = MaterialTheme.colorScheme.onSurface
     ) {
@@ -63,7 +67,8 @@ private fun PendingMessageHint(membershipState: GroupMembershipUiState) {
         ) {
             Text(
                 text = stringResource(Res.string.feature_chats_group_message_queued),
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary
             )
             membershipState.memberProgress.forEach { member ->
                 Text(

@@ -81,7 +81,10 @@ fun MessageControl(
         val basePaddingHorizontal = MaterialTheme.spacing.base
 
         Column(
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .imePadding()
         ) {
             Text(
                 text =
@@ -126,7 +129,7 @@ fun MessageControl(
                     modifier = Modifier.padding(
                         start = basePaddingHorizontal,
                         end = basePaddingHorizontal,
-                        bottom = MaterialTheme.spacing.base
+                        bottom = MaterialTheme.spacing.micro
                     )
                 )
 
@@ -204,8 +207,7 @@ private fun VoiceComposerContent(
         modifier =
             modifier
                 .fillMaxWidth()
-                .windowInsetsPadding(WindowInsets.navigationBars)
-                .imePadding(),
+                .padding(vertical = MaterialTheme.spacing.micro),
         verticalAlignment = Alignment.Bottom
     ) {
         VoiceComposer(

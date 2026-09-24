@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.identity.presentation.setup
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.identity.domain.model.IdentityBackupStatus
@@ -38,15 +39,40 @@ class IdentityViewModel(
     private val markIdentityBackupExported: MarkIdentityBackupExportedUseCase,
     private val getIdentityBackupStatus: GetIdentityBackupStatusUseCase
 ) : BaseViewModel() {
+    val logger = SparrowLog.withTag("IdentityViewModel")
     private val _uiState = MutableStateFlow<IdentityUiState>(IdentityUiState.Loading)
-
     val uiState: StateFlow<IdentityUiState> = _uiState.asStateFlow()
+
     private val _backupState = MutableStateFlow(IdentityBackupUiState())
     val backupState: StateFlow<IdentityBackupUiState> = _backupState.asStateFlow()
+
     private val _exportDocument = MutableStateFlow<ByteArray?>(null)
+    val exportDocument: StateFlow<ByteArray?> = _exportDocument.asStateFlow()
+
     private var pendingSigningPublicKey: ByteArray? = null
     private var pendingEncryptionPublicKey: ByteArray? = null
-    val exportDocument: StateFlow<ByteArray?> = _exportDocument.asStateFlow()
+
+    init {
+        loadIdentityState()
+    }
+
+    fun onUiEvent(event: IdentityUiEvent) {
+        when (event) {
+            IdentityUiEvent.RequestPhoneNumberHint -> Unit
+            is IdentityUiEvent.PhoneNumberChanged -> updatePhoneNumber(
+                event.value,
+                errorMessage = null
+            )
+
+            is IdentityUiEvent.NameChanged -> updateName(event.value)
+            IdentityUiEvent.CreateIdentityClicked -> createNewIdentity()
+            IdentityUiEvent.RetryClicked -> loadIdentityState()
+            IdentityUiEvent.ShareIdentityClicked -> navigator.navigateTo(AppRoute.ShareIdentity)
+            IdentityUiEvent.OpenBackup -> navigator.navigateTo(AppRoute.IdentityBackup)
+            IdentityUiEvent.OpenKeys -> navigator.navigateTo(AppRoute.IdentityKeys)
+            IdentityUiEvent.BackClicked -> navigator.popBackStack()
+        }
+    }
 
     /** Passwords are never retained in the ViewModel or SavedStateHandle. */
     fun prepareBackup(password: CharArray) {
@@ -60,11 +86,12 @@ class IdentityViewModel(
         viewModelScope.launch {
             _backupState.value = _backupState.value.copy(busy = true, message = null)
             try {
-                prepareIdentityBackup(password).onSuccess { _exportDocument.value = it }
-                    .onFailure {
+                prepareIdentityBackup(password)
+                    .onSuccess { _exportDocument.value = it }
+                    .onFailure { error ->
                         pendingSigningPublicKey = null
                         pendingEncryptionPublicKey = null
-                        _backupState.value = _backupState.value.copy(busy = false, message = it.message ?: "Backup encryption failed", error = true)
+                        setBackupResult(error.message ?: "Backup encryption failed", isError = true)
                     }
             } finally {
                 password.fill('\u0000')
@@ -73,7 +100,6 @@ class IdentityViewModel(
     }
 
     fun backupFileWritten(success: Boolean, failure: String?) {
-        // The document picker and output stream must both succeed before the backup status changes.
         val bytes = _exportDocument.value ?: return
         _exportDocument.value = null
         bytes.fill(0)
@@ -83,153 +109,119 @@ class IdentityViewModel(
         pendingEncryptionPublicKey = null
         viewModelScope.launch {
             if (success && expectedSigning != null && expectedEncryption != null) {
-                markIdentityBackupExported(expectedSigning, expectedEncryption).onSuccess {
-                    refreshBackupStatus()
-                    _backupState.value = _backupState.value.copy(busy = false, message = "Identity backup exported. Keep the file and password safe.", error = false)
-                }.onFailure {
-                    _backupState.value = _backupState.value.copy(busy = false, message = it.message ?: "Backup status could not be saved", error = true)
-                }
+                markIdentityBackupExported(expectedSigning, expectedEncryption)
+                    .onSuccess {
+                        refreshBackupStatus()
+                        setBackupResult(
+                            "Identity backup exported. Keep the file and password safe.",
+                            isError = false
+                        )
+                    }
+                    .onFailure { error ->
+                        setBackupResult(
+                            error.message ?: "Backup status could not be saved",
+                            isError = true
+                        )
+                    }
             } else {
-                _backupState.value = _backupState.value.copy(busy = false, message = failure ?: "Identity backup was not saved", error = true)
+                setBackupResult(failure ?: "Identity backup was not saved", isError = true)
             }
         }
     }
 
     fun showBackupError(message: String) {
-        _backupState.value = _backupState.value.copy(busy = false, message = message, error = true)
+        setBackupResult(message, isError = true)
     }
 
     fun restoreBackup(document: ByteArray, password: CharArray) {
         val state = _uiState.value as? IdentityUiState.NoIdentity ?: return
-
         if (_backupState.value.busy) {
             password.fill('\u0000')
             return
         }
         val normalized = normalizeLocalPhoneNumber(state.phoneNumber).getOrElse { error ->
-            _uiState.value = state.copy(phoneNumberError = error.message ?: "Enter your phone number first")
+            _uiState.value =
+                state.copy(phoneNumberError = error.message ?: "Enter your phone number first")
             password.fill('\u0000')
             return
         }
         viewModelScope.launch {
             _backupState.value = _backupState.value.copy(busy = true, message = null)
-            // The restore use case decrypts first, then persists the profile and validated keys.
-            // A wrong password leaves the saved phone/profile and identity keys unchanged.
             try {
-                restoreIdentityBackup(document, password, normalized, state.name).onSuccess { publicIdentity ->
-                    clearDraft()
-                    _uiState.value = IdentityUiState.Ready(publicIdentity, normalized)
-                    refreshBackupStatus()
-                    _backupState.value = _backupState.value.copy(busy = false, message = "Original identity keys restored. Chats and contacts must be re-established.", error = false)
-                }.onFailure {
-                    _backupState.value = _backupState.value.copy(busy = false, message = it.message ?: "Identity restore failed", error = true)
-                }
+                restoreIdentityBackup(document, password, normalized, state.name)
+                    .onSuccess { publicIdentity ->
+                        clearDraft()
+                        _uiState.value = IdentityUiState.Ready(publicIdentity, normalized)
+                        refreshBackupStatus()
+                        setBackupResult(
+                            "Original identity keys restored. Chats and contacts must be re-established.",
+                            isError = false
+                        )
+                    }
+                    .onFailure { error ->
+                        setBackupResult(error.message ?: "Identity restore failed", isError = true)
+                    }
             } catch (error: Throwable) {
-                _backupState.value = _backupState.value.copy(busy = false, message = error.message ?: "Identity restore failed", error = true)
+                setBackupResult(error.message ?: "Identity restore failed", isError = true)
             } finally {
                 password.fill('\u0000')
             }
         }
     }
 
-    private suspend fun refreshBackupStatus() {
-        getIdentityBackupStatus().onSuccess { status ->
-            _backupState.value = _backupState.value.copy(
-                status = when (status) {
-                    IdentityBackupStatus.NOT_BACKED_UP -> IdentityBackupUiStatus.NOT_BACKED_UP
-                    IdentityBackupStatus.EXPORTED -> IdentityBackupUiStatus.EXPORTED
-                    IdentityBackupStatus.IMPORTED -> IdentityBackupUiStatus.IMPORTED
-                }
+    fun onSuggestedPhoneNumber(phoneNumber: String) {
+        updatePhoneNumber(value = phoneNumber.trim(), errorMessage = null)
+    }
+
+    fun onPhoneNumberHintUnavailable() {
+        val currentState = _uiState.value as? IdentityUiState.NoIdentity ?: return
+        if (currentState.phoneNumber.isBlank()) {
+            _uiState.value = currentState.copy(
+                phoneNumberError = "No number was available from this device. Enter it manually."
             )
         }
     }
 
-    init {
-        loadIdentityState()
-    }
-
-    fun onUiEvent(event: IdentityUiEvent) {
-        when (event) {
-            IdentityUiEvent.RequestPhoneNumberHint -> Unit
-            is IdentityUiEvent.PhoneNumberChanged ->
-                updatePhoneNumber(
-                    value = event.value,
-                    errorMessage = null
-                )
-            is IdentityUiEvent.NameChanged -> updateName(event.value)
-            IdentityUiEvent.CreateIdentityClicked -> createNewIdentity()
-            IdentityUiEvent.RetryClicked -> loadIdentityState()
-            IdentityUiEvent.ShareIdentityClicked -> navigator.navigateTo(AppRoute.ShareIdentity)
-        }
+    fun onPhoneNumberHintFailed(message: String) {
+        val currentState = _uiState.value as? IdentityUiState.NoIdentity ?: return
+        _uiState.value = currentState.copy(
+            phoneNumberError = message.ifBlank { "Phone number picker could not be opened" }
+        )
     }
 
     private fun loadIdentityState() {
         viewModelScope.launch {
             _uiState.value = IdentityUiState.Loading
-
             getIdentityStatus()
-                .onSuccess { status ->
-                    handleIdentityStatus(status = status)
-                }.onFailure { error ->
-                    _uiState.value =
-                        IdentityUiState.Error(
-                            message = error.message ?: "Failed to load identity state"
-                        )
+                .onSuccess { status -> handleIdentityStatus(status) }
+                .onFailure { error ->
+                    _uiState.value = IdentityUiState.Error(
+                        message = error.message ?: "Failed to load identity state"
+                    )
                 }
-        }
-    }
-
-    fun onSuggestedPhoneNumber(phoneNumber: String) {
-        updatePhoneNumber(
-            value = phoneNumber.trim(),
-            errorMessage = null
-        )
-    }
-
-    fun onPhoneNumberHintUnavailable() {
-        val currentState = _uiState.value
-
-        if (currentState is IdentityUiState.NoIdentity && currentState.phoneNumber.isBlank()) {
-            _uiState.value =
-                currentState.copy(phoneNumberError = "No number was available from this device. Enter it manually.")
-        }
-    }
-
-    fun onPhoneNumberHintFailed(message: String) {
-        val currentState = _uiState.value
-
-        if (currentState is IdentityUiState.NoIdentity) {
-            _uiState.value =
-                currentState.copy(phoneNumberError = message.ifBlank { "Phone number picker could not be opened" })
         }
     }
 
     private fun createNewIdentity() {
-        val currentState = _uiState.value
-
-        if (currentState !is IdentityUiState.NoIdentity) return
-
-        val normalizedPhoneNumber =
-            normalizeLocalPhoneNumber(phoneNumber = currentState.phoneNumber)
-                .getOrElse { error ->
-                    _uiState.value =
-                        currentState.copy(phoneNumberError = error.message ?: "Invalid phone number")
-
-                    return
-                }
+        val currentState = _uiState.value as? IdentityUiState.NoIdentity ?: return
+        val normalizedPhoneNumber = normalizeLocalPhoneNumber(currentState.phoneNumber)
+            .getOrElse { error ->
+                _uiState.value = currentState.copy(
+                    phoneNumberError = error.message ?: "Invalid phone number"
+                )
+                return
+            }
 
         viewModelScope.launch {
             _uiState.value = IdentityUiState.Loading
 
-            saveLocalPhoneName(phoneNumber = normalizedPhoneNumber, name = currentState.name)
+            saveLocalPhoneName(normalizedPhoneNumber, currentState.name)
                 .onFailure { error ->
-                    _uiState.value =
-                        IdentityUiState.NoIdentity(
-                            phoneNumber = normalizedPhoneNumber,
-                            name = currentState.name,
-                            phoneNumberError = error.message ?: "Phone number could not be saved"
-                        )
-
+                    _uiState.value = IdentityUiState.NoIdentity(
+                        phoneNumber = normalizedPhoneNumber,
+                        name = currentState.name,
+                        phoneNumberError = error.message ?: "Phone number could not be saved"
+                    )
                     return@launch
                 }
 
@@ -237,63 +229,41 @@ class IdentityViewModel(
                 .onSuccess { publicIdentity ->
                     clearDraft()
                     refreshBackupStatus()
-                    _uiState.value =
-                        IdentityUiState.Ready(
-                            publicIdentity = publicIdentity,
-                            localPhoneNumber = normalizedPhoneNumber
-                        )
-                }.onFailure { error ->
-                    _uiState.value =
-                        IdentityUiState.Error(
-                            message = error.message ?: "Failed to create identity"
-                        )
+                    _uiState.value = IdentityUiState.Ready(
+                        publicIdentity = publicIdentity,
+                        localPhoneNumber = normalizedPhoneNumber
+                    )
+                }
+                .onFailure { error ->
+                    _uiState.value = IdentityUiState.Error(
+                        message = error.message ?: "Failed to create identity"
+                    )
                 }
         }
     }
 
-    private fun updatePhoneNumber(
-        value: String,
-        errorMessage: String?
-    ) {
-        val currentState = _uiState.value
-
-        if (currentState is IdentityUiState.NoIdentity) {
-            savedStateHandle[PHONE_NUMBER_KEY] = value
-            _uiState.value =
-                currentState.copy(
-                    phoneNumber = value,
-                    phoneNumberError = errorMessage
-                )
-        }
+    private fun updatePhoneNumber(value: String, errorMessage: String? = null) {
+        val currentState = _uiState.value as? IdentityUiState.NoIdentity ?: return
+        savedStateHandle[PHONE_NUMBER_KEY] = value
+        _uiState.value = currentState.copy(
+            phoneNumber = value,
+            phoneNumberError = errorMessage
+        )
     }
 
     private fun updateName(value: String) {
-        val currentState = _uiState.value
-
-        if (currentState is IdentityUiState.NoIdentity) {
-            savedStateHandle[NAME_KEY] = value
-            _uiState.value =
-                currentState.copy(
-                    name = value
-                )
-        }
+        val currentState = _uiState.value as? IdentityUiState.NoIdentity ?: return
+        savedStateHandle[NAME_KEY] = value
+        _uiState.value = currentState.copy(name = value)
     }
 
     private suspend fun handleIdentityStatus(status: IdentityStatus) {
         when (status) {
             IdentityStatus.NOT_CREATED -> {
-                val storedPhoneNumber = getLocalPhoneNumber().getOrNull().orEmpty()
-                val phoneNumber =
-                    if (savedStateHandle.contains(PHONE_NUMBER_KEY)) {
-                        savedStateHandle.get<String>(PHONE_NUMBER_KEY).orEmpty()
-                    } else {
-                        storedPhoneNumber
-                    }
-                _uiState.value =
-                    IdentityUiState.NoIdentity(
-                        phoneNumber = phoneNumber,
-                        name = savedStateHandle.get<String>(NAME_KEY).orEmpty()
-                    )
+                val storedPhone = getLocalPhoneNumber().getOrNull().orEmpty()
+                val phone = savedStateHandle.get<String>(PHONE_NUMBER_KEY) ?: storedPhone
+                val name = savedStateHandle.get<String>(NAME_KEY).orEmpty()
+                _uiState.value = IdentityUiState.NoIdentity(phoneNumber = phone, name = name)
             }
 
             IdentityStatus.INCOMPLETE -> {
@@ -308,54 +278,59 @@ class IdentityViewModel(
         }
     }
 
-    private fun clearDraft() {
-        savedStateHandle.remove<String>(PHONE_NUMBER_KEY)
-        savedStateHandle.remove<String>(NAME_KEY)
-    }
-
     private suspend fun loadReadyIdentity() {
-        val localPhoneNumber =
-            getLocalPhoneNumber()
-                .getOrElse { error ->
-                    _uiState.value =
-                        IdentityUiState.Error(
-                            message = error.message ?: "Local phone number could not be loaded"
-                        )
-
-                    return
-                }?.takeIf {
-                    it.isNotBlank()
-                }
-
+        val localPhoneNumber = getLocalPhoneNumber().getOrNull()?.takeIf { it.isNotBlank() }
         if (localPhoneNumber == null) {
-            _uiState.value =
-                IdentityUiState.Error(
-                    message =
-                        "Identity exists, but the local phone number is missing. " +
-                            "Clear app data once and complete onboarding again."
-                )
-
+            _uiState.value = IdentityUiState.Error(
+                message = "Identity exists, but the local phone number is missing. " +
+                    "Clear app data once and complete onboarding again."
+            )
             return
         }
 
         getPublicIdentity()
             .onSuccess { publicIdentity ->
-                _uiState.value =
-                    if (publicIdentity != null) {
-                        IdentityUiState.Ready(
-                            publicIdentity = publicIdentity,
-                            localPhoneNumber = localPhoneNumber
-                        )
-                    } else {
-                        IdentityUiState.IncompleteIdentity
-                    }
-            }.onFailure { error ->
-                _uiState.value =
-                    IdentityUiState.Error(
-                        message = error.message ?: "Failed to load public identity"
+                if (publicIdentity != null) {
+                    _uiState.value = IdentityUiState.Ready(
+                        publicIdentity = publicIdentity,
+                        localPhoneNumber = localPhoneNumber
                     )
+                    refreshBackupStatus()
+                } else {
+                    _uiState.value = IdentityUiState.IncompleteIdentity
+                }
             }
-        if (_uiState.value is IdentityUiState.Ready) refreshBackupStatus()
+            .onFailure { error ->
+                _uiState.value = IdentityUiState.Error(
+                    message = error.message ?: "Failed to load public identity"
+                )
+            }
+    }
+
+    private suspend fun refreshBackupStatus() {
+        getIdentityBackupStatus().onSuccess { status ->
+            _backupState.value = _backupState.value.copy(
+                status = when (status) {
+                    IdentityBackupStatus.NOT_BACKED_UP -> IdentityBackupUiStatus.NOT_BACKED_UP
+                    IdentityBackupStatus.EXPORTED -> IdentityBackupUiStatus.EXPORTED
+                    IdentityBackupStatus.IMPORTED -> IdentityBackupUiStatus.IMPORTED
+                }
+            )
+        }
+    }
+
+    private fun setBackupResult(message: String?, isError: Boolean) {
+        _backupState.value = _backupState.value.copy(
+            busy = false,
+            message = message,
+            error = isError
+        )
+        logger.error { message ?: "" }
+    }
+
+    private fun clearDraft() {
+        savedStateHandle.remove<String>(PHONE_NUMBER_KEY)
+        savedStateHandle.remove<String>(NAME_KEY)
     }
 
     private companion object {

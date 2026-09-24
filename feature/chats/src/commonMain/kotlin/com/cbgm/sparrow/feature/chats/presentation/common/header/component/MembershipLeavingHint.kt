@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.header.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -10,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
@@ -20,7 +22,17 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 internal fun MembershipLeavingHint(modifier: Modifier = Modifier) {
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(
+                horizontal = MaterialTheme.spacing.small,
+                vertical = MaterialTheme.spacing.micro
+            ),
+        shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(
+            Dimens.Base.borderStrokeWidth,
+            MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.16f)
+        ),
         color = MaterialTheme.colorScheme.secondaryContainer,
         contentColor = MaterialTheme.colorScheme.onSecondaryContainer
     ) {
@@ -32,7 +44,7 @@ internal fun MembershipLeavingHint(modifier: Modifier = Modifier) {
         ) {
             Text(
                 text = stringResource(Res.string.feature_chats_group_leaving_hint_title),
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold
             )
             Text(

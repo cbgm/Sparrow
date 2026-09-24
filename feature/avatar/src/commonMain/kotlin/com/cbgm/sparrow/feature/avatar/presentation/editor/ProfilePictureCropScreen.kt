@@ -1,9 +1,11 @@
 package com.cbgm.sparrow.feature.avatar.presentation.editor
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -11,6 +13,7 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -49,7 +52,7 @@ internal fun ProfilePictureCropScreen(
             CenterAlignedTopAppBar(
                 colors =
                     TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background,
+                        containerColor = FunctionalColors.MediaBackground,
                         titleContentColor = MaterialTheme.colorScheme.onBackground,
                         navigationIconContentColor = MaterialTheme.colorScheme.onBackground
                     ),
@@ -71,7 +74,10 @@ internal fun ProfilePictureCropScreen(
             )
         }
     ) {
-        Box(modifier = Modifier.background(FunctionalColors.MediaBackground)) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(FunctionalColors.MediaBackground),
+            contentAlignment = Alignment.Center
+        ) {
             ProfilePictureCropCanvas(
                 image = image,
                 onCropRegionChanged = { region -> cropRegion = region },
@@ -86,15 +92,22 @@ internal fun ProfilePictureCropScreen(
                         )
             )
 
-            SparrowRoundApprovalButton(
-                enabled = cropRegion != null && !isCropping,
-                onClick = { cropRegion?.let(onConfirm) },
-                imageVector = Icons.Filled.Check,
+            Surface(
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(MaterialTheme.spacing.medium)
-            )
+                        .padding(MaterialTheme.spacing.medium),
+                color = MaterialTheme.colorScheme.background,
+                shape = CircleShape,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                SparrowRoundApprovalButton(
+                    enabled = cropRegion != null && !isCropping,
+                    onClick = { cropRegion?.let(onConfirm) },
+                    imageVector = Icons.Filled.Check,
+                    modifier = Modifier.padding(MaterialTheme.spacing.small)
+                )
+            }
         }
     }
 }

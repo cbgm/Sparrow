@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.feature.identity.presentation.setup.components
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,8 +19,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.extensions.toHexString
 import com.cbgm.sparrow.core.ui.theme.Alpha
@@ -31,7 +36,8 @@ fun PublicKeySection(
     icon: ImageVector,
     title: String,
     description: String,
-    key: ByteArray
+    key: ByteArray,
+    onCopied: () -> Unit = {}
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -46,7 +52,7 @@ fun PublicKeySection(
 
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.SemiBold
             )
@@ -62,19 +68,48 @@ fun PublicKeySection(
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.base))
 
-        Text(
-            text = key.toHexString(),
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .background(
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
-                        shape = MaterialTheme.shapes.medium
-                    ).padding(MaterialTheme.spacing.base),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = Alpha.IdentityScreen.publicKeyValue),
-            fontFamily = FontFamily.Monospace
+        KeyHexGrid(
+            key = key,
+            modifier = Modifier.padding(vertical = MaterialTheme.spacing.small),
+            onCopied = onCopied
         )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+internal fun KeyHexGrid(key: ByteArray, modifier: Modifier = Modifier, onCopied: () -> Unit = {}) {
+    val fullHexValue = key.toHexString().uppercase()
+    val groups = fullHexValue.chunked(4)
+    val clipboard = LocalClipboardManager.current
+    Column(
+        modifier = modifier.fillMaxWidth().combinedClickable(
+            onClick = {},
+            onLongClick = {
+                clipboard.setText(AnnotatedString(fullHexValue))
+                onCopied()
+            }
+        ),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
+    ) {
+        groups.chunked(4).forEach { line ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
+            ) {
+                repeat(4) { index ->
+                    Text(
+                        text = line.getOrElse(index) { "" },
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
     }
 }
 

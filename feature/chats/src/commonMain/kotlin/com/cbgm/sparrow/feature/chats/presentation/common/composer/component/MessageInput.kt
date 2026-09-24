@@ -1,13 +1,12 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.composer.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -15,6 +14,7 @@ import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Attachment
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -28,6 +28,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.feature_chats_composer_placeholder
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun MessageInput(
@@ -54,10 +57,7 @@ internal fun MessageInput(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .windowInsetsPadding(
-                WindowInsets.navigationBars
-            )
-            .imePadding(),
+            .padding(vertical = MaterialTheme.spacing.micro),
         verticalAlignment = Alignment.Bottom
     ) {
         RoundedInputButton(
@@ -116,12 +116,21 @@ private fun MessageField(
         value = messageText,
         onValueChange = onMessageTextChanged,
         modifier = modifier
+            .heightIn(
+                min = Dimens.MessageInput.messageFieldHeight,
+                max = Dimens.MessageInput.messageFieldHeightMax
+            )
             .background(
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                shape = MaterialTheme.shapes.extraSmall
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                shape = MaterialTheme.shapes.medium
+            )
+            .border(
+                width = Dimens.Base.borderStrokeWidth,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
+                shape = MaterialTheme.shapes.medium
             )
             .padding(
-                horizontal = MaterialTheme.spacing.base,
+                horizontal = MaterialTheme.spacing.small,
                 vertical = MaterialTheme.spacing.micro
             ),
         enabled = isInputEnabled,
@@ -137,7 +146,19 @@ private fun MessageField(
             onTextLineCountChanged(result.lineCount)
         },
         decorationBox = { innerTextField ->
-            innerTextField()
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                if (messageText.isEmpty()) {
+                    Text(
+                        text = stringResource(Res.string.feature_chats_composer_placeholder),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                innerTextField()
+            }
         }
     )
 }

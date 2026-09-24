@@ -71,7 +71,7 @@ private fun Content(
     Box(
         modifier =
             Modifier
-                .clip(MaterialTheme.shapes.small)
+                .clip(MaterialTheme.shapes.medium)
                 .clickable(enabled = location != null) {
                     location?.let { onClick() }
                 }
@@ -157,8 +157,8 @@ private fun FakeLocationPreview(
         modifier = modifier
             .clip(
                 RoundedCornerShape(
-                    topStart = MaterialTheme.shapes.extraSmall.topStart,
-                    topEnd = MaterialTheme.shapes.extraSmall.topEnd,
+                    topStart = MaterialTheme.shapes.medium.topStart,
+                    topEnd = MaterialTheme.shapes.medium.topEnd,
                     bottomStart = CornerSize(Dimens.Base.zero),
                     bottomEnd = CornerSize(Dimens.Base.zero)
                 )

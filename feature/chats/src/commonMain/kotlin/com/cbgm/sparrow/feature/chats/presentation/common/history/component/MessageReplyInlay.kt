@@ -55,7 +55,7 @@ internal fun MessageReplyInlay(
             .fillMaxWidth()
             .then(clickModifier),
         color = color.darker(0.9f),
-        contentColor = MaterialTheme.colorScheme.primary
+        contentColor = MaterialTheme.colorScheme.onSurface
     ) {
         Content(reply = reply, isMine = isMine)
     }
@@ -71,12 +71,12 @@ private fun Content(
 
     val padding = remember(isMine) {
         if (isMine) {
-            val left = 8.dp
-            val right = 16.dp
+            val left = 16.dp
+            val right = 24.dp
             Pair(left, right)
         } else {
-            val left = 16.dp
-            val right = 8.dp
+            val left = 24.dp
+            val right = 16.dp
             Pair(left, right)
         }
     }
@@ -85,10 +85,10 @@ private fun Content(
         modifier = modifier.padding(
             start = padding.first,
             end = padding.second,
-            top = MaterialTheme.spacing.micro,
-            bottom = MaterialTheme.spacing.micro
+            top = MaterialTheme.spacing.base,
+            bottom = MaterialTheme.spacing.base
         ),
-        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(

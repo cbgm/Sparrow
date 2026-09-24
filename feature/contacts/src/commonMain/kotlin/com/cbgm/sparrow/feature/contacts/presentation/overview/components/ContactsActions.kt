@@ -5,9 +5,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -16,6 +18,7 @@ import androidx.compose.material.icons.filled.GroupAdd
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -48,8 +51,8 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun ContactsFloatingActionButton(onClick: () -> Unit) {
     FloatingActionButton(
-        modifier = Modifier.size(Dimens.ContactsScreen.addContactButtonSize),
         onClick = onClick,
+        shape = CircleShape,
         containerColor = MaterialTheme.colorScheme.primary,
         contentColor = MaterialTheme.colorScheme.onPrimary
     ) {
@@ -65,10 +68,10 @@ fun ContactsFloatingActionButton(onClick: () -> Unit) {
 fun CreateGroupListItem(onClick: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        tonalElevation = Dimens.Card.tonalElevation,
-        shadowElevation = Dimens.Card.shadowElevation
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.background,
+        tonalElevation = Dimens.Base.zero,
+        shadowElevation = Dimens.Base.zero
     ) {
         ListItem(
             modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
@@ -113,7 +116,7 @@ fun ImportContactBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        containerColor = MaterialTheme.colorScheme.background,
         contentColor = MaterialTheme.colorScheme.onSurface,
         dragHandle = null
     ) {
@@ -155,7 +158,7 @@ private fun ImportContactSheet(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(MaterialTheme.spacing.base),
+                    .padding(MaterialTheme.spacing.small),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -175,12 +178,16 @@ private fun ImportContactSheet(
             }
         }
 
+        HorizontalDivider(thickness = Dimens.Base.dividerThickness)
+        Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
         ImportOptionRow(
             icon = Icons.Default.Contacts,
             title = stringResource(Res.string.feature_contacts_import_from_device),
             description = stringResource(Res.string.feature_contacts_import_from_device_description),
             onClick = onImportDeviceContacts
         )
+
+        Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
 
         ImportOptionRow(
             icon = Icons.Default.PersonAdd,
@@ -199,34 +206,36 @@ private fun ImportOptionRow(
     description: String,
     onClick: () -> Unit
 ) {
-    ListItem(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick),
-        leadingContent = {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.ContactsScreen.scanIcon),
-                modifier = Modifier.size(Dimens.ContactsScreen.menuItemIconSize)
-            )
-        },
-        headlineContent = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        },
-        supportingContent = {
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = Alpha.OpaqueText)
-            )
-        },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-    )
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        ListItem(
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+            leadingContent = {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(Dimens.ContactsScreen.menuItemIconSize)
+                )
+            },
+            headlineContent = {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            supportingContent = {
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = Alpha.OpaqueText)
+                )
+            },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+        )
+    }
 }

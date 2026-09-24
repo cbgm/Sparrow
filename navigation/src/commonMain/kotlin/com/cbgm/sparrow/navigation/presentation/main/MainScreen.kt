@@ -31,6 +31,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.component.SparrowScrollStateType
@@ -141,13 +142,17 @@ private fun MainTopBar(
         title = {
             Text(
                 text = stringResource(selectedTab.label),
-                style = MaterialTheme.typography.titleSmall
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
             )
         },
         actions = {
             if (selectedTab == MainTab.Chats) {
                 if (isMessageSearchAvailable) {
-                    IconButton(onClick = onOpenSearch) {
+                    IconButton(
+                        onClick = onOpenSearch,
+                        modifier = Modifier
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = null
@@ -156,7 +161,8 @@ private fun MainTopBar(
                 }
                 IconButton(
                     onClick = onOpenInvitations,
-                    enabled = invitationCount > 0
+                    enabled = invitationCount > 0,
+                    modifier = Modifier
                 ) {
                     BadgedBox(
                         badge = {
@@ -173,7 +179,10 @@ private fun MainTopBar(
                         )
                     }
                 }
-                IconButton(onClick = onAddChat) {
+                IconButton(
+                    onClick = onAddChat,
+                    modifier = Modifier
+                ) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = ""

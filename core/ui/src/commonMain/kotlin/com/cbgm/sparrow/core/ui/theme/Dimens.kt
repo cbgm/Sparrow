@@ -7,6 +7,7 @@ object Dimens {
         val zero = 0.dp
         val progressIndicatorStrokeWidth = 2.dp
         val dividerThickness = 0.5.dp
+        val borderStrokeWidth = 1.dp
     }
 
     object ActionMenu {
@@ -24,7 +25,7 @@ object Dimens {
     object PermissionsPage {
         val dotSelectedSize = 8.dp
         val dotUnselectedSize = 6.dp
-        val pagerHeight = 90.dp
+        val pagerHeight = 150.dp
     }
 
     object MessageList {
@@ -34,6 +35,8 @@ object Dimens {
 
     object Avatar {
         val defaultSize = 48.dp
+        val sourceActionSize = 22.dp
+        val editIconSize = 36.dp
     }
 
     object Badge {
@@ -42,7 +45,9 @@ object Dimens {
 
     object Button {
         val borderWidth = 1.dp
-        val iconButtonSize = 50.dp
+        val iconButtonSize = 44.dp
+        val loadingIndicatorSize = 18.dp
+        val loadingIndicatorStrokeWidth = 2.dp
     }
 
     object Card {
@@ -98,6 +103,8 @@ object Dimens {
 
     object MessageInput {
         val sendButtonWidth = 42.dp
+        val messageFieldHeight = 30.dp
+        val messageFieldHeightMax = 300.dp
         val buttonHeight = 29.dp
         val composerHeight = 30.5.dp
         val overlap = 10.dp
@@ -106,7 +113,7 @@ object Dimens {
 
     object MessageAttachment {
         val previewPlayIconSize = 16.dp
-        val previewSize = 50.dp
+        val previewSize = 60.dp
         val filePreviewIconSize = 24.dp
         val loadingIndicatorSize = 24.dp
     }
@@ -170,7 +177,7 @@ object Dimens {
         val avatarProgressStrokeWidth = 3.dp
         val verificationProgressSize = 20.dp
         val loadingSize = 160.dp
-        val avatarSize = 104.dp
+        val avatarSize = 128.dp
         val avatarProgressSize = 32.dp
         val sectionIconSize = 22.dp
     }
@@ -208,7 +215,7 @@ object Dimens {
         val loadingSize = 160.dp
         val sectionIconSize = 18.dp
         val rowIconSize = 20.dp
-        val avatarSize = 88.dp
+        val avatarSize = 112.dp
         val verificationBadgeSize = 26.dp
         val verificationBadgeIconSize = 14.dp
         val headerStatusIconSize = 16.dp
@@ -259,7 +266,7 @@ object Dimens {
     }
 
     object ControlPlaneSettingsScreen {
-        val statusIndicatorSize = 12.dp
+        val statusIndicatorSize = 10.dp
     }
 
     object ImportIdentityScreen {

@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.header.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -31,7 +32,6 @@ import com.cbgm.sparrow.core.time.formatMessageTimestamp
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
-import com.cbgm.sparrow.core.ui.theme.Shapes
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
@@ -77,7 +77,11 @@ internal fun GroupPinnedMessageBar(
                 vertical = MaterialTheme.spacing.base
             )
             .clickable(onClick = onClick),
-        shape = Shapes.extraSmall,
+        shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(
+            Dimens.Base.borderStrokeWidth,
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)
+        ),
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = Alpha.OpaqueBar)
     ) {
         Row(
@@ -86,14 +90,14 @@ internal fun GroupPinnedMessageBar(
             ),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = {}) {
-                Icon(
-                    painter = painterResource(Res.drawable.ic_pin),
-                    contentDescription = null,
-                    modifier = Modifier.size(Dimens.MessageBubble.iconSize),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
+            Icon(
+                painter = painterResource(Res.drawable.ic_pin),
+                contentDescription = null,
+                modifier = Modifier
+                    .padding(horizontal = MaterialTheme.spacing.medium)
+                    .size(Dimens.MessageBubble.iconSize),
+                tint = MaterialTheme.colorScheme.primary
+            )
 
             Column(modifier = Modifier.weight(1f).padding(end = MaterialTheme.spacing.small)) {
                 Text(

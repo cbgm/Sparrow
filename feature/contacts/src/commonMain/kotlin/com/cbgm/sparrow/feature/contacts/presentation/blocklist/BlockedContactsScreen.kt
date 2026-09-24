@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -18,12 +19,12 @@ import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -90,6 +91,16 @@ fun BlockedContactsScreen(
                         navigationIconContentColor = MaterialTheme.colorScheme.onBackground
                     )
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { onUiEvent(BlockedContactsUiEvent.AddContactClicked) },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                shape = CircleShape
+            ) {
+                Icon(imageVector = Icons.Default.Add, contentDescription = null)
+            }
         }
     ) { innerPadding, listState ->
         Box(
@@ -104,18 +115,6 @@ fun BlockedContactsScreen(
                 listState = listState,
                 onUiEvent = onUiEvent
             )
-
-            FloatingActionButton(
-                onClick = { onUiEvent(BlockedContactsUiEvent.AddContactClicked) },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                modifier =
-                    Modifier
-                        .padding(MaterialTheme.spacing.screenPadding)
-                        .align(Alignment.BottomEnd)
-            ) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = null)
-            }
         }
     }
 
@@ -168,29 +167,25 @@ private fun BlockedContactsList(
                         bottom = innerPadding.calculateBottomPadding()
                     )
             ) {
-                items(
-                    items = contacts,
-                    key = ContactUi::id
-                ) { contact ->
-                    BlockedContactRow(
-                        contact = contact,
-                        enabled = processing == null,
-                        onUnblock = {
-                            onUiEvent(
-                                BlockedContactsUiEvent.UnblockContactClicked(
-                                    contact.id
-                                )
-                            )
-                        }
-                    )
-
-                    HorizontalDivider(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(start = MaterialTheme.spacing.listDividerStart),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
-                    )
+                items(items = contacts, key = ContactUi::id) { contact ->
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                horizontal = MaterialTheme.spacing.screenPadding,
+                                vertical = MaterialTheme.spacing.micro
+                            ),
+                        shape = MaterialTheme.shapes.medium,
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        BlockedContactRow(
+                            contact = contact,
+                            enabled = processing == null,
+                            onUnblock = {
+                                onUiEvent(BlockedContactsUiEvent.UnblockContactClicked(contact.id))
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -269,7 +264,7 @@ private fun BlockedContactRow(
                 ListItemDefaults.colors(
                     containerColor = MaterialTheme.colorScheme.background,
                     contentColor = MaterialTheme.colorScheme.onBackground,
-                    trailingContentColor = MaterialTheme.colorScheme.onBackground
+                    trailingContentColor = MaterialTheme.colorScheme.primary
                 ),
             modifier = Modifier.fillMaxWidth()
         )

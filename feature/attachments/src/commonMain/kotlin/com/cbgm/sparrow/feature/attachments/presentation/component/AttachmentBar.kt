@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.attachments.presentation.component
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,6 +18,7 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -40,45 +42,52 @@ fun AttachmentBar(
     isFileEnabled: Boolean = true,
     isLocationInProgress: Boolean = false
 ) {
-    Row(
+    Surface(
         modifier = modifier
             .fillMaxWidth()
             .padding(
-                bottom = MaterialTheme.spacing.screenPadding
+                top = MaterialTheme.spacing.base + MaterialTheme.spacing.micro,
+                bottom = MaterialTheme.spacing.micro
             ),
-        horizontalArrangement = Arrangement.SpaceEvenly
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.background
     ) {
-        FilledButton(
-            onClick = onClickGallery,
-            imageVector = Icons.Filled.PhotoAlbum,
-            tint = MaterialTheme.attachmentColors.gallery,
-            enabled = isGalleryEnabled
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.micro),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            FilledButton(
+                onClick = onClickGallery,
+                imageVector = Icons.Filled.PhotoAlbum,
+                tint = MaterialTheme.attachmentColors.gallery,
+                enabled = isGalleryEnabled
+            )
 
-        FilledButton(
-            onClick = onClickCamera,
-            imageVector = Icons.Filled.Camera,
-            tint = MaterialTheme.attachmentColors.camera,
-            enabled = isCameraEnabled
-        )
-        FilledButton(
-            onClick = onClickFile,
-            imageVector = Icons.Filled.FilePresent,
-            tint = MaterialTheme.attachmentColors.file,
-            enabled = isFileEnabled
-        )
-        FilledButton(
-            onClick = onClickContact,
-            imageVector = Icons.Filled.Person,
-            tint = MaterialTheme.attachmentColors.contact
-        )
-        FilledButton(
-            onClick = onClickLocation,
-            imageVector = Icons.Filled.MyLocation,
-            tint = MaterialTheme.attachmentColors.location,
-            enabled = !isLocationInProgress,
-            isLoading = isLocationInProgress
-        )
+            FilledButton(
+                onClick = onClickCamera,
+                imageVector = Icons.Filled.Camera,
+                tint = MaterialTheme.attachmentColors.camera,
+                enabled = isCameraEnabled
+            )
+            FilledButton(
+                onClick = onClickFile,
+                imageVector = Icons.Filled.FilePresent,
+                tint = MaterialTheme.attachmentColors.file,
+                enabled = isFileEnabled
+            )
+            FilledButton(
+                onClick = onClickContact,
+                imageVector = Icons.Filled.Person,
+                tint = MaterialTheme.attachmentColors.contact
+            )
+            FilledButton(
+                onClick = onClickLocation,
+                imageVector = Icons.Filled.MyLocation,
+                tint = MaterialTheme.attachmentColors.location,
+                enabled = !isLocationInProgress,
+                isLoading = isLocationInProgress
+            )
+        }
     }
 }
 
@@ -93,10 +102,17 @@ private fun FilledButton(
     FilledIconButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.size(Dimens.AttachmentBar.buttonSize),
+        modifier = Modifier
+            .size(Dimens.AttachmentBar.buttonSize)
+            .border(
+                width = Dimens.Base.borderStrokeWidth,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
+                shape = CircleShape
+            ),
         shape = CircleShape,
         colors = IconButtonDefaults.filledIconButtonColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
     ) {
         if (isLoading) {

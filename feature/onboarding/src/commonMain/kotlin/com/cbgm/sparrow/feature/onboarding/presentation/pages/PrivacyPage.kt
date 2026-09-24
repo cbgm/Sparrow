@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.onboarding.presentation.pages
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
@@ -29,16 +30,18 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun PrivacyPage(onNext: () -> Unit) {
     Column(
-        Modifier.padding(MaterialTheme.spacing.medium),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacing.medium),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
     ) {
         Text(
             text = stringResource(Res.string.feature_onboarding_privacy_first),
-            style = MaterialTheme.typography.titleSmall,
+            style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = MaterialTheme.spacing.small)
         )
-        Spacer(Modifier.height(MaterialTheme.spacing.small))
         ListingRow(
             index = "01",
             title = stringResource(Res.string.feature_onboarding_end_to_end_encryption),
@@ -54,9 +57,9 @@ fun PrivacyPage(onNext: () -> Unit) {
             title = stringResource(Res.string.feature_onboarding_identity_belongs_to_you),
             description = stringResource(Res.string.feature_onboarding_identity_belongs_to_you_description)
         )
-        Spacer(Modifier.height(MaterialTheme.spacing.medium))
         SparrowApprovalButton(
             onClick = onNext,
+            modifier = Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.small),
             text = stringResource(Res.string.base_continue_action)
         )
     }
@@ -65,7 +68,5 @@ fun PrivacyPage(onNext: () -> Unit) {
 @Preview
 @Composable
 private fun PrivacyPagePreview() {
-    SparrowTheme {
-        PrivacyPage {}
-    }
+    SparrowTheme { PrivacyPage {} }
 }

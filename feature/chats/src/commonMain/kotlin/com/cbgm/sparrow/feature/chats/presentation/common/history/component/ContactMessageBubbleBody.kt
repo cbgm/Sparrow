@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.chats.presentation.common.history.component
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -71,7 +72,13 @@ private fun Content(
     Box(
         modifier =
             Modifier
-                .clip(MaterialTheme.shapes.small)
+                .clip(MaterialTheme.shapes.medium)
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .border(
+                    Dimens.Base.borderStrokeWidth,
+                    MaterialTheme.colorScheme.outlineVariant,
+                    MaterialTheme.shapes.medium
+                )
                 .clickable(enabled = contact != null) {
                     contact?.let(onContactClick)
                 }
@@ -164,8 +171,8 @@ private fun FakeContactPreview(
             modifier
                 .clip(
                     RoundedCornerShape(
-                        topStart = MaterialTheme.shapes.extraSmall.topStart,
-                        topEnd = MaterialTheme.shapes.extraSmall.topEnd,
+                        topStart = MaterialTheme.shapes.medium.topStart,
+                        topEnd = MaterialTheme.shapes.medium.topEnd,
                         bottomStart = CornerSize(Dimens.Base.zero),
                         bottomEnd = CornerSize(Dimens.Base.zero)
                     )

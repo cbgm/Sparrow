@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -33,7 +34,7 @@ fun SparrowAvatar(
     size: Dp = Dimens.Avatar.defaultSize
 ) {
     val uiState =
-        if (target == null) {
+        if (target == null || LocalInspectionMode.current) {
             AvatarUiState.Empty
         } else {
             val viewModel =

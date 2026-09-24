@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -47,7 +48,12 @@ internal fun ContactHeader(contact: ContactDetailsContactUi) {
     val isMutuallyVerified = verifiedByMe && verifiedByContact
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                top = MaterialTheme.spacing.large,
+                bottom = MaterialTheme.spacing.medium
+            ),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(contentAlignment = Alignment.BottomEnd) {
@@ -95,17 +101,18 @@ internal fun ContactHeader(contact: ContactDetailsContactUi) {
             }
         }
 
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
         Text(
-            text = contact.displayName ?: stringResource(Res.string.feature_contacts_unnamed_contact),
-            style = MaterialTheme.typography.titleSmall,
+            text = contact.displayName
+                ?: stringResource(Res.string.feature_contacts_unnamed_contact),
+            style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.micro))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.base))
 
         Text(
             text =

@@ -97,11 +97,11 @@ private fun MessageFileItem(
 
     Surface(
         modifier = Modifier.clickable(enabled = !isOpening) { onClick() },
-        shape = MaterialTheme.shapes.extraSmall,
+        shape = MaterialTheme.shapes.small,
         color = MaterialTheme.colorScheme.surfaceContainerHigh
     ) {
         Row(
-            modifier = Modifier.padding(MaterialTheme.spacing.micro),
+            modifier = Modifier.padding(MaterialTheme.spacing.base),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (isOpening) {
@@ -113,7 +113,8 @@ private fun MessageFileItem(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
                     contentDescription = null,
-                    modifier = Modifier.size(Dimens.MessageAttachment.filePreviewIconSize)
+                    modifier = Modifier.size(Dimens.MessageAttachment.filePreviewIconSize),
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
 
@@ -122,7 +123,7 @@ private fun MessageFileItem(
             Column {
                 Text(
                     text = attachment.fileName,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

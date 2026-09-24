@@ -15,6 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.cbgm.sparrow.feature.chats.presentation.common.header.component.HeaderTitle
 import com.cbgm.sparrow.feature.chats.presentation.common.header.model.HeaderUiModel
+import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.base_back
+import org.jetbrains.compose.resources.stringResource
 
 /** Shared header chrome. Conversation-specific status or security content is supplied as a slot. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,7 +44,7 @@ fun HeaderContent(
                 IconButton(onClick = onBackClick) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = null
+                        contentDescription = stringResource(Res.string.base_back)
                     )
                 }
             }

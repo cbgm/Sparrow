@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.attachments.presentation.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,6 +39,7 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.FunctionalColors
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.attachmentColors
+import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaItem
@@ -163,8 +165,12 @@ private fun MessageLocationAttachment(
             Modifier
                 .size(Dimens.MessageAttachment.previewSize)
                 .clickable(enabled = location != null) { onAttachmentClick(attachment.id) },
-        shape = MaterialTheme.shapes.extraSmall,
-        color = FunctionalColors.MediaBackground
+        shape = MaterialTheme.shapes.medium,
+        color = FunctionalColors.MediaBackground,
+        border = BorderStroke(
+            Dimens.Base.borderStrokeWidth,
+            MaterialTheme.colorScheme.outlineVariant
+        )
     ) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -214,8 +220,12 @@ private fun MessageVisualAttachment(
             Modifier
                 .size(Dimens.MessageAttachment.previewSize)
                 .clickable { onAttachmentClick(attachment.id) },
-        shape = MaterialTheme.shapes.extraSmall,
-        color = FunctionalColors.MediaBackground
+        shape = MaterialTheme.shapes.medium,
+        color = FunctionalColors.MediaBackground,
+        border = BorderStroke(
+            Dimens.Base.borderStrokeWidth,
+            MaterialTheme.colorScheme.outlineVariant
+        )
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (localFilePath != null) {
@@ -239,15 +249,20 @@ private fun MessageVisualAttachment(
             }
 
             if (attachment.type == MessageAttachmentType.VIDEO) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onBackground,
-                    modifier =
-                        Modifier
-                            .align(Alignment.Center)
+                Surface(
+                    modifier = Modifier.align(Alignment.Center),
+                    shape = MaterialTheme.shapes.circle,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.88f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .padding(MaterialTheme.spacing.micro)
                             .size(Dimens.MessageAttachment.previewPlayIconSize)
-                )
+                    )
+                }
             }
         }
     }
@@ -301,7 +316,11 @@ private fun MessageFileList(
                         .fillMaxWidth()
                         .clickable(enabled = !isOpening) { pendingFileId = attachment.id },
                 shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                border = BorderStroke(
+                    Dimens.Base.borderStrokeWidth,
+                    MaterialTheme.colorScheme.outlineVariant
+                )
             ) {
                 Row(
                     modifier = Modifier.padding(MaterialTheme.spacing.base),
@@ -316,6 +335,7 @@ private fun MessageFileList(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
                             contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(Dimens.MessageAttachment.filePreviewIconSize)
                         )
                     }
@@ -349,17 +369,21 @@ private fun MoreAttachment(
             Modifier
                 .size(Dimens.MessageAttachment.previewSize)
                 .clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.extraSmall,
-        color = FunctionalColors.MediaBackground
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        border = BorderStroke(
+            Dimens.Base.borderStrokeWidth,
+            MaterialTheme.colorScheme.outlineVariant
+        )
     ) {
         Box(
-            contentAlignment = Alignment.BottomEnd,
+            contentAlignment = Alignment.Center,
             modifier = Modifier.padding(MaterialTheme.spacing.micro)
         ) {
             Text(
                 text = "+$additionalCount",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground,
+                color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold
             )
         }

@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.history.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -107,8 +108,12 @@ private fun MessageMediaPreview(
             Modifier
                 .size(Dimens.MessageAttachment.previewSize)
                 .clickable { onAttachmentClick(imageVideoPart.id) },
-        shape = MaterialTheme.shapes.extraSmall,
-        color = FunctionalColors.MediaBackground
+        shape = MaterialTheme.shapes.medium,
+        color = FunctionalColors.MediaBackground,
+        border = BorderStroke(
+            Dimens.Base.borderStrokeWidth,
+            MaterialTheme.colorScheme.outlineVariant
+        )
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (localFilePath != null) {
@@ -171,17 +176,21 @@ private fun MoreAttachment(
             Modifier
                 .size(Dimens.MessageAttachment.previewSize)
                 .clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.extraSmall,
-        color = FunctionalColors.MediaBackground
+        shape = MaterialTheme.shapes.medium,
+        color = FunctionalColors.MediaBackground,
+        border = BorderStroke(
+            Dimens.Base.borderStrokeWidth,
+            MaterialTheme.colorScheme.outlineVariant
+        )
     ) {
         Box(
-            contentAlignment = Alignment.BottomEnd,
+            contentAlignment = Alignment.Center,
             modifier = Modifier.padding(MaterialTheme.spacing.micro)
         ) {
             Text(
                 text = "+$additionalCount",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground,
+                color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold
             )
         }

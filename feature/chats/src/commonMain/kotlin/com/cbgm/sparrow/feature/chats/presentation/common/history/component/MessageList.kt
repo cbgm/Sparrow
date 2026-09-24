@@ -143,7 +143,10 @@ internal fun MessageList(
                             onContextMessageRequested = onContextMessageRequested,
                             onReactionsClick = { anchor ->
                                 onReactionBurstRequested(
-                                    MessageReactionBurst(reactions = message.reactions, anchor = anchor)
+                                    MessageReactionBurst(
+                                        reactions = message.reactions,
+                                        anchor = anchor
+                                    )
                                 )
                             },
                             isContextSelected = selectedContextMessageId == message.id,
@@ -168,7 +171,10 @@ internal fun MessageList(
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(Dimens.MessageList.loadingSize),
+                            modifier = Modifier
+                                .padding(MaterialTheme.spacing.small)
+                                .size(Dimens.MessageList.loadingSize),
+                            color = MaterialTheme.colorScheme.primary,
                             strokeWidth = Dimens.MessageList.loadingStroke
                         )
                     }

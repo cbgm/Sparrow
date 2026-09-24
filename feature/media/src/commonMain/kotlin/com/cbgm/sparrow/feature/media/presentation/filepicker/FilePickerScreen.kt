@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.ArrowDownward
@@ -27,7 +28,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.PictureAsPdf
@@ -39,6 +39,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -55,6 +56,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowSearchField
@@ -265,54 +267,63 @@ private fun FileEntryRow(
     selected: Boolean,
     onUiEvent: (FilePickerUiEvent) -> Unit
 ) {
-    ListItem(
-        headlineContent = {
-            Text(
-                text = entry.displayName,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        },
-        supportingContent = {
-            when {
-                entry.isBlocked -> Text(stringResource(Res.string.feature_media_file_picker_already_selected))
-                entry.isDirectory -> Unit
-                else -> FileMetadata(entry)
-            }
-        },
-        leadingContent = {
-            Icon(
-                imageVector = entry.kind.icon(),
-                contentDescription = null
-            )
-        },
-        trailingContent = {
-            if (entry.isDirectory) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
-            } else {
-                Icon(
-                    imageVector =
-                        if (selected || entry.isBlocked) {
-                            Icons.Default.CheckCircle
-                        } else {
-                            Icons.Default.RadioButtonUnchecked
-                        },
-                    contentDescription = null,
-                    tint =
-                        if (selected || entry.isBlocked) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        }
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = MaterialTheme.spacing.screenPadding, vertical = MaterialTheme.spacing.micro),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.background
+    ) {
+        ListItem(
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            headlineContent = {
+                Text(
+                    text = entry.displayName,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-            }
-        },
-        modifier =
-            Modifier.clickable(
-                enabled = entry.isDirectory || !entry.isBlocked,
-                onClick = { onUiEvent(FilePickerUiEvent.EntryClicked(entry.reference)) }
-            )
-    )
+            },
+            supportingContent = {
+                when {
+                    entry.isBlocked -> Text(stringResource(Res.string.feature_media_file_picker_already_selected))
+                    entry.isDirectory -> Unit
+                    else -> FileMetadata(entry)
+                }
+            },
+            leadingContent = {
+                Icon(
+                    imageVector = entry.kind.icon(),
+                    contentDescription = null
+                )
+            },
+            trailingContent = {
+                if (entry.isDirectory) {
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+                } else {
+                    Icon(
+                        imageVector =
+                            if (selected || entry.isBlocked) {
+                                Icons.Default.CheckCircle
+                            } else {
+                                Icons.Default.RadioButtonUnchecked
+                            },
+                        contentDescription = null,
+                        tint =
+                            if (selected || entry.isBlocked) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                    )
+                }
+            },
+            modifier =
+                Modifier.clickable(
+                    enabled = entry.isDirectory || !entry.isBlocked,
+                    onClick = { onUiEvent(FilePickerUiEvent.EntryClicked(entry.reference)) }
+                )
+        )
+    }
 }
 
 @Composable
@@ -331,7 +342,12 @@ private fun EmptyFolder() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(Icons.Default.Folder, contentDescription = null)
+        Icon(
+            Icons.Default.Folder,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(MaterialTheme.spacing.large * 2)
+        )
         Text(
             text = stringResource(Res.string.feature_media_file_picker_empty_folder),
             style = MaterialTheme.typography.bodyMedium,
@@ -473,7 +489,10 @@ private fun FilePickerBottomBar(
     onUiEvent: (FilePickerUiEvent) -> Unit
 ) {
     if (uiState.requiresFileAccess || uiState.selectionCapacity <= 0) return
-    Surface(color = containerColor) {
+    Surface(
+        color = containerColor,
+        shadowElevation = 0.dp
+    ) {
         Row(
             modifier =
                 Modifier
@@ -519,5 +538,5 @@ private fun FileBrowserEntryKind.icon(): ImageVector =
         FileBrowserEntryKind.PDF -> Icons.Default.PictureAsPdf
         FileBrowserEntryKind.TEXT -> Icons.Default.Description
         FileBrowserEntryKind.ARCHIVE -> Icons.Default.Archive
-        FileBrowserEntryKind.OTHER -> Icons.Default.InsertDriveFile
+        FileBrowserEntryKind.OTHER -> Icons.AutoMirrored.Filled.InsertDriveFile
     }

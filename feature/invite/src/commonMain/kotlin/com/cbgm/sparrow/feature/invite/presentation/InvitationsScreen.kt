@@ -6,13 +6,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Check
@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowSwipeRevealItem
 import com.cbgm.sparrow.core.ui.component.SwipeRevealAction
@@ -146,46 +147,55 @@ fun InvitationsScreen(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     state = listState,
-                    contentPadding =
-                        PaddingValues(
-                            bottom = innerPadding.calculateBottomPadding()
-                        )
+                    contentPadding = PaddingValues(
+                        top = MaterialTheme.spacing.medium,
+                        bottom = innerPadding.calculateBottomPadding(),
+                        start = MaterialTheme.spacing.screenPadding,
+                        end = MaterialTheme.spacing.screenPadding
+                    )
                 ) {
-                    if (uiState.selectedTab == InvitationTab.INCOMING) {
-                        items(
-                            items = recoveryRequests,
-                            key = { "recovery:${it.peerId}:${it.invitationId}" }
-                        ) { request ->
-                            ListItem(
-                                headlineContent = {
-                                    Column {
-                                        Text(stringResource(Res.string.feature_identity_recovery_inbox_title), style = MaterialTheme.typography.labelMedium)
-                                        Text(request.peerDisplayName)
+                    item(key = "invitations-settings-group") {
+                        SparrowCardNoAnimation {
+                            Column {
+                                if (uiState.selectedTab == InvitationTab.INCOMING) {
+                                    recoveryRequests.forEachIndexed { index, request ->
+                                        androidx.compose.runtime.key(request.peerId, request.invitationId) {
+                                            if (index > 0) InvitationDivider()
+                                            ListItem(
+                                                headlineContent = {
+                                                    Column {
+                                                        Text(stringResource(Res.string.feature_identity_recovery_inbox_title), style = MaterialTheme.typography.labelMedium)
+                                                        Text(request.peerDisplayName)
+                                                    }
+                                                },
+                                                supportingContent = {
+                                                    Text(stringResource(Res.string.feature_identity_recovery_inbox_description))
+                                                },
+                                                trailingContent = {
+                                                    TextButton(onClick = { onReviewRecovery(request.peerId, request.invitationId) }) {
+                                                        Text(stringResource(Res.string.feature_identity_recovery_inbox_action))
+                                                    }
+                                                },
+                                                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                                            )
+                                        }
                                     }
-                                },
-                                supportingContent = {
-                                    Text(stringResource(Res.string.feature_identity_recovery_inbox_description))
-                                },
-                                trailingContent = {
-                                    TextButton(onClick = { onReviewRecovery(request.peerId, request.invitationId) }) {
-                                        Text(stringResource(Res.string.feature_identity_recovery_inbox_action))
+                                }
+                                uiState.selectedInvitations.forEachIndexed { index, invitation ->
+                                    androidx.compose.runtime.key(invitation.invitationId) {
+                                        if (index > 0 || (uiState.selectedTab == InvitationTab.INCOMING && recoveryRequests.isNotEmpty())) {
+                                            InvitationDivider()
+                                        }
+                                        InvitationItem(
+                                            invitation = invitation,
+                                            isProcessing = uiState.processingInvitationId == invitation.invitationId,
+                                            actionsEnabled = uiState.processingInvitationId == null,
+                                            onUiEvent = onUiEvent
+                                        )
                                     }
-                                },
-                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background)
-                            )
-                            InvitationDivider()
+                                }
+                            }
                         }
-                    }
-                    items(
-                        items = uiState.selectedInvitations,
-                        key = InvitationUi::invitationId
-                    ) { invitation ->
-                        InvitationItem(
-                            invitation = invitation,
-                            isProcessing = uiState.processingInvitationId == invitation.invitationId,
-                            actionsEnabled = uiState.processingInvitationId == null,
-                            onUiEvent = onUiEvent
-                        )
                     }
                 }
             }
@@ -209,7 +219,7 @@ private fun InvitationTabs(
                     .tabIndicatorOffset(selectedTabIndex = selectedTab.ordinal)
                     .fillMaxWidth()
                     .height(Dimens.InvitationsScreen.tabIndicatorHeight)
-                    .background(MaterialTheme.colorScheme.onSurfaceVariant) // Set your indicator color
+                    .background(MaterialTheme.colorScheme.primary)
             )
         }
     ) {
@@ -242,8 +252,8 @@ private fun InvitationTab(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = title,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.bodyLarge
+                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
                 )
                 if (hasUnreadUpdate) {
                     Badge(modifier = Modifier.padding(start = MaterialTheme.spacing.micro))
@@ -287,6 +297,7 @@ private fun IncomingInvitationItem(
     onUiEvent: (InvitationUiEvent) -> Unit
 ) {
     SparrowSwipeRevealItem(
+        modifier = Modifier,
         enabled = actionsEnabled,
         actions =
             buildList {
@@ -336,11 +347,7 @@ private fun IncomingInvitationItem(
                 }
             }
     ) {
-        InvitationRow(
-            invitation = invitation,
-            isProcessing = isProcessing
-        )
-        InvitationDivider()
+        InvitationRow(invitation = invitation, isProcessing = isProcessing)
     }
 }
 
@@ -353,6 +360,7 @@ private fun OutgoingInvitationItem(
 ) {
     if (invitation.status == InvitationUiStatus.DECLINED) {
         SparrowSwipeRevealItem(
+            modifier = Modifier,
             enabled = actionsEnabled,
             actions =
                 listOf(
@@ -374,19 +382,16 @@ private fun OutgoingInvitationItem(
                     }
                 )
         ) {
-            InvitationRow(
-                invitation = invitation,
-                isProcessing = isProcessing
-            )
-            InvitationDivider()
+            InvitationCard(invitation = invitation, isProcessing = isProcessing)
         }
     } else {
-        InvitationRow(
-            invitation = invitation,
-            isProcessing = isProcessing
-        )
-        InvitationDivider()
+        InvitationCard(invitation = invitation, isProcessing = isProcessing)
     }
+}
+
+@Composable
+private fun InvitationCard(invitation: InvitationUi, isProcessing: Boolean) {
+    InvitationRow(invitation = invitation, isProcessing = isProcessing)
 }
 
 @Composable
@@ -442,59 +447,52 @@ private fun InvitationRow(
             ?: invitation.peerSecondaryText
             ?: stringResource(Res.string.base_unknown)
 
-    ListItem(
-        modifier = modifier.fillMaxWidth(),
-        leadingContent = {
-            SparrowAvatar(
-                name = displayName,
-                target =
-                    when (invitation.payloadType) {
-                        InvitationUiPayloadType.DIRECT -> AvatarTarget.User(invitation.peerId)
-                        InvitationUiPayloadType.GROUP -> AvatarTarget.Group(invitation.payloadId)
-                    }
-            )
-        },
-        headlineContent = {
+    Row(
+        modifier = modifier.fillMaxWidth().padding(
+            horizontal = MaterialTheme.spacing.small,
+            vertical = MaterialTheme.spacing.small
+        ),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        SparrowAvatar(
+            name = displayName,
+            target = when (invitation.payloadType) {
+                InvitationUiPayloadType.DIRECT -> AvatarTarget.User(invitation.peerId)
+                InvitationUiPayloadType.GROUP -> AvatarTarget.Group(invitation.payloadId)
+            }
+        )
+        Spacer(Modifier.size(MaterialTheme.spacing.small))
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = displayName,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
             )
-        },
-        supportingContent = {
-            Column {
-                invitation.peerSecondaryText
-                    ?.takeIf {
-                        invitation.payloadType == InvitationUiPayloadType.DIRECT &&
-                            invitation.peerDisplayName != null
-                    }
-                    ?.let { phoneNumber ->
-                        Text(
-                            text = phoneNumber,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                if (invitation.direction == InvitationUiDirection.OUTGOING) {
-                    InvitationStatus(invitation.status)
-                }
-            }
-        },
-        trailingContent = {
-            if (isProcessing) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(Dimens.InvitationsScreen.progressSize),
-                    strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
+            invitation.peerSecondaryText?.takeIf {
+                invitation.payloadType == InvitationUiPayloadType.DIRECT && invitation.peerDisplayName != null
+            }?.let { phoneNumber ->
+                Text(
+                    text = phoneNumber,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        },
-        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background)
-    )
+            if (invitation.direction == InvitationUiDirection.OUTGOING) {
+                InvitationStatus(invitation.status)
+            }
+        }
+        if (isProcessing) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(Dimens.InvitationsScreen.progressSize),
+                strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
+            )
+        }
+    }
 }
 
 @Composable
@@ -541,21 +539,11 @@ private fun InvitationSwipeActionContent(
     icon: ImageVector,
     label: String
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(Dimens.InvitationsScreen.actionIconSize)
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            maxLines = 1
-        )
-    }
+    Icon(
+        imageVector = icon,
+        contentDescription = label,
+        modifier = Modifier.size(Dimens.InvitationsScreen.actionIconSize)
+    )
 }
 
 private data class InvitationStatusPresentation(

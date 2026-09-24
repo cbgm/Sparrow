@@ -59,6 +59,7 @@
     <string name="feature_chats_chat_key_exchange_incomplete_title">Key exchange is incomplete</string>
     <string name="feature_chats_chat_no_keys_description">This contact has no Sparrow public keys. Messages use plaintext transport.</string>
     <string name="feature_chats_chat_one_way_keys_description">You have this contact's public keys, but they do not have yours yet. Messages remain plaintext.</string>
+    <string name="feature_chats_composer_placeholder">Message</string>
     <string name="feature_chats_chat_typing">%1$s is typing…</string>
     <string name="feature_chats_chat_recording_voice">%1$s is recording a voice message…</string>
     <string name="feature_chats_chat_unencrypted_description">You do not have this contact's Sparrow public keys.</string>
@@ -166,7 +167,7 @@
     <string name="feature_contactimport_unnamed_sparrow_contact">Unnamed Sparrow contact</string>
 
     <!-- Feature: contacts -->
-    <string name="feature_contacts_add_contact">Add contact</string>
+    <string name="feature_contacts_add_contact">Add</string>
     <string name="feature_contacts_add_contact_title">Add contact</string>
     <string name="feature_contacts_both_devices_same_number">Both devices must display exactly the same number.</string>
     <string name="feature_contacts_compare_before_trusting">Compare the safety number with the contact before trusting this identity.</string>
@@ -504,7 +505,7 @@
     <string name="feature_settings_control_plane_directory_title">Control-plane directory</string>
     <string name="feature_settings_control_plane_directory_description">Optional URL that publishes the current control-plane list. Sparrow syncs it automatically and keeps the last successful list if the directory is unavailable.</string>
     <string name="feature_settings_control_plane_directory_url">Directory URL</string>
-    <string name="feature_settings_control_plane_directory_apply">Save and sync</string>
+    <string name="feature_settings_control_plane_directory_apply">Save</string>
     <string name="feature_settings_control_plane_directory_disabled">No directory configured</string>
     <string name="feature_settings_control_plane_directory_synced_count">%1$d addresses received from directory</string>
     <string name="feature_settings_control_plane_directory_sync_failed">Directory unavailable. Using the last successful list.</string>
@@ -514,8 +515,10 @@
     <string name="feature_settings_control_plane_source_directory">Directory</string>
     <string name="feature_settings_control_plane_source_manual_and_directory">Manual + directory</string>
     <string name="feature_settings_control_planes_summary">%1$d available · %2$d unavailable</string>
+    <string name="feature_settings_control_planes_auto_health_brief">Availability is checked automatically.</string>
     <string name="feature_settings_control_planes_auto_health">Availability is checked automatically. Unreachable addresses are de-prioritized and retried in the background.</string>
     <string name="feature_chats_group_promote_admin">Promote to admin</string>
+    <string name="feature_chats_group_promote_admin_button">Promote</string>
     <string name="feature_chats_group_promote_admin_description">Promote %1$s to group admin? Admins can add and remove members and promote other admins.</string>
     <string name="feature_chats_group_promote_before_leave">Choose a new admin</string>
     <string name="feature_chats_group_promote_before_leave_description">You are the only admin. Promote another active member before leaving this group.</string>
@@ -633,8 +636,8 @@
     <string name="feature_identity_backup_warning">You have not backed up this identity. If you reinstall Sparrow or change devices, you may lose your original keys and your contacts may no longer recognize you. Export an encrypted backup. It saves your identity keys, not chats or message history.</string>
     <string name="feature_identity_backup_exported">Backup exported. Keep the file and password safe. You can export again at any time; chats and contacts are not included.</string>
     <string name="feature_identity_backup_imported">Your original identity keys have been restored. Chats, contacts, and authorizations are not in this backup. To reconnect, use Chats → New chat to invite your contact again, or ask them to open your old conversation and choose Reconnect contact. They do not need to replace your identity when you restored the original keys. Keep your backup file and password safe.</string>
-    <string name="feature_identity_backup_export_action">Back up identity</string>
-    <string name="feature_identity_backup_restore_action">Restore existing identity</string>
+    <string name="feature_identity_backup_export_action">Back up</string>
+    <string name="feature_identity_backup_restore_action">Restore</string>
     <string name="feature_identity_backup_password">Backup password (12+ characters for export)</string>
     <string name="feature_identity_backup_restore_hint">Select your backup file and enter its password. Enter your phone number on the identity setup screen before restoring. This restores your original keys only, not your previous chats or contacts.</string>
 

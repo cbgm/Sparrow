@@ -10,14 +10,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
@@ -44,20 +41,20 @@ fun IdentityProfilePictureSection(
                 modifier = Modifier.padding(MaterialTheme.spacing.base)
             )
 
-            IconButton(
+            Surface(
                 onClick = onEdit,
                 enabled = !state.isSaving,
+                modifier = Modifier.align(Alignment.BottomEnd),
                 shape = CircleShape,
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ),
-                modifier = Modifier.align(Alignment.BottomEnd)
+                color = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
-                Icon(
-                    imageVector = Icons.Default.PhotoCamera,
-                    contentDescription = stringResource(Res.string.feature_settings_profile_picture),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Box(modifier = Modifier.size(Dimens.Avatar.editIconSize), contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.PhotoCamera,
+                        contentDescription = stringResource(Res.string.feature_settings_profile_picture)
+                    )
+                }
             }
 
             if (state.isSaving) {
@@ -66,16 +63,6 @@ fun IdentityProfilePictureSection(
                     strokeWidth = Dimens.GroupDetailsScreen.avatarProgressStrokeWidth
                 )
             }
-        }
-
-        state.errorMessage?.let { error ->
-            Text(
-                text = error,
-                modifier = Modifier.padding(top = MaterialTheme.spacing.small),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-                textAlign = TextAlign.Center
-            )
         }
     }
 }

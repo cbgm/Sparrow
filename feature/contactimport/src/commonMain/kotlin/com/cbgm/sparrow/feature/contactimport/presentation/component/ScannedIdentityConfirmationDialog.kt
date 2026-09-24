@@ -2,10 +2,13 @@ package com.cbgm.sparrow.feature.contactimport.presentation.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -85,19 +88,20 @@ fun ScannedIdentityConfirmationDialog(
                 }
             },
             confirmButton = {
-                SparrowApprovalButton(
-                    fillMaxWidth = false,
-                    onClick = onConfirm,
-                    text = confirmButtonText
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)) {
+                    SparrowApprovalButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = onConfirm,
+                        text = confirmButtonText
+                    )
+                    SparrowSecondaryButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = onDismiss,
+                        text = stringResource(Res.string.base_cancel)
+                    )
+                }
             },
-            dismissButton = {
-                SparrowSecondaryButton(
-                    fillMaxWidth = false,
-                    onClick = onDismiss,
-                    text = stringResource(Res.string.base_cancel)
-                )
-            }
+            dismissButton = {}
         )
     }
 }
@@ -114,11 +118,18 @@ private fun FingerprintSection(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        Text(
-            text = fingerprint,
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace
-        )
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            shape = MaterialTheme.shapes.small
+        ) {
+            Text(
+                text = fingerprint,
+                modifier = Modifier.padding(MaterialTheme.spacing.small),
+                style = MaterialTheme.typography.bodySmall,
+                fontFamily = FontFamily.Monospace
+            )
+        }
     }
 }
 

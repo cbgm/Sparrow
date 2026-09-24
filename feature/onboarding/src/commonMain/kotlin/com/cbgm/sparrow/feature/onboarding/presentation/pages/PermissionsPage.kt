@@ -1,3 +1,5 @@
+package com.cbgm.sparrow.feature.onboarding.presentation.pages
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,7 +58,7 @@ fun PermissionsPage(
     )
 
     Column(
-        modifier = Modifier.padding(MaterialTheme.spacing.medium),
+        modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacing.medium),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         PermissionsHeader()
@@ -71,11 +73,12 @@ fun PermissionsPage(
         )
 
         Spacer(
-            modifier = Modifier.height(MaterialTheme.spacing.medium)
+            modifier = Modifier.height(MaterialTheme.spacing.small)
         )
 
         SparrowApprovalButton(
             onClick = onRequestPermissions,
+            modifier = Modifier.fillMaxWidth(),
             text = stringResource(
                 Res.string.feature_onboarding_allow_and_continue
             )
@@ -93,9 +96,10 @@ fun PermissionsPage(
 private fun PermissionsHeader() {
     Text(
         text = stringResource(Res.string.base_permissions),
-        style = MaterialTheme.typography.titleSmall,
+        style = MaterialTheme.typography.headlineSmall,
         color = MaterialTheme.colorScheme.onSurface,
-        fontWeight = FontWeight.SemiBold
+        fontWeight = FontWeight.Bold,
+        textAlign = TextAlign.Center
     )
 
     Spacer(

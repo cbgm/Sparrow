@@ -1,11 +1,14 @@
 package com.cbgm.sparrow.feature.voice.presentation.composer
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Pause
@@ -44,8 +47,13 @@ fun VoiceComposer(
         modifier =
             modifier
                 .height(Dimens.MessageInput.composerHeight)
-                .clip(MaterialTheme.shapes.extraSmall)
-                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .clip(MaterialTheme.shapes.large)
+                .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                .border(
+                    Dimens.Base.borderStrokeWidth,
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
+                    MaterialTheme.shapes.large
+                )
                 .padding(horizontal = MaterialTheme.spacing.small),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -102,24 +110,11 @@ private fun SwitchButton(
             VoiceComposerPhase.RECORDED -> if (state.isPlaying) VoiceAction.Pause else VoiceAction.Play
         }
 
-    Icon(
-        imageVector =
-            when (action) {
-                VoiceAction.Record -> Icons.Default.Mic
-                VoiceAction.Stop -> Icons.Default.Stop
-                VoiceAction.Play -> Icons.Default.PlayArrow
-                VoiceAction.Pause -> Icons.Default.Pause
-            },
-        contentDescription = null,
-        tint =
-            if (isEnabled) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.primary.copy(alpha = Alpha.Disabled)
-            },
+    Box(
         modifier =
             Modifier
-                .size(Dimens.MessageInput.iconSize)
+                .size(Dimens.MessageInput.sendButtonWidth)
+                .clip(CircleShape)
                 .clickable(enabled = isEnabled) {
                     when (action) {
                         VoiceAction.Record -> onRecordClick()
@@ -127,8 +122,27 @@ private fun SwitchButton(
                         VoiceAction.Play,
                         VoiceAction.Pause -> onPlayPauseClick()
                     }
-                }
-    )
+                },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector =
+                when (action) {
+                    VoiceAction.Record -> Icons.Default.Mic
+                    VoiceAction.Stop -> Icons.Default.Stop
+                    VoiceAction.Play -> Icons.Default.PlayArrow
+                    VoiceAction.Pause -> Icons.Default.Pause
+                },
+            contentDescription = null,
+            tint =
+                if (isEnabled) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.primary.copy(alpha = Alpha.Disabled)
+                },
+            modifier = Modifier.size(Dimens.MessageInput.iconSize)
+        )
+    }
 }
 
 private enum class VoiceAction {

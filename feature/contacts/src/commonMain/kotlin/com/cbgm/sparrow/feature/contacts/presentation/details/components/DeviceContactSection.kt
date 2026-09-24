@@ -25,12 +25,14 @@ import com.cbgm.sparrow.resources.feature_contacts_not_linked
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-internal fun DeviceContactSection(status: DeviceContactLinkUi) {
-    SectionTitle(
-        icon = Icons.Default.ContactPhone,
-        title = stringResource(Res.string.feature_contacts_device_contact)
-    )
-    Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+internal fun DeviceContactSection(status: DeviceContactLinkUi, showTitle: Boolean = true) {
+    if (showTitle) {
+        SectionTitle(
+            icon = Icons.Default.ContactPhone,
+            title = stringResource(Res.string.feature_contacts_device_contact)
+        )
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+    }
 
     when (status) {
         DeviceContactLinkUi.NOT_LINKED ->

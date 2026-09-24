@@ -84,7 +84,7 @@ fun ContactStatus(contact: ContactUi) {
             SparrowStatusBadge(
                 text = stringResource(Res.string.base_secure),
                 icon = Icons.Default.Verified,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.tertiary
             )
         }
     }
@@ -166,7 +166,7 @@ fun EmptyContactsContent(modifier: Modifier = Modifier) {
             Text(
                 text = stringResource(Res.string.feature_contacts_no_contacts_yet),
                 modifier = Modifier.padding(top = MaterialTheme.spacing.small),
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -233,20 +233,20 @@ private fun ContactGroup(
                     start = MaterialTheme.spacing.small,
                     bottom = MaterialTheme.spacing.small
                 ),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.ContactsScreen.tertiaryContent)
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onBackground
         )
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.small,
-            color = MaterialTheme.colorScheme.surfaceContainer,
-            tonalElevation = Dimens.Card.tonalElevation,
-            shadowElevation = Dimens.Card.shadowElevation
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.background,
+            tonalElevation = Dimens.Base.zero,
+            shadowElevation = Dimens.Base.zero
         ) {
             Column {
-                group.contacts.forEach { contact ->
+                group.contacts.forEachIndexed { index, contact ->
                     ContactListItem(
                         contact = contact,
                         onClick = {
@@ -254,7 +254,8 @@ private fun ContactGroup(
                         },
                         trailingContent = {
                             trailingContent(contact)
-                        }
+                        },
+                        showDivider = index < group.contacts.lastIndex
                     )
                 }
             }
@@ -266,7 +267,8 @@ private fun ContactGroup(
 private fun ContactListItem(
     contact: ContactUi,
     onClick: () -> Unit,
-    trailingContent: @Composable () -> Unit
+    trailingContent: @Composable () -> Unit,
+    showDivider: Boolean
 ) {
     Column(
         modifier = Modifier.fillMaxWidth()
@@ -290,7 +292,7 @@ private fun ContactListItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground
                 )
             },
@@ -313,12 +315,14 @@ private fun ContactListItem(
             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
         )
 
-        HorizontalDivider(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(start = MaterialTheme.spacing.listDividerStart),
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
-        )
+        if (showDivider) {
+            HorizontalDivider(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = MaterialTheme.spacing.listDividerStart),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
+            )
+        }
     }
 }

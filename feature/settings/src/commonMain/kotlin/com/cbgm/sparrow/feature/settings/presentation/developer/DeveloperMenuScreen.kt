@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -80,10 +81,10 @@ fun DeveloperMenuScreen(
                     .padding(
                         top = innerPadding.calculateTopPadding(),
                         bottom = innerPadding.calculateBottomPadding(),
-                        start = MaterialTheme.spacing.medium,
-                        end = MaterialTheme.spacing.medium
+                        start = MaterialTheme.spacing.screenPadding,
+                        end = MaterialTheme.spacing.screenPadding
                     ),
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
         ) {
             BuildInfoCard(buildInfo = uiState.buildInfo)
 
@@ -138,7 +139,7 @@ private fun TopBar(
 private fun BuildInfoCard(buildInfo: BuildInfo) {
     SparrowCardNoAnimation {
         Column(
-            modifier = Modifier.padding(MaterialTheme.spacing.small)
+            modifier = Modifier.padding(MaterialTheme.spacing.medium)
         ) {
             Text(
                 text = stringResource(Res.string.feature_settings_build_info),
@@ -147,7 +148,9 @@ private fun BuildInfoCard(buildInfo: BuildInfo) {
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
+            Spacer(modifier = Modifier.size(MaterialTheme.spacing.small))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(modifier = Modifier.size(MaterialTheme.spacing.small))
 
             BuildInfoRow(
                 label = stringResource(Res.string.base_version_name),
@@ -180,7 +183,7 @@ private fun DangerZoneCard(
 ) {
     SparrowCardNoAnimation {
         Column(
-            modifier = Modifier.padding(MaterialTheme.spacing.small)
+            modifier = Modifier.padding(MaterialTheme.spacing.medium)
         ) {
             Text(
                 text = stringResource(Res.string.feature_settings_danger_zone),
@@ -224,7 +227,8 @@ private fun DangerZoneCard(
 
             OutlinedButton(
                 onClick = onDisableDeveloperMode,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium
             ) {
                 Text(text = stringResource(Res.string.feature_settings_disable_developer_mode))
             }

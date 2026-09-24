@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -63,7 +64,7 @@ import kotlin.time.Duration.Companion.seconds
 internal fun NetworkDiagnosticsCard(diagnostics: TransportDiagnostics) {
     SparrowCardNoAnimation {
         Column(
-            modifier = Modifier.padding(MaterialTheme.spacing.small)
+            modifier = Modifier.padding(MaterialTheme.spacing.medium)
         ) {
             Text(
                 text = stringResource(Res.string.feature_settings_network_diagnostics),
@@ -109,7 +110,7 @@ internal fun NetworkDiagnosticsCard(diagnostics: TransportDiagnostics) {
                 value = diagnostics.lastDisconnectReason ?: stringResource(Res.string.base_unknown)
             )
 
-            Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
+            Spacer(modifier = Modifier.size(MaterialTheme.spacing.medium))
             NodeList(diagnostics = diagnostics)
         }
     }
@@ -148,27 +149,30 @@ private fun NodeDiagnosticRow(node: TransportNodeDiagnostic) {
             node.state
         }
 
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = MaterialTheme.spacing.base)
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = MaterialTheme.spacing.small),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.medium
     ) {
-        NodeDiagnosticHeader(
-            nodeId = node.nodeId,
-            state = effectiveState,
-            activeConnections = node.activeConnections,
-            cooldownRemainingSeconds = cooldown.remainingSeconds
-        )
+        Column(modifier = Modifier.padding(MaterialTheme.spacing.small)) {
+            NodeDiagnosticHeader(
+                nodeId = node.nodeId,
+                state = effectiveState,
+                activeConnections = node.activeConnections,
+                cooldownRemainingSeconds = cooldown.remainingSeconds
+            )
 
-        Text(
-            text = node.websocketUrl,
-            modifier = Modifier.padding(top = MaterialTheme.spacing.base / 2),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.NetworkDiagnosticsCard.available)
-        )
+            Text(
+                text = node.websocketUrl,
+                modifier = Modifier.padding(top = MaterialTheme.spacing.base / 2),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.NetworkDiagnosticsCard.available)
+            )
+        }
     }
 }
 

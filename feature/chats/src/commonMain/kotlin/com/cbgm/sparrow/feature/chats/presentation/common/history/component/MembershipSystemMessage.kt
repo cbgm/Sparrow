@@ -45,13 +45,13 @@ internal fun MembershipSystemMessage(
         Surface(
             color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = Alpha.GroupScreen.membershipSystemMessage),
             contentColor = MaterialTheme.colorScheme.onSurface,
-            shape = MaterialTheme.shapes.small
+            shape = MaterialTheme.shapes.medium
         ) {
             Row(
                 modifier =
                     Modifier.padding(
                         horizontal = MaterialTheme.spacing.base,
-                        vertical = MaterialTheme.spacing.base
+                        vertical = MaterialTheme.spacing.small
                     ),
                 horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base),
                 verticalAlignment = Alignment.CenterVertically

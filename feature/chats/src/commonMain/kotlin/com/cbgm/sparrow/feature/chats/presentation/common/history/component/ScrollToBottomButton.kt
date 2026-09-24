@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Icon
@@ -67,7 +68,8 @@ internal fun ScrollToBottomButton(
                     }
                 }
             },
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = Alpha.FloatingButton.opaque),
+            shape = CircleShape,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = Alpha.FloatingButton.opaque),
             contentColor = MaterialTheme.colorScheme.onSurface
         ) {
             Icon(

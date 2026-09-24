@@ -50,7 +50,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.BlockScreenshotEffect
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
-import com.cbgm.sparrow.core.ui.component.SparrowCard
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.component.SparrowScrollScaffold
 import com.cbgm.sparrow.core.ui.theme.Alpha
@@ -355,7 +354,7 @@ private fun GeneratedIdentityContent(
 
         Spacer(modifier = Modifier.height(MaterialTheme.spacing.large))
 
-        SparrowCard {
+        SparrowCardNoAnimation {
             Column(
                 modifier = Modifier.padding(MaterialTheme.spacing.large),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -383,7 +382,7 @@ private fun GeneratedIdentityContent(
                 Button(
                     onClick = onShareIdentity,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.extraSmall,
+                    shape = MaterialTheme.shapes.medium,
                     colors =
                         ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,

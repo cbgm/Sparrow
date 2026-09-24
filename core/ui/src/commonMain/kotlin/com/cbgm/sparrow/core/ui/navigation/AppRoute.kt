@@ -55,6 +55,12 @@ sealed interface AppRoute {
     ) : AppRoute
 
     @Serializable
+    data object IdentityKeys : AppRoute
+
+    @Serializable
+    data object IdentityBackup : AppRoute
+
+    @Serializable
     data object ShareIdentity : AppRoute
 
     @Serializable
@@ -83,9 +89,6 @@ sealed interface AppRoute {
 
     @Serializable
     data object DeveloperErrorLog : AppRoute
-
-    @Serializable
-    data object ProfileSettings : AppRoute
 
     @Serializable
     data object AutoReplySettings : AppRoute

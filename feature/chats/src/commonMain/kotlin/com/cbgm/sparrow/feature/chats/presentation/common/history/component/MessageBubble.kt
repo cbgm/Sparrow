@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.history.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -40,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.cbgm.sparrow.core.ui.animation.rememberHighlightColor
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayAnchor
@@ -425,7 +427,7 @@ private fun MessageBubbleSurface(
         )
 
     val contentPadding =
-        if (hasInnerPadding) MaterialTheme.spacing.micro else MaterialTheme.spacing.zero
+        if (hasInnerPadding) MaterialTheme.spacing.base else MaterialTheme.spacing.zero
     val tailPadding = bubbleShapes.tailWidth + contentPadding
 
     Surface(
@@ -436,7 +438,15 @@ private fun MessageBubbleSurface(
             ),
         color = bubbleColor,
         contentColor = state.contentColor,
-        shape = bubbleShape
+        shape = bubbleShape,
+        border = BorderStroke(
+            1.dp,
+            if (state.isContentFailed) {
+                MaterialTheme.colorScheme.error.copy(alpha = 0.40f)
+            } else {
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+            }
+        )
     ) {
         Column {
             reply?.let { replyPreview ->
@@ -489,7 +499,9 @@ private fun MessageReactions(
                     indication = null,
                     onClick = { anchor?.let(onClick) }
                 ),
-        color = Color.Transparent
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.large,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Box(
             modifier = Modifier

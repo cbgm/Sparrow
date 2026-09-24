@@ -1,15 +1,23 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.history.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
@@ -35,47 +43,76 @@ internal fun AddSharedContactDialog(
         title = stringResource(Res.string.feature_contacts_add_contact_title),
         text = {
             Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
+                horizontalAlignment = Alignment.Start,
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
             ) {
                 Text(
                     text = stringResource(Res.string.feature_chats_add_shared_contact_description),
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
                 )
-                Column(
-                    modifier = Modifier
-                        .padding(vertical = MaterialTheme.spacing.base)
-                        .padding(MaterialTheme.spacing.base)
-                        .fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    shape = MaterialTheme.shapes.medium
                 ) {
-                    contact.displayName?.takeIf(String::isNotBlank)?.let { name ->
-                        Text(
-                            text = name,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                    Row(
+                        modifier = Modifier.padding(MaterialTheme.spacing.medium),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
+                    ) {
+                        Surface(
+                            shape = MaterialTheme.shapes.medium,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.32f))
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(MaterialTheme.spacing.small).size(28.dp)
+                            )
+                        }
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
+                        ) {
+                            contact.displayName?.takeIf(String::isNotBlank)?.let { name ->
+                                Text(
+                                    text = name,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            Text(
+                                text = contact.phoneNumber,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
-                    Text(
-                        text = contact.phoneNumber,
-                        style = MaterialTheme.typography.bodySmall
-                    )
                 }
             }
         },
         confirmButton = {
-            SparrowApprovalButton(
-                onClick = onConfirm,
-                text = stringResource(Res.string.feature_contacts_add_contact),
-                fillMaxWidth = false
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
+            ) {
+                SparrowSecondaryButton(
+                    onClick = onDismiss,
+                    text = stringResource(Res.string.base_cancel),
+                    modifier = Modifier.weight(1f)
+                )
+
+                SparrowApprovalButton(
+                    onClick = onConfirm,
+                    text = stringResource(Res.string.feature_contacts_add_contact),
+                    modifier = Modifier.weight(1f)
+                )
+            }
         },
-        dismissButton = {
-            SparrowSecondaryButton(
-                onClick = onDismiss,
-                text = stringResource(Res.string.base_cancel),
-                fillMaxWidth = false
-            )
-        }
+        dismissButton = {}
     )
 }
 

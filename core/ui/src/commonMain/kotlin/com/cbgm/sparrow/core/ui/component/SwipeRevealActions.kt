@@ -25,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
@@ -79,7 +80,7 @@ fun SparrowSwipeRevealItem(
             }
     }
 
-    Box(modifier = modifier.fillMaxWidth()) {
+    Box(modifier = modifier.fillMaxWidth().clipToBounds()) {
         Row(
             modifier = Modifier.matchParentSize(),
             horizontalArrangement = Arrangement.End
@@ -102,6 +103,7 @@ fun SparrowSwipeRevealItem(
                 Modifier
                     .fillMaxWidth()
                     .offset { IntOffset(offset.roundToInt(), 0) }
+                    .background(MaterialTheme.colorScheme.background)
                     .draggable(
                         enabled = enabled,
                         orientation = Orientation.Horizontal,

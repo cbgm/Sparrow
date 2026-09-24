@@ -58,8 +58,8 @@ internal fun MessageContextActionMenu(
     onDeleteClick: () -> Unit
 ) {
     Surface(
-        modifier = Modifier.width(Dimens.ActionMenu.menuWidth),
-        shape = MaterialTheme.shapes.extraSmall,
+        modifier = Modifier.width(Dimens.ActionMenu.menuWidth + MaterialTheme.spacing.medium),
+        shape = MaterialTheme.shapes.large,
         color = color.darker(0.9f),
         shadowElevation = Dimens.ActionMenu.shadowElevation
     ) {
@@ -76,13 +76,17 @@ internal fun MessageContextActionMenu(
             ) {
                 listOf("👍", "❤️", "😂", "🔥", "💯", "💀", "😮", "😢", "🙏", "🤦‍♂️", "🤯", "🤔")
                     .forEach { emoji ->
-                        Text(
-                            text = emoji,
-                            modifier = Modifier
-                                .clickable { onReactionClick(emoji) }
-                                .padding(MaterialTheme.spacing.micro),
-                            style = MaterialTheme.typography.titleSmall
-                        )
+                        Surface(
+                            shape = MaterialTheme.shapes.medium,
+                            color = color.darker(0.8f),
+                            onClick = { onReactionClick(emoji) }
+                        ) {
+                            Text(
+                                text = emoji,
+                                modifier = Modifier.padding(MaterialTheme.spacing.base),
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                        }
                     }
             }
 
@@ -142,7 +146,8 @@ internal fun MessageContextActionMenu(
                 MessageActionItem(
                     text = stringResource(Res.string.feature_chats_delete_message),
                     onClick = onDeleteClick,
-                    icon = Icons.Default.DeleteOutline
+                    icon = Icons.Default.DeleteOutline,
+                    destructive = true
                 )
             }
         }
@@ -153,12 +158,13 @@ internal fun MessageContextActionMenu(
 private fun MessageActionItem(
     text: String,
     onClick: () -> Unit,
-    icon: ImageVector
+    icon: ImageVector,
+    destructive: Boolean = false
 ) {
     Row(
         modifier =
             Modifier
-                .height(Dimens.ActionMenu.actionItemHeight)
+                .height(Dimens.ActionMenu.actionItemHeight + MaterialTheme.spacing.base)
                 .clickable(onClick = onClick)
                 .padding(horizontal = MaterialTheme.spacing.actionItem.horizontalPadding),
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
@@ -166,15 +172,15 @@ private fun MessageActionItem(
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.onSurface
+            color = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
         )
         Icon(
             imageVector = icon,
             contentDescription = null,
             modifier = Modifier.size(Dimens.MessageBubble.iconSize),
-            tint = MaterialTheme.colorScheme.onSurface
+            tint = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
         )
     }
 }

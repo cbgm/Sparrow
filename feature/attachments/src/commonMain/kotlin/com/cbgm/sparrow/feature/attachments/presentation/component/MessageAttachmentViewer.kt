@@ -1,11 +1,13 @@
 package com.cbgm.sparrow.feature.attachments.presentation.component
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -17,6 +19,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
+import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.feature.attachments.device.rememberLocationOpener
 import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentContent
 import com.cbgm.sparrow.feature.attachments.presentation.mapper.toMediaExportItem
@@ -124,17 +127,23 @@ private fun MessageMediaViewer(
             if (canSaveToCameraRoll) {
                 IconButton(
                     onClick = { savePending = true },
-                    enabled = !savePending
+                    enabled = !savePending,
+                    modifier = Modifier.background(
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.88f),
+                        shape = MaterialTheme.shapes.circle
+                    )
                 ) {
                     if (savePending) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(Dimens.MessageAttachment.loadingIndicatorSize),
-                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
+                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     } else {
                         Icon(
                             imageVector = Icons.Default.SaveAlt,
-                            contentDescription = null
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                 }

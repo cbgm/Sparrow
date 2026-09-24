@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.common.header.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -83,7 +84,17 @@ internal fun SecurityBanner(
         securityState(securityState) ?: return
 
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(
+                horizontal = MaterialTheme.spacing.small,
+                vertical = MaterialTheme.spacing.micro
+            ),
+        shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(
+            Dimens.Base.borderStrokeWidth,
+            state.contentColor.copy(alpha = 0.18f)
+        ),
         color = state.containerColor,
         contentColor = state.contentColor
     ) {
@@ -163,48 +174,49 @@ private fun SecurityAction(
 }
 
 @Composable
-private fun securityState(securityState: ContactSecurityState): SecurityBannerState? = when (securityState) {
-    ContactSecurityState.NO_REMOTE_PUBLIC_KEYS ->
-        errorBanner(
-            icon = Icons.Default.LockOpen,
-            title = stringResource(Res.string.feature_chats_manual_identity_required_title),
-            description = stringResource(Res.string.feature_chats_manual_identity_required_description)
-        )
+private fun securityState(securityState: ContactSecurityState): SecurityBannerState? =
+    when (securityState) {
+        ContactSecurityState.NO_REMOTE_PUBLIC_KEYS ->
+            errorBanner(
+                icon = Icons.Default.LockOpen,
+                title = stringResource(Res.string.feature_chats_manual_identity_required_title),
+                description = stringResource(Res.string.feature_chats_manual_identity_required_description)
+            )
 
-    ContactSecurityState.LOCAL_IDENTITY_SHARED,
-    ContactSecurityState.ONE_WAY_KEYS ->
-        errorBanner(
-            icon = Icons.Default.LockOpen,
-            title = stringResource(Res.string.feature_chats_identity_not_fully_mutual_title),
-            description = stringResource(Res.string.feature_chats_manual_identity_incomplete_description)
-        )
+        ContactSecurityState.LOCAL_IDENTITY_SHARED,
+        ContactSecurityState.ONE_WAY_KEYS ->
+            errorBanner(
+                icon = Icons.Default.LockOpen,
+                title = stringResource(Res.string.feature_chats_identity_not_fully_mutual_title),
+                description = stringResource(Res.string.feature_chats_manual_identity_incomplete_description)
+            )
 
-    ContactSecurityState.MUTUAL_KEYS_UNVERIFIED ->
-        errorBanner(
-            title = stringResource(Res.string.feature_chats_chat_unverified_title),
-            description = stringResource(Res.string.feature_chats_chat_unverified_description)
-        )
+        ContactSecurityState.MUTUAL_KEYS_UNVERIFIED ->
+            errorBanner(
+                title = stringResource(Res.string.feature_chats_chat_unverified_title),
+                description = stringResource(Res.string.feature_chats_chat_unverified_description)
+            )
 
-    ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_ME ->
-        SecurityBannerState(
-            icon = Icons.Default.Schedule,
-            title = stringResource(Res.string.feature_chats_chat_verified_by_me_title),
-            description = stringResource(Res.string.feature_chats_chat_verified_by_me_description),
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-        )
+        ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_ME ->
+            SecurityBannerState(
+                icon = Icons.Default.Schedule,
+                title = stringResource(Res.string.feature_chats_chat_verified_by_me_title),
+                description = stringResource(Res.string.feature_chats_chat_verified_by_me_description),
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            )
 
-    ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_CONTACT ->
-        SecurityBannerState(
-            icon = Icons.Default.Security,
-            title = stringResource(Res.string.feature_chats_chat_verified_by_contact_title),
-            description = stringResource(Res.string.feature_chats_chat_verified_by_contact_description),
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-        )
+        ContactSecurityState.MUTUAL_KEYS_VERIFIED_BY_CONTACT ->
+            SecurityBannerState(
+                icon = Icons.Default.Security,
+                title = stringResource(Res.string.feature_chats_chat_verified_by_contact_title),
+                description = stringResource(Res.string.feature_chats_chat_verified_by_contact_description),
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            )
 
-    ContactSecurityState.MUTUAL_KEYS_VERIFIED -> null
-}
+        ContactSecurityState.MUTUAL_KEYS_VERIFIED -> null
+    }
 
 @Composable
 private fun errorBanner(
@@ -223,7 +235,17 @@ private fun errorBanner(
 @Composable
 private fun VerifiedSecurityIndicator(modifier: Modifier = Modifier) {
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(
+                horizontal = MaterialTheme.spacing.small,
+                vertical = MaterialTheme.spacing.micro
+            ),
+        shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(
+            Dimens.Base.borderStrokeWidth,
+            MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.18f)
+        ),
         color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = Alpha.DirectScreen.securityBanner),
         contentColor = MaterialTheme.colorScheme.onTertiaryContainer
     ) {

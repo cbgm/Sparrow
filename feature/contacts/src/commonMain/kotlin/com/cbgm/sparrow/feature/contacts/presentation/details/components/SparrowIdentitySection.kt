@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.contacts.presentation.details.components
 
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Link
@@ -37,13 +38,16 @@ import org.jetbrains.compose.resources.stringResource
 internal fun SparrowIdentitySection(
     identity: SparrowIdentityUi,
     safetyNumber: String?,
-    onVerifyIdentity: () -> Unit
+    onVerifyIdentity: () -> Unit,
+    showTitle: Boolean = true
 ) {
-    SectionTitle(
-        icon = Icons.Default.Security,
-        title = stringResource(Res.string.feature_contacts_sparrow_identity)
-    )
-    Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+    if (showTitle) {
+        SectionTitle(
+            icon = Icons.Default.Security,
+            title = stringResource(Res.string.feature_contacts_sparrow_identity)
+        )
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+    }
 
     val verifiedByContact =
         identity.mutualKeyExchange && identity.verifiedByContact
@@ -61,27 +65,27 @@ internal fun SparrowIdentitySection(
         identity.verifiedByMe ->
             ContactStatusRow(
                 icon = Icons.Default.Schedule,
-                iconColor = MaterialTheme.colorScheme.primary,
+                iconColor = MaterialTheme.colorScheme.tertiary,
                 title = stringResource(Res.string.feature_contacts_verified_by_you),
-                titleColor = MaterialTheme.colorScheme.primary,
+                titleColor = MaterialTheme.colorScheme.onSurface,
                 description = stringResource(Res.string.feature_contacts_verified_by_you_description)
             )
 
         verifiedByContact ->
             ContactStatusRow(
                 icon = Icons.Default.Security,
-                iconColor = MaterialTheme.colorScheme.secondary,
+                iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 title = stringResource(Res.string.feature_contacts_verified_by_contact),
-                titleColor = MaterialTheme.colorScheme.secondary,
+                titleColor = MaterialTheme.colorScheme.onSurface,
                 description = stringResource(Res.string.feature_contacts_verified_by_contact_description)
             )
 
         else ->
             ContactStatusRow(
                 icon = Icons.Default.LinkOff,
-                iconColor = MaterialTheme.colorScheme.error,
+                iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 title = stringResource(Res.string.base_not_verified),
-                titleColor = MaterialTheme.colorScheme.error,
+                titleColor = MaterialTheme.colorScheme.onSurface,
                 description = stringResource(Res.string.feature_contacts_compare_before_trusting)
             )
     }
@@ -90,14 +94,11 @@ internal fun SparrowIdentitySection(
 
     if (safetyNumber != null) {
         if (!identity.verifiedByMe) {
-            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
             SparrowApprovalButton(
                 onClick = onVerifyIdentity,
+                fillMaxWidth = false,
                 content = {
-                    Icon(
-                        imageVector = Icons.Default.Security,
-                        contentDescription = null
-                    )
+                    Icon(imageVector = Icons.Default.Security, contentDescription = null)
                     Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
                     Text(text = stringResource(Res.string.feature_contacts_verify_safety_number))
                 }
@@ -111,7 +112,10 @@ internal fun SparrowIdentitySection(
         title = stringResource(Res.string.feature_contacts_signing_fingerprint),
         fingerprint = identity.signingFingerprint
     )
-    Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
+    androidx.compose.material3.HorizontalDivider(
+        modifier = Modifier.padding(vertical = MaterialTheme.spacing.base),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+    )
     IdentityKeySection(
         title = stringResource(Res.string.feature_contacts_encryption_fingerprint),
         fingerprint = identity.encryptionFingerprint

@@ -3,10 +3,13 @@ package com.cbgm.sparrow.feature.contacts.presentation.details.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -22,22 +25,32 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 internal fun ContactPhoneNumbersSection(
     phoneNumbers: List<ContactPhoneNumberUi>,
-    preferredPhoneNumberId: String?
+    preferredPhoneNumberId: String?,
+    showTitle: Boolean = true
 ) {
-    SectionTitle(
-        icon = Icons.Default.Phone,
-        title = stringResource(Res.string.base_phone_numbers)
-    )
-    Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+    if (showTitle) {
+        SectionTitle(
+            icon = Icons.Default.Phone,
+            title = stringResource(Res.string.base_phone_numbers)
+        )
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+    }
 
     if (phoneNumbers.isEmpty()) {
-        Text(
-            text = stringResource(Res.string.feature_contacts_no_phone_numbers_stored),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            shape = MaterialTheme.shapes.medium
+        ) {
+            Text(
+                text = stringResource(Res.string.feature_contacts_no_phone_numbers_stored),
+                modifier = Modifier.padding(MaterialTheme.spacing.medium),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     } else {
-        Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base.div(2))) {
+        Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
             phoneNumbers.forEach { phoneNumber ->
                 ContactPhoneNumberRow(
                     phoneNumber = phoneNumber,

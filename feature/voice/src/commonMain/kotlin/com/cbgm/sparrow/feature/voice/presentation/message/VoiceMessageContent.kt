@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.feature.voice.presentation.message
 
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -34,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.layout.onSizeChanged
@@ -116,10 +119,16 @@ private fun VoiceMessageContentBody(
         ),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.micro)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+        ) {
             IconButton(
                 onClick = onPlayPauseClick,
-                modifier = Modifier.size(Dimens.MessageInput.sendButtonWidth)
+                modifier = Modifier
+                    .size(Dimens.MessageInput.sendButtonWidth)
+                    .clip(MaterialTheme.shapes.large)
+                    .background(MaterialTheme.colorScheme.primaryContainer)
             ) {
                 Icon(
                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
@@ -184,8 +193,19 @@ private fun VoiceMessageContentBody(
                 else ->
                     Text(
                         text = stringResource(Res.string.feature_voice_transcribe),
-                        modifier = Modifier.padding(start = MaterialTheme.spacing.base)
-                            .clickable(onClick = onTranscribeClick),
+                        modifier = Modifier
+                            .clip(MaterialTheme.shapes.large)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .border(
+                                Dimens.Base.borderStrokeWidth,
+                                MaterialTheme.colorScheme.outlineVariant,
+                                MaterialTheme.shapes.large
+                            )
+                            .clickable(onClick = onTranscribeClick)
+                            .padding(
+                                horizontal = MaterialTheme.spacing.medium,
+                                vertical = MaterialTheme.spacing.small
+                            ),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -211,12 +231,15 @@ private fun TranscriptionHint(state: VoiceTranscriptionState) {
                 when (state) {
                     VoiceTranscriptionState.Downloading ->
                         stringResource(Res.string.feature_voice_transcription_downloading)
+
                     VoiceTranscriptionState.Preparing ->
                         stringResource(Res.string.feature_voice_transcription_preparing)
+
                     is VoiceTranscriptionState.Transcribing ->
                         state.progressPercent?.let { progressPercent ->
                             "${stringResource(Res.string.feature_voice_transcribing)} $progressPercent%"
                         } ?: stringResource(Res.string.feature_voice_transcribing)
+
                     else -> ""
                 },
             style = MaterialTheme.typography.labelLarge,

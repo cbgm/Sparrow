@@ -37,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowSwipeRevealItem
@@ -158,6 +159,7 @@ private fun Content(
                         key = { conversation -> conversation.conversationId }
                     ) { conversation ->
                         SparrowSwipeRevealItem(
+                            modifier = Modifier.fillMaxWidth(),
                             actions =
                                 listOf(
                                     SwipeRevealAction(
@@ -219,7 +221,7 @@ private fun ActiveAutoReplyChip(
         onClick = onClick,
         modifier = modifier,
         shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = MaterialTheme.colorScheme.background,
         contentColor = MaterialTheme.colorScheme.primary,
         border =
             BorderStroke(
@@ -391,9 +393,10 @@ private fun EmptyContent(modifier: Modifier = Modifier) {
 
         Text(
             text = stringResource(Res.string.feature_chats_no_conversations_hint),
-            modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacing.base.div(2)),
+            modifier = Modifier.padding(MaterialTheme.spacing.base.div(2)),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
+            textAlign = TextAlign.Center
         )
     }
 }

@@ -16,7 +16,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
-import com.cbgm.sparrow.core.ui.theme.circle
 
 @Composable
 fun IconBadge(
@@ -26,8 +25,15 @@ fun IconBadge(
     Box(
         modifier = Modifier
             .size(Dimens.IdentityScreen.iconBadgeSize)
-            .background(tint.copy(alpha = Alpha.IdentityScreen.iconBadgeBackground), MaterialTheme.shapes.circle)
-            .border(Dimens.IdentityScreen.iconBadgeBorderWidth, tint.copy(alpha = Alpha.IdentityScreen.iconBadgeBorder), MaterialTheme.shapes.circle),
+            .background(
+                tint.copy(alpha = Alpha.IdentityScreen.iconBadgeBackground),
+                MaterialTheme.shapes.medium
+            )
+            .border(
+                Dimens.IdentityScreen.iconBadgeBorderWidth,
+                tint.copy(alpha = Alpha.IdentityScreen.iconBadgeBorder),
+                MaterialTheme.shapes.medium
+            ),
         contentAlignment = Alignment.Center
     ) {
         Icon(

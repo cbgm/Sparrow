@@ -59,6 +59,7 @@
     <string name="feature_chats_chat_key_exchange_incomplete_title">Schlüsselaustausch unvollständig</string>
     <string name="feature_chats_chat_no_keys_description">Dieser Kontakt besitzt keine öffentlichen Sparrow-Schlüssel. Nachrichten werden unverschlüsselt übertragen.</string>
     <string name="feature_chats_chat_one_way_keys_description">Du besitzt die öffentlichen Schlüssel dieses Kontakts, aber der Kontakt besitzt deine noch nicht. Nachrichten bleiben unverschlüsselt.</string>
+    <string name="feature_chats_composer_placeholder">Nachricht</string>
     <string name="feature_chats_chat_typing">%1$s schreibt…</string>
     <string name="feature_chats_chat_recording_voice">%1$s nimmt eine Sprachnachricht auf…</string>
     <string name="feature_chats_chat_unencrypted_description">Du besitzt keine öffentlichen Sparrow-Schlüssel dieses Kontakts.</string>
@@ -167,7 +168,7 @@
     <string name="feature_contactimport_unnamed_sparrow_contact">Unbenannter Sparrow-Kontakt</string>
 
     <!-- Feature: contacts -->
-    <string name="feature_contacts_add_contact">Kontakt hinzufügen</string>
+    <string name="feature_contacts_add_contact">Hinzufügen</string>
     <string name="feature_contacts_add_contact_title">Kontakt hinzufügen</string>
     <string name="feature_contacts_both_devices_same_number">Auf beiden Geräten muss exakt dieselbe Nummer angezeigt werden.</string>
     <string name="feature_contacts_compare_before_trusting">Vergleiche die Sicherheitsnummer mit dem Kontakt, bevor du dieser Identität vertraust.</string>
@@ -504,7 +505,7 @@
     <string name="feature_settings_control_plane_directory_title">Control-Plane-Verzeichnis</string>
     <string name="feature_settings_control_plane_directory_description">Optionale URL, die die aktuelle Control-Plane-Liste bereitstellt. Sparrow synchronisiert sie automatisch und behält bei einem Ausfall die letzte erfolgreiche Liste.</string>
     <string name="feature_settings_control_plane_directory_url">Verzeichnis-URL</string>
-    <string name="feature_settings_control_plane_directory_apply">Speichern und synchronisieren</string>
+    <string name="feature_settings_control_plane_directory_apply">Speichern</string>
     <string name="feature_settings_control_plane_directory_disabled">Kein Verzeichnis konfiguriert</string>
     <string name="feature_settings_control_plane_directory_synced_count">%1$d Adressen vom Verzeichnis empfangen</string>
     <string name="feature_settings_control_plane_directory_sync_failed">Verzeichnis nicht erreichbar. Die letzte erfolgreiche Liste wird weiter verwendet.</string>
@@ -514,8 +515,10 @@
     <string name="feature_settings_control_plane_source_directory">Verzeichnis</string>
     <string name="feature_settings_control_plane_source_manual_and_directory">Manuell + Verzeichnis</string>
     <string name="feature_settings_control_planes_summary">%1$d verfügbar · %2$d nicht erreichbar</string>
+    <string name="feature_settings_control_planes_auto_health_brief">Die Verfügbarkeit wird automatisch geprüft.</string>
     <string name="feature_settings_control_planes_auto_health">Die Erreichbarkeit wird automatisch geprüft. Nicht erreichbare Adressen werden nachrangig verwendet und im Hintergrund erneut geprüft.</string>
     <string name="feature_chats_group_promote_admin">Zum Admin machen</string>
+    <string name="feature_chats_group_promote_admin_button">Hochstufen</string>
     <string name="feature_chats_group_promote_admin_description">%1$s zum Gruppen-Admin machen? Admins können Mitglieder hinzufügen und entfernen sowie weitere Admins ernennen.</string>
     <string name="feature_chats_group_promote_before_leave">Neuen Admin auswählen</string>
     <string name="feature_chats_group_promote_before_leave_description">Du bist der einzige Admin. Ernenne ein anderes aktives Mitglied zum Admin, bevor du die Gruppe verlässt.</string>
@@ -637,8 +640,8 @@
     <string name="feature_identity_backup_warning">Diese Identität wurde noch nicht gesichert. Nach einer Neuinstallation oder einem Gerätewechsel kannst du deine ursprünglichen Schlüssel und das Vertrauen deiner Kontakte verlieren. Exportiere ein verschlüsseltes Backup. Chats und Nachrichten werden nicht gesichert.</string>
     <string name="feature_identity_backup_exported">Backup exportiert. Bewahre Datei und Passwort sicher auf. Du kannst jederzeit erneut exportieren; Chats und Kontakte sind nicht enthalten.</string>
     <string name="feature_identity_backup_imported">Deine ursprünglichen Identitätsschlüssel wurden wiederhergestellt. Chats, Kontakte und Berechtigungen sind nicht in diesem Backup enthalten. Öffne zum erneuten Verbinden Chats → Neuer Chat und lade den Kontakt erneut ein. Alternativ kann dein Kontakt euren alten Chat öffnen und „Kontakt erneut verbinden“ wählen. Da du die ursprünglichen Schlüssel wiederhergestellt hast, muss er deine Identität nicht ersetzen. Bewahre Backupdatei und Passwort sicher auf.</string>
-    <string name="feature_identity_backup_export_action">Identität sichern</string>
-    <string name="feature_identity_backup_restore_action">Vorhandene Identität wiederherstellen</string>
+    <string name="feature_identity_backup_export_action">Sichern</string>
+    <string name="feature_identity_backup_restore_action">Wiederherstellen</string>
     <string name="feature_identity_backup_password">Backup-Passwort (mindestens 12 Zeichen beim Export)</string>
     <string name="feature_identity_backup_restore_hint">Wähle deine Backupdatei und gib das Passwort ein. Gib vor dem Wiederherstellen deine Telefonnummer auf dem Identitätsbildschirm ein. Nur die ursprünglichen Schlüssel werden wiederhergestellt, nicht Chats oder Kontakte.</string>
 

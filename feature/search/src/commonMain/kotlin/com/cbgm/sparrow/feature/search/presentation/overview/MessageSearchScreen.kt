@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -36,7 +35,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowSearchField
-import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.search.domain.model.MessageSearchConversationType
@@ -101,7 +99,8 @@ private fun SearchList(
             .padding(vertical = MaterialTheme.spacing.screenPadding)
             .fillMaxSize(),
         state = listState,
-        contentPadding = innerPadding
+        contentPadding = innerPadding,
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
     ) {
         when {
             uiState.query.isBlank() ->
@@ -133,10 +132,6 @@ private fun SearchList(
                     SearchResultItem(
                         result = result,
                         onClick = { onUiEvent(MessageSearchUiEvent.ResultClicked(result.messageId)) }
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
                     )
                 }
         }
@@ -239,7 +234,7 @@ private fun SearchResultItem(
             .padding(horizontal = MaterialTheme.spacing.screenPadding)
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = MaterialTheme.spacing.base),
+            .padding(MaterialTheme.spacing.medium),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(

@@ -9,6 +9,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -42,66 +43,72 @@ fun MarkdownDisclaimerScreen(
             )
         }
     ) { innerPadding, scrollState ->
-        Markdown(
-            content = markdownContent,
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .verticalScroll(scrollState)
-                    .padding(
-                        top = innerPadding.calculateTopPadding() + MaterialTheme.spacing.small,
-                        bottom = innerPadding.calculateBottomPadding() + MaterialTheme.spacing.small,
-                        start = MaterialTheme.spacing.medium,
-                        end = MaterialTheme.spacing.medium
+        Surface(
+            modifier = Modifier.fillMaxSize().padding(
+                top = innerPadding.calculateTopPadding() + MaterialTheme.spacing.small,
+                bottom = innerPadding.calculateBottomPadding() + MaterialTheme.spacing.small,
+                start = MaterialTheme.spacing.screenPadding,
+                end = MaterialTheme.spacing.screenPadding
+            ),
+            color = MaterialTheme.colorScheme.background,
+            shape = MaterialTheme.shapes.medium
+        ) {
+            Markdown(
+                content = markdownContent,
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(scrollState)
+                        .padding(MaterialTheme.spacing.medium),
+                colors =
+                    markdownColor(
+                        text = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.DisclaimerScreen.content),
+                        codeBackground = MaterialTheme.colorScheme.surfaceContainer,
+                        inlineCodeBackground = MaterialTheme.colorScheme.surfaceContainer,
+                        dividerColor = MaterialTheme.colorScheme.outlineVariant,
+                        tableBackground = MaterialTheme.colorScheme.surfaceContainer
                     ),
-            colors =
-                markdownColor(
-                    text = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.DisclaimerScreen.content),
-                    codeBackground = MaterialTheme.colorScheme.surfaceContainer,
-                    inlineCodeBackground = MaterialTheme.colorScheme.surfaceContainer,
-                    dividerColor = MaterialTheme.colorScheme.outlineVariant,
-                    tableBackground = MaterialTheme.colorScheme.surfaceContainer
-                ),
-            typography =
-                markdownTypography(
-                    h1 =
-                        MaterialTheme.typography.bodyLarge.copy(
-                            color = MaterialTheme.colorScheme.onBackground,
-                            fontWeight = FontWeight.Bold
-                        ),
-                    h2 =
-                        MaterialTheme.typography.bodyMedium.copy(
-                            color = MaterialTheme.colorScheme.onBackground,
-                            fontWeight = FontWeight.Bold
-                        ),
-                    h3 =
-                        MaterialTheme.typography.bodySmall.copy(
-                            color = MaterialTheme.colorScheme.onBackground,
-                            fontWeight = FontWeight.SemiBold
-                        ),
-                    text =
-                        MaterialTheme.typography.labelMedium.copy(
-                            color =
-                                MaterialTheme.colorScheme.onBackground.copy(
-                                    alpha = Alpha.DisclaimerScreen.content
-                                )
-                        ),
-                    paragraph =
-                        MaterialTheme.typography.bodySmall.copy(
-                            color =
-                                MaterialTheme.colorScheme.onBackground.copy(
-                                    alpha = Alpha.DisclaimerScreen.content
-                                )
-                        ),
-                    list =
-                        MaterialTheme.typography.bodySmall.copy(
-                            color =
-                                MaterialTheme.colorScheme.onBackground.copy(
-                                    alpha = Alpha.DisclaimerScreen.content
-                                )
-                        )
-                )
-        )
+                typography =
+                    markdownTypography(
+                        h1 =
+                            MaterialTheme.typography.bodyLarge.copy(
+                                color = MaterialTheme.colorScheme.onBackground,
+                                fontWeight = FontWeight.Bold
+                            ),
+                        h2 =
+                            MaterialTheme.typography.bodyMedium.copy(
+                                color = MaterialTheme.colorScheme.onBackground,
+                                fontWeight = FontWeight.Bold
+                            ),
+                        h3 =
+                            MaterialTheme.typography.bodyMedium.copy(
+                                color = MaterialTheme.colorScheme.onBackground,
+                                fontWeight = FontWeight.SemiBold
+                            ),
+                        text =
+                            MaterialTheme.typography.bodyMedium.copy(
+                                color =
+                                    MaterialTheme.colorScheme.onBackground.copy(
+                                        alpha = Alpha.DisclaimerScreen.content
+                                    )
+                            ),
+                        paragraph =
+                            MaterialTheme.typography.bodyMedium.copy(
+                                color =
+                                    MaterialTheme.colorScheme.onBackground.copy(
+                                        alpha = Alpha.DisclaimerScreen.content
+                                    )
+                            ),
+                        list =
+                            MaterialTheme.typography.bodyMedium.copy(
+                                color =
+                                    MaterialTheme.colorScheme.onBackground.copy(
+                                        alpha = Alpha.DisclaimerScreen.content
+                                    )
+                            )
+                    )
+            )
+        }
     }
 }
 

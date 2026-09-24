@@ -4,8 +4,11 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.HistoryEmptyContent
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.HistoryLoadingContent
@@ -74,6 +77,39 @@ internal fun HistoryContent(
                 } else {
                     null
                 }
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun HistoryContentPreview() {
+    SparrowTheme {
+        HistoryContent(
+            model = HistoryUiModel(
+                messages = emptyList(),
+                isLoading = false,
+                emptyTitle = "dfsf",
+                emptyDescription = "ddfsd  ff sf",
+                showSenderAvatars = false
+            ),
+            listState = rememberLazyListState(),
+            innerPadding = PaddingValues(),
+            targetMessageId = null,
+            selectedContextMessageId = null,
+            historyState = MessageHistoryUiState(
+                isLoadingOlder = false,
+                hasMore = false,
+                loadedThroughMessageId = null
+            ),
+            onLoadOlderMessages = {},
+            onMessageHistoryTargetRequested = {},
+            onContextMessageRequested = {},
+            onReactionBurstRequested = {},
+            onRetryMessage = {},
+            onSafetyWarningClick = { _, _, _ -> },
+            onAttachmentClick = { _, _ -> },
+            onContactClick = {}
         )
     }
 }

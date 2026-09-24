@@ -5,10 +5,10 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
@@ -28,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.core.ui.component.IdentityVerificationScreen
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
+import com.cbgm.sparrow.core.ui.component.SparrowDestructiveButton
 import com.cbgm.sparrow.core.ui.component.SparrowDialogListItem
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.theme.Alpha
@@ -44,6 +45,7 @@ import com.cbgm.sparrow.resources.base_cancel
 import com.cbgm.sparrow.resources.feature_chats_group_leave
 import com.cbgm.sparrow.resources.feature_chats_group_leave_description
 import com.cbgm.sparrow.resources.feature_chats_group_promote_admin
+import com.cbgm.sparrow.resources.feature_chats_group_promote_admin_button
 import com.cbgm.sparrow.resources.feature_chats_group_promote_admin_description
 import com.cbgm.sparrow.resources.feature_chats_group_promote_before_leave
 import com.cbgm.sparrow.resources.feature_chats_group_promote_before_leave_description
@@ -251,6 +253,11 @@ private fun handleOverviewUiEvent(
 }
 
 @Composable
+private fun DestructiveGroupActionDescription(description: String) {
+    Text(text = description, style = MaterialTheme.typography.bodyMedium)
+}
+
+@Composable
 private fun LeaveDialog(
     isVisible: Boolean,
     isRemoving: Boolean,
@@ -263,13 +270,9 @@ private fun LeaveDialog(
         onDismissRequest = {},
         title = stringResource(Res.string.feature_chats_group_leave),
         text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = stringResource(Res.string.feature_chats_group_leave_description)
-                )
-
-                Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-            }
+            DestructiveGroupActionDescription(
+                description = stringResource(Res.string.feature_chats_group_leave_description)
+            )
 
             errorMessage?.let { message ->
                 Text(
@@ -281,7 +284,7 @@ private fun LeaveDialog(
             }
         },
         confirmButton = {
-            SparrowApprovalButton(
+            SparrowDestructiveButton(
                 onClick = onApprove,
                 fillMaxWidth = false,
                 content = {
@@ -419,28 +422,29 @@ private fun PromoteDialog(
             }
         },
         confirmButton = {
-            SparrowApprovalButton(
-                onClick = onApprove,
-                fillMaxWidth = false,
-                content = {
-                    if (isUpdating) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(Dimens.GroupDetailsScreen.verificationProgressSize),
-                            strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
-                        )
-                    } else {
-                        Text(stringResource(Res.string.feature_chats_group_promote_admin))
+            Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)) {
+                SparrowApprovalButton(
+                    onClick = onApprove,
+                    modifier = Modifier.weight(1f),
+                    content = {
+                        if (isUpdating) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(Dimens.GroupDetailsScreen.verificationProgressSize),
+                                strokeWidth = Dimens.Base.progressIndicatorStrokeWidth
+                            )
+                        } else {
+                            Text(stringResource(Res.string.feature_chats_group_promote_admin_button))
+                        }
                     }
-                }
-            )
+                )
+                SparrowOutlinedButton(
+                    onClick = onDismiss,
+                    text = stringResource(Res.string.base_cancel),
+                    modifier = Modifier.weight(1f)
+                )
+            }
         },
-        dismissButton = {
-            SparrowOutlinedButton(
-                onClick = onDismiss,
-                text = stringResource(Res.string.base_cancel),
-                fillMaxWidth = false
-            )
-        }
+        dismissButton = {}
     )
 }
 
@@ -472,17 +476,12 @@ private fun RemoveDialog(
             onDismissRequest = {},
             title = stringResource(Res.string.feature_chats_group_remove_member),
             text = {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text =
-                            stringResource(
-                                Res.string.feature_chats_group_remove_member_description,
-                                member.displayName
-                            )
+                DestructiveGroupActionDescription(
+                    description = stringResource(
+                        Res.string.feature_chats_group_remove_member_description,
+                        member.displayName
                     )
-
-                    Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-                }
+                )
 
                 errorMessage?.let { message ->
                     Text(
@@ -494,7 +493,7 @@ private fun RemoveDialog(
                 }
             },
             confirmButton = {
-                SparrowApprovalButton(
+                SparrowDestructiveButton(
                     onClick = onApprove,
                     fillMaxWidth = false,
                     content = {

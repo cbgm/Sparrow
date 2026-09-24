@@ -486,8 +486,8 @@ private fun SettingsSection(
 ) {
     Column {
         Text(
-            text = title.uppercase(),
-            style = MaterialTheme.typography.labelSmall,
+            text = title,
+            style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
             fontWeight = FontWeight.SemiBold,
             modifier =
@@ -510,7 +510,7 @@ private fun SettingsRow(
     subtitle: String,
     onClick: () -> Unit,
     showChevron: Boolean = true,
-    iconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.SettingsScreen.icon)
+    iconTint: Color = MaterialTheme.colorScheme.primary
 ) {
     Row(
         modifier =
@@ -580,7 +580,7 @@ private fun SettingsSwitchRow(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.SettingsScreen.icon),
+            tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize)
         )
 

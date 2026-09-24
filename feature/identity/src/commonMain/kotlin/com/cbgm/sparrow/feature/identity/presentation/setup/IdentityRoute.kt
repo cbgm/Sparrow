@@ -3,11 +3,6 @@ package com.cbgm.sparrow.feature.identity.presentation.setup
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -16,7 +11,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.feature.avatar.presentation.editor.AvatarEditor
 import com.cbgm.sparrow.feature.avatar.presentation.editor.AvatarEditorStrings
@@ -29,10 +23,6 @@ import com.cbgm.sparrow.feature.identity.presentation.setup.model.IdentityUiStat
 import com.cbgm.sparrow.feature.identity.presentation.setup.profile.IdentityProfilePictureViewModel
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
-import com.cbgm.sparrow.resources.feature_identity_backup_export_action
-import com.cbgm.sparrow.resources.feature_identity_backup_password
-import com.cbgm.sparrow.resources.feature_identity_backup_restore_action
-import com.cbgm.sparrow.resources.feature_identity_backup_restore_hint
 import com.cbgm.sparrow.resources.feature_settings_profile_picture
 import com.cbgm.sparrow.resources.feature_settings_profile_picture_choose_gallery
 import com.cbgm.sparrow.resources.feature_settings_profile_picture_crop
@@ -47,8 +37,8 @@ fun IdentityRoute(
     innerPadding: PaddingValues,
     modifier: Modifier = Modifier,
     onIdentityReady: () -> Unit = {},
-    viewModel: IdentityViewModel =
-        koinViewModel()
+    page: MeDetailPage = MeDetailPage.Overview,
+    viewModel: IdentityViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val backupState by viewModel.backupState.collectAsStateWithLifecycle()
@@ -143,52 +133,32 @@ fun IdentityRoute(
                 password = ""
             },
             onRestoreIdentity = { importRequestId += 1 },
+            page = page,
             modifier = Modifier
         )
 
         if (showExportDialog || importDocument != null) {
             val isImport = importDocument != null
-            AlertDialog(
-                onDismissRequest = {
+            IdentityBackupPasswordDialog(
+                isImport = isImport,
+                password = password,
+                onPasswordChange = { password = it },
+                busy = backupState.busy,
+                onDismiss = {
                     showExportDialog = false
                     importDocument = null
                     password = ""
                 },
-                title = { Text(stringResource(if (isImport) Res.string.feature_identity_backup_restore_action else Res.string.feature_identity_backup_export_action)) },
-                text = {
-                    androidx.compose.foundation.layout.Column {
-                        if (isImport) Text(stringResource(Res.string.feature_identity_backup_restore_hint))
-                        OutlinedTextField(
-                            value = password,
-                            onValueChange = { password = it },
-                            label = { Text(stringResource(Res.string.feature_identity_backup_password)) },
-                            visualTransformation = PasswordVisualTransformation(),
-                            singleLine = true
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        enabled = !backupState.busy && password.length >= (if (isImport) 1 else 12),
-                        onClick = {
-                            val pass = password.toCharArray()
-                            password = ""
-                            if (isImport) {
-                                viewModel.restoreBackup(importDocument!!, pass)
-                                importDocument = null
-                            } else {
-                                showExportDialog = false
-                                viewModel.prepareBackup(pass)
-                            }
-                        }
-                    ) { Text(stringResource(if (isImport) Res.string.feature_identity_backup_restore_action else Res.string.feature_identity_backup_export_action)) }
-                },
-                dismissButton = {
-                    TextButton(onClick = {
-                        showExportDialog = false
+                onConfirm = {
+                    val pass = password.toCharArray()
+                    password = ""
+                    if (isImport) {
+                        viewModel.restoreBackup(importDocument!!, pass)
                         importDocument = null
-                        password = ""
-                    }) { Text(stringResource(Res.string.base_cancel)) }
+                    } else {
+                        showExportDialog = false
+                        viewModel.prepareBackup(pass)
+                    }
                 }
             )
         }

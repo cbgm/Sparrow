@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,7 +23,9 @@ import com.cbgm.sparrow.feature.chats.presentation.common.header.model.HeaderUiM
 @Composable
 internal fun HeaderTitle(model: HeaderUiModel, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.clickable(onClick = onClick),
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(vertical = MaterialTheme.spacing.micro),
         verticalAlignment = Alignment.CenterVertically
     ) {
         val avatarTarget = model.avatarId.takeIf(String::isNotBlank)?.let { id ->
@@ -42,7 +45,7 @@ internal fun HeaderTitle(model: HeaderUiModel, onClick: () -> Unit) {
         )
         Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
         if (model.subtitle != null) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = model.title,
                     style = MaterialTheme.typography.titleSmall,
@@ -51,7 +54,7 @@ internal fun HeaderTitle(model: HeaderUiModel, onClick: () -> Unit) {
                 )
                 Text(
                     text = model.subtitle,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -60,6 +63,7 @@ internal fun HeaderTitle(model: HeaderUiModel, onClick: () -> Unit) {
         } else {
             Text(
                 text = model.title,
+                modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.titleSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

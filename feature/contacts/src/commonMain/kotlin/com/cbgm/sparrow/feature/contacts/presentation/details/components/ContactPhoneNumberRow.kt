@@ -1,6 +1,5 @@
 package com.cbgm.sparrow.feature.contacts.presentation.details.components
 
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Phone
@@ -8,7 +7,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -17,8 +15,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
-import com.cbgm.sparrow.core.ui.theme.contactDetailsScreen
-import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactPhoneNumberTypeUi
 import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactPhoneNumberUi
 import com.cbgm.sparrow.resources.Res
@@ -57,20 +53,11 @@ internal fun ContactPhoneNumberRow(
         },
         trailingContent = {
             if (isPreferred) {
-                Surface(
-                    shape = MaterialTheme.shapes.contactDetailsScreen.phoneNumber,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = Alpha.ContactDetailsScreen.preferredBackground)
-                ) {
-                    Text(
-                        text = stringResource(Res.string.base_preferred),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(
-                            horizontal = MaterialTheme.spacing.base,
-                            vertical = MaterialTheme.spacing.micro
-                        )
-                    )
-                }
+                Text(
+                    text = stringResource(Res.string.base_preferred),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         },
         colors =
