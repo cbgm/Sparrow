@@ -47,6 +47,7 @@ kotlin {
 
         commonTest.dependencies {
             implementation(libs.bundles.kmp.testing)
+            implementation(libs.ktor.client.mock)
         }
 
         androidDeviceTest.dependencies {

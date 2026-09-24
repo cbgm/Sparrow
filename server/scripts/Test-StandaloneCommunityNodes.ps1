@@ -227,18 +227,24 @@ function Wait-ForRegistryNodes {
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     $lastResult = ""
     while ((Get-Date) -lt $deadline) {
-        $lastResult = Wait-ForHealth `
-            -Name "node-registry" `
-            -Url "http://localhost:8391/health" `
-            -Pattern '^ok persistence=postgresql nodes=\d+$'
-        if ($lastResult -match 'nodes=(\d+)$' -and [int]$Matches[1] -eq $Expected) {
-            Write-Host "PASS registry contains $Expected independent nodes."
-            return
+        try {
+            $response = Invoke-WebRequest -Uri "http://localhost:8391/health" -UseBasicParsing -TimeoutSec 5
+            $lastResult = ([string]$response.Content).Trim()
+            if (
+                $response.StatusCode -eq 200 -and
+                $lastResult -match '^ok persistence=postgresql nodes=(\d+)$' -and
+                [int]$Matches[1] -eq $Expected
+            ) {
+                Write-Host "PASS registry contains $Expected independent nodes."
+                return
+            }
+        } catch {
+            $lastResult = $_.Exception.Message
         }
         Start-Sleep -Seconds 2
     }
 
-    throw "Registry did not reach nodes=$Expected. Last response: $lastResult"
+    throw "Registry did not reach nodes=$Expected within $TimeoutSeconds seconds. Last response: $lastResult"
 }
 
 function Get-RegisteredNodeIds {
@@ -448,8 +454,12 @@ function Stop-Project {
         [Parameter(Mandatory = $true)][string]$ComposeFile
     )
 
-    $arguments = Get-ComposeArguments $Project $EnvironmentFile $ComposeFile
-    & docker @($arguments + @("down", "-v", "--remove-orphans")) | Out-Host
+    $composeArguments = @(Get-ComposeArguments $Project $EnvironmentFile $ComposeFile)
+    $dockerArguments = $composeArguments + @("down", "-v", "--remove-orphans")
+    & docker @dockerArguments | Out-Host
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not clean up isolated smoke project '$Project'."
+    }
 }
 
 New-Item -ItemType Directory -Force -Path $workDirectory | Out-Null
@@ -476,6 +486,7 @@ Write-Utf8File -Path $controlEnvironment -Lines @(
 
 Write-Utf8File -Path $nodeAEnvironment -Lines @(
     "COMMUNITY_NODE_PROJECT_NAME=$nodeAProject",
+    "COMMUNITY_NODE_DIRECTORY_CACHE_VOLUME=$nodeAProject-directory-cache",
     "COMMUNITY_NODE_BIND_ADDRESS=0.0.0.0",
     "COMMUNITY_NODE_HTTP_PORT=8490",
     "COMMUNITY_NODE_SITE_ADDRESS=:80",
@@ -498,6 +509,7 @@ Write-Utf8File -Path $nodeAEnvironment -Lines @(
 
 Write-Utf8File -Path $nodeBEnvironment -Lines @(
     "COMMUNITY_NODE_PROJECT_NAME=$nodeBProject",
+    "COMMUNITY_NODE_DIRECTORY_CACHE_VOLUME=$nodeBProject-directory-cache",
     "COMMUNITY_NODE_BIND_ADDRESS=0.0.0.0",
     "COMMUNITY_NODE_HTTP_PORT=8590",
     "COMMUNITY_NODE_SITE_ADDRESS=:80",

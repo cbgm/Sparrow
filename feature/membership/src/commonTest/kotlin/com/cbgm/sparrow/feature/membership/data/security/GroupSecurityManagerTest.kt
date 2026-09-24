@@ -87,7 +87,22 @@ class GroupSecurityManagerTest {
                 groupId = GROUP_ID,
                 title = "Edited before acceptance",
                 createdAtEpochMilliseconds = 100L,
-                memberPayloads = emptyList(),
+                memberPayloads = listOf(
+                    GroupMemberPayload(
+                        displayName = null,
+                        encryptionPublicKey = byteArrayOf(8),
+                        signingPublicKey = LOCAL_SIGNING_KEY,
+                        role = "OWNER",
+                        phoneNumber = "+491"
+                    ),
+                    GroupMemberPayload(
+                        displayName = null,
+                        encryptionPublicKey = byteArrayOf(5),
+                        signingPublicKey = REMOTE_SIGNING_KEY,
+                        role = GROUP_MEMBER_ROLE,
+                        phoneNumber = "+492"
+                    )
+                ),
                 memberKeys = listOf(firstMember),
                 recipients = listOf(
                     GroupWelcomeRecipientDto(
@@ -533,7 +548,22 @@ class GroupSecurityManagerTest {
                     title = "Group",
                     createdAtEpochMilliseconds = 100L,
                     updatedAtEpochMilliseconds = 200L,
-                    memberPayloads = emptyList(),
+                    memberPayloads = listOf(
+                        GroupMemberPayload(
+                            displayName = null,
+                            encryptionPublicKey = byteArrayOf(8),
+                            signingPublicKey = LOCAL_SIGNING_KEY,
+                            role = "OWNER",
+                            phoneNumber = "+491"
+                        ),
+                        GroupMemberPayload(
+                            displayName = null,
+                            encryptionPublicKey = byteArrayOf(5),
+                            signingPublicKey = REMOTE_SIGNING_KEY,
+                            role = "MEMBER",
+                            phoneNumber = "+492"
+                        )
+                    ),
                     memberKeys = emptyList(),
                     recipients = emptyList(),
                     localSigningKeyPair =

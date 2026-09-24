@@ -89,7 +89,7 @@ class ClientPresenceRouteStateMachineTest {
     }
 
     @Test
-    fun refreshDueImmediatelyPreparesNextSignedRoute() {
+    fun refreshDueReloadsGatewayInformationBeforePreparingNextSignedRoute() {
         val gatewayInformation = gatewayInformation()
 
         val transition =
@@ -98,9 +98,9 @@ class ClientPresenceRouteStateMachineTest {
                 event = ClientPresenceRouteEvent.RefreshDue
             )
 
-        assertIs<ClientPresenceRouteState.PreparingRegistration>(transition.state)
+        assertIs<ClientPresenceRouteState.LoadingGatewayInformation>(transition.state)
         assertEquals(
-            listOf(ClientPresenceRouteEffect.PrepareRegistration(gatewayInformation)),
+            listOf(ClientPresenceRouteEffect.LoadGatewayInformation),
             transition.effects
         )
     }
@@ -139,7 +139,7 @@ class ClientPresenceRouteStateMachineTest {
                 localNowEpochMilliseconds = 9_000_000L
             )
 
-        assertEquals(1_090_000L, expiration)
+        assertEquals(1_085_000L, expiration)
     }
 
     @Test
@@ -156,7 +156,7 @@ class ClientPresenceRouteStateMachineTest {
                 localNowEpochMilliseconds = 2_060_000L
             )
 
-        assertEquals(1_150_000L, expiration)
+        assertEquals(1_145_000L, expiration)
     }
 
     @Test
