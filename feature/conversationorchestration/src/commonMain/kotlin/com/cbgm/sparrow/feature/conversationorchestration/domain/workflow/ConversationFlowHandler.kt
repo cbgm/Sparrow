@@ -997,6 +997,7 @@ internal class ConversationFlowHandler(
                             memberDisplayName = groupMemberDisplayName(requireNotNull(memberContactId)),
                             joinedAtEpochMilliseconds = packet.activatedAtEpochMilliseconds
                         ).getOrThrow()
+                        releaseGroupOutbox(packet.groupId)
                     }
                 }
                 is GroupMemberRemovedPacket -> {
@@ -1074,6 +1075,12 @@ internal class ConversationFlowHandler(
                             eventId = activeHandshake.sourceId
                         ).getOrThrow()
                     }
+                    if (activeHandshake?.status == MembershipStatus.ACTIVE &&
+                        activeHandshake.groupId == packet.groupId &&
+                        activeHandshake.peerId == context.contactId
+                    ) {
+                        releaseGroupOutbox(packet.groupId)
+                    }
                     conversationPort.refreshOwnedGroupVerification(packet.groupId).getOrThrow()
                     conversationPort.sendCurrentGroupMetadataTo(packet.groupId, context.contactId)
                 }
@@ -1105,6 +1112,13 @@ internal class ConversationFlowHandler(
                 else -> error("Unsupported membership packet: ${packet::class.simpleName}")
             }
         }
+
+    /** Membership became active; Chat owns its queued messages, not Membership. */
+    private suspend fun releaseGroupOutbox(groupId: String) {
+        conversationPort.flushPendingGroupMessages(groupId).onFailure { error ->
+            logger.warn(error) { "Pending group messages remain queued for retry: groupId=$groupId" }
+        }
+    }
 
     suspend fun onMembershipResult(result: MembershipResult): Result<Unit> =
         runCatching {
@@ -1142,7 +1156,7 @@ internal class ConversationFlowHandler(
                         response = InvitationResponse.ACCEPTED
                     ).getOrThrow()
 
-                MembershipStatus.ACTIVE ->
+                MembershipStatus.ACTIVE -> {
                     conversationPort
                         .addGroupParticipant(
                             groupId = result.groupId,
@@ -1152,6 +1166,8 @@ internal class ConversationFlowHandler(
                             joinedAtEpochMilliseconds = result.updatedAtEpochMilliseconds,
                             eventId = result.sourceInvitationId
                         ).getOrThrow()
+                    releaseGroupOutbox(result.groupId)
+                }
 
                 else -> Unit
             }

@@ -533,6 +533,7 @@ interface ChatDao {
         WHERE messages.conversationId = :conversationId
           AND conversations.type = 'GROUP'
           AND messages.isMine = 1
+          AND messages.transportMode = 'GROUP_E2EE'
           AND messages.packetId IS NULL
           AND messages.deliveryStatus = 'QUEUED'
           AND NOT EXISTS (
@@ -544,6 +545,25 @@ interface ChatDao {
         """
     )
     suspend fun findQueuedGroupMessages(conversationId: String): List<MessageEntity>
+
+    /** Recipient rows can be committed just before a process crash, with no
+     * corresponding outbox row yet. Reconcile that window after activation.
+     */
+    @Query(
+        """
+        SELECT DISTINCT messages.*
+        FROM messages
+        INNER JOIN conversations ON conversations.id = messages.conversationId
+        INNER JOIN message_recipient_states AS recipients ON recipients.messageId = messages.id
+        WHERE messages.conversationId = :conversationId
+          AND conversations.type = 'GROUP'
+          AND messages.isMine = 1
+          AND messages.transportMode = 'GROUP_E2EE'
+          AND recipients.deliveryStatus = 'QUEUED'
+        ORDER BY messages.createdAtEpochMilliseconds, messages.id
+        """
+    )
+    suspend fun findGroupMessagesAwaitingOutbox(conversationId: String): List<MessageEntity>
 
     @Query(
         """

@@ -18,6 +18,12 @@ class GroupOutgoingMessageDataSource(
 ) {
     suspend fun findMessage(messageId: String): MessageEntity? = chatDao.findMessageById(messageId)
 
+    suspend fun findQueuedGroupMessages(groupId: String): List<MessageEntity> =
+        chatDao.findQueuedGroupMessages(groupId)
+
+    suspend fun findGroupMessagesAwaitingOutbox(groupId: String): List<MessageEntity> =
+        chatDao.findGroupMessagesAwaitingOutbox(groupId)
+
     suspend fun findConversation(groupId: String): ConversationEntity? = chatDao.findConversationById(groupId)
 
     suspend fun findConversationParticipants(groupId: String): List<ConversationParticipantEntity> =

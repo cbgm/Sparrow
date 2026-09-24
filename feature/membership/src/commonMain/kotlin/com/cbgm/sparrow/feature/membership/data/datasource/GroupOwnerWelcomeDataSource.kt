@@ -85,10 +85,10 @@ internal class GroupOwnerWelcomeDataSource(
                 recipients = recipients,
                 localSigningKeyPair = localSigning
             ).getOrThrow()
-        } else if (current.size == 0 && currentState.currentEpoch == 1 &&
-            securityStore.findCurrentRemoteMemberKey(handshake.groupId, peer.id) != null
-        ) {
-            // Recovery when the first epoch was committed before its welcome could be enqueued.
+        } else if (current.isEmpty() && currentState.currentEpoch == 1) {
+            // Creation has already persisted the owner-only first epoch and key.
+            // Admit the first member to that SAME epoch, including recovery if
+            // the initial welcome was committed before it was enqueued.
             initialSecurity.createOwnedGroup(
                 groupId = handshake.groupId,
                 title = title,

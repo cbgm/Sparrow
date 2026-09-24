@@ -2,6 +2,7 @@ package com.cbgm.sparrow.feature.chats.data.group.outgoing
 
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.core.protocol.message.GroupMessageContent
@@ -39,6 +40,7 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageDeliveryStatus
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupMessageDeliveryStateMachine
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMessageMembershipAccess
 import com.cbgm.sparrow.feature.membership.domain.repository.GroupSecurityRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -75,12 +77,22 @@ class GroupOutgoingMessageProcessor(
                 val normalizedText = requireMessageContent(text, attachments)
                 requireActiveMembership(groupId, access)
                 val recipients = findCurrentRecipients(groupId)
-                check(recipients.isNotEmpty()) { "Group has no active recipients" }
+                // A previously queued owner message must go out before newly sent
+                // messages once an active participant is available.
+                if (recipients.isNotEmpty()) {
+                    flushQueuedLocked(groupId, recipients)
+                }
 
                 val message = createQueuedMessage(groupId, normalizedText, replyToMessageId)
                 val prepared = attachmentTransfer.prepareAttachments(attachments)
                 try {
-                    encryptAndEnqueue(message, recipients, prepared)
+                    if (recipients.isEmpty()) {
+                        // No pending invitee may receive this message. Persist it and
+                        // its encrypted attachment blobs locally, with NO packet yet.
+                        persistMessage(message, emptyList(), prepared)
+                    } else {
+                        encryptAndEnqueue(message, recipients, prepared)
+                    }
                 } catch (error: Throwable) {
                     val stored = messageDataSource.findMessage(message.id) != null
                     if (!stored) {
@@ -90,6 +102,69 @@ class GroupOutgoingMessageProcessor(
                 }
             }
         }
+
+    /** Release owner messages only after membership projection grants a recipient.
+     * The existing database queue survives process termination and is replayed
+     * on ACTIVE membership-result reconciliation after an app restart.
+     */
+    suspend fun flushQueued(groupId: String): Result<Unit> = safeSuspendCall {
+        sendMutex.withLock {
+            val recipients = findCurrentRecipients(groupId)
+            if (recipients.isNotEmpty()) flushQueuedLocked(groupId, recipients)
+        }
+    }
+
+    private suspend fun flushQueuedLocked(groupId: String, recipients: List<String>) {
+        val waiting = messageDataSource.findQueuedGroupMessages(groupId)
+        val interrupted = messageDataSource.findGroupMessagesAwaitingOutbox(groupId)
+        (waiting + interrupted).distinctBy { it.id }
+            .sortedWith(compareBy<MessageEntity> { it.createdAtEpochMilliseconds }.thenBy { it.id })
+            .forEach { message ->
+                try {
+                    val previousStates = messageDataSource.findRecipientStates(message.id)
+                    val missingRecipients = if (previousStates.isEmpty()) {
+                        recipients
+                    } else {
+                        // Reconcile ONLY original recipients; never backfill a
+                        // message to someone who joined at a later epoch.
+                        previousStates.filter { state ->
+                            val packetId = state.packetId
+
+                            state.contactId in recipients &&
+                                state.deliveryStatus == MessageDeliveryStatus.QUEUED.name &&
+                                packetId != null &&
+                                protocolOutbox.findByPacketId(packetId).getOrThrow() == null
+                        }.map { it.contactId }
+                    }
+                    if (missingRecipients.isEmpty()) return@forEach
+                    val packets = createPackets(
+                        message = message,
+                        recipients = missingRecipients,
+                        attachments = attachmentTransfer.protocolAttachments(message.id)
+                    )
+                    if (previousStates.isEmpty()) {
+                        val states = packets.map { (contactId, packet) ->
+                            packet.toMessageRecipientStateEntity(contactId)
+                        }
+                        // Persist recipient mapping before enqueuing. Restart
+                        // reconciliation handles a crash between these writes.
+                        messageDataSource.saveOutgoingMessage(
+                            message = message,
+                            recipientStates = states,
+                            timestamp = message.createdAtEpochMilliseconds
+                        )
+                    }
+                    enqueuePackets(packets)
+                } catch (error: Throwable) {
+                    if (error is CancellationException) throw error
+                    // A damaged/temporarily undeliverable old message must not
+                    // prevent active members from sending subsequent messages.
+                    logger.warn(error) {
+                        "Group message remains queued for retry: messageId=${message.id}"
+                    }
+                }
+            }
+    }
 
     suspend fun toggleReaction(
         groupId: String,
@@ -394,9 +469,17 @@ class GroupOutgoingMessageProcessor(
         recipients: List<String>,
         prepared: List<PreparedMessageAttachment>
     ) {
-        val packets = createPackets(message, recipients, prepared)
+        val packets = createPackets(message, recipients, prepared.map { it.attachment })
         val recipientStates = packets.map { (contactId, packet) -> packet.toMessageRecipientStateEntity(contactId) }
+        persistMessage(message, recipientStates, prepared)
+        enqueuePackets(packets)
+    }
 
+    private suspend fun persistMessage(
+        message: MessageEntity,
+        recipientStates: List<MessageRecipientStateEntity>,
+        prepared: List<PreparedMessageAttachment>
+    ) {
         messageDataSource.saveOutgoingMessage(
             message = message,
             recipientStates = recipientStates,
@@ -422,7 +505,9 @@ class GroupOutgoingMessageProcessor(
             attachmentTransfer.cleanupPrepared(prepared)
             throw error
         }
+    }
 
+    private suspend fun enqueuePackets(packets: Map<String, GroupChatMessagePacket>) {
         val failures = mutableListOf<String>()
         packets.forEach { (contactId, packet) ->
             val error = protocolOutbox.enqueue(contactId, packet).exceptionOrNull()
@@ -447,7 +532,7 @@ class GroupOutgoingMessageProcessor(
     private suspend fun createPackets(
         message: MessageEntity,
         recipients: List<String>,
-        prepared: List<PreparedMessageAttachment>
+        attachments: List<MessageAttachment>
     ): Map<String, GroupChatMessagePacket> {
         val localSigningKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
         val profilePicture =
@@ -456,7 +541,7 @@ class GroupOutgoingMessageProcessor(
             groupMessageContentCodec.encode(
                 GroupMessageContent(
                     text = message.text,
-                    attachments = prepared.map(PreparedMessageAttachment::attachment),
+                    attachments = attachments,
                     replyToMessageId = message.replyToMessageId
                 )
             )

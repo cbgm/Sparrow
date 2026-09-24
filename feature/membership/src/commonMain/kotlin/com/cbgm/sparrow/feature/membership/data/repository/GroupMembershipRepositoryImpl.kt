@@ -1,11 +1,13 @@
 package com.cbgm.sparrow.feature.membership.data.repository
 
+import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.core.protocol.packet.GroupConversationDeletedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivatedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivationAcknowledgementPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupReadyAcknowledgementPacket
+import com.cbgm.sparrow.feature.membership.data.GroupMembershipLock
 import com.cbgm.sparrow.feature.membership.data.GroupMembershipStateMachine
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupEpochSecurityDataSource
 import com.cbgm.sparrow.feature.membership.data.datasource.GroupIncomingActivationDataSource
@@ -22,6 +24,7 @@ import com.cbgm.sparrow.feature.membership.data.model.GroupLeaveRequirementDto
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipPerspective
 import com.cbgm.sparrow.feature.membership.data.model.GroupMembershipStatus
 import com.cbgm.sparrow.feature.membership.data.model.isGroupAdminRole
+import com.cbgm.sparrow.feature.membership.data.security.GroupSecurityManager
 import com.cbgm.sparrow.feature.membership.domain.model.GroupAdministrationState
 import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationMembershipSnapshot
 import com.cbgm.sparrow.feature.membership.domain.model.GroupIncomingWelcomeAuthorization
@@ -55,7 +58,10 @@ internal class GroupMembershipRepositoryImpl(
     private val incomingDeletion: GroupIncomingDeletionDataSource,
     private val incomingRemoval: GroupIncomingRemovalDataSource,
     private val operations: GroupMembershipLifecycleDataSource,
-    private val membershipStore: GroupMembershipStoreDataSource
+    private val membershipStore: GroupMembershipStoreDataSource,
+    private val groupSecurityManager: GroupSecurityManager,
+    private val signingKeyPairProvider: LocalSigningKeyPairProvider,
+    private val membershipLock: GroupMembershipLock
 ) : GroupMembershipRepository {
     override suspend fun getVerificationMembershipContext(groupId: String): Result<GroupVerificationMembershipContext> =
         runCatching {
@@ -317,7 +323,8 @@ internal class GroupMembershipRepositoryImpl(
         localSigningPublicKey: ByteArray,
         action: String
     ): Result<GroupMetadataSendContext> = runCatching {
-        val state = securityStore.findState(groupId) ?: error("Group security state was not found")
+        val state = securityStore.findState(groupId)
+            ?: recoverPendingOwnerEpoch(groupId, localSigningPublicKey)
         check(state.localRole.isGroupAdminRole()) { "Only a group admin may change the $action" }
         check(state.localSigningPublicKey.contentEquals(localSigningPublicKey)) {
             "Local admin signing key does not match the group security state"
@@ -332,6 +339,40 @@ internal class GroupMembershipRepositoryImpl(
                 .toSet()
         )
     }
+
+    /** Migration for groups created by older builds before owner epochs existed.
+     * Only an owner with exclusively pre-welcome memberships can be repaired;
+     * never synthesize a new key for an existing/previously active group.
+     */
+    private suspend fun recoverPendingOwnerEpoch(
+        groupId: String,
+        localSigningPublicKey: ByteArray
+    ): com.cbgm.sparrow.data.database.entity.GroupSecurityStateEntity =
+        membershipLock.withLock {
+            securityStore.findState(groupId)?.let { return@withLock it }
+            val rows = membershipStore.findByGroupId(groupId)
+            check(
+                rows.isNotEmpty() && rows.all {
+                    it.perspective == GroupMembershipPerspective.OWNER.name &&
+                        it.status in setOf(
+                            GroupMembershipStatus.STAGED.name,
+                            GroupMembershipStatus.IDENTITY_READY.name
+                        )
+                }
+            ) { "Cannot reconstruct a group epoch after membership activation" }
+            val signingKeyPair = signingKeyPairProvider.getSigningKeyPair().getOrThrow()
+            check(signingKeyPair.publicKey.contentEquals(localSigningPublicKey)) {
+                "Local group signing identity does not match"
+            }
+            groupSecurityManager.initializeOwnedGroup(
+                groupId = groupId,
+                createdAtEpochMilliseconds = rows.minOf { it.createdAtEpochMilliseconds },
+                localSigningKeyPair = signingKeyPair
+            ).getOrThrow()
+            requireNotNull(securityStore.findState(groupId)) {
+                "Owner group security initialization did not persist"
+            }
+        }
 
     override suspend fun authorizeMetadataReceive(
         groupId: String,

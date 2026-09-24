@@ -5,6 +5,15 @@ import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
 import com.cbgm.sparrow.feature.membership.domain.model.GroupMembershipContext
 
 interface ConversationPort {
+    /** Persist a local group before the orchestrator initializes Membership security. */
+    suspend fun createOwnedGroupConversation(title: String): Result<String>
+
+    /** Set up Chats-owned group verification after the owner's epoch is initialized. */
+    suspend fun initializeOwnedGroupVerification(groupId: String): Result<Unit>
+
+    /** Ask Chats to flush its persisted outgoing queue; no membership rules here. */
+    suspend fun flushPendingGroupMessages(groupId: String): Result<Unit>
+
     /** Conversation-only side effects after Membership authenticates the welcome. */
     suspend fun recordIncomingGroupWelcomeRestart(
         packet: GroupCreatedPacket,

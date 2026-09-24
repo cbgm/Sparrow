@@ -6,6 +6,7 @@ import com.cbgm.sparrow.core.protocol.outbox.OutboxProcessor
 import com.cbgm.sparrow.core.protocol.outbox.ProtocolOutbox
 import com.cbgm.sparrow.feature.conversationorchestration.data.datasource.WebSocketIncomingEnvelopeGateway
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.AddConversationMembersUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.CreateConversationGroupUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.DeleteConversationGroupUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.DeletePeerConversationUseCase
 import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.GetConversationGroupLeaveRequirementUseCase
@@ -183,6 +184,7 @@ val conversationOrchestrationModule =
         factory { StartRecoveryInvitationUseCase(get()) }
         factory { ReconnectExistingConversationUseCase(get()) }
         singleOf(::AddConversationMembersUseCase)
+        singleOf(::CreateConversationGroupUseCase)
         singleOf(::GetConversationGroupLeaveRequirementUseCase)
         singleOf(::PromoteConversationGroupMemberUseCase)
         singleOf(::RemoveConversationGroupMemberUseCase)

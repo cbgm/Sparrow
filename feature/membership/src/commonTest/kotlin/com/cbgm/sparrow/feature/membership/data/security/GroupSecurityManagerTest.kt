@@ -61,6 +61,51 @@ class GroupSecurityManagerTest {
         )
 
     @Test
+    fun ownerOnlyEpochIsInitializedBeforeAnyMemberAcceptsAndReusedForFirstWelcome() =
+        runTest {
+            val signing = LocalSigningKeyPair(
+                publicKey = LOCAL_SIGNING_KEY,
+                privateKey = LOCAL_SIGNING_KEY
+            )
+            manager.initializeOwnedGroup(GROUP_ID, 100L, signing).getOrThrow()
+            manager.initializeOwnedGroup(GROUP_ID, 100L, signing).getOrThrow()
+
+            assertEquals(1, dao.findState(GROUP_ID)?.currentEpoch)
+            assertEquals(0, dao.findMemberKeys(GROUP_ID, EPOCH).size)
+            assertEquals(1, crypto.generatedGroupKeyCount)
+            val originalKey = requireNotNull(keyStorage.load(GROUP_ID, EPOCH)).copyOf()
+
+            val firstMember = GroupMemberKeyEntity(
+                groupId = GROUP_ID,
+                epoch = EPOCH,
+                contactId = REMOTE_CONTACT_ID,
+                encryptionPublicKey = byteArrayOf(5),
+                signingPublicKey = REMOTE_SIGNING_KEY,
+                role = GROUP_MEMBER_ROLE
+            )
+            val welcome = manager.createOwnedGroup(
+                groupId = GROUP_ID,
+                title = "Edited before acceptance",
+                createdAtEpochMilliseconds = 100L,
+                memberPayloads = emptyList(),
+                memberKeys = listOf(firstMember),
+                recipients = listOf(
+                    GroupWelcomeRecipientDto(
+                        contactId = REMOTE_CONTACT_ID,
+                        invitationId = INVITATION_ID,
+                        encryptionPublicKey = byteArrayOf(5)
+                    )
+                ),
+                localSigningKeyPair = signing
+            ).getOrThrow()
+
+            assertEquals(1, dao.findState(GROUP_ID)?.currentEpoch)
+            assertEquals(1, crypto.generatedGroupKeyCount)
+            assertContentEquals(originalKey, requireNotNull(keyStorage.load(GROUP_ID, EPOCH)))
+            assertTrue(REMOTE_CONTACT_ID in welcome.welcomePacketsByContactId)
+        }
+
+    @Test
     fun localGroupDeletionClearsSecurityStateAndKeys() =
         runTest {
             manager

@@ -14,10 +14,12 @@ import com.cbgm.sparrow.feature.chats.data.group.description.GroupDescriptionBro
 import com.cbgm.sparrow.feature.chats.data.group.incoming.GroupCreatedIncomingProcessor
 import com.cbgm.sparrow.feature.chats.data.group.incoming.GroupWelcomePersistence
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
+import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupOutgoingMessageProcessor
 import com.cbgm.sparrow.feature.chats.data.group.pin.GroupPinBroadcaster
 import com.cbgm.sparrow.feature.chats.data.group.title.GroupTitleBroadcaster
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectConversationRepository
 import com.cbgm.sparrow.feature.chats.domain.repository.direct.DirectMessageRepository
+import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupConversationRepository
 import com.cbgm.sparrow.feature.chats.domain.usecase.direct.ActivateAuthorizedDirectConversationUseCase
 import com.cbgm.sparrow.feature.chats.runtime.group.verification.GroupVerificationCoordinator
 import com.cbgm.sparrow.feature.conversationorchestration.domain.port.ConversationPort
@@ -29,9 +31,11 @@ internal class ChatsConversationPort(
     private val activateAuthorizedDirectConversation: ActivateAuthorizedDirectConversationUseCase,
     private val pendingAuthorizationMessageCoordinator: DirectPendingAuthorizationMessageCoordinator,
     private val messageAttachmentRepository: MessageAttachmentRepository,
+    private val groupConversationRepository: GroupConversationRepository,
     private val groupConversationDataSource: GroupConversationDataSource,
     private val groupLocalCleanupDataSource: GroupLocalCleanupDataSource,
     private val groupOutgoingMessageDataSource: GroupOutgoingMessageDataSource,
+    private val groupOutgoingMessageProcessor: GroupOutgoingMessageProcessor,
     private val verificationCoordinator: GroupVerificationCoordinator,
     private val incomingConversationDataSource: GroupIncomingConversationDataSource,
     private val createdIncomingProcessor: GroupCreatedIncomingProcessor,
@@ -42,6 +46,15 @@ internal class ChatsConversationPort(
     private val groupPinBroadcaster: GroupPinBroadcaster
 ) : ConversationPort {
     private val logger = SparrowLog.withTag("ChatsConversationPort")
+
+    override suspend fun createOwnedGroupConversation(title: String): Result<String> =
+        groupConversationRepository.create(title)
+
+    override suspend fun initializeOwnedGroupVerification(groupId: String): Result<Unit> =
+        verificationCoordinator.initializeOwnedGroup(groupId)
+
+    override suspend fun flushPendingGroupMessages(groupId: String): Result<Unit> =
+        groupOutgoingMessageProcessor.flushQueued(groupId)
 
     override suspend fun recordIncomingGroupWelcomeRestart(
         packet: GroupCreatedPacket,

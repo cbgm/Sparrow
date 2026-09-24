@@ -73,54 +73,36 @@ internal class GroupSecurityManager internal constructor(
     suspend fun findCurrentEpoch(groupId: String): Result<Int?> =
         safeSuspendCall { groupSecurityStore.findState(groupId)?.currentEpoch }
 
-    @Suppress("unused") // Retained group-security helper; currently no production caller.
-    suspend fun findLocalRole(groupId: String): Result<String?> =
-        safeSuspendCall { groupSecurityStore.findState(groupId)?.localRole }
-
-    @Suppress("unused") // Retained group-security helper; currently no production caller.
-    suspend fun isLocalMembershipRetired(groupId: String): Result<Boolean> =
-        safeSuspendCall {
-            groupSecurityStore.findState(groupId)?.localRole == GROUP_LEFT_ROLE
-        }
-
-    @Suppress("unused") // Retained group-security helper; currently no production caller.
-    suspend fun findRemoteMemberKey(
-        groupId: String,
-        contactId: String
-    ): Result<GroupMemberKeyEntity?> =
-        safeSuspendCall {
-            val state = groupSecurityStore.findState(groupId) ?: return@safeSuspendCall null
-            groupSecurityStore.findMemberKey(
-                groupId = groupId,
-                epoch = state.currentEpoch,
-                contactId = contactId
-            )
-        }
-
-    @Suppress("unused") // Retained group-security helper; currently no production caller.
-    suspend fun requireRemoteAdmin(
-        groupId: String,
-        contactId: String,
-        signingPublicKey: ByteArray
-    ): Result<Unit> =
-        safeSuspendCall {
-            val state = groupSecurityStore.findState(groupId)
-                ?: error("Group security state was not found")
-            val memberKey =
-                groupSecurityStore.findMemberKey(
-                    groupId = groupId,
-                    epoch = state.currentEpoch,
-                    contactId = contactId
-                ) ?: error("Group authority is not part of the current epoch")
-            check(memberKey.role.isGroupAdminRole()) {
-                "Group update sender is not an admin"
-            }
-            check(memberKey.signingPublicKey.contentEquals(signingPublicKey)) {
-                "Group admin signing identity changed"
-            }
-        }
-
     suspend fun isOwnedGroup(groupId: String): Result<Boolean?> = isLocalAdmin(groupId)
+
+    override suspend fun initializeOwnedGroup(
+        groupId: String,
+        createdAtEpochMilliseconds: Long,
+        localSigningKeyPair: LocalSigningKeyPair
+    ): Result<Unit> = safeSuspendCall {
+        require(groupId.isNotBlank()) { "Group ID must not be blank" }
+        val state = groupSecurityStore.findState(groupId)
+        if (state != null) {
+            check(
+                state.localRole.isGroupAdminRole() &&
+                    state.localSigningPublicKey.contentEquals(localSigningKeyPair.publicKey) &&
+                    groupKeyDataSource.load(groupId, state.currentEpoch) != null
+            ) { "Existing group security state is not a usable local owner epoch" }
+            return@safeSuspendCall
+        }
+        // No remote member is admitted at creation; an empty recipient set creates
+        // the persisted owner epoch/key without transmitting a welcome to invitees.
+        createOwnedGroup(
+            groupId = groupId,
+            title = "",
+            createdAtEpochMilliseconds = createdAtEpochMilliseconds,
+            memberPayloads = emptyList(),
+            memberKeys = emptyList(),
+            recipients = emptyList(),
+            localSigningKeyPair = localSigningKeyPair
+        ).getOrThrow()
+        Unit
+    }
 
     suspend fun createOwnedGroup(
         groupId: String,

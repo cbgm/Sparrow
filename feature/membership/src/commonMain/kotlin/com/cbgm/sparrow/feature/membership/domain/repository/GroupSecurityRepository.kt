@@ -13,6 +13,13 @@ import com.cbgm.sparrow.feature.membership.domain.model.SecuredGroupMessageDto
 
 /** Membership owns the secure group epoch/key lifecycle and message crypto. */
 interface GroupSecurityRepository {
+    /** Install the owner-only first epoch before any invitation is accepted. Idempotent. */
+    suspend fun initializeOwnedGroup(
+        groupId: String,
+        createdAtEpochMilliseconds: Long,
+        localSigningKeyPair: LocalSigningKeyPair
+    ): Result<Unit>
+
     fun createKeyConfirmation(groupId: String, epoch: Int, groupKey: ByteArray): ByteArray
 
     suspend fun openWelcome(
