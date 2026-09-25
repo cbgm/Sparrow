@@ -10,11 +10,11 @@ Generated automatically by `./gradlew architectureReport`.
 | Group | `shared` |
 | Directory | `shared` |
 | Build file | `shared/build.gradle.kts` |
-| Kotlin files | 12 |
-| Production Kotlin files | 12 |
+| Kotlin files | 13 |
+| Production Kotlin files | 13 |
 | Test Kotlin files | 0 |
 | Resource files | 0 |
-| Direct dependencies | 22 |
+| Direct dependencies | 29 |
 | Direct dependents | 1 |
 
 ## Source sets
@@ -33,17 +33,24 @@ Generated automatically by `./gradlew architectureReport`.
 - [`:data:database`](../modules/data-database.md)
 - [`:data:datastore`](../modules/data-datastore.md)
 - [`:feature:attachments`](../modules/feature-attachments.md)
+- [`:feature:autoreply`](../modules/feature-autoreply.md)
+- [`:feature:avatar`](../modules/feature-avatar.md)
 - [`:feature:chats`](../modules/feature-chats.md)
 - [`:feature:contactimport`](../modules/feature-contactimport.md)
 - [`:feature:contacts`](../modules/feature-contacts.md)
+- [`:feature:conversationorchestration`](../modules/feature-conversationorchestration.md)
 - [`:feature:identity`](../modules/feature-identity.md)
+- [`:feature:invite`](../modules/feature-invite.md)
+- [`:feature:linkpreview`](../modules/feature-linkpreview.md)
 - [`:feature:media`](../modules/feature-media.md)
+- [`:feature:membership`](../modules/feature-membership.md)
 - [`:feature:messaging`](../modules/feature-messaging.md)
 - [`:feature:onboarding`](../modules/feature-onboarding.md)
 - [`:feature:safety`](../modules/feature-safety.md)
 - [`:feature:search`](../modules/feature-search.md)
 - [`:feature:settings`](../modules/feature-settings.md)
 - [`:feature:transport`](../modules/feature-transport.md)
+- [`:feature:voice`](../modules/feature-voice.md)
 - [`:navigation`](../modules/navigation.md)
 - [`:notification`](../modules/notification.md)
 - [`:startup`](../modules/startup.md)

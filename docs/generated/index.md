@@ -18,9 +18,9 @@ Generated automatically by `./gradlew architectureReport`.
 
 ## Summary
 
-- Modules: **40**
+- Modules: **48**
 - Module groups: **11**
-- Project dependency edges: **147**
-- Kotlin files: **1446**
-- Test Kotlin files: **105**
-- Resource files: **53**
+- Project dependency edges: **209**
+- Kotlin files: **1992**
+- Test Kotlin files: **142**
+- Resource files: **56**

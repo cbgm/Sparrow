@@ -18,15 +18,32 @@ val localProperties = Properties().apply {
     }
 }
 
-val appVersionCode =
-    providers
-        .gradleProperty("appVersionCode")
-        .map(String::toInt)
-        .getOrElse(1)
-val appVersionName =
-    providers
-        .gradleProperty("appVersionName")
-        .getOrElse("1.0")
+val appVersionCode = providers
+    .gradleProperty("appVersionCode")
+    .map(String::toInt)
+    .orElse(
+        providers.environmentVariable("GITHUB_RUN_NUMBER")
+            .map { runNumber ->
+                10_000 + runNumber.toInt()
+            }
+    )
+    .getOrElse(10_001)
+
+val appVersionName = providers
+    .gradleProperty("appVersionName")
+    .orElse(
+        providers.environmentVariable("GITHUB_REF_NAME")
+            .zip(
+                providers.environmentVariable("GITHUB_REF_TYPE")
+            ) { refName, refType ->
+                if (refType == "tag") {
+                    refName.removePrefix("v")
+                } else {
+                    "1.0.0"
+                }
+            }
+    )
+    .getOrElse("1.0.0")
 
 android {
     namespace = "com.cbgm.sparrow"
