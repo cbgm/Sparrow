@@ -51,13 +51,18 @@ import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
 import com.cbgm.sparrow.feature.chats.presentation.common.history.component.ScrollToBottomButton
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.ConversationListItem
+import com.cbgm.sparrow.feature.chats.presentation.overview.model.LastMessagePreviewUi
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiState
 import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.feature_attachments_media
 import com.cbgm.sparrow.resources.feature_chats_attachment
+import com.cbgm.sparrow.resources.feature_chats_contact_card
+import com.cbgm.sparrow.resources.feature_chats_location
 import com.cbgm.sparrow.resources.feature_chats_no_conversations_hint
 import com.cbgm.sparrow.resources.feature_chats_no_conversations_yet
 import com.cbgm.sparrow.resources.feature_chats_no_messages_yet
+import com.cbgm.sparrow.resources.feature_chats_voice_message
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Duration.Companion.milliseconds
@@ -290,8 +295,15 @@ private fun ConversationItem(
                     text =
                         when {
                             conversation.lastMessage.isNotBlank() -> conversation.lastMessage
-                            !conversation.isGroup && conversation.hasMessages ->
-                                stringResource(Res.string.feature_chats_attachment)
+                            conversation.lastMessagePreview == LastMessagePreviewUi.MEDIA ->
+                                stringResource(Res.string.feature_attachments_media)
+                            conversation.lastMessagePreview == LastMessagePreviewUi.LOCATION ->
+                                stringResource(Res.string.feature_chats_location)
+                            conversation.lastMessagePreview == LastMessagePreviewUi.CONTACT_CARD ->
+                                stringResource(Res.string.feature_chats_contact_card)
+                            conversation.lastMessagePreview == LastMessagePreviewUi.VOICE ->
+                                stringResource(Res.string.feature_chats_voice_message)
+                            conversation.hasMessages -> stringResource(Res.string.feature_chats_attachment)
                             else -> stringResource(Res.string.feature_chats_no_messages_yet)
                         },
                     maxLines = 1,

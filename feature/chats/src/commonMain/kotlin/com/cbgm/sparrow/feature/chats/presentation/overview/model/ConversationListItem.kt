@@ -11,5 +11,14 @@ data class ConversationListItem(
     val hasMessages: Boolean = false,
     val timestamp: String,
     val unreadCount: Int = 0,
-    val isGroup: Boolean = false
+    val isGroup: Boolean = false,
+    val lastMessagePreview: LastMessagePreviewUi? = null
 )
+
+enum class LastMessagePreviewUi {
+    MEDIA,
+    LOCATION,
+    CONTACT_CARD,
+    VOICE,
+    ATTACHMENT
+}

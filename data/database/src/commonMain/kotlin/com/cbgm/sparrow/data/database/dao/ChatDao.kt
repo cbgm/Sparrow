@@ -430,6 +430,20 @@ interface ChatDao {
             LIMIT 1
         ) AS lastMessageText,
         (
+            SELECT message_attachments.type
+            FROM message_attachments
+            WHERE message_attachments.messageId = (
+                SELECT messages.id
+                FROM messages
+                WHERE messages.conversationId = conversations.id
+                  AND messages.transportMode != :localMembershipStartedTransportMode
+                ORDER BY messages.createdAtEpochMilliseconds DESC, messages.id DESC
+                LIMIT 1
+            )
+            ORDER BY message_attachments.position ASC
+            LIMIT 1
+        ) AS lastMessageAttachmentType,
+        (
             SELECT messages.createdAtEpochMilliseconds
             FROM messages
             WHERE messages.conversationId = conversations.id

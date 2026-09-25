@@ -127,6 +127,8 @@
     <string name="common_copied">Kopiert</string>
     <string name="feature_chats_you">Du</string>
     <string name="feature_chats_attachment">Anhang</string>
+    <string name="feature_chats_contact_card">Kontaktkarte</string>
+    <string name="feature_chats_voice_message">Sprachnachricht</string>
     <string name="feature_chats_original_message_unavailable">Ursprüngliche Nachricht nicht verfügbar</string>
     <string name="feature_chats_read">Gelesen</string>
     <string name="feature_chats_safety_number_unavailable">Sicherheitsnummer nicht verfügbar</string>
