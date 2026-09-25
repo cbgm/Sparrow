@@ -1,96 +1,67 @@
 # Messaging boundary
 
-Messaging crosses modules, but each module has a narrow job.
+Messaging crosses several modules, but the current code has a deliberate split between **generic queue execution** and **conversation-aware orchestration**.
 
 | Concern | Owner | Representative classes |
 |---|---|---|
-| Packet contracts | `:core:protocol` | `SparrowPacket`, `PacketCodec`, packet data classes |
-| Persistent outbox contract | `:core:protocol` | `ProtocolOutbox`, `OutboxProcessor`, `OutgoingWireSender` |
-| Persistent outbox storage | `:data:database` | `DefaultProtocolOutbox` + Room DAOs |
-| Conversation meaning | `:feature:chats` | Direct/Group repositories, handlers, state machines, `MessagePartDto`/`MessagePart`/`MessagePartUi` |
-| Attachment blob/cache/storage | `:feature:attachments` | `MessageAttachmentDataSource`, `BlobTransferDataSource`, attachment repositories |
-| Media/file platform access | `:feature:media` | gallery/camera/file launchers, media viewer/open/export helpers |
-| Contact/identity packet meaning | `:feature:contacts` | invitation/identity handlers and use cases |
-| Send/receive orchestration | `:feature:messaging` | `DefaultOutboxRunner`, `DefaultOutboxProcessor`, `DefaultIncomingEnvelopeRunner`, `DefaultIncomingEnvelopeProcessor` |
-| Wire connection/discovery | `:feature:transport` | `DefaultTransportConnectionManager`, `DefaultWebSocketTransportClient`, discovery clients |
-| Client edge | `:server:gateway` | `GatewayWebSocketHandler`, `GatewaySessionHandler`, `ConnectionRegistry` |
-| Cross-node forwarding | `:server:federation` | `FederationRouter`, `FederationPeerRouter`, `OutboundEnvelopeRetryAgent` |
-| Offline store | `:server:mailbox` | `configureMailboxRoutes()`, `MailboxStorage`, `PostgresMailboxStore` |
-| Android wake-up | `:server:push` + `:notification` | `PushCoordinator`, `FirebasePushSender`, `SynchronizePendingMessagesUseCase` |
-
-## Attachment boundary
-
-Attachment source/transfer/storage ownership is separate from conversation meaning. `:feature:attachments` prepares and uploads encrypted blobs and exposes source attachment metadata. `:feature:chats` converts that boundary into its own typed `MessagePartDto`/`MessagePart`/`MessagePartUi` representations.
-
-This avoids leaking one generic attachment module model into Direct/Group domain state while still keeping blob behavior centralized. Image, video, file, location and contact all currently use this blob attachment path.
+| Packet contracts/codecs | `:core:protocol` | `SparrowPacket`, `KotlinxPacketCodec`, packet data classes |
+| Persistent outbox contracts/state | `:core:protocol` | `ProtocolOutbox`, outbox state/event types |
+| Persistent outbox storage | `:data:database` | `ProtocolOutboxEntity`, `ProtocolOutboxDao`, `ProtocolOutboxFailureEventEntity` |
+| Generic outbox/incoming execution | `:feature:messaging` | `DefaultOutboxRunner`, `DefaultOutboxProcessor`, `DefaultIncomingEnvelopeRunner` |
+| Cross-feature send/receive policy | `:feature:conversationorchestration` | `OutgoingPacketSender`, `OutgoingRecipientRoutingResolver`, `OutgoingTransportPayloadFactory`, `DefaultIncomingEnvelopeProcessor`, `ConversationFlowHandler` |
+| Conversation semantics | `:feature:chats` | `DirectOutgoingMessageProcessor`, `GroupOutgoingMessageProcessor`, incoming handlers, delivery handlers |
+| Invitation lifecycle | `:feature:invite` | `InvitationRepositoryImpl`, `InvitationLifecycleDataSource`, `InvitationResultObserver` (consumer in orchestration) |
+| Identity/trust/recovery | `:feature:identity` | `IdentityExchangeDataSource`, pending identity changes, approved reconnection repositories/use cases |
+| Group membership/security | `:feature:membership` | `GroupMembershipStateMachine`, `GroupSecurityManager`, membership use cases |
+| Wire/discovery | `:feature:transport` | `DefaultTransportConnectionManager`, `DefaultWebSocketTransportClient`, mailbox/push/control-plane clients |
 
 ## Outgoing boundary
 
 ```mermaid
 sequenceDiagram
-    participant VM as Direct/Group ViewModel
-    participant UC as Send*MessageUseCase
-    participant Repo as Direct/Group message repository
-    participant Proc as Direct/Group outgoing processor
-    participant Outbox as ProtocolOutbox
-    participant Runner as DefaultOutboxRunner
-    participant OP as DefaultOutboxProcessor
-    participant PS as OutgoingPacketSender
-    participant PF as OutgoingTransportPayloadFactory
-    participant RR as OutgoingRecipientRoutingResolver
-    participant Sender as WebSocketOutgoingWireSender
-    participant WS as DefaultWebSocketTransportClient
+    participant CHAT as Chats outgoing processor
+    participant OB as ProtocolOutbox
+    participant RUN as DefaultOutboxRunner
+    participant PROC as DefaultOutboxProcessor
+    participant SEND as OutgoingPacketSender
+    participant POLICY as identity/routing/payload policy
+    participant WIRE as SendEncodedTransportUseCase
+    participant TR as feature:transport
 
-    VM->>UC: send text + attachments
-    UC->>Repo: send(...)
-    Repo->>Proc: create/store/enqueue
-    Proc->>Outbox: enqueue(packet)
-    Runner->>OP: processPending()
-    OP->>PS: send(outbox item)
-    PS->>PF: create transport payload
-    PS->>RR: resolve recipient routing ID
-    PS->>Sender: sendWithAcceptance(...)
-    Sender->>WS: send envelope
+    CHAT->>OB: persist packet
+    RUN->>PROC: process pending item
+    PROC->>SEND: send(ProtocolOutboxItem)
+    SEND->>POLICY: decode, identity-review gate, encrypt, resolve routing
+    SEND->>WIRE: encoded transport payload + routing ID
+    WIRE->>TR: wire delivery
 ```
 
-`DefaultOutboxProcessor` owns outbox state transitions/batching; it does not know Direct/Group conversation semantics and no longer performs packet protection/routing itself. `OutgoingPacketSender` decodes the application packet, asks `OutgoingTransportPayloadFactory` for transport protection, resolves the destination with `OutgoingRecipientRoutingResolver`, and hands the encoded transport payload to `OutgoingWireSender`/`WebSocketOutgoingWireSender`.
+`OutgoingPacketSender` re-checks pending remote identity changes at the final transport boundary, preventing already-persisted Direct application packets from being sent against an old trust state while the user reviews replacement keys.
 
-`OutgoingRecipientRoutingResolver` uses `ContactRoutingDataSource` and `GroupRoutingDataSource` according to the concrete packet type. The outbox processes recipient groups concurrently with a maximum of eight recipient groups at once, while preserving ordering within one recipient group.
+`OutgoingRecipientRoutingResolver` uses contact routing use cases plus `GroupRoutingResolver`; invitations use invitation/bootstrap routing while established Group packets resolve through current Group routing state.
 
 ## Incoming boundary
 
 ```mermaid
 sequenceDiagram
-    participant WS as DefaultWebSocketTransportClient
-    participant G as WebSocketIncomingEnvelopeGateway
-    participant R as DefaultIncomingEnvelopeRunner
-    participant P as DefaultIncomingEnvelopeProcessor
-    participant C as core IncomingMessageHandler
-    participant IP as chats IncomingPacketProcessor
-    participant Router as IncomingPacketRouter
-    participant D as DirectIncomingPacketProcessor
-    participant GR as GroupIncomingPacketProcessor
+    participant TR as WebSocketIncomingEnvelopeGateway
+    participant RUN as DefaultIncomingEnvelopeRunner
+    participant PROC as DefaultIncomingEnvelopeProcessor
+    participant PH as DefaultProtocolPacketHandler
+    participant FLOW as ConversationFlowHandler
+    participant CHAT as IncomingPacketRouter
 
-    WS-->>G: TransportEnvelope
-    G-->>R: queued incoming envelope
-    R->>P: process(envelope)
-    P->>P: resolve sender contact / local keys
-    P->>C: decode secure transport message
-    C->>IP: decoded payload
-    IP->>IP: PacketCodec.decode()
-    IP->>Router: route packet
-    Router->>D: Direct packet
-    Router->>GR: Group packet
-    R-->>WS: acknowledge after successful processing
+    TR-->>RUN: encrypted transport envelope
+    RUN->>PROC: process
+    PROC->>PH: authenticated decoded packet
+    PH->>FLOW: identity/invite/membership/control workflow
+    PH->>CHAT: conversation message/receipt workflow
 ```
 
-The transport layer treats packet bytes as opaque. Packet semantics are decided only after the client has decoded/decrypted them.
+## Attachment/voice/link boundaries
 
-## Direct and Group callbacks
+Attachments own blob transfer/cache/storage and transcripts. Voice builds recording/playback/transcription on that attachment boundary. Link previews are fetched/cached separately from message encryption; the message contains the original text/URL, not trusted server-rendered HTML.
 
-Shared receipts/outbox callbacks are dispatched by narrow routers:
+## Server boundary
 
-- `ReceiptIncomingPacketRouter` → Direct or Group receipt handlers.
-- `ChatOutboxDeliveryStateRouter` → Direct or Group delivery coordinator.
-
-Those routers dispatch only. They do not contain Direct/Group lifecycle rules.
+Gateway/federation/mailbox/push route or store opaque encrypted application payloads. Conversation authorization, Group membership and identity replacement decisions are client concerns.

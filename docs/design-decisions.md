@@ -16,7 +16,7 @@ Reason: attachment transport/storage can evolve independently (including richer 
 
 ## Strict dependency direction inside features
 
-Datasources do not call repositories; repositories do not call other repositories or use cases; use cases do not call other use cases. Cross-boundary workflows are composed by the appropriate higher-level coordinator/caller.
+Datasources do not call repositories, and repositories do not call other repositories. Domain use cases may compose other use cases when that composition is the explicit business workflow; cross-feature composition belongs at an explicit orchestration boundary such as `:feature:conversationorchestration` rather than being hidden inside data-layer dependencies.
 
 Reason: this keeps data access, business operations and orchestration ownership explicit and prevents dependency chains from becoming circular or difficult to test.
 
@@ -56,6 +56,6 @@ Each deployable package exposes one operator/client edge and uses relative `/ind
 
 Normal/debug packages use GitHub variable `CONTROL_PLANE_DIRECTORY_URL`; signed release packages use `CONTROL_PLANE_RELEASE_DIRECTORY_URL`. Both produce the same KMP constant name inside their independent build.
 
-## Incremental release candidates, full tagged releases
+## Release packaging follows current checked-in tooling
 
-`release/**` pushes detect changed paths and only rebuild affected APK/images/bundles. A `v*` tag rebuilds the full application/server package so a published release is a complete reproducible snapshot.
+The current source-verified public server package is the unified `dist/sparrow-server.zip` built by `server/unified/Build-SparrowServer.cmd`. Exact GitHub Actions change-classification behavior must be documented from the workflow files in the release checkout; those workflow files are not present in this source snapshot.

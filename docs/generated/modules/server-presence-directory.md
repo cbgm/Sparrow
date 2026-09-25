@@ -1,34 +1,22 @@
 # `:server:presence-directory`
 
-Generated automatically by `./gradlew architectureReport`.
+Source directory: `server/presence-directory`
 
-## Module information
+## Direct project dependencies
 
-| Property | Value |
-|---|---|
-| Name | `presence-directory` |
-| Group | `server` |
-| Directory | `server/presence-directory` |
-| Build file | `server/presence-directory/build.gradle.kts` |
-| Kotlin files | 8 |
-| Production Kotlin files | 6 |
-| Test Kotlin files | 2 |
-| Resource files | 0 |
-| Direct dependencies | 4 |
-| Direct dependents | 0 |
+- `:server:persistence`
+- `:server:protocol`
+- `:server:security`
+- `:server:observability`
 
-## Source sets
+## Production top-level Kotlin declarations
 
-- `main`
-- `test`
-
-## Dependencies
-
-- [`:server:observability`](../modules/server-observability.md)
-- [`:server:persistence`](../modules/server-persistence.md)
-- [`:server:protocol`](../modules/server-protocol.md)
-- [`:server:security`](../modules/server-security.md)
-
-## Dependents
-
-None.
+| Type | Kind | Source set | Source file |
+|---|---|---|---|
+| `PresenceConfig` | `class` | `main` | `server/presence-directory/src/main/kotlin/com/cbgm/sparrow/server/presence/Application.kt` |
+| `PresenceResult` | `interface` | `main` | `server/presence-directory/src/main/kotlin/com/cbgm/sparrow/server/presence/PresenceStore.kt` |
+| `PresenceRouteKey` | `class` | `main` | `server/presence-directory/src/main/kotlin/com/cbgm/sparrow/server/presence/PresenceRoutes.kt` |
+| `PresenceRuntime` | `class` | `main` | `server/presence-directory/src/main/kotlin/com/cbgm/sparrow/server/presence/PresenceRuntime.kt` |
+| `PresenceStorage` | `interface` | `main` | `server/presence-directory/src/main/kotlin/com/cbgm/sparrow/server/presence/PresenceStore.kt` |
+| `PresenceStore` | `class` | `main` | `server/presence-directory/src/main/kotlin/com/cbgm/sparrow/server/presence/PresenceStore.kt` |
+| `RedisPresenceStore` | `class` | `main` | `server/presence-directory/src/main/kotlin/com/cbgm/sparrow/server/presence/RedisPresenceStore.kt` |

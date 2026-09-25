@@ -1,34 +1,29 @@
 # `:server:mailbox`
 
-Generated automatically by `./gradlew architectureReport`.
+Source directory: `server/mailbox`
 
-## Module information
+## Direct project dependencies
 
-| Property | Value |
-|---|---|
-| Name | `mailbox` |
-| Group | `server` |
-| Directory | `server/mailbox` |
-| Build file | `server/mailbox/build.gradle.kts` |
-| Kotlin files | 11 |
-| Production Kotlin files | 8 |
-| Test Kotlin files | 3 |
-| Resource files | 0 |
-| Direct dependencies | 4 |
-| Direct dependents | 0 |
+- `:server:protocol`
+- `:server:security`
+- `:server:persistence`
+- `:server:observability`
 
-## Source sets
+## Production top-level Kotlin declarations
 
-- `main`
-- `test`
-
-## Dependencies
-
-- [`:server:observability`](../modules/server-observability.md)
-- [`:server:persistence`](../modules/server-persistence.md)
-- [`:server:protocol`](../modules/server-protocol.md)
-- [`:server:security`](../modules/server-security.md)
-
-## Dependents
-
-None.
+| Type | Kind | Source set | Source file |
+|---|---|---|---|
+| `InMemoryMailbox` | `class` | `main` | `server/mailbox/src/main/kotlin/com/cbgm/sparrow/server/mailbox/MailboxStore.kt` |
+| `MailboxAuthorization` | `class` | `main` | `server/mailbox/src/main/kotlin/com/cbgm/sparrow/server/mailbox/PostgresMailboxQueries.kt` |
+| `MailboxConfig` | `class` | `main` | `server/mailbox/src/main/kotlin/com/cbgm/sparrow/server/mailbox/Application.kt` |
+| `MailboxCreationResult` | `interface` | `main` | `server/mailbox/src/main/kotlin/com/cbgm/sparrow/server/mailbox/MailboxStore.kt` |
+| `MailboxCredentials` | `class` | `main` | `server/mailbox/src/main/kotlin/com/cbgm/sparrow/server/mailbox/PostgresMailboxStore.kt` |
+| `MailboxPushNotifier` | `class` | `main` | `server/mailbox/src/main/kotlin/com/cbgm/sparrow/server/mailbox/MailboxPushNotifier.kt` |
+| `MailboxResult` | `interface` | `main` | `server/mailbox/src/main/kotlin/com/cbgm/sparrow/server/mailbox/MailboxStore.kt` |
+| `MailboxRevocationResult` | `interface` | `main` | `server/mailbox/src/main/kotlin/com/cbgm/sparrow/server/mailbox/MailboxStore.kt` |
+| `MailboxStorage` | `interface` | `main` | `server/mailbox/src/main/kotlin/com/cbgm/sparrow/server/mailbox/MailboxStore.kt` |
+| `MailboxStore` | `class` | `main` | `server/mailbox/src/main/kotlin/com/cbgm/sparrow/server/mailbox/MailboxStore.kt` |
+| `PostgresMailboxDatabase` | `class` | `main` | `server/mailbox/src/main/kotlin/com/cbgm/sparrow/server/mailbox/PostgresMailboxDatabase.kt` |
+| `PostgresMailboxDatabaseConfig` | `class` | `main` | `server/mailbox/src/main/kotlin/com/cbgm/sparrow/server/mailbox/PostgresMailboxDatabase.kt` |
+| `PostgresMailboxQueries` | `class` | `main` | `server/mailbox/src/main/kotlin/com/cbgm/sparrow/server/mailbox/PostgresMailboxQueries.kt` |
+| `PostgresMailboxStore` | `class` | `main` | `server/mailbox/src/main/kotlin/com/cbgm/sparrow/server/mailbox/PostgresMailboxStore.kt` |

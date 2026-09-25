@@ -1,50 +1,63 @@
 # Identity
 
-`:feature:identity` owns the local cryptographic identity lifecycle and sharing UI.
+`:feature:identity` owns local cryptographic identity, identity exchange/trust state, encrypted identity backup/restore, remote identity-change review and approved reconnection persistence.
 
-## What an identity contains
+## Core identity
 
-The public identity contains the public encryption/signing keys and profile information required by the protocol. Private keys are kept local.
+Key types include:
 
-Key classes:
-
+- `IdentityRepository` / `IdentityRepositoryImpl`
+- `PublicIdentity`
 - `CreateIdentityUseCase`
-- `IdentityRepositoryImpl`
-- `SodiumIdentityKeyGenerator` in `:core:crypto`
-- `PublicIdentityDataSource` / `SparrowDataStorePublicIdentityDataSource`
-- `PrivateKeyStorage` / `AndroidPrivateKeyStorage`
 - `IdentityLocalEncryptionKeyPairProvider`
 - `IdentityLocalSigningKeyPairProvider`
-- `CreateSharedIdentityUseCase`
-- `DecodeSharedIdentityUseCase`
+- `SodiumIdentityKeyGenerator` in `:core:crypto`
+- `PrivateKeyStorage` / Android private-key storage
+- `LocalIdentityProfileDataSource`
+- `GetLocalPhoneNumberUseCase`, `NormalizeLocalPhoneNumberUseCase`, `SaveLocalPhoneNameUseCase`
 
-## Creation
+The public identity contains the public encryption/signing keys plus public profile metadata needed by the protocol. Private keys stay local except when the user explicitly exports an encrypted identity backup.
 
-```mermaid
-sequenceDiagram
-    participant UI as IdentityViewModel
-    participant UC as CreateIdentityUseCase
-    participant R as IdentityRepositoryImpl
-    participant K as SodiumIdentityKeyGenerator
-    participant PUB as PublicIdentityDataSource
-    participant PRIV as PrivateKeyStorage
+## Identity exchange
 
-    UI->>UC: create identity
-    UC->>R: create
-    R->>K: generate key pairs
-    K-->>R: encryption + signing keys
-    R->>PUB: store public identity
-    R->>PRIV: store private keys securely
-```
+The persisted exchange state machine is implemented by `IdentityExchangeDataSource` and exposed through focused use cases including:
 
-Android private keys are wrapped using an Android Keystore AES key; see [Identity and key storage](../security/identity.md).
+- `StartIdentityExchangeUseCase`
+- `StartManualIdentityExchangeUseCase`
+- `ReceiveIdentityExchangeUseCase`
+- `AcceptIdentityExchangeUseCase`
+- `ReceiveIdentityExchangeAcceptedUseCase`
+- `ReceiveIdentityReadyUseCase`
+- `ReceiveIdentityAcknowledgementUseCase`
+- `EstablishMutualIdentityUseCase`
+- `CloseIdentityExchangeUseCase`
+- `InvalidateIdentityExchangeUseCase`
+- `RecoverIncompleteIdentityUseCase`
+- `RecoverManualIdentityExchangeUseCase`
+
+Cross-feature decisions around invitations/conversations are made by `ConversationFlowHandler`, not inside the identity repository.
+
+## Backup, restore and key replacement
+
+The current code contains a full encrypted backup/restore path and a separate remote-key replacement review/reconnection path. These are documented in detail in [Identity backup, recovery and reconnection](identity-recovery.md).
+
+Important classes include:
+
+- `PrepareIdentityBackupUseCase`, `RestoreIdentityBackupUseCase`
+- `IdentityBackupRepositoryImpl`, `AndroidIdentityBackupCodec`
+- `PendingRemoteIdentityChange`
+- `StagePendingRemoteIdentityChangeUseCase`
+- `ApprovePendingRemoteIdentityChangeUseCase`
+- `ApprovedIdentityReconnection`
+- `ApprovedIdentityReconnectionRepositoryImpl`
+- `ApprovedIdentityReconnectionObserver`
+- `ApprovedReconnectionRetryWorker`
+- `StartRecoveryInvitationUseCase`
 
 ## Sharing/import
 
-`ShareIdentityViewModel` and `CreateSharedIdentityUseCase` create the shareable payload/QR representation. Import/scanning lives in `:feature:contactimport`, which calls `ImportSharedIdentityUseCase` and contact-domain operations.
+`CreateSharedIdentityUseCase`/sharing UI create the shareable representation. Scanning/import lives in `:feature:contactimport`. Importing a public identity does not itself mean the peer is verified or authorized for Direct messaging.
 
-The imported payload is not automatically equivalent to “verified.” Verification is a separate user/security decision.
+## Platform status
 
-## iOS status
-
-Some common identity code and limited iOS platform stubs exist, but the iOS application runtime is not currently usable. Do not interpret these source sets as completed iOS identity persistence/feature parity.
+Android has the production-shaped private-key/backup platform implementations. iOS source-set adapters exist for several contracts, but the iOS application as a whole remains incomplete and should not be described as Android-parity.

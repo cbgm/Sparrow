@@ -1,48 +1,7 @@
-# Architecture Statistics
+# Statistics
 
-Generated automatically by `./gradlew architectureReport`.
+- Gradle modules: **44**
+- Production top-level Kotlin declarations: **1788**
+- Room database schema: **53**
 
-## Summary
-
-| Metric | Count |
-|---|---:|
-| Modules | 40 |
-| Module groups | 11 |
-| Dependency edges | 147 |
-| Modules without project dependencies | 11 |
-| Modules without dependents | 12 |
-| Maximum direct dependencies | 22 |
-| Maximum direct dependents | 17 |
-| Distinct source sets | 7 |
-| Kotlin files | 1446 |
-| Production Kotlin files | 1341 |
-| Test Kotlin files | 105 |
-| Resource files | 53 |
-
-## Modules by group
-
-| Group | Modules |
-|---|---:|
-| androidApp | 1 |
-| core | 5 |
-| data | 3 |
-| feature | 13 |
-| navigation | 1 |
-| notification | 1 |
-| quality | 2 |
-| resources | 1 |
-| server | 11 |
-| shared | 1 |
-| startup | 1 |
-
-## Source-set usage
-
-| Source set | Modules |
-|---|---:|
-| `androidDeviceTest` | 6 |
-| `androidMain` | 21 |
-| `commonMain` | 24 |
-| `commonTest` | 15 |
-| `iosMain` | 10 |
-| `main` | 12 |
-| `test` | 10 |
+Counts are derived from the current source snapshot and intentionally exclude tests.

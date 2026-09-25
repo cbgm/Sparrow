@@ -1,48 +1,313 @@
 # `:feature:chats`
 
-Generated automatically by `./gradlew architectureReport`.
+Source directory: `feature/chats`
 
-## Module information
+## Direct project dependencies
 
-| Property | Value |
-|---|---|
-| Name | `chats` |
-| Group | `feature` |
-| Directory | `feature/chats` |
-| Build file | `feature/chats/build.gradle.kts` |
-| Kotlin files | 316 |
-| Production Kotlin files | 298 |
-| Test Kotlin files | 18 |
-| Resource files | 1 |
-| Direct dependencies | 12 |
-| Direct dependents | 4 |
+- `:core`
+- `:data:datastore`
+- `:core:crypto`
+- `:core:protocol`
+- `:core:ui`
+- `:feature:avatar`
+- `:data:database`
+- `:feature:autoreply`
+- `:feature:contactimport`
+- `:feature:contacts`
+- `:feature:conversationorchestration`
+- `:feature:attachments`
+- `:feature:identity`
+- `:feature:media`
+- `:feature:membership`
+- `:feature:voice`
+- `:feature:linkpreview`
+- `:feature:safety`
+- `:feature:transport`
 
-## Source sets
+## Production top-level Kotlin declarations
 
-- `androidDeviceTest`
-- `androidMain`
-- `commonMain`
-- `commonTest`
-- `iosMain`
-
-## Dependencies
-
-- [`:core`](../modules/core.md)
-- [`:core:crypto`](../modules/core-crypto.md)
-- [`:core:protocol`](../modules/core-protocol.md)
-- [`:core:ui`](../modules/core-ui.md)
-- [`:data:database`](../modules/data-database.md)
-- [`:data:datastore`](../modules/data-datastore.md)
-- [`:feature:attachments`](../modules/feature-attachments.md)
-- [`:feature:contactimport`](../modules/feature-contactimport.md)
-- [`:feature:contacts`](../modules/feature-contacts.md)
-- [`:feature:identity`](../modules/feature-identity.md)
-- [`:feature:media`](../modules/feature-media.md)
-- [`:feature:safety`](../modules/feature-safety.md)
-
-## Dependents
-
-- [`:feature:messaging`](../modules/feature-messaging.md)
-- [`:navigation`](../modules/navigation.md)
-- [`:notification`](../modules/notification.md)
-- [`:shared`](../modules/shared.md)
+| Type | Kind | Source set | Source file |
+|---|---|---|---|
+| `IncomingMessageDataSource` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/datasource/IncomingMessageDataSource.kt` |
+| `MessageHistoryDataSource` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/datasource/MessageHistoryDataSource.kt` |
+| `MessageReactionDataSource` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/datasource/MessageReactionDataSource.kt` |
+| `UnreadableTransportMessageDataSource` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/datasource/UnreadableTransportMessageDataSource.kt` |
+| `DirectConversationDataSource` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/direct/datasource/DirectConversationDataSource.kt` |
+| `DirectDeliveryDataSource` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/direct/datasource/DirectDeliveryDataSource.kt` |
+| `DirectMessageDeliveryCoordinator` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/direct/delivery/DirectMessageDeliveryCoordinator.kt` |
+| `DirectOutboxDeliveryHandler` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/direct/delivery/DirectOutboxDeliveryHandler.kt` |
+| `DirectIncomingPacketProcessor` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/direct/incoming/DirectIncomingPacketProcessor.kt` |
+| `DirectMessageDeletionPacketHandler` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/direct/incoming/handler/DirectMessageDeletionPacketHandler.kt` |
+| `DirectMessageEditPacketHandler` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/direct/incoming/handler/DirectMessageEditPacketHandler.kt` |
+| `DirectMessagePacketHandler` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/direct/incoming/handler/DirectMessagePacketHandler.kt` |
+| `DirectReceiptPacketHandler` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/direct/incoming/handler/DirectReceiptPacketHandler.kt` |
+| `DirectAutomaticOutgoingGate` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/direct/outgoing/DirectAutomaticOutgoingGate.kt` |
+| `DirectOutgoingMessageProcessor` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/direct/outgoing/DirectOutgoingMessageProcessor.kt` |
+| `DirectPendingAuthorizationMessageCoordinator` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/direct/outgoing/DirectPendingAuthorizationMessageCoordinator.kt` |
+| `DirectTargetDto` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/direct/outgoing/DirectOutgoingMessageProcessor.kt` |
+| `DirectConversationRepositoryImpl` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/direct/repository/DirectConversationRepositoryImpl.kt` |
+| `DirectMessageRepositoryImpl` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/direct/repository/DirectMessageRepositoryImpl.kt` |
+| `GroupAvatarBroadcaster` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/avatar/GroupAvatarBroadcaster.kt` |
+| `GroupAvatarPacketProtocol` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/avatar/GroupAvatarPacketProtocol.kt` |
+| `GroupAvatarDataSource` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/datasource/GroupAvatarDataSource.kt` |
+| `GroupAvatarFileDataSource` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/datasource/GroupAvatarFileDataSource.kt` |
+| `GroupConversationContextDto` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/datasource/GroupConversationDataSource.kt` |
+| `GroupConversationDataSource` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/datasource/GroupConversationDataSource.kt` |
+| `GroupConversationHistoryDataSource` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/datasource/GroupConversationHistoryDataSource.kt` |
+| `GroupDescriptionDataSource` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/datasource/GroupDescriptionDataSource.kt` |
+| `GroupIncomingConversationDataSource` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/datasource/GroupIncomingConversationDataSource.kt` |
+| `GroupLocalCleanupDataSource` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/datasource/GroupLocalCleanupDataSource.kt` |
+| `GroupOutgoingMessageDataSource` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/datasource/GroupOutgoingMessageDataSource.kt` |
+| `GroupPinDataSource` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/datasource/GroupPinDataSource.kt` |
+| `GroupRecipientDeliveryDataSource` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/datasource/GroupRecipientDeliveryDataSource.kt` |
+| `GroupTitleDataSource` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/datasource/GroupTitleDataSource.kt` |
+| `GroupTitleSnapshot` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/datasource/GroupTitleDataSource.kt` |
+| `GroupMessageDeliveryCoordinator` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/delivery/GroupMessageDeliveryCoordinator.kt` |
+| `GroupOutboxDeliveryHandler` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/delivery/GroupOutboxDeliveryHandler.kt` |
+| `GroupDescriptionBroadcaster` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/description/GroupDescriptionBroadcaster.kt` |
+| `GroupDescriptionPacketProtocol` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/description/GroupDescriptionPacketProtocol.kt` |
+| `GroupCreatedIncomingProcessor` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/incoming/GroupCreatedIncomingProcessor.kt` |
+| `GroupIncomingPacketPolicy` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/incoming/GroupIncomingPacketPolicy.kt` |
+| `GroupIncomingPacketProcessor` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/incoming/GroupIncomingPacketProcessor.kt` |
+| `GroupPacketHandlerRegistry` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/incoming/GroupPacketHandlerRegistry.kt` |
+| `GroupWelcomePersistence` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/incoming/GroupWelcomePersistence.kt` |
+| `PreviousGroupMembershipDto` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/incoming/GroupWelcomeModels.kt` |
+| `GroupAvatarUpdatedPacketHandler` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/incoming/handler/GroupAvatarUpdatedPacketHandler.kt` |
+| `GroupChatMessagePacketHandler` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/incoming/handler/GroupChatMessagePacketHandler.kt` |
+| `GroupDescriptionUpdatedPacketHandler` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/incoming/handler/GroupDescriptionUpdatedPacketHandler.kt` |
+| `GroupMessageDeletionPacketHandler` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/incoming/handler/GroupMessageDeletionPacketHandler.kt` |
+| `GroupMessageEditPacketHandler` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/incoming/handler/GroupMessageEditPacketHandler.kt` |
+| `GroupPacketHandler` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/incoming/handler/GroupPacketHandler.kt` |
+| `GroupPinUpdatedPacketHandler` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/incoming/handler/GroupPinUpdatedPacketHandler.kt` |
+| `GroupReceiptPacketHandler` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/incoming/handler/GroupReceiptPacketHandler.kt` |
+| `GroupTitleUpdatedPacketHandler` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/incoming/handler/GroupTitleUpdatedPacketHandler.kt` |
+| `GroupLocalMembershipTimelineDto` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/mapper/GroupLocalMembershipTimelineDto.kt` |
+| `GroupMembershipMessageFactory` | `object` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/mapper/GroupMembershipMessageFactory.kt` |
+| `GroupOutgoingMessageProcessor` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/outgoing/GroupOutgoingMessageProcessor.kt` |
+| `GroupPacketBroadcaster` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/outgoing/GroupPacketBroadcaster.kt` |
+| `GroupPinBroadcaster` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/pin/GroupPinBroadcaster.kt` |
+| `GroupPinPacketProtocol` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/pin/GroupPinPacketProtocol.kt` |
+| `GroupAvatarRepositoryImpl` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/repository/GroupAvatarRepositoryImpl.kt` |
+| `GroupConversationRepositoryImpl` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/repository/GroupConversationRepositoryImpl.kt` |
+| `GroupDescriptionRepositoryImpl` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/repository/GroupDescriptionRepositoryImpl.kt` |
+| `GroupKeyRepositoryImpl` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/repository/GroupKeyRepositoryImpl.kt` |
+| `GroupMessageRepositoryImpl` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/repository/GroupMessageRepositoryImpl.kt` |
+| `GroupPinRepositoryImpl` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/repository/GroupPinRepositoryImpl.kt` |
+| `GroupTitleRepositoryImpl` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/repository/GroupTitleRepositoryImpl.kt` |
+| `GroupVerificationRepositoryImpl` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/repository/GroupVerificationRepositoryImpl.kt` |
+| `GroupTitleBroadcaster` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/title/GroupTitleBroadcaster.kt` |
+| `GroupTitlePacketProtocol` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/title/GroupTitlePacketProtocol.kt` |
+| `GroupVerificationDataSource` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/verification/GroupVerificationDataSource.kt` |
+| `GroupVerificationPayloadEncoder` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/group/verification/GroupVerificationPayloadEncoder.kt` |
+| `IncomingPacketProcessor` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/incoming/IncomingPacketProcessor.kt` |
+| `IncomingPacketRouter` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/incoming/IncomingPacketRouter.kt` |
+| `ReceiptIncomingPacketRouter` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/incoming/ReceiptIncomingPacketRouter.kt` |
+| `DecodedIncomingPacketDto` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/model/DecodedIncomingPacketDto.kt` |
+| `ImageVideoTypeDto` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/model/MessagePartDto.kt` |
+| `MessagePartDto` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/model/MessagePartDto.kt` |
+| `ChatsConversationPort` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/orchestration/ChatsConversationPort.kt` |
+| `ChatOutboxDeliveryStateRouter` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/outbox/ChatOutboxDeliveryStateRouter.kt` |
+| `ConversationOverviewDataSource` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/overview/datasource/ConversationOverviewDataSource.kt` |
+| `ConversationOverviewRepositoryImpl` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/overview/repository/ConversationOverviewRepositoryImpl.kt` |
+| `DirectIndicatorRepositoryImpl` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/repository/DirectIndicatorRepositoryImpl.kt` |
+| `GroupIndicatorRepositoryImpl` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/repository/GroupIndicatorRepositoryImpl.kt` |
+| `MessageHistoryRepositoryImpl` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/data/repository/MessageHistoryRepositoryImpl.kt` |
+| `ForwardMessageContent` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/ForwardMessageContent.kt` |
+| `ForwardingTarget` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/ForwardingTarget.kt` |
+| `ImageVideoType` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/MessagePart.kt` |
+| `IndicatorType` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/IndicatorType.kt` |
+| `LocationShareEvent` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/LocationShareState.kt` |
+| `LocationShareState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/LocationShareState.kt` |
+| `LocationShareStateMachine` | `object` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/LocationShareState.kt` |
+| `MessageComposerAvailability` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/MessageComposerAvailability.kt` |
+| `MessageComposerPolicy` | `object` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/MessageComposerAvailability.kt` |
+| `MessageContentStatus` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/MessageContentStatus.kt` |
+| `MessageDeliveryEvent` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/MessageDeliveryEvent.kt` |
+| `MessageDeliveryStatus` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/MessageDeliveryStatus.kt` |
+| `MessageHistoryCursor` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/MessageHistoryCursor.kt` |
+| `MessageHistoryLoadResult` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/MessageHistoryLoadResult.kt` |
+| `MessageHistoryPolicy` | `object` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/MessageHistoryPolicy.kt` |
+| `MessagePart` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/MessagePart.kt` |
+| `MessageReaction` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/MessageReaction.kt` |
+| `MessageSecurity` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/MessageSecurity.kt` |
+| `ContactSecurityState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/direct/ContactSecurityState.kt` |
+| `DirectChatContext` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/direct/DirectChatContext.kt` |
+| `DirectComposerState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/direct/DirectComposerState.kt` |
+| `DirectConversation` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/direct/DirectConversation.kt` |
+| `DirectMessage` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/direct/DirectMessage.kt` |
+| `DirectMessageDeliveryStateMachine` | `object` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/direct/DirectMessageDeliveryStateMachine.kt` |
+| `DirectMessageDispatchResult` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/direct/DirectMessageDispatchResult.kt` |
+| `DirectPendingAuthorizationMessagePolicy` | `object` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/direct/DirectPendingAuthorizationMessagePolicy.kt` |
+| `ChatMessageType` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/group/ChatMessageType.kt` |
+| `GroupAvatar` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/group/GroupAvatar.kt` |
+| `GroupAvatarMetadata` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/group/GroupAvatarMetadata.kt` |
+| `GroupChatContext` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/group/GroupChatContext.kt` |
+| `GroupComposerState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/group/GroupComposerState.kt` |
+| `GroupConversation` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/group/GroupConversation.kt` |
+| `GroupDescription` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/group/GroupDescription.kt` |
+| `GroupDetailsContext` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/group/GroupDetailsContext.kt` |
+| `GroupMessage` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/group/GroupMessage.kt` |
+| `GroupMessageDeliveryStateMachine` | `object` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/group/GroupMessageDeliveryStateMachine.kt` |
+| `GroupPin` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/group/GroupPin.kt` |
+| `GroupPinTarget` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/group/GroupPinTarget.kt` |
+| `GroupVerificationContext` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/group/GroupVerificationState.kt` |
+| `GroupVerificationMembershipStatus` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/group/GroupVerificationState.kt` |
+| `GroupVerificationPair` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/group/GroupVerificationState.kt` |
+| `GroupVerificationState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/group/GroupVerificationState.kt` |
+| `MessageDeliveryProgress` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/group/MessageDeliveryProgress.kt` |
+| `ConversationOverview` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/overview/ConversationOverview.kt` |
+| `ConversationOverviewContext` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/overview/ConversationOverviewContext.kt` |
+| `ConversationOverviewPreview` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/overview/ConversationOverview.kt` |
+| `ConversationOverviewType` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/model/overview/ConversationOverview.kt` |
+| `MessageHistoryRepository` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/repository/MessageHistoryRepository.kt` |
+| `DirectConversationRepository` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/repository/direct/DirectConversationRepository.kt` |
+| `DirectIndicatorRepository` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/repository/direct/DirectIndicatorRepository.kt` |
+| `DirectMessageRepository` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/repository/direct/DirectMessageRepository.kt` |
+| `GroupAvatarRepository` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/repository/group/GroupAvatarRepository.kt` |
+| `GroupConversationRepository` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/repository/group/GroupConversationRepository.kt` |
+| `GroupDescriptionRepository` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/repository/group/GroupDescriptionRepository.kt` |
+| `GroupIndicatorRepository` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/repository/group/GroupIndicatorRepository.kt` |
+| `GroupKeyRepository` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/repository/group/GroupKeyRepository.kt` |
+| `GroupMessageRepository` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/repository/group/GroupMessageRepository.kt` |
+| `GroupPinRepository` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/repository/group/GroupPinRepository.kt` |
+| `GroupTitleRepository` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/repository/group/GroupTitleRepository.kt` |
+| `GroupVerificationActionRepository` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/repository/group/GroupVerificationActionRepository.kt` |
+| `GroupVerificationRepository` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/repository/group/GroupVerificationRepository.kt` |
+| `ConversationOverviewRepository` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/repository/overview/ConversationOverviewRepository.kt` |
+| `FindMessageHistoryCursorUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/FindMessageHistoryCursorUseCase.kt` |
+| `EncodeContactForSharingUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/contact/EncodeContactForSharingUseCase.kt` |
+| `ActivateAuthorizedDirectConversationUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/direct/ActivateAuthorizedDirectConversationUseCase.kt` |
+| `DeleteDirectConversationUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/direct/DeleteDirectConversationUseCase.kt` |
+| `DeleteDirectMessageUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/direct/DeleteDirectMessageUseCase.kt` |
+| `DiscardPendingAuthorizationMessagesUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/direct/DiscardPendingAuthorizationMessagesUseCase.kt` |
+| `EditDirectMessageUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/direct/EditDirectMessageUseCase.kt` |
+| `GetOrCreateDirectConversationUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/direct/GetOrCreateDirectConversationUseCase.kt` |
+| `MarkDirectConversationReadUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/direct/MarkDirectConversationReadUseCase.kt` |
+| `ObserveDirectChatContextUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/direct/ObserveDirectChatContextUseCase.kt` |
+| `ObserveDirectConversationUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/direct/ObserveDirectConversationUseCase.kt` |
+| `ObserveDirectIndicatorUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/direct/ObserveDirectIndicatorUseCase.kt` |
+| `QueueDirectMessageUntilAuthorizedUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/direct/QueueDirectMessageUntilAuthorizedUseCase.kt` |
+| `RetryDirectMessageUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/direct/RetryDirectMessageUseCase.kt` |
+| `SendDirectMessageUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/direct/SendDirectMessageUseCase.kt` |
+| `SendOrQueueDirectMessageUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/direct/SendOrQueueDirectMessageUseCase.kt` |
+| `SetDirectIndicatorUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/direct/SetDirectIndicatorUseCase.kt` |
+| `ToggleDirectMessageReactionUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/direct/ToggleDirectMessageReactionUseCase.kt` |
+| `ForwardDirectMessageUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/forward/ForwardDirectMessageUseCase.kt` |
+| `ForwardMessageUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/forward/ForwardMessageUseCase.kt` |
+| `ForwardToContactUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/forward/ForwardToContactUseCase.kt` |
+| `ForwardToDirectConversationUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/forward/ForwardToDirectConversationUseCase.kt` |
+| `ForwardToGroupConversationUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/forward/ForwardToGroupConversationUseCase.kt` |
+| `LoadOlderMessagesUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/forward/LoadOlderMessagesUseCase.kt` |
+| `PrepareForwardMessageUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/forward/PrepareForwardMessageUseCase.kt` |
+| `AddGroupMembersUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/AddGroupMembersUseCase.kt` |
+| `CreateGroupConversationUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/CreateGroupConversationUseCase.kt` |
+| `DeleteGroupMessageUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/DeleteGroupMessageUseCase.kt` |
+| `EditGroupMessageUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/EditGroupMessageUseCase.kt` |
+| `LoadGroupPinnedAttachmentUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/LoadGroupPinnedAttachmentUseCase.kt` |
+| `MarkGroupConversationReadUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/MarkGroupConversationReadUseCase.kt` |
+| `ObserveGroupChatContextUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/ObserveGroupChatContextUseCase.kt` |
+| `ObserveGroupConversationUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/ObserveGroupConversationUseCase.kt` |
+| `ObserveGroupDetailsContextUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/ObserveGroupDetailsContextUseCase.kt` |
+| `ObserveGroupMemberIndicatorUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/ObserveGroupMemberIndicatorUseCase.kt` |
+| `ObserveGroupVerificationContextUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/ObserveGroupVerificationContextUseCase.kt` |
+| `ObserveGroupVerificationUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/ObserveGroupVerificationUseCase.kt` |
+| `PinGroupMessageUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/PinGroupMessageUseCase.kt` |
+| `RemoveGroupAvatarUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/RemoveGroupAvatarUseCase.kt` |
+| `RetryGroupMessageUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/RetryGroupMessageUseCase.kt` |
+| `SendGroupMessageUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/SendGroupMessageUseCase.kt` |
+| `SetGroupAvatarUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/SetGroupAvatarUseCase.kt` |
+| `SetGroupDescriptionUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/SetGroupDescriptionUseCase.kt` |
+| `SetGroupIndicatorUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/SetGroupIndicatorUseCase.kt` |
+| `SetGroupTitleUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/SetGroupTitleUseCase.kt` |
+| `SynchronizeGroupVerificationUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/SynchronizeGroupVerificationUseCase.kt` |
+| `ToggleGroupMessageReactionUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/ToggleGroupMessageReactionUseCase.kt` |
+| `UnpinGroupMessageUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/UnpinGroupMessageUseCase.kt` |
+| `VerifyGroupMemberUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/group/VerifyGroupMemberUseCase.kt` |
+| `ObserveConversationOverviewContextUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/overview/ObserveConversationOverviewContextUseCase.kt` |
+| `ObserveConversationOverviewsUseCase` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/domain/usecase/overview/ObserveConversationOverviewsUseCase.kt` |
+| `ContactsContent` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/ContactsFlow.kt` |
+| `ContactsFlowViewModel` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/ContactsFlowViewModel.kt` |
+| `MorphingSendButtonShape` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/composer/component/SendButtonShape.kt` |
+| `ComposerAvailabilityUi` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/composer/model/ComposerAvailabilityUi.kt` |
+| `ComposerPreviewUi` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/composer/model/ComposerPreviewUi.kt` |
+| `IndicatorUiState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/composer/model/IndicatorUiState.kt` |
+| `IndicatorUiType` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/composer/model/IndicatorUiState.kt` |
+| `MessageComposerUiState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/composer/model/MessageComposerUiState.kt` |
+| `MessageInputActions` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/composer/model/MessageInputActions.kt` |
+| `MessageInputState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/composer/model/MessageInputState.kt` |
+| `HeaderAvatarKind` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/header/model/HeaderUiModel.kt` |
+| `HeaderUiModel` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/header/model/HeaderUiModel.kt` |
+| `SecurityBannerState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/header/model/SecurityBannerState.kt` |
+| `BubbleState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/component/MessageBubble.kt` |
+| `BurstItemProperties` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/component/MessageReactionBurstOverlay.kt` |
+| `DissolvingMessageListState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/component/MessageDissolve.kt` |
+| `MessageBubbleShape` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/component/MessageBubbleShape.kt` |
+| `PrimaryContent` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/component/MessageBubble.kt` |
+| `DeliveryProgressUi` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/model/MessageBubbleUi.kt` |
+| `HistoryUiModel` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/model/HistoryUiModel.kt` |
+| `ImageVideoTypeUi` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/model/MessagePartUi.kt` |
+| `MessageBubbleUi` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/model/MessageBubbleUi.kt` |
+| `MessageContextAnchor` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/model/MessageContextAnchor.kt` |
+| `MessageContextUiState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/model/MessageContextUiState.kt` |
+| `MessageHistoryUiState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/model/MessageHistoryUiState.kt` |
+| `MessageJumpState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/model/MessageSearchUiState.kt` |
+| `MessagePartUi` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/model/MessagePartUi.kt` |
+| `MessageReactionBurst` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/model/MessageReactionBurst.kt` |
+| `MessageReactionUi` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/model/MessageBubbleUi.kt` |
+| `MessageReplyUi` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/model/MessageBubbleUi.kt` |
+| `MessageSearchTargetState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/common/history/model/MessageSearchUiState.kt` |
+| `CreateGroupViewModel` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/create/CreateGroupViewModel.kt` |
+| `ContactsFlowUiEvent` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/create/model/ContactsFlowUiEvent.kt` |
+| `CreateGroupConversationUiState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/create/model/CreateGroupUiState.kt` |
+| `CreateGroupEffect` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/create/model/CreateGroupEffect.kt` |
+| `CreateGroupUiEvent` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/create/model/CreateGroupUiEvent.kt` |
+| `DetailsContent` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/details/GroupDetailsFlow.kt` |
+| `GroupDetailsPreviewData` | `object` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/details/GroupDetailsPreviewData.kt` |
+| `GroupVerificationViewModel` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/details/GroupVerificationViewModel.kt` |
+| `AddGroupMembersUiEvent` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/details/model/GroupDetailsUiEvent.kt` |
+| `DetailsTarget` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/details/model/DetailsTarget.kt` |
+| `GroupAvatarUiState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/details/model/GroupAvatarUiState.kt` |
+| `GroupDescriptionUiState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/details/model/GroupDescriptionUiState.kt` |
+| `GroupDetailsUiEvent` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/details/model/GroupDetailsUiEvent.kt` |
+| `GroupDetailsUiState` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/details/model/GroupDetailsUiState.kt` |
+| `GroupLeavePrompt` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/details/model/GroupLeaveUiState.kt` |
+| `GroupLeaveUiState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/details/model/GroupLeaveUiState.kt` |
+| `GroupMemberManagementUiState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/details/model/GroupMemberManagementUiState.kt` |
+| `GroupMemberVerificationState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/details/model/GroupVerificationSummaryUiState.kt` |
+| `GroupMemberVerificationUiState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/details/model/GroupVerificationSummaryUiState.kt` |
+| `GroupTitleUiState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/details/model/GroupTitleUiState.kt` |
+| `GroupVerificationSummaryUiState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/details/model/GroupVerificationSummaryUiState.kt` |
+| `GroupVerificationUiState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/details/model/GroupVerificationUiState.kt` |
+| `DirectConversationViewModel` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/direct/DirectConversationViewModel.kt` |
+| `IndicatorController` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/direct/IndicatorController.kt` |
+| `DirectConversationUiEvent` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/direct/model/DirectConversationUiEvent.kt` |
+| `DirectConversationUiState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/direct/model/DirectConversationUiState.kt` |
+| `ForwardingSelectionViewModel` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/forwarding/ForwardingSelectionViewModel.kt` |
+| `ForwardingSelectionEffect` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/forwarding/model/ForwardingSelectionEffect.kt` |
+| `ForwardingSelectionUiEvent` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/forwarding/model/ForwardingSelectionUiEvent.kt` |
+| `ForwardingSelectionUiState` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/forwarding/model/ForwardingSelectionUiState.kt` |
+| `ForwardingTargetUi` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/forwarding/model/ForwardingTargetUi.kt` |
+| `AttachmentSelection` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/group/GroupConversationScreen.kt` |
+| `GroupConversationViewModel` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/group/GroupConversationViewModel.kt` |
+| `IndicatorController` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/group/IndicatorController.kt` |
+| `GroupConversationUiEvent` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/group/model/GroupConversationUiEvent.kt` |
+| `GroupConversationUiState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/group/model/GroupConversationUiState.kt` |
+| `GroupMemberProgressUi` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/group/model/GroupMembershipUiState.kt` |
+| `GroupMembershipUiState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/group/model/GroupMembershipUiState.kt` |
+| `GroupMessageUi` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/group/model/GroupMessageUi.kt` |
+| `OverviewViewModel` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/overview/OverviewViewModel.kt` |
+| `ConversationListItem` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/overview/model/ConversationListItem.kt` |
+| `LastMessagePreviewUi` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/overview/model/ConversationListItem.kt` |
+| `OverviewUiEvent` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/overview/model/OverviewUiEvent.kt` |
+| `OverviewUiState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/overview/model/OverviewUiState.kt` |
+| `GroupMemberQrVerificationViewModel` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/verification/GroupMemberQrVerificationViewModel.kt` |
+| `GroupMemberQrVerificationError` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/verification/model/GroupMemberQrVerificationUiState.kt` |
+| `GroupMemberQrVerificationUiEvent` | `interface` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/verification/model/GroupMemberQrVerificationUiEvent.kt` |
+| `GroupMemberQrVerificationUiState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/presentation/verification/model/GroupMemberQrVerificationUiState.kt` |
+| `GroupVerificationReceiptPacketHandler` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/runtime/group/incoming/GroupVerificationReceiptPacketHandler.kt` |
+| `GroupVerificationSnapshotPacketHandler` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/runtime/group/incoming/GroupVerificationSnapshotPacketHandler.kt` |
+| `GroupVerificationSnapshotRequestPacketHandler` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/runtime/group/incoming/GroupVerificationSnapshotRequestPacketHandler.kt` |
+| `GroupVerificationActionRepositoryImpl` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/runtime/group/verification/GroupVerificationActionRepositoryImpl.kt` |
+| `GroupVerificationCoordinator` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/runtime/group/verification/GroupVerificationCoordinator.kt` |
+| `GroupVerificationSnapshotSender` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/runtime/group/verification/GroupVerificationSnapshotSender.kt` |
+| `GroupVerificationState` | `class` | `commonMain` | `feature/chats/src/commonMain/kotlin/com/cbgm/sparrow/feature/chats/runtime/group/verification/GroupVerificationState.kt` |

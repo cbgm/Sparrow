@@ -1,37 +1,31 @@
 # `:core:embedding`
 
-Generated automatically by `./gradlew architectureReport`.
+Source directory: `core/embedding`
 
-## Module information
+## Direct project dependencies
 
-| Property | Value |
-|---|---|
-| Name | `embedding` |
-| Group | `core` |
-| Directory | `core/embedding` |
-| Build file | `core/embedding/build.gradle.kts` |
-| Kotlin files | 21 |
-| Production Kotlin files | 20 |
-| Test Kotlin files | 1 |
-| Resource files | 0 |
-| Direct dependencies | 2 |
-| Direct dependents | 5 |
+- `:core`
+- `:data:datastore`
 
-## Source sets
+## Production top-level Kotlin declarations
 
-- `androidMain`
-- `commonMain`
-- `commonTest`
-
-## Dependencies
-
-- [`:core`](../modules/core.md)
-- [`:data:datastore`](../modules/data-datastore.md)
-
-## Dependents
-
-- [`:feature:safety`](../modules/feature-safety.md)
-- [`:feature:search`](../modules/feature-search.md)
-- [`:feature:settings`](../modules/feature-settings.md)
-- [`:shared`](../modules/shared.md)
-- [`:startup`](../modules/startup.md)
+| Type | Kind | Source set | Source file |
+|---|---|---|---|
+| `AndroidLocalEmbeddingModelDownloader` | `class` | `androidMain` | `core/embedding/src/androidMain/kotlin/com/cbgm/sparrow/core/embedding/data/platform/AndroidLocalEmbeddingModelDownloader.kt` |
+| `AndroidLocalEmbeddingModelFiles` | `class` | `androidMain` | `core/embedding/src/androidMain/kotlin/com/cbgm/sparrow/core/embedding/data/platform/AndroidLocalEmbeddingModelFiles.kt` |
+| `AndroidLocalEmbeddingModelManager` | `class` | `androidMain` | `core/embedding/src/androidMain/kotlin/com/cbgm/sparrow/core/embedding/data/platform/AndroidLocalEmbeddingModelManager.kt` |
+| `MediaPipeLocalTextEmbedder` | `class` | `androidMain` | `core/embedding/src/androidMain/kotlin/com/cbgm/sparrow/core/embedding/data/platform/MediaPipeLocalTextEmbedder.kt` |
+| `LocalEmbeddingModelDownloadWorker` | `class` | `androidMain` | `core/embedding/src/androidMain/kotlin/com/cbgm/sparrow/core/embedding/work/LocalEmbeddingModelDownloadWorker.kt` |
+| `LocalEmbeddingModel` | `object` | `commonMain` | `core/embedding/src/commonMain/kotlin/com/cbgm/sparrow/core/embedding/data/model/LocalEmbeddingModel.kt` |
+| `EmbeddingInputType` | `class` | `commonMain` | `core/embedding/src/commonMain/kotlin/com/cbgm/sparrow/core/embedding/data/platform/LocalTextEmbedder.kt` |
+| `LocalEmbeddingModelManager` | `interface` | `commonMain` | `core/embedding/src/commonMain/kotlin/com/cbgm/sparrow/core/embedding/data/platform/LocalEmbeddingModelManager.kt` |
+| `LocalTextEmbedder` | `interface` | `commonMain` | `core/embedding/src/commonMain/kotlin/com/cbgm/sparrow/core/embedding/data/platform/LocalTextEmbedder.kt` |
+| `LocalEmbeddingRepositoryImpl` | `class` | `commonMain` | `core/embedding/src/commonMain/kotlin/com/cbgm/sparrow/core/embedding/data/repository/LocalEmbeddingRepositoryImpl.kt` |
+| `LocalEmbeddingSettingsStorage` | `class` | `commonMain` | `core/embedding/src/commonMain/kotlin/com/cbgm/sparrow/core/embedding/data/storage/LocalEmbeddingSettingsStorage.kt` |
+| `LocalEmbeddingFeature` | `class` | `commonMain` | `core/embedding/src/commonMain/kotlin/com/cbgm/sparrow/core/embedding/domain/model/LocalEmbeddingFeature.kt` |
+| `LocalEmbeddingModelState` | `interface` | `commonMain` | `core/embedding/src/commonMain/kotlin/com/cbgm/sparrow/core/embedding/domain/model/LocalEmbeddingModelState.kt` |
+| `LocalEmbeddingState` | `class` | `commonMain` | `core/embedding/src/commonMain/kotlin/com/cbgm/sparrow/core/embedding/domain/model/LocalEmbeddingState.kt` |
+| `LocalEmbeddingRepository` | `interface` | `commonMain` | `core/embedding/src/commonMain/kotlin/com/cbgm/sparrow/core/embedding/domain/repository/LocalEmbeddingRepository.kt` |
+| `InitializeLocalEmbeddingUseCase` | `class` | `commonMain` | `core/embedding/src/commonMain/kotlin/com/cbgm/sparrow/core/embedding/domain/usecase/InitializeLocalEmbeddingUseCase.kt` |
+| `ObserveLocalEmbeddingStateUseCase` | `class` | `commonMain` | `core/embedding/src/commonMain/kotlin/com/cbgm/sparrow/core/embedding/domain/usecase/ObserveLocalEmbeddingStateUseCase.kt` |
+| `SetLocalEmbeddingFeatureEnabledUseCase` | `class` | `commonMain` | `core/embedding/src/commonMain/kotlin/com/cbgm/sparrow/core/embedding/domain/usecase/SetLocalEmbeddingFeatureEnabledUseCase.kt` |
