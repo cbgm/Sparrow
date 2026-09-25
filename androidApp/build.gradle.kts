@@ -22,11 +22,29 @@ val appVersionCode =
     providers
         .gradleProperty("appVersionCode")
         .map(String::toInt)
-        .getOrElse(1)
+        .orElse(
+            providers
+                .environmentVariable("GITHUB_RUN_NUMBER")
+                .map { 10_000 + it.toInt() }
+        )
+        .orElse(
+            providers.exec {
+                commandLine("git", "rev-list", "--count", "HEAD")
+            }.standardOutput.asText
+                .map { 10_000 + it.trim().toInt() }
+        )
+        .getOrElse(10_001)
+
 val appVersionName =
     providers
         .gradleProperty("appVersionName")
-        .getOrElse("1.0")
+        .orElse(
+            providers.exec {
+                commandLine("git", "describe", "--tags", "--abbrev=0")
+            }.standardOutput.asText
+                .map { it.trim().removePrefix("v") }
+        )
+        .getOrElse("1.0.0")
 
 android {
     namespace = "com.cbgm.sparrow"

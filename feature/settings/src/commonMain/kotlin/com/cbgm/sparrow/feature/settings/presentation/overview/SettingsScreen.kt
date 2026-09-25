@@ -632,8 +632,8 @@ fun SettingsScreenPreview() {
                         showLanguagePicker = false,
                         buildInfo =
                             BuildInfo(
-                                versionName = "1.0.0",
-                                versionCode = 1,
+                                versionName = "Preview",
+                                versionCode = 0,
                                 buildType = "debug",
                                 gitSha = null
                             ),
