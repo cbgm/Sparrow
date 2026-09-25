@@ -170,8 +170,6 @@ jobs:
         env:
           IMAGE_PREFIX: ${{ steps.images.outputs.image_prefix }}
           IMAGE_TAG: ${{ steps.images.outputs.image_tag }}
-          CONTROL_PLANE_RELEASE_DIRECTORY_URL: ${{ vars.CONTROL_PLANE_RELEASE_DIRECTORY_URL }}
-          CONTROL_PLANE_DIRECTORY_PUBLIC_KEY: ${{ vars.CONTROL_PLANE_DIRECTORY_PUBLIC_KEY }}
         run: |
           $ErrorActionPreference = 'Stop'
           ./server/unified/New-SparrowServerBundle.ps1 `
