@@ -74,6 +74,17 @@ interface IdentityExchangeRepository {
         wasKnownPeerAtReceive: Boolean
     ): Result<Unit>
 
+    /**
+     * Resume an already-approved incoming identity replacement without publishing a
+     * second actionable incoming invitation. The original signed challenge is reused
+     * and the exchange is persisted directly in its accepted/waiting state.
+     */
+    suspend fun acceptApprovedIncomingExchange(
+        context: IncomingPacketContext,
+        offer: IdentityExchangeOffer,
+        wasKnownPeerAtReceive: Boolean
+    ): Result<Unit>
+
     suspend fun reassignPeer(
         fromPeerId: String,
         toPeerId: String

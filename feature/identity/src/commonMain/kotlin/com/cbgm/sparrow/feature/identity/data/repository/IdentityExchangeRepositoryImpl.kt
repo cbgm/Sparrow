@@ -118,6 +118,12 @@ internal class IdentityExchangeRepositoryImpl(
         wasKnownPeerAtReceive: Boolean
     ): Result<Unit> = dataSource.receiveExchange(context, offer, wasKnownPeerAtReceive)
 
+    override suspend fun acceptApprovedIncomingExchange(
+        context: IncomingPacketContext,
+        offer: IdentityExchangeOffer,
+        wasKnownPeerAtReceive: Boolean
+    ): Result<Unit> = dataSource.acceptApprovedIncomingExchange(context, offer, wasKnownPeerAtReceive)
+
     override suspend fun reassignPeer(
         fromPeerId: String,
         toPeerId: String

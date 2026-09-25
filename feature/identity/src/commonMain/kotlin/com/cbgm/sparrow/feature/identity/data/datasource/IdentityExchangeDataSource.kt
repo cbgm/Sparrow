@@ -592,6 +592,163 @@ internal class IdentityExchangeDataSource(
             }
         }
 
+    /**
+     * Resume the exact signed invitation that produced an explicitly approved identity
+     * replacement. Unlike [receiveExchange], this method never persists
+     * INCOMING_CHALLENGE_RECEIVED, because the user has already approved this offer in
+     * the recovery Mailbox. Publishing that transient state would recreate a second
+     * normal invitation and could race the already-completed handshake.
+     */
+    suspend fun acceptApprovedIncomingExchange(
+        context: IncomingPacketContext,
+        offer: IdentityExchangeOffer,
+        wasKnownPeerAtReceive: Boolean
+    ): Result<Unit> =
+        safeSuspendCall {
+            mutex.withLock {
+                val contactId = context.contactId
+                val now = SystemClock.nowEpochMilliseconds()
+                require(offer.exchangeId.isNotBlank()) { "Invitation ID must not be blank" }
+                require(offer.inviteChallenge.size == CHALLENGE_SIZE) { "Invalid invitation challenge" }
+                require(offer.encryptionPublicKey.size == 32 && offer.signingPublicKey.size == 32) {
+                    "Invalid remote identity keys"
+                }
+                check(offer.createdAtEpochMilliseconds < offer.expiresAtEpochMilliseconds) {
+                    "Invitation lifetime is invalid"
+                }
+                check(offer.expiresAtEpochMilliseconds > now) {
+                    "Approved identity invitation has expired"
+                }
+
+                val pinnedIdentity = requireNotNull(remoteIdentityDataSource.findByPeerId(contactId)) {
+                    "Approved replacement identity is missing"
+                }
+                check(
+                    pinnedIdentity.encryptionPublicKey.contentEquals(offer.encryptionPublicKey) &&
+                        pinnedIdentity.signingPublicKey.contentEquals(offer.signingPublicKey)
+                ) { "Approved invitation no longer matches the pinned contact identity" }
+
+                val localIdentity = localPublicIdentityProvider.getLocalPublicIdentity().getOrThrow()
+                val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
+                requireLocalKeysMatch(localIdentity, signingKeyPair)
+
+                val existing = store.findById(offer.exchangeId)
+                if (existing != null) {
+                    check(existing.direction == IdentityExchangeDirection.INCOMING.name) {
+                        "Approved invitation replay changed its direction"
+                    }
+                    check(existing.contactId == contactId) {
+                        "Approved invitation replay used a different contact"
+                    }
+                    check(existing.createdAtEpochMilliseconds == offer.createdAtEpochMilliseconds) {
+                        "Approved invitation replay changed its creation time"
+                    }
+                    check(existing.expiresAtEpochMilliseconds == offer.expiresAtEpochMilliseconds) {
+                        "Approved invitation replay changed its expiry time"
+                    }
+                    check(existing.inviteChallenge.contentEquals(offer.inviteChallenge)) {
+                        "Approved invitation replay changed its challenge"
+                    }
+                    check(existing.remoteEncryptionPublicKey.contentEquals(offer.encryptionPublicKey)) {
+                        "Approved invitation replay changed its encryption key"
+                    }
+                    check(existing.remoteSigningPublicKey.contentEquals(offer.signingPublicKey)) {
+                        "Approved invitation replay changed its signing key"
+                    }
+
+                    when (existing.stage) {
+                        IdentityExchangeStage.MUTUAL_UNVERIFIED.name -> return@withLock
+                        IdentityExchangeStage.ACCEPTANCE_SENT.name,
+                        IdentityExchangeStage.WAITING_FOR_READY.name -> {
+                            queueAcceptanceReplay(
+                                existing.copy(
+                                    localEncryptionPublicKey = localIdentity.encryptionPublicKey.copyOf(),
+                                    localSigningPublicKey = localIdentity.signingPublicKey.copyOf()
+                                )
+                            )
+                            return@withLock
+                        }
+                        IdentityExchangeStage.EXCHANGE_INVALIDATED.persistedValue,
+                        IdentityExchangeStage.INCOMING_CHALLENGE_RECEIVED.name -> Unit
+                        else -> error(
+                            "Approved identity invitation cannot resume from state ${existing.stage}"
+                        )
+                    }
+                }
+
+                // The key cutover has already happened transactionally. Re-apply only
+                // the normal incoming-handshake metadata for the exact pinned keys.
+                if (offer.autoSharesIdentity) {
+                    stageIncomingInvitationIdentity(
+                        contactId = contactId,
+                        remoteEncryptionPublicKey = offer.encryptionPublicKey,
+                        remoteSigningPublicKey = offer.signingPublicKey
+                    )
+                    remoteIdentityDataSource.accept(
+                        peerId = contactId,
+                        encryptionPublicKey = offer.encryptionPublicKey,
+                        signingPublicKey = offer.signingPublicKey
+                    )
+                }
+
+                val responseChallenge =
+                    existing?.responseChallenge?.copyOf()
+                        ?: secureRandomGenerator.generateBytes(CHALLENGE_SIZE).getOrThrow()
+                val profilePicture =
+                    localProfilePictureMetadataProvider.forInvite().getOrElse { ProfilePictureMetadata() }
+                val packet = invitationHandshakeProtocol.createAccepted(
+                    invitationId = offer.exchangeId,
+                    acceptedAtEpochMilliseconds = now,
+                    profilePicture = profilePicture,
+                    inviteChallenge = offer.inviteChallenge,
+                    responseChallenge = responseChallenge,
+                    inviterEncryptionPublicKey = offer.encryptionPublicKey,
+                    inviterSigningPublicKey = offer.signingPublicKey,
+                    responderEncryptionPublicKey = localIdentity.encryptionPublicKey,
+                    signingKeyPair = signingKeyPair,
+                    autoSharesIdentity = sharesIdentityAutomatically()
+                ).getOrThrow()
+
+                val accepted = IdentityExchangeEntity(
+                    exchangeId = offer.exchangeId,
+                    contactId = contactId,
+                    direction = IdentityExchangeDirection.INCOMING.name,
+                    stage = IdentityExchangeStage.ACCEPTANCE_SENT.name,
+                    remoteDisplayName = existing?.remoteDisplayName,
+                    inviteChallenge = offer.inviteChallenge.copyOf(),
+                    responseChallenge = responseChallenge.copyOf(),
+                    remoteEncryptionPublicKey = offer.encryptionPublicKey.copyOf(),
+                    remoteSigningPublicKey = offer.signingPublicKey.copyOf(),
+                    createdAtEpochMilliseconds = offer.createdAtEpochMilliseconds,
+                    expiresAtEpochMilliseconds = offer.expiresAtEpochMilliseconds,
+                    updatedAtEpochMilliseconds = now,
+                    lastError = null,
+                    localEncryptionPublicKey = localIdentity.encryptionPublicKey.copyOf(),
+                    localSigningPublicKey = localIdentity.signingPublicKey.copyOf(),
+                    wasKnownPeerAtReceive = existing?.wasKnownPeerAtReceive ?: wasKnownPeerAtReceive
+                )
+                // Persist the response challenge before transport. A retry can only
+                // resend this same acceptance; it cannot mint another normal invite.
+                store.upsert(accepted)
+                enqueueOrResend(contactId, packet).getOrElse { error ->
+                    store.upsert(
+                        accepted.copy(
+                            updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
+                            lastError = error.message
+                        )
+                    )
+                    throw error
+                }
+                store.upsert(
+                    accepted.copy(
+                        stage = IdentityExchangeStage.WAITING_FOR_READY.name,
+                        updatedAtEpochMilliseconds = SystemClock.nowEpochMilliseconds(),
+                        lastError = null
+                    )
+                )
+            }
+        }
+
     suspend fun receiveAccepted(
         context: IncomingPacketContext,
         acceptance: IdentityExchangeAcceptance

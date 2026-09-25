@@ -353,9 +353,9 @@ internal class ConversationFlowHandler(
                 transportMode = "approved-local-proposal",
                 receivedAtEpochMilliseconds = approval.approvedAtEpochMilliseconds
             )
-            receiveIdentityExchange(
-                context,
-                IdentityExchangeOffer(
+            receiveIdentityExchange.acceptApproved(
+                context = context,
+                offer = IdentityExchangeOffer(
                     exchangeId = approval.approvalId,
                     createdAtEpochMilliseconds = createdAt,
                     expiresAtEpochMilliseconds = expiresAt,
@@ -366,9 +366,13 @@ internal class ConversationFlowHandler(
                 ),
                 wasKnownPeerAtReceive = true
             ).getOrThrow()
-            acceptIdentityExchange(approval.approvalId).getOrThrow()
-            // DO NOT call activateAuthorizedConversation here. The new recipient's
-            // READY/identity result (bound to this exchange) does that later.
+            // Clean up a stale normal Mailbox row created by an older recovery build.
+            // New approvals never create this row, but existing installations may
+            // already have one persisted under the original invitation ID.
+            invalidatePendingInvitation(approval.approvalId).getOrThrow()
+            // The approved path never publishes INCOMING_CHALLENGE_RECEIVED, so the
+            // Identity result observer cannot recreate this recovery as a normal invite.
+            // READY/identity completion still activates the existing conversation later.
         }
 
     /**

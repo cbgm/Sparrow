@@ -12,4 +12,14 @@ class ReceiveIdentityExchangeUseCase(
         offer: IdentityExchangeOffer,
         wasKnownPeerAtReceive: Boolean
     ): Result<Unit> = repository.receiveExchange(context, offer, wasKnownPeerAtReceive)
+
+    /**
+     * Resume an identity-change invitation that the user already approved. This path
+     * must never expose the original challenge as another normal Mailbox invitation.
+     */
+    suspend fun acceptApproved(
+        context: IncomingPacketContext,
+        offer: IdentityExchangeOffer,
+        wasKnownPeerAtReceive: Boolean
+    ): Result<Unit> = repository.acceptApprovedIncomingExchange(context, offer, wasKnownPeerAtReceive)
 }
