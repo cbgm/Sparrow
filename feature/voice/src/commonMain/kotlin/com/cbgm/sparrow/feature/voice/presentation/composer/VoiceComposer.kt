@@ -47,12 +47,12 @@ fun VoiceComposer(
         modifier =
             modifier
                 .height(Dimens.MessageInput.composerHeight)
-                .clip(MaterialTheme.shapes.large)
+                .clip(MaterialTheme.shapes.medium)
                 .background(MaterialTheme.colorScheme.surfaceContainerLow)
                 .border(
                     Dimens.Base.borderStrokeWidth,
                     MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
-                    MaterialTheme.shapes.large
+                    MaterialTheme.shapes.medium
                 )
                 .padding(horizontal = MaterialTheme.spacing.small),
         verticalAlignment = Alignment.CenterVertically

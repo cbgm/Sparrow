@@ -117,7 +117,7 @@ private fun MessageField(
         onValueChange = onMessageTextChanged,
         modifier = modifier
             .heightIn(
-                min = Dimens.MessageInput.messageFieldHeight,
+                min = Dimens.MessageInput.composerHeight,
                 max = Dimens.MessageInput.messageFieldHeightMax
             )
             .background(

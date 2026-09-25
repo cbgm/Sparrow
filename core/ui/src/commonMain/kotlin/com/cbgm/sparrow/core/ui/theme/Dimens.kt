@@ -103,10 +103,9 @@ object Dimens {
 
     object MessageInput {
         val sendButtonWidth = 42.dp
-        val messageFieldHeight = 30.dp
         val messageFieldHeightMax = 300.dp
-        val buttonHeight = 29.dp
-        val composerHeight = 30.5.dp
+        val buttonHeight = 32.dp
+        val composerHeight = 34.dp
         val overlap = 10.dp
         val iconSize = 16.dp
     }
