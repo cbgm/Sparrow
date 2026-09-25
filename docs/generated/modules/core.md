@@ -1,49 +1,32 @@
 # `:core`
 
-Generated automatically by `./gradlew architectureReport`.
+Source directory: `core`
 
-## Module information
+## Direct project dependencies
 
-| Property | Value |
-|---|---|
-| Name | `core` |
-| Group | `core` |
-| Directory | `core` |
-| Build file | `core/build.gradle.kts` |
-| Kotlin files | 18 |
-| Production Kotlin files | 18 |
-| Test Kotlin files | 0 |
-| Resource files | 1 |
-| Direct dependencies | 0 |
-| Direct dependents | 17 |
+None detected.
 
-## Source sets
+## Production top-level Kotlin declarations
 
-- `androidMain`
-- `commonMain`
-- `commonTest`
-- `iosMain`
-
-## Dependencies
-
-None.
-
-## Dependents
-
-- [`:core:embedding`](../modules/core-embedding.md)
-- [`:core:protocol`](../modules/core-protocol.md)
-- [`:data:database`](../modules/data-database.md)
-- [`:feature:attachments`](../modules/feature-attachments.md)
-- [`:feature:chats`](../modules/feature-chats.md)
-- [`:feature:contactimport`](../modules/feature-contactimport.md)
-- [`:feature:contacts`](../modules/feature-contacts.md)
-- [`:feature:identity`](../modules/feature-identity.md)
-- [`:feature:media`](../modules/feature-media.md)
-- [`:feature:messaging`](../modules/feature-messaging.md)
-- [`:feature:safety`](../modules/feature-safety.md)
-- [`:feature:search`](../modules/feature-search.md)
-- [`:feature:settings`](../modules/feature-settings.md)
-- [`:feature:transport`](../modules/feature-transport.md)
-- [`:navigation`](../modules/navigation.md)
-- [`:notification`](../modules/notification.md)
-- [`:shared`](../modules/shared.md)
+| Type | Kind | Source set | Source file |
+|---|---|---|---|
+| `ApplicationCoroutineScope` | `class` | `commonMain` | `core/src/commonMain/kotlin/com/cbgm/sparrow/core/coroutines/ApplicationCoroutineScope.kt` |
+| `IdGenerator` | `object` | `commonMain` | `core/src/commonMain/kotlin/com/cbgm/sparrow/core/id/IdGenerator.kt` |
+| `ChatOpenTrace` | `object` | `commonMain` | `core/src/commonMain/kotlin/com/cbgm/sparrow/core/logging/ChatOpenTrace.kt` |
+| `KermitSparrowLogger` | `class` | `commonMain` | `core/src/commonMain/kotlin/com/cbgm/sparrow/core/logging/SparrowLogger.kt` |
+| `SparrowLog` | `object` | `commonMain` | `core/src/commonMain/kotlin/com/cbgm/sparrow/core/logging/SparrowLogger.kt` |
+| `SparrowLogger` | `interface` | `commonMain` | `core/src/commonMain/kotlin/com/cbgm/sparrow/core/logging/SparrowLogger.kt` |
+| `StartupTrace` | `object` | `commonMain` | `core/src/commonMain/kotlin/com/cbgm/sparrow/core/logging/StartupTrace.kt` |
+| `SystemClock` | `object` | `commonMain` | `core/src/commonMain/kotlin/com/cbgm/sparrow/core/time/SystemClock.kt` |
+| `ControlPlaneConfiguration` | `interface` | `commonMain` | `core/src/commonMain/kotlin/com/cbgm/sparrow/core/transport/ControlPlaneConfiguration.kt` |
+| `ControlPlaneDirectorySynchronizer` | `interface` | `commonMain` | `core/src/commonMain/kotlin/com/cbgm/sparrow/core/transport/ControlPlaneConfiguration.kt` |
+| `ControlPlaneEndpoint` | `class` | `commonMain` | `core/src/commonMain/kotlin/com/cbgm/sparrow/core/transport/ControlPlaneConfiguration.kt` |
+| `ControlPlaneEndpointStatus` | `class` | `commonMain` | `core/src/commonMain/kotlin/com/cbgm/sparrow/core/transport/ControlPlaneConfiguration.kt` |
+| `ControlPlaneHealthMonitor` | `interface` | `commonMain` | `core/src/commonMain/kotlin/com/cbgm/sparrow/core/transport/ControlPlaneConfiguration.kt` |
+| `ControlPlaneReachability` | `class` | `commonMain` | `core/src/commonMain/kotlin/com/cbgm/sparrow/core/transport/ControlPlaneConfiguration.kt` |
+| `ControlPlaneStatusStore` | `interface` | `commonMain` | `core/src/commonMain/kotlin/com/cbgm/sparrow/core/transport/ControlPlaneConfiguration.kt` |
+| `TransportDiagnosticConnectionState` | `class` | `commonMain` | `core/src/commonMain/kotlin/com/cbgm/sparrow/core/transport/TransportDiagnostics.kt` |
+| `TransportDiagnostics` | `class` | `commonMain` | `core/src/commonMain/kotlin/com/cbgm/sparrow/core/transport/TransportDiagnostics.kt` |
+| `TransportDiagnosticsProvider` | `interface` | `commonMain` | `core/src/commonMain/kotlin/com/cbgm/sparrow/core/transport/TransportDiagnostics.kt` |
+| `TransportNodeDiagnostic` | `class` | `commonMain` | `core/src/commonMain/kotlin/com/cbgm/sparrow/core/transport/TransportDiagnostics.kt` |
+| `TransportNodeDiagnosticState` | `class` | `commonMain` | `core/src/commonMain/kotlin/com/cbgm/sparrow/core/transport/TransportDiagnostics.kt` |

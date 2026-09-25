@@ -168,144 +168,103 @@ git push origin v0.1.0
 
 The tag must point at the exact release-branch commit whose candidate was tested. A `v*` tag triggers the complete release build described below.
 
-## Every push to `release/**`
+## Release automation present in this source snapshot
 
-`.github/scripts/resolve-release-changes.sh` classifies the diff.
+The source archive used for this documentation audit does **not** contain the repository `.github/workflows` directory. Therefore this documentation does not pretend to verify the exact current GitHub Actions trigger/change-classification implementation from this ZIP alone.
 
-| Changed files | Artifacts |
-|---|---|
-| client/shared/features/resources | debug APK + signed release APK |
-| `server/node-registry/**` | node-registry image + Control Plane bundle |
-| `server/presence-directory/**` | presence image + Control Plane bundle |
-| `server/push/**` | push image + Control Plane bundle |
-| `server/gateway/**` | gateway image + Community Node bundle |
-| `server/federation/**` | federation image + Community Node bundle |
-| `server/mailbox/**` | mailbox image + Community Node bundle |
-| shared server protocol/security/persistence/observability | all server images + both bundles |
-| Control Plane launcher/Caddy/compose only | Control Plane bundle only |
-| Community Node launcher/Caddy/compose only | Community Node bundle only |
-| docs only | validation only; no distributable artifact |
-| build/release infrastructure | conservative full artifact build |
+What **is** directly verifiable in the source is the current Android build configuration, server Dockerfiles/Compose definitions and the unified public server-bundle builder under `server/unified`.
 
-The first push of a new release line has no useful previous release-line SHA and therefore bootstraps a full build.
+If the CI workflow in GitHub is changed, keep this page synchronized with the checked-in workflow files in the repository used for release.
 
-Unchanged server images are not unnecessarily rebuilt. The workflow can copy existing image manifests to the new
-immutable candidate tag so a launcher bundle still references one reproducible tag across all services.
+## Current public server bundle
 
-## Candidate versions
+The current server distribution path is a **single unified server bundle**, not separate public Control Plane and Community Node packages.
 
-A branch such as `release/0.1` produces versions similar to:
+Build from the repository root on Windows:
 
 ```text
-0.1-rc.<github-run-number>-<short-sha>
+server\unified\Build-SparrowServer.cmd
 ```
 
-and immutable image tags similar to:
+That wrapper invokes `server/unified/New-SparrowServerBundle.ps1` and produces:
 
 ```text
-release-0-1-sha-<short-sha>
+dist/sparrow-server.zip
 ```
 
-A moving `release-0-1` image tag represents the current release line; immutable candidate tags preserve exact
-candidate contents.
+The bundle contains the cross-platform runtime/manager scripts plus the Control Plane and Community Node Compose/Caddy configuration needed by the unified manager. It does not contain live deployment secrets or state.
 
-## What builds in common examples
+Important bundled entry points include:
 
-App-only change (`feature/chats/**`, `shared/**`, etc.):
+- `Start-SparrowServer.ps1`
+- `Start-SparrowServer.sh`
+- `Start-SparrowServer.command`
+- `Invoke-SparrowServer.ps1` / `.py`
+- `Manage-SparrowNodes.ps1` / `.py`
+- the Control Plane and Community Node Compose/Caddy templates
+- signed-directory client/registration helpers used by the public runtime
+- shared-public-proxy definitions used by public Combined deployments
+
+The Windows bundle also exposes `Start-SparrowServer.cmd` as the normal GUI entry point after packaging.
+
+## Server bundle exclusion: private Control Plane Directory
+
+`server/control-plane-directory` is **operator-only** infrastructure. `New-SparrowServerBundle.ps1` explicitly documents that it must never copy that directory or server identities/secrets into the public unified bundle.
+
+Therefore these are **not public Sparrow server release assets**:
+
+- the independent directory's private installer;
+- its administrator CLI/token;
+- its signing key or SQLite state;
+- the persistent `sparrow-central-directory-state` volume.
+
+The public unified runtime may contain directory **client** helpers, because nodes/Control Planes need to consume/register with a separately operated signed directory. That is different from shipping the directory server itself.
+
+## Server image builds
+
+Executable Ktor services are built with the shared `server/Dockerfile` using a `SERVICE` build argument. Current Gradle server modules are:
 
 ```text
-✓ debug APK
-✓ signed release APK
-✗ server image rebuilds
-✗ unrelated launcher bundles
+:server:node-registry
+:server:presence-directory
+:server:gateway
+:server:federation
+:server:mailbox
+:server:push
+:server:link-preview
 ```
 
-Push-service-only change:
+They share `:server:protocol`, `:server:security`, `:server:persistence` and `:server:observability` as appropriate.
+
+The unified manager is designed to pull/update selected Sparrow backend images while preserving an intact installation's stateful PostgreSQL/Redis/Caddy resources, generated secrets and identities. That lifecycle behavior does not remove the need for a verified backup before an upgrade that may run database migrations.
+
+## Android release APK
+
+The Android application build uses the `androidApp` release configuration. Release signing requires the keystore material described earlier on this page. Release builds use the configured R8/resource-shrinking rules from the Android Gradle build.
+
+Before publishing, preserve the release signing keystore independently. If obfuscation is enabled for the release variant, archive the generated mapping file privately for stack-trace de-obfuscation rather than publishing it with the app.
+
+## What should be attached to a tagged release
+
+The exact GitHub workflow must remain the source of truth for automated release assets. From the current repository tooling, the public server asset is expected to be the unified:
 
 ```text
-✓ push image
-✓ Control Plane bundle that references the new candidate tag
-✗ Android APKs
-✗ Community Node bundle
+sparrow-server.zip
 ```
 
-Community Node Caddy/launcher-only change:
+plus its checksum when produced by release automation. Android APK/AAB assets and checksums should correspond to the exact tagged commit. Do not document or publish the private `server/control-plane-directory` installer as part of the normal public bundle.
 
-```text
-✓ Community Node bundle
-✗ gateway/federation/mailbox image rebuilds
-✗ Android APKs
-```
+## Release verification checklist
 
-A shared server-security/protocol change conservatively rebuilds all server images and both server bundles.
+Before tagging/publishing:
 
-## What tagging a full release does
+1. Verify the tag points at the tested release-branch commit.
+2. Build/test the Android release variant with the production discovery configuration.
+3. Build `dist/sparrow-server.zip` from the same source revision.
+4. Inspect the ZIP to ensure no deployment secrets, identities, Firebase credentials, `.env.runtime`, or `server/control-plane-directory` server/admin files are present.
+5. Verify server image tags/digests referenced by the released runtime are immutable/reproducible for that release.
+6. Back up production server state before applying new backend images or migrations.
+7. Keep release APK mapping/signing material private and backed up.
+8. Verify checksums after artifact upload/download.
 
-Use the exact tagging commands from the complete release sequence above. The supported tag forms include prerelease versions such as `v0.1.0-alpha.1` and stable versions such as `v0.1.0`.
-
-A `v*` tag **forces a complete build**, regardless of change detection:
-
-- debug APK;
-- signed release APK;
-- all server images;
-- Control Plane launcher package;
-- Community Node Windows package;
-- Community Node macOS/Linux package;
-- checksums and release metadata;
-- combined full ZIP;
-- GitHub Release/Pre-Release.
-
-Tags with a suffix such as `-alpha.1` are published as prereleases. A plain semantic version is published as a
-normal release. The workflow verifies that the tagged commit belongs to a `release/**` branch; do not tag an arbitrary
-feature/develop/master commit and expect it to publish.
-
-After the workflow succeeds, open the repository's **Releases** page. GitHub shows the individual assets plus the
-combined full ZIP. GitHub also adds its normal source-code ZIP/tarball automatically; those source archives are not the
-same thing as Sparrow's packaged `sparrow-<version>-full.zip`.
-
-## Full ZIP
-
-The GitHub release includes individual assets and:
-
-```text
-sparrow-<version>-full.zip
-```
-
-Conceptually:
-
-```text
-Sparrow-<version>/
-├── app/
-│   ├── sparrow-<version>-debug.apk
-│   └── sparrow-<version>-release.apk
-├── control-plane/
-│   └── sparrow-control-plane-<version>-windows.zip
-├── community-node/
-│   ├── sparrow-community-node-<version>-windows.zip
-│   └── sparrow-community-node-<version>-macos-linux.tar.gz
-├── RELEASE.txt
-├── MANIFEST.txt
-└── SHA256SUMS.txt
-```
-
-The outer GitHub release also has checksums including the full ZIP itself.
-
-## Release APK optimization
-
-Release builds use:
-
-```text
-R8 minification = enabled
-resource shrinking = enabled
-optimized default ProGuard configuration
-```
-
-Debug builds remain unminified.
-
-`mapping.txt` is uploaded as a private GitHub Actions artifact for 90 days so obfuscated stack traces can be
-de-obfuscated. It is deliberately not published in the public release/full ZIP.
-
-## Docker images and launcher packages
-
-Launcher bundles contain Compose/Caddy/config/launcher files, not six duplicated server binaries. They pull the
-versioned images from GHCR. Full release tags therefore bind launcher packages to exact server image versions.
+See [Server runtime, build and deployment](../server/runtime-build-deployment.md) for the operational model implemented by the current scripts.

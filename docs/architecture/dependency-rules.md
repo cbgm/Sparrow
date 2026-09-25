@@ -1,8 +1,8 @@
 # Dependency rules
 
-The project combines Gradle module boundaries, Clean Architecture conventions, Detekt and generated architecture reports to keep dependencies understandable.
+The current architecture is enforced primarily through Gradle module boundaries and the repository/datasource/use-case conventions below.
 
-## Current module families
+## Module families
 
 ```text
 androidApp
@@ -18,54 +18,43 @@ server/*
 quality/*
 ```
 
-The exact module list is generated from `settings.gradle.kts`; see [Generated architecture](../generated/index.md).
+## Current rules
 
-## Rules that matter in daily work
+1. **Keep `androidApp` thin.** Platform implementations belong in the owning feature/core module's platform source set.
+2. **Presentation calls domain use cases.** ViewModels should not reach directly into DAOs, datasources or repository implementations.
+3. **Use-case composition is allowed.** A use case may call another use case when it is the explicit workflow/orchestration boundary. `ConversationFlowHandler` and recovery/membership workflows rely on this.
+4. **Repositories do not call unrelated repositories or use cases.** Repository implementations own their own datasources/mappers; cross-feature workflows belong above repositories.
+5. **Datasources do not call repositories.** Datasources face storage/network/platform primitives.
+6. **Feature ownership remains strict.** `:feature:invite` owns invitation lifecycle, `:feature:identity` identity/trust/recovery, `:feature:membership` Group membership/security, `:feature:chats` conversation/message semantics.
+7. **Cross-feature workflows belong in `:feature:conversationorchestration`.** Do not move membership logic back into Chats or identity logic into Invite.
+8. **`:feature:messaging` stays generic.** It executes the persisted outbox/incoming queue and must not decide Direct-vs-Group business rules.
+9. **Domain is implementation-independent.** No Compose/Room/Ktor implementation/platform framework imports in common domain code.
+10. **Representation suffixes are meaningful.** `...Entity` = persistence, `...Dto` = data representation, unsuffixed = domain, `...Ui` = presentation.
+11. **Mapper names identify their destination** (`toXDto()`, `toX()`, `toXUi()`).
+12. **Direct and Group paths stay separate** where their semantics differ.
+13. **Attachment ownership stays explicit.** Attachments own blob/source/cache/transcript concerns; Chats maps them into message content representations.
+14. **Server applications are independent.** Server services communicate through HTTP/protocol boundaries and shared low-level server modules, not by importing each other's application internals.
+15. **No dependency cycles.** A lower-level module must not reach upward for convenience.
 
-1. **Keep `androidApp` thin.** Platform implementations belong in the platform source set of the module that owns the responsibility.
-2. **ViewModels use use cases.** They do not reach directly into repository implementations, DAOs, datasources or HTTP gateways.
-3. **Use cases do not call use cases.** A use case may coordinate one or more repository contracts, but use-case chaining is not the orchestration model.
-4. **Repositories do not call repositories or use cases.** A repository implementation owns its datasources/mappers; cross-repository workflows belong above repository implementations.
-5. **Datasources do not call repositories.** Dependency direction never points back upward from datasource to repository.
-6. **Domain is implementation-independent.** No Compose, Room, Ktor implementation or platform framework imports in common domain code.
-7. **Data representation models are DTOs.** Actual data-layer models use `...Dto`; Room persistence models stay `...Entity`.
-8. **Mapper names identify the destination.** Use `toNameDto()`, `toName()` and `toNameUi()` for data/domain/presentation targets.
-9. **Presentation models end in `Ui`.** Do not use `UiModel`/`Model` for presentation state types when the type is a UI representation.
-10. **Repository packages contain repositories.** Coordinators/state machines/mappers/storage helpers belong in packages named for their responsibility.
-11. **Platform code stays out of `commonMain`.** Platform adapters live in `androidMain`/`iosMain` under the owning top-level responsibility such as `device`.
-12. **Keep small architecture packages flat.** Do not create speculative nested categories inside model/mapper/repository/datasource/usecase packages.
-13. **Direct and Group paths stay separate.** Similar method names are not enough reason to merge semantics.
-14. **Attachment ownership stays explicit.** `:feature:attachments` owns attachment source/transfer/cache/storage; chats maps that boundary into its own `MessagePartDto`/`MessagePart`/`MessagePartUi` representations.
-15. **Server applications are independent.** Gateway, federation, mailbox, push, registry and presence communicate through HTTP/protocol boundaries rather than service implementation imports.
-16. **No dependency cycles.** A lower-level module must not reach upward just for convenience.
-17. **Generated architecture docs are generated.** Run the task instead of editing `docs/generated/` by hand.
-
-## Useful dependency picture
+## Correct orchestration example
 
 ```mermaid
-flowchart TD
-    A[androidApp] --> S[shared]
-    S --> NAV[navigation]
-    S --> START[startup]
-    S --> FEATURES[feature/*]
-    FEATURES --> CORE[core/*]
-    FEATURES --> DB[data/database]
-    DB --> CORE
-    NAV --> FEATURES
-
-    SG[server gateway/federation/mailbox/...] --> SP[server:protocol]
-    SG --> SS[server:security]
-    SG --> SO[server:observability]
-    SG --> PERSIST[server:persistence]
+flowchart LR
+    UI[ViewModel] --> UC[Use case]
+    UC --> FLOW[ConversationFlowHandler]
+    FLOW --> IUC[Invite use case]
+    FLOW --> IDUC[Identity use case]
+    FLOW --> MUC[Membership use case]
+    FLOW --> PORT[ConversationPort]
 ```
 
-This diagram is deliberately simplified; use `./gradlew architectureReport` for the actual graph.
+The orchestration layer may compose use cases because that is precisely its responsibility. What remains forbidden is hiding that coordination inside `InvitationRepositoryImpl`, `GroupMembershipRepositoryImpl`, a datasource, or a Room DAO.
 
-## Architecture report
+## Generated reference
+
+The generated module catalog is derived from the current Gradle/source tree. If the normal Gradle report is available, regenerate with:
 
 ```bash
 ./gradlew architectureReport
 ./gradlew verifyArchitectureReport
 ```
-
-If you add/remove modules or change dependency topology, regenerate the report before committing. Pure model/mapper renames do not require a generated dependency-graph rewrite.

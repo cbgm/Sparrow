@@ -53,12 +53,15 @@ nav:
       - Community Node: server/community-node.md
       - Docker & Troubleshooting: server/operations.md
       - Secrets: server/secrets.md
+      - Runtime, Build & Deployment: server/runtime-build-deployment.md
   - Architecture:
       - Overview: architecture/overview.md
       - Clean Architecture: architecture/clean-architecture.md
       - Dependency Rules: architecture/dependency-rules.md
       - Module Types: architecture/module-types.md
       - Messaging Boundary: architecture/messaging-boundary.md
+      - Runtime Flows: architecture/runtime-flows.md
+      - Persistence: architecture/persistence.md
       - "Chats: Direct & Group": architecture/chats.md
   - Features:
       - Current Feature Status: features/current-features.md
@@ -69,6 +72,14 @@ nav:
       - Message Safety: features/message-safety.md
       - Settings & Diagnostics: features/settings.md
       - Identity: features/identity.md
+      - Identity Recovery: features/identity-recovery.md
+      - Invitations: features/invitations.md
+      - Group Membership: features/group-membership.md
+      - Voice: features/voice.md
+      - Link Previews: features/link-previews.md
+      - Auto Reply: features/auto-reply.md
+      - Avatars: features/avatar.md
+      - Pinned Messages: features/pinned-messages.md
       - Onboarding: features/onboarding.md
       - Messaging & Delivery Flow: features/message-transport-flow.md
       - Transport: features/transport.md
@@ -98,6 +109,8 @@ nav:
       - Module Catalog: generated/modules.md
       - Dependency Matrix: generated/dependency-matrix.md
       - Statistics: generated/statistics.md
+      - Current Code Inventory: generated/current-code-inventory.md
+      - Documentation Audit: generated/documentation-audit.md
   - Design Decisions: design-decisions.md
   - Roadmap: roadmap.md
   - FAQ: faq.md

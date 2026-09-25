@@ -1,89 +1,68 @@
-# Chats and current messaging features
+# Chats
 
-Android currently implements separate Direct and Group conversation stacks while sharing typed message rendering where the semantics are genuinely common.
+`:feature:chats` implements Direct and Group conversation/message behavior and presentation. Group membership/security is supplied by `:feature:membership`; invitations and identity exchange are coordinated outside Chats.
 
-## Shared message content
+## Presentation
 
-Conversation content is represented through the chats-owned typed hierarchy:
+Primary screens/view models include:
 
-```text
-MessagePartDto -> MessagePart -> MessagePartUi
-```
+- `DirectConversationViewModel`
+- `GroupConversationViewModel`
+- conversation overview presentation
+- Group details/verification presentation
+- shared message history/bubble/context actions
 
-Variants cover text, image/video, file, location and contact. `:feature:attachments` remains responsible for attachment blob transfer/cache/storage; chats maps the source into its own data/domain/presentation types.
+## Direct messages
 
-Message bubbles render each available typed part explicitly, so text, media and files can coexist in one message without mutually excluding each other.
+Key use cases include:
 
-See [Attachments](attachments.md) for attachment-specific behavior.
+- `ObserveDirectChatContextUseCase`
+- `ObserveDirectConversationUseCase`
+- `SendDirectMessageUseCase`
+- `SendOrQueueDirectMessageUseCase`
+- `QueueDirectMessageUntilAuthorizedUseCase`
+- `RetryDirectMessageUseCase`
+- `EditDirectMessageUseCase`
+- `DeleteDirectMessageUseCase`
+- `ToggleDirectMessageReactionUseCase`
+- `MarkDirectConversationReadUseCase`
+- `SetDirectIndicatorUseCase`, `ObserveDirectIndicatorUseCase`
+- `GetOrCreateDirectConversationUseCase`
+- `ActivateAuthorizedDirectConversationUseCase`
+- `DiscardPendingAuthorizationMessagesUseCase`
 
-## Direct chats
+The data path is centered on `DirectMessageRepositoryImpl` and `DirectOutgoingMessageProcessor`.
 
-Current Direct-chat behavior includes:
+## Group messages
 
-- creating/keeping a conversation after invitation acceptance;
-- end-to-end protected message payloads when identity state permits;
-- persistent local outbox;
-- queued/sending/sent/delivered/read state;
-- retry of failed outgoing messages;
-- unread/read handling;
-- typing indicator;
-- identity/security state surfaced in the UI;
-- deletion/revocation flows kept separate from Group membership logic;
-- re-invitation messages can wait locally for authorization, are released on acceptance, discarded on decline, and expire after two days;
-- text plus image/video/file/location/contact attachment messages;
-- attachment viewer/file/location/contact actions.
+Key use cases include:
 
-Core Direct classes include `DirectViewModel`, `DirectConversationRepositoryImpl`, `DirectMessageRepositoryImpl`, `DirectOutgoingMessageProcessor`, `DirectIncomingPacketProcessor`, `DirectMessagePacketHandler`, `DirectMessageDeliveryCoordinator`, `DirectMessageDeliveryStateMachine` and `DirectTypingRepositoryImpl`.
+- `CreateGroupConversationUseCase`
+- `AddGroupMembersUseCase`
+- `ObserveGroupChatContextUseCase`
+- `ObserveGroupConversationUseCase`
+- `SendGroupMessageUseCase`
+- `RetryGroupMessageUseCase`
+- `EditGroupMessageUseCase`
+- `DeleteGroupMessageUseCase`
+- `ToggleGroupMessageReactionUseCase`
+- `MarkGroupConversationReadUseCase`
+- `SetGroupIndicatorUseCase`, `ObserveGroupMemberIndicatorUseCase`
+- `SetGroupTitleUseCase`, `SetGroupDescriptionUseCase`, `SetGroupAvatarUseCase`, `RemoveGroupAvatarUseCase`
+- `PinGroupMessageUseCase`, `UnpinGroupMessageUseCase`
 
-## Group chats
+The outgoing data path is centered on `GroupMessageRepositoryImpl` and `GroupOutgoingMessageProcessor`.
 
-Current Group behavior includes:
+## Forwarding/history
 
-- group creation;
-- invitations and invitation acceptance/decline;
-- membership activation/welcome flows;
-- adding/removing members;
-- multiple admins and member promotion;
-- leave/admin-transfer requirements;
-- member verification/snapshot synchronization;
-- group security epochs/key distribution;
-- per-active-recipient encrypted message fan-out;
-- per-recipient delivered/read aggregation;
-- Group typing indicators;
-- the same typed text/image/video/file/location/contact content representation;
-- keeping Direct and Group state machines/repos/UI paths independent.
+Forwarding is a distinct domain path with `PrepareForwardMessageUseCase`, `ForwardMessageUseCase`, `ForwardDirectMessageUseCase`, `ForwardToContactUseCase`, `ForwardToDirectConversationUseCase`, `ForwardToGroupConversationUseCase` and `LoadOlderMessagesUseCase`.
 
-Core Group classes include `GroupViewModel`, `GroupConversationRepositoryImpl`, `GroupMessageRepositoryImpl`, `GroupMembershipRepositoryImpl`, `GroupOutgoingMessageProcessor`, `GroupIncomingPacketProcessor`, the group membership/security coordinators, `GroupMembershipStateMachine`, `GroupSecurityManager`, `GroupMessageDeliveryCoordinator`, `GroupMessageDeliveryStateMachine` and `GroupTypingRepositoryImpl`.
+## Message content
 
-There is **no orphaned-group mode** in the current architecture.
+Chats represents text plus attachment-backed content. Attachment transfer/storage is owned by `:feature:attachments`, media selection/rendering by `:feature:media`, and voice recording/playback/transcription by `:feature:voice`.
 
-## Membership lifecycle
+## Group details and membership
 
-```mermaid
-stateDiagram-v2
-    [*] --> Invited
-    Invited --> Joining: invitation accepted / join sent
-    Joining --> Activating: membership handshake
-    Activating --> Active: key/welcome/ready flow completes
-    Active --> Active: promote / membership epoch changes
-    Active --> Left: local leave
-    Active --> Removed: admin removes member
-    Left --> Invited: later re-invite
-    Removed --> Invited: later re-invite
-```
+Group details can edit title/description/avatar and administer members, but the underlying membership/role/security operations are domain APIs from `:feature:membership` coordinated through `:feature:conversationorchestration` where cross-feature decisions are required.
 
-This is a conceptual guide; the source of truth is `GroupMembershipStateMachine` plus the invitation/activation/admin coordinators.
-
-## Per-recipient history/delivery
-
-Group messages are associated with the current epoch recipients. The sender stores recipient delivery rows and sends one packet per recipient. This supports correct per-member delivery/read progress and prevents a simple “send to every contact ever associated with this group” model.
-
-## Search and safety integration
-
-Message search can navigate directly to a matching Direct or Group message. Optional message-safety assessments can surface warnings/details in chat presentation without moving safety analysis into the chat repositories.
-
-## Shared overview only
-
-`ConversationOverviewRepositoryImpl` combines Direct and Group projections only for the overview/list. It is not evidence that Direct/Group repositories should be merged.
-
-For the package-level red line, read [Chats architecture](../architecture/chats.md).
+See [Chats architecture](../architecture/chats.md), [Group membership](group-membership.md), [Pinned messages](pinned-messages.md), and [Runtime flows](../architecture/runtime-flows.md).

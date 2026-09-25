@@ -210,3 +210,10 @@ classDiagram
 ```
 
 The diagrams show responsibility/usage relationships, not every constructor parameter.
+
+
+## Link preview service
+
+`:server:link-preview` is a separate Ktor service for metadata/image preview fetching. Key classes are `LinkPreviewService`, `LinkPreviewFetcher`, `LinkPreviewHtmlParser` and `LinkPreviewUrlValidator`. It is intentionally separate from the encrypted message-routing services.
+
+For exact Compose topology, unified installer scripts, update semantics and bundle building, see [Server runtime, build and deployment](runtime-build-deployment.md).

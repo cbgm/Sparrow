@@ -1,144 +1,141 @@
 # Architecture overview
 
-Sparrow is a Kotlin Multiplatform client plus a federated Kotlin server system. The code is intentionally split by responsibility rather than by deployment convenience.
+Sparrow is a Kotlin Multiplatform secure-messaging client plus a federated Kotlin/Ktor server system. The current codebase separates **feature ownership** from **cross-feature orchestration** so repositories do not become hidden coordinators.
 
-## High-level view
-
-```mermaid
-flowchart LR
-    subgraph Client[Client application]
-        UI[Compose UI]
-        VM[ViewModels]
-        UC[Use cases]
-        REPO[Repository contracts]
-        DATA[Repository implementations]
-        MSG[feature:messaging]
-        TR[feature:transport]
-        DB[(Room / SQLite)]
-        CRYPTO[core:crypto]
-        PROTO[core:protocol]
-    end
-
-    DIR[Control Plane directory JSON]
-
-    subgraph CP[Control Plane]
-        CPC[Caddy]
-        REG[node-registry]
-        PRES[presence-directory]
-        PUSH[push]
-    end
-
-    subgraph NODE[Community Node]
-        NC[Caddy]
-        GW[gateway]
-        FED[federation]
-        MB[mailbox]
-    end
-
-    UI --> VM --> UC --> REPO
-    DATA --> REPO
-    DATA --> DB
-    MSG --> DATA
-    MSG --> CRYPTO
-    MSG --> PROTO
-    MSG --> TR
-    TR --> DIR
-    TR --> CPC
-    TR --> NC
-    CPC --> REG
-    CPC --> PRES
-    CPC --> PUSH
-    NC --> GW
-    NC --> FED
-    NC --> MB
-    GW <--> FED
-    FED --> MB
-    FED <--> CP
-```
-
-## Application startup
-
-The Android application entry point is deliberately thin. `SparrowApplication` initializes dependency injection; the shared application shell and startup orchestration live in `:shared`.
-
-`AppViewModel` owns application startup and foreground runtime orchestration. Its startup path includes:
-
-1. initialize the crypto runtime;
-2. initialize language/settings;
-3. initialize notification runtime/coordinators;
-4. load and synchronize the configured Control Plane directory;
-5. refresh Control Plane health and start periodic maintenance;
-6. observe the local identity/routing registration target;
-7. synchronize device contacts;
-8. mark the application runtime ready.
-
-Foreground runtime dependencies then coordinate `IncomingEnvelopeRunner`, `TransportConnectionManager`, `OutboxRunner`, mailbox synchronization and application visibility.
-
-The build-time directory URL comes from `local.properties` as `controlPlaneDirectoryUrl` and is exposed to common KMP code through `BuildKonfig.CONTROL_PLANE_DIRECTORY_URL`.
-
-## Layering inside a feature
-
-Feature modules normally use these layers:
+## High-level client architecture
 
 ```mermaid
 flowchart TD
-    P[Presentation<br/>Compose, ViewModel, UI models] --> D[Domain<br/>use cases, models, repository contracts]
-    I[Data / infrastructure<br/>repository implementations, protocol/database/network adapters] --> D
-    DI[DI composition] --> P
-    DI --> I
+    UI[Compose presentation]
+    UC[feature domain use cases]
+    ORCH[feature:conversationorchestration]
+    INV[feature:invite]
+    ID[feature:identity]
+    MEM[feature:membership]
+    CHAT[feature:chats]
+    ATT[feature:attachments / media / voice / linkpreview]
+    MSG[feature:messaging]
+    TR[feature:transport]
+    PROTO[core:protocol]
+    CRYPTO[core:crypto]
+    DB[(data:database)]
+
+    UI --> UC
+    UC --> CHAT
+    UC --> INV
+    UC --> ID
+    UC --> MEM
+    CHAT --> ORCH
+    ORCH --> CHAT
+    ORCH --> INV
+    ORCH --> ID
+    ORCH --> MEM
+    ORCH --> MSG
+    MSG --> TR
+    CHAT --> PROTO
+    ORCH --> PROTO
+    MSG --> PROTO
+    CHAT --> DB
+    INV --> DB
+    ID --> DB
+    MEM --> DB
+    ATT --> DB
+    PROTO --> CRYPTO
 ```
 
-Important rules:
+## Current ownership boundaries
 
-- ViewModels call use cases, not repository implementations.
-- Use cases do not call other use cases.
-- Repository implementations do not call other repositories or use cases.
+| Module | Owns |
+|---|---|
+| `:feature:chats` | Direct/Group conversations, messages, reactions, edits/deletes, receipts, Group pins, chat UI |
+| `:feature:invite` | Generic Direct/Group invitation lifecycle and invitation inbox UI |
+| `:feature:identity` | Local identity, identity exchange/trust, backup/restore, pending remote identity changes, approved reconnections |
+| `:feature:membership` | Group membership, roles, Group security epochs/keys, welcome/activation/admin/leave/delete membership lifecycle |
+| `:feature:conversationorchestration` | Workflows that must coordinate chats + invite + identity + membership + transport |
+| `:feature:messaging` | Generic durable outbox and incoming-envelope execution |
+| `:feature:transport` | Control Plane discovery, Community Node selection, WebSocket/presence/mailbox/push transport |
+| `:feature:attachments` | Attachment preparation/loading/cache/storage/transcripts |
+| `:feature:voice` | Voice recording/playback/local transcription on top of attachments |
+| `:feature:linkpreview` | Client link-preview cache/fetch/rendering |
+| `:feature:autoreply` | Auto-reply configuration and per-contact claiming |
+
+## Application startup
+
+`SparrowApplication` initializes DI. `shared.presentation.AppViewModel` owns application startup and runtime coordination. It:
+
+1. initializes crypto/settings/notification prerequisites;
+2. restores and refreshes the signed Control Plane directory;
+3. starts Control Plane health maintenance;
+4. waits for local identity readiness;
+5. starts orchestration observers (`InvitationResultObserver`, `MembershipResultObserver`, `MessagingTransportResultObserver`, `IdentityResultObserver`, `ContactBlockObserver`, `ApprovedIdentityReconnectionObserver`);
+6. synchronizes device contacts when permission is available;
+7. starts/stops foreground network runtime based on visibility.
+
+Foreground runtime uses `IncomingEnvelopeRunner`, `TransportConnectionManager`, `OutboxRunner` and mailbox coordination.
+
+See [Runtime orchestration and protocol flows](runtime-flows.md).
+
+## Feature-internal layering
+
+```mermaid
+flowchart TD
+    P[Presentation\nCompose / ViewModel / *Ui] --> U[Domain use cases]
+    U --> R[Domain repository contracts]
+    RI[Data repository implementation] --> R
+    RI --> DS[Datasource / persistence / network adapter]
+    DS --> EXT[(Room / DataStore / Ktor / platform API)]
+```
+
+Current rules:
+
+- ViewModels call use cases rather than DAOs/datasources/repository implementations.
+- A domain use case **may compose other use cases** when that is the intended orchestration boundary. This is used heavily by `:feature:conversationorchestration` and some feature-level workflows.
+- Repository implementations do not call unrelated repositories or use cases.
 - Datasources do not call repositories.
-- Domain code does not depend on Compose, Room, Ktor or Android APIs.
-- Data representation models use `...Dto`; domain models are unsuffixed; presentation representations use `...Ui`.
-- Mapper functions are named for their destination: `toNameDto()`, `toName()`, `toNameUi()`.
-- Platform-specific code belongs in the corresponding source set (`androidMain`, `iosMain`) of the owning module, under the owning top-level responsibility such as `device`.
-- `androidApp` stays small.
+- Cross-feature coordination belongs in orchestration/use-case composition, not repository chaining.
+- Presentation uses `...Ui`; data transport/intermediate representations use `...Dto`; persistence uses `...Entity`.
+- Platform code belongs in the owning module's platform source set.
 
-## Messaging boundary
+## Direct vs Group
 
-Messaging spans several modules but ownership is explicit:
+Direct and Group conversation semantics stay distinct. They may share truly generic infrastructure (packet decoding, persisted outbox, attachment loading, overview projection), but authorization, recipient selection, membership and Group epoch security are separate.
 
-- `:core:protocol` owns packet contracts and transport-independent outbox interfaces.
-- `:feature:chats` owns direct/group conversation semantics.
-- `:feature:contacts` owns contact invitation and identity-exchange semantics.
-- `:feature:messaging` orchestrates persistent outgoing/incoming processing.
-- `:feature:transport` owns Control Plane/node discovery, WebSocket mechanics, routing registration, mailbox/push HTTP gateways and diagnostics.
-- server modules route and persist opaque envelopes; they do not own client conversation semantics.
+## Persistence
 
-See [Messaging boundary](messaging-boundary.md) and [Message transport flow](../features/message-transport-flow.md).
+The Room database is currently schema version **53** and contains durable state for invitations, identity exchange/recovery, group membership/security, messages/attachments, protocol outbox, mailbox routes, link previews, search/safety and auto reply.
 
-## Direct and Group are separate paths
+See [Persistence model](persistence.md).
 
-A deliberate architectural constraint is that Direct and Group chat behavior is not hidden behind a generic “chat” implementation.
+## Server topology
 
 ```mermaid
 flowchart LR
-    ROUTER[IncomingPacketRouter]
-    ROUTER --> DIRECT[DirectIncomingPacketProcessor]
-    ROUTER --> GROUP[GroupIncomingPacketProcessor]
+    APP[Client]
+    subgraph CP[Control Plane]
+      C1[Caddy]
+      REG[node-registry]
+      PRES[presence-directory]
+      PUSH[push]
+    end
+    subgraph CN[Community Node]
+      C2[Caddy]
+      GW[gateway]
+      FED[federation]
+      MB[mailbox]
+    end
+    LP[link-preview service]
 
-    DIRECT --> DD[Direct repositories / delivery / typing]
-    GROUP --> GD[Group repositories / membership / security / delivery / typing]
+    APP --> C1
+    APP <--> C2
+    C1 --> REG
+    C1 --> PRES
+    C1 --> PUSH
+    C2 --> GW
+    C2 --> FED
+    C2 --> MB
+    GW <--> FED
+    FED --> MB
+    APP --> LP
 ```
 
-Shared code is allowed only when semantics are genuinely shared, such as packet decoding or the conversation-overview projection. See [Chats architecture](chats.md).
-
-## Server architecture
-
-The server is not one monolith. It has two deployable shapes:
-
-- **Control Plane:** node registry, presence directory and push service behind Caddy.
-- **Community Node:** gateway, federation and mailbox services behind Caddy.
-
-Each JVM service is an independent Gradle module and communicates across HTTP/protocol contracts instead of importing another service application's implementation package.
-
-See [Server overview](../server/overview.md).
-
-## Platform status
-
-Android is the usable client target. The project has KMP iOS source sets and an Xcode host, but major platform/runtime integrations are still incomplete. iOS should therefore be treated as architectural scaffolding, **not** a supported client with Android feature parity.
+The deployable runtime and unified installer are described in [Server runtime, build and deployment](../server/runtime-build-deployment.md).

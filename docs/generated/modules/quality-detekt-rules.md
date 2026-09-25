@@ -1,30 +1,22 @@
 # `:quality:detekt-rules`
 
-Generated automatically by `./gradlew architectureReport`.
+Source directory: `quality/detekt-rules`
 
-## Module information
+## Direct project dependencies
 
-| Property | Value |
-|---|---|
-| Name | `detekt-rules` |
-| Group | `quality` |
-| Directory | `quality/detekt-rules` |
-| Build file | `quality/detekt-rules/build.gradle.kts` |
-| Kotlin files | 11 |
-| Production Kotlin files | 11 |
-| Test Kotlin files | 0 |
-| Resource files | 0 |
-| Direct dependencies | 0 |
-| Direct dependents | 0 |
+None detected.
 
-## Source sets
+## Production top-level Kotlin declarations
 
-- `main`
-
-## Dependencies
-
-None.
-
-## Dependents
-
-None.
+| Type | Kind | Source set | Source file |
+|---|---|---|---|
+| `SparrowRuleSetProvider` | `class` | `main` | `quality/detekt-rules/src/main/kotlin/com/cbgm/sparrow/detekt/SparrowRuleSetProvider.kt` |
+| `DaoUsageRule` | `class` | `main` | `quality/detekt-rules/src/main/kotlin/com/cbgm/sparrow/detekt/rule/DaoUsageRule.kt` |
+| `LayerDependencyRule` | `class` | `main` | `quality/detekt-rules/src/main/kotlin/com/cbgm/sparrow/detekt/rule/LayerDependencyRule.kt` |
+| `NoNotNullAssertionRule` | `class` | `main` | `quality/detekt-rules/src/main/kotlin/com/cbgm/sparrow/detekt/rule/NoNotNullAssertionRule.kt` |
+| `NoPlatformImportInCommonMainRule` | `class` | `main` | `quality/detekt-rules/src/main/kotlin/com/cbgm/sparrow/detekt/rule/NoPlatformImportInCommonMainRule.kt` |
+| `NoTestImportInProductionRule` | `class` | `main` | `quality/detekt-rules/src/main/kotlin/com/cbgm/sparrow/detekt/rule/NoTestImportInProductionRule.kt` |
+| `RepositoryDependencyRule` | `class` | `main` | `quality/detekt-rules/src/main/kotlin/com/cbgm/sparrow/detekt/rule/RepositoryDependencyRule.kt` |
+| `UseCaseDependencyRule` | `class` | `main` | `quality/detekt-rules/src/main/kotlin/com/cbgm/sparrow/detekt/rule/UseCaseDependencyRule.kt` |
+| `ViewModelDirectDataDependencyRule` | `class` | `main` | `quality/detekt-rules/src/main/kotlin/com/cbgm/sparrow/detekt/rule/ViewModelDirectDataDependencyRule.kt` |
+| `WeakHashAlgorithmRule` | `class` | `main` | `quality/detekt-rules/src/main/kotlin/com/cbgm/sparrow/detekt/rule/WeakHashAlgorithmRule.kt` |

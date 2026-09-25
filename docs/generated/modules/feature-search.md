@@ -1,37 +1,37 @@
 # `:feature:search`
 
-Generated automatically by `./gradlew architectureReport`.
+Source directory: `feature/search`
 
-## Module information
+## Direct project dependencies
 
-| Property | Value |
-|---|---|
-| Name | `search` |
-| Group | `feature` |
-| Directory | `feature/search` |
-| Build file | `feature/search/build.gradle.kts` |
-| Kotlin files | 30 |
-| Production Kotlin files | 28 |
-| Test Kotlin files | 2 |
-| Resource files | 0 |
-| Direct dependencies | 4 |
-| Direct dependents | 4 |
+- `:core`
+- `:core:embedding`
+- `:core:ui`
+- `:data:database`
 
-## Source sets
+## Production top-level Kotlin declarations
 
-- `commonMain`
-- `commonTest`
-
-## Dependencies
-
-- [`:core`](../modules/core.md)
-- [`:core:embedding`](../modules/core-embedding.md)
-- [`:core:ui`](../modules/core-ui.md)
-- [`:data:database`](../modules/data-database.md)
-
-## Dependents
-
-- [`:feature:settings`](../modules/feature-settings.md)
-- [`:navigation`](../modules/navigation.md)
-- [`:shared`](../modules/shared.md)
-- [`:startup`](../modules/startup.md)
+| Type | Kind | Source set | Source file |
+|---|---|---|---|
+| `MessageSearchIndexDataSource` | `class` | `commonMain` | `feature/search/src/commonMain/kotlin/com/cbgm/sparrow/feature/search/data/datasource/MessageSearchIndexDataSource.kt` |
+| `MessageSearchLocalDataSource` | `class` | `commonMain` | `feature/search/src/commonMain/kotlin/com/cbgm/sparrow/feature/search/data/datasource/MessageSearchLocalDataSource.kt` |
+| `SemanticSearchEmbeddingDataSource` | `class` | `commonMain` | `feature/search/src/commonMain/kotlin/com/cbgm/sparrow/feature/search/data/datasource/SemanticSearchEmbeddingDataSource.kt` |
+| `EmbeddingCodecMapper` | `object` | `commonMain` | `feature/search/src/commonMain/kotlin/com/cbgm/sparrow/feature/search/data/mapper/EmbeddingCodecMapper.kt` |
+| `SemanticSearchIndexConfig` | `object` | `commonMain` | `feature/search/src/commonMain/kotlin/com/cbgm/sparrow/feature/search/data/model/SemanticSearchIndexConfig.kt` |
+| `MessageSearchRepositoryImpl` | `class` | `commonMain` | `feature/search/src/commonMain/kotlin/com/cbgm/sparrow/feature/search/data/repository/MessageSearchRepositoryImpl.kt` |
+| `SemanticSearchRepositoryImpl` | `class` | `commonMain` | `feature/search/src/commonMain/kotlin/com/cbgm/sparrow/feature/search/data/repository/SemanticSearchRepositoryImpl.kt` |
+| `MessageSearchConversationType` | `class` | `commonMain` | `feature/search/src/commonMain/kotlin/com/cbgm/sparrow/feature/search/domain/model/MessageSearchConversationType.kt` |
+| `MessageSearchMatchType` | `class` | `commonMain` | `feature/search/src/commonMain/kotlin/com/cbgm/sparrow/feature/search/domain/model/MessageSearchMatchType.kt` |
+| `MessageSearchResult` | `class` | `commonMain` | `feature/search/src/commonMain/kotlin/com/cbgm/sparrow/feature/search/domain/model/MessageSearchResult.kt` |
+| `SemanticSearchState` | `interface` | `commonMain` | `feature/search/src/commonMain/kotlin/com/cbgm/sparrow/feature/search/domain/model/SemanticSearchState.kt` |
+| `MessageSearchRepository` | `interface` | `commonMain` | `feature/search/src/commonMain/kotlin/com/cbgm/sparrow/feature/search/domain/repository/MessageSearchRepository.kt` |
+| `SemanticSearchRepository` | `interface` | `commonMain` | `feature/search/src/commonMain/kotlin/com/cbgm/sparrow/feature/search/domain/repository/SemanticSearchRepository.kt` |
+| `InitializeSemanticSearchUseCase` | `class` | `commonMain` | `feature/search/src/commonMain/kotlin/com/cbgm/sparrow/feature/search/domain/usecase/InitializeSemanticSearchUseCase.kt` |
+| `ObserveSemanticSearchStateUseCase` | `class` | `commonMain` | `feature/search/src/commonMain/kotlin/com/cbgm/sparrow/feature/search/domain/usecase/ObserveSemanticSearchStateUseCase.kt` |
+| `SearchMessagesUseCase` | `class` | `commonMain` | `feature/search/src/commonMain/kotlin/com/cbgm/sparrow/feature/search/domain/usecase/SearchMessagesUseCase.kt` |
+| `SetSemanticSearchEnabledUseCase` | `class` | `commonMain` | `feature/search/src/commonMain/kotlin/com/cbgm/sparrow/feature/search/domain/usecase/SetSemanticSearchEnabledUseCase.kt` |
+| `MessageSearchViewModel` | `class` | `commonMain` | `feature/search/src/commonMain/kotlin/com/cbgm/sparrow/feature/search/presentation/overview/MessageSearchViewModel.kt` |
+| `MessageSearchMode` | `class` | `commonMain` | `feature/search/src/commonMain/kotlin/com/cbgm/sparrow/feature/search/presentation/overview/model/MessageSearchMode.kt` |
+| `MessageSearchResultUi` | `class` | `commonMain` | `feature/search/src/commonMain/kotlin/com/cbgm/sparrow/feature/search/presentation/overview/model/MessageSearchResultUi.kt` |
+| `MessageSearchUiEvent` | `interface` | `commonMain` | `feature/search/src/commonMain/kotlin/com/cbgm/sparrow/feature/search/presentation/overview/model/MessageSearchUiEvent.kt` |
+| `MessageSearchUiState` | `class` | `commonMain` | `feature/search/src/commonMain/kotlin/com/cbgm/sparrow/feature/search/presentation/overview/model/MessageSearchUiState.kt` |

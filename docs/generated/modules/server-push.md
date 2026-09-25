@@ -1,34 +1,33 @@
 # `:server:push`
 
-Generated automatically by `./gradlew architectureReport`.
+Source directory: `server/push`
 
-## Module information
+## Direct project dependencies
 
-| Property | Value |
-|---|---|
-| Name | `push` |
-| Group | `server` |
-| Directory | `server/push` |
-| Build file | `server/push/build.gradle.kts` |
-| Kotlin files | 17 |
-| Production Kotlin files | 13 |
-| Test Kotlin files | 4 |
-| Resource files | 0 |
-| Direct dependencies | 4 |
-| Direct dependents | 0 |
+- `:server:protocol`
+- `:server:persistence`
+- `:server:security`
+- `:server:observability`
 
-## Source sets
+## Production top-level Kotlin declarations
 
-- `main`
-- `test`
-
-## Dependencies
-
-- [`:server:observability`](../modules/server-observability.md)
-- [`:server:persistence`](../modules/server-persistence.md)
-- [`:server:protocol`](../modules/server-protocol.md)
-- [`:server:security`](../modules/server-security.md)
-
-## Dependents
-
-None.
+| Type | Kind | Source set | Source file |
+|---|---|---|---|
+| `FirebasePushSender` | `class` | `main` | `server/push/src/main/kotlin/com/cbgm/sparrow/server/push/FirebasePushSender.kt` |
+| `InMemoryPendingEnvelopeStore` | `class` | `main` | `server/push/src/main/kotlin/com/cbgm/sparrow/server/push/PushStores.kt` |
+| `InMemoryPushDeviceStore` | `class` | `main` | `server/push/src/main/kotlin/com/cbgm/sparrow/server/push/PushStores.kt` |
+| `InMemoryWakeUpStore` | `class` | `main` | `server/push/src/main/kotlin/com/cbgm/sparrow/server/push/PushStores.kt` |
+| `PendingEnvelopeStore` | `interface` | `main` | `server/push/src/main/kotlin/com/cbgm/sparrow/server/push/PushStores.kt` |
+| `PostgresPendingEnvelopeStore` | `class` | `main` | `server/push/src/main/kotlin/com/cbgm/sparrow/server/push/PostgresPendingEnvelopeStore.kt` |
+| `PostgresPushDatabase` | `class` | `main` | `server/push/src/main/kotlin/com/cbgm/sparrow/server/push/PostgresPushDatabase.kt` |
+| `PostgresPushDatabaseConfig` | `class` | `main` | `server/push/src/main/kotlin/com/cbgm/sparrow/server/push/PostgresPushDatabase.kt` |
+| `PostgresPushDeviceStore` | `class` | `main` | `server/push/src/main/kotlin/com/cbgm/sparrow/server/push/PostgresPushDeviceStore.kt` |
+| `PostgresWakeUpStore` | `class` | `main` | `server/push/src/main/kotlin/com/cbgm/sparrow/server/push/PostgresWakeUpStore.kt` |
+| `PushConfig` | `class` | `main` | `server/push/src/main/kotlin/com/cbgm/sparrow/server/push/Application.kt` |
+| `PushCoordinator` | `class` | `main` | `server/push/src/main/kotlin/com/cbgm/sparrow/server/push/PushCoordinator.kt` |
+| `PushDevice` | `class` | `main` | `server/push/src/main/kotlin/com/cbgm/sparrow/server/push/PushStores.kt` |
+| `PushDeviceStore` | `interface` | `main` | `server/push/src/main/kotlin/com/cbgm/sparrow/server/push/PushStores.kt` |
+| `PushNodeApiRuntime` | `class` | `main` | `server/push/src/main/kotlin/com/cbgm/sparrow/server/push/PushRuntime.kt` |
+| `PushRuntime` | `class` | `main` | `server/push/src/main/kotlin/com/cbgm/sparrow/server/push/PushRuntime.kt` |
+| `PushStores` | `class` | `main` | `server/push/src/main/kotlin/com/cbgm/sparrow/server/push/PushStores.kt` |
+| `WakeUpStore` | `interface` | `main` | `server/push/src/main/kotlin/com/cbgm/sparrow/server/push/PushStores.kt` |

@@ -31,18 +31,25 @@ Room classes remain explicitly named `...Entity`; data representation DTOs use `
 
 ## Feature modules
 
-- `:feature:identity` — local identity and private/public key persistence.
-- `:feature:contacts` — contacts, invitations, verification, identity exchange and blocklist behavior.
-- `:feature:contactimport` — importing/scanning identities and contact-related platform flows.
-- `:feature:chats` — Direct and Group conversations, typed message parts, membership, delivery/read/typing and conversation UI.
+- `:feature:identity` — local identity, identity exchange/trust, encrypted backup/restore, pending remote identity changes and approved reconnection state.
+- `:feature:invite` — generic Direct/Group invitation persistence, state/result streams and invitation UI.
+- `:feature:contacts` — contacts, phone/routing projections, blocking and device-contact integration; it does not own invitation lifecycle.
+- `:feature:contactimport` — device/QR contact and identity import flows.
+- `:feature:autoreply` — auto-reply definitions, activation and per-recipient claim/release state.
+- `:feature:avatar` — target-aware avatar loading/cache plus profile-picture selection/cropping.
+- `:feature:linkpreview` — URL preview cache/prefetch/presentation.
+- `:feature:chats` — Direct/Group conversation and message semantics, message UI, delivery/read/typing and chat-specific outgoing/incoming processors.
+- `:feature:conversationorchestration` — explicit cross-feature Invite/Identity/Membership/Chats/Transport workflows, outgoing packet policy/routing and recovery observers/workers.
+- `:feature:membership` — Group membership handshakes, welcome/activation, current members/roles, epoch/group security and administration.
 - `:feature:attachments` — attachment source models, encrypted blob preparation/transfer/loading, cache, saved-copy storage and attachment management.
 - `:feature:media` — gallery/camera/file selection, file browser, media rendering/opening/export.
-- `:feature:messaging` — incoming/outgoing envelope processing and routing-ID resolution.
+- `:feature:voice` — attachment-backed audio recording/playback and local transcription.
+- `:feature:messaging` — generic durable protocol-outbox and incoming-envelope runners/processors.
 - `:feature:search` — exact and optional local semantic message search.
 - `:feature:safety` — local message-risk analysis and warning/details UI.
-- `:feature:transport` — Control Plane/node discovery, WebSocket client, presence registration, mailbox/push APIs, diagnostics.
+- `:feature:transport` — Control Plane/node discovery, WebSocket transport, presence/mailbox/push APIs and diagnostics.
 - `:feature:onboarding` — first-run pages and permissions/phone/privacy setup.
-- `:feature:settings` — user/developer/Control Plane settings, local-model feature toggles, attachment storage and developer error log.
+- `:feature:settings` — user/developer/network settings, feature toggles, storage and developer error log.
 
 ### `:notification`
 
@@ -55,6 +62,8 @@ Shared: `:server:protocol`, `:server:security`, `:server:persistence`, `:server:
 Control Plane applications: `:server:node-registry`, `:server:presence-directory`, `:server:push`.
 
 Community Node applications: `:server:gateway`, `:server:federation`, `:server:mailbox`.
+
+Additional server application: `:server:link-preview` for validated server-side URL metadata/image retrieval. `server/control-plane-directory` is a separate operator-only Python service, not a Gradle module and not part of the public server ZIP.
 
 ## Build/quality
 

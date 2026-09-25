@@ -1,213 +1,98 @@
-# Chats architecture: Direct and Group red line
+# Chats architecture: Direct, Group and orchestration boundaries
 
-Direct and Group conversations are intentionally separate feature paths. They share only infrastructure whose **meaning and lifecycle are actually shared**.
+`:feature:chats` owns conversation/message behavior. It no longer owns the Group membership lifecycle or the generic invitation lifecycle.
 
-This is the central architecture guide to read before changing `:feature:chats`.
-
-## Red line
+## Current boundary
 
 ```mermaid
 flowchart TB
-    IN[IncomingPacketProcessor] --> ROUTER[IncomingPacketRouter]
+    ORCH[feature:conversationorchestration\nConversationFlowHandler]
+    INV[feature:invite]
+    ID[feature:identity]
+    MEM[feature:membership]
+    CHAT[feature:chats]
+    MSG[feature:messaging]
 
-    ROUTER --> DIRECT[DirectIncomingPacketProcessor]
-    ROUTER --> GROUP[GroupIncomingPacketProcessor]
-
-    DIRECT --> DSTORE[DirectConversationDataSource]
-    DIRECT --> DDEL[DirectMessageDeliveryCoordinator]
-
-    GROUP --> REG[GroupPacketHandlerRegistry]
-    REG --> GH[explicit GroupPacketHandler]
-    GH --> GMEM[Group membership/security/verification/message code]
+    ORCH --> INV
+    ORCH --> ID
+    ORCH --> MEM
+    ORCH --> CHAT
+    CHAT --> MSG
 ```
 
-Do not make Direct use Group repositories/state machines or Group use Direct repositories/state machines to “reuse” similarly named operations.
-
-## Direct conversation path
-
-Incoming:
+## Direct outgoing path
 
 ```text
-IncomingPacketProcessor
-  -> IncomingPacketRouter
-  -> DirectIncomingPacketProcessor
-  -> DirectMessagePacketHandler / DirectReceiptPacketHandler
-  -> DirectConversationDataSource / DirectMessageDeliveryCoordinator
-```
-
-Outgoing:
-
-```text
-DirectViewModel
-  -> direct *UseCase
-  -> DirectMessageRepository
+DirectConversationViewModel
+  -> Direct domain use case
   -> DirectMessageRepositoryImpl
   -> DirectOutgoingMessageProcessor
   -> ProtocolOutbox
+  -> DefaultOutboxRunner / DefaultOutboxProcessor
+  -> OutgoingPacketSender
 ```
 
-Delivery:
+`DirectOutgoingMessageProcessor` implements `send`, reactions, delete/edit, read receipts, retry, and the waiting-for-authorization queue. It delegates the authorization decision to `RequireDirectChatAuthorizationUseCase` instead of reading Identity internals itself.
+
+Important methods:
+
+- `send()`
+- `queueUntilAuthorized()`
+- `releaseWaitingForAuthorization()`
+- `discardWaitingForAuthorization()`
+- `retry()`
+- `sendReadReceipts()`
+
+## Direct incoming path
+
+`IncomingPacketRouter` dispatches Direct chat packets to `DirectIncomingPacketProcessor` and explicit handlers. Identity/invitation packets are not treated as chat messages; they are routed into `ConversationFlowHandler` through the protocol/orchestration boundary.
+
+## Direct authorization
+
+A missing/invalid authorization does not cause plaintext fallback. Source material is persisted as waiting-for-authorization and released only after orchestration establishes fresh authorization. Explicit reconnect uses `ReconnectExistingConversationUseCase`/`ConversationFlowHandler.startExplicitReconnection()`.
+
+## Group outgoing path
 
 ```text
-DirectOutboxDeliveryHandler
-  -> DirectMessageDeliveryCoordinator
-  -> DirectMessageDeliveryStateMachine
-```
-
-Typing:
-
-```text
-ObserveDirectTypingUseCase / SetDirectTypingUseCase
-  -> DirectTypingRepository
-  -> DirectTypingRepositoryImpl
-```
-
-## Direct authorization boundary
-
-Direct messages that cannot currently be authorized are not pushed through the normal outbox immediately. `DirectViewModel` uses `QueueDirectMessageUntilAuthorizedUseCase`; `DirectOutgoingMessageProcessor` persists them as `WAITING_FOR_AUTHORIZATION`. `HandleAcceptedDirectInvitationUseCase` releases valid waiting messages, `HandleDeclinedDirectInvitationUseCase` discards them, and `DirectPendingAuthorizationMessagePolicy` expires them after two days.
-
-This remains a Direct-chat rule; it must not be moved into Group membership state or shared transport code.
-
-## Group conversation path
-
-Incoming:
-
-```text
-IncomingPacketProcessor
-  -> IncomingPacketRouter
-  -> GroupIncomingPacketProcessor
-  -> GroupPacketHandlerRegistry
-  -> one explicit GroupPacketHandler
-```
-
-Handlers include the concrete group packet types such as `GroupInvitePacketHandler`, `GroupJoinRequestPacketHandler`, `GroupMemberActivatedPacketHandler`, `GroupMemberRemovedPacketHandler`, `GroupChatMessagePacketHandler`, verification snapshot handlers and `GroupReceiptPacketHandler`.
-
-Outgoing:
-
-```text
-GroupViewModel
-  -> group *UseCase
-  -> GroupMessageRepository
+GroupConversationViewModel
+  -> Group domain use case
   -> GroupMessageRepositoryImpl
   -> GroupOutgoingMessageProcessor
-  -> ProtocolOutbox
+  -> GetGroupTransportRoutingMembersUseCase (membership)
+  -> current group security epoch / recipient keys
+  -> ProtocolOutbox (one packet per active recipient)
 ```
 
-Delivery:
+`GroupOutgoingMessageProcessor` currently implements send/flush, reactions, edit/delete, retry and read receipts. It requires active membership and current recipients; removed/inactive members are not ordinary recipients.
 
-```text
-GroupOutboxDeliveryHandler
-  -> GroupMessageDeliveryCoordinator
-  -> GroupMessageDeliveryStateMachine
-```
+## Group membership is not in Chats
 
-Typing:
+Group membership/security moved to `:feature:membership`. Current key implementation types include:
 
-```text
-ObserveGroupMemberTypingUseCase / SetGroupTypingUseCase
-  -> GroupTypingRepository
-  -> GroupTypingRepositoryImpl
-```
+- `GroupMembershipStateMachine`
+- `GroupMembershipLock`
+- `GroupMembershipPacketProtocol`
+- `GroupSecurityManager`
+- `GroupOwnerWelcomeDataSource`
+- `GroupIncomingWelcomeDataSource`
+- `GroupMembershipActivationDataSource`
+- `GroupMemberPromotionDataSource`
+- `GroupMemberRemovalDataSource`
+- `GroupLeaveDataSource`
+- `GroupMembershipDeletionDataSource`
 
-## Group membership lifecycle
+Chats asks Membership through domain use cases (`GetGroupTransportRoutingMembersUseCase`, `AuthorizeGroupMetadataUseCase`, `GetGroupCurrentEpochUseCase`, etc.).
 
-`GroupMembershipCoordinator` is a small entry facade. Mutating membership behavior is split into focused coordinators:
+See [Group membership and group security](../features/group-membership.md).
 
-- `GroupInvitationCoordinator` — creation, invitations, accept/decline and join requests;
-- `GroupMembershipActivationCoordinator` — welcome/key distribution, ready/activation acknowledgements;
-- `GroupMembershipAdministrationCoordinator` — promote, remove, leave and admin transfer;
-- `GroupMembershipDeletionCoordinator` — local/remote group deletion lifecycle;
-- `GroupMembershipIdentity` — contact identity pinning/acceptance used by membership flows;
-- `GroupEpochCoordinator` — current member/role resolution and epoch payload construction;
-- `GroupMembershipStateMachine` — explicit lifecycle transition rules;
-- `GroupMembershipPacketProtocol` — group membership packet creation/verification/encoding.
+## Group pins
 
-All mutating membership coordinators share `GroupMembershipLock`, so splitting responsibilities does not split the serialization boundary.
+Pins are chat-owned content metadata but use Membership for current admin authorization. `PinGroupMessageUseCase` and `UnpinGroupMessageUseCase` persist through `GroupPinRepositoryImpl`; `GroupPinBroadcaster` emits `GroupPinUpdatedPacket` to currently authorized members. See [Group pinned messages](../features/pinned-messages.md).
 
-```mermaid
-classDiagram
-    class GroupMembershipCoordinator
-    class GroupInvitationCoordinator
-    class GroupMembershipActivationCoordinator
-    class GroupMembershipAdministrationCoordinator
-    class GroupMembershipDeletionCoordinator
-    class GroupEpochCoordinator
-    class GroupMembershipIdentity
-    class GroupMembershipStateMachine
-    class GroupMembershipPacketProtocol
-    class GroupMembershipLock
+## Typed message content
 
-    GroupMembershipCoordinator --> GroupInvitationCoordinator
-    GroupMembershipCoordinator --> GroupMembershipActivationCoordinator
-    GroupMembershipCoordinator --> GroupMembershipAdministrationCoordinator
-    GroupMembershipCoordinator --> GroupMembershipDeletionCoordinator
-    GroupInvitationCoordinator --> GroupMembershipLock
-    GroupMembershipActivationCoordinator --> GroupMembershipLock
-    GroupMembershipAdministrationCoordinator --> GroupMembershipLock
-    GroupMembershipDeletionCoordinator --> GroupMembershipLock
-    GroupMembershipCoordinator --> GroupEpochCoordinator
-    GroupMembershipCoordinator --> GroupMembershipIdentity
-    GroupMembershipCoordinator --> GroupMembershipStateMachine
-    GroupMembershipCoordinator --> GroupMembershipPacketProtocol
-```
+Direct and Group both map chat-owned content representations across layers. Attachment storage/transfer remains in `:feature:attachments`; voice is an attachment-backed message feature in `:feature:voice`.
 
-There is **no orphaned-group state/mode** in the current code.
+## Presentation/recomposition boundary
 
-## Group security and history boundary
-
-`GroupOutgoingMessageProcessor` selects recipients from the current group security epoch, encrypts the group message through `GroupSecurityManager`, stores one recipient delivery row per active recipient and queues one packet per active recipient.
-
-A removed member is not kept in the recipient set merely because that contact was previously in the group. Re-invitation starts a new active membership period; old absence-period messages are not supposed to become ordinary backlog for that member.
-
-## Typed message representation
-
-Direct and Group messages share a typed chat-owned content representation. The layers are deliberately parallel:
-
-```text
-MessagePartDto  ->  MessagePart  ->  MessagePartUi
-     data            domain           presentation
-```
-
-Current variants are text, image/video, file, location and contact. Data DTO variants use the `Dto` suffix; domain variants are unsuffixed; presentation variants use `Ui`. Mapper functions are named for their destination (`toMessagePartDto()`, `toMessagePart()`, `toMessagePartUi()`).
-
-`:feature:attachments` remains the source owner for attachment blob preparation/transfer/loading/storage. The chats data boundary converts attachment source metadata into `MessagePartDto`; Direct/Group domain models do not expose the attachment feature's source `MessageAttachment` model.
-
-Do not add parallel fields such as `locationAttachment` or `contactAttachment` to Direct/Group domain messages. Extend the typed part hierarchy when the conversation representation needs a new content kind.
-
-## Shared edges
-
-These are shared because the protocol/infrastructure is actually shared:
-
-- `IncomingPacketProcessor` — transport/protocol decode boundary;
-- `IncomingPacketRouter` — packet dispatch;
-- `ReceiptIncomingPacketRouter` — shared receipt-format dispatch;
-- `ChatOutboxDeliveryStateRouter` — shared outbox callback dispatch;
-- `ConversationOverviewRepositoryImpl` — combines Direct/Group projections for the overview screen.
-
-Shared routers contain dispatch only. Conversation-specific rules belong under `data/direct` or `data/group`.
-
-## Package rules
-
-- `domain/model/direct` and `domain/model/group` — conversation-specific domain state/models/state machines;
-- `domain/repository/direct|group` — repository contracts only;
-- `domain/usecase/direct|group` — one-purpose use cases;
-- `data/**/repository` — repository implementations only;
-- `data/**/incoming` — packet processors/routing;
-- `data/**/incoming/handler` — explicit packet handlers;
-- `data/**/outgoing` — outgoing orchestration;
-- `data/**/delivery` — delivery callbacks/coordinators;
-- `data/model` — shared chats DTO representations such as `MessagePartDto`;
-- `data/**/mapper` — mappings named for their concrete destination type;
-- `data/**/storage` — focused persistence helpers that are not repositories;
-- `data/group/membership` — group membership coordinators/state machine/epoch helpers;
-- `data/group/protocol` — group membership protocol construction/verification;
-- `data/group/security` — group cryptographic state/operations;
-- `data/group/verification` — verification synchronization.
-
-General dependency rules still apply inside these paths: datasources do not call repositories; repositories do not call repositories/use cases; use cases do not call use cases. Keep small model/mapper/repository/usecase packages flat unless the number of files genuinely justifies another grouping level.
-
-## Presentation
-
-Direct presentation lives under the Direct screen path; Group presentation lives under the Group screen path. Shared Compose elements should be shared only if both conversation types genuinely render/use the same thing.
-
-Previews remain in the same Kotlin file as the composable being previewed.
+Direct and Group use separate `DirectConversationViewModel` and `GroupConversationViewModel` paths. Item-level child components/view models (for example voice message playback) should own fast-changing per-item state instead of forcing unrelated message rows to rebuild.
