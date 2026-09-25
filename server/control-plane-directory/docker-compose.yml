@@ -1,0 +1,50 @@
+name: sparrow-central-directory
+services:
+  directory:
+    image: sparrow-central-directory:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sparrow-central-directory
+    restart: unless-stopped
+    env_file:
+      - ./private/admin.env
+    volumes:
+      - directory-state:/state
+    networks:
+      - public-edge
+    # No direct host ports. Public ingress is either this installer's own
+    # optional standalone Caddy or an independently configured shared edge.
+    # The administrator interface binds only to loopback INSIDE this container.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+  directory-caddy:
+    profiles: [standalone]
+    image: caddy:2-alpine
+    container_name: sparrow-central-directory-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./private/Caddyfile:/etc/caddy/Caddyfile:ro
+      - directory-caddy-data:/data
+      - directory-caddy-config:/config
+    depends_on:
+      - directory
+    networks:
+      - public-edge
+networks:
+  public-edge:
+    external: true
+    name: sparrow-public-edge
+volumes:
+  directory-state:
+    name: sparrow-central-directory-state
+  directory-caddy-data:
+    name: sparrow-central-directory-caddy-data
+  directory-caddy-config:
+    name: sparrow-central-directory-caddy-config

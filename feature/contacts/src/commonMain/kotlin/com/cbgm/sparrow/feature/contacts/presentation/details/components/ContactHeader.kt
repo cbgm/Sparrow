@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -21,15 +22,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
-import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
-import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
+import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
+import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
+import com.cbgm.sparrow.feature.contacts.presentation.details.model.ContactDetailsContactUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.feature_contacts_no_sparrow_identity
 import com.cbgm.sparrow.resources.feature_contacts_sparrow_contact_not_verified
@@ -40,24 +40,26 @@ import com.cbgm.sparrow.resources.feature_contacts_verified_sparrow_contact
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-internal fun ContactHeader(
-    contact: Contact,
-    profilePictureBytes: ByteArray? = null
-) {
+internal fun ContactHeader(contact: ContactDetailsContactUi) {
     val identity = contact.sparrowIdentity
-    val verifiedByMe = identity?.verificationStatus == ContactVerificationStatus.VERIFIED
+    val verifiedByMe = identity?.verifiedByMe == true
     val verifiedByContact =
-        identity?.keyExchangeStatus == KeyExchangeStatus.MUTUAL && identity.verifiedByContact
+        identity?.mutualKeyExchange == true && identity.verifiedByContact
     val isMutuallyVerified = verifiedByMe && verifiedByContact
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                top = MaterialTheme.spacing.large,
+                bottom = MaterialTheme.spacing.medium
+            ),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(contentAlignment = Alignment.BottomEnd) {
             SparrowAvatar(
                 name = contact.displayName.orEmpty(),
-                pictureBytes = profilePictureBytes,
+                target = AvatarTarget.User(contact.id),
                 size = Dimens.ContactDetailsScreen.avatarSize
             )
 
@@ -99,17 +101,18 @@ internal fun ContactHeader(
             }
         }
 
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
         Text(
-            text = contact.displayName ?: stringResource(Res.string.feature_contacts_unnamed_contact),
-            style = MaterialTheme.typography.titleSmall,
+            text = contact.displayName
+                ?: stringResource(Res.string.feature_contacts_unnamed_contact),
+            style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.micro))
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.base))
 
         Text(
             text =

@@ -4,16 +4,16 @@ import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.message.MessageEditPayloadCodec
 import com.cbgm.sparrow.core.protocol.packet.GroupMessageEditPacket
 import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
-import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
+import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
+import com.cbgm.sparrow.feature.chats.data.datasource.IncomingMessageDataSource
 import com.cbgm.sparrow.feature.chats.data.group.security.GROUP_END_TO_END_ENCRYPTED_MODE
-import com.cbgm.sparrow.feature.chats.data.group.security.GroupSecurityManager
+import com.cbgm.sparrow.feature.membership.domain.repository.GroupSecurityRepository
 
 class GroupMessageEditPacketHandler(
-    private val chatDao: ChatDao,
-    private val groupSecurityManager: GroupSecurityManager,
+    private val incomingMessageDataSource: IncomingMessageDataSource,
+    private val groupSecurityManager: GroupSecurityRepository,
     private val messageEditPayloadCodec: MessageEditPayloadCodec,
-    private val attachmentTransfer: MessageAttachmentDataSource
+    private val attachmentTransfer: MessageAttachmentOperationsRepository
 ) : GroupPacketHandler {
     override fun canHandle(packet: SparrowPacket): Boolean = packet is GroupMessageEditPacket
 
@@ -26,7 +26,7 @@ class GroupMessageEditPacketHandler(
                 packet as? GroupMessageEditPacket
                     ?: error("GroupMessageEditPacketHandler received an incompatible packet")
             val conversation =
-                chatDao.findConversationById(editPacket.groupId)
+                incomingMessageDataSource.findConversation(editPacket.groupId)
                     ?: error("Group conversation was not found")
             check(conversation.type == GROUP_CONVERSATION_TYPE) { "Conversation is not a group" }
 
@@ -35,7 +35,7 @@ class GroupMessageEditPacketHandler(
                     .decryptMessageEdit(editPacket, context.contactId)
                     .getOrThrow()
             val edit = messageEditPayloadCodec.decode(plaintext)
-            val target = chatDao.findMessageById(edit.messageId) ?: return@runCatching
+            val target = incomingMessageDataSource.findMessage(edit.messageId) ?: return@runCatching
             check(target.conversationId == editPacket.groupId) {
                 "Edited message belongs to another group"
             }
@@ -49,7 +49,7 @@ class GroupMessageEditPacketHandler(
             check(attachmentTransfer.protocolAttachments(edit.messageId).isEmpty()) {
                 "Messages with attachments cannot be edited"
             }
-            chatDao.upsertMessage(target.copy(text = edit.text.trim()))
+            incomingMessageDataSource.saveMessage(target.copy(text = edit.text.trim()))
         }
 
     private companion object {

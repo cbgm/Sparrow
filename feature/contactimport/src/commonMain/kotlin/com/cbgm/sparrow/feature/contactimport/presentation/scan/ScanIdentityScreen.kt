@@ -11,6 +11,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -93,28 +94,30 @@ fun ScanIdentityScreen(
                 modifier = Modifier.fillMaxSize()
             )
 
-            Text(
-                text = stringResource(Res.string.feature_contactimport_scan_identity_instruction),
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .padding(
-                            horizontal = MaterialTheme.spacing.screenPadding,
-                            vertical = MaterialTheme.spacing.times(5)
-                        ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-                textAlign = TextAlign.Center,
-                fontWeight = FontWeight.Medium
-            )
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal = MaterialTheme.spacing.screenPadding,
+                        vertical = MaterialTheme.spacing.times(5)
+                    ),
+                color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.96f),
+                shape = MaterialTheme.shapes.large
+            ) {
+                Text(
+                    text = stringResource(Res.string.feature_contactimport_scan_identity_instruction),
+                    modifier = Modifier.padding(MaterialTheme.spacing.medium),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
     }
 }
 
-// Draws a scrim with a transparent square cutout in the center and
-// bracket-style corners around it — the standard "viewfinder" affordance
-// that tells the user exactly where to aim, instead of a bare camera feed.
 @Composable
 private fun ScannerOverlay(modifier: Modifier = Modifier) {
     val scrimColor = MaterialTheme.colorScheme.scrim

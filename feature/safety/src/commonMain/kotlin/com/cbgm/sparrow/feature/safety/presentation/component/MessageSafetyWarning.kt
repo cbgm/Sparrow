@@ -60,7 +60,7 @@ fun MessageSafetyWarning(
             modifier =
                 Modifier.padding(
                     horizontal = MaterialTheme.spacing.small,
-                    vertical = MaterialTheme.spacing.micro
+                    vertical = MaterialTheme.spacing.base
                 ),
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base),
             verticalAlignment = Alignment.CenterVertically

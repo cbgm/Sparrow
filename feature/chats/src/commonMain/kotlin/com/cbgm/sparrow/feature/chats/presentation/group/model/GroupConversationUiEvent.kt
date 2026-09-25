@@ -13,32 +13,7 @@ sealed interface GroupConversationUiEvent {
 
     data object SendClicked : GroupConversationUiEvent
 
-    data object VoiceRecordClicked : GroupConversationUiEvent
-
-    data object VoiceStopClicked : GroupConversationUiEvent
-
-    data object VoicePreviewPlayPauseClicked : GroupConversationUiEvent
-
     data object VoiceSendClicked : GroupConversationUiEvent
-
-    data object VoiceComposerCancelled : GroupConversationUiEvent
-
-    data class VoicePlayPauseClicked(
-        val attachmentId: String
-    ) : GroupConversationUiEvent
-
-    data class VoiceTranscribeClicked(
-        val attachmentId: String
-    ) : GroupConversationUiEvent
-
-    data class VoiceSeekStarted(
-        val attachmentId: String
-    ) : GroupConversationUiEvent
-
-    data class VoiceSeekFinished(
-        val attachmentId: String,
-        val positionMilliseconds: Long
-    ) : GroupConversationUiEvent
 
     data object LoadOlderMessages : GroupConversationUiEvent
 
@@ -110,10 +85,6 @@ sealed interface GroupConversationUiEvent {
         val contact: SharedContact
     ) : GroupConversationUiEvent
 
-    data class AttachmentVisible(
-        val attachmentId: String
-    ) : GroupConversationUiEvent
-
     data class AttachmentError(
         val message: String
     ) : GroupConversationUiEvent
@@ -131,8 +102,4 @@ sealed interface GroupConversationUiEvent {
     ) : GroupConversationUiEvent
 
     data object BackClicked : GroupConversationUiEvent
-
-    data object AcceptInvitation : GroupConversationUiEvent
-
-    data object DeclineInvitation : GroupConversationUiEvent
 }

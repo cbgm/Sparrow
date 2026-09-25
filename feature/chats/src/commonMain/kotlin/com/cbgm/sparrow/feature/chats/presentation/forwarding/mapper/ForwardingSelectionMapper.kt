@@ -1,20 +1,20 @@
 package com.cbgm.sparrow.feature.chats.presentation.forwarding.mapper
 
+import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
 import com.cbgm.sparrow.feature.chats.domain.model.ForwardingTarget
 import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverviewContext
 import com.cbgm.sparrow.feature.chats.domain.model.overview.ConversationOverviewType
 import com.cbgm.sparrow.feature.chats.presentation.forwarding.model.ForwardingSelectionUiState
 import com.cbgm.sparrow.feature.chats.presentation.forwarding.model.ForwardingTargetUi
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
-import com.cbgm.sparrow.feature.contacts.domain.model.ContactsWithProfilePictures
 
 internal fun toForwardingSelectionUiState(
     conversationContext: ConversationOverviewContext,
-    contactsContext: ContactsWithProfilePictures,
+    contacts: List<Contact>,
     query: String
 ): ForwardingSelectionUiState {
     val normalizedQuery = query.trim()
-    val contactsById = contactsContext.contacts.associateBy(Contact::id)
+    val contactsById = contacts.associateBy(Contact::id)
     val directContactIds =
         conversationContext.conversations
             .asSequence()
@@ -37,13 +37,10 @@ internal fun toForwardingSelectionUiState(
                 ForwardingTargetUi(
                     id = "conversation:${conversation.id}",
                     displayName = conversation.displayName,
-                    avatarBytes =
+                    avatarTarget =
                         when (conversation.type) {
-                            ConversationOverviewType.DIRECT ->
-                                conversationContext.profilePictures[conversation.contactId]
-
-                            ConversationOverviewType.GROUP ->
-                                conversationContext.groupAvatars[conversation.id]
+                            ConversationOverviewType.DIRECT -> AvatarTarget.User(conversation.contactId)
+                            ConversationOverviewType.GROUP -> AvatarTarget.Group(conversation.id)
                         },
                     target =
                         when (conversation.type) {
@@ -56,8 +53,8 @@ internal fun toForwardingSelectionUiState(
                 )
             }.toList()
 
-    val contacts =
-        contactsContext.contacts
+    val contactTargets =
+        contacts
             .asSequence()
             .filterNot { contact -> contact.id in directContactIds }
             .filter { contact -> contact.matches(normalizedQuery) }
@@ -66,17 +63,17 @@ internal fun toForwardingSelectionUiState(
                 ForwardingTargetUi(
                     id = "contact:${contact.id}",
                     displayName = contact.forwardingDisplayName(),
-                    avatarBytes = contactsContext.profilePictures[contact.id],
+                    avatarTarget = AvatarTarget.User(contact.id),
                     target = ForwardingTarget.Contact(contact.id)
                 )
             }.toList()
 
-    return if (chats.isEmpty() && contacts.isEmpty()) {
+    return if (chats.isEmpty() && contactTargets.isEmpty()) {
         ForwardingSelectionUiState.Empty(searchQuery = query)
     } else {
         ForwardingSelectionUiState.Content(
             chats = chats,
-            contacts = contacts,
+            contacts = contactTargets,
             searchQuery = query
         )
     }

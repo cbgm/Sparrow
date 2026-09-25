@@ -39,6 +39,19 @@ class DirectMessageDeliveryStateMachineTest {
     }
 
     @Test
+    fun transientWireFailureKeepsMessageQueuedUntilAutomaticRetry() {
+        val initial = transition(MessageDeliveryStatus.QUEUED, MessageDeliveryEvent.SEND_STARTED)
+        val retrying = transition(initial, MessageDeliveryEvent.TRANSPORT_RETRY_PENDING)
+        assertEquals(MessageDeliveryStatus.QUEUED, retrying)
+        assertEquals(MessageDeliveryStatus.SENDING, transition(retrying, MessageDeliveryEvent.SEND_STARTED))
+        assertEquals(MessageDeliveryStatus.FAILED, transition(initial, MessageDeliveryEvent.SEND_FAILED))
+        assertEquals(
+            MessageDeliveryStatus.DELIVERED,
+            transition(MessageDeliveryStatus.QUEUED, MessageDeliveryEvent.DELIVERY_CONFIRMED)
+        )
+    }
+
+    @Test
     fun lateEventsNeverRegressReadState() {
         MessageDeliveryEvent.entries.forEach { event ->
             assertEquals(MessageDeliveryStatus.READ, transition(MessageDeliveryStatus.READ, event))

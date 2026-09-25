@@ -1,0 +1,12 @@
+# Include only when an operator has supplied service-account credentials.
+# Without this optional override the push API continues to operate, but FCM is disabled.
+services:
+  push:
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-admin.json
+    secrets:
+      - source: firebase-admin
+        target: firebase-admin.json
+secrets:
+  firebase-admin:
+    file: ${FIREBASE_ADMIN_CREDENTIALS:?Set FIREBASE_ADMIN_CREDENTIALS}

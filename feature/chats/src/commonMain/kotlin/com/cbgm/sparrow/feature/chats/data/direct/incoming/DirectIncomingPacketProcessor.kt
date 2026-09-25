@@ -10,21 +10,28 @@ import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessage
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessageEditPacketHandler
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.handler.DirectMessagePacketHandler
 import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacketDto
-import com.cbgm.sparrow.feature.contacts.domain.model.DirectChatAuthorizationRequiredException
-import com.cbgm.sparrow.feature.contacts.domain.usecase.RequireDirectChatAuthorizationUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.domain.error.DirectChatAuthorizationRequiredException
+import com.cbgm.sparrow.feature.identity.domain.usecase.GetIdentityPeerStateUseCase
 
 class DirectIncomingPacketProcessor(
     private val conversationDataSource: DirectConversationDataSource,
     private val messagePacketHandler: DirectMessagePacketHandler,
     private val deletionPacketHandler: DirectMessageDeletionPacketHandler,
     private val editPacketHandler: DirectMessageEditPacketHandler,
-    private val requireDirectChatAuthorization: RequireDirectChatAuthorizationUseCase
+    private val getIdentityPeerState: GetIdentityPeerStateUseCase
 ) {
     fun canProcess(packet: SparrowPacket): Boolean =
         packet is ChatMessagePacket || packet is MessageDeletionPacket || packet is MessageEditPacket
 
     suspend fun process(incoming: DecodedIncomingPacketDto): Result<Unit> {
-        val authorization = requireDirectChatAuthorization(incoming.contactId)
+        val authorization =
+            getIdentityPeerState(incoming.contactId).mapCatching { state ->
+                if (!state.hasEstablishedExchange) {
+                    throw DirectChatAuthorizationRequiredException(
+                        "A contact invitation must be accepted before messages can be received"
+                    )
+                }
+            }
         authorization.exceptionOrNull()?.let { error ->
             return if (error is DirectChatAuthorizationRequiredException) {
                 Result.success(Unit)

@@ -10,6 +10,7 @@ fun AttachmentManagementRoute(
     viewModel: AttachmentManagementViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
     AttachmentManagementScreen(
         uiState = uiState,
         onUiEvent = viewModel::onUiEvent

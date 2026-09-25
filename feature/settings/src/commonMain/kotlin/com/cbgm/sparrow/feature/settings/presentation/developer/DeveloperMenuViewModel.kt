@@ -11,6 +11,7 @@ import com.cbgm.sparrow.feature.settings.domain.usecase.SetDeveloperEnabledUseCa
 import com.cbgm.sparrow.feature.settings.presentation.developer.mapper.toDeveloperMenuUiState
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.developer.model.DeveloperMenuUiState
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -58,13 +59,10 @@ class DeveloperMenuViewModel(
                 )
         )
 
-    init {
-        refreshTransportDiagnostics()
-    }
-
     fun onUiEvent(event: DeveloperMenuUiEvent) {
         when (event) {
             DeveloperMenuUiEvent.BackClicked -> navigator.popBackStack()
+            DeveloperMenuUiEvent.NodesClicked -> navigator.navigateTo(AppRoute.DeveloperNodes)
             DeveloperMenuUiEvent.ErrorLogClicked -> navigator.navigateTo(AppRoute.DeveloperErrorLog)
             DeveloperMenuUiEvent.ClearLocalDataClicked -> clearLocalData()
             DeveloperMenuUiEvent.DisableDeveloperModeClicked -> disableDeveloperMode()
@@ -91,12 +89,10 @@ class DeveloperMenuViewModel(
         }
     }
 
-    private fun refreshTransportDiagnostics() {
-        viewModelScope.launch {
-            while (isActive) {
-                transportDiagnosticsProvider.refreshDiagnostics()
-                delay(DIAGNOSTICS_REFRESH_INTERVAL_MILLISECONDS.milliseconds)
-            }
+    suspend fun refreshTransportDiagnosticsWhileVisible() {
+        while (currentCoroutineContext().isActive) {
+            transportDiagnosticsProvider.refreshDiagnostics()
+            delay(DIAGNOSTICS_REFRESH_INTERVAL_MILLISECONDS.milliseconds)
         }
     }
 

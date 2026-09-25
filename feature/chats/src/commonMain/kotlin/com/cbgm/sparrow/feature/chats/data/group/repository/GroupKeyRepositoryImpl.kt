@@ -1,11 +1,11 @@
 package com.cbgm.sparrow.feature.chats.data.group.repository
 
+import com.cbgm.sparrow.core.crypto.group.GroupKeyStore
 import com.cbgm.sparrow.core.result.safeSuspendCall
-import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupKeyDataSource
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupKeyRepository
 
 class GroupKeyRepositoryImpl(
-    private val dataSource: GroupKeyDataSource
+    private val dataSource: GroupKeyStore
 ) : GroupKeyRepository {
     override suspend fun save(
         groupId: String,

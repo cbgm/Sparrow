@@ -95,6 +95,13 @@ private fun Route.installNodeWakeUpRoute(runtime: PushRuntime) {
             !call.hasNodeAccess(runtime, "POST", path, "", NodeCapability.MAILBOX) ->
                 call.respond(HttpStatusCode.Unauthorized)
 
+            // A successful wake-up means this Control Plane actually owns a
+            // registered device for the recipient. Previously every plane
+            // returned 202 even with no device, preventing the mailbox from
+            // trying the next dynamically discovered plane.
+            runtime.devices.find(recipientId).isEmpty() ->
+                call.respond(HttpStatusCode.NotFound)
+
             else -> {
                 runtime.coordinator.notifyRecipient(recipientId)
                 call.respond(HttpStatusCode.Accepted)

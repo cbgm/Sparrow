@@ -2,14 +2,16 @@ package com.cbgm.sparrow.feature.chats.presentation.create
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.chats.domain.usecase.group.CreateGroupConversationUseCase
 import com.cbgm.sparrow.feature.chats.presentation.create.mapper.toCreateGroupConversationUiState
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupConversationUiState
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupEffect
 import com.cbgm.sparrow.feature.chats.presentation.create.model.CreateGroupUiEvent
-import com.cbgm.sparrow.feature.contacts.domain.model.ContactsWithProfilePictures
-import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsWithProfilePicturesUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
+import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.toContactsUi
+import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactUi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -24,7 +26,7 @@ import kotlinx.coroutines.launch
 
 class CreateGroupViewModel(
     savedStateHandle: SavedStateHandle,
-    private val observeContactsWithProfilePictures: ObserveContactsWithProfilePicturesUseCase,
+    private val observeContacts: ObserveContactsUseCase,
     private val createGroupConversation: CreateGroupConversationUseCase
 ) : BaseViewModel() {
     private val title = savedStateHandle.getMutableStateFlow(TITLE_KEY, "")
@@ -47,8 +49,7 @@ class CreateGroupViewModel(
             formState,
             actionState
         ) { snapshot, form, action ->
-            snapshot.contacts.contacts.toCreateGroupConversationUiState(
-                profilePictures = snapshot.contacts.profilePictures,
+            snapshot.contacts.toCreateGroupConversationUiState(
                 title = form.title,
                 searchQuery = form.searchQuery,
                 selectedContactIds = form.selectedContactIds,
@@ -75,12 +76,13 @@ class CreateGroupViewModel(
     }
 
     private fun contactsPresentationFlow() =
-        observeContactsWithProfilePictures()
-            .map { contacts -> ContactsPresentation(contacts = contacts) }
+        observeContacts()
+            .map { contacts -> ContactsPresentation(contacts = contacts.toContactsUi()) }
             .catch { error ->
+                SparrowLog.error("CreateGroupViewModel", "Contacts could not be loaded", error)
                 emit(
                     ContactsPresentation(
-                        contacts = ContactsWithProfilePictures(emptyList(), emptyMap()),
+                        contacts = emptyList(),
                         errorMessage = error.message ?: "Contacts could not be loaded"
                     )
                 )
@@ -123,6 +125,7 @@ class CreateGroupViewModel(
                     clearForm()
                     _effects.send(CreateGroupEffect.GroupCreated)
                 }.onFailure { error ->
+                    SparrowLog.error("CreateGroupViewModel", "Group could not be created", error)
                     actionState.value =
                         CreateGroupActionState(
                             errorMessage = error.message ?: "Group could not be created"
@@ -143,7 +146,7 @@ class CreateGroupViewModel(
     }
 
     private data class ContactsPresentation(
-        val contacts: ContactsWithProfilePictures,
+        val contacts: List<ContactUi>,
         val errorMessage: String? = null
     )
 

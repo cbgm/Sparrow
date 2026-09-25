@@ -2,23 +2,15 @@ package com.cbgm.sparrow.feature.attachments.data.datasource
 
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
-import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.ContactDao
 import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
-import com.cbgm.sparrow.data.database.entity.ConversationEntity
 import com.cbgm.sparrow.data.database.entity.MessageAttachmentEntity
 import com.cbgm.sparrow.data.database.model.LocalMessageAttachmentRowDto
-import com.cbgm.sparrow.feature.attachments.data.mapper.toAttachmentStorageSummary
-import com.cbgm.sparrow.feature.attachments.data.mapper.toLocalAttachments
-import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentStorageSummary
-import com.cbgm.sparrow.feature.attachments.domain.model.LocalAttachment
+import com.cbgm.sparrow.feature.attachments.data.model.AttachmentStorageSummaryDto
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-class LocalAttachmentDataSource(
+internal class LocalAttachmentDataSource(
     private val attachmentDao: MessageAttachmentDao,
-    private val chatDao: ChatDao,
-    private val contactDao: ContactDao,
     private val fileDataSource: MessageAttachmentFileDataSource
 ) {
     private val logger = SparrowLog.withTag("LocalAttachmentDataSource")
@@ -36,45 +28,46 @@ class LocalAttachmentDataSource(
         }
 
         try {
-            val message = chatDao.findMessageById(entity.messageId) ?: return
-            if (message.isMine) return
+            val context = attachmentDao.findMessageContext(entity.messageId) ?: return
+            if (context.isMine) return
 
-            val conversation = chatDao.findConversationById(message.conversationId) ?: return
             fileDataSource.saveForConversation(
-                conversationId = conversation.id,
-                displayName = resolveDisplayName(conversation),
+                conversationId = context.conversationId,
+                displayName = context.displayName,
                 attachmentId = entity.id,
                 type = MessageAttachmentType.valueOf(entity.type),
                 mimeType = entity.mimeType,
                 bytes = bytes
             )
-            message.senderContactId?.let { senderContactId ->
+            context.senderContactId?.let { senderContactId ->
                 fileDataSource.deleteLegacyContactAttachment(senderContactId, entity.id)
             }
         } catch (error: Throwable) {
-            logger.warn(error) { "Could not save Sparrow conversation copy for attachment ${entity.id}" }
+            logger.error(error) { "Could not save Sparrow conversation copy for attachment ${entity.id}" }
         }
     }
 
-    fun observeByConversation(conversationId: String): Flow<List<LocalAttachment>> {
-        require(conversationId.isNotBlank()) { "Conversation ID must not be blank" }
-        return attachmentDao.observeLocalByConversationId(conversationId)
-            .map { rows -> rows.toLocalAttachments() }
+    fun updateSavedConversationName(conversationId: String, displayName: String) {
+        fileDataSource.updateSavedConversationName(conversationId, displayName)
     }
 
-    fun observeStorageSummaries(): Flow<List<AttachmentStorageSummary>> =
+    fun observeByConversation(conversationId: String): Flow<List<LocalMessageAttachmentRowDto>> {
+        require(conversationId.isNotBlank()) { "Conversation ID must not be blank" }
+        return attachmentDao.observeLocalByConversationId(conversationId)
+    }
+
+    fun observeStorageSummaries(): Flow<List<AttachmentStorageSummaryDto>> =
         attachmentDao.observeAllLocal()
             .map { rows ->
                 rows.groupBy { row -> row.conversationId }
                     .mapNotNull { (conversationId, conversationRows) ->
-                        val conversation = chatDao.findConversationById(conversationId) ?: return@mapNotNull null
-                        conversationRows
-                            .toLocalAttachments()
-                            .toAttachmentStorageSummary(
-                                conversationId = conversationId,
-                                displayName = resolveDisplayName(conversation),
-                                isGroup = conversation.type == "GROUP"
-                            )
+                        val first = conversationRows.firstOrNull() ?: return@mapNotNull null
+                        AttachmentStorageSummaryDto(
+                            conversationId = conversationId,
+                            displayName = first.displayName,
+                            isGroup = first.isGroup,
+                            rows = conversationRows
+                        )
                     }.sortedBy { summary -> summary.displayName.lowercase() }
             }
 
@@ -111,20 +104,10 @@ class LocalAttachmentDataSource(
     }
 
     private suspend fun deleteLegacyCopy(entity: MessageAttachmentEntity) {
-        chatDao.findMessageById(entity.messageId)
+        attachmentDao.findMessageContext(entity.messageId)
             ?.senderContactId
             ?.let { senderContactId ->
                 fileDataSource.deleteLegacyContactAttachment(senderContactId, entity.id)
             }
-    }
-
-    private suspend fun resolveDisplayName(conversation: ConversationEntity): String {
-        conversation.title?.takeIf(String::isNotBlank)?.let { return it }
-        val directContactId = conversation.contactId ?: return conversation.id
-        val contact = contactDao.findById(directContactId)
-        return contact?.contact?.displayName
-            ?.takeIf(String::isNotBlank)
-            ?: contact?.phoneNumbers?.firstOrNull()?.value
-            ?: directContactId
     }
 }

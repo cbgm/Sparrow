@@ -23,6 +23,7 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./index.html:/srv/index.html:ro
+      - ./directory-registration-proofs:/srv/directory-proofs:ro
       - caddy-data:/data
       - caddy-config:/config
     depends_on:
@@ -154,7 +155,7 @@ services:
       NODE_REGISTRY_URL: http://node-registry:8090
       PRESENCE_DIRECTORY_URL: http://presence-directory:8091
       PUSH_INTERNAL_API_TOKEN: ${PUSH_INTERNAL_API_TOKEN:-local-push-development-token}
-      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-admin.json
+      FIREBASE_TARGET_PROJECT_ID: ${FIREBASE_TARGET_PROJECT_ID:-sparrow-a9048}
       PUSH_DATABASE_URL: jdbc:postgresql://push-database:5432/sparrow_push
       PUSH_DATABASE_USER: sparrow_push
       PUSH_DATABASE_PASSWORD: ${PUSH_DATABASE_PASSWORD:-local-development-password}
@@ -163,13 +164,6 @@ services:
       PUSH_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS: ${PUSH_RATE_LIMIT_MAXIMUM_TRACKED_CLIENTS:-100000}
     ports:
       - "127.0.0.1:${PUSH_DIAGNOSTIC_PORT:-8395}:8095"
-    volumes:
-      - type: bind
-        source: ${FIREBASE_ADMIN_CREDENTIALS:?Define FIREBASE_ADMIN_CREDENTIALS}
-        target: /run/secrets/firebase-admin.json
-        read_only: true
-        bind:
-          create_host_path: false
     depends_on:
       node-registry:
         condition: service_healthy

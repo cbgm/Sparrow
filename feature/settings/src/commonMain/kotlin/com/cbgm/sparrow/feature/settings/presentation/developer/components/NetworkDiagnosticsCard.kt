@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.settings.presentation.developer.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,6 +31,7 @@ import com.cbgm.sparrow.core.transport.TransportNodeDiagnostic
 import com.cbgm.sparrow.core.transport.TransportNodeDiagnosticState
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.theme.Alpha
+import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.resources.Res
@@ -39,8 +43,9 @@ import com.cbgm.sparrow.resources.feature_settings_last_disconnect
 import com.cbgm.sparrow.resources.feature_settings_last_failed_node
 import com.cbgm.sparrow.resources.feature_settings_network_active_connections
 import com.cbgm.sparrow.resources.feature_settings_network_diagnostics
-import com.cbgm.sparrow.resources.feature_settings_network_no_nodes
+import com.cbgm.sparrow.resources.feature_settings_network_no_active_node
 import com.cbgm.sparrow.resources.feature_settings_network_nodes
+import com.cbgm.sparrow.resources.feature_settings_network_show_all_nodes
 import com.cbgm.sparrow.resources.feature_settings_node_available
 import com.cbgm.sparrow.resources.feature_settings_node_cooldown
 import com.cbgm.sparrow.resources.feature_settings_node_cooldown_remaining
@@ -60,10 +65,13 @@ import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
-internal fun NetworkDiagnosticsCard(diagnostics: TransportDiagnostics) {
+internal fun NetworkDiagnosticsCard(
+    diagnostics: TransportDiagnostics,
+    onShowAllNodes: () -> Unit
+) {
     SparrowCardNoAnimation {
         Column(
-            modifier = Modifier.padding(MaterialTheme.spacing.small)
+            modifier = Modifier.padding(MaterialTheme.spacing.medium)
         ) {
             Text(
                 text = stringResource(Res.string.feature_settings_network_diagnostics),
@@ -109,14 +117,20 @@ internal fun NetworkDiagnosticsCard(diagnostics: TransportDiagnostics) {
                 value = diagnostics.lastDisconnectReason ?: stringResource(Res.string.base_unknown)
             )
 
-            Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
-            NodeList(diagnostics = diagnostics)
+            Spacer(modifier = Modifier.size(MaterialTheme.spacing.medium))
+            CurrentNodeSummary(
+                diagnostics = diagnostics,
+                onShowAllNodes = onShowAllNodes
+            )
         }
     }
 }
 
 @Composable
-private fun NodeList(diagnostics: TransportDiagnostics) {
+private fun CurrentNodeSummary(
+    diagnostics: TransportDiagnostics,
+    onShowAllNodes: () -> Unit
+) {
     Text(
         text = stringResource(Res.string.feature_settings_network_nodes),
         style = MaterialTheme.typography.labelLarge,
@@ -124,22 +138,57 @@ private fun NodeList(diagnostics: TransportDiagnostics) {
         color = MaterialTheme.colorScheme.onSurface
     )
 
-    if (diagnostics.availableNodes.isEmpty()) {
+    // Do not show an old node as connected after the transport has disconnected.
+    val currentNode =
+        if (diagnostics.connectionState == TransportDiagnosticConnectionState.CONNECTED) {
+            diagnostics.availableNodes
+                .firstOrNull { node -> node.nodeId == diagnostics.currentNodeId }
+                ?.copy(state = TransportNodeDiagnosticState.CURRENT)
+                ?: diagnostics.currentNodeId?.let { nodeId ->
+                    diagnostics.currentWebSocketUrl?.let { websocketUrl ->
+                        TransportNodeDiagnostic(
+                            nodeId = nodeId,
+                            websocketUrl = websocketUrl,
+                            state = TransportNodeDiagnosticState.CURRENT
+                        )
+                    }
+                }
+        } else {
+            null
+        }
+
+    if (currentNode != null) {
+        NodeDiagnosticRow(node = currentNode)
+    } else {
         Text(
-            text = stringResource(Res.string.feature_settings_network_no_nodes),
+            text = stringResource(Res.string.feature_settings_network_no_active_node),
             modifier = Modifier.padding(top = MaterialTheme.spacing.base),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-    } else {
-        diagnostics.availableNodes.forEach { node ->
-            NodeDiagnosticRow(node = node)
-        }
+    }
+
+    OutlinedButton(
+        onClick = onShowAllNodes,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = MaterialTheme.spacing.small),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Text(
+            text = stringResource(
+                Res.string.feature_settings_network_show_all_nodes,
+                diagnostics.availableNodes.size
+            )
+        )
     }
 }
 
 @Composable
-private fun NodeDiagnosticRow(node: TransportNodeDiagnostic) {
+internal fun NodeDiagnosticRow(
+    node: TransportNodeDiagnostic,
+    outlined: Boolean = false
+) {
     val cooldown = rememberNodeCooldown(node)
     val effectiveState =
         if (node.state == TransportNodeDiagnosticState.COOLDOWN && cooldown.remainingSeconds == 0L) {
@@ -148,27 +197,35 @@ private fun NodeDiagnosticRow(node: TransportNodeDiagnostic) {
             node.state
         }
 
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = MaterialTheme.spacing.base)
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (outlined) Modifier else Modifier.padding(top = MaterialTheme.spacing.small)),
+        color = if (outlined) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.medium,
+        border = if (outlined) {
+            BorderStroke(Dimens.Base.borderStrokeWidth, MaterialTheme.colorScheme.outlineVariant)
+        } else {
+            null
+        }
     ) {
-        NodeDiagnosticHeader(
-            nodeId = node.nodeId,
-            state = effectiveState,
-            activeConnections = node.activeConnections,
-            cooldownRemainingSeconds = cooldown.remainingSeconds
-        )
+        Column(modifier = Modifier.padding(MaterialTheme.spacing.small)) {
+            NodeDiagnosticHeader(
+                nodeId = node.nodeId,
+                state = effectiveState,
+                activeConnections = node.activeConnections,
+                cooldownRemainingSeconds = cooldown.remainingSeconds
+            )
 
-        Text(
-            text = node.websocketUrl,
-            modifier = Modifier.padding(top = MaterialTheme.spacing.base / 2),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.NetworkDiagnosticsCard.available)
-        )
+            Text(
+                text = node.websocketUrl,
+                modifier = Modifier.padding(top = MaterialTheme.spacing.base / 2),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.NetworkDiagnosticsCard.available)
+            )
+        }
     }
 }
 
@@ -333,6 +390,7 @@ private fun TransportNodeDiagnosticState.displayColor(): Color =
 fun NetworkDiagnosticCardPreview() {
     SparrowTheme {
         NetworkDiagnosticsCard(
+            onShowAllNodes = {},
             diagnostics =
                 TransportDiagnostics(
                     connectionState = TransportDiagnosticConnectionState.CONNECTED,

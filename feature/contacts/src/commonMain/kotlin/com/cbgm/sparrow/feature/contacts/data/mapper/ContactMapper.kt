@@ -1,17 +1,13 @@
 package com.cbgm.sparrow.feature.contacts.data.mapper
 
 import com.cbgm.sparrow.data.database.entity.ContactPhoneNumberEntity
-import com.cbgm.sparrow.data.database.entity.ContactPublicIdentityEntity
-import com.cbgm.sparrow.data.database.model.ContactWithPublicIdentityDto
+import com.cbgm.sparrow.data.database.model.ContactWithPhoneNumbersDto
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumber
 import com.cbgm.sparrow.feature.contacts.domain.model.ContactPhoneNumberType
-import com.cbgm.sparrow.feature.contacts.domain.model.ContactVerificationStatus
 import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
-import com.cbgm.sparrow.feature.contacts.domain.model.KeyExchangeStatus
-import com.cbgm.sparrow.feature.contacts.domain.model.SparrowIdentity
 
-fun ContactWithPublicIdentityDto.toContact(): Contact =
+fun ContactWithPhoneNumbersDto.toContact(): Contact =
     Contact(
         id = contact.id,
         displayName = contact.displayName,
@@ -23,7 +19,7 @@ fun ContactWithPublicIdentityDto.toContact(): Contact =
         deviceContactId =
             contact.deviceContactId,
         deviceContactLinkStatus = contact.deviceContactLinkStatus.toDeviceContactLinkStatus(),
-        sparrowIdentity = publicIdentity?.toSparrowIdentity(),
+        sparrowIdentity = null,
         createdAtEpochMilliseconds = contact.createdAtEpochMilliseconds,
         updatedAtEpochMilliseconds = contact.updatedAtEpochMilliseconds
     )
@@ -34,17 +30,6 @@ private fun ContactPhoneNumberEntity.toContactPhoneNumber(): ContactPhoneNumber 
         value = value,
         type = type.toContactPhoneNumberType(),
         label = label
-    )
-
-private fun ContactPublicIdentityEntity.toSparrowIdentity(): SparrowIdentity =
-    SparrowIdentity(
-        encryptionPublicKey = encryptionPublicKey.copyOf(),
-        signingPublicKey = signingPublicKey.copyOf(),
-        verificationStatus = verificationStatus.toContactVerificationStatus(),
-        verifiedByContact = verifiedByContact,
-        locallyImported = locallyImported,
-        keyExchangeStatus = keyExchangeStatus.toKeyExchangeStatus(),
-        updatedAtEpochMilliseconds = updatedAtEpochMilliseconds
     )
 
 private fun String.toContactPhoneNumberType(): ContactPhoneNumberType =
@@ -87,28 +72,4 @@ private fun String.toDeviceContactLinkStatus(): DeviceContactLinkStatus =
 
         else ->
             error("Unknown device-contact link status: $this")
-    }
-
-private fun String.toContactVerificationStatus(): ContactVerificationStatus =
-    when (this) {
-        ContactVerificationStatus.UNVERIFIED.name ->
-            ContactVerificationStatus.UNVERIFIED
-
-        ContactVerificationStatus.VERIFIED.name ->
-            ContactVerificationStatus.VERIFIED
-
-        else ->
-            error("Unknown verification status: $this")
-    }
-
-private fun String.toKeyExchangeStatus(): KeyExchangeStatus =
-    when (this) {
-        KeyExchangeStatus.ONE_WAY.name ->
-            KeyExchangeStatus.ONE_WAY
-
-        KeyExchangeStatus.MUTUAL.name ->
-            KeyExchangeStatus.MUTUAL
-
-        else ->
-            error("Unknown key-exchange status: $this")
     }

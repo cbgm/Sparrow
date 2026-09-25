@@ -45,7 +45,7 @@ fun MemberSelectionContactsTopBar(
                     containerColor = containerColor,
                     scrolledContainerColor = containerColor,
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    actionIconContentColor = MaterialTheme.colorScheme.onBackground,
+                    actionIconContentColor = MaterialTheme.colorScheme.primary,
                     navigationIconContentColor = MaterialTheme.colorScheme.onBackground
                 ),
             title = {
@@ -75,7 +75,8 @@ fun MemberSelectionContactsTopBar(
                     } else {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = null
+                            contentDescription = title,
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -87,7 +88,11 @@ fun MemberSelectionContactsTopBar(
             onSearchQueryChanged = onSearchQueryChanged,
             placeholder = stringResource(Res.string.feature_contacts_search_placholder),
             onClear = { onSearchQueryChanged("") },
-            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.screenPadding)
+            modifier = Modifier.padding(
+                start = MaterialTheme.spacing.screenPadding,
+                end = MaterialTheme.spacing.screenPadding,
+                bottom = MaterialTheme.spacing.small
+            )
         )
     }
 }

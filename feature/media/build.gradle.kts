@@ -15,7 +15,6 @@ kotlin {
         commonMain.dependencies {
             implementation(projects.core)
             implementation(projects.core.ui)
-            implementation(projects.data.datastore)
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)
             implementation(libs.bundles.koin.compose)

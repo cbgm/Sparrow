@@ -9,6 +9,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,7 +19,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
-import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.identity.domain.model.PublicIdentity
@@ -29,6 +29,7 @@ import com.cbgm.sparrow.resources.base_choose_phone_number
 import com.cbgm.sparrow.resources.base_generating_secure_identity
 import com.cbgm.sparrow.resources.base_identity_ready_opening
 import com.cbgm.sparrow.resources.base_phone_number
+import com.cbgm.sparrow.resources.feature_identity_backup_restore_action
 import com.cbgm.sparrow.resources.feature_onboarding_approve_create_identity
 import com.cbgm.sparrow.resources.feature_onboarding_approve_phone_number
 import com.cbgm.sparrow.resources.feature_onboarding_detected_automatically_confirm
@@ -50,10 +51,13 @@ fun PhonePage(
     onRetryAutomaticNumber: () -> Unit,
     onPhoneNumberChanged: (String) -> Unit,
     onApproveAndCreate: () -> Unit,
+    onRestoreIdentity: () -> Unit = {},
+    isRestoring: Boolean = false,
+    restoreError: String? = null,
     onNameChanged: (String) -> Unit
 ) {
     Column(
-        Modifier.padding(MaterialTheme.spacing.medium),
+        Modifier.fillMaxWidth().padding(MaterialTheme.spacing.medium),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         when (identityState) {
@@ -76,9 +80,10 @@ fun PhonePage(
             is IdentityUiState.NoIdentity -> {
                 Text(
                     text = stringResource(Res.string.feature_onboarding_approve_phone_number),
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
                 )
                 Spacer(Modifier.height(MaterialTheme.spacing.base))
                 Text(
@@ -88,58 +93,74 @@ fun PhonePage(
                     textAlign = TextAlign.Center
                 )
                 Spacer(Modifier.height(MaterialTheme.spacing.medium))
-                SparrowInputField(
-                    value = identityState.phoneNumber,
-                    onValueChange = onPhoneNumberChanged,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = stringResource(Res.string.base_phone_number),
-                    placeholderText = "+491701234567",
-                    errorText = identityState.phoneNumberError
-                        ?: if (identityState.phoneNumber.isBlank()) {
-                            stringResource(Res.string.feature_onboarding_no_automatic_number)
-                        } else {
-                            stringResource(
-                                Res.string.feature_onboarding_detected_automatically_confirm
-                            )
-                        },
-                    isError = identityState.phoneNumberError != null,
-                    isSingleLine = true
-                )
-                Spacer(Modifier.height(MaterialTheme.spacing.small))
-                SparrowInputField(
-                    value = identityState.name,
-                    onValueChange = onNameChanged,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = stringResource(Res.string.feature_onboarding_your_name),
-                    placeholderText = stringResource(Res.string.feature_onboarding_your_name),
-                    errorText = stringResource(Res.string.feature_onboarding_input_your_name),
-                    isSingleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
-                )
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    SparrowInputField(
+                        value = identityState.phoneNumber,
+                        onValueChange = onPhoneNumberChanged,
+                        modifier = Modifier.fillMaxWidth(),
+                        label = stringResource(Res.string.base_phone_number),
+                        placeholderText = "+491701234567",
+                        errorText = identityState.phoneNumberError
+                            ?: if (identityState.phoneNumber.isBlank()) {
+                                stringResource(Res.string.feature_onboarding_no_automatic_number)
+                            } else {
+                                stringResource(
+                                    Res.string.feature_onboarding_detected_automatically_confirm
+                                )
+                            },
+                        isError = identityState.phoneNumberError != null,
+                        isSingleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                    Spacer(Modifier.height(MaterialTheme.spacing.small))
+                    SparrowInputField(
+                        value = identityState.name,
+                        onValueChange = onNameChanged,
+                        modifier = Modifier.fillMaxWidth(),
+                        label = stringResource(Res.string.feature_onboarding_your_name),
+                        placeholderText = stringResource(Res.string.feature_onboarding_your_name),
+                        errorText = stringResource(Res.string.feature_onboarding_input_your_name),
+                        isSingleLine = true
+                    )
+                }
                 Spacer(Modifier.height(MaterialTheme.spacing.base))
                 if (canRetryAutomatic) {
-                    SparrowSecondaryButton(
-                        onClick = onRetryAutomaticNumber,
-                        text = stringResource(Res.string.feature_onboarding_try_sim_number_again)
-                    )
-                    Spacer(Modifier.height(MaterialTheme.spacing.base))
-                }
-                SparrowSecondaryButton(
-                    onClick = onChooseAnotherNumber,
-                    text = if (identityState.phoneNumber.isBlank()) {
-                        stringResource(Res.string.base_choose_phone_number)
-                    } else {
-                        stringResource(
-                            Res.string.base_choose_another_number
-                        )
+                    TextButton(onClick = onRetryAutomaticNumber) {
+                        Text(stringResource(Res.string.feature_onboarding_try_sim_number_again))
                     }
-                )
-                Spacer(Modifier.height(MaterialTheme.spacing.small))
+                }
+                TextButton(onClick = onChooseAnotherNumber) {
+                    Text(
+                        if (identityState.phoneNumber.isBlank()) {
+                            stringResource(Res.string.base_choose_phone_number)
+                        } else {
+                            stringResource(Res.string.base_choose_another_number)
+                        }
+                    )
+                }
+                Spacer(Modifier.height(MaterialTheme.spacing.base))
                 SparrowApprovalButton(
                     onClick = onApproveAndCreate,
+                    modifier = Modifier.fillMaxWidth(),
                     enabled = identityState.phoneNumber.isNotBlank() && identityState.name.isNotBlank(),
                     text = stringResource(Res.string.feature_onboarding_approve_create_identity)
                 )
+                Spacer(Modifier.height(MaterialTheme.spacing.small))
+                TextButton(
+                    onClick = onRestoreIdentity,
+                    enabled = identityState.phoneNumber.isNotBlank() && identityState.name.isNotBlank() && !isCreating && !isRestoring
+                ) {
+                    Text(stringResource(Res.string.feature_identity_backup_restore_action))
+                }
+                restoreError?.let { error ->
+                    Text(
+                        text = error,
+                        modifier = Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.base),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
 
             is IdentityUiState.Ready -> {

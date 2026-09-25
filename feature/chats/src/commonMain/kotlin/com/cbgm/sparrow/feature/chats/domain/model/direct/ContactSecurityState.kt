@@ -4,6 +4,9 @@ enum class ContactSecurityState {
     /** Phone-book contact only. We do not possess this contact's public keys. */
     NO_REMOTE_PUBLIC_KEYS,
 
+    /** We initiated sharing our current identity with this peer; no remote keys imported yet. */
+    LOCAL_IDENTITY_SHARED,
+
     /** We possess their public keys, but they do not yet possess ours. */
     ONE_WAY_KEYS,
 

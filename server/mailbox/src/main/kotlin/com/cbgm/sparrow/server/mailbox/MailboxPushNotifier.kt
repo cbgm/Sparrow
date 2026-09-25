@@ -2,7 +2,6 @@ package com.cbgm.sparrow.server.mailbox
 
 import com.cbgm.sparrow.server.persistence.ControlPlaneEndpointPool
 import com.cbgm.sparrow.server.persistence.ServiceEnvironment
-import com.cbgm.sparrow.server.persistence.controlPlaneUrlsFromEnvironment
 import com.cbgm.sparrow.server.security.InternalApiAuthentication
 import com.cbgm.sparrow.server.security.NodeIdentityStore
 import com.cbgm.sparrow.server.security.NodeRequestAuthentication
@@ -13,6 +12,7 @@ import io.ktor.client.engine.cio.CIO
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.header
 import io.ktor.client.request.post
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
 import java.nio.file.Path
@@ -52,10 +52,17 @@ class MailboxPushNotifier private constructor(
                     pool.markAvailable(baseUrl)
                     return true
                 }
+                if (response.status == HttpStatusCode.NotFound) {
+                    // This plane is online but has no registered device for
+                    // this recipient. Try the next verified plane without
+                    // putting the healthy local plane into failure cooldown.
+                    pool.markReachable(baseUrl)
+                    continue
+                }
                 pool.markUnavailable(baseUrl)
             } catch (cancellation: CancellationException) {
                 throw cancellation
-            } catch (error: Exception) {
+            } catch (_: Exception) {
                 pool.markUnavailable(baseUrl)
             }
         }
@@ -83,11 +90,9 @@ class MailboxPushNotifier private constructor(
             val internalUrl = System.getenv("PUSH_INTERNAL_URL")?.takeIf(String::isNotBlank)
             val endpointPool =
                 nodeApiUrl?.let {
-                    ControlPlaneEndpointPool(
-                        controlPlaneUrlsFromEnvironment(
-                            legacyEnvironmentNames = listOf("PUSH_NODE_API_URL"),
-                            defaultUrl = it
-                        )
+                    ControlPlaneEndpointPool.fromEnvironment(
+                        legacyEnvironmentNames = listOf("PUSH_NODE_API_URL"),
+                        defaultUrl = it
                     )
                 }
             return MailboxPushNotifier(

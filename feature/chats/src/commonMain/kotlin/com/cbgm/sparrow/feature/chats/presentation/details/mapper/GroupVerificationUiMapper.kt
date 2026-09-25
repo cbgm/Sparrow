@@ -13,7 +13,7 @@ import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupVerificati
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupVerificationUiState
 import com.cbgm.sparrow.feature.contacts.domain.model.Contact
 import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.filterContacts
-import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.groupContactsByInitial
+import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.toContactGroups
 
 internal fun buildGroupVerificationSummary(
     isLocalAdmin: Boolean,
@@ -141,15 +141,17 @@ private fun GroupVerificationPair.toGroupMemberVerificationState(): GroupMemberV
     }
 
 internal fun toGroupAvatarUiState(
+    groupId: String,
     title: String,
-    avatarBytes: ByteArray?,
+    hasAvatar: Boolean,
     canEdit: Boolean,
     isSaving: Boolean,
     errorMessage: String?
 ): GroupAvatarUiState =
     GroupAvatarUiState(
+        groupId = groupId,
         title = title,
-        avatarBytes = avatarBytes,
+        hasAvatar = hasAvatar,
         canEdit = canEdit,
         isSaving = isSaving,
         errorMessage = errorMessage
@@ -161,7 +163,6 @@ internal fun toGroupVerificationUiState(
     groupTitle: GroupTitleUiState,
     groupDescription: GroupDescriptionUiState,
     contacts: List<Contact>,
-    profilePictures: Map<String, ByteArray?>,
     selectedContactId: String?,
     safetyNumber: String,
     isLoadingSafetyNumber: Boolean,
@@ -205,8 +206,7 @@ internal fun toGroupVerificationUiState(
                 availableContactGroups =
                     availableContacts
                         .filterContacts(searchQuery)
-                        .groupContactsByInitial(),
-                profilePictures = profilePictures,
+                        .toContactGroups(),
                 selectedContactIds =
                     selectedContactIds.filterTo(mutableSetOf()) { contactId ->
                         availableContacts.any { contact -> contact.id == contactId }

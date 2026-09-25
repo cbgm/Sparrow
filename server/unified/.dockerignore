@@ -1,0 +1,11 @@
+# Directory-sync public-client image must NEVER send the installed bundle's
+# server secrets, Firebase credentials, databases, or other files to Docker's
+# build context. Only the listed public client sources and Dockerfiles are allowed.
+**
+!control_plane_directory_client.py
+!control_plane_directory_sync.py
+!directory-sync/
+!directory-sync/Dockerfile
+!control_plane_directory_registration.py
+!directory-registration/
+!directory-registration/Dockerfile

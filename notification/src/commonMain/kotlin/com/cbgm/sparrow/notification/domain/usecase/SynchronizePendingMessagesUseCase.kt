@@ -87,9 +87,15 @@ class SynchronizePendingMessagesUseCase(
         mailboxCoordinator
             .synchronizePending()
             .getOrElse { error ->
-                logger.warn(error) {
-                    "Mailbox synchronization failed during push wake-up; " +
-                        "central push synchronization already completed"
+                // This is a best-effort second pass AFTER authenticated central
+                // push envelopes have already been processed. A stale mailbox
+                // capability after a server replacement must not show a global
+                // error popup for an otherwise successful notification.
+                // Keep the failure diagnostically visible; normal mailbox sync
+                // and mailbox credential re-provisioning remain separate work.
+                logger.warn {
+                    "Additional mailbox sync deferred during push wake-up: " +
+                        (error.message ?: error::class.simpleName.orEmpty())
                 }
                 0
             }

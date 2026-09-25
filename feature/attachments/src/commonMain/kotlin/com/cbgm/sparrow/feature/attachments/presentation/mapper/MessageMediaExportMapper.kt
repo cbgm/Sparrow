@@ -5,7 +5,9 @@ import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachment
 import com.cbgm.sparrow.feature.media.domain.model.MediaContentType
 import com.cbgm.sparrow.feature.media.domain.model.MediaExportItem
 
-internal fun MessageAttachmentUi.ImageVideoAttachmentUi.toMediaExportItem(): MediaExportItem =
+internal fun MessageAttachmentUi.ImageVideoAttachmentUi.toMediaExportItem(
+    localFilePath: String
+): MediaExportItem =
     MediaExportItem(
         id = id,
         type =
@@ -15,6 +17,5 @@ internal fun MessageAttachmentUi.ImageVideoAttachmentUi.toMediaExportItem(): Med
                 else -> error("Unsupported image/video attachment type: $type")
             },
         mimeType = mimeType,
-        localFilePath = localFilePath,
-        bytes = bytes
+        localFilePath = localFilePath
     )

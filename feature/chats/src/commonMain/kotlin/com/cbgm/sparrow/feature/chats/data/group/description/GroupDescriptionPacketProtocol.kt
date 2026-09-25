@@ -4,7 +4,7 @@ import com.cbgm.sparrow.core.crypto.group.GroupCrypto
 import com.cbgm.sparrow.core.id.IdGenerator
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair
 import com.cbgm.sparrow.core.protocol.packet.GroupDescriptionUpdatedPacket
-import com.cbgm.sparrow.feature.chats.data.group.protocol.GroupProtocolPayloadEncoder
+import com.cbgm.sparrow.core.protocol.packet.GroupProtocolPayloadEncoder
 
 internal class GroupDescriptionPacketProtocol(
     private val groupCrypto: GroupCrypto,

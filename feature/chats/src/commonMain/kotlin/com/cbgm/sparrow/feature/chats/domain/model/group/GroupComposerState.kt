@@ -1,5 +1,7 @@
 package com.cbgm.sparrow.feature.chats.domain.model.group
 
+import com.cbgm.sparrow.feature.membership.domain.model.GroupConversationState
+
 enum class GroupComposerState(
     val isInputEnabled: Boolean,
     val isSendActionEnabled: Boolean,
@@ -27,7 +29,7 @@ fun GroupConversation?.resolveComposerState(): GroupComposerState {
 
     return when {
         isReady -> GroupComposerState.READY
-        !isIncomingInvitation && state.canQueueMessagesWhilePreparing() -> GroupComposerState.QUEUEING
+        state.canQueueMessagesWhilePreparing() -> GroupComposerState.QUEUEING
         else -> GroupComposerState.DISABLED
     }
 }

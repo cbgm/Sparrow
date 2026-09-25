@@ -3,6 +3,8 @@ package com.cbgm.sparrow.feature.media.device
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.ImageDecoder
 import android.media.MediaMetadataRetriever
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -40,6 +42,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.theme.FunctionalColors
 import com.cbgm.sparrow.feature.media.domain.model.CameraCaptureConfig
 import com.cbgm.sparrow.feature.media.domain.model.CameraCaptureType
@@ -48,6 +51,7 @@ import com.cbgm.sparrow.feature.media.domain.model.CapturedMedia
 import com.cbgm.sparrow.feature.media.presentation.camera.CameraControls
 import java.io.ByteArrayOutputStream
 import java.io.File
+import kotlin.math.ceil
 
 @Composable
 actual fun rememberCameraCaptureLauncher(
@@ -190,6 +194,8 @@ private fun CameraCaptureDialog(
                         boundCamera.cameraControl.enableTorch(true)
                     }
                 }.onFailure { error ->
+                    SparrowLog.error("CameraCapture", "Media operation failed", error)
+
                     currentOnError(error.message ?: "Camera could not be opened")
                 }
             }
@@ -345,7 +351,7 @@ private fun capturePhoto(
             override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                 runCatching {
                     val bitmap = requireNotNull(
-                        decodeProfilePictureBitmap(
+                        decodeCameraBitmap(
                             file = outputFile,
                             maxDimension = maxDimension ?: DEFAULT_CAMERA_MAX_IMAGE_DIMENSION
                         )
@@ -365,7 +371,10 @@ private fun capturePhoto(
                         bitmap.recycle()
                     }
                 }.onSuccess(onCaptured)
-                    .onFailure { error -> onError(error.message ?: "Photo could not be captured") }
+                    .onFailure { error ->
+                        SparrowLog.error("CameraCapture", "Photo could not be captured", error)
+                        onError(error.message ?: "Photo could not be captured")
+                    }
                 outputFile.delete()
             }
 
@@ -377,11 +386,11 @@ private fun capturePhoto(
     )
 }
 
-private fun android.graphics.Bitmap.encodeCameraPhoto(maxBytes: Int?): ByteArray {
+private fun Bitmap.encodeCameraPhoto(maxBytes: Int?): ByteArray {
     for (quality in CAMERA_JPEG_QUALITIES) {
         val bytes =
             ByteArrayOutputStream().use { output ->
-                check(compress(android.graphics.Bitmap.CompressFormat.JPEG, quality, output)) {
+                check(compress(Bitmap.CompressFormat.JPEG, quality, output)) {
                     "Captured photo could not be encoded"
                 }
                 output.toByteArray()
@@ -432,6 +441,8 @@ private fun startVideoRecording(
                                 outputFile.delete()
                                 onFinalized(captured, null)
                             }.onFailure { error ->
+                                SparrowLog.error("CameraCapture", "Media operation failed", error)
+
                                 outputFile.delete()
                                 onFinalized(null, error.message ?: "Video recording could not be read")
                             }
@@ -482,3 +493,19 @@ private fun CameraLens.toCameraSelector(): CameraSelector =
 
 private const val DEFAULT_CAMERA_MAX_IMAGE_DIMENSION = 4096
 private val CAMERA_JPEG_QUALITIES = listOf(92, 88, 84, 80, 76, 72, 68, 64, 60)
+
+private fun decodeCameraBitmap(
+    file: File,
+    maxDimension: Int
+): Bitmap? =
+    runCatching {
+        ImageDecoder.decodeBitmap(ImageDecoder.createSource(file)) { decoder, info, _ ->
+            decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+            val largestDimension = maxOf(info.size.width, info.size.height)
+            if (largestDimension > maxDimension) {
+                decoder.setTargetSampleSize(
+                    ceil(largestDimension.toDouble() / maxDimension.toDouble()).toInt()
+                )
+            }
+        }
+    }.getOrNull()

@@ -1,11 +1,10 @@
 package com.cbgm.sparrow.feature.contacts.presentation.blocklist.model
 
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
+import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactUi
 
 data class BlockedContactsUiState(
-    val blockedContacts: List<Contact> = emptyList(),
-    val availableContacts: List<Contact> = emptyList(),
-    val profilePictures: Map<String, ByteArray?> = emptyMap(),
+    val blockedContacts: List<ContactUi> = emptyList(),
+    val availableContacts: List<ContactUi> = emptyList(),
     val showAddContacts: Boolean = false,
     val phoneNumber: String = "",
     val phoneNumberError: String? = null,

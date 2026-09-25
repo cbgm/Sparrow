@@ -1,14 +1,21 @@
 package com.cbgm.sparrow.presentation
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.BuildKonfig
 import com.cbgm.sparrow.core.logging.SparrowLog
+import com.cbgm.sparrow.core.logging.StartupTrace
 import com.cbgm.sparrow.core.transport.ControlPlaneReachability
 import com.cbgm.sparrow.feature.settings.domain.usecase.InitAppLanguageUseCase
 import com.cbgm.sparrow.feature.transport.connection.TransportConnectionState
+import com.cbgm.sparrow.feature.transport.connection.isRecoverableConnectivityFailure
 import com.cbgm.sparrow.presentation.model.AppInitializationDependencies
 import com.cbgm.sparrow.presentation.model.ForegroundRuntimeDependencies
+import com.cbgm.sparrow.startup.util.StartupRuntimeReadiness
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
@@ -25,15 +32,27 @@ import kotlin.time.Duration.Companion.milliseconds
 class AppViewModel(
     private val initAppLanguageUseCase: InitAppLanguageUseCase,
     private val initialization: AppInitializationDependencies,
-    private val foreground: ForegroundRuntimeDependencies
+    private val foreground: ForegroundRuntimeDependencies,
+    private val startupRuntimeReadiness: StartupRuntimeReadiness
 ) : ViewModel() {
     private val logger = SparrowLog.withTag("AppViewModel")
     private val isForeground = MutableStateFlow(false)
     private val isRuntimeReady = MutableStateFlow(false)
 
+    var isLanguageInitialized by mutableStateOf(false)
+        private set
+
     init {
+        StartupTrace.begin()
         viewModelScope.launch {
-            initializeApplication()
+            try {
+                initializeApplication()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Throwable) {
+                startupRuntimeReadiness.markFailed(error)
+                logger.error(error) { "Required application initialization failed" }
+            }
         }
         viewModelScope.launch {
             observeForegroundRuntime()
@@ -41,6 +60,7 @@ class AppViewModel(
     }
 
     fun onAppVisible() {
+        StartupTrace.event("app lifecycle visible")
         foreground.appVisibilityState.onAppVisible()
         initialization.platformNotificationRuntime.requestPushTokenRegistration()
         isForeground.value = true
@@ -52,58 +72,113 @@ class AppViewModel(
     }
 
     private suspend fun initializeApplication() {
-        initialization.initializeCryptoRuntime()
-            .getOrElse { error ->
-                throw IllegalStateException(
-                    "Sparrow could not initialize its cryptographic runtime",
-                    error
-                )
-            }
-        initAppLanguageUseCase()
-        initialization.controlPlaneConfiguration.initialize()
-        initialization.platformNotificationRuntime.initialize()
-        initialization.conversationNotificationCoordinator.start()
-        startDirectInvitationConversationCoordinator()
-        initializeControlPlaneDirectory()
+        StartupTrace.event("application initialization started")
+        StartupTrace.measure("app language") { initAppLanguageUseCase() }
+        isLanguageInitialized = true
+        StartupTrace.event("language ready; navigation composition now permitted")
+
+        StartupTrace.measure("crypto runtime") {
+            initialization.initializeCryptoRuntime()
+                .getOrElse { error ->
+                    throw IllegalStateException(
+                        "Sparrow could not initialize its cryptographic runtime",
+                        error
+                    )
+                }
+        }
+        StartupTrace.measure("load saved control-plane configuration") {
+            initialization.controlPlaneConfiguration.initialize()
+        }
+        StartupTrace.measure("notification runtime") {
+            initialization.platformNotificationRuntime.initialize()
+        }
+        StartupTrace.measure("conversation notification coordinator") {
+            initialization.conversationNotificationCoordinator.start()
+        }
+        StartupTrace.event("launching invitation/membership/identity result observers")
+        startInvitationResultCoordinators()
+        StartupTrace.measure("control-plane directory configuration/discovery") {
+            initializeControlPlaneDirectory()
+        }
+        StartupTrace.event("starting background control-plane maintenance")
         startControlPlaneMaintenance()
         observeControlPlaneRegistrationTargets()
         synchronizeDeviceContacts()
         isRuntimeReady.value = true
+        startupRuntimeReadiness.markReady()
+        StartupTrace.event("app runtime ready; foreground session allowed")
     }
 
     private suspend fun initializeControlPlaneDirectory() {
-        val configuredDirectoryUrl =
-            BuildKonfig.CONTROL_PLANE_DIRECTORY_URL
-                .trim()
-                .takeIf(String::isNotBlank)
-        if (initialization.controlPlaneConfiguration.directoryUrl.value == null &&
-            configuredDirectoryUrl != null
-        ) {
-            initialization.controlPlaneConfiguration
-                .setDirectoryUrl(configuredDirectoryUrl)
-                .onFailure { error ->
-                    logger.warn {
-                        "Control-plane directory configuration could not be stored: ${error.message}"
+        // Consume the optional build URL on the first app launch only. Passing
+        // an empty URL also records that the initial bootstrap was considered:
+        // later APK rebuilds cannot silently override a user's configuration.
+        initialization.controlPlaneConfiguration
+            .useDefaultDirectoryUrlIfUnconfigured(BuildKonfig.CONTROL_PLANE_DIRECTORY_URL.trim())
+            .onFailure { error ->
+                logger.error(error) { "Initial control-plane directory configuration could not be stored" }
+            }
+
+        // Restore the signed, last-good directory without any HTTP request first.
+        // This keeps transport startup immediate when the directory is offline.
+        initialization.controlPlaneDirectorySynchronizer.restoreCached()
+            .onFailure { error ->
+                if (error is CancellationException) throw error
+                logger.warn { "Verified Control Plane cache could not be restored: ${error.message}" }
+            }
+
+        // Persisted endpoints are sufficient to start transport. Do not block
+        // the foreground runtime on an HTTP directory refresh or health probes
+        // every time the app opens: startControlPlaneMaintenance() performs both.
+        // A first run without any cached endpoints still needs initial discovery.
+        val cachedEndpointCount = initialization.controlPlaneConfiguration.endpoints.value.size
+        StartupTrace.event("saved control-plane endpoints=$cachedEndpointCount")
+        if (cachedEndpointCount == 0) {
+            initialization.controlPlaneDirectorySynchronizer
+                .refresh()
+                .onSuccess { count ->
+                    logger.info { "Initial control-plane directory synchronized; addresses=$count" }
+                }.onFailure { error ->
+                    if (error is CancellationException && !error.isRecoverableConnectivityFailure()) throw error
+                    if (error.isRecoverableConnectivityFailure()) {
+                        // Startup with the directory server down is already represented
+                        // by the existing global offline/reconnected hint.
+                        logger.debug { "Initial control-plane directory unreachable: ${error.message}" }
+                    } else {
+                        logger.warn { "Initial control-plane directory unavailable: ${error.message}" }
                     }
                 }
         }
-
-        initialization.controlPlaneDirectorySynchronizer
-            .refresh()
-            .onSuccess { count ->
-                logger.info { "Control-plane directory synchronized; addresses=$count" }
-            }.onFailure { error ->
-                logger.warn {
-                    "Control-plane directory unavailable during startup: ${error.message}"
-                }
-            }
-        initialization.controlPlaneHealthMonitor.refresh()
     }
 
-    private fun startDirectInvitationConversationCoordinator() {
+    private fun startInvitationResultCoordinators() {
         viewModelScope.launch {
             waitUntilLocalIdentityIsReady()
-            initialization.directInvitationConversationCoordinator.run()
+            initialization.attachmentConversationNameObserver.run()
+        }
+        viewModelScope.launch {
+            waitUntilLocalIdentityIsReady()
+            initialization.invitationResultObserver.run()
+        }
+        viewModelScope.launch {
+            waitUntilLocalIdentityIsReady()
+            initialization.membershipResultObserver.run()
+        }
+        viewModelScope.launch {
+            waitUntilLocalIdentityIsReady()
+            initialization.messagingTransportResultObserver.run()
+        }
+        viewModelScope.launch {
+            waitUntilLocalIdentityIsReady()
+            initialization.directIdentityResultObserver.run()
+        }
+        viewModelScope.launch {
+            waitUntilLocalIdentityIsReady()
+            initialization.contactBlockObserver.run()
+        }
+        viewModelScope.launch {
+            waitUntilLocalIdentityIsReady()
+            initialization.approvedIdentityReconnectionObserver.run()
         }
     }
 
@@ -135,8 +210,9 @@ class AppViewModel(
             waitUntilLocalIdentityIsReady()
             combine(
                 initialization.controlPlaneConfiguration.endpoints,
-                initialization.controlPlaneStatusStore.statuses
-            ) { endpoints, statuses ->
+                initialization.controlPlaneStatusStore.statuses,
+                initialization.controlPlaneConfiguration.activeEndpoint
+            ) { endpoints, statuses, activeEndpoint ->
                 val reachabilityByUrl =
                     statuses.associate { status ->
                         status.endpoint.baseUrl to status.reachability
@@ -145,9 +221,11 @@ class AppViewModel(
                     .filter { endpoint ->
                         reachabilityByUrl[endpoint.baseUrl] != ControlPlaneReachability.UNREACHABLE
                     }.map { endpoint -> endpoint.baseUrl }
-                    .toSet()
+                    .toSet() to activeEndpoint?.baseUrl
             }.distinctUntilChanged()
                 .collectLatest {
+                    // Register again when the active control plane changes,
+                    // even if the set of available endpoints remains identical.
                     initialization.platformNotificationRuntime.requestPushTokenRegistration()
                 }
         }
@@ -189,9 +267,10 @@ class AppViewModel(
     }
 
     private suspend fun runForegroundSession() {
-        waitUntilLocalIdentityIsReady()
-        foreground.incomingEnvelopeRunner.start()
-        foreground.transportConnectionManager.start()
+        StartupTrace.event("foreground session requested; waiting for local identity")
+        StartupTrace.measure("foreground local identity ready") { waitUntilLocalIdentityIsReady() }
+        StartupTrace.measure("incoming envelope runner start") { foreground.incomingEnvelopeRunner.start() }
+        StartupTrace.measure("transport connection manager start") { foreground.transportConnectionManager.start() }
 
         coroutineScope {
             val connectionObserver =
@@ -211,36 +290,104 @@ class AppViewModel(
     }
 
     private suspend fun handleConnectionState(state: TransportConnectionState) {
+        StartupTrace.event(
+            "foreground transport state=${when (state) {
+                is TransportConnectionState.Connected -> "Connected"
+                is TransportConnectionState.Connecting -> "Connecting"
+                is TransportConnectionState.Disconnected -> "Disconnected"
+                is TransportConnectionState.Failed -> "Failed"
+            }}"
+        )
         when (state) {
             is TransportConnectionState.Connected -> handleConnected(state)
             is TransportConnectionState.Connecting -> logger.debug { "Transport connecting" }
             is TransportConnectionState.Disconnected -> logger.info { "Transport disconnected" }
-            is TransportConnectionState.Failed -> logger.error { "Transport failed: ${state.message}" }
+            // Failed is a connection state and already drives the offline/reconnected
+            // hint in AppNavigation. Unexpected causes are logged at their source.
+            is TransportConnectionState.Failed -> logger.debug { "Transport unavailable: ${state.message}" }
         }
     }
 
     private suspend fun handleConnected(state: TransportConnectionState.Connected) {
         logger.info { "Transport connected: ${state.routingId}" }
-        foreground.mailboxCoordinator
-            .provisionRoutes()
-            .onSuccess { provisioned ->
-                logger.info { "Mailbox routes ready; newly provisioned=$provisioned" }
-            }.onFailure { error ->
-                logger.warn { "Mailbox route provisioning failed: ${error.message}" }
-            }
-        foreground.mailboxCoordinator
-            .synchronizePending()
+        // A brief shared-proxy reload may reset an HTTPS handshake while the
+        // gateway remains connected. Do not block mailbox synchronization and
+        // outbox startup behind retry delays or expose an internal stack trace
+        // as a global snackbar; online/offline is handled by AppNavigation.
+        val initialProvisioning = foreground.mailboxCoordinator.provisionRoutes()
+        val initialFailure = initialProvisioning.exceptionOrNull()
+        if (initialFailure is CancellationException) throw initialFailure
+        initialProvisioning.onSuccess { provisioned ->
+            logger.info { "Mailbox routes ready; newly provisioned=$provisioned" }
+        }.onFailure { error ->
+            SparrowLog.diagnostic("AppViewModel", "Mailbox route provisioning deferred", error)
+        }
+        foreground.mailboxCoordinator.synchronizePending()
             .onSuccess { processed ->
                 logger.info { "Mailbox synchronization completed; processed=$processed" }
             }.onFailure { error ->
-                logger.warn { "Mailbox synchronization failed: ${error.message}" }
+                if (error is CancellationException) throw error
+                SparrowLog.diagnostic("AppViewModel", "Mailbox synchronization deferred", error)
             }
         foreground.outboxRunner.start()
+
+        // collectLatest cancels this retry loop immediately when transport is
+        // disconnected, the routing ID changes, or the foreground session ends.
+        // Never regenerate credentials, bypass TLS validation, or retire a route
+        // solely because an HTTPS request failed during a proxy restart.
+        if (initialFailure != null && initialFailure.isTransientMailboxNetworkFailure()) {
+            retryMailboxProvisioning()
+        }
+    }
+
+    private suspend fun retryMailboxProvisioning() {
+        var backoffMilliseconds = MAILBOX_PROVISIONING_INITIAL_RETRY_MILLISECONDS
+        var attempt = 0
+        while (true) {
+            delay(backoffMilliseconds.milliseconds)
+            val result = foreground.mailboxCoordinator.provisionRoutes()
+            val failure = result.exceptionOrNull()
+            if (failure is CancellationException) throw failure
+            if (failure == null) {
+                logger.info { "Mailbox route provisioning recovered; newly provisioned=${result.getOrThrow()}" }
+                return
+            }
+            attempt += 1
+            // Throttle persistent failures in the developer log; they are not
+            // foreground errors and should not flood the storage sink.
+            if (attempt <= 3 || attempt % 10 == 0 || !failure.isTransientMailboxNetworkFailure()) {
+                SparrowLog.diagnostic(
+                    "AppViewModel",
+                    "Mailbox route provisioning retry $attempt deferred",
+                    failure
+                )
+            }
+            if (!failure.isTransientMailboxNetworkFailure()) return
+            backoffMilliseconds = (backoffMilliseconds * 2).coerceAtMost(MAILBOX_PROVISIONING_MAX_RETRY_MILLISECONDS)
+        }
+    }
+
+    /** A proxy's temporary TLS internal-error alert is not a certificate-trust error. */
+    private fun Throwable.isTransientMailboxNetworkFailure(): Boolean {
+        if (isRecoverableConnectivityFailure()) return true
+        var current: Throwable? = this
+        repeat(8) {
+            val cause = current ?: return false
+            if (cause::class.simpleName == "SSLProtocolException" &&
+                cause.message?.contains("TLSV1_ALERT_INTERNAL_ERROR", ignoreCase = true) == true
+            ) {
+                return true
+            }
+            current = cause.cause
+        }
+        return false
     }
 
     private companion object {
         const val CONTROL_PLANE_DIRECTORY_REFRESH_MILLISECONDS = 300_000L
         const val CONTROL_PLANE_DIRECTORY_RETRY_MILLISECONDS = 5_000L
         const val CONTROL_PLANE_HEALTH_REFRESH_MILLISECONDS = 60_000L
+        const val MAILBOX_PROVISIONING_INITIAL_RETRY_MILLISECONDS = 2_000L
+        const val MAILBOX_PROVISIONING_MAX_RETRY_MILLISECONDS = 60_000L
     }
 }

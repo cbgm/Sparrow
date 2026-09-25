@@ -11,6 +11,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalContext
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.google.android.gms.auth.api.identity.GetPhoneNumberHintIntentRequest
 import com.google.android.gms.auth.api.identity.Identity
 
@@ -42,8 +43,8 @@ actual fun PhoneNumberHintLauncher(
             val selectedPhoneNumber =
                 runCatching {
                     signInClient?.getPhoneNumberFromIntent(result.data)
-                }.getOrNull()
-                    ?.trim()
+                }.onFailure { failure -> SparrowLog.error("PhoneNumberHintLauncher", "Could not read selected phone number", failure) }
+                    .getOrNull()?.trim()
                     .orEmpty()
 
             if (selectedPhoneNumber.isBlank()) {
@@ -78,6 +79,7 @@ actual fun PhoneNumberHintLauncher(
                     IntentSenderRequest.Builder(pendingIntent.intentSender).build()
                 )
             }.addOnFailureListener { error ->
+                SparrowLog.error("PhoneNumberHintLauncher", "Phone number picker unavailable", error)
                 currentOnResult.value(
                     PhoneNumberHintResult.Failed(
                         message = error.message ?: "Phone number picker is unavailable"

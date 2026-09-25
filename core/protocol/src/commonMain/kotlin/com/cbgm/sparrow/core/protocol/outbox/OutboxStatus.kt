@@ -5,5 +5,8 @@ enum class OutboxStatus {
     PROCESSING,
     SENT,
     FAILED,
-    EXPIRED
+    EXPIRED,
+
+    /** Historical recipient identity is retired; this packet must never be retried as-is. */
+    QUARANTINED
 }

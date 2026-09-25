@@ -7,7 +7,7 @@ import com.cbgm.sparrow.feature.chats.presentation.forwarding.mapper.toForwardin
 import com.cbgm.sparrow.feature.chats.presentation.forwarding.model.ForwardingSelectionEffect
 import com.cbgm.sparrow.feature.chats.presentation.forwarding.model.ForwardingSelectionUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.forwarding.model.ForwardingSelectionUiState
-import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsWithProfilePicturesUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 
 class ForwardingSelectionViewModel(
     observeConversationContext: ObserveConversationOverviewContextUseCase,
-    observeContactsWithProfilePictures: ObserveContactsWithProfilePicturesUseCase
+    observeContacts: ObserveContactsUseCase
 ) : BaseViewModel() {
     private val searchQuery = MutableStateFlow("")
     private val _effects = Channel<ForwardingSelectionEffect>(Channel.BUFFERED)
@@ -29,12 +29,12 @@ class ForwardingSelectionViewModel(
     val uiState: StateFlow<ForwardingSelectionUiState> =
         combine(
             observeConversationContext(),
-            observeContactsWithProfilePictures(),
+            observeContacts(),
             searchQuery
-        ) { conversationContext, contactsContext, query ->
+        ) { conversationContext, contacts, query ->
             toForwardingSelectionUiState(
                 conversationContext = conversationContext,
-                contactsContext = contactsContext,
+                contacts = contacts,
                 query = query
             )
         }.stateIn(

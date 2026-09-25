@@ -1,9 +1,9 @@
 package com.cbgm.sparrow.feature.attachments.data.mapper
 
-import com.cbgm.sparrow.feature.media.domain.model.VoiceTranscriptCue
-import com.cbgm.sparrow.feature.media.domain.model.VoiceTranscription
+import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentTranscript
+import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentTranscriptCue
 
-internal fun VoiceTranscription.toPersistedTranscript(): String =
+internal fun AttachmentTranscript.toPersistedTranscript(): String =
     buildString {
         append(PREFIX)
         append(escape(text))
@@ -17,8 +17,8 @@ internal fun VoiceTranscription.toPersistedTranscript(): String =
         }
     }
 
-internal fun String.toVoiceTranscription(): VoiceTranscription {
-    if (!startsWith(PREFIX)) return VoiceTranscription(text = this)
+internal fun String.toAttachmentTranscript(): AttachmentTranscript {
+    if (!startsWith(PREFIX)) return AttachmentTranscript(text = this)
 
     val records = removePrefix(PREFIX).split(RECORD_SEPARATOR)
     val text = records.firstOrNull()?.let(::unescape).orEmpty()
@@ -30,14 +30,14 @@ internal fun String.toVoiceTranscription(): VoiceTranscription {
             val end = fields[1].toLongOrNull() ?: return@mapNotNull null
             val cueText = unescape(fields[2])
             if (cueText.isEmpty() || end <= start) return@mapNotNull null
-            VoiceTranscriptCue(
+            AttachmentTranscriptCue(
                 text = cueText,
                 startMilliseconds = start,
                 endMilliseconds = end
             )
         }
 
-    return VoiceTranscription(text = text, cues = cues)
+    return AttachmentTranscript(text = text, cues = cues)
 }
 
 private fun escape(value: String): String =

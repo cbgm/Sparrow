@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.core.ui.component
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -50,6 +51,11 @@ fun SparrowSearchField(
         modifier = modifier
             .fillMaxWidth()
             .height(Dimens.SearchField.searchHeight)
+            .border(
+                Dimens.Base.borderStrokeWidth,
+                MaterialTheme.colorScheme.outlineVariant,
+                MaterialTheme.shapes.extraSmall
+            )
             .focusRequester(focusRequester ?: FocusRequester.Cancel),
         textStyle =
             MaterialTheme.typography.bodySmall.copy(
@@ -135,7 +141,7 @@ fun SparrowInputField(
     keyboardOptions: KeyboardOptions? = null
 ) {
     val defaultKeyboardOptions = KeyboardOptions(
-        keyboardType = KeyboardType.Phone,
+        keyboardType = KeyboardType.Text,
         imeAction = ImeAction.Done
     )
 
@@ -187,9 +193,7 @@ fun SparrowInputField(
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(
-                        alpha = Alpha.TextField.unfocusedBorder
-                    ),
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
                     focusedLabelColor = MaterialTheme.colorScheme.primary,
                     unfocusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(
                         alpha = Alpha.OpaqueText

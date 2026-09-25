@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.uikit.LocalUIViewController
+import com.cbgm.sparrow.core.logging.SparrowLog
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.UIKit.UIDocumentPickerDelegateProtocol
 import platform.UIKit.UIDocumentPickerViewController
@@ -39,6 +40,8 @@ actual fun rememberFileAccessLauncher(
                     picker.delegate = delegate
                     viewController.presentViewController(picker, animated = true, completion = null)
                 }.onFailure { error ->
+                    SparrowLog.error("FileAccessLauncher", "Media operation failed", error)
+
                     currentOnError.value(error.message ?: "File access could not be opened")
                 }
             }

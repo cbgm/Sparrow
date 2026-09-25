@@ -4,7 +4,6 @@ import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactGrou
 
 data class GroupMemberManagementUiState(
     val availableContactGroups: List<ContactGroupEntity> = emptyList(),
-    val profilePictures: Map<String, ByteArray?> = emptyMap(),
     val selectedContactIds: Set<String> = emptySet(),
     val searchQuery: String = "",
     val removalCandidate: GroupMemberVerificationUiState? = null,

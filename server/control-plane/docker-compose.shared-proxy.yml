@@ -1,0 +1,38 @@
+# Combined/standalone unified Public mode; never republish 80/443 in this project.
+services:
+  caddy:
+    # Shared front proxy owns public TLS. Keep the component Caddy HTTP-only.
+    environment:
+      CONTROL_PLANE_SITE_ADDRESS: ":80"
+    ports: !override
+      - "127.0.0.1:${CONTROL_PLANE_HTTP_PORT:-8390}:8080"
+    networks:
+      edge:
+      public-edge:
+        aliases:
+          - sparrow-control-edge
+  node-registry:
+    networks:
+      edge:
+      backend:
+      public-edge:
+        aliases:
+          - sparrow-control-registry
+  presence-directory:
+    networks:
+      edge:
+      backend:
+      public-edge:
+        aliases:
+          - sparrow-control-presence
+  push:
+    networks:
+      edge:
+      backend:
+      public-edge:
+        aliases:
+          - sparrow-control-push
+networks:
+  public-edge:
+    external: true
+    name: sparrow-public-edge

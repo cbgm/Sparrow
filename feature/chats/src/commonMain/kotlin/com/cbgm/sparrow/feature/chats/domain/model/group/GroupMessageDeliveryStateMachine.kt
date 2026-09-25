@@ -12,6 +12,8 @@ object GroupMessageDeliveryStateMachine {
             MessageDeliveryStatus.QUEUED to MessageDeliveryEvent.SEND_STARTED,
             MessageDeliveryStatus.FAILED to MessageDeliveryEvent.SEND_STARTED -> MessageDeliveryStatus.SENDING
 
+            MessageDeliveryStatus.SENDING to MessageDeliveryEvent.TRANSPORT_RETRY_PENDING -> MessageDeliveryStatus.QUEUED
+
             MessageDeliveryStatus.SENDING to MessageDeliveryEvent.SEND_SUCCEEDED -> MessageDeliveryStatus.SENT
 
             MessageDeliveryStatus.QUEUED to MessageDeliveryEvent.SEND_FAILED,

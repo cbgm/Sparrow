@@ -22,7 +22,9 @@ internal fun ContactDetailsBody(
     onRetry: () -> Unit,
     onShareContact: () -> Unit,
     onVerifyIdentity: () -> Unit,
-    onMediaAndFiles: () -> Unit
+    onMediaAndFiles: () -> Unit,
+    page: ContactDetailPage = ContactDetailPage.Overview,
+    onPageSelected: (ContactDetailPage) -> Unit = {}
 ) {
     when (uiState) {
         ContactDetailsUiState.Loading ->
@@ -47,10 +49,11 @@ internal fun ContactDetailsBody(
             ContactDetailsContent(
                 contact = uiState.contact,
                 safetyNumber = uiState.safetyNumber,
-                profilePictureBytes = uiState.profilePictureBytes,
                 onShareContact = onShareContact,
                 onVerifyIdentity = onVerifyIdentity,
                 onMediaAndFiles = onMediaAndFiles,
+                page = page,
+                onPageSelected = onPageSelected,
                 scrollState = scrollState,
                 innerPadding = innerPadding,
                 modifier = Modifier.fillMaxSize()

@@ -63,7 +63,14 @@ internal fun CameraControls(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onDismiss, enabled = !isRecording) {
+            IconButton(
+                onClick = onDismiss,
+                enabled = !isRecording,
+                modifier = Modifier.background(
+                    MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
+                    CircleShape
+                )
+            ) {
                 Icon(
                     imageVector = Icons.Filled.Close,
                     contentDescription = null,
@@ -72,7 +79,11 @@ internal fun CameraControls(
             }
             IconButton(
                 onClick = onToggleFlash,
-                enabled = isFlashAvailable
+                enabled = isFlashAvailable,
+                modifier = Modifier.background(
+                    MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
+                    CircleShape
+                )
             ) {
                 Icon(
                     imageVector = if (isFlashEnabled) Icons.Filled.FlashOn else Icons.Filled.FlashOff,
@@ -96,15 +107,30 @@ internal fun CameraControls(
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
         ) {
             if (isRecording) {
-                Text(
-                    text = recordingDurationMilliseconds.toCameraDuration(),
-                    color = FunctionalColors.MediaForeground,
-                    style = MaterialTheme.typography.labelLarge
-                )
+                Surface(
+                    color = MaterialTheme.colorScheme.error.copy(alpha = 0.90f),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Text(
+                        text = recordingDurationMilliseconds.toCameraDuration(),
+                        modifier = Modifier.padding(
+                            horizontal = MaterialTheme.spacing.medium,
+                            vertical = MaterialTheme.spacing.small
+                        ),
+                        color = MaterialTheme.colorScheme.onError,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
             }
 
             if (allowedTypes.size > 1 && !isRecording) {
                 Row(
+                    modifier = Modifier
+                        .background(
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+                            MaterialTheme.shapes.large
+                        )
+                        .padding(MaterialTheme.spacing.micro),
                     horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -140,7 +166,11 @@ internal fun CameraControls(
                 ) {
                     IconButton(
                         onClick = onSwitchCamera,
-                        enabled = canSwitchCamera && !isRecording
+                        enabled = canSwitchCamera && !isRecording,
+                        modifier = Modifier.background(
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
+                            CircleShape
+                        )
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Cameraswitch,
@@ -163,7 +193,15 @@ private fun CameraModeButton(
 ) {
     IconButton(
         enabled = enabled,
-        onClick = { onClick(type) }
+        onClick = { onClick(type) },
+        modifier = Modifier.background(
+            if (selected) {
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+            } else {
+                Color.Transparent
+            },
+            MaterialTheme.shapes.medium
+        )
     ) {
         Icon(
             imageVector =
@@ -200,10 +238,10 @@ private fun CameraShutterButton(
         modifier =
             Modifier
                 .size(CAMERA_SHUTTER_SIZE)
-                .border(3.dp, FunctionalColors.MediaForeground, CircleShape)
+                .border(3.dp, MaterialTheme.colorScheme.primary, CircleShape)
                 .clickable(onClick = onClick),
         shape = CircleShape,
-        color = Color.Transparent
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Box(

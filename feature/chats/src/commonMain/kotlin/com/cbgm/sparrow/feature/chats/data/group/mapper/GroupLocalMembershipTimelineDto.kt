@@ -1,17 +1,17 @@
 package com.cbgm.sparrow.feature.chats.data.group.mapper
 
-import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberLifecycleSnapshot
 
 internal data class GroupLocalMembershipTimelineDto(
     val visibleMessages: List<MessageEntity>,
-    val currentInvitations: List<GroupInvitationEntity>,
+    val currentMemberships: List<GroupMemberLifecycleSnapshot>,
     val isLocallyInactive: Boolean
 )
 
 internal fun buildGroupLocalMembershipTimeline(
     messages: List<MessageEntity>,
-    invitations: List<GroupInvitationEntity>,
+    memberships: List<GroupMemberLifecycleSnapshot>,
     localMembershipHistory: List<MessageEntity> = messages
 ): GroupLocalMembershipTimelineDto {
     val orderedMessages = messages.sortedWith(MESSAGE_ORDER)
@@ -30,13 +30,13 @@ internal fun buildGroupLocalMembershipTimeline(
             .maxWithOrNull(MESSAGE_ORDER)
             ?.createdAtEpochMilliseconds
 
-    val currentInvitations =
+    val currentMemberships =
         if (locallyInactive && latestEndAt != null) {
-            invitations.filter { invitation ->
-                invitation.createdAtEpochMilliseconds > latestEndAt
+            memberships.filter { membership ->
+                membership.createdAtEpochMilliseconds > latestEndAt
             }
         } else {
-            invitations
+            memberships
         }
 
     val initiallyActive =
@@ -55,8 +55,8 @@ internal fun buildGroupLocalMembershipTimeline(
 
     return GroupLocalMembershipTimelineDto(
         visibleMessages = orderedMessages.visibleDuringMembershipPeriods(initiallyActive),
-        currentInvitations = currentInvitations,
-        isLocallyInactive = locallyInactive && currentInvitations.isEmpty()
+        currentMemberships = currentMemberships,
+        isLocallyInactive = locallyInactive && currentMemberships.isEmpty()
     )
 }
 

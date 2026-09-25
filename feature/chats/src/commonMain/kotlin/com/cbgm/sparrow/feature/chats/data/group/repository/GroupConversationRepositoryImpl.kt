@@ -1,20 +1,16 @@
 package com.cbgm.sparrow.feature.chats.data.group.repository
 
-import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
-import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
-import com.cbgm.sparrow.data.database.dao.GroupVerificationDao
-import com.cbgm.sparrow.data.database.dao.MessageReactionDao
-import com.cbgm.sparrow.data.database.dao.MessageRecipientStateDao
+import com.cbgm.sparrow.core.id.IdGenerator
+import com.cbgm.sparrow.core.logging.ChatOpenTrace
+import com.cbgm.sparrow.core.time.SystemClock
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
-import com.cbgm.sparrow.data.database.entity.GroupInvitationEntity
 import com.cbgm.sparrow.data.database.entity.GroupVerificationPairEntity
 import com.cbgm.sparrow.data.database.entity.MessageEntity
 import com.cbgm.sparrow.data.database.entity.MessageReactionEntity
 import com.cbgm.sparrow.data.database.entity.MessageRecipientStateEntity
 import com.cbgm.sparrow.data.database.model.ConversationWithMessagesDto
-import com.cbgm.sparrow.feature.attachments.data.datasource.MessageAttachmentDataSource
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachment
+import com.cbgm.sparrow.feature.attachments.domain.repository.MessageAttachmentOperationsRepository
+import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupConversationHistoryDataSource
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
 import com.cbgm.sparrow.feature.chats.data.group.mapper.toGroupConversation
 import com.cbgm.sparrow.feature.chats.data.mapper.toMessagePartDtos
@@ -24,110 +20,141 @@ import com.cbgm.sparrow.feature.chats.domain.model.MessageHistoryPolicy
 import com.cbgm.sparrow.feature.chats.domain.model.MessageReaction
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupConversation
 import com.cbgm.sparrow.feature.chats.domain.repository.group.GroupConversationRepository
+import com.cbgm.sparrow.feature.membership.domain.model.GroupMemberLifecycleSnapshot
+import com.cbgm.sparrow.feature.membership.domain.repository.GroupMembershipRepository
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.shareIn
+import kotlin.time.TimeSource
 
-class GroupConversationRepositoryImpl(
-    private val chatDao: ChatDao,
-    private val messageAttachmentDataSource: MessageAttachmentDataSource,
-    private val messageRecipientStateDao: MessageRecipientStateDao,
-    private val messageReactionDao: MessageReactionDao,
-    private val groupInvitationDao: GroupInvitationDao,
-    private val groupSecurityDao: GroupSecurityDao,
-    private val groupVerificationDao: GroupVerificationDao
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+internal class GroupConversationRepositoryImpl(
+    private val historyDataSource: GroupConversationHistoryDataSource,
+    private val messageAttachmentDataSource: MessageAttachmentOperationsRepository,
+    private val membershipRepository: GroupMembershipRepository
 ) : GroupConversationRepository {
+    override suspend fun create(title: String): Result<String> =
+        runCatching {
+            val normalizedTitle = title.trim()
+            require(normalizedTitle.isNotEmpty()) { "Group title must not be blank" }
+            val now = SystemClock.nowEpochMilliseconds()
+            val groupId = IdGenerator.generate(prefix = "group")
+            historyDataSource.upsertConversation(
+                ConversationEntity(
+                    id = groupId,
+                    contactId = null,
+                    type = GROUP_CONVERSATION_TYPE,
+                    title = normalizedTitle,
+                    createdAtEpochMilliseconds = now,
+                    updatedAtEpochMilliseconds = now
+                )
+            )
+            groupId
+        }
+
     override fun observe(
         groupId: String,
         oldestCursor: MessageHistoryCursor?
-    ): Flow<GroupConversation?> {
-        val messages =
-            oldestCursor?.let { cursor ->
-                chatDao.observeMessagesFromCursor(
-                    conversationId = groupId,
-                    fromTimestamp = cursor.createdAtEpochMilliseconds,
-                    fromMessageId = cursor.messageId
-                )
-            } ?: chatDao.observeRecentMessages(groupId, MessageHistoryPolicy.PAGE_SIZE)
-
-        val messageSnapshot =
-            combine(
-                chatDao.observeConversationById(groupId),
-                messages,
-                observeAttachments(groupId, oldestCursor),
-                observeReactions(groupId, oldestCursor)
-            ) { conversation, loadedMessages, attachmentsByMessageId, reactions ->
-                MessageSnapshotDto(
-                    conversation = conversation,
-                    messages = loadedMessages,
-                    partsByMessageId =
-                        attachmentsByMessageId.mapValues { (_, values) ->
-                            values.toMessagePartDtos()
-                        },
-                    reactionsByMessageId = reactions.toDomainReactionsByMessageId()
-                )
+    ): Flow<GroupConversation?> = flow {
+        coroutineScope {
+            val messages =
+                oldestCursor?.let { cursor ->
+                    historyDataSource.observeMessagesFromCursor(
+                        conversationId = groupId,
+                        fromTimestamp = cursor.createdAtEpochMilliseconds,
+                        fromMessageId = cursor.messageId
+                    )
+                } ?: historyDataSource.observeRecentMessages(groupId, MessageHistoryPolicy.PAGE_SIZE)
+            val tracedMessages = messages.onEach { loaded ->
+                ChatOpenTrace.event("group Room messages emitted count=${loaded.size}")
             }
 
-        val groupStateSnapshot =
-            combine(
-                groupSecurityDao.observeCurrentMemberKeys(groupId),
-                observeRecipientStates(groupId, oldestCursor),
-                groupInvitationDao.observeByGroupId(groupId),
-                groupVerificationDao.observeByGroupId(groupId)
-            ) { memberKeys, recipientStates, invitations, verificationRows ->
-                GroupStateSnapshotDto(
-                    participantContactIds = memberKeys.map { memberKey -> memberKey.contactId },
-                    recipientStates = recipientStates,
-                    invitations = invitations,
-                    verificationRows = verificationRows
-                )
-            }
+            val sharedMessages = tracedMessages.shareIn(
+                scope = this,
+                started = SharingStarted.Eagerly,
+                replay = 1
+            )
 
-        return combine(
-            messageSnapshot,
-            groupStateSnapshot,
-            chatDao.observeMessagesByTransportModes(groupId, LOCAL_MEMBERSHIP_TRANSPORT_MODES)
-        ) { snapshot, groupState, membershipHistory ->
-            snapshot.conversation
-                ?.takeIf { it.type == GROUP_CONVERSATION_TYPE }
-                ?.let { ConversationWithMessagesDto(it, snapshot.messages) }
-                ?.toGroupConversation(
-                    participantContactIds = groupState.participantContactIds,
-                    recipientStates = groupState.recipientStates,
-                    invitations = groupState.invitations,
-                    verificationRows = groupState.verificationRows,
-                    partsByMessageId = snapshot.partsByMessageId,
-                    reactionsByMessageId = snapshot.reactionsByMessageId,
-                    localMembershipHistory = membershipHistory
-                )
+            val messageSnapshot =
+                combine(
+                    historyDataSource.observeConversation(groupId),
+                    sharedMessages,
+                    sharedMessages.map { loaded -> loaded.map { it.id } }.distinctUntilChanged().flatMapLatest { messageIds ->
+                        messageAttachmentDataSource.observeByMessageIds(messageIds)
+                    },
+                    observeReactions(groupId, oldestCursor)
+                ) { conversation, loadedMessages, attachmentsByMessageId, reactions ->
+                    MessageSnapshotDto(
+                        conversation = conversation,
+                        messages = loadedMessages,
+                        partsByMessageId =
+                            attachmentsByMessageId.mapValues { (_, values) ->
+                                values.toMessagePartDtos()
+                            },
+                        reactionsByMessageId = reactions.toDomainReactionsByMessageId()
+                    )
+                }
+
+            val groupStateSnapshot =
+                combine(
+                    membershipRepository.observeConversationMembership(groupId),
+                    observeRecipientStates(groupId, oldestCursor),
+                    historyDataSource.observeVerificationRows(groupId)
+                ) { membership, recipientStates, verificationRows ->
+                    GroupStateSnapshotDto(
+                        participantContactIds = membership.participantContactIds,
+                        recipientStates = recipientStates,
+                        memberships = membership.memberships,
+                        verificationRows = verificationRows
+                    )
+                }
+
+            combine(
+                messageSnapshot,
+                groupStateSnapshot,
+                historyDataSource.observeMessagesByTransportModes(groupId, LOCAL_MEMBERSHIP_TRANSPORT_MODES)
+            ) { snapshot, groupState, membershipHistory ->
+                val mappingStarted = TimeSource.Monotonic.markNow()
+                ChatOpenTrace.event("group repo joined snapshot messages=${snapshot.messages.size}")
+                val mapped = snapshot.conversation
+                    ?.takeIf { it.type == GROUP_CONVERSATION_TYPE }
+                    ?.let { ConversationWithMessagesDto(it, snapshot.messages) }
+                    ?.toGroupConversation(
+                        participantContactIds = groupState.participantContactIds,
+                        recipientStates = groupState.recipientStates,
+                        memberships = groupState.memberships,
+                        verificationRows = groupState.verificationRows,
+                        partsByMessageId = snapshot.partsByMessageId,
+                        reactionsByMessageId = snapshot.reactionsByMessageId,
+                        localMembershipHistory = membershipHistory
+                    )
+                ChatOpenTrace.event("group repo domain mapping completed duration=${mappingStarted.elapsedNow().inWholeMilliseconds}ms messages=${mapped?.messages?.size ?: 0}")
+                mapped
+            }.onStart {
+                ChatOpenTrace.event("group repo subscribed")
+            }.collect { emit(it) }
         }
     }
-
-    private fun observeAttachments(
-        conversationId: String,
-        oldestCursor: MessageHistoryCursor?
-    ): Flow<Map<String, List<MessageAttachment>>> =
-        oldestCursor?.let { cursor ->
-            messageAttachmentDataSource.observeFromMessageCursor(
-                conversationId = conversationId,
-                fromTimestamp = cursor.createdAtEpochMilliseconds,
-                fromMessageId = cursor.messageId
-            )
-        } ?: messageAttachmentDataSource.observeRecentByConversation(
-            conversationId = conversationId,
-            messageLimit = MessageHistoryPolicy.PAGE_SIZE
-        )
 
     private fun observeReactions(
         conversationId: String,
         oldestCursor: MessageHistoryCursor?
     ): Flow<List<MessageReactionEntity>> =
         oldestCursor?.let { cursor ->
-            messageReactionDao.observeFromMessageCursor(
+            historyDataSource.observeReactionsFromCursor(
                 conversationId = conversationId,
                 fromTimestamp = cursor.createdAtEpochMilliseconds,
                 fromMessageId = cursor.messageId
             )
-        } ?: messageReactionDao.observeRecentByConversationId(
+        } ?: historyDataSource.observeRecentReactions(
             conversationId = conversationId,
             messageLimit = MessageHistoryPolicy.PAGE_SIZE
         )
@@ -137,12 +164,12 @@ class GroupConversationRepositoryImpl(
         oldestCursor: MessageHistoryCursor?
     ): Flow<List<MessageRecipientStateEntity>> =
         oldestCursor?.let { cursor ->
-            messageRecipientStateDao.observeFromMessageCursor(
+            historyDataSource.observeRecipientStatesFromCursor(
                 conversationId = conversationId,
                 fromTimestamp = cursor.createdAtEpochMilliseconds,
                 fromMessageId = cursor.messageId
             )
-        } ?: messageRecipientStateDao.observeRecentByConversationId(
+        } ?: historyDataSource.observeRecentRecipientStates(
             conversationId = conversationId,
             messageLimit = MessageHistoryPolicy.PAGE_SIZE
         )
@@ -165,7 +192,7 @@ class GroupConversationRepositoryImpl(
     private data class GroupStateSnapshotDto(
         val participantContactIds: List<String>,
         val recipientStates: List<MessageRecipientStateEntity>,
-        val invitations: List<GroupInvitationEntity>,
+        val memberships: List<GroupMemberLifecycleSnapshot>,
         val verificationRows: List<GroupVerificationPairEntity>
     )
 

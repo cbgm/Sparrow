@@ -1,19 +1,21 @@
 package com.cbgm.sparrow.feature.chats.presentation.overview
 
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.ChatOpenTrace
 import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.ObserveActiveAutoReplyUseCase
-import com.cbgm.sparrow.feature.chats.domain.model.group.GroupLeaveRequirement
-import com.cbgm.sparrow.feature.chats.domain.usecase.direct.DeleteDirectConversationUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.DeleteGroupConversationUseCase
-import com.cbgm.sparrow.feature.chats.domain.usecase.group.GetGroupLeaveRequirementUseCase
 import com.cbgm.sparrow.feature.chats.domain.usecase.overview.ObserveConversationOverviewContextUseCase
 import com.cbgm.sparrow.feature.chats.presentation.overview.mapper.toOverviewUiState
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.ConversationListItem
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiState
+import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.DeleteConversationGroupUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.DeletePeerConversationUseCase
+import com.cbgm.sparrow.feature.conversationorchestration.domain.usecase.GetConversationGroupLeaveRequirementUseCase
+import com.cbgm.sparrow.feature.membership.domain.model.GroupLeaveRequirement
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -23,26 +25,27 @@ import kotlinx.coroutines.launch
 class OverviewViewModel(
     observeConversationContext: ObserveConversationOverviewContextUseCase,
     observeActiveAutoReply: ObserveActiveAutoReplyUseCase,
-    private val deleteDirectConversation: DeleteDirectConversationUseCase,
-    private val deleteGroupConversation: DeleteGroupConversationUseCase,
-    private val getGroupLeaveRequirement: GetGroupLeaveRequirementUseCase
+    private val deletePeerConversation: DeletePeerConversationUseCase,
+    private val deleteGroupConversation: DeleteConversationGroupUseCase,
+    private val getGroupLeaveRequirement: GetConversationGroupLeaveRequirementUseCase
 ) : BaseViewModel() {
     private val logger = SparrowLog.withTag("OverviewViewModel")
+    private val error = MutableStateFlow<String?>(null)
 
     val uiState: StateFlow<OverviewUiState> =
         combine(
             observeConversationContext(),
-            observeActiveAutoReply()
-        ) { context, activeAutoReply ->
+            observeActiveAutoReply(),
+            error
+        ) { context, activeAutoReply, currentError ->
             context.conversations.toOverviewUiState(
-                profilePictures = context.profilePictures,
-                groupAvatars = context.groupAvatars,
-                activeAutoReplyName = activeAutoReply?.name
+                activeAutoReplyName = activeAutoReply?.name,
+                error = currentError
             )
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = OverviewUiState.Loading
+            initialValue = OverviewUiState(isLoading = true)
         )
 
     fun onUiEvent(event: OverviewUiEvent) {
@@ -50,6 +53,7 @@ class OverviewViewModel(
             OverviewUiEvent.AutoReplyClicked -> navigator.navigateTo(AppRoute.AutoReplySettings)
             is OverviewUiEvent.ChatClicked -> openChat(event.chat)
             is OverviewUiEvent.DeleteConversation -> deleteConversation(event.conversationId)
+            OverviewUiEvent.ErrorDismissed -> error.value = null
         }
     }
 
@@ -60,6 +64,7 @@ class OverviewViewModel(
             } else {
                 AppRoute.Chat(chat.conversationId, chat.contactId, chat.contactName)
             }
+        ChatOpenTrace.begin(if (chat.isGroup) "group" else "direct")
         navigator.navigateTo(route)
     }
 
@@ -69,16 +74,20 @@ class OverviewViewModel(
             if (chat.isGroup) {
                 deleteGroup(chat)
             } else {
-                deleteDirectConversation(conversationId)
-                    .onFailure { error -> logger.error(error) { "Direct conversation deletion failed" } }
+                deletePeerConversation(conversationId)
+                    .onFailure { failure ->
+                        logger.error(failure) { "Direct conversation deletion failed" }
+                        error.value = failure.message ?: "Direct conversation deletion failed"
+                    }
             }
         }
     }
 
     private suspend fun deleteGroup(chat: ConversationListItem) {
         val requirement = getGroupLeaveRequirement(chat.conversationId)
-            .getOrElse { error ->
-                logger.error(error) { "Group leave requirement could not be resolved" }
+            .getOrElse { failure ->
+                logger.error(failure) { "Group leave requirement could not be resolved" }
+                error.value = failure.message ?: "Group leave requirement could not be resolved"
                 return
             }
         if (requirement is GroupLeaveRequirement.PromoteAdminFirst) {
@@ -86,11 +95,12 @@ class OverviewViewModel(
             return
         }
         deleteGroupConversation(chat.conversationId)
-            .onFailure { error -> logger.error(error) { "Group conversation deletion failed" } }
+            .onFailure { failure ->
+                logger.error(failure) { "Group conversation deletion failed" }
+                error.value = failure.message ?: "Group conversation deletion failed"
+            }
     }
 
     private fun currentConversation(conversationId: String): ConversationListItem? =
-        (uiState.value as? OverviewUiState.Content)
-            ?.conversations
-            ?.firstOrNull { it.conversationId == conversationId }
+        uiState.value.conversations.firstOrNull { it.conversationId == conversationId }
 }

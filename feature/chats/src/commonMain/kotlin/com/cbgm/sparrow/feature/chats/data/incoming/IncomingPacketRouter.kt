@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.chats.data.incoming
 
 import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
 import com.cbgm.sparrow.core.protocol.handler.ProtocolPacketHandler
-import com.cbgm.sparrow.data.database.dao.ChatDao
+import com.cbgm.sparrow.feature.chats.data.direct.datasource.DirectConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.direct.incoming.DirectIncomingPacketProcessor
 import com.cbgm.sparrow.feature.chats.data.group.incoming.GroupIncomingPacketProcessor
 import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacketDto
@@ -18,7 +18,7 @@ class IncomingPacketRouter(
     private val groupProcessor: GroupIncomingPacketProcessor,
     private val receiptRouter: ReceiptIncomingPacketRouter,
     private val fallbackPacketHandler: ProtocolPacketHandler,
-    private val chatDao: ChatDao
+    private val directConversationDataSource: DirectConversationDataSource
 ) {
     suspend fun route(incoming: DecodedIncomingPacketDto): Result<Unit> =
         when {
@@ -36,7 +36,7 @@ class IncomingPacketRouter(
 
     private suspend fun DecodedIncomingPacketDto.toFallbackContext(): IncomingPacketContext {
         val conversationId =
-            chatDao.findConversationByContactId(contactId)?.id
+            directConversationDataSource.findConversationByContactId(contactId)?.id
                 ?: "control-${packet.packetId}"
         return IncomingPacketContext(
             contactId = contactId,

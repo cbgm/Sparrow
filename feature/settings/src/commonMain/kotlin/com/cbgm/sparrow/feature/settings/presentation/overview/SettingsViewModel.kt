@@ -2,14 +2,15 @@ package com.cbgm.sparrow.feature.settings.presentation.overview
 
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingFeature
+import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingModelState
 import com.cbgm.sparrow.core.embedding.domain.usecase.SetLocalEmbeddingFeatureEnabledUseCase
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.autoreply.domain.usecase.ObserveActiveAutoReplyUseCase
-import com.cbgm.sparrow.feature.media.domain.usecase.ObserveVoiceTranscriptionEnabledUseCase
-import com.cbgm.sparrow.feature.media.domain.usecase.SetVoiceTranscriptionEnabledUseCase
+import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
+import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
 import com.cbgm.sparrow.feature.search.domain.usecase.SetSemanticSearchEnabledUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetAppLanguageUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.GetBuildInfoUseCase
@@ -21,15 +22,17 @@ import com.cbgm.sparrow.feature.settings.domain.usecase.SetDeveloperEnabledUseCa
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetDirectIdentitySetupModeUseCase
 import com.cbgm.sparrow.feature.settings.presentation.overview.mapper.toSettingsUiState
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.DEVELOPER_MODE_TAP_THRESHOLD
-import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsEffect
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsUiEvent
 import com.cbgm.sparrow.feature.settings.presentation.overview.model.SettingsUiState
-import kotlinx.coroutines.channels.Channel
+import com.cbgm.sparrow.feature.voice.domain.usecase.ObserveVoiceTranscriptionEnabledUseCase
+import com.cbgm.sparrow.feature.voice.domain.usecase.SetVoiceTranscriptionEnabledUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -52,9 +55,29 @@ class SettingsViewModel(
     private val buildInfo = getBuildInfoUseCase()
     private val localState = MutableStateFlow(SettingsLocalState())
 
+    private val domainContext = observeSettingsDomainContext()
+        .shareIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+            replay = 1
+        )
+
+    val modelDownloadPercent: StateFlow<Int?> =
+        domainContext
+            .map { context ->
+                (context.localEmbeddingState.modelState as? LocalEmbeddingModelState.Downloading)
+                    ?.progress?.let { (it * 100).toInt().coerceIn(0, 100) }
+            }
+            .distinctUntilChanged()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                initialValue = null
+            )
+
     val uiState: StateFlow<SettingsUiState> =
         combine(
-            observeSettingsDomainContext(),
+            domainContext,
             localState,
             observeVoiceTranscriptionEnabled(),
             observeActiveAutoReply()
@@ -73,14 +96,27 @@ class SettingsViewModel(
                 developerModeTapCount = local.developerModeTapCount,
                 showLanguagePicker = local.showLanguagePicker
             )
-        }.stateIn(
+        }.map { state ->
+            // Keep download *status* in the screen state, but remove the
+            // continuously changing Float progress. Otherwise StateFlow emits
+            // a new SettingsUiState for every download tick.
+            val modelState = state.localEmbeddingState.modelState
+            state.copy(
+                localEmbeddingState = if (modelState is LocalEmbeddingModelState.Downloading) {
+                    state.localEmbeddingState.copy(modelState = LocalEmbeddingModelState.Downloading(null))
+                } else {
+                    state.localEmbeddingState
+                },
+                semanticSearchState = when (state.semanticSearchState) {
+                    is SemanticSearchState.DownloadingModel -> SemanticSearchState.DownloadingModel(null)
+                    else -> state.semanticSearchState
+                }
+            )
+        }.distinctUntilChanged().stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
             initialValue = SettingsUiState(buildInfo = buildInfo)
         )
-
-    private val _effects = Channel<SettingsEffect>(capacity = Channel.BUFFERED)
-    val effects = _effects.receiveAsFlow()
 
     init {
         loadLocalSettings()
@@ -103,7 +139,6 @@ class SettingsViewModel(
             SettingsUiEvent.LicensesClicked -> navigator.navigateTo(AppRoute.Licenses)
             SettingsUiEvent.DeveloperMenuClicked -> navigator.navigateTo(AppRoute.DeveloperMenu)
             SettingsUiEvent.BlockedContactsClicked -> navigator.navigateTo(AppRoute.BlockedContacts)
-            SettingsUiEvent.ProfileClicked -> navigator.navigateTo(AppRoute.ProfileSettings)
             SettingsUiEvent.AutoReplyClicked -> navigator.navigateTo(AppRoute.AutoReplySettings)
             SettingsUiEvent.ControlPlanesClicked -> navigator.navigateTo(AppRoute.ControlPlanes)
             SettingsUiEvent.AttachmentStorageClicked -> navigator.navigateTo(AppRoute.AttachmentStorage)
@@ -138,12 +173,7 @@ class SettingsViewModel(
         viewModelScope.launch {
             val result = setVoiceTranscriptionEnabled(enabled)
             if (result.isFailure) {
-                _effects.send(
-                    SettingsEffect.ShowSnackbar(
-                        result.exceptionOrNull()?.message
-                            ?: "Voice transcription setting could not be changed"
-                    )
-                )
+                SparrowLog.error("SettingsViewModel", "Voice transcription setting could not be changed", result.exceptionOrNull())
             }
         }
     }
@@ -166,7 +196,7 @@ class SettingsViewModel(
                         "Manual identity sharing enabled"
                 }
 
-            _effects.send(SettingsEffect.ShowSnackbar(message))
+            SparrowLog.hint(message)
         }
     }
 
@@ -179,11 +209,7 @@ class SettingsViewModel(
                     showLanguagePicker = false
                 )
             }
-            _effects.send(
-                SettingsEffect.ShowSnackbar(
-                    "Language changed to ${language.name}. Restart the app to apply it everywhere."
-                )
-            )
+            SparrowLog.hint("Language changed to ${language.name}. Restart the app to apply it everywhere.")
         }
     }
 
@@ -201,7 +227,7 @@ class SettingsViewModel(
                         developerModeTapCount = 0
                     )
                 }
-                _effects.send(SettingsEffect.ShowSnackbar("Developer mode enabled"))
+                SparrowLog.hint("Developer mode enabled")
             }
             return
         }
@@ -209,7 +235,7 @@ class SettingsViewModel(
         localState.update { it.copy(developerModeTapCount = newCount) }
         val remaining = DEVELOPER_MODE_TAP_THRESHOLD - newCount
         if (remaining <= 3) {
-            _effects.trySend(SettingsEffect.ShowSnackbar("$remaining more taps to enable developer mode"))
+            SparrowLog.hint("$remaining more taps to enable developer mode")
         }
     }
 

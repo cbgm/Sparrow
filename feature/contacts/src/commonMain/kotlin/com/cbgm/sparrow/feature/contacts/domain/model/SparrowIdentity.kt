@@ -1,5 +1,8 @@
 package com.cbgm.sparrow.feature.contacts.domain.model
 
+import com.cbgm.sparrow.feature.identity.domain.model.ContactVerificationStatus
+import com.cbgm.sparrow.feature.identity.domain.model.KeyExchangeStatus
+
 /**
  * Another person's public Sparrow identity.
  *

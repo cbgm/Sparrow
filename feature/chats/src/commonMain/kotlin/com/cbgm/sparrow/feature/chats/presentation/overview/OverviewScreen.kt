@@ -29,12 +29,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowSwipeRevealItem
 import com.cbgm.sparrow.core.ui.component.SwipeRevealAction
 import com.cbgm.sparrow.core.ui.theme.Alpha
@@ -42,16 +47,25 @@ import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.circle
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.chats.presentation.component.ScrollToBottomButton
+import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
+import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
+import com.cbgm.sparrow.feature.chats.presentation.common.history.component.ScrollToBottomButton
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.ConversationListItem
+import com.cbgm.sparrow.feature.chats.presentation.overview.model.LastMessagePreviewUi
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.overview.model.OverviewUiState
 import com.cbgm.sparrow.resources.Res
+import com.cbgm.sparrow.resources.feature_attachments_media
 import com.cbgm.sparrow.resources.feature_chats_attachment
+import com.cbgm.sparrow.resources.feature_chats_contact_card
+import com.cbgm.sparrow.resources.feature_chats_location
 import com.cbgm.sparrow.resources.feature_chats_no_conversations_hint
 import com.cbgm.sparrow.resources.feature_chats_no_conversations_yet
 import com.cbgm.sparrow.resources.feature_chats_no_messages_yet
+import com.cbgm.sparrow.resources.feature_chats_voice_message
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun OverviewScreen(
@@ -78,16 +92,29 @@ private fun Content(
     innerPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
-    when (uiState) {
-        OverviewUiState.Loading ->
+    // Short Room startup loads should not flash a spinner immediately after the
+    // native splash. This only delays the indicator, never data or navigation.
+    var showLoadingIndicator by remember { mutableStateOf(false) }
+    LaunchedEffect(uiState.isLoading) {
+        showLoadingIndicator = false
+        if (uiState.isLoading) {
+            delay(400L.milliseconds)
+            showLoadingIndicator = true
+        }
+    }
+
+    when {
+        uiState.isLoading ->
             Box(
                 modifier = modifier.fillMaxSize().padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.onBackground)
+                if (showLoadingIndicator) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.onBackground)
+                }
             }
 
-        is OverviewUiState.Empty ->
+        uiState.conversations.isEmpty() ->
             Box(modifier = modifier.fillMaxSize().padding(innerPadding)) {
                 EmptyContent(modifier = Modifier.fillMaxSize())
                 uiState.activeAutoReplyName?.let { name ->
@@ -105,7 +132,7 @@ private fun Content(
                 }
             }
 
-        is OverviewUiState.Content ->
+        else ->
             Box(modifier = modifier.fillMaxSize()) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -137,6 +164,7 @@ private fun Content(
                         key = { conversation -> conversation.conversationId }
                     ) { conversation ->
                         SparrowSwipeRevealItem(
+                            modifier = Modifier.fillMaxWidth(),
                             actions =
                                 listOf(
                                     SwipeRevealAction(
@@ -185,8 +213,6 @@ private fun Content(
                         )
                 )
             }
-
-        is OverviewUiState.Error -> Unit
     }
 }
 
@@ -200,7 +226,7 @@ private fun ActiveAutoReplyChip(
         onClick = onClick,
         modifier = modifier,
         shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = MaterialTheme.colorScheme.background,
         contentColor = MaterialTheme.colorScheme.primary,
         border =
             BorderStroke(
@@ -251,7 +277,7 @@ private fun ConversationItem(
             leadingContent = {
                 SparrowAvatar(
                     name = conversation.contactName,
-                    pictureBytes = conversation.avatarBytes
+                    target = conversation.avatarTarget
                 )
             },
             headlineContent = {
@@ -269,8 +295,15 @@ private fun ConversationItem(
                     text =
                         when {
                             conversation.lastMessage.isNotBlank() -> conversation.lastMessage
-                            !conversation.isGroup && conversation.hasMessages ->
-                                stringResource(Res.string.feature_chats_attachment)
+                            conversation.lastMessagePreview == LastMessagePreviewUi.MEDIA ->
+                                stringResource(Res.string.feature_attachments_media)
+                            conversation.lastMessagePreview == LastMessagePreviewUi.LOCATION ->
+                                stringResource(Res.string.feature_chats_location)
+                            conversation.lastMessagePreview == LastMessagePreviewUi.CONTACT_CARD ->
+                                stringResource(Res.string.feature_chats_contact_card)
+                            conversation.lastMessagePreview == LastMessagePreviewUi.VOICE ->
+                                stringResource(Res.string.feature_chats_voice_message)
+                            conversation.hasMessages -> stringResource(Res.string.feature_chats_attachment)
                             else -> stringResource(Res.string.feature_chats_no_messages_yet)
                         },
                     maxLines = 1,
@@ -372,9 +405,10 @@ private fun EmptyContent(modifier: Modifier = Modifier) {
 
         Text(
             text = stringResource(Res.string.feature_chats_no_conversations_hint),
-            modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacing.base.div(2)),
+            modifier = Modifier.padding(MaterialTheme.spacing.base.div(2)),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
+            textAlign = TextAlign.Center
         )
     }
 }
@@ -385,12 +419,13 @@ private fun OverviewScreenPreview() {
     SparrowTheme {
         OverviewScreen(
             uiState =
-                OverviewUiState.Content(
+                OverviewUiState(
                     conversations =
                         listOf(
                             ConversationListItem(
                                 contactId = "1",
                                 contactName = "Alice",
+                                avatarTarget = AvatarTarget.User("1"),
                                 lastMessage = "Hello!",
                                 timestamp = "10:00 AM",
                                 unreadCount = 3,
@@ -399,6 +434,7 @@ private fun OverviewScreenPreview() {
                             ConversationListItem(
                                 contactId = "2",
                                 contactName = "Bob",
+                                avatarTarget = AvatarTarget.User("2"),
                                 lastMessage = "Sounds good, see you then.",
                                 timestamp = "Yesterday",
                                 conversationId = "6"

@@ -1,6 +1,6 @@
 package com.cbgm.sparrow.feature.settings.domain.usecase
 
-import com.cbgm.sparrow.core.security.ContactBlocklistRepository
+import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
 
 class ObserveBlockedContactIdsUseCase(
     private val repository: ContactBlocklistRepository

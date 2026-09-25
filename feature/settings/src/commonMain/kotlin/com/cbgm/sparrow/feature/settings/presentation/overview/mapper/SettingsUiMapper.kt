@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.settings.presentation.overview.mapper
 
 import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingState
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
+import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyState
 import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo

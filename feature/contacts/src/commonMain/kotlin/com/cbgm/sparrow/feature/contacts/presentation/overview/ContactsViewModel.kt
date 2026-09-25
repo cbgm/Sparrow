@@ -2,9 +2,10 @@ package com.cbgm.sparrow.feature.contacts.presentation.overview
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.contacts.domain.usecase.ImportDeviceContactsUseCase
-import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsWithProfilePicturesUseCase
+import com.cbgm.sparrow.feature.contacts.domain.usecase.ObserveContactsUseCase
 import com.cbgm.sparrow.feature.contacts.presentation.overview.mapper.toContactsUiState
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsEffect
 import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactsUiEvent
@@ -20,7 +21,7 @@ import kotlinx.coroutines.launch
 
 class ContactsViewModel(
     savedStateHandle: SavedStateHandle,
-    observeContactsWithProfilePictures: ObserveContactsWithProfilePicturesUseCase,
+    observeContacts: ObserveContactsUseCase,
     private val importDeviceContacts: ImportDeviceContactsUseCase
 ) : BaseViewModel() {
     private val searchQuery = savedStateHandle.getMutableStateFlow(SEARCH_QUERY_KEY, "")
@@ -30,11 +31,12 @@ class ContactsViewModel(
 
     val uiState: StateFlow<ContactsUiState> =
         combine(
-            observeContactsWithProfilePictures(),
+            observeContacts(),
             searchQuery
-        ) { snapshot, query ->
-            snapshot.contacts.toContactsUiState(query, snapshot.profilePictures)
+        ) { contacts, query ->
+            contacts.toContactsUiState(query)
         }.catch { error ->
+            reportError(error.message ?: "Failed to load contacts")
             emit(ContactsUiState.Error(error.message ?: "Failed to load contacts", searchQuery.value))
         }.stateIn(
             scope = viewModelScope,
@@ -64,23 +66,19 @@ class ContactsViewModel(
         }
     }
 
+    fun reportError(message: String) = SparrowLog.error("ContactsViewModel", message)
+
     private fun importContacts() {
         viewModelScope.launch {
             importDeviceContacts()
                 .onFailure { error ->
-                    _effects.send(
-                        ContactsEffect.ShowError(error.message ?: "Failed to import contacts")
-                    )
+                    SparrowLog.error("ContactsViewModel", "Failed to import contacts", error)
                 }
         }
     }
 
     private fun showPermissionDenied() {
-        emitEffect(
-            ContactsEffect.ShowError(
-                "Contacts permission is required to import device contacts."
-            )
-        )
+        SparrowLog.error("ContactsViewModel", "Contacts permission is required to import device contacts.")
     }
 
     private fun emitEffect(effect: ContactsEffect) {

@@ -26,6 +26,7 @@ $bundleFiles = @(
     "docker-compose.yml",
     "docker-compose.release.yml",
     "docker-compose.production.yml",
+    "docker-compose.shared-proxy.yml",
     "Caddyfile",
     "index.html",
     "Bootstrap-CommunityNode.ps1",

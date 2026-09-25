@@ -15,9 +15,11 @@ kotlin {
         commonMain.dependencies {
             implementation(projects.core)
             implementation(projects.data.datastore)
+            implementation(projects.data.database)
             implementation(projects.core.crypto)
             implementation(projects.core.protocol)
             implementation(projects.core.ui)
+            implementation(projects.feature.avatar)
 
             implementation(libs.bundles.compose)
             implementation(libs.bundles.coroutines)
@@ -36,6 +38,7 @@ kotlin {
 
         androidDeviceTest.dependencies {
             implementation(libs.bundles.android.device.testing)
+            implementation(libs.bundles.room.runtime)
             implementation(libs.kotlinx.coroutines.test)
         }
     }

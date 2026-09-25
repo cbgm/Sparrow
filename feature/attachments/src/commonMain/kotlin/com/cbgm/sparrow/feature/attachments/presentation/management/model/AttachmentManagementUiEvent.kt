@@ -15,10 +15,6 @@ sealed interface AttachmentManagementUiEvent {
         val attachmentId: String
     ) : AttachmentManagementUiEvent
 
-    data class AttachmentVisible(
-        val attachmentId: String
-    ) : AttachmentManagementUiEvent
-
     data object DeleteSelectedClicked : AttachmentManagementUiEvent
 
     data object DeleteConfirmed : AttachmentManagementUiEvent

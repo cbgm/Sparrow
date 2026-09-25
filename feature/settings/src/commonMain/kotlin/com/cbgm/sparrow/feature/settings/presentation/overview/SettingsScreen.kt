@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonOff
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Search
@@ -33,11 +32,14 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,13 +48,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingModelState
 import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingState
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
 import com.cbgm.sparrow.core.ui.locale.AppLanguage
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyState
 import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState
 import com.cbgm.sparrow.feature.settings.domain.model.BuildInfo
@@ -90,14 +92,12 @@ import com.cbgm.sparrow.resources.feature_settings_message_safety_downloading
 import com.cbgm.sparrow.resources.feature_settings_message_safety_failed
 import com.cbgm.sparrow.resources.feature_settings_message_safety_ready
 import com.cbgm.sparrow.resources.feature_settings_message_safety_subtitle
+import com.cbgm.sparrow.resources.feature_settings_messaging
 import com.cbgm.sparrow.resources.feature_settings_network
 import com.cbgm.sparrow.resources.feature_settings_open_source_licenses
 import com.cbgm.sparrow.resources.feature_settings_privacy_and_data
 import com.cbgm.sparrow.resources.feature_settings_privacy_policy
 import com.cbgm.sparrow.resources.feature_settings_privacy_policy_subtitle
-import com.cbgm.sparrow.resources.feature_settings_profile
-import com.cbgm.sparrow.resources.feature_settings_profile_picture
-import com.cbgm.sparrow.resources.feature_settings_profile_subtitle
 import com.cbgm.sparrow.resources.feature_settings_security
 import com.cbgm.sparrow.resources.feature_settings_semantic_search
 import com.cbgm.sparrow.resources.feature_settings_semantic_search_building
@@ -112,13 +112,29 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun SettingsScreen(
-    uiState: SettingsUiState,
-    snackbarHostState: SnackbarHostState,
+    uiState: State<SettingsUiState>,
+    modelDownloadPercent: State<Int?>,
     onUiEvent: (SettingsUiEvent) -> Unit,
     scrollState: ScrollState,
     innerPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
+    // Observe only the value(s) needed by each row. The parent does not read
+    // uiState.value: a switch change invalidates its own row, not the screen.
+    val language = remember(uiState) { derivedStateOf { uiState.value.currentLanguage } }
+    val autoReplyName = remember(uiState) { derivedStateOf { uiState.value.activeAutoReplyName } }
+    val identityMode = remember(uiState) { derivedStateOf { uiState.value.directIdentitySetupMode } }
+    val blockUnknownInvites = remember(uiState) { derivedStateOf { uiState.value.blockUnknownContactInvites } }
+    val blockedCount = remember(uiState) { derivedStateOf { uiState.value.blockedContactCount } }
+    val semanticEnabled = remember(uiState) { derivedStateOf { uiState.value.localEmbeddingState.semanticSearchEnabled } }
+    val semanticState = remember(uiState) { derivedStateOf { uiState.value.semanticSearchState } }
+    val safetyEmbedding = remember(uiState) { derivedStateOf { uiState.value.localEmbeddingState } }
+    val safetyState = remember(uiState) { derivedStateOf { uiState.value.messageSafetyState } }
+    val voiceEnabled = remember(uiState) { derivedStateOf { uiState.value.voiceTranscriptionEnabled } }
+    val buildInfo = remember(uiState) { derivedStateOf { uiState.value.buildInfo } }
+    val developerEnabled = remember(uiState) { derivedStateOf { uiState.value.isDeveloperModeEnabled } }
+    val pickerVisible = remember(uiState) { derivedStateOf { uiState.value.showLanguagePicker } }
+
     Column(
         modifier =
             modifier
@@ -133,31 +149,11 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
     ) {
         SettingsSection(title = stringResource(Res.string.feature_settings_general)) {
-            SettingsRow(
-                icon = Icons.Default.Language,
-                title = stringResource(Res.string.base_language),
-                subtitle = uiState.currentLanguage.nativeName,
-                onClick = { onUiEvent(SettingsUiEvent.LanguagePickerOpened) },
-                showChevron = false
-            )
+            LanguageSettingsRow(language, onUiEvent)
         }
 
-        SettingsSection(title = stringResource(Res.string.feature_settings_profile)) {
-            SettingsRow(
-                icon = Icons.Default.Person,
-                title = stringResource(Res.string.feature_settings_profile_picture),
-                subtitle = stringResource(Res.string.feature_settings_profile_subtitle),
-                onClick = { onUiEvent(SettingsUiEvent.ProfileClicked) }
-            )
-
-            SettingsDivider()
-
-            SettingsRow(
-                icon = Icons.AutoMirrored.Filled.Reply,
-                title = stringResource(Res.string.feature_auto_reply),
-                subtitle = uiState.activeAutoReplyName ?: stringResource(Res.string.feature_auto_reply_off),
-                onClick = { onUiEvent(SettingsUiEvent.AutoReplyClicked) }
-            )
+        SettingsSection(title = stringResource(Res.string.feature_settings_messaging)) {
+            AutoReplySettingsRow(autoReplyName, onUiEvent)
         }
 
         SettingsSection(title = stringResource(Res.string.feature_settings_network)) {
@@ -170,92 +166,27 @@ fun SettingsScreen(
         }
 
         SettingsSection(title = stringResource(Res.string.feature_settings_security)) {
-            SettingsSwitchRow(
-                icon = Icons.Default.Lock,
-                title = stringResource(Res.string.feature_settings_automatic_secure_setup),
-                subtitle =
-                    if (uiState.directIdentitySetupMode == DirectIdentitySetupMode.AUTOMATIC_INVITATION) {
-                        stringResource(Res.string.feature_settings_automatic_secure_setup_enabled_subtitle)
-                    } else {
-                        stringResource(Res.string.feature_settings_automatic_secure_setup_disabled_subtitle)
-                    },
-                checked = uiState.directIdentitySetupMode == DirectIdentitySetupMode.AUTOMATIC_INVITATION,
-                onCheckedChange = { enabled ->
-                    onUiEvent(
-                        SettingsUiEvent.DirectIdentitySetupModeChanged(
-                            if (enabled) {
-                                DirectIdentitySetupMode.AUTOMATIC_INVITATION
-                            } else {
-                                DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING
-                            }
-                        )
-                    )
-                }
-            )
+            AutomaticSecureSetupRow(identityMode, onUiEvent)
 
             SettingsDivider()
 
-            SettingsSwitchRow(
-                icon = Icons.Default.PersonOff,
-                title = stringResource(Res.string.feature_settings_block_unknown_invites),
-                subtitle = stringResource(Res.string.feature_settings_block_unknown_invites_subtitle),
-                checked = uiState.blockUnknownContactInvites,
-                onCheckedChange = { enabled ->
-                    onUiEvent(SettingsUiEvent.BlockUnknownContactInvitesChanged(enabled))
-                }
-            )
+            BlockUnknownInvitesRow(blockUnknownInvites, onUiEvent)
 
             SettingsDivider()
 
-            SettingsRow(
-                icon = Icons.Default.Block,
-                title = stringResource(Res.string.feature_settings_blocked_contacts),
-                subtitle =
-                    stringResource(
-                        Res.string.feature_settings_blocked_contacts_count,
-                        uiState.blockedContactCount
-                    ),
-                onClick = { onUiEvent(SettingsUiEvent.BlockedContactsClicked) }
-            )
+            BlockedContactsRow(blockedCount, onUiEvent)
         }
 
         SettingsSection(title = stringResource(Res.string.feature_settings_local_intelligence)) {
-            SettingsSwitchRow(
-                icon = Icons.Default.Search,
-                title = stringResource(Res.string.feature_settings_semantic_search),
-                subtitle = semanticSearchSubtitle(uiState.semanticSearchState),
-                checked = uiState.localEmbeddingState.semanticSearchEnabled,
-                onCheckedChange = { enabled ->
-                    onUiEvent(SettingsUiEvent.SemanticSearchEnabledChanged(enabled))
-                }
-            )
+            SemanticSearchRow(semanticEnabled, semanticState, modelDownloadPercent, onUiEvent)
 
             SettingsDivider()
 
-            SettingsSwitchRow(
-                icon = Icons.Default.Security,
-                title = stringResource(Res.string.feature_settings_message_safety),
-                subtitle = messageSafetySubtitle(
-                    uiState.localEmbeddingState,
-                    uiState.messageSafetyState
-                ),
-                checked = uiState.localEmbeddingState.messageSafetyEnabled,
-                onCheckedChange = { enabled ->
-                    onUiEvent(SettingsUiEvent.MessageSafetyEnabledChanged(enabled))
-                }
-            )
+            MessageSafetyRow(safetyEmbedding, safetyState, modelDownloadPercent, onUiEvent)
 
             SettingsDivider()
 
-            SettingsSwitchRow(
-                icon = Icons.Default.Mic,
-                title = stringResource(Res.string.feature_settings_voice_transcription),
-                subtitle = stringResource(Res.string.feature_settings_voice_transcription_subtitle),
-                checked = uiState.voiceTranscriptionEnabled,
-                onCheckedChange = { enabled ->
-                    onUiEvent(SettingsUiEvent.VoiceTranscriptionEnabledChanged(enabled))
-                }
-            )
+            VoiceTranscriptionRow(voiceEnabled, onUiEvent)
         }
 
         SettingsSection(title = stringResource(Res.string.feature_settings_storage)) {
@@ -295,48 +226,206 @@ fun SettingsScreen(
 
             SettingsDivider()
 
-            SettingsRow(
-                icon = Icons.Default.Description,
-                title = stringResource(Res.string.base_version),
-                subtitle = "${uiState.buildInfo.versionName} (${uiState.buildInfo.versionCode})",
-                showChevron = false,
-                onClick = { onUiEvent(SettingsUiEvent.VersionRowTapped) }
-            )
+            VersionSettingsRow(buildInfo, onUiEvent)
         }
 
-        if (uiState.isDeveloperModeEnabled) {
-            SettingsSection(title = stringResource(Res.string.base_developer)) {
-                SettingsRow(
-                    icon = Icons.Default.BugReport,
-                    title = stringResource(Res.string.feature_settings_developer_menu),
-                    subtitle = stringResource(Res.string.feature_settings_developer_menu_subtitle),
-                    onClick = { onUiEvent(SettingsUiEvent.DeveloperMenuClicked) },
-                    iconTint = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
+        DeveloperSettingsSection(developerEnabled, onUiEvent)
 
         Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
     }
 
-    LanguagePickerDialog(
-        isVisible = uiState.showLanguagePicker,
-        currentLanguage = uiState.currentLanguage,
-        onLanguageSelected = { language ->
-            onUiEvent(SettingsUiEvent.LanguageSelected(language))
-        },
-        onDismiss = { onUiEvent(SettingsUiEvent.LanguagePickerDismissed) }
+    SettingsLanguagePicker(pickerVisible, language, onUiEvent)
+}
+
+@Composable
+private fun LanguageSettingsRow(language: State<AppLanguage>, onUiEvent: (SettingsUiEvent) -> Unit) {
+    SettingsRow(
+        icon = Icons.Default.Language,
+        title = stringResource(Res.string.base_language),
+        subtitle = language.value.nativeName,
+        onClick = { onUiEvent(SettingsUiEvent.LanguagePickerOpened) },
+        showChevron = false
     )
 }
 
 @Composable
-private fun semanticSearchSubtitle(state: SemanticSearchState): String =
+private fun AutoReplySettingsRow(name: State<String?>, onUiEvent: (SettingsUiEvent) -> Unit) {
+    SettingsRow(
+        icon = Icons.AutoMirrored.Filled.Reply,
+        title = stringResource(Res.string.feature_auto_reply),
+        subtitle = name.value ?: stringResource(Res.string.feature_auto_reply_off),
+        onClick = { onUiEvent(SettingsUiEvent.AutoReplyClicked) }
+    )
+}
+
+@Composable
+private fun AutomaticSecureSetupRow(
+    mode: State<DirectIdentitySetupMode>,
+    onUiEvent: (SettingsUiEvent) -> Unit
+) {
+    val automatic = mode.value == DirectIdentitySetupMode.AUTOMATIC_INVITATION
+    SettingsSwitchRow(
+        icon = Icons.Default.Lock,
+        title = stringResource(Res.string.feature_settings_automatic_secure_setup),
+        subtitle = if (automatic) {
+            stringResource(Res.string.feature_settings_automatic_secure_setup_enabled_subtitle)
+        } else {
+            stringResource(Res.string.feature_settings_automatic_secure_setup_disabled_subtitle)
+        },
+        checked = automatic,
+        onCheckedChange = { enabled ->
+            onUiEvent(
+                SettingsUiEvent.DirectIdentitySetupModeChanged(
+                    if (enabled) {
+                        DirectIdentitySetupMode.AUTOMATIC_INVITATION
+                    } else {
+                        DirectIdentitySetupMode.MANUAL_IDENTITY_SHARING
+                    }
+                )
+            )
+        }
+    )
+}
+
+@Composable
+private fun BlockUnknownInvitesRow(
+    blocked: State<Boolean>,
+    onUiEvent: (SettingsUiEvent) -> Unit
+) {
+    SettingsSwitchRow(
+        icon = Icons.Default.PersonOff,
+        title = stringResource(Res.string.feature_settings_block_unknown_invites),
+        subtitle = stringResource(Res.string.feature_settings_block_unknown_invites_subtitle),
+        checked = blocked.value,
+        onCheckedChange = { onUiEvent(SettingsUiEvent.BlockUnknownContactInvitesChanged(it)) }
+    )
+}
+
+@Composable
+private fun BlockedContactsRow(
+    count: State<Int>,
+    onUiEvent: (SettingsUiEvent) -> Unit
+) {
+    SettingsRow(
+        icon = Icons.Default.Block,
+        title = stringResource(Res.string.feature_settings_blocked_contacts),
+        subtitle = stringResource(Res.string.feature_settings_blocked_contacts_count, count.value),
+        onClick = { onUiEvent(SettingsUiEvent.BlockedContactsClicked) }
+    )
+}
+
+@Composable
+private fun SemanticSearchRow(
+    enabled: State<Boolean>,
+    state: State<SemanticSearchState>,
+    modelDownloadPercent: State<Int?>,
+    onUiEvent: (SettingsUiEvent) -> Unit
+) {
+    val semanticState = state.value
+    val percent = if (semanticState is SemanticSearchState.DownloadingModel) {
+        modelDownloadPercent.value
+    } else {
+        null
+    }
+    SettingsSwitchRow(
+        icon = Icons.Default.Search,
+        title = stringResource(Res.string.feature_settings_semantic_search),
+        subtitle = semanticSearchSubtitle(semanticState, percent),
+        checked = enabled.value,
+        onCheckedChange = { onUiEvent(SettingsUiEvent.SemanticSearchEnabledChanged(it)) }
+    )
+}
+
+@Composable
+private fun MessageSafetyRow(
+    embedding: State<LocalEmbeddingState>,
+    state: State<MessageSafetyState>,
+    modelDownloadPercent: State<Int?>,
+    onUiEvent: (SettingsUiEvent) -> Unit
+) {
+    val embeddingState = embedding.value
+    val percent = if (embeddingState.messageSafetyEnabled &&
+        embeddingState.modelState is LocalEmbeddingModelState.Downloading
+    ) {
+        modelDownloadPercent.value
+    } else {
+        null
+    }
+    SettingsSwitchRow(
+        icon = Icons.Default.Security,
+        title = stringResource(Res.string.feature_settings_message_safety),
+        subtitle = messageSafetySubtitle(embeddingState, state.value, percent),
+        checked = embeddingState.messageSafetyEnabled,
+        onCheckedChange = { onUiEvent(SettingsUiEvent.MessageSafetyEnabledChanged(it)) }
+    )
+}
+
+@Composable
+private fun VoiceTranscriptionRow(enabled: State<Boolean>, onUiEvent: (SettingsUiEvent) -> Unit) {
+    SettingsSwitchRow(
+        icon = Icons.Default.Mic,
+        title = stringResource(Res.string.feature_settings_voice_transcription),
+        subtitle = stringResource(Res.string.feature_settings_voice_transcription_subtitle),
+        checked = enabled.value,
+        onCheckedChange = { onUiEvent(SettingsUiEvent.VoiceTranscriptionEnabledChanged(it)) }
+    )
+}
+
+@Composable
+private fun VersionSettingsRow(info: State<BuildInfo>, onUiEvent: (SettingsUiEvent) -> Unit) {
+    val buildInfo = info.value
+    SettingsRow(
+        icon = Icons.Default.Description,
+        title = stringResource(Res.string.base_version),
+        subtitle = "${buildInfo.versionName} (${buildInfo.versionCode})",
+        showChevron = false,
+        onClick = { onUiEvent(SettingsUiEvent.VersionRowTapped) }
+    )
+}
+
+@Composable
+private fun DeveloperSettingsSection(
+    enabled: State<Boolean>,
+    onUiEvent: (SettingsUiEvent) -> Unit
+) {
+    if (enabled.value) {
+        SettingsSection(title = stringResource(Res.string.base_developer)) {
+            SettingsRow(
+                icon = Icons.Default.BugReport,
+                title = stringResource(Res.string.feature_settings_developer_menu),
+                subtitle = stringResource(Res.string.feature_settings_developer_menu_subtitle),
+                onClick = { onUiEvent(SettingsUiEvent.DeveloperMenuClicked) },
+                iconTint = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsLanguagePicker(
+    visible: State<Boolean>,
+    language: State<AppLanguage>,
+    onUiEvent: (SettingsUiEvent) -> Unit
+) {
+    // Avoid reading the language while the dialog is not shown.
+    if (visible.value) {
+        LanguagePickerDialog(
+            isVisible = true,
+            currentLanguage = language.value,
+            onLanguageSelected = { onUiEvent(SettingsUiEvent.LanguageSelected(it)) },
+            onDismiss = { onUiEvent(SettingsUiEvent.LanguagePickerDismissed) }
+        )
+    }
+}
+
+@Composable
+private fun semanticSearchSubtitle(state: SemanticSearchState, modelDownloadPercent: Int?): String =
     when (state) {
         SemanticSearchState.Disabled,
         SemanticSearchState.Preparing -> stringResource(Res.string.feature_settings_semantic_search_subtitle)
 
         is SemanticSearchState.DownloadingModel -> {
-            val percent = state.progress?.let { (it * 100).toInt().coerceIn(0, 100) }
+            val percent = modelDownloadPercent
             if (percent == null) {
                 stringResource(Res.string.feature_settings_semantic_search_downloading)
             } else {
@@ -358,18 +447,19 @@ private fun semanticSearchSubtitle(state: SemanticSearchState): String =
 @Composable
 private fun messageSafetySubtitle(
     localEmbeddingState: LocalEmbeddingState,
-    messageSafetyState: MessageSafetyState
+    messageSafetyState: MessageSafetyState,
+    modelDownloadPercent: Int?
 ): String {
     if (!localEmbeddingState.messageSafetyEnabled) {
         return stringResource(Res.string.feature_settings_message_safety_subtitle)
     }
 
-    return when (val modelState = localEmbeddingState.modelState) {
+    return when (localEmbeddingState.modelState) {
         LocalEmbeddingModelState.NotNeeded,
         LocalEmbeddingModelState.Preparing -> stringResource(Res.string.feature_settings_message_safety_subtitle)
 
         is LocalEmbeddingModelState.Downloading -> {
-            val percent = modelState.progress?.let { (it * 100).toInt().coerceIn(0, 100) }
+            val percent = modelDownloadPercent
             if (percent == null) {
                 stringResource(Res.string.feature_settings_message_safety_downloading)
             } else {
@@ -396,8 +486,8 @@ private fun SettingsSection(
 ) {
     Column {
         Text(
-            text = title.uppercase(),
-            style = MaterialTheme.typography.labelSmall,
+            text = title,
+            style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText),
             fontWeight = FontWeight.SemiBold,
             modifier =
@@ -420,7 +510,7 @@ private fun SettingsRow(
     subtitle: String,
     onClick: () -> Unit,
     showChevron: Boolean = true,
-    iconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.SettingsScreen.icon)
+    iconTint: Color = MaterialTheme.colorScheme.primary
 ) {
     Row(
         modifier =
@@ -490,7 +580,7 @@ private fun SettingsSwitchRow(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.SettingsScreen.icon),
+            tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize)
         )
 
@@ -535,20 +625,23 @@ private fun SettingsDivider() {
 fun SettingsScreenPreview() {
     SparrowTheme {
         SettingsScreen(
-            uiState =
-                SettingsUiState(
-                    currentLanguage = AppLanguage.ENGLISH,
-                    showLanguagePicker = false,
-                    buildInfo =
-                        BuildInfo(
-                            versionName = "1.0.0",
-                            versionCode = 1,
-                            buildType = "debug",
-                            gitSha = null
-                        ),
-                    isDeveloperModeEnabled = true
-                ),
-            snackbarHostState = SnackbarHostState(),
+            uiState = remember {
+                mutableStateOf(
+                    SettingsUiState(
+                        currentLanguage = AppLanguage.ENGLISH,
+                        showLanguagePicker = false,
+                        buildInfo =
+                            BuildInfo(
+                                versionName = "1.0.0",
+                                versionCode = 1,
+                                buildType = "debug",
+                                gitSha = null
+                            ),
+                        isDeveloperModeEnabled = true
+                    )
+                )
+            },
+            modelDownloadPercent = remember { mutableStateOf(null) },
             onUiEvent = {},
             scrollState = ScrollState(0),
             innerPadding = PaddingValues(MaterialTheme.spacing.zero)

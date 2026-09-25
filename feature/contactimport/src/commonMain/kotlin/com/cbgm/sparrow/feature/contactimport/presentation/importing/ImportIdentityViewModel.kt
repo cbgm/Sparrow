@@ -3,9 +3,11 @@ package com.cbgm.sparrow.feature.contactimport.presentation.importing
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.cbgm.sparrow.core.extensions.toFingerprint
+import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.core.ui.presentation.BaseViewModel
 import com.cbgm.sparrow.feature.contactimport.domain.usecase.ImportSharedIdentityUseCase
+import com.cbgm.sparrow.feature.contactimport.presentation.importing.mapper.toUi
 import com.cbgm.sparrow.feature.contactimport.presentation.importing.model.ImportIdentityUiEvent
 import com.cbgm.sparrow.feature.contactimport.presentation.importing.model.ImportIdentityUiState
 import com.cbgm.sparrow.feature.contactimport.presentation.scan.model.ScannedIdentityPreview
@@ -18,19 +20,16 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class ImportIdentityViewModel(
-    private val savedStateHandle: SavedStateHandle,
+    savedStateHandle: SavedStateHandle,
     private val decodeSharedIdentity: DecodeSharedIdentityUseCase,
     private val importSharedIdentity: ImportSharedIdentityUseCase
 ) : BaseViewModel() {
     private val contactId = savedStateHandle.get<String>(AppRoute.ImportContact::contactId.name)
     private val scannedIdentity = savedStateHandle.get<String>(AppRoute.ImportContact::scannedIdentity.name)
 
-    private val _uiState =
-        MutableStateFlow(
-            ImportIdentityUiState(
-                encodedIdentity = savedStateHandle.get<String>(ENCODED_IDENTITY_KEY).orEmpty()
-            )
-        )
+    // Every new import screen starts with an empty text field. QR scans are
+    // handled explicitly via the scannedIdentity route argument.
+    private val _uiState = MutableStateFlow(ImportIdentityUiState())
     val uiState: StateFlow<ImportIdentityUiState> = _uiState.asStateFlow()
 
     init {
@@ -68,7 +67,16 @@ class ImportIdentityViewModel(
                     )
                 }
             }.onFailure {
-                updateEncodedIdentity(encodedIdentity)
+                // Ignore unrelated/stale QR payloads on entry. A QR value must never
+                // prefill the manual field or show a validation error before the user
+                // explicitly pastes an identity or confirms a valid scan.
+                _uiState.update {
+                    it.copy(
+                        scannedIdentityPreview = null,
+                        encodedIdentity = "",
+                        errorMessage = null
+                    )
+                }
             }
     }
 
@@ -93,7 +101,6 @@ class ImportIdentityViewModel(
     }
 
     private fun updateEncodedIdentity(value: String) {
-        savedStateHandle[ENCODED_IDENTITY_KEY] = value
         _uiState.update {
             it.copy(
                 encodedIdentity = value,
@@ -131,17 +138,17 @@ class ImportIdentityViewModel(
                 contactId = contactId,
                 identityImportTrust = identityImportTrust
             ).onSuccess { contact ->
-                savedStateHandle[ENCODED_IDENTITY_KEY] = ""
                 _uiState.update {
                     it.copy(
                         encodedIdentity = "",
                         isImporting = false,
                         importedContactName = contact.displayName ?: "Unnamed contact",
-                        importedIdentityTrust = identityImportTrust,
+                        importedIdentityTrust = identityImportTrust.toUi(),
                         errorMessage = null
                     )
                 }
             }.onFailure { error ->
+                SparrowLog.error("ImportIdentityViewModel", "Could not import identity", error)
                 _uiState.update {
                     it.copy(
                         isImporting = false,
@@ -152,9 +159,5 @@ class ImportIdentityViewModel(
                 }
             }
         }
-    }
-
-    private companion object {
-        const val ENCODED_IDENTITY_KEY = "encodedIdentity"
     }
 }

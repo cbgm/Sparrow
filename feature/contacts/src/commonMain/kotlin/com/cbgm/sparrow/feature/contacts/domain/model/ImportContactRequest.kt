@@ -16,7 +16,9 @@ data class ImportContactRequest(
     val phoneNumber: String?,
     val encryptionPublicKey: ByteArray,
     val signingPublicKey: ByteArray,
-    val identityImportTrust: IdentityImportTrust = IdentityImportTrust.UNVERIFIED
+    val identityImportTrust: IdentityImportTrust = IdentityImportTrust.UNVERIFIED,
+    /** Identity-owned signing-key match; used after matching the phone number. */
+    val matchedIdentityContactId: String? = null
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) {
@@ -28,6 +30,7 @@ data class ImportContactRequest(
         }
 
         return contactId == other.contactId &&
+            matchedIdentityContactId == other.matchedIdentityContactId &&
             displayName == other.displayName &&
             phoneNumber == other.phoneNumber &&
             identityImportTrust == other.identityImportTrust &&
@@ -41,6 +44,7 @@ data class ImportContactRequest(
 
     override fun hashCode(): Int {
         var result = contactId?.hashCode() ?: 0
+        result = 31 * result + (matchedIdentityContactId?.hashCode() ?: 0)
 
         result = 31 * result + (displayName?.hashCode() ?: 0)
 

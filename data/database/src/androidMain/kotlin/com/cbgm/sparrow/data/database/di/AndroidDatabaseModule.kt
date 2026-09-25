@@ -47,7 +47,11 @@ val androidDatabaseModule =
         }
 
         single {
-            get<SparrowDatabase>().groupInvitationDao()
+            get<SparrowDatabase>().groupMembershipDao()
+        }
+
+        single {
+            get<SparrowDatabase>().invitationDao()
         }
 
         single {
@@ -55,7 +59,19 @@ val androidDatabaseModule =
         }
 
         single {
-            get<SparrowDatabase>().identityInvitationDao()
+            get<SparrowDatabase>().identityExchangeDao()
+        }
+
+        single {
+            get<SparrowDatabase>().remoteIdentityDao()
+        }
+
+        single {
+            get<SparrowDatabase>().pendingRemoteIdentityChangeDao()
+        }
+
+        single {
+            get<SparrowDatabase>().approvedIdentityReconnectionDao()
         }
 
         single {

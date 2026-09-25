@@ -10,4 +10,6 @@ sealed interface OverviewUiEvent {
     data class DeleteConversation(
         val conversationId: String
     ) : OverviewUiEvent
+
+    data object ErrorDismissed : OverviewUiEvent
 }

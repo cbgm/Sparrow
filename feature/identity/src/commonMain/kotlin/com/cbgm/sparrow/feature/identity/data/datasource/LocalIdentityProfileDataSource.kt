@@ -1,11 +1,14 @@
 package com.cbgm.sparrow.feature.identity.data.datasource
 
+import com.cbgm.sparrow.core.protocol.phone.LocalPhoneNumberProvider
+import com.cbgm.sparrow.core.protocol.phone.PhoneNumberNormalizer
 import com.cbgm.sparrow.data.datastore.SparrowDataStore
 import kotlinx.coroutines.flow.Flow
 
 class LocalIdentityProfileDataSource(
-    private val dataStore: SparrowDataStore
-) {
+    private val dataStore: SparrowDataStore,
+    private val phoneNumberNormalizer: PhoneNumberNormalizer
+) : LocalPhoneNumberProvider {
     fun observePhoneNumber(): Flow<String?> = dataStore.observeString(LOCAL_PHONE_NUMBER)
 
     suspend fun loadPhoneName(): Pair<String, String>? {
@@ -32,6 +35,16 @@ class LocalIdentityProfileDataSource(
             removeString(LOCAL_NAME)
         }
     }
+
+    override suspend fun getLocalPhoneNumber(): Result<String> =
+        runCatching {
+            val storedPhoneNumber =
+                loadPhoneNumber()
+                    ?.takeIf { it.isNotBlank() }
+                    ?: error("Local phone number has not been configured")
+
+            phoneNumberNormalizer.normalize(phoneNumber = storedPhoneNumber).getOrThrow()
+        }
 
     private companion object {
         const val PREFIX = "identity.profile."

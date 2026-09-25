@@ -11,12 +11,12 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -114,14 +114,14 @@ private fun MediaViewerTopBar(
     onBack: () -> Unit,
     actions: @Composable RowScope.() -> Unit
 ) {
-    TopAppBar(
+    CenterAlignedTopAppBar(
         colors =
             TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.background,
-                scrolledContainerColor = MaterialTheme.colorScheme.background,
-                titleContentColor = MaterialTheme.colorScheme.onBackground,
-                navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
-                actionIconContentColor = MaterialTheme.colorScheme.onBackground
+                containerColor = FunctionalColors.MediaBackground,
+                scrolledContainerColor = FunctionalColors.MediaBackground,
+                titleContentColor = FunctionalColors.MediaForeground,
+                navigationIconContentColor = FunctionalColors.MediaForeground,
+                actionIconContentColor = FunctionalColors.MediaForeground
             ),
         title = {
             Text(
@@ -148,9 +148,9 @@ private fun MediaViewerPage(
     onEnsureMediaLoaded: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isLoaded = media.localFilePath != null || media.bytes != null
+    val isLoaded = media.localFilePath != null
 
-    LaunchedEffect(media.id, media.localFilePath, media.bytes) {
+    LaunchedEffect(media.id, media.localFilePath) {
         if (!isLoaded) {
             onEnsureMediaLoaded(media.id)
         }
@@ -168,7 +168,7 @@ private fun MediaViewerPage(
     when (media.type) {
         MediaType.IMAGE ->
             MediaImage(
-                data = media.bytes,
+                data = null,
                 localFilePath = media.localFilePath,
                 cacheKey = "media-full:${media.id}",
                 contentDescription = null,
@@ -236,7 +236,7 @@ private fun MediaViewerPreview() {
                         id = "preview-image",
                         type = MediaType.IMAGE,
                         mimeType = "image/jpeg",
-                        bytes = byteArrayOf()
+                        localFilePath = "/preview/image.jpg"
                     )
                 ),
             initialIndex = 0,

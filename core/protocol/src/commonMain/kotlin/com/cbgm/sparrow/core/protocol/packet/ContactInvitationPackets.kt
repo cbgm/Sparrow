@@ -22,6 +22,8 @@ data class ContactInvitePacket(
     val encryptionPublicKey: ByteArray,
     @Serializable(with = ByteArrayAsBase64Serializer::class)
     val signingPublicKey: ByteArray,
+    /** Authenticated choice of the inviter to share their identity through this invitation. */
+    val autoSharesIdentity: Boolean = false,
     @Serializable(with = ByteArrayAsBase64Serializer::class)
     val signature: ByteArray
 ) : SparrowPacket {
@@ -49,6 +51,7 @@ data class ContactInvitePacket(
             inviteChallenge.contentEquals(other.inviteChallenge) &&
             encryptionPublicKey.contentEquals(other.encryptionPublicKey) &&
             signingPublicKey.contentEquals(other.signingPublicKey) &&
+            autoSharesIdentity == other.autoSharesIdentity &&
             signature.contentEquals(other.signature)
 
     override fun hashCode(): Int {
@@ -62,6 +65,7 @@ data class ContactInvitePacket(
         result = 31 * result + inviteChallenge.contentHashCode()
         result = 31 * result + encryptionPublicKey.contentHashCode()
         result = 31 * result + signingPublicKey.contentHashCode()
+        result = 31 * result + autoSharesIdentity.hashCode()
         result = 31 * result + signature.contentHashCode()
         return result
     }
@@ -87,6 +91,8 @@ data class ContactInviteAcceptedPacket(
     val responderEncryptionPublicKey: ByteArray,
     @Serializable(with = ByteArrayAsBase64Serializer::class)
     val responderSigningPublicKey: ByteArray,
+    /** Authenticated choice of the responder to share their identity through acceptance. */
+    val autoSharesIdentity: Boolean = false,
     @Serializable(with = ByteArrayAsBase64Serializer::class)
     val signature: ByteArray
 ) : SparrowPacket {
@@ -117,6 +123,7 @@ data class ContactInviteAcceptedPacket(
             inviterSigningPublicKey.contentEquals(other.inviterSigningPublicKey) &&
             responderEncryptionPublicKey.contentEquals(other.responderEncryptionPublicKey) &&
             responderSigningPublicKey.contentEquals(other.responderSigningPublicKey) &&
+            autoSharesIdentity == other.autoSharesIdentity &&
             signature.contentEquals(other.signature)
 
     override fun hashCode(): Int {
@@ -131,6 +138,7 @@ data class ContactInviteAcceptedPacket(
         result = 31 * result + inviterSigningPublicKey.contentHashCode()
         result = 31 * result + responderEncryptionPublicKey.contentHashCode()
         result = 31 * result + responderSigningPublicKey.contentHashCode()
+        result = 31 * result + autoSharesIdentity.hashCode()
         result = 31 * result + signature.contentHashCode()
         return result
     }

@@ -1,15 +1,12 @@
 package com.cbgm.sparrow.feature.chats.data.group.incoming
 
 import com.cbgm.sparrow.core.protocol.handler.IncomingPacketContext
+import com.cbgm.sparrow.core.protocol.handler.ProtocolPacketHandler
 import com.cbgm.sparrow.core.protocol.packet.GroupAvatarUpdatedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupChatMessagePacket
 import com.cbgm.sparrow.core.protocol.packet.GroupConversationDeletedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupDescriptionUpdatedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupInviteDeclinedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupInvitePacket
-import com.cbgm.sparrow.core.protocol.packet.GroupInviteReceivedPacket
-import com.cbgm.sparrow.core.protocol.packet.GroupJoinRequestPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupLeaveRequestPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivatedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberActivationAcknowledgementPacket
@@ -27,7 +24,8 @@ import com.cbgm.sparrow.feature.chats.data.model.DecodedIncomingPacketDto
 
 class GroupIncomingPacketProcessor(
     private val policy: GroupIncomingPacketPolicy,
-    private val handlerRegistry: GroupPacketHandlerRegistry
+    private val handlerRegistry: GroupPacketHandlerRegistry,
+    private val protocolPacketHandler: ProtocolPacketHandler
 ) {
     fun canProcess(packet: SparrowPacket): Boolean = packet.groupIdOrNull() != null
 
@@ -35,6 +33,20 @@ class GroupIncomingPacketProcessor(
         runCatching {
             val groupId = requireNotNull(incoming.packet.groupIdOrNull()) { "Packet is not a group packet" }
             if (policy.shouldIgnore(groupId, incoming.packet)) return@runCatching
+            if (incoming.packet is GroupCreatedPacket ||
+                incoming.packet is GroupMemberActivatedPacket ||
+                incoming.packet is GroupMemberRemovedPacket ||
+                incoming.packet is GroupConversationDeletedPacket ||
+                incoming.packet is GroupReadyAcknowledgementPacket ||
+                incoming.packet is GroupMemberActivationAcknowledgementPacket ||
+                incoming.packet is GroupLeaveRequestPacket
+            ) {
+                protocolPacketHandler.handle(
+                    incoming.toIncomingPacketContext(groupId),
+                    incoming.packet
+                ).getOrThrow()
+                return@runCatching
+            }
             val handler = handlerRegistry.find(incoming.packet)
                 ?: error("No group packet handler registered for ${incoming.packet::class.simpleName}")
             handler.handle(incoming.toIncomingPacketContext(groupId), incoming.packet).getOrThrow()
@@ -64,11 +76,7 @@ internal fun SparrowPacket.groupIdOrNull(): String? =
         is GroupMessageDeletionPacket -> groupId
         is GroupMessageEditPacket -> groupId
         is GroupPinUpdatedPacket -> groupId
-        is GroupInvitePacket -> groupId
-        is GroupInviteReceivedPacket -> groupId
-        is GroupJoinRequestPacket -> groupId
         is GroupLeaveRequestPacket -> groupId
-        is GroupInviteDeclinedPacket -> groupId
         is GroupReadyAcknowledgementPacket -> groupId
         is GroupVerificationReceiptPacket -> groupId
         is GroupVerificationSnapshotRequestPacket -> groupId

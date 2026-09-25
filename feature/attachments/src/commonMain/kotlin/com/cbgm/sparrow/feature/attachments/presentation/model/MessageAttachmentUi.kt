@@ -1,11 +1,14 @@
 package com.cbgm.sparrow.feature.attachments.presentation.model
 
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
-import com.cbgm.sparrow.feature.attachments.domain.model.CurrentLocation
-import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
+import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentSource
+import com.cbgm.sparrow.feature.attachments.domain.model.AttachmentTarget
 
 sealed interface MessageAttachmentUi {
     val id: String
+    val source: AttachmentSource
+
+    val target: AttachmentTarget
 
     data class ImageVideoAttachmentUi(
         override val id: String,
@@ -16,38 +19,10 @@ sealed interface MessageAttachmentUi {
         val width: Int? = null,
         val height: Int? = null,
         val durationMilliseconds: Long? = null,
-        val localFilePath: String? = null,
-        val bytes: ByteArray? = null
+        override val source: AttachmentSource = AttachmentSource.Message
     ) : MessageAttachmentUi {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (other !is ImageVideoAttachmentUi) return false
-
-            return id == other.id &&
-                type == other.type &&
-                mimeType == other.mimeType &&
-                byteSize == other.byteSize &&
-                fileName == other.fileName &&
-                width == other.width &&
-                height == other.height &&
-                durationMilliseconds == other.durationMilliseconds &&
-                localFilePath == other.localFilePath &&
-                bytes.contentEquals(other.bytes)
-        }
-
-        override fun hashCode(): Int {
-            var result = id.hashCode()
-            result = 31 * result + type.hashCode()
-            result = 31 * result + mimeType.hashCode()
-            result = 31 * result + byteSize.hashCode()
-            result = 31 * result + (fileName?.hashCode() ?: 0)
-            result = 31 * result + (width ?: 0)
-            result = 31 * result + (height ?: 0)
-            result = 31 * result + (durationMilliseconds?.hashCode() ?: 0)
-            result = 31 * result + (localFilePath?.hashCode() ?: 0)
-            result = 31 * result + (bytes?.contentHashCode() ?: 0)
-            return result
-        }
+        override val target: AttachmentTarget
+            get() = AttachmentTarget(id = id, type = type, source = source)
     }
 
     data class FileAttachmentUi(
@@ -55,39 +30,25 @@ sealed interface MessageAttachmentUi {
         val mimeType: String,
         val byteSize: Long,
         val fileName: String,
-        val localFilePath: String? = null,
-        val bytes: ByteArray? = null
+        override val source: AttachmentSource = AttachmentSource.Message
     ) : MessageAttachmentUi {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (other !is FileAttachmentUi) return false
-
-            return id == other.id &&
-                mimeType == other.mimeType &&
-                byteSize == other.byteSize &&
-                fileName == other.fileName &&
-                localFilePath == other.localFilePath &&
-                bytes.contentEquals(other.bytes)
-        }
-
-        override fun hashCode(): Int {
-            var result = id.hashCode()
-            result = 31 * result + mimeType.hashCode()
-            result = 31 * result + byteSize.hashCode()
-            result = 31 * result + fileName.hashCode()
-            result = 31 * result + (localFilePath?.hashCode() ?: 0)
-            result = 31 * result + (bytes?.contentHashCode() ?: 0)
-            return result
-        }
+        override val target: AttachmentTarget
+            get() = AttachmentTarget(id = id, type = MessageAttachmentType.FILE, source = source)
     }
 
     data class LocationAttachmentUi(
         override val id: String,
-        val location: CurrentLocation
-    ) : MessageAttachmentUi
+        override val source: AttachmentSource = AttachmentSource.Message
+    ) : MessageAttachmentUi {
+        override val target: AttachmentTarget
+            get() = AttachmentTarget(id = id, type = MessageAttachmentType.LOCATION, source = source)
+    }
 
     data class ContactAttachmentUi(
         override val id: String,
-        val contact: SharedContact
-    ) : MessageAttachmentUi
+        override val source: AttachmentSource = AttachmentSource.Message
+    ) : MessageAttachmentUi {
+        override val target: AttachmentTarget
+            get() = AttachmentTarget(id = id, type = MessageAttachmentType.CONTACT, source = source)
+    }
 }

@@ -6,7 +6,9 @@
         parent="android:style/Theme.Material.Light.NoActionBar">
 
         <item name="android:fontFamily">sans</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <!-- Keep the window dark between the Android splash exit and the first Compose frame. -->
+        <item name="android:windowBackground">@color/sparrow_splash_background</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 
     <style

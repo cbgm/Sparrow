@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param()
+param([switch]$Headless)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -26,7 +26,9 @@ $form.Size = New-Object System.Drawing.Size(760, 430)
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
 $form.MaximizeBox = $false
-$form.TopMost = $true
+# Do not keep the installer above other applications. It must remain movable,
+# minimizable and permit normal Alt+Tab during Docker operations.
+$form.TopMost = $false
 
 $title = New-Object System.Windows.Forms.Label
 $title.Location = New-Object System.Drawing.Point(24, 22)
@@ -58,8 +60,10 @@ $details.WordWrap = $false
 $details.Font = New-Object System.Drawing.Font("Consolas", 9)
 $form.Controls.Add($details)
 
-$form.Show()
-[System.Windows.Forms.Application]::DoEvents()
+if (-not $Headless) {
+    $form.Show()
+    [System.Windows.Forms.Application]::DoEvents()
+}
 
 function Write-Log {
     param([Parameter(Mandatory = $true)][string]$Message)
@@ -77,6 +81,7 @@ function Write-Detail {
         return
     }
 
+    if ($Headless) { Write-Host $Message; return }
     $details.AppendText("[$(Get-Date -Format HH:mm:ss)] $Message`r`n")
     $details.SelectionStart = $details.Text.Length
     $details.ScrollToCaret()
@@ -232,7 +237,7 @@ function Read-LauncherConfiguration {
     $hint = New-Object System.Windows.Forms.Label
     $hint.Location = New-Object System.Drawing.Point(220, 176)
     $hint.Size = New-Object System.Drawing.Size(460, 36)
-    $hint.Text = "The directory URL must return JSON containing a controlPlanes array. This is the only configured source of control-plane addresses."
+    $hint.Text = "Directory Server HTTPS base URL; remote planes require a separately pinned Ed25519 verification key."
     $panel.Controls.Add($hint)
 
     $imageTagLabel = New-Object System.Windows.Forms.Label
@@ -372,6 +377,11 @@ function Read-LauncherConfiguration {
 function Initialize-NetworkConfiguration {
     param([Parameter(Mandatory = $true)][hashtable]$Config)
 
+    if ($Headless) {
+        if ($Config['CONFIGURED'] -ne 'true') { throw 'Headless setup requires an explicitly configured sparrow.conf.' }
+        return $Config
+    }
+
     $launcherConfig = Read-LauncherConfiguration -Config $Config
 
     Write-NetworkConfiguration `
@@ -387,67 +397,17 @@ function Initialize-NetworkConfiguration {
 function Get-DirectoryControlPlaneUrls {
     param(
         [Parameter(Mandatory = $true)][string]$DirectoryUrl,
-        [Parameter(Mandatory = $true)][string]$Mode
+        [Parameter(Mandatory = $true)][string]$Mode,
+        [Parameter(Mandatory = $true)][string]$PinnedPublicKey
     )
-
-    $response = Invoke-WebRequest -Uri $DirectoryUrl -Method Get -TimeoutSec 8 -UseBasicParsing
-    try {
-        $document = $response.Content | ConvertFrom-Json -ErrorAction Stop
-    } catch {
-        throw "Control-plane directory response is not valid JSON: $($_.Exception.Message)"
-    }
-
-    if ($null -eq $document.controlPlanes) {
-        throw "Control-plane directory response does not contain controlPlanes."
-    }
-
-    $urls = @(
-        $document.controlPlanes |
-            ForEach-Object { Normalize-ControlPlaneUrl -Value $_.ToString() -Mode $Mode } |
-            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
-            Select-Object -Unique
-    )
-
-    if ($urls.Count -eq 0) {
-        throw "Control-plane directory returned no control-plane addresses."
-    }
-
-    return $urls
-}
-
-function Get-CachedControlPlaneUrls {
-    param([Parameter(Mandatory = $true)][string]$Mode)
-
-    if (-not (Test-Path -LiteralPath $runtimeEnvironmentPath -PathType Leaf)) {
-        return @()
-    }
-
-    $runtime = Read-EnvironmentFile -Path $runtimeEnvironmentPath
-    $cachedValue = if ($runtime.ContainsKey("ADVERTISED_CONTROL_PLANE_URLS")) {
-            $runtime["ADVERTISED_CONTROL_PLANE_URLS"]
-        } elseif ($runtime.ContainsKey("CONTROL_PLANE_URLS")) {
-            $runtime["CONTROL_PLANE_URLS"]
-        } else {
-            ""
-        }
-
-    if ([string]::IsNullOrWhiteSpace($cachedValue)) {
-        return @()
-    }
-
-    $urls = [System.Collections.Generic.List[string]]::new()
-    foreach ($rawValue in ($cachedValue -split '[,;]')) {
-        try {
-            $normalized = Normalize-ControlPlaneUrl -Value $rawValue -Mode $Mode
-            if (-not [string]::IsNullOrWhiteSpace($normalized) -and -not $urls.Contains($normalized)) {
-                $urls.Add($normalized)
-            }
-        } catch {
-            Write-Log "Ignoring cached control-plane address '$rawValue': $($_.Exception.Message)"
-        }
-    }
-
-    return @($urls)
+    $helperRoot = if (Test-Path -LiteralPath (Join-Path (Split-Path -Parent $PSScriptRoot) 'Get-SparrowVerifiedDirectory.ps1')) { Split-Path -Parent $PSScriptRoot } else { Split-Path -Parent (Split-Path -Parent $PSScriptRoot) }
+    . (Join-Path $helperRoot 'Get-SparrowVerifiedDirectory.ps1')
+    $verified = @(Get-SparrowVerifiedDirectoryUrls `
+        -DirectoryUrl $DirectoryUrl `
+        -PinnedPublicKey $PinnedPublicKey `
+        -CacheFile (Join-Path $PSScriptRoot '.control-plane-directory-verified.json') `
+        -ClientScript (Join-Path $helperRoot 'control_plane_directory_client.py'))
+    return @($verified | ForEach-Object { Normalize-ControlPlaneUrl -Value $_ -Mode $Mode } | Select-Object -Unique)
 }
 
 function Wait-RetryInterval {
@@ -470,30 +430,42 @@ function Resolve-ConfiguredControlPlaneUrls {
         [Parameter(Mandatory = $true)][string]$Mode
     )
 
-    $directoryUrl = if ($Config.ContainsKey("CONTROL_PLANE_DIRECTORY_URL")) {
-        $Config["CONTROL_PLANE_DIRECTORY_URL"].Trim()
-    } else {
-        ""
+    $localUrls = [System.Collections.Generic.List[string]]::new()
+    foreach ($value in ([string]$Config['CONTROL_PLANE_URLS'] -split '[,;]')) {
+        $url = Normalize-ControlPlaneUrl -Value $value -Mode $Mode
+        if ($url -and -not $localUrls.Contains($url)) { $localUrls.Add($url) }
     }
-
-    if ([string]::IsNullOrWhiteSpace($directoryUrl)) {
-        throw "sparrow.conf is missing CONTROL_PLANE_DIRECTORY_URL."
+    $directoryUrl = ([string]$Config['CONTROL_PLANE_DIRECTORY_URL']).Trim()
+    if (-not $directoryUrl) {
+        if ($localUrls.Count -eq 0) { throw 'sparrow.conf is missing CONTROL_PLANE_DIRECTORY_URL and CONTROL_PLANE_URLS.' }
+        return @($localUrls)
     }
-
+    $pin = ([string]$Config['CONTROL_PLANE_DIRECTORY_PUBLIC_KEY']).Trim()
+    if (-not $pin) {
+        Write-Detail 'Directory signing key not pinned; continuing with local Control Plane only.'
+        if ($localUrls.Count -eq 0) { throw 'No local Control Plane and no trusted directory key are configured.' }
+        return @($localUrls)
+    }
+    # Always consult a configured directory, even in Combined mode. The local
+    # Control Plane is an additional candidate, not a replacement for wider
+    # network discovery. Keep installed local connectivity if directory is down.
     while ($true) {
-        Set-Status "Loading control-plane directory..."
+        Set-Status 'Loading control-plane directory...'
         try {
-            return @(Get-DirectoryControlPlaneUrls -DirectoryUrl $directoryUrl -Mode $Mode)
+            $remoteUrls = @(Get-DirectoryControlPlaneUrls -DirectoryUrl $directoryUrl -Mode $Mode -PinnedPublicKey $pin)
+            foreach ($url in $remoteUrls) {
+                if (-not $localUrls.Contains($url)) { $localUrls.Add($url) }
+            }
+            return @($localUrls)
         } catch {
             Write-Log "Control-plane directory unavailable: $($_.Exception.Message)"
-
-            $cachedUrls = @(Get-CachedControlPlaneUrls -Mode $Mode)
-            if ($cachedUrls.Count -gt 0) {
-                Write-Detail "Directory unavailable; using the last known control-plane addresses."
-                return $cachedUrls
+            # The helper already authenticated the persistent directory cache.
+            # Never resurrect old unverified runtime addresses here.
+            if ($localUrls.Count -gt 0) {
+                Write-Detail 'Directory unavailable; continuing with locally configured or authenticated cached control planes.'
+                return @($localUrls)
             }
-
-            Set-Status "Control-plane directory unavailable. Retrying in 5 seconds..."
+            Set-Status 'Control-plane directory unavailable. Retrying in 5 seconds...'
             Wait-RetryInterval -Seconds 5
         }
     }
@@ -724,8 +696,10 @@ function Normalize-ControlPlaneUrl {
     }
 
     $uri = $null
-    if (-not [Uri]::TryCreate($candidate, [UriKind]::Absolute, [ref]$uri)) {
-        throw "Invalid control-plane address in sparrow.conf: $Value"
+    if (-not [Uri]::TryCreate($candidate, [UriKind]::Absolute, [ref]$uri) -or
+        $null -eq $uri -or -not $uri.IsAbsoluteUri -or
+        [string]::IsNullOrWhiteSpace($uri.Host)) {
+        throw "Invalid control-plane address in sparrow.conf (missing or invalid hostname): $Value"
     }
 
     if ($uri.Scheme -notin @("http", "https")) {
@@ -745,28 +719,25 @@ function Resolve-ControlPlaneUrl {
     $uri = [Uri]$ConfiguredUrl
     $port = if ($uri.IsDefaultPort) { if ($uri.Scheme -eq "https") { 443 } else { 80 } } else { $uri.Port }
 
-    if (Test-IsLocalHostAddress -HostName $uri.Host) {
-        $hostProbeUrl = $ConfiguredUrl.TrimEnd("/")
-
-        if (-not (Test-ControlPlane -Url $hostProbeUrl)) {
-            throw "The local Sparrow control plane is not reachable at $hostProbeUrl."
-        }
-
-        $containerUrl = if ($uri.Scheme -eq "http") { "http://host.docker.internal`:$port" } else { $ConfiguredUrl }
-
-        return [PSCustomObject]@{
-            HostProbeUrl = $hostProbeUrl
-            ContainerUrl = $containerUrl.TrimEnd("/")
-        }
+    # Only a *local HTTP* Control Plane needs host.docker.internal inside
+    # Docker. Public HTTPS candidates always use their original address, and
+    # must not call Test-IsLocalHostAddress (whose HostName parameter is
+    # mandatory and rejects an empty value in Windows PowerShell 5.1).
+    # Validate a nonempty URI host before doing any host-dependent work.
+    if (-not $uri.IsAbsoluteUri -or [string]::IsNullOrWhiteSpace($uri.Host)) {
+        throw "Invalid control-plane address (missing hostname): $ConfiguredUrl"
     }
-
+    $localHttp = $uri.Scheme -eq "http" -and
+        (Test-IsLocalHostAddress -HostName $uri.Host)
     if (-not (Test-ControlPlane -Url $ConfiguredUrl)) {
-        throw "The Sparrow control plane is not reachable at $ConfiguredUrl."
+        $scope = if ($localHttp) { 'local ' } else { '' }
+        throw "The ${scope}Sparrow control plane is not reachable at $ConfiguredUrl."
     }
 
+    $containerUrl = if ($localHttp) { "http://host.docker.internal`:$port" } else { $ConfiguredUrl }
     return [PSCustomObject]@{
         HostProbeUrl = $ConfiguredUrl.TrimEnd("/")
-        ContainerUrl = $ConfiguredUrl.TrimEnd("/")
+        ContainerUrl = $containerUrl.TrimEnd("/")
     }
 }
 
@@ -776,7 +747,13 @@ function Convert-ControlPlaneUrlForContainer {
     $uri = [Uri]$ConfiguredUrl
     $port = if ($uri.IsDefaultPort) { if ($uri.Scheme -eq "https") { 443 } else { 80 } } else { $uri.Port }
 
-    if ((Test-IsLocalHostAddress -HostName $uri.Host) -and $uri.Scheme -eq "http") {
+    if (-not $uri.IsAbsoluteUri -or [string]::IsNullOrWhiteSpace($uri.Host)) {
+        throw "Invalid control-plane address (missing hostname): $ConfiguredUrl"
+    }
+    # Check the scheme FIRST: the public HTTPS path never needs local-host
+    # detection. An unavailable public Control Plane remains an advertised
+    # candidate, but its URL is never rewritten to a private Docker address.
+    if ($uri.Scheme -eq "http" -and (Test-IsLocalHostAddress -HostName $uri.Host)) {
         return "http://host.docker.internal`:$port"
     }
 
@@ -793,7 +770,14 @@ function Resolve-ControlPlaneCandidates {
     $containerUrls = [System.Collections.Generic.List[string]]::new()
     $advertisedUrls = [System.Collections.Generic.List[string]]::new()
     $selected = $null
-    $configuredUrls = Resolve-ConfiguredControlPlaneUrls -Config $Config -Mode $Mode
+    # PowerShell unwraps a function's single pipeline result to a scalar
+    # string. Without an array wrapper, $configuredUrls[0] below becomes the
+    # FIRST CHARACTER of an HTTPS URL ("h") when only one registry is set.
+    # Retain an actual array for both the probe and the offline fallback.
+    $configuredUrls = @(Resolve-ConfiguredControlPlaneUrls -Config $Config -Mode $Mode)
+    if ($configuredUrls.Count -eq 0) {
+        throw 'No configured control-plane URLs were found.'
+    }
 
     foreach ($candidate in $configuredUrls) {
         $containerUrl = Convert-ControlPlaneUrlForContainer -ConfiguredUrl $candidate
@@ -813,12 +797,14 @@ function Resolve-ControlPlaneCandidates {
             $selected = Resolve-ControlPlaneUrl -ConfiguredUrl $candidate
         } catch {
             $failures += "$candidate - $($_.Exception.Message)"
-            Write-Log "Control-plane candidate failed: $candidate"
+            Write-Log "Control-plane candidate failed: $candidate - $($_.Exception.Message)"
         }
     }
 
     if ($null -eq $selected) {
-        $fallback = $configuredUrls[0]
+        # Must be the complete first URL, never the first character of a
+        # scalar string produced by PowerShell's pipeline unwrapping.
+        $fallback = [string]$configuredUrls[0]
         $selected = [PSCustomObject]@{
             HostProbeUrl = $fallback
             ContainerUrl = (Convert-ControlPlaneUrlForContainer -ConfiguredUrl $fallback)
@@ -1004,47 +990,16 @@ function Invoke-ComposeStreaming {
 function Invoke-Compose {
     param([Parameter(Mandatory = $true)][string[]]$Arguments)
 
-    # Windows PowerShell 5.1 can turn normal native stderr output such as
-    # "Image ... Pulling" into a terminating NativeCommandError when the
-    # script uses ErrorActionPreference=Stop. Docker Compose writes progress
-    # to stderr even on success, so temporarily disable terminating handling
-    # only for the native Docker invocation and decide success from LASTEXITCODE.
-    $previousErrorActionPreference = $ErrorActionPreference
-
-    try {
-        $ErrorActionPreference = "Continue"
-
-        $composeFileArguments = $script:ComposeFileArguments
-        $output = @(
-            & $script:Docker compose `
-                --env-file $runtimeEnvironmentPath `
-                @composeFileArguments `
-                @Arguments 2>&1
-        )
-
-        $exitCode = $LASTEXITCODE
-    } finally {
-        $ErrorActionPreference = $previousErrorActionPreference
+    # Compose can run for minutes even after image pulls (container recreation,
+    # image extraction, database initialization). Reuse the process-backed reader
+    # here, not a synchronous native invocation that freezes the window. The
+    # streaming reader logs both output streams and checks the exit code.
+    $activity = if ($Arguments.Count -gt 1) {
+        "Docker Compose $($Arguments[0]) $($Arguments[1])"
+    } else {
+        "Docker Compose $($Arguments[0])"
     }
-
-    foreach ($line in $output) {
-        Write-Log "compose: $($line.ToString())"
-    }
-
-    if ($exitCode -ne 0) {
-        $detail = (
-            $output |
-                ForEach-Object { $_.ToString() } |
-                Select-Object -Last 12 |
-                Out-String
-        ).Trim()
-
-        if ([string]::IsNullOrWhiteSpace($detail)) {
-            throw "Docker Compose failed: $($Arguments -join ' ')"
-        }
-
-        throw "Docker Compose failed: $($Arguments -join ' ')`n`n$detail"
-    }
+    Invoke-ComposeStreaming -Arguments $Arguments -Activity $activity
 }
 
 function Wait-ForContainerRunning {
@@ -1221,6 +1176,11 @@ function Fail {
         }
     }
 
+    if ($Headless) {
+        [Console]::Error.WriteLine("$Message`nDiagnostic log: $logPath")
+        exit 1
+    }
+
     [System.Windows.Forms.MessageBox]::Show(
         "$Message`n`nDiagnostic log:`n$logPath",
         "Sparrow Community Node",
@@ -1261,15 +1221,47 @@ try {
     }
 
     $mode = Get-NetworkMode -Config $config
+    $publicPort = if ($config['COMMUNITY_NODE_HTTP_PORT']) { [int]$config['COMMUNITY_NODE_HTTP_PORT'] } else { 8490 }
     $script:ComposeFileArguments = @("-f", $composePath, "-f", $releaseComposePath)
 
     if ($mode -eq "public") {
         $script:ComposeFileArguments += @("-f", $productionComposePath)
+        if ($config['SHARED_PROXY'] -eq 'true') {
+            $sharedComposePath = Join-Path $deploymentDirectory "docker-compose.shared-proxy.yml"
+            if (-not (Test-Path -LiteralPath $sharedComposePath -PathType Leaf)) {
+                throw "Shared-proxy deployment override is missing: $sharedComposePath"
+            }
+            $script:ComposeFileArguments += @("-f", $sharedComposePath)
+        }
     }
 
     Set-Status "Checking Sparrow control plane..."
     $controlPlane = Resolve-ControlPlaneCandidates -Config $config -Mode $mode
+    # A combined Public installation can reach its local Control Plane over the
+    # shared Docker edge network before public DNS, NAT hairpin or TLS is ready.
+    # Keep the public URL advertised to clients; only change internal upstreams.
+    if ($mode -eq 'public' -and $config['SHARED_PROXY'] -eq 'true' -and
+        -not [string]::IsNullOrWhiteSpace($config['LOCAL_CONTROL_PLANE_DOMAIN'])) {
+        $localUrl = "https://$($config['LOCAL_CONTROL_PLANE_DOMAIN'])"
+        if ($controlPlane.AdvertisedUrls -contains $localUrl) {
+            $controlPlane.ContainerUrl = 'http://sparrow-control-edge:8080'
+            $controlPlane.ContainerUrls = @($controlPlane.ContainerUrls | ForEach-Object {
+                if ($_ -eq $localUrl) { 'http://sparrow-control-edge:8080' } else { $_ }
+            })
+        }
+    }
     $hostAddress = Get-PrimaryIpv4Address
+    # Combined LAN resolves localhost:8390 on the Windows host and
+    # host.docker.internal inside Docker. Neither address is usable from the
+    # Android phone. Publish this node's reachable LAN IP to clients instead.
+    if ($mode -eq 'lan') {
+        $controlPlane.AdvertisedUrls = @($controlPlane.AdvertisedUrls | ForEach-Object {
+            $candidate = [Uri]$_
+            if ($candidate.Host -in @('localhost','127.0.0.1','::1')) {
+                "http://$hostAddress`:$($candidate.Port)"
+            } else { $_ }
+        } | Select-Object -Unique)
+    }
     $publicDomain = if ($mode -eq "public") { Resolve-PublicDomain -Config $config } else { $null }
 
     Write-Detail "Mode: $mode"
@@ -1310,14 +1302,22 @@ try {
     Write-Detail "Federation/mailbox endpoint: $httpEndpoint"
 
     $runtimeEnvironment = @(
-        "COMMUNITY_NODE_PROJECT_NAME=sparrow-community-node",
+        "COMMUNITY_NODE_PROJECT_NAME=$(if ($config['COMMUNITY_NODE_PROJECT_NAME']) { $config['COMMUNITY_NODE_PROJECT_NAME'] } else { 'sparrow-community-node' })",
         "COMMUNITY_NODE_BIND_ADDRESS=0.0.0.0",
         "COMMUNITY_NODE_HTTP_PORT=$publicPort",
+        "MAILBOX_DIAGNOSTIC_PORT=$(if ($config['MAILBOX_DIAGNOSTIC_PORT']) { $config['MAILBOX_DIAGNOSTIC_PORT'] } else { '8492' })",
+        "FEDERATION_DIAGNOSTIC_PORT=$(if ($config['FEDERATION_DIAGNOSTIC_PORT']) { $config['FEDERATION_DIAGNOSTIC_PORT'] } else { '8493' })",
+        "GATEWAY_DIAGNOSTIC_PORT=$(if ($config['GATEWAY_DIAGNOSTIC_PORT']) { $config['GATEWAY_DIAGNOSTIC_PORT'] } else { '8494' })",
+        "MAILBOX_DATABASE_PORT=$(if ($config['MAILBOX_DATABASE_PORT']) { $config['MAILBOX_DATABASE_PORT'] } else { '5636' })",
+        "FEDERATION_DATABASE_PORT=$(if ($config['FEDERATION_DATABASE_PORT']) { $config['FEDERATION_DATABASE_PORT'] } else { '5638' })",
+        "COMMUNITY_NODE_DIRECTORY_CACHE_VOLUME=$(if ($config['COMMUNITY_NODE_DIRECTORY_CACHE_VOLUME']) { $config['COMMUNITY_NODE_DIRECTORY_CACHE_VOLUME'] } else { 'sparrow-node-directory-cache' })",
         "COMMUNITY_NODE_SITE_ADDRESS=$siteAddress",
         "COMMUNITY_NODE_DOMAIN=$publicDomain",
         "CONTROL_PLANE_URL=$($controlPlane.ContainerUrl)",
         "CONTROL_PLANE_URLS=$($controlPlane.ContainerUrls -join ',')",
         "ADVERTISED_CONTROL_PLANE_URLS=$($controlPlane.AdvertisedUrls -join ',')",
+        "LOCAL_CONTROL_PLANE_DOMAIN=$($config['LOCAL_CONTROL_PLANE_DOMAIN'])",
+        "MANUAL_CONTROL_PLANE_URLS=$($config['CONTROL_PLANE_URLS'])",
         "CLIENT_ENDPOINT=$clientEndpoint",
         "FEDERATION_ENDPOINT=$httpEndpoint",
         "MAILBOX_ENDPOINT=$httpEndpoint",
@@ -1417,11 +1417,11 @@ try {
         -Url "http://127.0.0.1:$publicPort/health/gateway"
 
     Set-ProgressValue -Value 97
-    Set-Status "Verifying control-plane registration..."
+    Set-Status "Checking Control Plane health (registration may still be pending)..."
 
     if (-not (Test-ControlPlane -Url $controlPlane.HostProbeUrl)) {
         Write-Log "Control plane is currently unavailable; node registration will recover automatically."
-        Write-Detail "Control plane unavailable; registration will retry in the background."
+        Write-Detail "Control Plane health check failed; check federation logs for registration status."
     }
 
     Set-ProgressValue -Value 100
@@ -1431,7 +1431,7 @@ try {
     Write-Log "SUCCESS: $displayUrl"
 
     [System.Windows.Forms.Application]::DoEvents()
-    Start-Sleep -Seconds 3
+    if (-not $Headless) { Start-Sleep -Seconds 3 }
 
     $form.Close()
     exit 0

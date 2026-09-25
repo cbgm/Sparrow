@@ -1,83 +1,66 @@
 package com.cbgm.sparrow.feature.chats.presentation.direct
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import com.cbgm.sparrow.core.ui.component.FeedbackOverlay
 import com.cbgm.sparrow.core.ui.component.FeedbackOverlayData
 import com.cbgm.sparrow.core.ui.component.PatternBackground
-import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOverlay
 import com.cbgm.sparrow.core.ui.component.SparrowOverlayHost
 import com.cbgm.sparrow.core.ui.device.clipboard.rememberClipboardWriter
 import com.cbgm.sparrow.core.ui.theme.Alpha
-import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.attachments.domain.model.SharedContact
 import com.cbgm.sparrow.feature.attachments.presentation.component.MessageAttachmentViewer
-import com.cbgm.sparrow.feature.chats.domain.model.direct.ContactSecurityState
-import com.cbgm.sparrow.feature.chats.presentation.component.AddSharedContactDialog
-import com.cbgm.sparrow.feature.chats.presentation.component.ChatComposerBar
-import com.cbgm.sparrow.feature.chats.presentation.component.MessageBubble
-import com.cbgm.sparrow.feature.chats.presentation.component.MessageContextAnchor
-import com.cbgm.sparrow.feature.chats.presentation.component.MessageContextHost
-import com.cbgm.sparrow.feature.chats.presentation.component.MessageList
-import com.cbgm.sparrow.feature.chats.presentation.component.MessageReactionBurst
-import com.cbgm.sparrow.feature.chats.presentation.component.MessageReactionBurstOverlay
-import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toMessageAttachmentsUi
+import com.cbgm.sparrow.feature.chats.presentation.common.composer.ComposerContent
+import com.cbgm.sparrow.feature.chats.presentation.common.composer.model.IndicatorUiState
+import com.cbgm.sparrow.feature.chats.presentation.common.composer.model.MessageComposerUiState
+import com.cbgm.sparrow.feature.chats.presentation.common.header.HeaderContent
+import com.cbgm.sparrow.feature.chats.presentation.common.header.component.SecurityBanner
+import com.cbgm.sparrow.feature.chats.presentation.common.header.component.securityDescription
+import com.cbgm.sparrow.feature.chats.presentation.common.header.mapper.toHeaderUiModel
+import com.cbgm.sparrow.feature.chats.presentation.common.history.HistoryContent
+import com.cbgm.sparrow.feature.chats.presentation.common.history.component.AddSharedContactDialog
+import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageBubble
+import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageContextHost
+import com.cbgm.sparrow.feature.chats.presentation.common.history.component.MessageReactionBurstOverlay
+import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toHistoryUiModel
+import com.cbgm.sparrow.feature.chats.presentation.common.history.mapper.toMessageAttachmentsUi
+import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageBubbleUi
+import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextAnchor
+import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageContextUiState
+import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageHistoryUiState
+import com.cbgm.sparrow.feature.chats.presentation.common.history.model.MessageReactionBurst
 import com.cbgm.sparrow.feature.chats.presentation.component.mapper.toSharedContact
-import com.cbgm.sparrow.feature.chats.presentation.component.model.IndicatorUiState
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageBubbleUi
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageComposerUiState
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageContextUiState
-import com.cbgm.sparrow.feature.chats.presentation.component.model.MessageHistoryUiState
-import com.cbgm.sparrow.feature.chats.presentation.component.rememberDissolvingMessageListState
 import com.cbgm.sparrow.feature.chats.presentation.direct.component.IdentitySetupDialog
-import com.cbgm.sparrow.feature.chats.presentation.direct.component.SecurityBanner
-import com.cbgm.sparrow.feature.chats.presentation.direct.component.securityDescription
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversationUiEvent
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.DirectConversationUiState
 import com.cbgm.sparrow.feature.chats.presentation.direct.model.findMessage
 import com.cbgm.sparrow.feature.contacts.presentation.overview.ContactAttachmentSelectionRoute
-import com.cbgm.sparrow.feature.safety.presentation.details.model.MessageSafetyWarningUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.common_copied
-import com.cbgm.sparrow.resources.feature_chats_loading_chat
+import com.cbgm.sparrow.resources.feature_chats_reconnect_cancel
+import com.cbgm.sparrow.resources.feature_chats_reconnect_confirm
+import com.cbgm.sparrow.resources.feature_chats_reconnect_contact
+import com.cbgm.sparrow.resources.feature_chats_reconnect_warning
 import com.cbgm.sparrow.resources.feature_chats_start_conversation_with
 import org.jetbrains.compose.resources.stringResource
 
@@ -89,13 +72,15 @@ fun DirectConversationScreen(
     contextState: MessageContextUiState<MessageBubbleUi>,
     indicatorState: IndicatorUiState,
     historyState: MessageHistoryUiState,
-    errorMessage: String?,
+    modifier: Modifier = Modifier,
     onUiEvent: (DirectConversationUiEvent) -> Unit,
     onForwardMessageRequested: (String) -> Unit,
-    modifier: Modifier = Modifier,
+    onReconnectRequested: () -> Unit = {},
+    reconnectBusy: Boolean = false,
     targetMessageId: String? = null
 ) {
     var showIdentitySetupDialog by rememberSaveable { mutableStateOf(false) }
+    var showReconnectConfirmation by rememberSaveable { mutableStateOf(false) }
     var viewerMessageId by rememberSaveable { mutableStateOf<String?>(null) }
     var viewerAttachmentId by rememberSaveable { mutableStateOf<String?>(null) }
     var showContactSelection by rememberSaveable { mutableStateOf(false) }
@@ -103,13 +88,6 @@ fun DirectConversationScreen(
     var messageContextAnchor by remember { mutableStateOf<MessageContextAnchor?>(null) }
     var reactionBurst by remember { mutableStateOf<MessageReactionBurst?>(null) }
     var feedbackOverlay by remember { mutableStateOf<FeedbackOverlayData?>(null) }
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    LaunchedEffect(errorMessage) {
-        errorMessage?.let { message ->
-            snackbarHostState.showSnackbar(message)
-        }
-    }
 
     val clipboardWriter = rememberClipboardWriter()
     val copiedText = stringResource(Res.string.common_copied)
@@ -124,6 +102,25 @@ fun DirectConversationScreen(
         messageContextAnchor?.takeIf { anchor ->
             anchor.messageId == contextState.message?.id
         }
+
+    if (showReconnectConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showReconnectConfirmation = false },
+            title = { Text(stringResource(Res.string.feature_chats_reconnect_contact)) },
+            text = { Text(stringResource(Res.string.feature_chats_reconnect_warning)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showReconnectConfirmation = false
+                    onReconnectRequested()
+                }) { Text(stringResource(Res.string.feature_chats_reconnect_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showReconnectConfirmation = false }) {
+                    Text(stringResource(Res.string.feature_chats_reconnect_cancel))
+                }
+            }
+        )
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
         MessageContextHost(
@@ -176,10 +173,8 @@ fun DirectConversationScreen(
                         message = message,
                         onRetryClick = {},
                         onSafetyDetailsClick = {},
-                        onAttachmentVisible = {},
                         onAttachmentClick = {},
                         onContactClick = {},
-                        voiceTranscriptionEnabled = uiState.voiceTranscriptionEnabled,
                         onReplyPreviewClick = {},
                         isSearchHighlighted = false,
                         showMetadata = false
@@ -190,7 +185,6 @@ fun DirectConversationScreen(
             SparrowLazyScaffold(
                 modifier = Modifier.fillMaxSize(),
                 barColor = MaterialTheme.colorScheme.background,
-                snackbarHostState = snackbarHostState,
                 background = {
                     PatternBackground(
                         modifier = Modifier.fillMaxSize(),
@@ -199,12 +193,33 @@ fun DirectConversationScreen(
                     )
                 },
                 topBar = { containerColor ->
-                    TopBar(
-                        uiState = uiState,
+                    HeaderContent(
+                        model = uiState.toHeaderUiModel(),
                         containerColor = containerColor,
-                        onUiEvent = onUiEvent,
-                        onManualIdentitySetup = { showIdentitySetupDialog = true }
-                    )
+                        onBackClick = { onUiEvent(DirectConversationUiEvent.BackClicked) },
+                        onHeaderClick = { onUiEvent(DirectConversationUiEvent.HeaderClicked) },
+                        actions = {
+                            IconButton(
+                                onClick = { showReconnectConfirmation = true },
+                                enabled = !reconnectBusy && !uiState.isLoading
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = stringResource(Res.string.feature_chats_reconnect_contact)
+                                )
+                            }
+                        }
+                    ) {
+                        if (!uiState.isLoading) {
+                            SecurityBanner(
+                                securityState = uiState.contactSecurityState,
+                                identitySetupMode = uiState.identitySetupMode,
+                                isChatAuthorized = uiState.isChatAuthorized,
+                                onVerifyIdentity = { onUiEvent(DirectConversationUiEvent.VerifyIdentityClicked) },
+                                onManualIdentitySetup = { showIdentitySetupDialog = true }
+                            )
+                        }
+                    }
                 },
                 bottomBar = { containerColor ->
                     BottomBar(
@@ -216,8 +231,11 @@ fun DirectConversationScreen(
                     )
                 }
             ) { innerPadding, listState ->
-                Content(
-                    uiState = uiState,
+                HistoryContent(
+                    model = uiState.toHistoryUiModel(
+                        emptyTitle = stringResource(Res.string.feature_chats_start_conversation_with, uiState.contactName),
+                        emptyDescription = securityDescription(uiState.contactSecurityState)
+                    ),
                     listState = listState,
                     innerPadding = innerPadding,
                     targetMessageId = targetMessageId,
@@ -235,7 +253,7 @@ fun DirectConversationScreen(
                     onRetryMessage = { messageId ->
                         onUiEvent(DirectConversationUiEvent.RetryMessage(messageId))
                     },
-                    onSafetyWarningClick = { messageId, warning ->
+                    onSafetyWarningClick = { messageId, _, warning ->
                         onUiEvent(
                             DirectConversationUiEvent.SafetyWarningClicked(
                                 messageId = messageId,
@@ -243,32 +261,11 @@ fun DirectConversationScreen(
                             )
                         )
                     },
-                    onAttachmentVisible = { attachmentId ->
-                        onUiEvent(DirectConversationUiEvent.AttachmentVisible(attachmentId))
-                    },
                     onAttachmentClick = { messageId, attachmentId ->
                         viewerMessageId = messageId
                         viewerAttachmentId = attachmentId
-                        onUiEvent(DirectConversationUiEvent.AttachmentVisible(attachmentId))
                     },
-                    onContactClick = { contact -> pendingSharedContact = contact },
-                    onVoicePlayPauseClick = { attachmentId ->
-                        onUiEvent(DirectConversationUiEvent.VoicePlayPauseClicked(attachmentId))
-                    },
-                    onVoiceTranscribeClick = { attachmentId ->
-                        onUiEvent(DirectConversationUiEvent.VoiceTranscribeClicked(attachmentId))
-                    },
-                    onVoiceSeekStart = { attachmentId ->
-                        onUiEvent(DirectConversationUiEvent.VoiceSeekStarted(attachmentId))
-                    },
-                    onVoiceSeekEnd = { attachmentId, positionMilliseconds ->
-                        onUiEvent(
-                            DirectConversationUiEvent.VoiceSeekFinished(
-                                attachmentId = attachmentId,
-                                positionMilliseconds = positionMilliseconds
-                            )
-                        )
-                    }
+                    onContactClick = { contact -> pendingSharedContact = contact }
                 )
             }
         }
@@ -347,69 +344,8 @@ fun DirectConversationScreen(
                 viewerMessageId = null
                 viewerAttachmentId = null
             },
-            onEnsureAttachmentLoaded = { attachmentId ->
-                onUiEvent(DirectConversationUiEvent.AttachmentVisible(attachmentId))
-            },
             onError = { error -> onUiEvent(DirectConversationUiEvent.AttachmentError(error)) }
         )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TopBar(
-    uiState: DirectConversationUiState,
-    containerColor: Color,
-    onUiEvent: (DirectConversationUiEvent) -> Unit,
-    onManualIdentitySetup: () -> Unit
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        TopAppBar(
-            colors =
-                TopAppBarDefaults.topAppBarColors(
-                    containerColor = containerColor,
-                    scrolledContainerColor = containerColor,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-                ),
-            title = {
-                Row(
-                    modifier = Modifier.clickable { onUiEvent(DirectConversationUiEvent.HeaderClicked) },
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SparrowAvatar(
-                        name = uiState.contactName,
-                        pictureBytes = uiState.profilePictureBytes,
-                        size = Dimens.DirectConversationScreen.topBarAvatarSize
-                    )
-                    Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
-                    Text(
-                        text = uiState.contactName,
-                        style = MaterialTheme.typography.titleSmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            },
-            navigationIcon = {
-                IconButton(onClick = { onUiEvent(DirectConversationUiEvent.BackClicked) }) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = null
-                    )
-                }
-            }
-        )
-
-        if (!uiState.isLoading) {
-            SecurityBanner(
-                securityState = uiState.contactSecurityState,
-                identitySetupMode = uiState.identitySetupMode,
-                isChatAuthorized = uiState.isChatAuthorized,
-                onVerifyIdentity = { onUiEvent(DirectConversationUiEvent.VerifyIdentityClicked) },
-                onManualIdentitySetup = onManualIdentitySetup
-            )
-        }
     }
 }
 
@@ -421,7 +357,7 @@ private fun BottomBar(
     onUiEvent: (DirectConversationUiEvent) -> Unit,
     onContactAttachmentClick: () -> Unit
 ) {
-    ChatComposerBar(
+    ComposerContent(
         composerState = composerState,
         indicatorState = indicatorState,
         containerColor = containerColor,
@@ -436,128 +372,6 @@ private fun BottomBar(
         onLocationCaptured = { onUiEvent(DirectConversationUiEvent.ShareCurrentLocation(it)) },
         onLocationCaptureFailed = { onUiEvent(DirectConversationUiEvent.LocationCaptureFailed(it)) },
         onAttachmentError = { onUiEvent(DirectConversationUiEvent.AttachmentError(it)) },
-        onVoiceRecordClick = { onUiEvent(DirectConversationUiEvent.VoiceRecordClicked) },
-        onVoiceStopClick = { onUiEvent(DirectConversationUiEvent.VoiceStopClicked) },
-        onVoicePlayPauseClick = { onUiEvent(DirectConversationUiEvent.VoicePreviewPlayPauseClicked) },
-        onVoiceSendClick = { onUiEvent(DirectConversationUiEvent.VoiceSendClicked) },
-        onVoiceCancelClick = { onUiEvent(DirectConversationUiEvent.VoiceComposerCancelled) }
+        onVoiceSendClick = { onUiEvent(DirectConversationUiEvent.VoiceSendClicked) }
     )
-}
-
-@Composable
-private fun Content(
-    uiState: DirectConversationUiState,
-    listState: LazyListState,
-    innerPadding: PaddingValues,
-    targetMessageId: String?,
-    selectedContextMessageId: String?,
-    historyState: MessageHistoryUiState,
-    onLoadOlderMessages: () -> Unit,
-    onMessageHistoryTargetRequested: (String) -> Unit,
-    onContextMessageRequested: (MessageContextAnchor) -> Unit,
-    onReactionBurstRequested: (MessageReactionBurst) -> Unit,
-    onRetryMessage: (String) -> Unit,
-    onSafetyWarningClick: (String, MessageSafetyWarningUi) -> Unit,
-    onAttachmentVisible: (String) -> Unit,
-    onAttachmentClick: (String, String) -> Unit,
-    onContactClick: (SharedContact) -> Unit,
-    onVoicePlayPauseClick: (String) -> Unit,
-    onVoiceTranscribeClick: (String) -> Unit,
-    onVoiceSeekStart: (String) -> Unit,
-    onVoiceSeekEnd: (String, Long) -> Unit
-) {
-    val fillModifier = Modifier.fillMaxSize().padding(innerPadding)
-    val dissolvingListState =
-        rememberDissolvingMessageListState(
-            messages = uiState.messages,
-            idOf = { it.id },
-            shouldDissolve = { !it.isMine }
-        )
-
-    when {
-        uiState.isLoading -> LoadingContent(modifier = fillModifier)
-
-        dissolvingListState.messages.isEmpty() -> EmptyContent(
-            contactName = uiState.contactName,
-            securityState = uiState.contactSecurityState,
-            modifier = fillModifier
-        )
-
-        else -> MessageList(
-            dissolvingListState = dissolvingListState,
-            listState = listState,
-            targetMessageId = targetMessageId,
-            selectedContextMessageId = selectedContextMessageId,
-            onContextMessageRequested = onContextMessageRequested,
-            onReactionBurstRequested = onReactionBurstRequested,
-            onRetryMessage = onRetryMessage,
-            onSafetyWarningClick = { messageId, _, warning ->
-                onSafetyWarningClick(
-                    messageId,
-                    warning
-                )
-            },
-            onAttachmentVisible = onAttachmentVisible,
-            onAttachmentClick = onAttachmentClick,
-            onContactClick = onContactClick,
-            onVoicePlayPauseClick = onVoicePlayPauseClick,
-            onVoiceTranscribeClick = onVoiceTranscribeClick,
-            voiceTranscriptionEnabled = uiState.voiceTranscriptionEnabled,
-            onVoiceSeekStart = onVoiceSeekStart,
-            onVoiceSeekEnd = onVoiceSeekEnd,
-            contentPadding = innerPadding,
-            historyState = historyState,
-            onLoadOlderMessages = onLoadOlderMessages,
-            onMessageHistoryTargetRequested = onMessageHistoryTargetRequested
-        )
-    }
-}
-
-@Composable
-private fun EmptyContent(
-    contactName: String,
-    securityState: ContactSecurityState,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier.padding(horizontal = MaterialTheme.spacing.large),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = stringResource(
-                    Res.string.feature_chats_start_conversation_with,
-                    contactName
-                ),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = securityDescription(securityState),
-                modifier = Modifier.padding(top = MaterialTheme.spacing.base),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
-
-@Composable
-private fun LoadingContent(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-        Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
-        Text(
-            text = stringResource(Res.string.feature_chats_loading_chat),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
 }

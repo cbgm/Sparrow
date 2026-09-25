@@ -5,7 +5,9 @@ import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachment
 import com.cbgm.sparrow.feature.media.presentation.model.MediaItem
 import com.cbgm.sparrow.feature.media.presentation.model.MediaType
 
-internal fun MessageAttachmentUi.ImageVideoAttachmentUi.toMediaItem(): MediaItem =
+internal fun MessageAttachmentUi.ImageVideoAttachmentUi.toMediaItem(
+    localFilePath: String?
+): MediaItem =
     MediaItem(
         id = id,
         type =
@@ -16,7 +18,6 @@ internal fun MessageAttachmentUi.ImageVideoAttachmentUi.toMediaItem(): MediaItem
             },
         mimeType = mimeType,
         localFilePath = localFilePath,
-        bytes = bytes,
         width = width,
         height = height,
         durationMilliseconds = durationMilliseconds

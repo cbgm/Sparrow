@@ -4,13 +4,12 @@ import com.cbgm.sparrow.core.logging.SparrowLog
 import com.cbgm.sparrow.core.protocol.attachment.EncryptedBlobReference
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.data.database.dao.MessageAttachmentDao
+import com.cbgm.sparrow.data.database.entity.AttachmentMessageContextEntity
 import com.cbgm.sparrow.data.database.entity.MessageAttachmentEntity
-import com.cbgm.sparrow.feature.attachments.data.mapper.toMessageAttachmentsByMessageId
+import com.cbgm.sparrow.feature.attachments.data.model.AttachmentMessageContextDto
+import com.cbgm.sparrow.feature.attachments.data.model.OutgoingMessageAttachmentDto
 import com.cbgm.sparrow.feature.attachments.data.model.PreparedMessageAttachmentDto
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachment
-import com.cbgm.sparrow.feature.attachments.domain.model.MessageAttachmentPolicy
-import com.cbgm.sparrow.feature.attachments.domain.model.OutgoingMessageAttachment
-import com.cbgm.sparrow.feature.attachments.domain.model.UploadedBlob
+import com.cbgm.sparrow.feature.attachments.data.model.UploadedBlobDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -20,7 +19,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachment as ProtocolMessageAttachment
 
-class MessageAttachmentDataSource(
+internal class MessageAttachmentDataSource(
     private val attachmentDao: MessageAttachmentDao,
     private val fileDataSource: MessageAttachmentFileDataSource,
     private val blobTransferDataSource: BlobTransferDataSource,
@@ -29,11 +28,10 @@ class MessageAttachmentDataSource(
     private val logger = SparrowLog.withTag("MessageAttachmentDataSource")
 
     suspend fun prepareAttachments(
-        attachments: List<OutgoingMessageAttachment>,
-        retentionMilliseconds: Long = MessageAttachmentPolicy.DEFAULT_RETENTION_MILLISECONDS
+        attachments: List<OutgoingMessageAttachmentDto>,
+        retentionMilliseconds: Long
     ): List<PreparedMessageAttachmentDto> {
         require(retentionMilliseconds > 0L) { "Attachment retention must be positive" }
-        MessageAttachmentPolicy.requireValid(attachments)
 
         val prepared = mutableListOf<PreparedMessageAttachmentDto>()
         return try {
@@ -100,8 +98,9 @@ class MessageAttachmentDataSource(
         )
     }
 
-    suspend fun persistOutgoing(messageId: String, prepared: List<PreparedMessageAttachmentDto>) {
+    suspend fun persistOutgoing(messageId: String, prepared: List<PreparedMessageAttachmentDto>, context: AttachmentMessageContextDto) {
         if (prepared.isEmpty()) return
+        saveMessageContext(messageId, context)
         attachmentDao.upsertAll(
             prepared.mapIndexed { index, item ->
                 item.toMessageAttachmentEntity(messageId = messageId, position = index)
@@ -109,8 +108,9 @@ class MessageAttachmentDataSource(
         )
     }
 
-    suspend fun persistIncoming(messageId: String, attachments: List<ProtocolMessageAttachment>) {
+    suspend fun persistIncoming(messageId: String, attachments: List<ProtocolMessageAttachment>, context: AttachmentMessageContextDto) {
         if (attachments.isEmpty()) return
+        saveMessageContext(messageId, context)
         attachmentDao.upsertAll(
             attachments.mapIndexed { index, attachment ->
                 attachment.toMessageAttachmentEntity(
@@ -122,6 +122,30 @@ class MessageAttachmentDataSource(
                 )
             }
         )
+    }
+
+    private suspend fun saveMessageContext(messageId: String, context: AttachmentMessageContextDto) {
+        require(context.conversationId.isNotBlank())
+        attachmentDao.upsertMessageContext(
+            AttachmentMessageContextEntity(
+                messageId = messageId,
+                conversationId = context.conversationId,
+                createdAtEpochMilliseconds = context.createdAtEpochMilliseconds,
+                displayName = context.displayName.ifBlank { context.conversationId },
+                isGroup = context.isGroup,
+                isMine = context.isMine,
+                senderContactId = context.senderContactId
+            )
+        )
+    }
+
+    suspend fun updateConversationDisplayName(conversationId: String, displayName: String, isGroup: Boolean) {
+        require(conversationId.isNotBlank())
+        val normalizedName = displayName.ifBlank { conversationId }
+        attachmentDao.updateConversationDisplayName(conversationId, normalizedName, isGroup)
+        // File-system naming is Attachments-owned. Keep existing saved copies in the
+        // same conversation directory when Chats or Contacts changes its display name.
+        localAttachmentDataSource.updateSavedConversationName(conversationId, normalizedName)
     }
 
     suspend fun protocolAttachments(messageId: String): List<ProtocolMessageAttachment> =
@@ -140,7 +164,7 @@ class MessageAttachmentDataSource(
                         try {
                             loadBytes(entity.id)
                         } catch (error: Exception) {
-                            logger.warn(error) { "Could not cache message attachment ${entity.id}" }
+                            logger.error(error) { "Could not cache message attachment ${entity.id}" }
                         }
                     }
                 }.awaitAll()
@@ -152,6 +176,18 @@ class MessageAttachmentDataSource(
             "Message attachment disappeared while its transcript was saved"
         }
     }
+
+    fun observeTranscript(attachmentId: String): Flow<String?> =
+        attachmentDao.observeById(attachmentId)
+            .map { entity -> entity?.transcript }
+
+    suspend fun resolveLocalFilePath(attachmentId: String): String? =
+        withContext(Dispatchers.IO) {
+            attachmentDao
+                .findById(attachmentId)
+                ?.localFileName
+                ?.let(fileDataSource::resolveCacheFilePath)
+        }
 
     suspend fun loadBytes(attachmentId: String): ByteArray =
         withContext(Dispatchers.IO) {
@@ -187,28 +223,8 @@ class MessageAttachmentDataSource(
         return bytes
     }
 
-    fun observeRecentByConversation(
-        conversationId: String,
-        messageLimit: Int
-    ): Flow<Map<String, List<MessageAttachment>>> =
-        attachmentDao.observeRecentByConversation(conversationId, messageLimit)
-            .map { attachments ->
-                attachments.toMessageAttachmentsByMessageId(fileDataSource::resolveCacheFilePath)
-            }
-
-    fun observeFromMessageCursor(
-        conversationId: String,
-        fromTimestamp: Long,
-        fromMessageId: String
-    ): Flow<Map<String, List<MessageAttachment>>> =
-        attachmentDao
-            .observeFromMessageCursor(
-                conversationId = conversationId,
-                fromTimestamp = fromTimestamp,
-                fromMessageId = fromMessageId
-            ).map { attachments ->
-                attachments.toMessageAttachmentsByMessageId(fileDataSource::resolveCacheFilePath)
-            }
+    fun observeByMessageIds(messageIds: List<String>): Flow<List<MessageAttachmentEntity>> =
+        attachmentDao.observeByMessageIds(messageIds)
 
     suspend fun deleteForMessages(messageIds: List<String>) {
         if (messageIds.isEmpty()) return
@@ -219,13 +235,13 @@ class MessageAttachmentDataSource(
             entity.deleteCapability?.let { deleteCapability ->
                 try {
                     blobTransferDataSource.delete(
-                        UploadedBlob(
+                        UploadedBlobDto(
                             reference = entity.toEncryptedBlobReference(),
                             deleteCapability = deleteCapability
                         )
                     )
                 } catch (error: Throwable) {
-                    logger.warn(error) { "Could not delete remote attachment blob ${entity.blobId}" }
+                    logger.error(error) { "Could not delete remote attachment blob ${entity.blobId}" }
                 }
             }
         }
@@ -238,14 +254,14 @@ class MessageAttachmentDataSource(
                 item.localFileName?.let(fileDataSource::delete)
                 item.deleteCapability.let { capability ->
                     blobTransferDataSource.delete(
-                        UploadedBlob(
+                        UploadedBlobDto(
                             reference = item.attachment.blob,
                             deleteCapability = capability
                         )
                     )
                 }
             } catch (e: Exception) {
-                logger.warn(e) { "Failed to cleanup prepared attachment during rollback" }
+                logger.error(e) { "Failed to cleanup prepared attachment during rollback" }
             }
         }
     }

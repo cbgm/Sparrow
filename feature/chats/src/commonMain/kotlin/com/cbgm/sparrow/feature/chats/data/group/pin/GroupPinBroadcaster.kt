@@ -4,14 +4,13 @@ import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair
 import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
 import com.cbgm.sparrow.core.protocol.message.GroupMessageContent
 import com.cbgm.sparrow.core.protocol.message.GroupMessageContentCodec
-import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.entity.GroupPinEntity
 import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupPinDataSource
 import com.cbgm.sparrow.feature.chats.data.group.outgoing.GroupPacketBroadcaster
-import com.cbgm.sparrow.feature.chats.data.group.security.isGroupAdminRole
+import com.cbgm.sparrow.feature.membership.domain.usecase.AuthorizeGroupMetadataUseCase
 
 internal class GroupPinBroadcaster(
-    private val groupSecurityDao: GroupSecurityDao,
+    private val authorizeGroupMetadata: AuthorizeGroupMetadataUseCase,
     private val localSigningKeyPairProvider: LocalSigningKeyPairProvider,
     private val packetProtocol: GroupPinPacketProtocol,
     private val packetBroadcaster: GroupPacketBroadcaster,
@@ -19,8 +18,7 @@ internal class GroupPinBroadcaster(
     private val groupMessageContentCodec: GroupMessageContentCodec
 ) {
     suspend fun requireLocalAdmin(groupId: String): Result<Unit> =
-        runCatching { requireAdminContext(groupId) }
-            .map { Unit }
+        runCatching { requireAdminContext(groupId).let { } }
 
     suspend fun broadcast(groupId: String): Result<Unit> =
         runCatching {
@@ -73,24 +71,16 @@ internal class GroupPinBroadcaster(
         )
 
     private suspend fun requireAdminContext(groupId: String): AdminContextDto {
-        val state = groupSecurityDao.findState(groupId) ?: error("Group security state was not found")
-        check(state.localRole.isGroupAdminRole()) { "Only a group admin may change the pinned message" }
         val signingKeyPair = localSigningKeyPairProvider.getSigningKeyPair().getOrThrow()
-        check(state.localSigningPublicKey.contentEquals(signingKeyPair.publicKey)) {
-            "Local admin signing key does not match the group security state"
-        }
-        val recipients =
-            groupSecurityDao
-                .findMemberKeys(groupId, state.currentEpoch)
-                .asSequence()
-                .filterNot { member -> member.signingPublicKey.contentEquals(signingKeyPair.publicKey) }
-                .map { member -> member.contactId }
-                .filter(String::isNotBlank)
-                .toSet()
+        val authorized = authorizeGroupMetadata.send(
+            groupId = groupId,
+            localSigningPublicKey = signingKeyPair.publicKey,
+            action = "pinned message"
+        ).getOrThrow()
         return AdminContextDto(
-            epoch = state.currentEpoch,
+            epoch = authorized.epoch,
             signingKeyPair = signingKeyPair,
-            recipientContactIds = recipients
+            recipientContactIds = authorized.recipientContactIds
         )
     }
 

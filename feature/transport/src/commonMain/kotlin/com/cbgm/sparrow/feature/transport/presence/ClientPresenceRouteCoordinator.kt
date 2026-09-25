@@ -14,8 +14,12 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 
 private const val MAX_COMPATIBILITY_CLOCK_SKEW_MILLISECONDS = 30_000L
+private const val MAX_ROUTE_TTL_SAFETY_MARGIN_MILLISECONDS = 5_000L
+private const val MAX_EXPIRATION_RETRIES = 3
 private const val SERVER_TIME_HEADER = "X-Sparrow-Server-Time"
 
 internal class ClientPresenceRouteCoordinator(
@@ -57,6 +61,9 @@ internal class ClientPresenceRouteSession(
     private var state: ClientPresenceRouteState =
         ClientPresenceRouteState.AwaitingGatewayRegistration
     private var refreshJob: Job? = null
+    private var gatewayTimeObservedAt: TimeMark? = null
+    private var expirationRetries = 0
+    private var recoveringExpiredRoute = false
 
     private val runner =
         scope.launch {
@@ -76,7 +83,22 @@ internal class ClientPresenceRouteSession(
     }
 
     fun onRouteRejected(error: Throwable) {
-        events.trySend(ClientPresenceRouteEvent.RouteRejected(error = error))
+        if (error is PresenceRouteRefreshRejectedException && error.isExpiration &&
+            expirationRetries < MAX_EXPIRATION_RETRIES
+        ) {
+            expirationRetries++
+            recoveringExpiredRoute = true
+            refreshJob?.cancel()
+            logger.debug {
+                "Presence refresh expired; obtaining fresh gateway time " +
+                    "(retry $expirationRetries/$MAX_EXPIRATION_RETRIES)"
+            }
+            events.trySend(ClientPresenceRouteEvent.RouteExpired)
+        } else {
+            // A sustained route rejection is handled by normal transport reconnect;
+            // this is not a foreground messaging failure or a global snackbar.
+            events.trySend(ClientPresenceRouteEvent.RouteRejected(error = error))
+        }
     }
 
     fun close() {
@@ -99,6 +121,8 @@ internal class ClientPresenceRouteSession(
                 scheduleRefresh(effect.delayMilliseconds)
 
             is ClientPresenceRouteEffect.AnnounceReady -> {
+                expirationRetries = 0
+                recoveringExpiredRoute = false
                 logger.info {
                     "Presence route ready for ${connection.routingId}; aliases=${effect.aliases.size}"
                 }
@@ -106,7 +130,13 @@ internal class ClientPresenceRouteSession(
             }
 
             is ClientPresenceRouteEffect.Fail -> {
-                logger.warn { "Presence route failed: ${effect.error.message ?: "unknown error"}" }
+                if (recoveringExpiredRoute || effect.error is PresenceRouteRefreshRejectedException) {
+                    // Expected transport housekeeping failure; reconnect will retry.
+                    // Error logging here would display an intrusive global snackbar.
+                    logger.warn { "Presence route refresh rejected; reconnecting" }
+                } else {
+                    logger.error(effect.error) { "Presence route failed" }
+                }
                 onFailure(effect.error)
             }
         }
@@ -120,6 +150,12 @@ internal class ClientPresenceRouteSession(
                 response.headers[SERVER_TIME_HEADER]
                     ?.toLongOrNull()
 
+            // Keep a monotonic observation as well as the original epoch value.
+            // Changing the device wall clock while Sparrow is open must not
+            // manufacture a route that expires in the past or exceeds the TTL.
+            gatewayTimeObservedAt = serverTimeEpochMilliseconds?.let {
+                TimeSource.Monotonic.markNow()
+            }
             gatewayInformation.copy(
                 serverTimeEpochMilliseconds = serverTimeEpochMilliseconds,
                 serverTimeObservedAtEpochMilliseconds =
@@ -147,8 +183,8 @@ internal class ClientPresenceRouteSession(
         val aliases =
             localBootstrapRoutingIdProvider
                 .getLocalBootstrapRoutingId()
-                .getOrNull()
-                ?.let(::listOf)
+                .onFailure { failure -> SparrowLog.error("ClientPresenceRouteCoordinator", "Could not load bootstrap routing ID", failure) }
+                .getOrNull()?.let(::listOf)
                 .orEmpty()
 
         registrationFactory.create(
@@ -156,7 +192,13 @@ internal class ClientPresenceRouteSession(
             nodeId = gatewayInformation.nodeId,
             connectionId = connection.connectionId,
             generation = connection.generation,
-            expiresAtEpochMilliseconds = routeExpirationEpochMilliseconds(gatewayInformation),
+            expiresAtEpochMilliseconds = routeExpirationEpochMilliseconds(
+                gatewayInformation = gatewayInformation,
+                localNowEpochMilliseconds =
+                    gatewayInformation.serverTimeObservedAtEpochMilliseconds?.let { observedAt ->
+                        observedAt + (gatewayTimeObservedAt?.elapsedNow()?.inWholeMilliseconds ?: 0L)
+                    } ?: SystemClock.nowEpochMilliseconds()
+            ),
             aliases = aliases
         ).fold(
             onSuccess = { registration ->
@@ -178,6 +220,7 @@ internal class ClientPresenceRouteSession(
 
     private suspend fun publishRegistration(registration: ClientRouteRegistration) {
         publishRoute(registration).onFailure { error ->
+            SparrowLog.error("ClientPresenceRouteCoordinator", "Client route publication failed", error)
             events.send(
                 ClientPresenceRouteEvent.RoutePublicationFailed(
                     error = error
@@ -225,6 +268,18 @@ internal fun routeExpirationEpochMilliseconds(
     gatewayInformation: GatewayNodeInformation,
     localNowEpochMilliseconds: Long = SystemClock.nowEpochMilliseconds()
 ): Long {
+    val maximumSafetyMargin =
+        (
+            gatewayInformation.routeLifetimeMilliseconds -
+                gatewayInformation.routeRefreshIntervalMilliseconds -
+                1L
+        ).coerceAtLeast(0L)
+    val ttlSafetyMargin = minOf(
+        MAX_ROUTE_TTL_SAFETY_MARGIN_MILLISECONDS,
+        gatewayInformation.routeLifetimeMilliseconds / 6L,
+        maximumSafetyMargin
+    )
+
     val serverTimeEpochMilliseconds = gatewayInformation.serverTimeEpochMilliseconds
     if (serverTimeEpochMilliseconds != null) {
         val elapsedSinceObservation =
@@ -235,15 +290,10 @@ internal fun routeExpirationEpochMilliseconds(
                 ?: 0L
         return serverTimeEpochMilliseconds +
             elapsedSinceObservation +
-            gatewayInformation.routeLifetimeMilliseconds
+            gatewayInformation.routeLifetimeMilliseconds -
+            ttlSafetyMargin
     }
 
-    val maximumSafetyMargin =
-        (
-            gatewayInformation.routeLifetimeMilliseconds -
-                gatewayInformation.routeRefreshIntervalMilliseconds -
-                1L
-        ).coerceAtLeast(0L)
     val preferredSafetyMargin =
         minOf(
             MAX_COMPATIBILITY_CLOCK_SKEW_MILLISECONDS,

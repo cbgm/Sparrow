@@ -14,6 +14,9 @@ class GroupAvatarFileDataSource(
         fileSystem.createDirectories(directory)
     }
 
+    fun exists(fileName: String): Boolean =
+        fileSystem.exists(directory / fileName)
+
     fun read(fileName: String): ByteArray? {
         val path = directory / fileName
         return if (fileSystem.exists(path)) {

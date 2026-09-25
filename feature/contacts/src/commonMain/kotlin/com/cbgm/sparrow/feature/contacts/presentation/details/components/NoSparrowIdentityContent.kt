@@ -1,12 +1,20 @@
 package com.cbgm.sparrow.feature.contacts.presentation.details.components
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -24,25 +32,44 @@ internal fun NoSparrowIdentityContent() {
         icon = Icons.Default.Security,
         title = stringResource(Res.string.base_sparrow)
     )
-    Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-    Text(
-        text = stringResource(Res.string.feature_contacts_sparrow_not_enabled),
-        style = MaterialTheme.typography.bodyMedium,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.error
-    )
-    Spacer(modifier = Modifier.height(MaterialTheme.spacing.micro))
-    Text(
-        text = stringResource(Res.string.feature_contacts_sparrow_keys_attach_later),
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.small),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Surface(
+                color = MaterialTheme.colorScheme.error.copy(alpha = 0.12f),
+                shape = CircleShape
+            ) {
+                Text(
+                    text = "!",
+                    modifier = Modifier.padding(
+                        horizontal = MaterialTheme.spacing.small,
+                        vertical = MaterialTheme.spacing.micro
+                    ),
+                    color = MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
+            Spacer(modifier = Modifier.width(MaterialTheme.spacing.base))
+            Text(
+                text = stringResource(Res.string.feature_contacts_sparrow_not_enabled),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        Text(
+            text = stringResource(Res.string.feature_contacts_sparrow_keys_attach_later),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
 }
 
 @Preview
 @Composable
 private fun NoSparrowIdentityContentPreview() {
-    SparrowTheme {
-        NoSparrowIdentityContent()
-    }
+    SparrowTheme { NoSparrowIdentityContent() }
 }

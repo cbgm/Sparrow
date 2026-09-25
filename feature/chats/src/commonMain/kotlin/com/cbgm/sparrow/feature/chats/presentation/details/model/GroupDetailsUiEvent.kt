@@ -1,5 +1,7 @@
 package com.cbgm.sparrow.feature.chats.presentation.details.model
 
+import com.cbgm.sparrow.feature.avatar.domain.model.AvatarEditResult
+
 sealed interface GroupDetailsUiEvent {
     data object BackClicked : GroupDetailsUiEvent
 
@@ -46,21 +48,8 @@ sealed interface GroupDetailsUiEvent {
     data object LeaveGroupDismissed : GroupDetailsUiEvent
 
     data class AvatarSelected(
-        val bytes: ByteArray
-    ) : GroupDetailsUiEvent {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as AvatarSelected
-
-            if (!bytes.contentEquals(other.bytes)) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int = bytes.contentHashCode()
-    }
+        val result: AvatarEditResult
+    ) : GroupDetailsUiEvent
 
     data object RemoveGroupAvatarClicked : GroupDetailsUiEvent
 

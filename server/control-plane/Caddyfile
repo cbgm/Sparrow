@@ -20,6 +20,15 @@
         file_server
     }
 
+    # Serve only short-lived proof files from a dedicated non-secret directory.
+    # A separate proxy mounts this directory at the same absolute location.
+    @directory_registration path_regexp directory_registration ^/\.well-known/sparrow-directory-registration/[A-Za-z0-9_-]{32}$
+    handle @directory_registration {
+        root * /srv/directory-proofs
+        header Cache-Control "no-store"
+        file_server
+    }
+
     @nodes path /v1/nodes /v1/nodes/*
     handle @nodes {
         reverse_proxy node-registry:8090

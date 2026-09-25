@@ -3,11 +3,8 @@ package com.cbgm.sparrow.feature.attachments.presentation.mapper
 import com.cbgm.sparrow.core.protocol.attachment.MessageAttachmentType
 import com.cbgm.sparrow.feature.attachments.domain.model.LocalAttachment
 import com.cbgm.sparrow.feature.attachments.presentation.model.MessageAttachmentUi
-import com.cbgm.sparrow.feature.attachments.util.LocationAttachmentPayload
 
-internal fun List<LocalAttachment>.toMessageAttachmentsUi(
-    loadedBytes: Map<String, ByteArray>
-): List<MessageAttachmentUi> =
+internal fun List<LocalAttachment>.toMessageAttachmentsUi(): List<MessageAttachmentUi> =
     mapNotNull { attachment ->
         when (attachment.type) {
             MessageAttachmentType.IMAGE,
@@ -20,8 +17,7 @@ internal fun List<LocalAttachment>.toMessageAttachmentsUi(
                     fileName = attachment.fileName,
                     width = attachment.width,
                     height = attachment.height,
-                    durationMilliseconds = attachment.durationMilliseconds,
-                    bytes = loadedBytes[attachment.id]
+                    durationMilliseconds = attachment.durationMilliseconds
                 )
 
             MessageAttachmentType.FILE ->
@@ -32,16 +28,7 @@ internal fun List<LocalAttachment>.toMessageAttachmentsUi(
                     fileName = attachment.fileName ?: attachment.id
                 )
 
-            MessageAttachmentType.LOCATION ->
-                loadedBytes[attachment.id]
-                    ?.let(LocationAttachmentPayload::decode)
-                    ?.let { location ->
-                        MessageAttachmentUi.LocationAttachmentUi(
-                            id = attachment.id,
-                            location = location
-                        )
-                    }
-
+            MessageAttachmentType.LOCATION,
             MessageAttachmentType.CONTACT,
             MessageAttachmentType.VOICE -> null
         }

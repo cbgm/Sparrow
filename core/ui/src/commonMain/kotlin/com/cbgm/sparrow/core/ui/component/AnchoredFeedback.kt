@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.core.ui.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -86,15 +87,16 @@ fun SparrowOverlayScope.FeedbackOverlay(
 }
 
 @Composable
-private fun FeedbackBubble(
+fun FeedbackBubble(
     text: String,
     color: Color,
     modifier: Modifier = Modifier
 ) {
     Surface(
         modifier = modifier,
-        shape = MaterialTheme.shapes.extraSmall,
+        shape = MaterialTheme.shapes.medium,
         color = color.darker(0.9f),
+        border = BorderStroke(Dimens.Base.borderStrokeWidth, color.copy(alpha = 0.42f)),
         shadowElevation = Dimens.Card.shadowElevation
     ) {
         Text(

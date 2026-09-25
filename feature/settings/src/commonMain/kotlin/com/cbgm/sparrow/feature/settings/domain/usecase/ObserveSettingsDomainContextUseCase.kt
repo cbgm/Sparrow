@@ -2,7 +2,7 @@ package com.cbgm.sparrow.feature.settings.domain.usecase
 
 import com.cbgm.sparrow.core.embedding.domain.model.LocalEmbeddingState
 import com.cbgm.sparrow.core.embedding.domain.usecase.ObserveLocalEmbeddingStateUseCase
-import com.cbgm.sparrow.core.security.DirectIdentitySetupMode
+import com.cbgm.sparrow.feature.identity.domain.model.DirectIdentitySetupMode
 import com.cbgm.sparrow.feature.safety.domain.model.MessageSafetyState
 import com.cbgm.sparrow.feature.safety.domain.usecase.ObserveMessageSafetyStateUseCase
 import com.cbgm.sparrow.feature.search.domain.model.SemanticSearchState

@@ -112,6 +112,6 @@ internal class IndicatorController(
 
     private suspend fun sendNow(indicatorType: IndicatorType) {
         sendIndicatorState(indicatorType)
-            .onFailure { error -> logger.warn(error) { "Could not send indicator state" } }
+            .onFailure { error -> logger.error(error) { "Could not send indicator state" } }
     }
 }

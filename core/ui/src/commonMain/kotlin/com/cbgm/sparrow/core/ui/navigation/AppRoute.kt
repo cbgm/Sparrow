@@ -55,6 +55,12 @@ sealed interface AppRoute {
     ) : AppRoute
 
     @Serializable
+    data object IdentityKeys : AppRoute
+
+    @Serializable
+    data object IdentityBackup : AppRoute
+
+    @Serializable
     data object ShareIdentity : AppRoute
 
     @Serializable
@@ -82,10 +88,10 @@ sealed interface AppRoute {
     data object DeveloperMenu : AppRoute
 
     @Serializable
-    data object DeveloperErrorLog : AppRoute
+    data object DeveloperNodes : AppRoute
 
     @Serializable
-    data object ProfileSettings : AppRoute
+    data object DeveloperErrorLog : AppRoute
 
     @Serializable
     data object AutoReplySettings : AppRoute
@@ -110,7 +116,7 @@ sealed interface AppRoute {
     data object BlockedContacts : AppRoute
 
     @Serializable
-    data class ContactInvitations(
+    data class Invitations(
         val showOutgoing: Boolean = false
     ) : AppRoute
 }

@@ -1,10 +1,8 @@
 package com.cbgm.sparrow.feature.contacts.presentation.overview
 
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.feature.contacts.device.rememberDeviceContactsPermissionRequest
@@ -20,12 +18,11 @@ fun ContactsRoute(
     viewModel: ContactsViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
             when (effect) {
-                is ContactsEffect.ShowError -> snackbarHostState.showSnackbar(effect.message)
+                is ContactsEffect.ShowError -> viewModel.reportError(effect.message)
                 else -> onEffect(effect)
             }
         }
@@ -55,7 +52,6 @@ fun ContactsRoute(
                 viewModel.onUiEvent(event)
             }
         },
-        modifier = modifier,
-        snackbarHostState = snackbarHostState
+        modifier = modifier
     )
 }

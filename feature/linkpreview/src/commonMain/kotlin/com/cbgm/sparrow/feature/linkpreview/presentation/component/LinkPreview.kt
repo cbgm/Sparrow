@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -14,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,25 +61,49 @@ private fun LinkPreviewContent(
     ) {
         when (uiState) {
             LinkPreviewUiState.Loading ->
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
 
-            is LinkPreviewUiState.Success ->
-                LinkPreviewCard(
-                    preview = uiState.preview,
-                    onClick = { uriHandler.openUri(url) }
-                )
-
-            is LinkPreviewUiState.Error -> {
-                Text(
-                    text = url,
-                    modifier = Modifier.clickable { uriHandler.openUri(url) },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+            is LinkPreviewUiState.Success -> {
+                if (uiState.preview.imageBytes != null) {
+                    LinkPreviewCard(
+                        preview = uiState.preview,
+                        onClick = { uriHandler.openUri(url) }
+                    )
+                } else {
+                    // No image is a normal outcome, not an error or snackbar event.
+                    LinkPreviewFallback(url = url, onClick = { uriHandler.openUri(url) })
+                }
             }
+
+            is LinkPreviewUiState.Error ->
+                LinkPreviewFallback(url = url, onClick = { uriHandler.openUri(url) })
         }
+    }
+}
+
+@Composable
+private fun LinkPreviewFallback(
+    url: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Text(
+            text = url,
+            modifier = Modifier.padding(MaterialTheme.spacing.base),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -95,8 +119,8 @@ private fun LinkPreviewCard(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(MaterialTheme.spacing.base),
-        tonalElevation = MaterialTheme.spacing.micro
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.background
     ) {
         Column(
             modifier = Modifier
@@ -107,15 +131,29 @@ private fun LinkPreviewCard(
             SparrowImage(
                 model = imageBytes,
                 contentDescription = null,
-                modifier = Modifier.fillMaxWidth().height(PREVIEW_IMAGE_HEIGHT),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(PREVIEW_IMAGE_HEIGHT)
+                    .clip(MaterialTheme.shapes.small),
                 contentScale = ContentScale.Crop,
                 memoryCacheKey = "link-preview:${preview.url}"
             )
 
+            preview.siteName?.takeIf(String::isNotBlank)?.let { site ->
+                Text(
+                    text = site,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
             preview.title?.takeIf(String::isNotBlank)?.let { title ->
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )

@@ -32,7 +32,9 @@ data class GroupMemberKeyEntity(
     val contactId: String,
     val encryptionPublicKey: ByteArray,
     val signingPublicKey: ByteArray,
-    val role: String
+    val role: String,
+    /** Real contact phone received with an authenticated member; retained across epoch rotations. */
+    val phoneNumber: String? = null
 ) {
     init {
         require(groupId.isNotBlank()) { "Group ID must not be blank" }
@@ -52,7 +54,8 @@ data class GroupMemberKeyEntity(
             contactId == other.contactId &&
             encryptionPublicKey.contentEquals(other.encryptionPublicKey) &&
             signingPublicKey.contentEquals(other.signingPublicKey) &&
-            role == other.role
+            role == other.role &&
+            phoneNumber == other.phoneNumber
     }
 
     override fun hashCode(): Int {
@@ -62,6 +65,7 @@ data class GroupMemberKeyEntity(
         result = 31 * result + encryptionPublicKey.contentHashCode()
         result = 31 * result + signingPublicKey.contentHashCode()
         result = 31 * result + role.hashCode()
+        result = 31 * result + (phoneNumber?.hashCode() ?: 0)
         return result
     }
 }

@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.chats.presentation.details
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -8,17 +9,21 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
@@ -38,43 +43,48 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
+import androidx.compose.ui.unit.dp
 import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
-import com.cbgm.sparrow.core.ui.component.SparrowAvatar
 import com.cbgm.sparrow.core.ui.component.SparrowCardNoAnimation
-import com.cbgm.sparrow.core.ui.component.SparrowInputField
-import com.cbgm.sparrow.core.ui.component.SparrowLazyScaffold
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
-import com.cbgm.sparrow.core.ui.component.SparrowSecondaryButton
-import com.cbgm.sparrow.core.ui.component.SparrowStatusBadge
+import com.cbgm.sparrow.core.ui.component.SparrowSwipeRevealItem
+import com.cbgm.sparrow.core.ui.component.SwipeRevealAction
+import com.cbgm.sparrow.core.ui.helper.BorderSides
+import com.cbgm.sparrow.core.ui.helper.drawShapeBorder
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
+import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
+import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
+import com.cbgm.sparrow.feature.avatar.presentation.editor.AvatarEditor
+import com.cbgm.sparrow.feature.avatar.presentation.editor.AvatarEditorStrings
 import com.cbgm.sparrow.feature.chats.domain.model.group.GroupDescription
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupAvatarUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupDescriptionUiState
@@ -83,11 +93,8 @@ import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupDetailsUiS
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupMemberVerificationState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupMemberVerificationUiState
 import com.cbgm.sparrow.feature.chats.presentation.details.model.GroupVerificationSummaryUiState
-import com.cbgm.sparrow.feature.media.presentation.avatar.AvatarEditor
-import com.cbgm.sparrow.feature.media.presentation.avatar.AvatarEditorStrings
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_cancel
-import com.cbgm.sparrow.resources.base_verify
 import com.cbgm.sparrow.resources.base_verify_contact
 import com.cbgm.sparrow.resources.feature_attachments_media_and_files
 import com.cbgm.sparrow.resources.feature_chats_group_add_members
@@ -97,8 +104,6 @@ import com.cbgm.sparrow.resources.feature_chats_group_avatar_choose_gallery
 import com.cbgm.sparrow.resources.feature_chats_group_avatar_crop
 import com.cbgm.sparrow.resources.feature_chats_group_avatar_remove
 import com.cbgm.sparrow.resources.feature_chats_group_avatar_take_photo
-import com.cbgm.sparrow.resources.feature_chats_group_description
-import com.cbgm.sparrow.resources.feature_chats_group_description_add
 import com.cbgm.sparrow.resources.feature_chats_group_description_edit
 import com.cbgm.sparrow.resources.feature_chats_group_description_empty
 import com.cbgm.sparrow.resources.feature_chats_group_description_placeholder
@@ -133,14 +138,13 @@ fun GroupDetailsScreen(
     var showAvatarEditor by remember { mutableStateOf(false) }
     var isEditingTitle by remember { mutableStateOf(false) }
     var titleDraft by remember { mutableStateOf("") }
-    var showDescriptionEditor by remember { mutableStateOf(false) }
-    var descriptionDraft by remember { mutableStateOf("") }
 
     Box(modifier = modifier.fillMaxSize()) {
-        SparrowLazyScaffold(
+        Scaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = MaterialTheme.colorScheme.background,
-            topBar = { containerColor ->
+            topBar = {
+                val containerColor = MaterialTheme.colorScheme.background
                 val titleState = (uiState as? GroupDetailsUiState.Content)?.groupTitle
                 TopBar(
                     containerColor = containerColor,
@@ -167,21 +171,23 @@ fun GroupDetailsScreen(
                     },
                     onBack = { onUiEvent(GroupDetailsUiEvent.BackClicked) }
                 )
+            },
+            bottomBar = {
+                val visibleDetails = uiState as? GroupDetailsUiState.Content
+                if (visibleDetails != null) {
+                    GroupDetailsBottomActions(
+                        canLeaveGroup = visibleDetails.summary.canLeaveGroup,
+                        onMediaAndFiles = { onUiEvent(GroupDetailsUiEvent.MediaAndFilesClicked) },
+                        onLeaveGroup = { onUiEvent(GroupDetailsUiEvent.LeaveGroupClicked) }
+                    )
+                }
             }
-        ) { innerPadding, listState ->
+        ) { innerPadding ->
             Content(
                 uiState = uiState,
                 innerPadding = innerPadding,
-                listState = listState,
                 onUiEvent = onUiEvent,
-                onEditGroupAvatar = { showAvatarEditor = true },
-                onEditGroupDescription = {
-                    val content = uiState as? GroupDetailsUiState.Content
-                    if (content?.groupDescription?.canEdit == true) {
-                        descriptionDraft = content.groupDescription.description
-                        showDescriptionEditor = true
-                    }
-                }
+                onEditGroupAvatar = { showAvatarEditor = true }
             )
         }
 
@@ -194,39 +200,22 @@ fun GroupDetailsScreen(
                         takePhoto = stringResource(Res.string.feature_chats_group_avatar_take_photo),
                         chooseFromGallery = stringResource(Res.string.feature_chats_group_avatar_choose_gallery),
                         remove =
-                            if (((uiState as? GroupDetailsUiState.Content)?.groupAvatar?.avatarBytes) != null) {
+                            if ((uiState as? GroupDetailsUiState.Content)?.groupAvatar?.hasAvatar == true) {
                                 stringResource(Res.string.feature_chats_group_avatar_remove)
                             } else {
                                 null
                             },
                         cancel = stringResource(Res.string.base_cancel)
                     ),
-                onAvatarSelected = { bytes ->
+                onAvatarSelected = { result ->
                     showAvatarEditor = false
-                    onUiEvent(GroupDetailsUiEvent.AvatarSelected(bytes))
+                    onUiEvent(GroupDetailsUiEvent.AvatarSelected(result))
                 },
                 onRemoveAvatar = {
                     showAvatarEditor = false
                     onUiEvent(GroupDetailsUiEvent.RemoveGroupAvatarClicked)
                 },
                 onDismiss = { showAvatarEditor = false }
-            )
-        }
-
-        val descriptionState = (uiState as? GroupDetailsUiState.Content)?.groupDescription
-
-        if (showDescriptionEditor && descriptionState?.canEdit == true) {
-            GroupDescriptionEditorDialog(
-                description = descriptionDraft,
-                isSaving = descriptionState.isSaving,
-                onDescriptionChanged = { value ->
-                    if (value.length <= GroupDescription.MAX_LENGTH) descriptionDraft = value
-                },
-                onSave = {
-                    showDescriptionEditor = false
-                    onUiEvent(GroupDetailsUiEvent.SaveGroupDescriptionClicked(descriptionDraft))
-                },
-                onDismiss = { showDescriptionEditor = false }
             )
         }
     }
@@ -247,6 +236,14 @@ private fun TopBar(
     onCancelTitle: () -> Unit,
     onBack: () -> Unit
 ) {
+    val titleFocusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    LaunchedEffect(isEditingTitle) {
+        if (isEditingTitle) {
+            titleFocusRequester.requestFocus()
+            keyboardController?.show()
+        }
+    }
     Column {
         CenterAlignedTopAppBar(
             colors =
@@ -262,9 +259,13 @@ private fun TopBar(
                     BasicTextField(
                         value = titleDraft,
                         onValueChange = onTitleDraftChanged,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(titleFocusRequester),
                         enabled = !isSavingTitle,
                         singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { onSaveTitle() }),
                         textStyle =
                             MaterialTheme.typography.titleSmall.copy(
                                 color = MaterialTheme.colorScheme.onBackground,
@@ -334,42 +335,39 @@ private fun TopBar(
 private fun Content(
     uiState: GroupDetailsUiState,
     innerPadding: PaddingValues,
-    listState: LazyListState,
     onUiEvent: (GroupDetailsUiEvent) -> Unit,
-    onEditGroupAvatar: () -> Unit,
-    onEditGroupDescription: () -> Unit
+    onEditGroupAvatar: () -> Unit
 ) {
     when (uiState) {
         GroupDetailsUiState.Loading ->
-            LoadingContent(
+            Loading(
                 modifier = Modifier.fillMaxSize().padding(innerPadding)
             )
 
         is GroupDetailsUiState.Content ->
-            MemberList(
+            Content(
                 summary = uiState.summary,
                 groupAvatarState = uiState.groupAvatar,
                 groupDescriptionState = uiState.groupDescription,
                 innerPadding = innerPadding,
-                listState = listState,
                 onVerifyMember = { contactId ->
                     onUiEvent(GroupDetailsUiEvent.VerifyMemberClicked(contactId))
                 },
                 onAddMembers = { onUiEvent(GroupDetailsUiEvent.AddMembersClicked) },
-                onMediaAndFiles = { onUiEvent(GroupDetailsUiEvent.MediaAndFilesClicked) },
                 onRemoveMember = { contactId ->
                     onUiEvent(GroupDetailsUiEvent.RemoveMemberClicked(contactId))
                 },
                 onPromoteMember = { contactId ->
                     onUiEvent(GroupDetailsUiEvent.PromoteMemberClicked(contactId))
                 },
-                onLeaveGroup = { onUiEvent(GroupDetailsUiEvent.LeaveGroupClicked) },
                 onEditGroupAvatar = onEditGroupAvatar,
-                onEditGroupDescription = onEditGroupDescription
+                onSaveGroupDescription = { description ->
+                    onUiEvent(GroupDetailsUiEvent.SaveGroupDescriptionClicked(description))
+                }
             )
 
         is GroupDetailsUiState.Error ->
-            ErrorContent(
+            Error(
                 message = uiState.message,
                 modifier =
                     Modifier
@@ -386,23 +384,21 @@ private fun Metric(
     label: String,
     modifier: Modifier = Modifier
 ) {
-    SparrowCardNoAnimation(modifier = modifier) {
-        Column(
-            modifier = Modifier.padding(MaterialTheme.spacing.small),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = value.toString(),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+    Column(
+        modifier = modifier.padding(vertical = MaterialTheme.spacing.base),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = value.toString(),
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -418,7 +414,7 @@ private fun MetricPreview() {
 }
 
 @Composable
-private fun ErrorContent(
+private fun Error(
     message: String,
     modifier: Modifier = Modifier
 ) {
@@ -436,9 +432,9 @@ private fun ErrorContent(
 
 @Preview
 @Composable
-private fun ErrorContentPreview() {
+private fun ErrorPreview() {
     SparrowTheme {
-        ErrorContent(
+        Error(
             message = "Group details could not be loaded",
             modifier = Modifier.padding(MaterialTheme.spacing.medium)
         )
@@ -446,7 +442,7 @@ private fun ErrorContentPreview() {
 }
 
 @Composable
-private fun LoadingContent(modifier: Modifier = Modifier) {
+private fun Loading(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center
@@ -457,9 +453,9 @@ private fun LoadingContent(modifier: Modifier = Modifier) {
 
 @Preview
 @Composable
-private fun LoadingContentPreview() {
+private fun LoadingPreview() {
     SparrowTheme {
-        LoadingContent(modifier = Modifier.size(Dimens.GroupDetailsScreen.loadingSize))
+        Loading(modifier = Modifier.size(Dimens.GroupDetailsScreen.loadingSize))
     }
 }
 
@@ -529,26 +525,28 @@ private fun GroupAvatarSection(
         ) {
             SparrowAvatar(
                 name = state.title,
-                pictureBytes = state.avatarBytes,
+                target = state.groupId
+                    .takeIf(String::isNotBlank)
+                    ?.let { AvatarTarget.Group(it) },
                 size = Dimens.GroupDetailsScreen.avatarSize,
                 modifier = Modifier.padding(MaterialTheme.spacing.base)
             )
 
             if (state.canEdit) {
-                IconButton(
+                Surface(
                     onClick = onEdit,
                     enabled = !state.isSaving,
+                    modifier = Modifier.align(Alignment.BottomEnd),
                     shape = CircleShape,
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
-                    ),
-                    modifier = Modifier.align(Alignment.BottomEnd)
+                    color = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.PhotoCamera,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Box(modifier = Modifier.size(Dimens.Avatar.editIconSize), contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.PhotoCamera,
+                            contentDescription = null
+                        )
+                    }
                 }
             }
 
@@ -586,211 +584,176 @@ private fun GroupAvatarSectionPreview() {
 @Composable
 private fun GroupDescriptionSection(
     state: GroupDescriptionUiState,
-    onEdit: () -> Unit
+    onSave: (String) -> Unit
 ) {
-    SparrowCardNoAnimation(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacing.medium)) {
-            Text(
-                text = stringResource(Res.string.feature_chats_group_description),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
-            )
+    var isEditing by remember(state.description) { mutableStateOf(false) }
+    var draft by remember(state.description) { mutableStateOf(state.description) }
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
 
-            Text(
-                text =
-                    state.description.takeIf(String::isNotBlank)
-                        ?: stringResource(Res.string.feature_chats_group_description_empty),
-                modifier = Modifier.padding(top = MaterialTheme.spacing.small),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+    LaunchedEffect(isEditing) {
+        if (isEditing) {
+            focusRequester.requestFocus()
+            keyboardController?.show()
+        }
+    }
 
-            if (state.canEdit) {
-                SparrowSecondaryButton(
-                    onClick = onEdit,
+    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        if (isEditing && state.canEdit) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BasicTextField(
+                    value = draft,
+                    onValueChange = { if (it.length <= GroupDescription.MAX_LENGTH) draft = it },
+                    modifier = Modifier.weight(1f).focusRequester(focusRequester),
                     enabled = !state.isSaving,
-                    modifier = Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.medium),
-                    text =
-                        stringResource(
-                            if (state.description.isBlank()) {
-                                Res.string.feature_chats_group_description_add
-                            } else {
-                                Res.string.feature_chats_group_description_edit
+                    minLines = 1,
+                    maxLines = 4,
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.onBackground,
+                        textAlign = TextAlign.Center
+                    ),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    decorationBox = { innerTextField ->
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (draft.isEmpty()) {
+                                Text(
+                                    text = stringResource(Res.string.feature_chats_group_description_placeholder),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
                             }
+                            innerTextField()
+                        }
+                    }
+                )
+                IconButton(
+                    onClick = {
+                        isEditing = false
+                        draft = state.description
+                    },
+                    enabled = !state.isSaving
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = stringResource(Res.string.base_cancel)
+                    )
+                }
+                IconButton(
+                    onClick = {
+                        isEditing = false
+                        keyboardController?.hide()
+                        onSave(draft)
+                    },
+                    enabled = !state.isSaving
+                ) {
+                    if (state.isSaving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp
                         )
-                )
+                    } else {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = stringResource(Res.string.feature_chats_group_description_save),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
-
-            state.errorMessage?.let { error ->
+            Text(
+                text = "${draft.length}/${GroupDescription.MAX_LENGTH}",
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.End
+            )
+        } else {
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = error,
-                    modifier = Modifier.padding(top = MaterialTheme.spacing.small),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
+                    text = state.description.takeIf(String::isNotBlank)
+                        ?: stringResource(Res.string.feature_chats_group_description_empty),
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(horizontal = if (state.canEdit) 44.dp else 0.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
                 )
+                if (state.canEdit) {
+                    IconButton(
+                        onClick = {
+                            draft = state.description
+                            isEditing = true
+                        },
+                        enabled = !state.isSaving,
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = stringResource(Res.string.feature_chats_group_description_edit),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun GroupDescriptionEditorDialog(
-    description: String,
-    isSaving: Boolean,
-    onDescriptionChanged: (String) -> Unit,
-    onSave: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    SparrowAlertDialog(
-        isVisible = true,
-        onDismissRequest = { if (!isSaving) onDismiss() },
-        title = stringResource(Res.string.feature_chats_group_description),
-        text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                SparrowInputField(
-                    value = description,
-                    onValueChange = onDescriptionChanged,
-                    label = stringResource(Res.string.feature_chats_group_description),
-                    placeholderText = stringResource(Res.string.feature_chats_group_description_placeholder),
-                    minLines = 3,
-                    maxLines = 6,
-                    isEnabled = !isSaving,
-                    keyboardOptions =
-                        KeyboardOptions(
-                            keyboardType = KeyboardType.Text,
-                            imeAction = ImeAction.Default
-                        )
-                )
-                Text(
-                    text = "${description.length}/${GroupDescription.MAX_LENGTH}",
-                    modifier = Modifier.fillMaxWidth().padding(top = MaterialTheme.spacing.micro),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.End
-                )
-            }
-        },
-        confirmButton = {
-            SparrowApprovalButton(
-                onClick = onSave,
-                text = stringResource(Res.string.feature_chats_group_description_save),
-                fillMaxWidth = false,
-                enabled = !isSaving
-            )
-        },
-        dismissButton = {
-            SparrowOutlinedButton(
-                onClick = onDismiss,
-                text = stringResource(Res.string.base_cancel),
-                fillMaxWidth = false,
-                enabled = !isSaving
-            )
-        }
-    )
-}
-
-@Composable
-private fun MemberList(
+private fun Content(
     summary: GroupVerificationSummaryUiState,
     groupAvatarState: GroupAvatarUiState,
     groupDescriptionState: GroupDescriptionUiState,
     onVerifyMember: (String) -> Unit,
     onAddMembers: () -> Unit,
-    onMediaAndFiles: () -> Unit,
     onRemoveMember: (String) -> Unit,
     onPromoteMember: (String) -> Unit,
-    onLeaveGroup: () -> Unit,
     onEditGroupAvatar: () -> Unit,
-    onEditGroupDescription: () -> Unit,
-    innerPadding: PaddingValues,
-    listState: LazyListState
+    onSaveGroupDescription: (String) -> Unit,
+    innerPadding: PaddingValues
 ) {
     val admin = summary.members.firstOrNull(GroupMemberVerificationUiState::isGroupAdmin)
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        state = listState,
-        contentPadding =
-            PaddingValues(
-                start = MaterialTheme.spacing.medium,
-                top = innerPadding.calculateTopPadding(),
-                end = MaterialTheme.spacing.medium,
-                bottom = innerPadding.calculateBottomPadding()
-            ),
-        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)
+            .padding(horizontal = MaterialTheme.spacing.screenPadding)
+            .padding(top = MaterialTheme.spacing.base, bottom = MaterialTheme.spacing.base),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)
     ) {
-        item(key = "group-avatar") {
-            GroupAvatarSection(
-                state = groupAvatarState,
-                onEdit = onEditGroupAvatar
-            )
-        }
-
+        GroupAvatarSection(state = groupAvatarState, onEdit = onEditGroupAvatar)
         if (groupDescriptionState.canEdit || groupDescriptionState.description.isNotBlank()) {
-            item(key = "group-description") {
-                GroupDescriptionSection(
-                    state = groupDescriptionState,
-                    onEdit = onEditGroupDescription
-                )
-            }
+            GroupDescriptionSection(state = groupDescriptionState, onSave = onSaveGroupDescription)
         }
-
         if (!summary.isLocalAdmin && admin != null && admin.canVerify) {
-            item(key = "verify-group-admin") {
-                AdminVerificationCard(
-                    admin = admin,
-                    onVerify = {
-                        admin.contactId?.let(onVerifyMember)
-                    }
-                )
-            }
+            AdminVerificationCard(admin = admin, onVerify = {
+                admin.contactId?.let(onVerifyMember)
+            })
         }
-
-        item(key = "summary") {
-            Summary(summary = summary)
-        }
-
-        item(key = "media-and-files") {
-            SparrowOutlinedButton(
-                onClick = onMediaAndFiles,
-                modifier = Modifier.fillMaxWidth(),
-                content = {
-                    Icon(Icons.Default.Folder, contentDescription = null)
-                    Text(
-                        text = stringResource(Res.string.feature_attachments_media_and_files),
-                        modifier = Modifier.padding(start = MaterialTheme.spacing.small)
-                    )
-                }
-            )
-        }
-
-        if (summary.isLocalAdmin) {
-            item(key = "member-management") {
-                MemberManagementActions(onAddMembers = onAddMembers)
-            }
-        }
-        if (summary.canLeaveGroup) {
-            item(key = "leave-group") {
-                LeaveAction(onLeaveGroup = onLeaveGroup)
-            }
-        }
-
-        item(key = "members") {
-            MembersCard(
-                summary = summary,
-                onVerifyMember = onVerifyMember,
-                onRemoveMember = onRemoveMember,
-                onPromoteMember = onPromoteMember
-            )
-        }
+        MembersCard(
+            summary = summary,
+            onAddMembers = if (summary.isLocalAdmin) onAddMembers else null,
+            onVerifyMember = onVerifyMember,
+            onRemoveMember = onRemoveMember,
+            onPromoteMember = onPromoteMember,
+            modifier = Modifier.weight(1f, fill = false)
+        )
     }
 }
 
 @Preview
 @Composable
-private fun MemberListPreview() {
+private fun ContentPreview() {
     SparrowTheme {
-        MemberList(
+        Content(
             summary = GroupDetailsPreviewData.summary,
             groupAvatarState = GroupAvatarUiState(title = "Sparrow Team", canEdit = true),
             groupDescriptionState = GroupDescriptionUiState(
@@ -799,14 +762,11 @@ private fun MemberListPreview() {
             ),
             onVerifyMember = {},
             onAddMembers = {},
-            onMediaAndFiles = {},
             onRemoveMember = {},
             onPromoteMember = {},
-            onLeaveGroup = {},
             onEditGroupAvatar = {},
-            onEditGroupDescription = {},
-            innerPadding = PaddingValues(),
-            listState = rememberLazyListState()
+            onSaveGroupDescription = {},
+            innerPadding = PaddingValues()
         )
     }
 }
@@ -849,101 +809,108 @@ private fun MemberRow(
     onPromote: () -> Unit
 ) {
     val statusColor = member.verificationStatusColor()
-    val displayName =
-        member.displayName.takeIf(String::isNotBlank)
-            ?: stringResource(Res.string.feature_chats_group_admin)
+    val displayName = member.displayName.takeIf(String::isNotBlank)
+        ?: stringResource(Res.string.feature_chats_group_admin)
     val verifyDescription = stringResource(Res.string.base_verify_contact, displayName)
+    val removeDescription =
+        stringResource(Res.string.feature_chats_group_remove_member_name, displayName)
+    val promoteDescription = stringResource(Res.string.feature_chats_group_promote_admin)
 
-    Column(modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacing.zero)) {
-        ListItem(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .then(
-                        if (showVerifyAction) {
-                            Modifier.clickable(
-                                onClickLabel = verifyDescription,
-                                role = Role.Button,
-                                onClick = onVerify
-                            )
-                        } else {
-                            Modifier
-                        }
-                    ),
-            leadingContent = {
-                Icon(
-                    imageVector = member.verificationStatusIcon(),
-                    contentDescription = null,
-                    tint = statusColor,
-                    modifier = Modifier.size(Dimens.GroupDetailsScreen.sectionIconSize)
-                )
-            },
-            headlineContent = {
-                Text(
-                    text = displayName,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            },
-            supportingContent = {
-                Text(
-                    text = member.verificationStatusText(),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.OpaqueText)
-                )
-            },
-            trailingContent = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
+    val actions = buildList {
+        if (showPromoteAction) {
+            add(
+                SwipeRevealAction(
+                    backgroundColor = MaterialTheme.colorScheme.tertiary,
+                    contentColor = MaterialTheme.colorScheme.onTertiary,
+                    onClick = onPromote
                 ) {
-                    if (showVerifyAction) {
-                        SparrowStatusBadge(
-                            text = stringResource(Res.string.base_verify),
-                            icon = Icons.Default.Verified,
-                            color = statusColor
-                        )
-                    }
-                    if (showPromoteAction) {
-                        IconButton(onClick = onPromote) {
-                            Icon(
-                                imageVector = Icons.Default.Verified,
-                                contentDescription =
-                                    stringResource(Res.string.feature_chats_group_promote_admin),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                    if (showRemoveAction) {
-                        IconButton(onClick = onRemove) {
-                            Icon(
-                                imageVector = Icons.Default.DeleteOutline,
-                                contentDescription =
-                                    stringResource(
-                                        Res.string.feature_chats_group_remove_member_name,
-                                        displayName
-                                    ),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                    Icon(
+                        Icons.Default.Verified,
+                        contentDescription = promoteDescription,
+                        tint = MaterialTheme.colorScheme.onTertiary
+                    )
                 }
-            },
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-        )
-
-        if (showDivider) {
-            HorizontalDivider(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = MaterialTheme.spacing.listDividerStart),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
             )
         }
+        if (showRemoveAction) {
+            add(
+                SwipeRevealAction(
+                    backgroundColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError,
+                    onClick = onRemove
+                ) {
+                    Icon(
+                        Icons.Default.DeleteOutline,
+                        contentDescription = removeDescription,
+                        tint = MaterialTheme.colorScheme.onError
+                    )
+                }
+            )
+        }
+    }
+    SparrowSwipeRevealItem(actions = actions) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(
+                    if (showVerifyAction) {
+                        Modifier.clickable(
+                            onClickLabel = verifyDescription,
+                            role = Role.Button,
+                            onClick = onVerify
+                        )
+                    } else {
+                        Modifier
+                    }
+                )
+                .padding(
+                    horizontal = MaterialTheme.spacing.small,
+                    vertical = MaterialTheme.spacing.small
+                ),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            SparrowAvatar(
+                name = displayName,
+                target = member.contactId?.takeIf(String::isNotBlank)
+                    ?.let { AvatarTarget.User(it) },
+                size = Dimens.Avatar.defaultSize
+            )
+            Text(
+                text = displayName,
+                modifier = Modifier.weight(1f).padding(start = MaterialTheme.spacing.small),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Icon(
+                imageVector = member.verificationStatusIcon(),
+                contentDescription = null,
+                tint = statusColor
+            )
+            /*Text(
+                // An admin remains labeled Admin even if their verification is pending.
+                // The row itself can still be tapped to verify when showVerifyAction is true.
+                text = if (member.isGroupAdmin || member.state == GroupMemberVerificationState.GROUP_ADMIN) {
+                    member.verificationStatusText()
+                } else if (showVerifyAction) {
+                    stringResource(Res.string.base_verify)
+                } else {
+                    member.verificationStatusText()
+                },
+                maxLines = 1,
+                color = statusColor,
+                style = MaterialTheme.typography.labelLarge
+            )*/
+        }
+    }
+    if (showDivider) {
+        HorizontalDivider(
+            modifier = Modifier.fillMaxWidth()
+                .padding(start = MaterialTheme.spacing.listDividerStart),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.itemDivider)
+        )
     }
 }
 
@@ -979,11 +946,11 @@ private fun GroupMemberVerificationUiState.verificationStatusText(): String =
 @Composable
 private fun GroupMemberVerificationUiState.verificationStatusColor(): Color =
     if (isGroupAdmin) {
-        MaterialTheme.colorScheme.onSurfaceVariant
+        MaterialTheme.colorScheme.tertiary
     } else {
         when (state) {
             GroupMemberVerificationState.GROUP_ADMIN ->
-                MaterialTheme.colorScheme.onSurfaceVariant
+                MaterialTheme.colorScheme.tertiary
 
             GroupMemberVerificationState.MUTUALLY_VERIFIED ->
                 MaterialTheme.colorScheme.tertiary
@@ -994,7 +961,7 @@ private fun GroupMemberVerificationUiState.verificationStatusColor(): Color =
 
             GroupMemberVerificationState.UNVERIFIED,
             GroupMemberVerificationState.UNAVAILABLE ->
-                MaterialTheme.colorScheme.error
+                MaterialTheme.colorScheme.onSurfaceVariant
 
             GroupMemberVerificationState.INVITATION_PENDING ->
                 MaterialTheme.colorScheme.onSurfaceVariant
@@ -1003,7 +970,7 @@ private fun GroupMemberVerificationUiState.verificationStatusColor(): Color =
 
 private fun GroupMemberVerificationUiState.verificationStatusIcon(): ImageVector =
     if (isGroupAdmin) {
-        Icons.Default.Group
+        Icons.Default.AdminPanelSettings
     } else {
         when (state) {
             GroupMemberVerificationState.MUTUALLY_VERIFIED -> Icons.Default.CheckCircle
@@ -1040,50 +1007,59 @@ private fun MembersCard(
     summary: GroupVerificationSummaryUiState,
     onVerifyMember: (String) -> Unit,
     onRemoveMember: (String) -> Unit,
-    onPromoteMember: (String) -> Unit
+    onPromoteMember: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    onAddMembers: (() -> Unit)? = null
 ) {
-    Column {
-        Text(
-            text = stringResource(Res.string.feature_chats_group_details_members),
-            modifier =
-                Modifier.padding(
-                    start = MaterialTheme.spacing.small,
-                    bottom = MaterialTheme.spacing.small
-                ),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = Alpha.OpaqueText)
-        )
-
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.small,
-            color = MaterialTheme.colorScheme.surfaceContainer,
-            tonalElevation = Dimens.Card.tonalElevation,
-            shadowElevation = Dimens.Card.shadowElevation
-        ) {
-            Column {
-                summary.members.forEachIndexed { index, member ->
+    // The card itself has the exact Settings border/radius. Do not add any
+    // padding around the member rows: swipe actions extend to the card edges.
+    SparrowCardNoAnimation(modifier = modifier) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.09f))
+                    .padding(
+                        horizontal = MaterialTheme.spacing.small,
+                        vertical = MaterialTheme.spacing.base
+                    ),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${stringResource(Res.string.feature_chats_group_details_members)} (${summary.totalMemberCount})",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (onAddMembers != null) {
+                    TextButton(onClick = onAddMembers) {
+                        Icon(Icons.Default.PersonAdd, contentDescription = null)
+                        Text(
+                            text = stringResource(Res.string.feature_chats_group_add_members),
+                            modifier = Modifier.padding(start = MaterialTheme.spacing.micro),
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                }
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = Alpha.divider))
+            // Only this list scrolls; member count / Add Members remain visible.
+            LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
+                items(
+                    count = summary.members.size,
+                    key = { index -> summary.members[index].contactId ?: "member-$index" }
+                ) { index ->
+                    val member = summary.members[index]
                     MemberRow(
                         member = member,
                         showVerifyAction = summary.isLocalAdmin && member.canVerify,
-                        showRemoveAction =
-                            summary.isLocalAdmin &&
-                                !member.isGroupAdmin &&
-                                member.contactId != null,
-                        showPromoteAction =
-                            summary.isLocalAdmin &&
-                                member.contactId in summary.promotableContactIds,
+                        showRemoveAction = summary.isLocalAdmin && !member.isGroupAdmin && member.contactId != null,
+                        showPromoteAction = summary.isLocalAdmin && member.contactId in summary.promotableContactIds,
                         showDivider = index < summary.members.lastIndex,
-                        onVerify = {
-                            member.contactId?.let(onVerifyMember)
-                        },
-                        onRemove = {
-                            member.contactId?.let(onRemoveMember)
-                        },
-                        onPromote = {
-                            member.contactId?.let(onPromoteMember)
-                        }
+                        onVerify = { member.contactId?.let(onVerifyMember) },
+                        onRemove = { member.contactId?.let(onRemoveMember) },
+                        onPromote = { member.contactId?.let(onPromoteMember) }
                     )
                 }
             }
@@ -1105,28 +1081,114 @@ private fun MembersCardPreview() {
 }
 
 @Composable
-private fun LeaveAction(
+private fun GroupDetailsBottomActions(
+    canLeaveGroup: Boolean,
+    onMediaAndFiles: () -> Unit,
     onLeaveGroup: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    SparrowOutlinedButton(
-        onClick = onLeaveGroup,
-        modifier = modifier.fillMaxWidth(),
-        content = {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                contentDescription = null
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.background)
+            .navigationBarsPadding()
+            .padding(
+                horizontal = MaterialTheme.spacing.screenPadding,
+                vertical = MaterialTheme.spacing.base
             )
-            Text(text = stringResource(Res.string.feature_chats_group_leave))
-        }
-    )
-}
+    ) {
+        val topShape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+        val bottomShape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
 
-@Preview
-@Composable
-private fun LeaveActionPreview() {
-    SparrowTheme {
-        LeaveAction(onLeaveGroup = {})
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .drawShapeBorder(
+                    shape = topShape,
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    strokeWidth = Dimens.Base.borderStrokeWidth,
+                    sides = BorderSides(top = true, bottom = false, left = true, right = true)
+                ),
+            color = MaterialTheme.colorScheme.background,
+            shape = topShape
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth()
+                    .clickable(onClick = onMediaAndFiles)
+                    .padding(
+                        horizontal = MaterialTheme.spacing.small,
+                        vertical = MaterialTheme.spacing.small
+                    ),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Folder,
+                    contentDescription = null,
+                    modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = stringResource(Res.string.feature_attachments_media_and_files),
+                    modifier = Modifier.weight(1f).padding(start = MaterialTheme.spacing.small),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    modifier = Modifier.size(Dimens.SettingsScreen.secondaryIconSize),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = Alpha.SettingsScreen.disabledIcon)
+                )
+            }
+        }
+
+        HorizontalDivider(thickness = 2.dp, color = MaterialTheme.colorScheme.outlineVariant)
+
+        if (canLeaveGroup) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .offset(y = (-1).dp)
+                    .drawShapeBorder(
+                        shape = bottomShape,
+                        color = MaterialTheme.colorScheme.error,
+                        strokeWidth = 1.dp,
+                        sides = BorderSides(top = false, bottom = true, left = true, right = true)
+                    ),
+                color = MaterialTheme.colorScheme.background,
+                shape = bottomShape // FIXED: Added shape to Surface to prevent corner bleeding
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth()
+                        // FIXED: Applied bottomShape here so the red tint tint respects the curves
+                        .background(
+                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.18f),
+                            shape = bottomShape
+                        )
+                        .clickable(onClick = onLeaveGroup)
+                        .padding(
+                            horizontal = MaterialTheme.spacing.small,
+                            vertical = MaterialTheme.spacing.small
+                        ),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                        contentDescription = null,
+                        modifier = Modifier.size(Dimens.SettingsScreen.primaryIconSize),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                    Text(
+                        text = stringResource(Res.string.feature_chats_group_leave),
+                        modifier = Modifier.weight(1f).padding(start = MaterialTheme.spacing.small),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -1139,37 +1201,40 @@ private fun AdminVerificationCard(
         admin.displayName.takeIf(String::isNotBlank)
             ?: stringResource(Res.string.feature_chats_group_admin)
 
-    SparrowCardNoAnimation(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(MaterialTheme.spacing.medium)) {
-            Text(
-                text = stringResource(Res.string.feature_chats_group_verify_admin_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = stringResource(Res.string.feature_chats_group_verify_admin_description),
-                modifier = Modifier.padding(top = MaterialTheme.spacing.base),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = admin.verificationStatusText(),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(MaterialTheme.spacing.small)
-            )
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = MaterialTheme.spacing.small)
+    ) {
+        Text(
+            text = stringResource(Res.string.feature_chats_group_verify_admin_title),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = stringResource(Res.string.feature_chats_group_verify_admin_description),
+            modifier = Modifier.padding(top = MaterialTheme.spacing.base),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = admin.verificationStatusText(),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(MaterialTheme.spacing.small)
+        )
 
-            if (admin.canVerify && admin.contactId != null) {
-                SparrowApprovalButton(
-                    onClick = onVerify,
-                    text = stringResource(Res.string.base_verify_contact, adminName)
-                )
-            }
+        if (admin.canVerify && admin.contactId != null) {
+            SparrowApprovalButton(
+                onClick = onVerify,
+                fillMaxWidth = false,
+                text = stringResource(Res.string.base_verify_contact, adminName)
+            )
         }
     }
 }
@@ -1209,9 +1274,11 @@ private fun TopBarPreview() {
 @Composable
 private fun GroupDetailsScreenPreview() {
     SparrowTheme {
-        GroupDetailsScreen(
-            uiState = GroupDetailsUiState.Content(GroupDetailsPreviewData.summary),
-            onUiEvent = {}
-        )
+        Box(Modifier.background(MaterialTheme.colorScheme.background)) {
+            GroupDetailsScreen(
+                uiState = GroupDetailsUiState.Content(GroupDetailsPreviewData.summary),
+                onUiEvent = {}
+            )
+        }
     }
 }

@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.feature.contacts.presentation.blocklist.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -23,13 +25,14 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import com.cbgm.sparrow.core.ui.component.SparrowAlertDialog
-import com.cbgm.sparrow.core.ui.component.SparrowApprovalButton
-import com.cbgm.sparrow.core.ui.component.SparrowAvatar
+import com.cbgm.sparrow.core.ui.component.SparrowDestructiveButton
 import com.cbgm.sparrow.core.ui.component.SparrowInputField
 import com.cbgm.sparrow.core.ui.component.SparrowOutlinedButton
 import com.cbgm.sparrow.core.ui.theme.Dimens
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.contacts.domain.model.Contact
+import com.cbgm.sparrow.feature.avatar.domain.model.AvatarTarget
+import com.cbgm.sparrow.feature.avatar.presentation.component.SparrowAvatar
+import com.cbgm.sparrow.feature.contacts.presentation.overview.model.ContactUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_close
 import com.cbgm.sparrow.resources.feature_contacts_add_blocked_contact
@@ -48,12 +51,11 @@ fun AddBlockedContactDialog(
     isVisible: Boolean,
     phoneNumber: String,
     phoneNumberError: String?,
-    contacts: List<Contact>,
-    profilePictures: Map<String, ByteArray?>,
+    contacts: List<ContactUi>,
     enabled: Boolean,
     onPhoneNumberChanged: (String) -> Unit,
     onBlockPhoneNumber: () -> Unit,
-    onContactSelected: (Contact) -> Unit,
+    onContactSelected: (ContactUi) -> Unit,
     onDismiss: () -> Unit
 ) {
     SparrowAlertDialog(
@@ -61,11 +63,18 @@ fun AddBlockedContactDialog(
         onDismissRequest = onDismiss,
         title = stringResource(Res.string.feature_contacts_add_blocked_contact),
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
-                Text(
-                    text = stringResource(Res.string.feature_contacts_add_blocked_contact_description),
-                    style = MaterialTheme.typography.bodySmall
-                )
+            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)) {
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    Text(
+                        text = stringResource(Res.string.feature_contacts_add_blocked_contact_description),
+                        modifier = Modifier.padding(MaterialTheme.spacing.medium),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
 
                 SparrowInputField(
                     value = phoneNumber,
@@ -81,9 +90,9 @@ fun AddBlockedContactDialog(
                     )
                 )
 
-                SparrowApprovalButton(
+                SparrowDestructiveButton(
                     onClick = onBlockPhoneNumber,
-                    fillMaxWidth = false,
+                    fillMaxWidth = true,
                     enabled = enabled && phoneNumber.isNotBlank(),
                     text = stringResource(Res.string.feature_contacts_block_phone_number)
                 )
@@ -104,40 +113,53 @@ fun AddBlockedContactDialog(
                 }
 
                 if (contacts.isEmpty()) {
-                    Text(
-                        text = stringResource(Res.string.feature_contacts_no_contacts_to_block),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                        color = MaterialTheme.colorScheme.surfaceContainerLow
+                    ) {
+                        Text(
+                            text = stringResource(Res.string.feature_contacts_no_contacts_to_block),
+                            modifier = Modifier.padding(MaterialTheme.spacing.medium),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxWidth()
-                            .heightIn(max = Dimens.BlockedContactsScreen.dialogListMaxHeight)
+                            .heightIn(max = Dimens.BlockedContactsScreen.dialogListMaxHeight),
+                        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
                     ) {
                         items(
                             items = contacts,
-                            key = Contact::id
+                            key = ContactUi::id
                         ) { contact ->
                             Row(
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
+                                        .background(
+                                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                                            shape = MaterialTheme.shapes.medium
+                                        )
                                         .clickable(enabled = enabled) {
                                             onContactSelected(contact)
-                                        }.padding(vertical = MaterialTheme.spacing.small),
+                                        }.padding(MaterialTheme.spacing.medium),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 SparrowAvatar(
                                     name =
                                         contact.displayName
-                                            ?: contact.preferredPhoneNumber?.value ?: "?",
-                                    pictureBytes = profilePictures[contact.id]
+                                            ?: contact.preferredPhoneNumber ?: "?",
+                                    target = AvatarTarget.User(contact.id)
                                 )
                                 Spacer(modifier = Modifier.size(MaterialTheme.spacing.small))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text =
                                             contact.displayName
-                                                ?: contact.preferredPhoneNumber?.value
+                                                ?: contact.preferredPhoneNumber
                                                 ?: stringResource(Res.string.feature_contacts_unnamed_contact),
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
@@ -168,9 +190,9 @@ fun AddBlockedContactDialog(
 }
 
 @Composable
-private fun Contact.subtitle(): String =
-    preferredPhoneNumber?.value
-        ?: if (sparrowIdentity != null) {
+private fun ContactUi.subtitle(): String =
+    preferredPhoneNumber
+        ?: if (hasSparrowIdentity) {
             stringResource(Res.string.feature_contacts_sparrow_contact)
         } else {
             stringResource(Res.string.feature_contacts_no_phone_number)

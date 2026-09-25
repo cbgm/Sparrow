@@ -91,9 +91,13 @@ private fun createGatewayHandler(
     blobUploadPermitStore: BlobUploadPermitStore
 ): GatewayWebSocketHandler {
     val signer = NodeRequestSigner(identity)
+    val discoveryFile = System.getenv("DIRECTORY_DISCOVERY_PATH")
+        ?.takeIf(String::isNotBlank)
+        ?.let { Path.of(it) }
     val presenceEndpointPool =
         ControlPlaneEndpointPool(
-            config.controlPlaneUrls.ifEmpty { listOf(config.presenceDirectoryUrl) }
+            config.controlPlaneUrls.ifEmpty { listOf(config.presenceDirectoryUrl) },
+            discoveryFile = discoveryFile
         )
     val pushClient =
         config.pushNodeApiUrl?.let { nodeApiUrl ->
@@ -101,7 +105,8 @@ private fun createGatewayHandler(
                 httpClient = httpClient,
                 endpointPool =
                     ControlPlaneEndpointPool(
-                        config.controlPlaneUrls.ifEmpty { listOf(nodeApiUrl) }
+                        config.controlPlaneUrls.ifEmpty { listOf(nodeApiUrl) },
+                        discoveryFile = discoveryFile
                     ),
                 signer = signer
             )

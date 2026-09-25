@@ -51,6 +51,37 @@ class ContactInvitationPacketCodecTest {
     }
 
     @Test
+    fun automaticIdentityShareFlagSurvivesWireRoundTrip() {
+        val invite = ContactInvitePacket(
+            packetId = "contact-invite-invitation-auto",
+            invitationId = "invitation-auto",
+            displayName = "Alice",
+            createdAtEpochMilliseconds = 100L,
+            expiresAtEpochMilliseconds = 200L,
+            inviteChallenge = challenge(1),
+            encryptionPublicKey = key(2),
+            signingPublicKey = key(3),
+            autoSharesIdentity = true,
+            signature = signature(4)
+        )
+        val accepted = ContactInviteAcceptedPacket(
+            packetId = "contact-invite-accepted-invitation-auto",
+            invitationId = "invitation-auto",
+            acceptedAtEpochMilliseconds = 150L,
+            inviteChallenge = challenge(1),
+            responseChallenge = challenge(2),
+            inviterEncryptionPublicKey = key(3),
+            inviterSigningPublicKey = key(4),
+            responderEncryptionPublicKey = key(5),
+            responderSigningPublicKey = key(6),
+            autoSharesIdentity = true,
+            signature = signature(7)
+        )
+        assertEquals(invite, roundTrip<ContactInvitePacket>(invite))
+        assertEquals(accepted, roundTrip<ContactInviteAcceptedPacket>(accepted))
+    }
+
+    @Test
     fun contactReadyRoundTrip() {
         val original =
             ContactReadyPacket(

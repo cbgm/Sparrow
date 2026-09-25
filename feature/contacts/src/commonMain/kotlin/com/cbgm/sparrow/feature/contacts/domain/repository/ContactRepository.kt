@@ -9,13 +9,22 @@ import kotlinx.coroutines.flow.Flow
 interface ContactRepository {
     suspend fun importDeviceContact(request: ImportDeviceContactRequest): Result<Contact>
 
-    suspend fun importContact(request: ImportContactRequest): Result<Contact>
+    /** Persists contact details only; the calling use case must then persist the keys with Identity. */
+    suspend fun upsertImportedContact(request: ImportContactRequest): Result<Contact>
 
     suspend fun getContact(contactId: String): Result<Contact?>
 
-    suspend fun findBySigningPublicKey(signingPublicKey: ByteArray): Result<Contact?>
+    /** A validated incoming sender phone number is used only if the contact has no display name. */
+    suspend fun usePhoneNumberAsDisplayNameWhenMissing(
+        contactId: String,
+        phoneNumber: String,
+        updatedAtEpochMilliseconds: Long
+    ): Result<Unit>
 
     suspend fun findOrCreateByPhoneNumber(phoneNumber: String): Result<Contact>
+
+    /** The packet was already authenticated; update the sender or create an address-book contact. */
+    suspend fun resolveAuthenticatedPeerContact(senderContactId: String?, phoneNumber: String?): Result<String>
 
     fun observeContacts(): Flow<List<Contact>>
 
@@ -24,22 +33,6 @@ interface ContactRepository {
         displayName: String?,
         phoneNumber: String?
     ): Result<Contact>
-
-    suspend fun markVerified(contactId: String): Result<Contact>
-
-    /**
-     * Marks that both parties possess each other's current keys.
-     *
-     * Do not call this merely after importing their identity.
-     * It should only be called after an authenticated acknowledgement
-     * from the remote device.
-     */
-    suspend fun markKeyExchangeMutual(contactId: String): Result<Contact>
-
-    /**
-     * Resets the exchange to one-way and removes verification.
-     */
-    suspend fun resetKeyExchange(contactId: String): Result<Contact>
 
     suspend fun updateDeviceContactLinkStatus(
         deviceContactId: String,

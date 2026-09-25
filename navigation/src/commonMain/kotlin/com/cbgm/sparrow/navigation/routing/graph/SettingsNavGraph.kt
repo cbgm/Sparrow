@@ -5,12 +5,12 @@ import androidx.navigation.compose.composable
 import com.cbgm.sparrow.core.ui.navigation.AppRoute
 import com.cbgm.sparrow.feature.autoreply.presentation.AutoReplySettingsRoute
 import com.cbgm.sparrow.feature.settings.presentation.developer.DeveloperMenuRoute
+import com.cbgm.sparrow.feature.settings.presentation.developer.nodes.DeveloperNodesRoute
 import com.cbgm.sparrow.feature.settings.presentation.disclaimer.DisclaimerRoute
 import com.cbgm.sparrow.feature.settings.presentation.disclaimer.model.DisclaimerType
 import com.cbgm.sparrow.feature.settings.presentation.errors.DeveloperErrorLogRoute
 import com.cbgm.sparrow.feature.settings.presentation.licenses.LicensesRoute
 import com.cbgm.sparrow.feature.settings.presentation.network.ControlPlaneSettingsRoute
-import com.cbgm.sparrow.feature.settings.presentation.profile.ProfileSettingsRoute
 import com.cbgm.sparrow.navigation.routing.slideInFromRight
 import com.cbgm.sparrow.navigation.routing.slideOutToRight
 
@@ -43,18 +43,18 @@ fun NavGraphBuilder.settingsNavGraph() {
         DeveloperMenuRoute()
     }
 
+    composable<AppRoute.DeveloperNodes>(
+        enterTransition = { slideInFromRight() },
+        exitTransition = { slideOutToRight() }
+    ) {
+        DeveloperNodesRoute()
+    }
+
     composable<AppRoute.DeveloperErrorLog>(
         enterTransition = { slideInFromRight() },
         exitTransition = { slideOutToRight() }
     ) {
         DeveloperErrorLogRoute()
-    }
-
-    composable<AppRoute.ProfileSettings>(
-        enterTransition = { slideInFromRight() },
-        exitTransition = { slideOutToRight() }
-    ) {
-        ProfileSettingsRoute()
     }
 
     composable<AppRoute.AutoReplySettings>(

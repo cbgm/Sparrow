@@ -28,7 +28,7 @@ internal fun LazyListScope.forwardingTargetSection(
                         horizontal = MaterialTheme.spacing.screenPadding,
                         vertical = MaterialTheme.spacing.small
                     ),
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }

@@ -7,6 +7,9 @@ interface PrivateKeyStorage {
         signingPrivateKey: UByteArray
     )
 
+    /** True even when some or all persisted private-key entries are damaged or undecryptable. */
+    suspend fun hasAnyIdentityPrivateKeyMaterial(): Boolean
+
     suspend fun hasIdentityPrivateKeys(): Boolean
 
     @OptIn(ExperimentalUnsignedTypes::class)

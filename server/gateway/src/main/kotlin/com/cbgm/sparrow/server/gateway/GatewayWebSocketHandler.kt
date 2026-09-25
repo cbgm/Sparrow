@@ -92,8 +92,7 @@ class GatewayWebSocketHandler(
                 envelope = routedEnvelope,
                 pushStorage = legacyPush::store,
                 networkDelivery = ::routeEnvelope,
-                markFederationStored = federation::markStored,
-                queuedPushFallback = pushDispatcher::scheduleFallback
+                markFederationStored = federation::markStored
             )
 
         respondToEnvelope(
@@ -124,8 +123,7 @@ class GatewayWebSocketHandler(
                 envelope = routedEnvelope,
                 pushStorage = legacyPush::store,
                 networkDelivery = ::routeEnvelope,
-                markFederationStored = federation::markStored,
-                queuedPushFallback = pushDispatcher::scheduleFallback
+                markFederationStored = federation::markStored
             )
 
         respondToEnvelope(
@@ -266,8 +264,7 @@ internal suspend fun storeAndRouteLegacyEnvelope(
     envelope: TransportEnvelope,
     pushStorage: suspend (TransportEnvelope) -> Boolean,
     networkDelivery: suspend (FederatedEnvelope) -> EnvelopeAcceptanceState?,
-    markFederationStored: suspend (String) -> Unit,
-    queuedPushFallback: (TransportEnvelope, String) -> Unit = { _, _ -> }
+    markFederationStored: suspend (String) -> Unit
 ): Boolean =
     storeAndRouteEnvelope(
         pushEnvelope = envelope,
@@ -276,8 +273,7 @@ internal suspend fun storeAndRouteLegacyEnvelope(
         fallbackActions =
             EnvelopeFallbackActions(
                 pushStorage = pushStorage,
-                markFederationStored = markFederationStored,
-                queuedPushFallback = queuedPushFallback
+                markFederationStored = markFederationStored
             )
     )
 
@@ -285,8 +281,7 @@ internal suspend fun storeAndRouteFederatedEnvelope(
     envelope: FederatedEnvelope,
     pushStorage: suspend (TransportEnvelope) -> Boolean,
     networkDelivery: suspend (FederatedEnvelope) -> EnvelopeAcceptanceState?,
-    markFederationStored: suspend (String) -> Unit,
-    queuedPushFallback: (TransportEnvelope, String) -> Unit = { _, _ -> }
+    markFederationStored: suspend (String) -> Unit
 ): Boolean =
     storeAndRouteEnvelope(
         pushEnvelope = envelope.toTransportEnvelope(),
@@ -295,15 +290,13 @@ internal suspend fun storeAndRouteFederatedEnvelope(
         fallbackActions =
             EnvelopeFallbackActions(
                 pushStorage = pushStorage,
-                markFederationStored = markFederationStored,
-                queuedPushFallback = queuedPushFallback
+                markFederationStored = markFederationStored
             )
     )
 
 private data class EnvelopeFallbackActions(
     val pushStorage: suspend (TransportEnvelope) -> Boolean,
-    val markFederationStored: suspend (String) -> Unit,
-    val queuedPushFallback: (TransportEnvelope, String) -> Unit
+    val markFederationStored: suspend (String) -> Unit
 )
 
 private suspend fun storeAndRouteEnvelope(
@@ -321,22 +314,26 @@ private suspend fun storeAndRouteEnvelope(
         return true
     }
 
-    if (routingState == EnvelopeAcceptanceState.QUEUED_AT_GATEWAY) {
-        fallbackActions.queuedPushFallback(pushEnvelope, networkEnvelope.envelopeId)
-        return true
-    }
-
+    // QUEUED_AT_GATEWAY is not proof of durable recipient storage. In particular,
+    // the federation queue can be memory-backed. A fire-and-forget push fallback
+    // previously sent success to the client *before* push storage ran, so a failure
+    // could leave a message reported as SENT but unavailable to an offline recipient.
+    // Store synchronously and acknowledge only after the pending inbox accepts it.
     val storedForPush =
         runCatching {
             fallbackActions.pushStorage(pushEnvelope)
         }.getOrDefault(false)
 
     if (storedForPush) {
+        // This is bookkeeping for the separately queued federation copy. If it
+        // fails, the encrypted envelope is nevertheless already in push storage.
         runCatching {
             fallbackActions.markFederationStored(networkEnvelope.envelopeId)
         }
     }
 
+    // When neither federation has stored it at the recipient nor the push inbox
+    // can accept it, report failure. The sender's outbox will retain/retry it.
     return storedForPush
 }
 

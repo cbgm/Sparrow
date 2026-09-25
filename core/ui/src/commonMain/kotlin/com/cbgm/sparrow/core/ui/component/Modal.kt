@@ -40,10 +40,7 @@ fun SparrowOverlayHost(
     horizontalPadding: Dp = MaterialTheme.spacing.small,
     topPadding: Dp = MaterialTheme.spacing.times(6),
     shape: Shape = MaterialTheme.shapes.modal,
-    // containerColor: Color = MaterialTheme.colorScheme.background,
     scrimColor: Color = MaterialTheme.colorScheme.scrim.copy(alpha = Alpha.Disabled),
-    // tonalElevation: Dp = 8.dp,
-    // shadowElevation: Dp = 12.dp,
     content: @Composable (
         dismissOverlay: () -> Unit
     ) -> Unit
@@ -154,10 +151,8 @@ fun SparrowOverlayHost(
         ) {
             Surface(
                 modifier = Modifier.fillMaxSize(),
-                shape = shape
-                // color = containerColor,
-                // tonalElevation = tonalElevation,
-                // shadowElevation = shadowElevation
+                shape = shape,
+                color = MaterialTheme.colorScheme.surfaceContainerLow
             ) {
                 content(::dismissOverlay)
             }
@@ -175,8 +170,6 @@ fun OverlayHostPreview() {
             modifier = Modifier.fillMaxSize(),
             horizontalPadding = MaterialTheme.spacing.zero,
             topPadding = MaterialTheme.spacing.times(6),
-            // tonalElevation = 8.dp,
-            // shadowElevation = 12.dp,
             content = {
             }
         )

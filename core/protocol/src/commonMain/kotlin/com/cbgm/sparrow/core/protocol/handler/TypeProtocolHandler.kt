@@ -10,8 +10,10 @@ import com.cbgm.sparrow.core.protocol.packet.SparrowPacket
  * feature:chats
  * -> ChatMessagePacketHandler
  *
+ * feature:invite
+ * -> IncomingInvitationPacketHandler
+ *
  * feature:contacts
- * -> ContactInvitePacketHandler
  * -> ContactReadyPacketHandler
  */
 interface TypedProtocolPacketHandler {

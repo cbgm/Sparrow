@@ -13,7 +13,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
-import com.cbgm.sparrow.feature.contacts.domain.model.DeviceContactLinkStatus
+import com.cbgm.sparrow.feature.contacts.presentation.details.model.DeviceContactLinkUi
 import com.cbgm.sparrow.resources.Res
 import com.cbgm.sparrow.resources.base_linked
 import com.cbgm.sparrow.resources.feature_contacts_device_contact
@@ -25,15 +25,17 @@ import com.cbgm.sparrow.resources.feature_contacts_not_linked
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-internal fun DeviceContactSection(status: DeviceContactLinkStatus) {
-    SectionTitle(
-        icon = Icons.Default.ContactPhone,
-        title = stringResource(Res.string.feature_contacts_device_contact)
-    )
-    Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+internal fun DeviceContactSection(status: DeviceContactLinkUi, showTitle: Boolean = true) {
+    if (showTitle) {
+        SectionTitle(
+            icon = Icons.Default.ContactPhone,
+            title = stringResource(Res.string.feature_contacts_device_contact)
+        )
+        Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+    }
 
     when (status) {
-        DeviceContactLinkStatus.NOT_LINKED ->
+        DeviceContactLinkUi.NOT_LINKED ->
             ContactStatusRow(
                 icon = Icons.Default.LinkOff,
                 iconColor = MaterialTheme.colorScheme.error,
@@ -42,7 +44,7 @@ internal fun DeviceContactSection(status: DeviceContactLinkStatus) {
                 description = stringResource(Res.string.feature_contacts_device_contact_not_linked_description)
             )
 
-        DeviceContactLinkStatus.LINKED ->
+        DeviceContactLinkUi.LINKED ->
             ContactStatusRow(
                 icon = Icons.Default.Link,
                 iconColor = MaterialTheme.colorScheme.tertiary,
@@ -51,7 +53,7 @@ internal fun DeviceContactSection(status: DeviceContactLinkStatus) {
                 description = stringResource(Res.string.feature_contacts_device_contact_linked_description)
             )
 
-        DeviceContactLinkStatus.MISSING ->
+        DeviceContactLinkUi.MISSING ->
             ContactStatusRow(
                 icon = Icons.Default.LinkOff,
                 iconColor = MaterialTheme.colorScheme.error.copy(alpha = Alpha.OpaqueText),
@@ -66,6 +68,6 @@ internal fun DeviceContactSection(status: DeviceContactLinkStatus) {
 @Composable
 private fun DeviceContactSectionPreview() {
     SparrowTheme {
-        DeviceContactSection(status = DeviceContactLinkStatus.LINKED)
+        DeviceContactSection(status = DeviceContactLinkUi.LINKED)
     }
 }

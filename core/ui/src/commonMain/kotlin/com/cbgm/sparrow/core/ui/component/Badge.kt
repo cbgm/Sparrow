@@ -1,5 +1,6 @@
 package com.cbgm.sparrow.core.ui.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -15,7 +16,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
-import com.cbgm.sparrow.core.ui.theme.badge
 import com.cbgm.sparrow.core.ui.theme.spacing
 
 @Composable
@@ -25,13 +25,14 @@ fun SparrowStatusBadge(
     color: Color
 ) {
     Surface(
-        shape = MaterialTheme.shapes.badge,
-        color = color.copy(alpha = Alpha.Badge.container)
+        shape = MaterialTheme.shapes.large,
+        color = color.copy(alpha = Alpha.Badge.container),
+        border = BorderStroke(Dimens.Base.borderStrokeWidth, color.copy(alpha = 0.35f))
     ) {
         Row(
             modifier =
                 Modifier.padding(
-                    horizontal = MaterialTheme.spacing.base,
+                    horizontal = MaterialTheme.spacing.small,
                     vertical = MaterialTheme.spacing.micro
                 ),
             verticalAlignment = Alignment.CenterVertically

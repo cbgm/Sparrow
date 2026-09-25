@@ -1,6 +1,8 @@
 package com.cbgm.sparrow.feature.settings.presentation.overview.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,7 +38,7 @@ fun LanguagePickerDialog(
         isVisible = isVisible,
         title = stringResource(Res.string.base_language),
         text = {
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.base)) {
                 AppLanguage.entries.forEach { language ->
                     val isSelected = language == currentLanguage
 
@@ -44,8 +46,16 @@ fun LanguagePickerDialog(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
+                                .background(
+                                    color = if (isSelected) {
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceContainerLow
+                                    },
+                                    shape = MaterialTheme.shapes.small
+                                )
                                 .clickable { onLanguageSelected(language) }
-                                .padding(vertical = MaterialTheme.spacing.base),
+                                .padding(MaterialTheme.spacing.small),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {

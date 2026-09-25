@@ -61,7 +61,11 @@ fun OverviewContactsTopBar(
             onSearchQueryChanged = onSearchQueryChanged,
             placeholder = stringResource(Res.string.feature_contacts_search_placholder),
             onClear = { onSearchQueryChanged("") },
-            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.screenPadding)
+            modifier = Modifier.padding(
+                start = MaterialTheme.spacing.screenPadding,
+                end = MaterialTheme.spacing.screenPadding,
+                bottom = MaterialTheme.spacing.small
+            )
         )
     }
 }

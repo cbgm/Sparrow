@@ -3,7 +3,9 @@ package com.cbgm.sparrow.feature.contacts.presentation.details.components
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Link
@@ -29,14 +31,17 @@ internal fun ContactStatusRow(
     description: String,
     titleColor: Color = MaterialTheme.colorScheme.onSurface
 ) {
-    Row(verticalAlignment = Alignment.Top) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.spacing.small),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = iconColor,
             modifier = Modifier.size(Dimens.ContactDetailsScreen.rowIconSize)
         )
-        Spacer(modifier = Modifier.size(MaterialTheme.spacing.base))
+        Spacer(modifier = Modifier.size(MaterialTheme.spacing.medium))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
@@ -47,7 +52,7 @@ internal fun ContactStatusRow(
             Spacer(modifier = Modifier.height(MaterialTheme.spacing.micro))
             Text(
                 text = description,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

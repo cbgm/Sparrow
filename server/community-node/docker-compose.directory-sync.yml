@@ -1,0 +1,21 @@
+# Optional per-node signed-directory client. It owns no identity keys, Docker
+# socket, administrative credentials or public listeners. Each Compose project
+# already namespaces node-directory-cache and the second cache below.
+services:
+  directory-sync:
+    profiles: [directory]
+    image: sparrow-directory-sync:local
+    build:
+      context: ../..
+      dockerfile: directory-sync/Dockerfile
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    env_file:
+      - ./sparrow.conf
+    volumes:
+      - node-directory-cache:/cache/node
+      - node-directory-control-cache:/cache/control-plane
+volumes:
+  node-directory-control-cache:

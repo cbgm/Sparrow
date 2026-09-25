@@ -21,6 +21,7 @@ kotlin {
         }
 
         androidMain.dependencies {
+            implementation(projects.core.protocol)
             implementation(projects.resources)
 
             implementation(libs.androidx.core.ktx)

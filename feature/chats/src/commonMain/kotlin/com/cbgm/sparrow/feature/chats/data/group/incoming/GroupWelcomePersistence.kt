@@ -2,53 +2,40 @@ package com.cbgm.sparrow.feature.chats.data.group.incoming
 
 import com.cbgm.sparrow.core.protocol.packet.GroupCreatedPacket
 import com.cbgm.sparrow.core.protocol.packet.GroupMemberRemovedPacket
-import com.cbgm.sparrow.data.database.dao.ChatDao
-import com.cbgm.sparrow.data.database.dao.ContactDao
-import com.cbgm.sparrow.data.database.dao.GroupInvitationDao
-import com.cbgm.sparrow.data.database.dao.GroupSecurityDao
 import com.cbgm.sparrow.data.database.entity.ConversationEntity
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationDirection
-import com.cbgm.sparrow.feature.chats.data.group.invitation.GroupInvitationStatus
+import com.cbgm.sparrow.data.database.entity.ConversationParticipantEntity
+import com.cbgm.sparrow.feature.chats.data.group.datasource.GroupIncomingConversationDataSource
 import com.cbgm.sparrow.feature.chats.data.group.mapper.GroupMembershipMessageFactory
 
 internal class GroupWelcomePersistence(
-    private val chatDao: ChatDao,
-    private val contactDao: ContactDao,
-    private val groupInvitationDao: GroupInvitationDao,
-    private val groupSecurityDao: GroupSecurityDao
+    private val incomingConversationDataSource: GroupIncomingConversationDataSource
 ) {
-    suspend fun loadPreviousMembership(groupId: String): PreviousGroupMembershipDto {
-        val participants = chatDao.findConversationParticipants(groupId)
-        val previousEpoch = groupSecurityDao.findState(groupId)?.currentEpoch
-        val signingKeys =
-            if (previousEpoch == null) {
-                emptyMap()
-            } else {
-                participants.associate { participant ->
-                    participant.contactId to
-                        groupSecurityDao
-                            .findMemberKey(
-                                groupId = groupId,
-                                epoch = previousEpoch,
-                                contactId = participant.contactId
-                            )?.signingPublicKey
-                }
+    suspend fun loadPreviousMembership(
+        groupId: String,
+        previousSigningKeysByContactId: Map<String, ByteArray>
+    ): PreviousGroupMembershipDto {
+        val participants = incomingConversationDataSource.findConversationParticipants(groupId)
+        return PreviousGroupMembershipDto(
+            participants = participants,
+            signingKeysByContactId = participants.associate { participant ->
+                participant.contactId to previousSigningKeysByContactId[participant.contactId]
             }
-        return PreviousGroupMembershipDto(participants, signingKeys)
+        )
     }
 
     suspend fun persistConversation(
         packet: GroupCreatedPacket,
         persistedAt: Long
     ) {
-        chatDao.upsertConversation(
+        incomingConversationDataSource.upsertConversation(
             ConversationEntity(
                 id = packet.groupId,
                 contactId = null,
                 type = GROUP_CONVERSATION_TYPE,
                 title = packet.title,
                 createdAtEpochMilliseconds = packet.createdAtEpochMilliseconds,
-                updatedAtEpochMilliseconds = persistedAt
+                updatedAtEpochMilliseconds = persistedAt,
+                isVisible = true
             )
         )
     }
@@ -62,23 +49,23 @@ internal class GroupWelcomePersistence(
         if (!isFirstWelcome) return
         val latestEndAt =
             listOfNotNull(
-                chatDao.findMessageTimestampByTransportMode(
+                incomingConversationDataSource.findMessageTimestampByTransportMode(
                     conversationId = packet.groupId,
                     transportMode = GroupMembershipMessageFactory.LOCAL_MEMBERSHIP_LEFT_TRANSPORT_MODE
                 ),
-                chatDao.findMessageTimestampByTransportMode(
+                incomingConversationDataSource.findMessageTimestampByTransportMode(
                     conversationId = packet.groupId,
                     transportMode = GroupMembershipMessageFactory.LOCAL_MEMBERSHIP_REMOVED_TRANSPORT_MODE
                 )
             ).maxOrNull() ?: return
         val latestStartAt =
-            chatDao.findMessageTimestampByTransportMode(
+            incomingConversationDataSource.findMessageTimestampByTransportMode(
                 conversationId = packet.groupId,
                 transportMode = GroupMembershipMessageFactory.LOCAL_MEMBERSHIP_STARTED_TRANSPORT_MODE
             )
         if (latestStartAt != null && latestStartAt > latestEndAt) return
 
-        chatDao.upsertMessage(
+        incomingConversationDataSource.upsertMessage(
             GroupMembershipMessageFactory.localMembershipStarted(
                 conversationId = packet.groupId,
                 referenceId = invitationId ?: packet.packetId,
@@ -91,32 +78,29 @@ internal class GroupWelcomePersistence(
     suspend fun replaceMembership(
         packet: GroupCreatedPacket,
         previous: PreviousGroupMembershipDto,
-        current: ResolvedGroupMembershipDto,
+        current: List<ConversationParticipantEntity>,
+        contactDisplayNames: Map<String, String>,
         persistedAt: Long
-    ) {
-        val currentParticipantIds = current.participants.mapTo(mutableSetOf()) { it.contactId }
+    ): Set<String> {
+        val currentParticipantIds = current.mapTo(mutableSetOf()) { it.contactId }
         val previousParticipantIds = previous.participants.mapTo(mutableSetOf()) { it.contactId }
         val removedParticipantIds = previousParticipantIds - currentParticipantIds
-        val removedMessages = removedMembershipMessages(packet, previous, currentParticipantIds, persistedAt)
-        val addedMessages = addedMembershipMessages(packet, current, previousParticipantIds, persistedAt)
+        val removedMessages = removedMembershipMessages(packet, previous, currentParticipantIds, contactDisplayNames, persistedAt)
+        val addedMessages = addedMembershipMessages(packet, current, previousParticipantIds, contactDisplayNames, persistedAt)
 
-        markRemovedOutgoingInvitationsTerminal(
-            groupId = packet.groupId,
-            removedContactIds = removedParticipantIds,
-            updatedAt = persistedAt
-        )
-
-        chatDao.replaceConversationParticipantsWithMessages(
+        incomingConversationDataSource.replaceConversationParticipantsWithMessages(
             conversationId = packet.groupId,
-            participants = current.participants,
+            participants = current,
             messages = removedMessages + addedMessages
         )
+        return removedParticipantIds
     }
 
-    private suspend fun removedMembershipMessages(
+    private fun removedMembershipMessages(
         packet: GroupCreatedPacket,
         previous: PreviousGroupMembershipDto,
         currentParticipantIds: Set<String>,
+        contactDisplayNames: Map<String, String>,
         persistedAt: Long
     ) =
         previous.participants
@@ -127,7 +111,7 @@ internal class GroupWelcomePersistence(
                         conversationId = packet.groupId,
                         epoch = packet.epoch,
                         contactId = participant.contactId,
-                        contactName = membershipDisplayName(participant.contactId),
+                        contactName = contactDisplayNames[participant.contactId] ?: "Member",
                         createdAtEpochMilliseconds = persistedAt
                     )
                 } else {
@@ -135,73 +119,34 @@ internal class GroupWelcomePersistence(
                         conversationId = packet.groupId,
                         epoch = packet.epoch,
                         contactId = participant.contactId,
-                        contactName = membershipDisplayName(participant.contactId),
+                        contactName = contactDisplayNames[participant.contactId] ?: "Member",
                         createdAtEpochMilliseconds = persistedAt
                     )
                 }
             }
 
-    private suspend fun addedMembershipMessages(
+    private fun addedMembershipMessages(
         packet: GroupCreatedPacket,
-        current: ResolvedGroupMembershipDto,
+        current: List<ConversationParticipantEntity>,
         previousParticipantIds: Set<String>,
+        contactDisplayNames: Map<String, String>,
         persistedAt: Long
     ) =
-        if (previousParticipantIds.isNotEmpty() && chatDao.hasMessages(packet.groupId)) {
-            current.participants
+        if (previousParticipantIds.isNotEmpty()) {
+            current
                 .filterNot { participant -> participant.contactId in previousParticipantIds }
                 .map { participant ->
                     GroupMembershipMessageFactory.memberAdded(
                         conversationId = packet.groupId,
                         epoch = packet.epoch,
                         contactId = participant.contactId,
-                        contactName = membershipDisplayName(participant.contactId),
+                        contactName = contactDisplayNames[participant.contactId] ?: "Member",
                         createdAtEpochMilliseconds = persistedAt
                     )
                 }
         } else {
             emptyList()
         }
-
-    private suspend fun markRemovedOutgoingInvitationsTerminal(
-        groupId: String,
-        removedContactIds: Set<String>,
-        updatedAt: Long
-    ) {
-        removedContactIds.forEach { contactId ->
-            val invitation =
-                groupInvitationDao.findByGroupContactAndDirection(
-                    groupId = groupId,
-                    contactId = contactId,
-                    direction = GroupInvitationDirection.OUTGOING.name
-                ) ?: return@forEach
-
-            if (invitation.status.isTerminalInvitationStatus()) return@forEach
-
-            groupInvitationDao.updateStatus(
-                invitationId = invitation.invitationId,
-                expectedStatus = invitation.status,
-                newStatus = GroupInvitationStatus.REMOVED.name,
-                updatedAt = updatedAt
-            )
-        }
-    }
-
-    private fun String.isTerminalInvitationStatus(): Boolean =
-        this == GroupInvitationStatus.DECLINED.name ||
-            this == GroupInvitationStatus.EXPIRED.name ||
-            this == GroupInvitationStatus.FAILED.name ||
-            this == GroupInvitationStatus.REMOVED.name ||
-            this == GroupInvitationStatus.GROUP_DELETED.name
-
-    private suspend fun membershipDisplayName(contactId: String): String =
-        contactDao
-            .findById(contactId)
-            ?.contact
-            ?.displayName
-            ?.trim()
-            ?.takeIf(String::isNotEmpty)
-            ?: "Member"
 
     private fun GroupCreatedPacket.memberLeft(previousSigningPublicKey: ByteArray?): Boolean {
         val change = membershipChange ?: return false

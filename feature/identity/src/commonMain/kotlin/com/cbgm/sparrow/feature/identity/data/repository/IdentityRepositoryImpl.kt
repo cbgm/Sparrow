@@ -2,6 +2,15 @@ package com.cbgm.sparrow.feature.identity.data.repository
 
 import com.cbgm.sparrow.core.crypto.identity.IdentityKeyGenerator
 import com.cbgm.sparrow.core.crypto.signature.DetachedSignatureCrypto
+import com.cbgm.sparrow.core.crypto.transport.TransportMessageCipher
+import com.cbgm.sparrow.core.protocol.identity.LocalEncryptionKeyPair
+import com.cbgm.sparrow.core.protocol.identity.LocalEncryptionKeyPairProvider
+import com.cbgm.sparrow.core.protocol.identity.LocalIdentityUnavailableException
+import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentity
+import com.cbgm.sparrow.core.protocol.identity.LocalPublicIdentityProvider
+import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPair
+import com.cbgm.sparrow.core.protocol.identity.LocalSigningKeyPairProvider
+import com.cbgm.sparrow.core.protocol.identity.LocalSigningPublicKeyProvider
 import com.cbgm.sparrow.core.result.safeSuspendCall
 import com.cbgm.sparrow.feature.identity.data.datasource.PublicIdentityDataSource
 import com.cbgm.sparrow.feature.identity.device.PrivateKeyStorage
@@ -16,9 +25,14 @@ import kotlinx.coroutines.flow.flow
 class IdentityRepositoryImpl(
     private val identityKeyGenerator: IdentityKeyGenerator,
     private val signatureCrypto: DetachedSignatureCrypto,
+    private val transportCipher: TransportMessageCipher,
     private val privateKeyStorage: PrivateKeyStorage,
     private val publicIdentityDataSource: PublicIdentityDataSource
-) : IdentityRepository {
+) : IdentityRepository,
+    LocalPublicIdentityProvider,
+    LocalSigningKeyPairProvider,
+    LocalEncryptionKeyPairProvider,
+    LocalSigningPublicKeyProvider {
     private val identityUpdates =
         MutableSharedFlow<PublicIdentity?>(
             replay = 1,
@@ -34,10 +48,11 @@ class IdentityRepositoryImpl(
     override suspend fun getStatus(): Result<IdentityStatus> =
         safeSuspendCall {
             val publicIdentityExists = publicIdentityDataSource.exists()
-            val privateKeysExist = privateKeyStorage.hasIdentityPrivateKeys()
+            val privateKeysExist = runCatching { privateKeyStorage.hasIdentityPrivateKeys() }.getOrDefault(false)
+            val anyPrivateKeyMaterial = privateKeyStorage.hasAnyIdentityPrivateKeyMaterial()
 
             when {
-                !publicIdentityExists && !privateKeysExist -> IdentityStatus.NOT_CREATED
+                !publicIdentityExists && !anyPrivateKeyMaterial -> IdentityStatus.NOT_CREATED
                 !publicIdentityExists || !privateKeysExist -> IdentityStatus.INCOMPLETE
                 !hasConsistentSigningIdentity() -> IdentityStatus.INCOMPLETE
                 else -> IdentityStatus.READY
@@ -75,7 +90,7 @@ class IdentityRepositoryImpl(
 
             try {
                 val publicIdentityExists = publicIdentityDataSource.exists()
-                val privateKeysExist = privateKeyStorage.hasIdentityPrivateKeys()
+                val privateKeysExist = privateKeyStorage.hasAnyIdentityPrivateKeyMaterial()
 
                 check(!publicIdentityExists && !privateKeysExist) {
                     "Identity or partial identity state already exists"
@@ -123,6 +138,52 @@ class IdentityRepositoryImpl(
             }
         }
 
+    /** Validates both key pairs BEFORE persisting either; fails closed if any identity state exists. */
+    @OptIn(ExperimentalUnsignedTypes::class)
+    override suspend fun restoreIdentity(
+        publicIdentity: PublicIdentity,
+        encryptionPrivateKey: ByteArray,
+        signingPrivateKey: ByteArray
+    ): Result<PublicIdentity> = safeSuspendCall {
+        check(!publicIdentityDataSource.exists() && !privateKeyStorage.hasAnyIdentityPrivateKeyMaterial()) {
+            "An identity or partial identity already exists"
+        }
+        require(
+            publicIdentity.encryptionPublicKey.size == 32 && encryptionPrivateKey.size == 32 &&
+                publicIdentity.signingPublicKey.size == 32 && signingPrivateKey.size == 64
+        ) {
+            "Invalid identity key lengths"
+        }
+        val testPayload = "sparrow-backup-key-validation-v1".encodeToByteArray()
+        val signature = signatureCrypto.sign(testPayload, signingPrivateKey).getOrThrow()
+        signatureCrypto.verify(testPayload, publicIdentity.signingPublicKey, signature).getOrThrow()
+        val ciphertext = transportCipher.encryptForRecipient(testPayload, publicIdentity.encryptionPublicKey).getOrThrow()
+        val decrypted = transportCipher.decryptFromSender(
+            ciphertext,
+            publicIdentity.encryptionPublicKey,
+            encryptionPrivateKey
+        ).getOrThrow()
+        check(decrypted.contentEquals(testPayload)) { "Backup encryption key does not match public identity" }
+        // The private-key storage uses one DataStore edit for both already-wrapped private keys.
+        // Public keys are stored only afterwards; a failed import attempts rollback of both.
+        try {
+            privateKeyStorage.saveIdentityPrivateKeys(
+                encryptionPrivateKey.toUByteArray(),
+                signingPrivateKey.toUByteArray()
+            )
+            publicIdentityDataSource.save(publicIdentity)
+        } catch (error: Throwable) {
+            val rollback = safeSuspendCall {
+                publicIdentityDataSource.delete()
+                privateKeyStorage.deleteIdentityPrivateKeys()
+            }
+            if (rollback.isFailure) throw IllegalStateException("Identity import rollback failed", error)
+            throw error
+        }
+        identityUpdates.emit(publicIdentity)
+        publicIdentity
+    }
+
     override suspend fun resetIdentity(): Result<Unit> =
         safeSuspendCall {
             privateKeyStorage.deleteIdentityPrivateKeys()
@@ -145,6 +206,45 @@ class IdentityRepositoryImpl(
         safeSuspendCall {
             privateKeyStorage.loadSigningPrivateKey()?.toByteArray()
                 ?: error("Local signing private key does not exist")
+        }
+
+    override suspend fun getLocalPublicIdentity(): Result<LocalPublicIdentity> =
+        runCatching {
+            val identity = getIdentity().getOrThrow() ?: error("Local Sparrow identity does not exist")
+            LocalPublicIdentity(
+                encryptionPublicKey = identity.encryptionPublicKey.copyOf(),
+                signingPublicKey = identity.signingPublicKey.copyOf()
+            )
+        }
+
+    override suspend fun getSigningKeyPair(): Result<LocalSigningKeyPair> =
+        runCatching {
+            val identity = getIdentity().getOrThrow() ?: error("Local Sparrow identity does not exist")
+            LocalSigningKeyPair(
+                publicKey = identity.signingPublicKey.copyOf(),
+                privateKey = getSigningPrivateKey().getOrThrow().copyOf()
+            )
+        }
+
+    override suspend fun getEncryptionKeyPair(): Result<LocalEncryptionKeyPair> =
+        runCatching {
+            val identity = getIdentity().getOrThrow() ?: error("Local Sparrow identity does not exist")
+            val privateKey = getEncryptionPrivateKey().getOrThrow()
+            require(identity.encryptionPublicKey.isNotEmpty()) { "Local encryption public key is empty" }
+            require(privateKey.isNotEmpty()) { "Local encryption private key is empty" }
+            LocalEncryptionKeyPair(
+                publicKey = identity.encryptionPublicKey.copyOf(),
+                privateKey = privateKey.copyOf()
+            )
+        }
+
+    override suspend fun getSigningPublicKey(): Result<ByteArray> =
+        runCatching {
+            // FCM may ask for a routing ID before onboarding has created the identity.
+            // Use the typed absence signal so PushTokenRegistrationWorker can defer
+            // registration without publishing an expected startup state as a global error.
+            val identity = getIdentity().getOrThrow() ?: throw LocalIdentityUnavailableException()
+            identity.signingPublicKey.copyOf()
         }
 
     private companion object {

@@ -10,10 +10,10 @@ import androidx.compose.ui.unit.dp
 data class Spacing(
     val micro: Dp = 4.dp,
     val base: Dp = 8.dp,
-    val small: Dp = 16.dp,
-    val medium: Dp = 24.dp,
-    val large: Dp = 32.dp,
-    val screenPadding: Dp = 24.dp,
+    val small: Dp = 12.dp,
+    val medium: Dp = 16.dp,
+    val large: Dp = 24.dp,
+    val screenPadding: Dp = 16.dp,
     val zero: Dp = 0.dp,
     val listDividerStart: Dp = 80.dp,
     val button: ButtonSpacing = ButtonSpacing(),
@@ -50,7 +50,7 @@ data class ButtonSpacing(
 )
 
 data class CardSpacing(
-    val bottomShadowPadding: Dp = 30.dp
+    val bottomShadowPadding: Dp = 12.dp
 )
 
 data class StartupScreenSpacing(

@@ -1,8 +1,8 @@
 package com.cbgm.sparrow.feature.settings.di
 
 import com.cbgm.sparrow.core.logging.SparrowLog
-import com.cbgm.sparrow.core.security.ContactBlocklistRepository
-import com.cbgm.sparrow.core.security.DirectIdentitySetupModeRepository
+import com.cbgm.sparrow.feature.contacts.domain.repository.ContactBlocklistRepository
+import com.cbgm.sparrow.feature.identity.domain.repository.DirectIdentitySetupModeRepository
 import com.cbgm.sparrow.feature.settings.data.datasource.DeveloperErrorLogStorageDataSource
 import com.cbgm.sparrow.feature.settings.data.datasource.SettingsStorage
 import com.cbgm.sparrow.feature.settings.data.datasource.SettingsStorageImpl
@@ -32,12 +32,12 @@ import com.cbgm.sparrow.feature.settings.domain.usecase.SetBlockUnknownContactIn
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetDeveloperEnabledUseCase
 import com.cbgm.sparrow.feature.settings.domain.usecase.SetDirectIdentitySetupModeUseCase
 import com.cbgm.sparrow.feature.settings.presentation.developer.DeveloperMenuViewModel
+import com.cbgm.sparrow.feature.settings.presentation.developer.nodes.DeveloperNodesViewModel
 import com.cbgm.sparrow.feature.settings.presentation.disclaimer.DisclaimerViewModel
 import com.cbgm.sparrow.feature.settings.presentation.errors.DeveloperErrorLogViewModel
 import com.cbgm.sparrow.feature.settings.presentation.licenses.LicensesViewModel
 import com.cbgm.sparrow.feature.settings.presentation.network.ControlPlaneSettingsViewModel
 import com.cbgm.sparrow.feature.settings.presentation.overview.SettingsViewModel
-import com.cbgm.sparrow.feature.settings.presentation.profile.ProfileSettingsViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
@@ -58,7 +58,8 @@ val settingsModule =
         single<SettingsRepository> {
             SettingsRepositoryImpl(
                 buildInfoProvider = get(),
-                settingsStorage = get()
+                settingsStorage = get(),
+                systemLanguageProvider = get()
             )
         }
 
@@ -173,14 +174,6 @@ val settingsModule =
         }
 
         viewModel {
-            ProfileSettingsViewModel(
-                observeLocalProfilePicture = get(),
-                setLocalProfilePicture = get(),
-                removeLocalProfilePicture = get()
-            )
-        }
-
-        viewModel {
             ControlPlaneSettingsViewModel(
                 savedStateHandle = get(),
                 configuration = get(),
@@ -198,6 +191,10 @@ val settingsModule =
                 setDeveloperEnabledUseCase = get(),
                 transportDiagnosticsProvider = get()
             )
+        }
+
+        viewModel {
+            DeveloperNodesViewModel(transportDiagnosticsProvider = get())
         }
 
         viewModel {

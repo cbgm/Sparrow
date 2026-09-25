@@ -24,7 +24,7 @@ fun SparrowAlertDialog(
     if (isVisible) {
         AlertDialog(
             onDismissRequest = onDismissRequest,
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            containerColor = MaterialTheme.colorScheme.surface,
             shape = MaterialTheme.shapes.small,
             title = {
                 Column {
