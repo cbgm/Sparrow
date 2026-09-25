@@ -361,7 +361,7 @@ function Send-SmokeWebSocketText {
 
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($Text)
     $segment = [System.ArraySegment[byte]]::new($bytes)
-    $Socket.SendAsync(
+    [void]$Socket.SendAsync(
         $segment,
         [System.Net.WebSockets.WebSocketMessageType]::Text,
         $true,
@@ -413,7 +413,10 @@ function Connect-SmokeGatewayClient {
     $socket = New-Object System.Net.WebSockets.ClientWebSocket
     try {
         $uri = [Uri]"ws://127.0.0.1:$GatewayPort/v1/gateway"
-        $socket.ConnectAsync($uri, [System.Threading.CancellationToken]::None).GetAwaiter().GetResult()
+        [void]$socket.ConnectAsync(
+            $uri,
+            [System.Threading.CancellationToken]::None
+        ).GetAwaiter().GetResult()
         $registerMessage = @{
             type = "register"
             routingId = $routePayload.routingId
