@@ -1,8 +1,6 @@
 package com.cbgm.sparrow.feature.voice.presentation.message
 
 import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -42,9 +40,11 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cbgm.sparrow.core.ui.theme.Alpha
 import com.cbgm.sparrow.core.ui.theme.Dimens
+import com.cbgm.sparrow.core.ui.theme.SparrowTheme
 import com.cbgm.sparrow.core.ui.theme.spacing
 import com.cbgm.sparrow.feature.voice.domain.model.VoiceMessageTarget
 import com.cbgm.sparrow.feature.voice.domain.model.VoiceTranscript
@@ -128,7 +128,6 @@ private fun VoiceMessageContentBody(
                 modifier = Modifier
                     .size(Dimens.MessageInput.sendButtonWidth)
                     .clip(MaterialTheme.shapes.large)
-                    .background(MaterialTheme.colorScheme.primaryContainer)
             ) {
                 Icon(
                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
@@ -193,19 +192,8 @@ private fun VoiceMessageContentBody(
                 else ->
                     Text(
                         text = stringResource(Res.string.feature_voice_transcribe),
-                        modifier = Modifier
-                            .clip(MaterialTheme.shapes.large)
-                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                            .border(
-                                Dimens.Base.borderStrokeWidth,
-                                MaterialTheme.colorScheme.outlineVariant,
-                                MaterialTheme.shapes.large
-                            )
-                            .clickable(onClick = onTranscribeClick)
-                            .padding(
-                                horizontal = MaterialTheme.spacing.medium,
-                                vertical = MaterialTheme.spacing.small
-                            ),
+                        modifier = Modifier.padding(start = MaterialTheme.spacing.base)
+                            .clickable(onClick = onTranscribeClick),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -552,6 +540,20 @@ private fun calculateTranscriptTargetScroll(
     return (playbackHeadX - viewportWidth * TRANSCRIPT_FOLLOW_POSITION)
         .roundToInt()
         .coerceIn(0, maxScroll)
+}
+
+@Preview
+@Composable
+private fun VoiceMessageContentPreview() {
+    SparrowTheme {
+        VoiceMessageContent(
+            target = VoiceMessageTarget(
+                attachmentId = "1",
+                durationMilliseconds = 10000L
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
 }
 
 private const val TRANSCRIPT_FOLLOW_POSITION = 0.62f
