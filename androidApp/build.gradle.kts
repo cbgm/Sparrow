@@ -18,33 +18,32 @@ val localProperties = Properties().apply {
     }
 }
 
-val appVersionCode =
-    providers
-        .gradleProperty("appVersionCode")
-        .map(String::toInt)
-        .orElse(
-            providers
-                .environmentVariable("GITHUB_RUN_NUMBER")
-                .map { 10_000 + it.toInt() }
-        )
-        .orElse(
-            providers.exec {
-                commandLine("git", "rev-list", "--count", "HEAD")
-            }.standardOutput.asText
-                .map { 10_000 + it.trim().toInt() }
-        )
-        .getOrElse(10_001)
+val appVersionCode = providers
+    .gradleProperty("appVersionCode")
+    .map(String::toInt)
+    .orElse(
+        providers.environmentVariable("GITHUB_RUN_NUMBER")
+            .map { runNumber ->
+                10_000 + runNumber.toInt()
+            }
+    )
+    .getOrElse(10_001)
 
-val appVersionName =
-    providers
-        .gradleProperty("appVersionName")
-        .orElse(
-            providers.exec {
-                commandLine("git", "describe", "--tags", "--abbrev=0")
-            }.standardOutput.asText
-                .map { it.trim().removePrefix("v") }
-        )
-        .getOrElse("1.0.0")
+val appVersionName = providers
+    .gradleProperty("appVersionName")
+    .orElse(
+        providers.environmentVariable("GITHUB_REF_NAME")
+            .zip(
+                providers.environmentVariable("GITHUB_REF_TYPE")
+            ) { refName, refType ->
+                if (refType == "tag") {
+                    refName.removePrefix("v")
+                } else {
+                    "1.0.0"
+                }
+            }
+    )
+    .getOrElse("1.0.0")
 
 android {
     namespace = "com.cbgm.sparrow"
