@@ -242,15 +242,6 @@ jobs:
 
           print(f"Validated {len(entries)} public bundle entries; internal Directory server is excluded.")
 
-      - name: Prepare Windows and Linux unified server artifacts
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf dist-artifacts/server-windows dist-artifacts/server-linux
-          mkdir -p dist-artifacts/server-windows dist-artifacts/server-linux
-          unzip -q dist-internal-server/sparrow-server.zip -d dist-artifacts/server-windows
-          cp -a dist-artifacts/server-windows/. dist-artifacts/server-linux/
-
       - name: Build internal Control Plane Directory installers
         shell: bash
         run: |
@@ -258,57 +249,53 @@ jobs:
           python3 server/control-plane-directory/Build-SparrowDirectoryInstaller.py \
             --output-dir dist-internal-directory
 
-          rm -rf dist-artifacts/directory-windows dist-artifacts/directory-linux
-          mkdir -p dist-artifacts/directory-windows dist-artifacts/directory-linux
+          test -s dist-internal-directory/sparrow-directory-windows.zip
+          test -s dist-internal-directory/sparrow-directory-linux.zip
+
+      - name: Prepare exactly two internal platform bundles
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist-artifacts
+          mkdir -p \
+            dist-artifacts/windows/directory \
+            dist-artifacts/linux/directory
+
+          # Both platform downloads use the current unified Sparrow server payload.
+          unzip -q dist-internal-server/sparrow-server.zip -d dist-artifacts/windows
+          unzip -q dist-internal-server/sparrow-server.zip -d dist-artifacts/linux
+
+          # INTERNAL build only: put the matching Directory installer INSIDE each
+          # unified bundle. There is no separate Directory artifact.
           unzip -q dist-internal-directory/sparrow-directory-windows.zip \
-            -d dist-artifacts/directory-windows
+            -d dist-artifacts/windows/directory
           unzip -q dist-internal-directory/sparrow-directory-linux.zip \
-            -d dist-artifacts/directory-linux
+            -d dist-artifacts/linux/directory
 
-          test -f dist-artifacts/directory-windows/Start-SparrowDirectory.cmd
-          test -f dist-artifacts/directory-windows/Start-SparrowDirectory.ps1
-          test -f dist-artifacts/directory-windows/directory_service.py
-          test -f dist-artifacts/directory-windows/docker-compose.yml
+          test -f dist-artifacts/windows/Start-SparrowServer.cmd
+          test -f dist-artifacts/windows/directory/Start-SparrowDirectory.cmd
+          test -f dist-artifacts/windows/directory/directory_service.py
+          test -f dist-artifacts/linux/Start-SparrowServer.sh
+          test -f dist-artifacts/linux/directory/Start-SparrowDirectory.sh
+          test -f dist-artifacts/linux/directory/directory_service.py
 
-          test -f dist-artifacts/directory-linux/Start-SparrowDirectory.sh
-          test -f dist-artifacts/directory-linux/directory_service.py
-          test -f dist-artifacts/directory-linux/docker-compose.yml
-
-      - name: Upload unified Windows server bundle
+      - name: Upload internal Windows unified + Directory bundle
         uses: actions/upload-artifact@v4
         with:
           name: sparrow-server-internal-windows
-          path: dist-artifacts/server-windows
+          path: dist-artifacts/windows
           if-no-files-found: error
           include-hidden-files: true
           retention-days: 14
 
-      - name: Upload unified Linux server bundle
+      - name: Upload internal Linux unified + Directory bundle
         uses: actions/upload-artifact@v4
         with:
           name: sparrow-server-internal-linux
-          path: dist-artifacts/server-linux
+          path: dist-artifacts/linux
           if-no-files-found: error
           include-hidden-files: true
           retention-days: 14
-
-      - name: Upload internal Directory Windows bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: sparrow-control-plane-directory-internal-windows
-          path: dist-artifacts/directory-windows
-          if-no-files-found: error
-          include-hidden-files: true
-          retention-days: 7
-
-      - name: Upload internal Directory Linux bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: sparrow-control-plane-directory-internal-linux
-          path: dist-artifacts/directory-linux
-          if-no-files-found: error
-          include-hidden-files: true
-          retention-days: 7
 
       - name: Summarize internal build
         shell: bash
@@ -318,13 +305,9 @@ jobs:
           {
             echo "## Sparrow internal server build"
             echo
-            echo "Published public server images with tag: \`${IMAGE_TAG}\`"
+            echo "Server image tag: \`${IMAGE_TAG}\`"
             echo
-            echo "Artifacts:"
-            echo "- Windows unified Sparrow server bundle"
-            echo "- Linux unified Sparrow server bundle"
-            echo "- Windows internal Control Plane Directory bundle"
-            echo "- Linux internal Control Plane Directory bundle"
-            echo
-            echo "The normal unified server bundle was verified to exclude the internal Directory server."
+            echo "Exactly two downloadable server artifacts:"
+            echo "- Windows unified Sparrow server + internal Directory"
+            echo "- Linux unified Sparrow server + internal Directory"
           } >> "${GITHUB_STEP_SUMMARY}"

@@ -43,16 +43,30 @@ try {
     Write-Host "Checking the latest published unified server release in GitHub repository $Repository ..."
     try { $allReleases = @(Invoke-RestMethod -Uri "https://api.github.com/repos/$Repository/releases?per_page=100" -Headers $headers -ErrorAction Stop) }
     catch { throw "GitHub releases unavailable for $Repository. Publish a unified RELEASE (the old Actions artifact alone is not a public update URL). No local files or containers changed. $($_.Exception.Message)" }
+    $platformSuffix = if ($env:OS -eq 'Windows_NT') { '-windows.zip' } else { '-linux.zip' }
     $serverReleases = @($allReleases | Where-Object {
-        -not $_.draft -and -not $_.prerelease -and ([string]$_.tag_name) -match '^server-v[A-Za-z0-9_.-]+$' -and
-        @($_.assets | Where-Object { $_.name -eq 'sparrow-server.zip' }).Count -eq 1 -and
-        @($_.assets | Where-Object { $_.name -eq 'sparrow-server.zip.sha256' }).Count -eq 1
+        $candidate = $_
+        $platformAssets = @($candidate.assets | Where-Object {
+            ([string]$_.name).StartsWith('sparrow-server-', [StringComparison]::OrdinalIgnoreCase) -and
+            ([string]$_.name).EndsWith($platformSuffix, [StringComparison]::OrdinalIgnoreCase)
+        })
+        -not $candidate.draft -and -not $candidate.prerelease -and
+        (([string]$candidate.tag_name) -match '^(?:server-)?v[A-Za-z0-9_.-]+$') -and
+        $platformAssets.Count -eq 1 -and
+        @($candidate.assets | Where-Object { $_.name -eq 'SHA256SUMS.txt' }).Count -eq 1
     } | Sort-Object -Property published_at -Descending)
-    if ($serverReleases.Count -eq 0) { throw "No published server-v* release with unified ZIP and checksum in $Repository. No changes made." }
+    if ($serverReleases.Count -eq 0) {
+        throw "No published release with the ${platformSuffix} unified server ZIP and SHA256SUMS.txt exists in $Repository. No changes made."
+    }
     $release = $serverReleases[0]
-    $asset = @($release.assets | Where-Object { $_.name -eq 'sparrow-server.zip' })
-    $checksumAsset = @($release.assets | Where-Object { $_.name -eq 'sparrow-server.zip.sha256' })
-    if ($asset.Count -ne 1 -or $checksumAsset.Count -ne 1) { throw 'Latest release is missing the unified ZIP or its SHA-256 checksum. No changes made.' }
+    $asset = @($release.assets | Where-Object {
+        ([string]$_.name).StartsWith('sparrow-server-', [StringComparison]::OrdinalIgnoreCase) -and
+        ([string]$_.name).EndsWith($platformSuffix, [StringComparison]::OrdinalIgnoreCase)
+    })
+    $checksumAsset = @($release.assets | Where-Object { $_.name -eq 'SHA256SUMS.txt' })
+    if ($asset.Count -ne 1 -or $checksumAsset.Count -ne 1) {
+        throw 'Latest release is missing the platform unified ZIP or SHA256SUMS.txt. No changes made.'
+    }
     foreach ($item in @($asset[0], $checksumAsset[0])) {
         $uri = [uri][string]$item.browser_download_url
         if ($uri.Scheme -ne 'https' -or $uri.Host -ne 'github.com' -or
@@ -61,13 +75,19 @@ try {
         }
     }
     New-Item -ItemType Directory -Path $stage -Force | Out-Null
-    $zip = Join-Path $stage 'sparrow-server.zip'
-    $shaFile = "$zip.sha256"
+    $zip = Join-Path $stage ([string]$asset[0].name)
+    $shaFile = Join-Path $stage 'SHA256SUMS.txt'
     Write-Host "Downloading unified release $($release.tag_name) directly from GitHub ..."
     Invoke-WebRequest -Uri $asset[0].browser_download_url -Headers $headers -OutFile $zip -UseBasicParsing -ErrorAction Stop
     Invoke-WebRequest -Uri $checksumAsset[0].browser_download_url -Headers $headers -OutFile $shaFile -UseBasicParsing -ErrorAction Stop
-    $expected = (Get-Content -LiteralPath $shaFile -Raw).Trim()
-    if ($expected -notmatch '^[A-Fa-f0-9]{64}$') { throw 'Malformed release checksum. No changes made.' }
+    $expected = $null
+    foreach ($line in Get-Content -LiteralPath $shaFile) {
+        if ($line -match '^([A-Fa-f0-9]{64})\s+\*?(.+)$' -and $Matches[2].Trim() -eq ([string]$asset[0].name)) {
+            $expected = $Matches[1]
+            break
+        }
+    }
+    if (-not $expected) { throw 'SHA256SUMS.txt does not contain the selected unified server ZIP. No changes made.' }
     $actual = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
     if ($actual -ine $expected) { throw 'Unified bundle checksum verification failed. No changes made.' }
     Write-Host "Verified GitHub release $($release.tag_name) / SHA-256 $actual."

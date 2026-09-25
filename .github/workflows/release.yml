@@ -677,16 +677,15 @@ jobs:
           if (-not (Test-Path -LiteralPath $bundle -PathType Leaf)) {
               throw 'Unified server installer was not created.'
           }
-          # Both downloadable platform packages contain the SAME unified installer.
-          # The Windows download is ZIP; the Linux/macOS download is TAR.GZ.
+          # The public release exposes exactly two server ZIPs: Windows and Linux.
 
       - name: Validate and prepare public unified server artifacts
         shell: bash
         run: |
           set -euo pipefail
 
-          rm -rf dist/server/windows dist/server/macos-linux
-          mkdir -p dist/server/windows dist/server/macos-linux
+          rm -rf dist/server/windows dist/server/linux
+          mkdir -p dist/server/windows dist/server/linux
           unzip -q dist-server/sparrow-server.zip -d dist/server/windows
 
           required=(
@@ -745,7 +744,7 @@ jobs:
             fi
           done
 
-          cp -a dist/server/windows/. dist/server/macos-linux/
+          cp -a dist/server/windows/. dist/server/linux/
 
       - name: Upload unified Windows server installer
         uses: actions/upload-artifact@v4
@@ -756,11 +755,11 @@ jobs:
           retention-days: 30
           include-hidden-files: true
 
-      - name: Upload unified macOS/Linux server installer
+      - name: Upload unified Linux server installer
         uses: actions/upload-artifact@v4
         with:
-          name: sparrow-server-${{ needs.metadata.outputs.artifact_version }}-macos-linux
-          path: dist/server/macos-linux
+          name: sparrow-server-${{ needs.metadata.outputs.artifact_version }}-linux
+          path: dist/server/linux
           if-no-files-found: error
           retention-days: 30
           include-hidden-files: true
@@ -786,7 +785,7 @@ jobs:
             echo
             echo "Immutable server image tag: \`${{ needs.metadata.outputs.image_tag }}\`"
             echo
-            echo "Unified public server installer packaged for Windows and macOS/Linux (Control Plane + Community Node; internal Directory server excluded)."
+            echo "Unified public server installer packaged for Windows and Linux (Control Plane + Community Node; internal Directory server excluded)."
             echo "Only changed server images were rebuilt; unchanged images were reused or aliased to the immutable candidate tag."
           } >> "${GITHUB_STEP_SUMMARY}"
 
@@ -828,13 +827,13 @@ jobs:
           name: sparrow-server-${{ needs.metadata.outputs.artifact_version }}-windows
           path: downloads/server-windows
 
-      - name: Download unified macOS/Linux server installer
+      - name: Download unified Linux server installer
         uses: actions/download-artifact@v4
         with:
-          name: sparrow-server-${{ needs.metadata.outputs.artifact_version }}-macos-linux
-          path: downloads/server-macos-linux
+          name: sparrow-server-${{ needs.metadata.outputs.artifact_version }}-linux
+          path: downloads/server-linux
 
-      - name: Assemble individual release assets
+      - name: Assemble exactly two public server ZIP assets
         shell: bash
         run: |
           set -euo pipefail
@@ -844,27 +843,26 @@ jobs:
           find downloads/debug -type f -name 'sparrow-*-debug.apk' -exec cp '{}' dist/ ';'
           find downloads/release -type f -name 'sparrow-*-release.apk' -exec cp '{}' dist/ ';'
 
-          # Linux/macOS startup scripts must be executable in the TAR archive.
           chmod +x \
-            downloads/server-macos-linux/Start-SparrowServer.sh \
-            downloads/server-macos-linux/Start-SparrowServer.command \
-            downloads/server-macos-linux/community-node/bootstrap-community-node.sh \
-            downloads/server-macos-linux/community-node/start-sparrow-node.sh \
-            downloads/server-macos-linux/community-node/Start-SparrowNode.command \
-            downloads/server-macos-linux/control-plane/bootstrap-control-plane.sh \
-            downloads/server-macos-linux/control-plane/start-sparrow-control-plane.sh \
-            downloads/server-macos-linux/control-plane/Start-SparrowControlPlane.command
+            downloads/server-linux/Start-SparrowServer.sh \
+            downloads/server-linux/Start-SparrowServer.command \
+            downloads/server-linux/community-node/bootstrap-community-node.sh \
+            downloads/server-linux/community-node/start-sparrow-node.sh \
+            downloads/server-linux/community-node/Start-SparrowNode.command \
+            downloads/server-linux/control-plane/bootstrap-control-plane.sh \
+            downloads/server-linux/control-plane/start-sparrow-control-plane.sh \
+            downloads/server-linux/control-plane/Start-SparrowControlPlane.command
 
-          # Keep the existing platform-specific download formats and the stable
-          # sparrow-server.zip asset used by the automatic installer updater.
           (cd downloads/server-windows && zip -qr "$GITHUB_WORKSPACE/dist/sparrow-server-${version}-windows.zip" .)
-          tar -czf "dist/sparrow-server-${version}-macos-linux.tar.gz" -C downloads/server-macos-linux .
-          cp "dist/sparrow-server-${version}-windows.zip" dist/sparrow-server.zip
+          (cd downloads/server-linux && zip -qr "$GITHUB_WORKSPACE/dist/sparrow-server-${version}-linux.zip" .)
 
-          package_count="$(find dist -maxdepth 1 -type f -name 'sparrow-*' | wc -l)"
-          if [[ "${package_count}" -ne 5 ]]; then
-            echo "::error::Expected 5 full-release packages (2 APKs, Windows ZIP, Linux/macOS TAR, updater ZIP), found ${package_count}."
-            find downloads -maxdepth 3 -type f -print
+          test -s "dist/sparrow-server-${version}-windows.zip"
+          test -s "dist/sparrow-server-${version}-linux.zip"
+
+          server_zip_count="$(find dist -maxdepth 1 -type f -name 'sparrow-server-*.zip' | wc -l)"
+          if [[ "${server_zip_count}" -ne 2 ]]; then
+            echo "::error::Expected exactly 2 public server ZIPs, found ${server_zip_count}." >&2
+            find dist -maxdepth 1 -type f -print
             exit 1
           fi
 
@@ -873,86 +871,10 @@ jobs:
           Commit: ${GITHUB_SHA}
           Server image tag: ${{ needs.metadata.outputs.image_tag }}
 
-          Packages:
-          - Debug Android APK
-          - Signed release Android APK
-          - Unified Windows server installer (Control Plane + Community Node; no internal Directory server)
-          - Unified macOS/Linux server installer (Control Plane + Community Node; no internal Directory server)
-          - sparrow-server.zip (stable updater asset)
+          Server bundles:
+          - sparrow-server-${version}-windows.zip (unified server, no internal Directory)
+          - sparrow-server-${version}-linux.zip (unified server, no internal Directory)
           EOF_RELEASE
-
-      - name: Assemble full downloadable ZIP
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          version="${{ needs.metadata.outputs.artifact_version }}"
-          package_root="dist/full/Sparrow-${version}"
-          mkdir -p \
-            "${package_root}/app" \
-            "${package_root}/server"
-
-          debug_apk="$(find dist -maxdepth 1 -type f -name 'sparrow-*-debug.apk' | head -n 1)"
-          release_apk="$(find dist -maxdepth 1 -type f -name 'sparrow-*-release.apk' | head -n 1)"
-          server_windows="dist/sparrow-server-${version}-windows.zip"
-          server_macos_linux="dist/sparrow-server-${version}-macos-linux.tar.gz"
-          server_updater="dist/sparrow-server.zip"
-
-          for required_file in \
-            "${debug_apk}" \
-            "${release_apk}" \
-            "${server_windows}" \
-            "${server_macos_linux}" \
-            "${server_updater}"; do
-            if [[ -z "${required_file}" || ! -s "${required_file}" ]]; then
-              echo "::error::Full release ZIP is missing one or more required release assets."
-              find dist -maxdepth 2 -type f -print
-              exit 1
-            fi
-          done
-
-          cp "${debug_apk}" "${package_root}/app/"
-          cp "${release_apk}" "${package_root}/app/"
-          cp "${server_windows}" "${package_root}/server/"
-          cp "${server_macos_linux}" "${package_root}/server/"
-          cp "${server_updater}" "${package_root}/server/"
-          cp dist/RELEASE.txt "${package_root}/RELEASE.txt"
-
-          cat > "${package_root}/MANIFEST.txt" <<EOF_MANIFEST
-          Sparrow full release package
-          Version: ${{ needs.metadata.outputs.version_name }}
-          Commit: ${GITHUB_SHA}
-          Server image tag: ${{ needs.metadata.outputs.image_tag }}
-
-          app/
-            Debug Android APK
-            Signed release Android APK
-
-          server/
-            Unified Windows server installer (Control Plane + Community Node)
-            Unified macOS/Linux server installer (Control Plane + Community Node)
-            Stable updater installer ZIP
-          EOF_MANIFEST
-
-          (
-            cd "${package_root}"
-            find app server -type f -print0 \
-              | sort -z \
-              | xargs -0 sha256sum > SHA256SUMS.txt
-          )
-
-          full_zip="dist/sparrow-${version}-full.zip"
-          (
-            cd dist/full
-            zip -qr "../$(basename "${full_zip}")" "Sparrow-${version}"
-          )
-
-          if [[ ! -s "${full_zip}" ]]; then
-            echo "::error::Full release ZIP was not created."
-            exit 1
-          fi
-
-          rm -rf dist/full
 
       - name: Generate release checksums
         shell: bash
@@ -960,17 +882,6 @@ jobs:
           set -euo pipefail
           cd dist
           sha256sum sparrow-* > SHA256SUMS.txt
-
-      - name: Upload complete release package
-        uses: actions/upload-artifact@v4
-        with:
-          name: sparrow-release-${{ needs.metadata.outputs.artifact_version }}
-          path: |
-            dist/sparrow-*
-            dist/RELEASE.txt
-            dist/SHA256SUMS.txt
-          if-no-files-found: error
-          retention-days: 90
 
       - name: Publish GitHub release
         shell: bash
